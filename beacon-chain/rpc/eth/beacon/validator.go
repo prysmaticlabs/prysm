@@ -264,9 +264,12 @@ func (bs *Server) ListCommittees(ctx context.Context, req *ethpb.StateCommittees
 //	 }
 //	}
 func (bs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
+	defer span.End()
+
 	stateID := mux.Vars(r)["state_id"]
 
-	isOptimistic, err := helpers.IsOptimistic(r.Context(), []byte(stateID), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateID), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
 		errJson := &http2.DefaultErrorJson{
 			Message: fmt.Errorf("could not check if slot's block is optimistic: %v", err).Error(),
@@ -276,7 +279,7 @@ func (bs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	st, err := bs.Stater.State(r.Context(), []byte(stateID))
+	st, err := bs.Stater.State(ctx, []byte(stateID))
 	if err != nil {
 		errJson := &http2.DefaultErrorJson{
 			Message: helpers.PrepareStateFetchError(err).Error(),
@@ -296,7 +299,7 @@ func (bs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	isFinalized := bs.FinalizationFetcher.IsFinalized(r.Context(), blockRoot)
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 	statusQuery := r.URL.Query().Get("status")
 	statusVal, ok := ethpb.ValidatorStatus_value[strings.ToUpper(statusQuery)]
 	if !ok {
