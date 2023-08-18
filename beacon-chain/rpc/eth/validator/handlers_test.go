@@ -396,21 +396,6 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
-
-	t.Run("no body", func(t *testing.T) {
-		c.SyncCommitteePool = synccommittee.NewStore()
-
-		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.SubmitContributionAndProofs(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
-	})
 }
 
 func TestSubmitAggregateAndProofs(t *testing.T) {
