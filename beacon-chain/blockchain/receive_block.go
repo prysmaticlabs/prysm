@@ -38,6 +38,12 @@ type BlockReceiver interface {
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 }
 
+// BlobReceiver interface defines the methods of chain service for receiving new
+// blobs
+type BlobReceiver interface {
+	SendNewBlobEvent([32]byte, uint64)
+}
+
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
 type SlashingReceiver interface {
 	ReceiveAttesterSlashing(ctx context.Context, slashings *ethpb.AttesterSlashing)
