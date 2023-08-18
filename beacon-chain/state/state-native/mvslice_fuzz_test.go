@@ -19,7 +19,7 @@ func FuzzMultiValueBalances(f *testing.F) {
 	firstState, err := InitializeFromProtoPhase0(&ethpb.BeaconState{Balances: bals})
 	require.NoError(f, err)
 
-	f.Fuzz(func(t *testing.T, index uint8, value uint8) {
+	f.Fuzz(func(t *testing.T, index uint16, value uint64) {
 		secondState := firstState
 		// there's a 25% chance we will copy the state
 		copyState := index%4 == 0
@@ -29,12 +29,12 @@ func FuzzMultiValueBalances(f *testing.F) {
 		if index%2 == 0 {
 			// update existing balance
 
-			/*oldValue, err := firstState.BalanceAtIndex(primitives.ValidatorIndex(index))
-			require.NoError(t, err)*/
+			oldValue, err := firstState.BalanceAtIndex(primitives.ValidatorIndex(index))
+			require.NoError(t, err)
 
-			require.NoError(t, secondState.UpdateBalancesAtIndex(primitives.ValidatorIndex(index), uint64(value)))
+			require.NoError(t, secondState.UpdateBalancesAtIndex(primitives.ValidatorIndex(index), value))
 
-			/*firstValue, err := firstState.BalanceAtIndex(primitives.ValidatorIndex(index))
+			firstValue, err := firstState.BalanceAtIndex(primitives.ValidatorIndex(index))
 			require.NoError(t, err)
 			secondValue, err := secondState.BalanceAtIndex(primitives.ValidatorIndex(index))
 			require.NoError(t, err)
@@ -44,17 +44,28 @@ func FuzzMultiValueBalances(f *testing.F) {
 			} else {
 				require.Equal(t, value, firstValue)
 				require.Equal(t, value, secondValue)
-			}*/
+			}
 		} else {
 			// append new balance
 
-			require.NoError(t, secondState.AppendBalance(uint64(value)))
+			firstLength := firstState.BalancesLength()
 
-			/*if copyState {
-				require.Equal(t, firstState.BalancesLength(), secondState.BalancesLength())
+			require.NoError(t, secondState.AppendBalance(value))
+
+			if copyState {
+				require.Equal(t, firstLength, secondState.BalancesLength())
+				v, err := firstState.BalanceAtIndex(primitives.ValidatorIndex(firstLength - 1))
+				require.NoError(t, err)
+				require.Equal(t, value, v)
+				v, err = secondState.BalanceAtIndex(primitives.ValidatorIndex(secondState.BalancesLength() - 1))
+				require.NoError(t, err)
+				require.Equal(t, value, v)
 			} else {
-				require.Equal(t, firstState.BalancesLength()+1, secondState.BalancesLength())
-			}*/
+				require.Equal(t, firstLength+1, secondState.BalancesLength())
+				v, err := secondState.BalanceAtIndex(primitives.ValidatorIndex(secondState.BalancesLength() - 1))
+				require.NoError(t, err)
+				require.Equal(t, value, v)
+			}
 		}
 	})
 }
