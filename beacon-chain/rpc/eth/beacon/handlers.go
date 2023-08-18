@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -683,28 +684,27 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		root = blkRoot[:]
 	default:
 		isHex := strings.HasPrefix(blockID, "0x")
-		if isHex && len(blockID) >= 32 {
+		if isHex {
 			blockIDBytes, err := hexutil.Decode(blockID)
 			if err != nil {
 				http2.HandleError(w, "Could not decode block ID into bytes: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			if len(blockIDBytes) == 32 {
-				blockID32 := bytesutil.ToBytes32(blockIDBytes)
-				blk, err := bs.BeaconDB.Block(ctx, blockID32)
-				if err != nil {
-					http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
-					return
-				}
-				if err := blocks.BeaconBlockIsNil(blk); err != nil {
-					http2.HandleError(w, "Could not find block: "+err.Error(), http.StatusNotFound)
-					return
-				}
-				root = blockIDBytes
-			} else {
-				http2.HandleError(w, fmt.Sprintf("Block ID has length %d instead of 32", len(blockIDBytes)), http.StatusBadRequest)
+			if len(blockIDBytes) != fieldparams.RootLength {
+				http2.HandleError(w, fmt.Sprintf("Block ID has length %d instead of %d", len(blockIDBytes), fieldparams.RootLength), http.StatusBadRequest)
 				return
 			}
+			blockID32 := bytesutil.ToBytes32(blockIDBytes)
+			blk, err := bs.BeaconDB.Block(ctx, blockID32)
+			if err != nil {
+				http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
+				return
+			}
+			if err := blocks.BeaconBlockIsNil(blk); err != nil {
+				http2.HandleError(w, "Could not find block: "+err.Error(), http.StatusNotFound)
+				return
+			}
+			root = blockIDBytes
 		} else {
 			slot, err := strconv.ParseUint(blockID, 10, 64)
 			if err != nil {
