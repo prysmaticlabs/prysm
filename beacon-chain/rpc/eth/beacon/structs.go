@@ -6,12 +6,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	bytesutil2 "github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/wealdtech/go-bytesutil"
 )
+
+type ListAttestationsResponse struct {
+	Data []*shared.Attestation `json:"data"`
+}
+
+type SubmitAttestationsRequest struct {
+	Data []*shared.Attestation `json:"data" validate:"required,dive"`
+}
 
 type SignedBeaconBlock struct {
 	Message   BeaconBlock `json:"message" validate:"required"`
