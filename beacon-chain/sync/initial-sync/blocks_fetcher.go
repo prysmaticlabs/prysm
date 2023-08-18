@@ -347,17 +347,11 @@ func blobRequest(bwb []blocks2.BlockWithVerifiedBlobs, blobWindowStart primitive
 	if len(bwb) == 0 {
 		return nil
 	}
-	// Short-circuit if the highest block is before the deneb start epoch or retention period start.
-	// This assumes blocks are sorted by sortedBlockWithVerifiedBlobSlice.
-	highest := bwb[len(bwb)-1].Block.Block().Slot()
-	// bwb is sorted by slot, so if the last element is outside the retention window, no blobs are needed.
-	if highest < blobWindowStart {
-		return nil
-	}
 	lowest := lowestSlotNeedsBlob(blobWindowStart, bwb)
 	if lowest == nil {
 		return nil
 	}
+	highest := bwb[len(bwb)-1].Block.Block().Slot()
 	return &p2ppb.BlobSidecarsByRangeRequest{
 		StartSlot: *lowest,
 		Count:     uint64(highest.SubSlot(*lowest)) + 1,
@@ -365,21 +359,27 @@ func blobRequest(bwb []blocks2.BlockWithVerifiedBlobs, blobWindowStart primitive
 }
 
 func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []blocks2.BlockWithVerifiedBlobs) *primitives.Slot {
-	i := sort.Search(len(bwb), func(i int) bool {
-		if bwb[i].Block.Block().Slot() < retentionStart {
-			return false
-		}
-		commits, err := bwb[i].Block.Block().Body().BlobKzgCommitments()
-		if err != nil || len(commits) == 0 {
-			return false
-		}
-		return true
-	})
-	if i >= len(bwb) {
+	if len(bwb) == 0 {
 		return nil
 	}
-	s := bwb[i].Block.Block().Slot()
-	return &s
+	// Short-circuit if the highest block is before the deneb start epoch or retention period start.
+	// This assumes blocks are sorted by sortedBlockWithVerifiedBlobSlice.
+	// bwb is sorted by slot, so if the last element is outside the retention window, no blobs are needed.
+	if bwb[len(bwb)-1].Block.Block().Slot() < retentionStart {
+		return nil
+	}
+	for _, b := range bwb {
+		slot := b.Block.Block().Slot()
+		if slot < retentionStart {
+			continue
+		}
+		commits, err := b.Block.Block().Body().BlobKzgCommitments()
+		if err != nil || len(commits) == 0 {
+			continue
+		}
+		return &slot
+	}
+	return nil
 }
 
 func sortBlobs(blobs []*p2ppb.BlobSidecar) []*p2ppb.BlobSidecar {
@@ -427,11 +427,11 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 			// There are more expected commitments in this block, but we've run out of blobs from the response
 			// (out-of-bound error guard).
 			if blobi == len(blobs) {
-				return nil, missingCommitError(bb.Block.Root(), commits[ci:])
+				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
 			}
 			bl := blobs[blobi]
 			if bl.Slot != block.Slot() {
-				return nil, missingCommitError(bb.Block.Root(), commits[ci:])
+				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
 			}
 			if bytesutil.ToBytes32(bl.BlockRoot) != bb.Block.Root() {
 				return nil, errors.Wrapf(errMismatchedBlobBlockRoot,
@@ -456,13 +456,13 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 	return bwb, nil
 }
 
-func missingCommitError(root [32]byte, missing [][]byte) error {
+func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) error {
 	missStr := make([]string, len(missing))
 	for k := range missing {
 		missStr = append(missStr, fmt.Sprintf("%#x", k))
 	}
 	return errors.Wrapf(errMissingBlobsForBlockCommitments,
-		"block root %#x missing %d commitments %s", root, len(missing), strings.Join(missStr, ","))
+		"block root %#x at slot %d missing %d commitments %s", root, slot, len(missing), strings.Join(missStr, ","))
 }
 
 // fetchBlobsFromPeer fetches blocks from a single randomly selected peer.
