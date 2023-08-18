@@ -660,7 +660,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	case "head":
 		root, err = bs.ChainInfoFetcher.HeadRoot(ctx)
 		if err != nil {
-			http2.HandleError(w, "Could not retrieve head block: "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, "Could not retrieve head root: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if root == nil {
