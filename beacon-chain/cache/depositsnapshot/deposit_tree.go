@@ -51,9 +51,6 @@ func NewDepositTree() *DepositTree {
 
 // GetSnapshot returns a deposit tree snapshot.
 func (d *DepositTree) GetSnapshot() (DepositTreeSnapshot, error) {
-	if d.finalizedExecutionBlock == (executionBlock{}) {
-		return DepositTreeSnapshot{}, ErrEmptyExecutionBlock
-	}
 	var finalized [][32]byte
 	depositCount, finalized := d.tree.GetFinalized(finalized)
 	return fromTreeParts(finalized, depositCount, d.finalizedExecutionBlock)
