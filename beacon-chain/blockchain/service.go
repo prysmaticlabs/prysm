@@ -61,6 +61,7 @@ type Service struct {
 	clockSetter          startup.ClockSetter
 	clockWaiter          startup.ClockWaiter
 	syncComplete         chan struct{}
+	blobNotifier         *blobNotifier
 }
 
 // config options for the service.
@@ -89,6 +90,16 @@ type config struct {
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
 
+type blobNotifierChan struct {
+	indices map[uint64]struct{}
+	channel chan struct{}
+}
+
+type blobNotifier struct {
+	sync.RWMutex
+	chanForRoot map[[32]byte]*blobNotifierChan
+}
+
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
@@ -97,12 +108,16 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		return nil, errors.Wrap(err, "could not initialize go-kzg context")
 	}
 	ctx, cancel := context.WithCancel(ctx)
+	bn := &blobNotifier{
+		chanForRoot: make(map[[32]byte]*blobNotifierChan),
+	}
 	srv := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
+		blobNotifier:         bn,
 		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
 	}
 	for _, opt := range opts {
