@@ -271,8 +271,8 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
-// GetBlockV2BlindedSignRequest maps the request for signing types
-// Supports Bellatrix and Capella
+// GetBlockV2BlindedSignRequest maps the request for signing types (GetBlockV2 id defined by the remote signer interface and not the beacon APIs)
+// Supports Bellatrix, Capella, Deneb
 func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BlindedSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
@@ -337,6 +337,11 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 			return nil, err
 		}
 		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		version = "DENEB"
+	case *validatorpb.SignRequest_BlockDeneb:
+		version = "DENEB"
+
 	default:
 		return nil, errors.New("invalid sign request - invalid object type")
 	}
@@ -384,5 +389,31 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 			Timestamp:    fmt.Sprint(registration.Timestamp),
 			Pubkey:       registration.Pubkey,
 		},
+	}, nil
+}
+
+func GetBlobSignRequest(request *validatorpb.SignRequest) (*BlobSidecarSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	var blobSidecar *BlobSidecar
+	switch request.Object.(type) {
+	case *validatorpb.SignRequest_Blob:
+		blob, ok := request.Object.(*validatorpb.SignRequest_Blob)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blob sidecar")
+		}
+		if blob == nil {
+			return nil, errors.New("invalid sign request: blob sidecar is nil")
+		}
+		blob.Blob.HashTreeRoot()
+	case *validatorpb.SignRequest_BlindedBlob:
+	default:
+		return nil, errors.New("invalid sign request - invalid object type")
+	}
+
+	return &BlobSidecarSignRequest{
+		Type:        "BLOB_SIDECAR",
+		BlobSidecar: blobSidecar,
 	}, nil
 }

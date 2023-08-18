@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -268,6 +269,22 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		validatorRegistrationSignRequestsTotal.Inc()
 		return json.Marshal(validatorRegistrationRequest)
+	case *validatorpb.SignRequest_Blob:
+		version = "DENEB"
+		blobSidecar, ok := request.Object.(*validatorpb.SignRequest_Blob)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blob sidecar")
+		}
+		if blobSidecar == nil {
+			return nil, errors.New("invalid sign request: blob sidecar is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockCapella.BlockCapella)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlob:
+		version = "DENEB"
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
