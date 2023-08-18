@@ -137,7 +137,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
 			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
-			log.WithError(err).Error("could not broadcast attestation")
+			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
 		if corehelpers.IsAggregated(att) {
