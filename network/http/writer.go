@@ -15,10 +15,18 @@ const (
 	octetStreamMediaType = "application/octet-stream"
 )
 
+type HasStatusCode interface {
+	StatusCode() int
+}
+
 // DefaultErrorJson is a JSON representation of a simple error value, containing only a message and an error code.
 type DefaultErrorJson struct {
 	Message string `json:"message"`
 	Code    int    `json:"code"`
+}
+
+func (e *DefaultErrorJson) StatusCode() int {
+	return e.Code
 }
 
 // WriteJson writes the response message in JSON format.
@@ -41,15 +49,15 @@ func WriteSsz(w http.ResponseWriter, respSsz []byte, fileName string) {
 }
 
 // WriteError writes the error by manipulating headers and the body of the final response.
-func WriteError(w http.ResponseWriter, errJson *DefaultErrorJson) {
+func WriteError(w http.ResponseWriter, errJson HasStatusCode) {
 	j, err := json.Marshal(errJson)
 	if err != nil {
 		log.WithError(err).Error("Could not marshal error message")
 		return
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(j)))
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(errJson.Code)
+	w.Header().Set("Content-Type", jsonMediaType)
+	w.WriteHeader(errJson.StatusCode())
 	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(j))); err != nil {
 		log.WithError(err).Error("Could not write error message")
 	}

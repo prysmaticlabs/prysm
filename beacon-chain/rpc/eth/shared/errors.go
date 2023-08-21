@@ -26,3 +26,20 @@ func NewDecodeError(err error, field string) *DecodeError {
 func (e *DecodeError) Error() string {
 	return fmt.Sprintf("could not decode %s: %s", strings.Join(e.path, "."), e.err.Error())
 }
+
+// IndexedVerificationFailureError wraps a collection of verification failures.
+type IndexedVerificationFailureError struct {
+	Message  string                        `json:"message"`
+	Code     int                           `json:"code"`
+	Failures []*IndexedVerificationFailure `json:"failures"`
+}
+
+func (e *IndexedVerificationFailureError) StatusCode() int {
+	return e.Code
+}
+
+// IndexedVerificationFailure represents an issue when verifying a single indexed object e.g. an item in an array.
+type IndexedVerificationFailure struct {
+	Index   int    `json:"index"`
+	Message string `json:"message"`
+}

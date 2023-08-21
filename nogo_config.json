@@ -94,7 +94,8 @@
   },
   "logruswitherror": {
     "exclude_files": {
-      "external/.*": "Third party code"
+      "external/.*": "Third party code",
+      ".*/testmain.go": "Generated/test code"
     }
   },
   "cryptorand": {

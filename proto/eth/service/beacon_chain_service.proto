@@ -308,27 +308,6 @@ service BeaconChain {
 
   // Beacon pools API related endpoints.
 
-  // ListPoolAttestations retrieves attestations known by the node but
-  // not necessarily incorporated into any block.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getPoolAttestations
-  rpc ListPoolAttestations(v1.AttestationsPoolRequest) returns (v1.AttestationsPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/attestations"
-    };
-  }
-
-  // SubmitAttestations submits Attestation objects to node. If attestation passes all validation
-  // constraints, node MUST publish attestation on appropriate subnet.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolAttestations
-  rpc SubmitAttestations(v1.SubmitAttestationsRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/attestations"
-      body: "*"
-    };
-  }
-
   // ListPoolAttesterSlashings retrieves attester slashings known by the node but
   // not necessarily incorporated into any block.
   //
