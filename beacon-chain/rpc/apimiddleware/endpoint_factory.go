@@ -64,7 +64,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/validator/blocks/{slot}",
 		"/eth/v1/validator/blinded_blocks/{slot}",
 		"/eth/v1/validator/prepare_beacon_proposer",
-		"/eth/v1/validator/register_validator",
 		"/eth/v1/validator/liveness/{epoch}",
 	}
 }
@@ -245,11 +244,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.PostRequest = &FeeRecipientsRequestJSON{}
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapFeeRecipientsArray,
-		}
-	case "/eth/v1/validator/register_validator":
-		endpoint.PostRequest = &SignedValidatorRegistrationsRequestJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapSignedValidatorRegistrationsArray,
 		}
 	case "/eth/v1/validator/liveness/{epoch}":
 		endpoint.PostRequest = &ValidatorIndicesJson{}

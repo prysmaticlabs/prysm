@@ -9,9 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
@@ -746,38 +744,6 @@ func (vs *Server) PrepareBeaconProposer(
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
-}
-
-// SubmitValidatorRegistration submits validator registrations.
-func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
-	defer span.End()
-
-	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
-	}
-	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
-	for i, registration := range reg.Registrations {
-		message := reg.Registrations[i].Message
-		registrations = append(registrations, &ethpbalpha.SignedValidatorRegistrationV1{
-			Message: &ethpbalpha.ValidatorRegistrationV1{
-				FeeRecipient: message.FeeRecipient,
-				GasLimit:     message.GasLimit,
-				Timestamp:    message.Timestamp,
-				Pubkey:       message.Pubkey,
-			},
-			Signature: registration.Signature,
-		})
-	}
-	if len(registrations) == 0 {
-		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
-	}
-
-	if err := vs.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
-	}
-
-	return &empty.Empty{}, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.

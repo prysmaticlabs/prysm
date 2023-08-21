@@ -970,22 +970,6 @@ type SyncCommitteeContributionJson struct {
 	Signature         string `json:"signature" hex:"true"`
 }
 
-type ValidatorRegistrationJson struct {
-	FeeRecipient string `json:"fee_recipient" hex:"true"`
-	GasLimit     string `json:"gas_limit"`
-	Timestamp    string `json:"timestamp"`
-	Pubkey       string `json:"pubkey" hex:"true"`
-}
-
-type SignedValidatorRegistrationJson struct {
-	Message   *ValidatorRegistrationJson `json:"message"`
-	Signature string                     `json:"signature" hex:"true"`
-}
-
-type SignedValidatorRegistrationsRequestJson struct {
-	Registrations []*SignedValidatorRegistrationJson `json:"registrations"`
-}
-
 type ForkChoiceNodeJson struct {
 	Slot                     string `json:"slot"`
 	BlockRoot                string `json:"block_root" hex:"true"`
