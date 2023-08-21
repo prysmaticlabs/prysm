@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
