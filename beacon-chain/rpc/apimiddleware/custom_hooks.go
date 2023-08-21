@@ -63,51 +63,6 @@ func wrapFeeRecipientsArray(
 	return true, nil
 }
 
-// https://ethereum.github.io/beacon-APIs/#/Validator/registerValidator expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct.
-func wrapSignedValidatorRegistrationsArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SignedValidatorRegistrationsRequestJson); !ok {
-		return true, nil
-	}
-	registrations := make([]*SignedValidatorRegistrationJson, 0)
-	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-	}
-	j := &SignedValidatorRegistrationsRequestJson{Registrations: registrations}
-	b, err := json.Marshal(j)
-	if err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-	}
-	req.Body = io.NopCloser(bytes.NewReader(b))
-	return true, nil
-}
-
-// https://ethereum.github.io/beacon-apis/#/Beacon/submitPoolAttestations expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapAttestationsArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitAttestationRequestJson); ok {
-		atts := make([]*AttestationJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&atts); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &SubmitAttestationRequestJson{Data: atts}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
-}
-
 // Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array of validator indices.
 // We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
 func wrapValidatorIndicesArray(
@@ -121,50 +76,6 @@ func wrapValidatorIndicesArray(
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
 		}
 		j := &ValidatorIndicesJson{Index: indices}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
-}
-
-// https://ethereum.github.io/beacon-apis/#/Validator/prepareBeaconCommitteeSubnet expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapBeaconCommitteeSubscriptionsArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitBeaconCommitteeSubscriptionsRequestJson); ok {
-		data := make([]*BeaconCommitteeSubscribeJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &SubmitBeaconCommitteeSubscriptionsRequestJson{Data: data}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
-}
-
-// https://ethereum.github.io/beacon-APIs/#/Validator/prepareSyncCommitteeSubnets expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapSyncCommitteeSubscriptionsArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitSyncCommitteeSubscriptionRequestJson); ok {
-		data := make([]*SyncCommitteeSubscriptionJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &SubmitSyncCommitteeSubscriptionRequestJson{Data: data}
 		b, err := json.Marshal(j)
 		if err != nil {
 			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")

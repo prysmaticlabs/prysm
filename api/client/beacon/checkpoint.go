@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	base "github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -109,8 +110,8 @@ func DownloadFinalizedData(ctx context.Context, client *Client) (*OriginData, er
 	log.
 		WithField("block_slot", b.Block().Slot()).
 		WithField("state_slot", s.Slot()).
-		WithField("state_root", sr).
-		WithField("block_root", br).
+		WithField("state_root", hexutil.Encode(sr[:])).
+		WithField("block_root", hexutil.Encode(br[:])).
 		Info("Downloaded checkpoint sync state and block.")
 	return &OriginData{
 		st: s,

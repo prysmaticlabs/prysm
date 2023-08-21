@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -30,7 +31,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
@@ -71,7 +72,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := rpcmiddleware.ProduceAttestationDataResponseJson{}
+	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
