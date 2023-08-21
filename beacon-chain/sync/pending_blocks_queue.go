@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -160,6 +161,11 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
+			if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot[:]); err != nil {
+				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not request pending blobs")
+				continue
+			}
+
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
 					r := blockchain.InvalidBlockRoot(err)
@@ -206,6 +212,45 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	}
 
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
+}
+
+func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnlyBeaconBlock, br []byte) error {
+	// Block before deneb has no blob.
+	if b.Version() < version.Deneb {
+		return nil
+	}
+	c, err := b.Body().BlobKzgCommitments()
+	if err != nil {
+		return err
+	}
+	// No op if the block has no blob commitments.
+	if len(c) == 0 {
+		return nil
+	}
+	// Choose the best peer to request blob sidecars.
+	_, peers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	if len(peers) == 0 {
+		return errors.New("no peers to request blob sidecars")
+	}
+	// Build request for blob sidecars.
+	bid := make([]*eth.BlobIdentifier, len(c))
+	for i := range c {
+		bid[i] = &eth.BlobIdentifier{Index: uint64(i), BlockRoot: br}
+	}
+
+	ctxByte, err := ContextByteVersionsForValRoot(s.cfg.chain.GenesisValidatorsRoot())
+	if err != nil {
+		return err
+	}
+	req := p2ptypes.BlobSidecarsByRootReq(bid)
+
+	// Send request to a random peer.
+	i := rand.NewGenerator().Int() % len(peers)
+	blobSidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peers[i], ctxByte, &req)
+	if err != nil {
+		return err
+	}
+	return s.cfg.beaconDB.SaveBlobSidecar(ctx, blobSidecars)
 }
 
 func (s *Service) checkIfBlockIsBad(
