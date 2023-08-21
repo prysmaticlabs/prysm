@@ -11,6 +11,7 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	v1 "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -483,7 +484,11 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningSlot: 0,
 		}
 	case "BLINDED_BLOB_SIDECAR":
-		blobRoot, _ := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
 			SigningRoot:     make([]byte, fieldparams.RootLength),
@@ -666,7 +671,11 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 
 // MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
 func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
-	blobRoot, _ := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
 	return &v1.BlobSidecarSignRequest{
 		Type:        "BLOB_SIDECAR",
 		SigningRoot: make([]byte, fieldparams.RootLength),
