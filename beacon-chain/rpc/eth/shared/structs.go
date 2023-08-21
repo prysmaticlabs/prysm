@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -71,6 +72,67 @@ type BeaconCommitteeSubscription struct {
 	CommitteesAtSlot string `json:"committees_at_slot" validate:"required,number,gte=0"`
 	Slot             string `json:"slot" validate:"required,number,gte=0"`
 	IsAggregator     bool   `json:"is_aggregator"`
+}
+
+type ValidatorRegistration struct {
+	FeeRecipient string `json:"fee_recipient" validate:"required,hexadecimal"`
+	GasLimit     string `json:"gas_limit" validate:"required,number,gte=0"`
+	Timestamp    string `json:"timestamp" validate:"required,number,gte=0"`
+	Pubkey       string `json:"pubkey" validate:"required,hexadecimal"`
+}
+
+type SignedValidatorRegistration struct {
+	Message   *ValidatorRegistration `json:"message" validate:"required,dive"`
+	Signature string                 `json:"signature" validate:"required,hexadecimal"`
+}
+
+func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
+	msg, err := s.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+	sig, err := hexutil.Decode(s.Signature)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	if len(sig) != fieldparams.BLSSignatureLength {
+		return nil, fmt.Errorf("Signature length was %d when expecting length %d", len(sig), fieldparams.BLSSignatureLength)
+	}
+	return &eth.SignedValidatorRegistrationV1{
+		Message:   msg,
+		Signature: sig,
+	}, nil
+}
+
+func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
+	feeRecipient, err := hexutil.Decode(s.FeeRecipient)
+	if err != nil {
+		return nil, NewDecodeError(err, "FeeRecipient")
+	}
+	if len(feeRecipient) != fieldparams.FeeRecipientLength {
+		return nil, fmt.Errorf("feeRecipient length was %d when expecting length %d", len(feeRecipient), fieldparams.FeeRecipientLength)
+	}
+	pubKey, err := hexutil.Decode(s.Pubkey)
+	if err != nil {
+		return nil, NewDecodeError(err, "FeeRecipient")
+	}
+	if len(pubKey) != fieldparams.BLSPubkeyLength {
+		return nil, fmt.Errorf("FeeRecipient length was %d when expecting length %d", len(pubKey), fieldparams.BLSPubkeyLength)
+	}
+	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "GasLimit")
+	}
+	timestamp, err := strconv.ParseUint(s.Timestamp, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Timestamp")
+	}
+	return &eth.ValidatorRegistrationV1{
+		FeeRecipient: feeRecipient,
+		GasLimit:     gasLimit,
+		Timestamp:    timestamp,
+		Pubkey:       pubKey,
+	}, nil
 }
 
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
