@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -203,6 +202,26 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		}
 		blindedBlockCapellaSignRequestsTotal.Inc()
 		return json.Marshal(blindedBlockv2CapellaSignRequest)
+	case *validatorpb.SignRequest_BlockDeneb:
+		blockv2DenebSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blockv2DenebSignRequest); err != nil {
+			return nil, err
+		}
+		blockDenebSignRequestsTotal.Inc()
+		return json.Marshal(blockv2DenebSignRequest)
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		blindedBlockv2DenebSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blindedBlockv2DenebSignRequest); err != nil {
+			return nil, err
+		}
+		blindedBlockDenebSignRequestsTotal.Inc()
+		return json.Marshal(blindedBlockv2DenebSignRequest)
 	// We do not support "DEPOSIT" type.
 	/*
 		case *validatorpb.:
@@ -270,21 +289,25 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		validatorRegistrationSignRequestsTotal.Inc()
 		return json.Marshal(validatorRegistrationRequest)
 	case *validatorpb.SignRequest_Blob:
-		version = "DENEB"
-		blobSidecar, ok := request.Object.(*validatorpb.SignRequest_Blob)
-		if !ok {
-			return nil, errors.New("failed to cast request object to blob sidecar")
-		}
-		if blobSidecar == nil {
-			return nil, errors.New("invalid sign request: blob sidecar is nil")
-		}
-		beaconBlock, err := blocks.NewBeaconBlock(blockCapella.BlockCapella)
+		blobRequest, err := web3signerv1.GetBlobSignRequest(request)
 		if err != nil {
 			return nil, err
 		}
-		b = beaconBlock
+		if err = validator.StructCtx(ctx, blobRequest); err != nil {
+			return nil, err
+		}
+		blobSignRequestsTotal.Inc()
+		return json.Marshal(blobRequest)
 	case *validatorpb.SignRequest_BlindedBlob:
-		version = "DENEB"
+		blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request)
+		if err != nil {
+			return nil, err
+		}
+		if err = validator.StructCtx(ctx, blindedBlobRequest); err != nil {
+			return nil, err
+		}
+		blindedBlobSignRequestsTotal.Inc()
+		return json.Marshal(blindedBlobRequest)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}

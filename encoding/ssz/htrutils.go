@@ -96,7 +96,7 @@ func SlashingsRoot(slashings []uint64) ([32]byte, error) {
 func TransactionsRoot(txs [][]byte) ([32]byte, error) {
 	txRoots := make([][32]byte, 0)
 	for i := 0; i < len(txs); i++ {
-		rt, err := transactionRoot(txs[i])
+		rt, err := ByteSliceRoot(txs[i]) // getting the transaction root here
 		if err != nil {
 			return [32]byte{}, err
 		}
@@ -141,8 +141,10 @@ func WithdrawalSliceRoot(withdrawals []*enginev1.Withdrawal, limit uint64) ([32]
 	return MixInLength(bytesRoot, bytesRootBufRoot), nil
 }
 
-func transactionRoot(tx []byte) ([32]byte, error) {
-	chunkedRoots, err := PackByChunk([][]byte{tx})
+// ByteSliceRoot is a helper func to merkleize an arbitrary List[Byte, N]
+// this func runs Chunkify + MerkleizeVector
+func ByteSliceRoot(slice []byte) ([32]byte, error) {
+	chunkedRoots, err := PackByChunk([][]byte{slice})
 	if err != nil {
 		return [32]byte{}, err
 	}
@@ -153,7 +155,7 @@ func transactionRoot(tx []byte) ([32]byte, error) {
 		return [32]byte{}, errors.Wrap(err, "could not compute merkleization")
 	}
 	bytesRootBuf := new(bytes.Buffer)
-	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(tx))); err != nil {
+	if err := binary.Write(bytesRootBuf, binary.LittleEndian, uint64(len(slice))); err != nil {
 		return [32]byte{}, errors.Wrap(err, "could not marshal length")
 	}
 	bytesRootBufRoot := make([]byte, 32)

@@ -107,8 +107,9 @@ type ValidatorRegistrationSignRequest struct {
 
 // BlobSidecarSignRequest a request object for web3signer sign api.
 type BlobSidecarSignRequest struct {
-	Type        string       `json:"type" validate:"required"`
-	BlobSidecar *BlobSidecar `json:"blob_sidecar" validate:"required,dive"`
+	Type        string        `json:"type" validate:"required"`
+	SigningRoot hexutil.Bytes `json:"signingRoot"`
+	BlobSidecar *BlobSidecar  `json:"blob_sidecar" validate:"required,dive"`
 }
 
 ////////////////////////////////////////////////////////////////////////////////

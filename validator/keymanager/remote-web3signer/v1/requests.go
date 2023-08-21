@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -415,6 +416,7 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 	}, nil
 }
 
+// GetBlobSignRequest maps the request for signing type BLOB_SIDECAR
 func GetBlobSignRequest(request *validatorpb.SignRequest) (*BlobSidecarSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
@@ -426,17 +428,48 @@ func GetBlobSignRequest(request *validatorpb.SignRequest) (*BlobSidecarSignReque
 		if !ok {
 			return nil, errors.New("failed to cast request object to blob sidecar")
 		}
-		if blob == nil {
+		if blob == nil || blob.Blob == nil {
 			return nil, errors.New("invalid sign request: blob sidecar is nil")
 		}
-		blob.Blob.HashTreeRoot()
+		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to get blob root from ssz roots")
+		}
+		blobSidecar = &BlobSidecar{
+			BlockRoot:       blob.Blob.BlockRoot,
+			Index:           fmt.Sprint(blob.Blob.Index),
+			Slot:            fmt.Sprint(blob.Blob.Slot),
+			BlockParentRoot: blob.Blob.BlockParentRoot,
+			ProposerIndex:   fmt.Sprint(blob.Blob.ProposerIndex),
+			BlobRoot:        blobRoot[:],
+			KzgCommitment:   blob.Blob.KzgCommitment,
+			KzgProof:        blob.Blob.KzgProof,
+		}
 	case *validatorpb.SignRequest_BlindedBlob:
+		blindedBlob, ok := request.Object.(*validatorpb.SignRequest_BlindedBlob)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded blob sidecar")
+		}
+		if blindedBlob == nil || blindedBlob.BlindedBlob == nil {
+			return nil, errors.New("invalid sign request: blinded blob sidecar is nil")
+		}
+		blobSidecar = &BlobSidecar{
+			BlockRoot:       blindedBlob.BlindedBlob.BlockRoot,
+			Index:           fmt.Sprint(blindedBlob.BlindedBlob.Index),
+			Slot:            fmt.Sprint(blindedBlob.BlindedBlob.Slot),
+			BlockParentRoot: blindedBlob.BlindedBlob.BlockParentRoot,
+			ProposerIndex:   fmt.Sprint(blindedBlob.BlindedBlob.ProposerIndex),
+			BlobRoot:        blindedBlob.BlindedBlob.BlobRoot,
+			KzgCommitment:   blindedBlob.BlindedBlob.KzgCommitment,
+			KzgProof:        blindedBlob.BlindedBlob.KzgProof,
+		}
 	default:
 		return nil, errors.New("invalid sign request - invalid object type")
 	}
 
 	return &BlobSidecarSignRequest{
 		Type:        "BLOB_SIDECAR",
+		SigningRoot: request.SigningRoot,
 		BlobSidecar: blobSidecar,
 	}, nil
 }
