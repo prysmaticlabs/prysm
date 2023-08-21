@@ -16,8 +16,11 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -231,19 +234,12 @@ func (r *testRunner) testTxGeneration(ctx context.Context, g *errgroup.Group, ke
 	})
 }
 
-func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration) error {
+func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Duration, check, ref *grpc.ClientConn) error {
 	start := time.Now()
 	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
 	defer cancel()
-	httpEndpoints := helpers.BeaconAPIHostnames(e2e.TestParams.BeaconNodeCount)
-	checkClient, err := beacon.NewClient(httpEndpoints[0])
-	if err != nil {
-		return fmt.Errorf("could not initialize client for %s: %w", httpEndpoints[0], err)
-	}
-	refClient, err := beacon.NewClient(httpEndpoints[1])
-	if err != nil {
-		return fmt.Errorf("could not initialize client for %s: %w", httpEndpoints[1], err)
-	}
+	checkClient := service.NewBeaconChainClient(check)
+	refClient := service.NewBeaconChainClient(ref)
 	for {
 		select {
 		case <-dctx.Done():
@@ -251,7 +247,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 			elapsed := time.Since(start)
 			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
 		default:
-			cResp, err := checkClient.GetBlockRoot(ctx, "head")
+			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
 			if err != nil {
 				errStatus, ok := status.FromError(err)
 				// in the happy path we expect NotFound results until the node has synced
@@ -260,11 +256,11 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 				}
 				return fmt.Errorf("error requesting head from 'check' beacon node")
 			}
-			rResp, err := refClient.GetBlockRoot(ctx, "head")
+			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
 			if err != nil {
 				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
 			}
-			if cResp == rResp {
+			if bytesutil.ToBytes32(cResp.Data.Root) == bytesutil.ToBytes32(rResp.Data.Root) {
 				return nil
 			}
 		}
@@ -321,7 +317,7 @@ func (r *testRunner) testCheckpointSync(ctx context.Context, g *errgroup.Group, 
 
 	// this is so that the syncEvaluators checks can run on the checkpoint sync'd node
 	conns = append(conns, c)
-	err = r.waitForMatchingHead(ctx, matchTimeout)
+	err = r.waitForMatchingHead(ctx, matchTimeout, c, conns[0])
 	if err != nil {
 		return err
 	}
