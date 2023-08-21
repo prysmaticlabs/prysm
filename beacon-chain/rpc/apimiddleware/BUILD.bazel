@@ -16,7 +16,7 @@ go_library(
         "//api/gateway/apimiddleware:go_default_library",
         "//api/grpc:go_default_library",
         "//beacon-chain/rpc/eth/events:go_default_library",
-        "//beacon-chain/rpc/eth/helpers:go_default_library",
+        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/eth/v2:go_default_library",

@@ -48,8 +48,9 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(context.Background(), state, 0)
-	require.NoError(t, err)
+	newState, epoch, err := InitiateValidatorExit(context.Background(), state, 0, 199, 1)
+	require.ErrorIs(t, err, ValidatorAlreadyExitedErr)
+	require.Equal(t, exitEpoch, epoch)
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
 	assert.Equal(t, exitEpoch, v.ExitEpoch, "Already exited")
@@ -66,8 +67,9 @@ func TestInitiateValidatorExit_ProperExit(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(context.Background(), state, idx)
+	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 1)
 	require.NoError(t, err)
+	require.Equal(t, exitedEpoch+2, epoch)
 	v, err := newState.ValidatorAtIndex(idx)
 	require.NoError(t, err)
 	assert.Equal(t, exitedEpoch+2, v.ExitEpoch, "Exit epoch was not the highest")
@@ -85,8 +87,9 @@ func TestInitiateValidatorExit_ChurnOverflow(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	newState, err := InitiateValidatorExit(context.Background(), state, idx)
+	newState, epoch, err := InitiateValidatorExit(context.Background(), state, idx, exitedEpoch+2, 4)
 	require.NoError(t, err)
+	require.Equal(t, exitedEpoch+3, epoch)
 
 	// Because of exit queue overflow,
 	// validator who init exited has to wait one more epoch.
@@ -106,7 +109,7 @@ func TestInitiateValidatorExit_WithdrawalOverflows(t *testing.T) {
 	}}
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
-	_, err = InitiateValidatorExit(context.Background(), state, 1)
+	_, _, err = InitiateValidatorExit(context.Background(), state, 1, params.BeaconConfig().FarFutureEpoch-1, 1)
 	require.ErrorContains(t, "addition overflows", err)
 }
 
@@ -335,5 +338,80 @@ func TestExitedValidatorIndices(t *testing.T) {
 		exitedIndices, err := ExitedValidatorIndices(0, tt.state.Validators, activeCount)
 		require.NoError(t, err)
 		assert.DeepEqual(t, tt.wanted, exitedIndices)
+	}
+}
+
+func TestValidatorMaxExitEpochAndChurn(t *testing.T) {
+	tests := []struct {
+		state       *ethpb.BeaconState
+		wantedEpoch primitives.Epoch
+		wantedChurn uint64
+	}{
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: 10,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 0,
+			wantedChurn: 3,
+		},
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 0,
+			wantedChurn: 0,
+		},
+		{
+			state: &ethpb.BeaconState{
+				Validators: []*ethpb.Validator{
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         1,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         0,
+						WithdrawableEpoch: 10,
+					},
+					{
+						EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance,
+						ExitEpoch:         1,
+						WithdrawableEpoch: params.BeaconConfig().MinValidatorWithdrawabilityDelay,
+					},
+				},
+			},
+			wantedEpoch: 1,
+			wantedChurn: 2,
+		},
+	}
+	for _, tt := range tests {
+		s, err := state_native.InitializeFromProtoPhase0(tt.state)
+		require.NoError(t, err)
+		epoch, churn := ValidatorsMaxExitEpochAndChurn(s)
+		require.Equal(t, tt.wantedEpoch, epoch)
+		require.Equal(t, tt.wantedChurn, churn)
 	}
 }

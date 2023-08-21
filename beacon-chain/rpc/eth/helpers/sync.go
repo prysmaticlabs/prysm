@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -38,8 +39,8 @@ func ValidateSyncGRPC(
 		return status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
 	}
 
-	syncDetailsContainer := &SyncDetailsContainer{
-		Data: &SyncDetailsJson{
+	syncDetailsContainer := &shared.SyncDetailsContainer{
+		Data: &shared.SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,
@@ -56,35 +57,6 @@ func ValidateSyncGRPC(
 		)
 	}
 	return status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
-}
-
-// ValidateSyncHTTP checks whether the node is currently syncing and returns sync information.
-// It returns information whether the node is currently syncing along with sync details.
-func ValidateSyncHTTP(
-	ctx context.Context,
-	syncChecker sync.Checker,
-	headFetcher blockchain.HeadFetcher,
-	timeFetcher blockchain.TimeFetcher,
-	optimisticModeFetcher blockchain.OptimisticModeFetcher,
-) (bool, *SyncDetailsContainer, error) {
-	if !syncChecker.Syncing() {
-		return false, nil, nil
-	}
-
-	headSlot := headFetcher.HeadSlot()
-	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return true, nil, errors.Wrap(err, "could not check optimistic status")
-	}
-	syncDetails := &SyncDetailsContainer{
-		Data: &SyncDetailsJson{
-			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
-			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
-			IsSyncing:    true,
-			IsOptimistic: isOptimistic,
-		},
-	}
-	return true, syncDetails, nil
 }
 
 // IsOptimistic checks whether the beacon state's block is optimistic.
@@ -215,18 +187,4 @@ func isStateRootOptimistic(
 	}
 	// No block matching requested state root, return true.
 	return true, nil
-}
-
-// SyncDetailsJson contains information about node sync status.
-type SyncDetailsJson struct {
-	HeadSlot     string `json:"head_slot"`
-	SyncDistance string `json:"sync_distance"`
-	IsSyncing    bool   `json:"is_syncing"`
-	IsOptimistic bool   `json:"is_optimistic"`
-	ElOffline    bool   `json:"el_offline"`
-}
-
-// SyncDetailsContainer is a wrapper for Data.
-type SyncDetailsContainer struct {
-	Data *SyncDetailsJson `json:"data"`
 }
