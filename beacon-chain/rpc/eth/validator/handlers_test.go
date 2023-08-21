@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -1474,6 +1475,58 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 	})
 }
 
+func TestServer_RegisterValidator(t *testing.T) {
+
+	tests := []struct {
+		name    string
+		request string
+		code    int
+		wantErr string
+	}{
+		{
+			name:    "Happy Path",
+			request: registrations,
+			code:    http.StatusOK,
+			wantErr: "",
+		},
+		{
+			name:    "Empty Request",
+			request: "",
+			code:    http.StatusBadRequest,
+			wantErr: "No data submitted",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var body bytes.Buffer
+			_, err := body.WriteString(tt.request)
+			require.NoError(t, err)
+			url := "http://example.com/eth/v1/validator/register_validator"
+			request := httptest.NewRequest(http.MethodPost, url, &body)
+			writer := httptest.NewRecorder()
+			db := dbutil.SetupDB(t)
+
+			server := Server{
+				CoreService: &core.Service{
+					HeadFetcher: &mockChain.ChainService{
+						SyncCommitteeIndices: []primitives.CommitteeIndex{0},
+					},
+				},
+				BlockBuilder: &builderTest.MockBuilderService{
+					HasConfigured: true,
+				},
+				BeaconDB: db,
+			}
+
+			server.RegisterValidator(writer, request)
+			require.Equal(t, tt.code, writer.Code)
+			if tt.wantErr != "" {
+				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
+			}
+		})
+	}
+}
+
 var (
 	singleContribution = `[
   {
@@ -1769,4 +1822,21 @@ var (
     "is_aggregator": false
   }
 ]`
+	registrations = `[{
+    "message": {
+      "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+      "gas_limit": "1",
+      "timestamp": "1",
+      "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  },{
+    "message": {
+      "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+      "gas_limit": "1",
+      "timestamp": "1",
+      "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }]`
 )
