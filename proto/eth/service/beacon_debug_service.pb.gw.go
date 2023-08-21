@@ -18,6 +18,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
 	github_com_prysmaticlabs_prysm_v4_consensus_types_primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"google.golang.org/grpc"
