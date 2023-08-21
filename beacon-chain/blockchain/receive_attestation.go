@@ -62,7 +62,7 @@ func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestat
 		return err
 	}
 	if !bytes.Equal(a.Data.Target.Root, r) {
-		return errors.New("FFG and LMD votes are not consistent")
+		return fmt.Errorf("FFG and LMD votes are not consistent, BeaconBlock Root: %#x, Target Root %#x, Canonical Target Root: %#x", a.Data.BeaconBlockRoot, a.Data.Target.Root, r)
 	}
 	return nil
 }
