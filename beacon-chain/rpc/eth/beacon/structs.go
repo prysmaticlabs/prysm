@@ -14,6 +14,14 @@ import (
 	"github.com/wealdtech/go-bytesutil"
 )
 
+type BlockRootResponse struct {
+	Data *struct {
+		Root string `json:"root"`
+	} `json:"data"`
+	ExecutionOptimistic bool `json:"execution_optimistic"`
+	Finalized           bool `json:"finalized"`
+}
+
 type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }
