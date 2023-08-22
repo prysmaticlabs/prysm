@@ -14,10 +14,10 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -225,27 +225,31 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	epochStart, err := slots.EpochStart(exit.Exit.Epoch)
 	if err != nil {
-		http2.HandleError(w,, "Could not get epoch start: "+ err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not get epoch start: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, epochStart)
 	if err != nil {
-		http2.HandleError(w, "Could not process slots: "+ err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		http2.HandleError(w, "Could not get validator: "+ err.Error(), http.StatusInternalServerError)
+		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
+			http2.HandleError(w, "Could not get exiting validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+			return
+		}
+		http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if err = blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorsRoot()); err != nil {
-		http2.HandleError(w, "Invalid exit: "+ err.Error(), http.StatusBadRequest)
+		http2.HandleError(w, "Invalid exit: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	s.VoluntaryExitsPool.InsertVoluntaryExit(exit)
 	if err = s.Broadcaster.Broadcast(ctx, exit); err != nil {
-		http2.HandleError(w, "Could not broadcast exit: "+ err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not broadcast exit: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
