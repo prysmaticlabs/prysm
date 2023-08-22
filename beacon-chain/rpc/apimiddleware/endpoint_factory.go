@@ -32,7 +32,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/blinded_blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
 		"/eth/v2/beacon/blocks/{block_id}",
-		"/eth/v1/beacon/blocks/{block_id}/root",
 		"/eth/v1/beacon/blocks/{block_id}/attestations",
 		"/eth/v1/beacon/blinded_blocks/{block_id}",
 		"/eth/v1/beacon/pool/attester_slashings",
@@ -126,8 +125,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreSerializeMiddlewareResponseIntoJson: serializeV2Block,
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
-	case "/eth/v1/beacon/blocks/{block_id}/root":
-		endpoint.GetResponse = &BlockRootResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}/attestations":
 		endpoint.GetResponse = &BlockAttestationsResponseJson{}
 	case "/eth/v1/beacon/blinded_blocks/{block_id}":

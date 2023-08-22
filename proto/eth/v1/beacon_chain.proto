@@ -168,17 +168,6 @@ message BlockAttestationsResponse {
     bool finalized  = 3;
 }
 
-message BlockRootContainer {
-    // 32 byte merkle tree root of the ssz encoded block.
-    bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-}
-
-message BlockRootResponse {
-    BlockRootContainer data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
 message BlockHeadersRequest {
     // Beacon chain slot of the requested block.
     optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];

@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes/empty"
@@ -18,7 +17,6 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
@@ -511,93 +509,6 @@ func (bs *Server) GetBlockSSZV2(ctx context.Context, req *ethpbv2.BlockRequestV2
 	}
 
 	return nil, status.Errorf(codes.Internal, "Unknown block type %T", blk)
-}
-
-// GetBlockRoot retrieves hashTreeRoot of ReadOnlyBeaconBlock/BeaconBlockHeader.
-func (bs *Server) GetBlockRoot(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockRootResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockRoot")
-	defer span.End()
-
-	var root []byte
-	var err error
-	switch string(req.BlockId) {
-	case "head":
-		root, err = bs.ChainInfoFetcher.HeadRoot(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve head block: %v", err)
-		}
-		if root == nil {
-			return nil, status.Errorf(codes.NotFound, "No head root was found")
-		}
-	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
-		root = finalized.Root
-	case "genesis":
-		blk, err := bs.BeaconDB.GenesisBlock(ctx)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for genesis slot: %v", err)
-		}
-		if err := blocks.BeaconBlockIsNil(blk); err != nil {
-			return nil, status.Errorf(codes.NotFound, "Could not find genesis block: %v", err)
-		}
-		blkRoot, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not hash genesis block")
-		}
-		root = blkRoot[:]
-	default:
-		if len(req.BlockId) == 32 {
-			blk, err := bs.BeaconDB.Block(ctx, bytesutil.ToBytes32(req.BlockId))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve block for block root %#x: %v", req.BlockId, err)
-			}
-			if err := blocks.BeaconBlockIsNil(blk); err != nil {
-				return nil, status.Errorf(codes.NotFound, "Could not find block: %v", err)
-			}
-			root = req.BlockId
-		} else {
-			slot, err := strconv.ParseUint(string(req.BlockId), 10, 64)
-			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "Could not parse block ID: %v", err)
-			}
-			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", slot, err)
-			}
-
-			if !hasRoots {
-				return nil, status.Error(codes.NotFound, "Could not find any blocks with given slot")
-			}
-			root = roots[0][:]
-			if len(roots) == 1 {
-				break
-			}
-			for _, blockRoot := range roots {
-				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
-				if err != nil {
-					return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
-				}
-				if canonical {
-					root = blockRoot[:]
-					break
-				}
-			}
-		}
-	}
-
-	b32Root := bytesutil.ToBytes32(root)
-	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, b32Root)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-	}
-
-	return &ethpbv1.BlockRootResponse{
-		Data: &ethpbv1.BlockRootContainer{
-			Root: root,
-		},
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
-	}, nil
 }
 
 // ListBlockAttestations retrieves attestation included in requested block.
