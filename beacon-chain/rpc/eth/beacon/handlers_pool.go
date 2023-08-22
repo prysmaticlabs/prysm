@@ -76,7 +76,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	var req SubmitAttestationsRequest
-	err := json.NewDecoder(r.Body).Decode(&req)
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
