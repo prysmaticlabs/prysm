@@ -86,6 +86,11 @@ type SignedValidatorRegistration struct {
 	Signature string                 `json:"signature" validate:"required,hexadecimal"`
 }
 
+type FeeRecipient struct {
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient" hex:"true"`
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 	reflect "reflect"
 
 	_ "github.com/golang/protobuf/protoc-gen-go/descriptor"
-	empty "github.com/golang/protobuf/ptypes/empty"
+	_ "github.com/golang/protobuf/ptypes/empty"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	v2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
@@ -47,7 +47,7 @@ var file_proto_eth_service_validator_service_proto_rawDesc = []byte{
 	0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x2f, 0x73, 0x73, 0x7a, 0x2e, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x1a, 0x1c, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f,
 	0x76, 0x32, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x32, 0xa7, 0x0b, 0x0a, 0x0f, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x56, 0x61, 0x6c,
+	0x74, 0x6f, 0x32, 0x87, 0x0a, 0x0a, 0x0f, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x56, 0x61, 0x6c,
 	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x12, 0xa3, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74, 0x41, 0x74,
 	0x74, 0x65, 0x73, 0x74, 0x65, 0x72, 0x44, 0x75, 0x74, 0x69, 0x65, 0x73, 0x12, 0x26, 0x2e, 0x65,
 	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x41,
@@ -118,17 +118,7 @@ var file_proto_eth_service_validator_service_proto_rawDesc = []byte{
 	0x93, 0x02, 0x36, 0x12, 0x34, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65,
 	0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f,
 	0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x2f, 0x7b,
-	0x73, 0x6c, 0x6f, 0x74, 0x7d, 0x2f, 0x73, 0x73, 0x7a, 0x12, 0x9d, 0x01, 0x0a, 0x15, 0x50, 0x72,
-	0x65, 0x70, 0x61, 0x72, 0x65, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x50, 0x72, 0x6f, 0x70, 0x6f,
-	0x73, 0x65, 0x72, 0x12, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
-	0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x42, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x50, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x3d, 0x82, 0xd3, 0xe4, 0x93,
-	0x02, 0x37, 0x3a, 0x01, 0x2a, 0x22, 0x32, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c,
-	0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x2f, 0x70, 0x72, 0x65, 0x70, 0x61, 0x72, 0x65, 0x5f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e,
-	0x5f, 0x70, 0x72, 0x6f, 0x70, 0x6f, 0x73, 0x65, 0x72, 0x12, 0x90, 0x01, 0x0a, 0x0b, 0x47, 0x65,
+	0x73, 0x6c, 0x6f, 0x74, 0x7d, 0x2f, 0x73, 0x73, 0x7a, 0x12, 0x90, 0x01, 0x0a, 0x0b, 0x47, 0x65,
 	0x74, 0x4c, 0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x12, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65,
 	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x47, 0x65, 0x74, 0x4c,
 	0x69, 0x76, 0x65, 0x6e, 0x65, 0x73, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x24,
@@ -151,20 +141,18 @@ var file_proto_eth_service_validator_service_proto_rawDesc = []byte{
 }
 
 var file_proto_eth_service_validator_service_proto_goTypes = []interface{}{
-	(*v1.AttesterDutiesRequest)(nil),        // 0: ethereum.eth.v1.AttesterDutiesRequest
-	(*v1.ProposerDutiesRequest)(nil),        // 1: ethereum.eth.v1.ProposerDutiesRequest
-	(*v2.SyncCommitteeDutiesRequest)(nil),   // 2: ethereum.eth.v2.SyncCommitteeDutiesRequest
-	(*v1.ProduceBlockRequest)(nil),          // 3: ethereum.eth.v1.ProduceBlockRequest
-	(*v1.PrepareBeaconProposerRequest)(nil), // 4: ethereum.eth.v1.PrepareBeaconProposerRequest
-	(*v2.GetLivenessRequest)(nil),           // 5: ethereum.eth.v2.GetLivenessRequest
-	(*v1.AttesterDutiesResponse)(nil),       // 6: ethereum.eth.v1.AttesterDutiesResponse
-	(*v1.ProposerDutiesResponse)(nil),       // 7: ethereum.eth.v1.ProposerDutiesResponse
-	(*v2.SyncCommitteeDutiesResponse)(nil),  // 8: ethereum.eth.v2.SyncCommitteeDutiesResponse
-	(*v2.ProduceBlockResponseV2)(nil),       // 9: ethereum.eth.v2.ProduceBlockResponseV2
-	(*v2.SSZContainer)(nil),                 // 10: ethereum.eth.v2.SSZContainer
-	(*v2.ProduceBlindedBlockResponse)(nil),  // 11: ethereum.eth.v2.ProduceBlindedBlockResponse
-	(*empty.Empty)(nil),                     // 12: google.protobuf.Empty
-	(*v2.GetLivenessResponse)(nil),          // 13: ethereum.eth.v2.GetLivenessResponse
+	(*v1.AttesterDutiesRequest)(nil),       // 0: ethereum.eth.v1.AttesterDutiesRequest
+	(*v1.ProposerDutiesRequest)(nil),       // 1: ethereum.eth.v1.ProposerDutiesRequest
+	(*v2.SyncCommitteeDutiesRequest)(nil),  // 2: ethereum.eth.v2.SyncCommitteeDutiesRequest
+	(*v1.ProduceBlockRequest)(nil),         // 3: ethereum.eth.v1.ProduceBlockRequest
+	(*v2.GetLivenessRequest)(nil),          // 4: ethereum.eth.v2.GetLivenessRequest
+	(*v1.AttesterDutiesResponse)(nil),      // 5: ethereum.eth.v1.AttesterDutiesResponse
+	(*v1.ProposerDutiesResponse)(nil),      // 6: ethereum.eth.v1.ProposerDutiesResponse
+	(*v2.SyncCommitteeDutiesResponse)(nil), // 7: ethereum.eth.v2.SyncCommitteeDutiesResponse
+	(*v2.ProduceBlockResponseV2)(nil),      // 8: ethereum.eth.v2.ProduceBlockResponseV2
+	(*v2.SSZContainer)(nil),                // 9: ethereum.eth.v2.SSZContainer
+	(*v2.ProduceBlindedBlockResponse)(nil), // 10: ethereum.eth.v2.ProduceBlindedBlockResponse
+	(*v2.GetLivenessResponse)(nil),         // 11: ethereum.eth.v2.GetLivenessResponse
 }
 var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.service.BeaconValidator.GetAttesterDuties:input_type -> ethereum.eth.v1.AttesterDutiesRequest
@@ -174,19 +162,17 @@ var file_proto_eth_service_validator_service_proto_depIdxs = []int32{
 	3,  // 4: ethereum.eth.service.BeaconValidator.ProduceBlockV2SSZ:input_type -> ethereum.eth.v1.ProduceBlockRequest
 	3,  // 5: ethereum.eth.service.BeaconValidator.ProduceBlindedBlock:input_type -> ethereum.eth.v1.ProduceBlockRequest
 	3,  // 6: ethereum.eth.service.BeaconValidator.ProduceBlindedBlockSSZ:input_type -> ethereum.eth.v1.ProduceBlockRequest
-	4,  // 7: ethereum.eth.service.BeaconValidator.PrepareBeaconProposer:input_type -> ethereum.eth.v1.PrepareBeaconProposerRequest
-	5,  // 8: ethereum.eth.service.BeaconValidator.GetLiveness:input_type -> ethereum.eth.v2.GetLivenessRequest
-	6,  // 9: ethereum.eth.service.BeaconValidator.GetAttesterDuties:output_type -> ethereum.eth.v1.AttesterDutiesResponse
-	7,  // 10: ethereum.eth.service.BeaconValidator.GetProposerDuties:output_type -> ethereum.eth.v1.ProposerDutiesResponse
-	8,  // 11: ethereum.eth.service.BeaconValidator.GetSyncCommitteeDuties:output_type -> ethereum.eth.v2.SyncCommitteeDutiesResponse
-	9,  // 12: ethereum.eth.service.BeaconValidator.ProduceBlockV2:output_type -> ethereum.eth.v2.ProduceBlockResponseV2
-	10, // 13: ethereum.eth.service.BeaconValidator.ProduceBlockV2SSZ:output_type -> ethereum.eth.v2.SSZContainer
-	11, // 14: ethereum.eth.service.BeaconValidator.ProduceBlindedBlock:output_type -> ethereum.eth.v2.ProduceBlindedBlockResponse
-	10, // 15: ethereum.eth.service.BeaconValidator.ProduceBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
-	12, // 16: ethereum.eth.service.BeaconValidator.PrepareBeaconProposer:output_type -> google.protobuf.Empty
-	13, // 17: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
-	9,  // [9:18] is the sub-list for method output_type
-	0,  // [0:9] is the sub-list for method input_type
+	4,  // 7: ethereum.eth.service.BeaconValidator.GetLiveness:input_type -> ethereum.eth.v2.GetLivenessRequest
+	5,  // 8: ethereum.eth.service.BeaconValidator.GetAttesterDuties:output_type -> ethereum.eth.v1.AttesterDutiesResponse
+	6,  // 9: ethereum.eth.service.BeaconValidator.GetProposerDuties:output_type -> ethereum.eth.v1.ProposerDutiesResponse
+	7,  // 10: ethereum.eth.service.BeaconValidator.GetSyncCommitteeDuties:output_type -> ethereum.eth.v2.SyncCommitteeDutiesResponse
+	8,  // 11: ethereum.eth.service.BeaconValidator.ProduceBlockV2:output_type -> ethereum.eth.v2.ProduceBlockResponseV2
+	9,  // 12: ethereum.eth.service.BeaconValidator.ProduceBlockV2SSZ:output_type -> ethereum.eth.v2.SSZContainer
+	10, // 13: ethereum.eth.service.BeaconValidator.ProduceBlindedBlock:output_type -> ethereum.eth.v2.ProduceBlindedBlockResponse
+	9,  // 14: ethereum.eth.service.BeaconValidator.ProduceBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
+	11, // 15: ethereum.eth.service.BeaconValidator.GetLiveness:output_type -> ethereum.eth.v2.GetLivenessResponse
+	8,  // [8:16] is the sub-list for method output_type
+	0,  // [0:8] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -235,7 +221,6 @@ type BeaconValidatorClient interface {
 	ProduceBlockV2SSZ(ctx context.Context, in *v1.ProduceBlockRequest, opts ...grpc.CallOption) (*v2.SSZContainer, error)
 	ProduceBlindedBlock(ctx context.Context, in *v1.ProduceBlockRequest, opts ...grpc.CallOption) (*v2.ProduceBlindedBlockResponse, error)
 	ProduceBlindedBlockSSZ(ctx context.Context, in *v1.ProduceBlockRequest, opts ...grpc.CallOption) (*v2.SSZContainer, error)
-	PrepareBeaconProposer(ctx context.Context, in *v1.PrepareBeaconProposerRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	GetLiveness(ctx context.Context, in *v2.GetLivenessRequest, opts ...grpc.CallOption) (*v2.GetLivenessResponse, error)
 }
 
@@ -310,15 +295,6 @@ func (c *beaconValidatorClient) ProduceBlindedBlockSSZ(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *beaconValidatorClient) PrepareBeaconProposer(ctx context.Context, in *v1.PrepareBeaconProposerRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/PrepareBeaconProposer", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *beaconValidatorClient) GetLiveness(ctx context.Context, in *v2.GetLivenessRequest, opts ...grpc.CallOption) (*v2.GetLivenessResponse, error) {
 	out := new(v2.GetLivenessResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconValidator/GetLiveness", in, out, opts...)
@@ -337,7 +313,6 @@ type BeaconValidatorServer interface {
 	ProduceBlockV2SSZ(context.Context, *v1.ProduceBlockRequest) (*v2.SSZContainer, error)
 	ProduceBlindedBlock(context.Context, *v1.ProduceBlockRequest) (*v2.ProduceBlindedBlockResponse, error)
 	ProduceBlindedBlockSSZ(context.Context, *v1.ProduceBlockRequest) (*v2.SSZContainer, error)
-	PrepareBeaconProposer(context.Context, *v1.PrepareBeaconProposerRequest) (*empty.Empty, error)
 	GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error)
 }
 
@@ -365,9 +340,6 @@ func (*UnimplementedBeaconValidatorServer) ProduceBlindedBlock(context.Context, 
 }
 func (*UnimplementedBeaconValidatorServer) ProduceBlindedBlockSSZ(context.Context, *v1.ProduceBlockRequest) (*v2.SSZContainer, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ProduceBlindedBlockSSZ not implemented")
-}
-func (*UnimplementedBeaconValidatorServer) PrepareBeaconProposer(context.Context, *v1.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PrepareBeaconProposer not implemented")
 }
 func (*UnimplementedBeaconValidatorServer) GetLiveness(context.Context, *v2.GetLivenessRequest) (*v2.GetLivenessResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLiveness not implemented")
@@ -503,24 +475,6 @@ func _BeaconValidator_ProduceBlindedBlockSSZ_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconValidator_PrepareBeaconProposer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.PrepareBeaconProposerRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconValidatorServer).PrepareBeaconProposer(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconValidator/PrepareBeaconProposer",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconValidatorServer).PrepareBeaconProposer(ctx, req.(*v1.PrepareBeaconProposerRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _BeaconValidator_GetLiveness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v2.GetLivenessRequest)
 	if err := dec(in); err != nil {
@@ -570,10 +524,6 @@ var _BeaconValidator_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProduceBlindedBlockSSZ",
 			Handler:    _BeaconValidator_ProduceBlindedBlockSSZ_Handler,
-		},
-		{
-			MethodName: "PrepareBeaconProposer",
-			Handler:    _BeaconValidator_PrepareBeaconProposer_Handler,
 		},
 		{
 			MethodName: "GetLiveness",

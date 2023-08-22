@@ -10,22 +10,28 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -570,4 +576,64 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// PrepareBeaconProposer endpoint saves the fee recipient given a validator index, this is used when proposing a block.
+func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.PrepareBeaconProposer")
+	defer span.End()
+
+	var jsonFeeRecipients []*shared.FeeRecipient
+	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	var feeRecipients []common.Address
+	var validatorIndices []primitives.ValidatorIndex
+	// filter for found fee recipients
+	for i, r := range jsonFeeRecipients {
+		validatorIndex, valid := shared.ValidateUint(w, "Validator Index", r.ValidatorIndex)
+		if !valid {
+			return
+		}
+		feeRecipientBytes, err := hexutil.Decode(r.FeeRecipient)
+		if err != nil {
+			http2.HandleError(w, fmt.Sprintf("fee recipient at index %d failed to decode: %v", i, err), http.StatusBadRequest)
+			return
+		}
+		if len(feeRecipientBytes) != fieldparams.FeeRecipientLength {
+			http2.HandleError(w, fmt.Sprintf("Invalid fee recipient address %s at index %d", r.FeeRecipient, i), http.StatusBadRequest)
+			return
+		}
+		f, err := s.BeaconDB.FeeRecipientByValidatorID(ctx, primitives.ValidatorIndex(validatorIndex))
+		switch {
+		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+			feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
+			validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
+		case err != nil:
+			http2.HandleError(w, fmt.Sprintf("Could not get fee recipient by validator index: %v", err), http.StatusInternalServerError)
+			return
+		default:
+			if common.BytesToAddress(feeRecipientBytes) != f {
+				feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
+				validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
+			}
+		}
+	}
+	if len(validatorIndices) == 0 {
+		return
+	}
+	if err := s.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not save fee recipients: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses for validator indices")
+	return
 }
