@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	log "github.com/sirupsen/logrus"
 )
 
 var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
@@ -119,7 +118,6 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		}
 
 		dgu, has := decoded["blobGasUsed"]
-		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
 			udgu, err := hexutil.DecodeUint64(dgu.(string))
