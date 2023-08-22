@@ -635,5 +635,4 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
-	return
 }
