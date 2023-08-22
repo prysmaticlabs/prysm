@@ -298,7 +298,7 @@ func TestServer_SubmitAttestations(t *testing.T) {
 	})
 }
 
-func TestListPoolVoluntaryExits(t *testing.T) {
+func TestListVoluntaryExits(t *testing.T) {
 	exit1 := &ethpbv1alpha1.SignedVoluntaryExit{
 		Exit: &ethpbv1alpha1.VoluntaryExit{
 			Epoch:          1,
@@ -337,7 +337,7 @@ func TestListPoolVoluntaryExits(t *testing.T) {
 	assert.Equal(t, "2", resp.Data[1].Message.ValidatorIndex)
 }
 
-func TestSubmitVoluntaryExit_Ok(t *testing.T) {
+func TestSubmitVoluntaryExit(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	defer transition.SkipSlotCache.Enable()
 

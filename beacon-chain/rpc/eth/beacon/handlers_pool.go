@@ -3,6 +3,7 @@ package beacon
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -74,12 +75,13 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestations")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitAttestationsRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitAttestationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -197,12 +199,13 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitVoluntaryExit")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req shared.SignedVoluntaryExit
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req shared.SignedVoluntaryExit
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
