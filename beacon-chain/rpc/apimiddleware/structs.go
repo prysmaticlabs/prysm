@@ -151,10 +151,6 @@ type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
 }
 
-type VoluntaryExitsPoolResponseJson struct {
-	Data []*SignedVoluntaryExitJson `json:"data"`
-}
-
 type SubmitSyncCommitteeSignaturesRequestJson struct {
 	Data []*SyncCommitteeMessageJson `json:"data"`
 }

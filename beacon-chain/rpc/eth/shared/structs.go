@@ -82,8 +82,18 @@ type ValidatorRegistration struct {
 }
 
 type SignedValidatorRegistration struct {
-	Message   *ValidatorRegistration `json:"message" validate:"required,dive"`
+	Message   *ValidatorRegistration `json:"message" validate:"required"`
 	Signature string                 `json:"signature" validate:"required,hexadecimal"`
+}
+
+type SignedVoluntaryExit struct {
+	Message   *VoluntaryExit `json:"message" validate:"required"`
+	Signature string         `json:"signature" validate:"required,hexadecimal"`
+}
+
+type VoluntaryExit struct {
+	Epoch          string `json:"epoch" validate:"required,number,gte=0"`
+	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
 }
 
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
@@ -381,6 +391,52 @@ func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeS
 		Slot:             primitives.Slot(slot),
 		IsAggregator:     b.IsAggregator,
 	}, nil
+}
+
+func (e *SignedVoluntaryExit) ToConsensus() (*eth.SignedVoluntaryExit, error) {
+	sig, err := hexutil.Decode(e.Signature)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	exit, err := e.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+
+	return &eth.SignedVoluntaryExit{
+		Exit:      exit,
+		Signature: sig,
+	}, nil
+}
+
+func SignedVoluntaryExitFromConsensus(e *eth.SignedVoluntaryExit) *SignedVoluntaryExit {
+	return &SignedVoluntaryExit{
+		Message:   VoluntaryExitFromConsensus(e.Exit),
+		Signature: hexutil.Encode(e.Signature),
+	}
+}
+
+func (e *VoluntaryExit) ToConsensus() (*eth.VoluntaryExit, error) {
+	epoch, err := strconv.ParseUint(e.Epoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Epoch")
+	}
+	valIndex, err := strconv.ParseUint(e.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+
+	return &eth.VoluntaryExit{
+		Epoch:          primitives.Epoch(epoch),
+		ValidatorIndex: primitives.ValidatorIndex(valIndex),
+	}, nil
+}
+
+func VoluntaryExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
+	return &VoluntaryExit{
+		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
+		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
+	}
 }
 
 // SyncDetails contains information about node sync status.

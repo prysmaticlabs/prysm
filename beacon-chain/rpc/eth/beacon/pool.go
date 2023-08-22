@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -132,63 +131,6 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// ListPoolVoluntaryExits retrieves voluntary exits known by the node but
-// not necessarily incorporated into any block.
-func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
-	_, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
-	defer span.End()
-
-	sourceExits, err := bs.VoluntaryExitsPool.PendingExits()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get exits from the pool")
-	}
-	exits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
-	for i, s := range sourceExits {
-		exits[i] = migration.V1Alpha1ExitToV1(s)
-	}
-
-	return &ethpbv1.VoluntaryExitsPoolResponse{
-		Data: exits,
-	}, nil
-}
-
-// SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
-// and if passes validation node MUST broadcast it to network.
-func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVoluntaryExit) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
-	defer span.End()
-
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	s, err := slots.EpochStart(req.Message.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get epoch from message: %v", err)
-	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, s)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
-	}
-
-	validator, err := headState.ValidatorAtIndexReadOnly(req.Message.ValidatorIndex)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
-	}
-	alphaExit := migration.V1ExitToV1Alpha1(req)
-	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
-	}
-
-	bs.VoluntaryExitsPool.InsertVoluntaryExit(alphaExit)
-	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil

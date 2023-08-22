@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,18 +12,24 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func TestListAttestations(t *testing.T) {
@@ -294,6 +301,206 @@ func TestServer_SubmitAttestations(t *testing.T) {
 		require.Equal(t, 1, len(e.Failures))
 		assert.Equal(t, true, strings.Contains(e.Failures[0].Message, "Incorrect attestation signature"))
 	})
+}
+
+func TestListPoolVoluntaryExits(t *testing.T) {
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+	exit1 := &ethpbv1alpha1.SignedVoluntaryExit{
+		Exit: &ethpbv1alpha1.VoluntaryExit{
+			Epoch:          1,
+			ValidatorIndex: 1,
+		},
+		Signature: bytesutil.PadTo([]byte("signature1"), 96),
+	}
+	exit2 := &ethpbv1alpha1.SignedVoluntaryExit{
+		Exit: &ethpbv1alpha1.VoluntaryExit{
+			Epoch:          2,
+			ValidatorIndex: 2,
+		},
+		Signature: bytesutil.PadTo([]byte("signature2"), 96),
+	}
+
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{Exits: []*ethpbv1alpha1.SignedVoluntaryExit{exit1, exit2}},
+	}
+
+	resp, err := s.ListPoolVoluntaryExits(context.Background(), &emptypb.Empty{})
+	require.NoError(t, err)
+	require.Equal(t, 2, len(resp.Data))
+	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit1), resp.Data[0])
+	assert.DeepEqual(t, migration.V1Alpha1ExitToV1(exit2), resp.Data[1])
+}
+
+func TestSubmitVoluntaryExit_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
+	}
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		// Satisfy activity time required before exiting.
+		state.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))
+		return nil
+	})
+	require.NoError(t, err)
+
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	sb, err := signing.ComputeDomainAndSign(bs, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	exit.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.NoError(t, err)
+	pendingExits, err := s.VoluntaryExitsPool.PendingExits()
+	require.NoError(t, err)
+	require.Equal(t, 1, len(pendingExits))
+	assert.DeepEqual(t, migration.V1ExitToV1Alpha1(exit), pendingExits[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitVoluntaryExit_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = params.BeaconConfig().ShardCommitteePeriod + 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+	// Satisfy activity time required before exiting.
+	require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod))))
+
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
+			Epoch:          params.BeaconConfig().ShardCommitteePeriod + 1,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().ShardCommitteePeriod)+1))
+	require.NoError(t, err)
+
+	sb, err := signing.ComputeDomainAndSign(newBs, exit.Message.Epoch, exit.Message, params.BeaconConfig().DomainVoluntaryExit, keys[0])
+	require.NoError(t, err)
+	sig, err := bls.SignatureFromBytes(sb)
+	require.NoError(t, err)
+	exit.Signature = sig.Marshal()
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.NoError(t, err)
+}
+
+func TestSubmitVoluntaryExit_InvalidValidatorIndex(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
+	}
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		return nil
+	})
+	require.NoError(t, err)
+
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 99,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.ErrorContains(t, "Could not get exiting validator", err)
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
+}
+
+func TestSubmitVoluntaryExit_InvalidExit(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+		PublicKey: keys[0].PublicKey().Marshal(),
+	}
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		return nil
+	})
+	require.NoError(t, err)
+
+	exit := &ethpbv1.SignedVoluntaryExit{
+		Message: &ethpbv1.VoluntaryExit{
+			Epoch:          0,
+			ValidatorIndex: 0,
+		},
+		Signature: make([]byte, 96),
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher:   &blockchainmock.ChainService{State: bs},
+		VoluntaryExitsPool: &mock.PoolMock{},
+		Broadcaster:        broadcaster,
+	}
+
+	_, err = s.SubmitVoluntaryExit(ctx, exit)
+	require.ErrorContains(t, "Invalid voluntary exit", err)
+	assert.Equal(t, false, broadcaster.BroadcastCalled)
 }
 
 const (

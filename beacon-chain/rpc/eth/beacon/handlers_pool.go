@@ -8,13 +8,16 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -142,11 +145,11 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 
 		if corehelpers.IsAggregated(att) {
 			if err = s.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save aggregated att")
+				log.WithError(err).Error("could not save aggregated attestation")
 			}
 		} else {
 			if err = s.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save unaggregated att")
+				log.WithError(err).Error("could not save unaggregated attestation")
 			}
 		}
 	}
@@ -166,5 +169,83 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 			Failures: attFailures,
 		}
 		http2.WriteError(w, failuresErr)
+	}
+}
+
+// ListVoluntaryExits retrieves voluntary exits known by the node but
+// not necessarily incorporated into any block.
+func (s *Server) ListVoluntaryExits(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.ListVoluntaryExits")
+	defer span.End()
+
+	sourceExits, err := s.VoluntaryExitsPool.PendingExits()
+	if err != nil {
+		http2.HandleError(w, "Could not get exits from the pool: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	exits := make([]*shared.SignedVoluntaryExit, len(sourceExits))
+	for i, e := range sourceExits {
+		exits[i] = shared.SignedVoluntaryExitFromConsensus(e)
+	}
+
+	http2.WriteJson(w, &ListVoluntaryExitsResponse{Data: exits})
+}
+
+// SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
+// and if passes validation node MUST broadcast it to network.
+func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitVoluntaryExit")
+	defer span.End()
+
+	if r.Body == http.NoBody {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	var req shared.SignedVoluntaryExit
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	validate := validator.New()
+	if err := validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	exit, err := req.ToConsensus()
+	if err != nil {
+		http2.HandleError(w, "Could not convert request exit to consensus exit: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	headState, err := s.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	epochStart, err := slots.EpochStart(exit.Exit.Epoch)
+	if err != nil {
+		http2.HandleError(w,, "Could not get epoch start: "+ err.Error(), http.StatusInternalServerError)
+		return
+	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, epochStart)
+	if err != nil {
+		http2.HandleError(w, "Could not process slots: "+ err.Error(), http.StatusInternalServerError)
+		return
+	}
+	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
+	if err != nil {
+		http2.HandleError(w, "Could not get validator: "+ err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if err = blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorsRoot()); err != nil {
+		http2.HandleError(w, "Invalid exit: "+ err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.VoluntaryExitsPool.InsertVoluntaryExit(exit)
+	if err = s.Broadcaster.Broadcast(ctx, exit); err != nil {
+		http2.HandleError(w, "Could not broadcast exit: "+ err.Error(), http.StatusInternalServerError)
+		return
 	}
 }
