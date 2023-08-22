@@ -166,6 +166,42 @@ func TestInitializeFromProto_Capella(t *testing.T) {
 	}
 }
 
+func TestInitializeFromProto_Deneb(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateDeneb
+		error string
+	}
+	initTests := []test{
+		{
+			name:  "nil state",
+			state: nil,
+			error: "received nil state",
+		},
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateDeneb{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateDeneb{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoDeneb(tt.state)
+			if tt.error != "" {
+				require.ErrorContains(t, tt.error, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestInitializeFromProtoUnsafe_Phase0(t *testing.T) {
 	testState, _ := util.DeterministicGenesisState(t, 64)
 	pbState, err := statenative.ProtobufBeaconStatePhase0(testState.ToProtoUnsafe())
@@ -288,6 +324,37 @@ func TestInitializeFromProtoUnsafe_Capella(t *testing.T) {
 	for _, tt := range initTests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := statenative.InitializeFromProtoUnsafeCapella(tt.state)
+			if tt.error != "" {
+				assert.ErrorContains(t, tt.error, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestInitializeFromProtoUnsafe_Deneb(t *testing.T) {
+	type test struct {
+		name  string
+		state *ethpb.BeaconStateDeneb
+		error string
+	}
+	initTests := []test{
+		{
+			name: "nil validators",
+			state: &ethpb.BeaconStateDeneb{
+				Slot:       4,
+				Validators: nil,
+			},
+		},
+		{
+			name:  "empty state",
+			state: &ethpb.BeaconStateDeneb{},
+		},
+	}
+	for _, tt := range initTests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := statenative.InitializeFromProtoUnsafeDeneb(tt.state)
 			if tt.error != "" {
 				assert.ErrorContains(t, tt.error, err)
 			} else {

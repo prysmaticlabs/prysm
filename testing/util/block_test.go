@@ -370,5 +370,5 @@ func TestGenerateVoluntaryExits(t *testing.T) {
 	require.NoError(t, err)
 	val, err := beaconState.ValidatorAtIndexReadOnly(0)
 	require.NoError(t, err)
-	require.NoError(t, coreBlock.VerifyExitAndSignature(val, 0, beaconState.Fork(), exit, beaconState.GenesisValidatorsRoot()))
+	require.NoError(t, coreBlock.VerifyExitAndSignature(val, beaconState, exit))
 }

@@ -21,6 +21,7 @@ go_library(
         "process_block.go",
         "process_block_helpers.go",
         "receive_attestation.go",
+        "receive_blob.go",
         "receive_block.go",
         "service.go",
         "weak_subjectivity_checks.go",
@@ -35,6 +36,7 @@ go_library(
     deps = [
         "//async:go_default_library",
         "//async/event:go_default_library",
+        "//beacon-chain/blockchain/kzg:go_default_library",
         "//beacon-chain/cache:go_default_library",
         "//beacon-chain/cache/depositcache:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
