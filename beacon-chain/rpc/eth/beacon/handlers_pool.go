@@ -256,3 +256,59 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+// SubmitSyncCommitteeSignatures submits sync committee signature objects to the node.
+func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitPoolSyncCommitteeSignatures")
+	defer span.End()
+
+	var req SubmitSyncCommitteeSignaturesRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Data) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	validate := validator.New()
+	if err = validate.Struct(req); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var validMessages []*ethpbalpha.SyncCommitteeMessage
+	var msgFailures []*shared.IndexedVerificationFailure
+	for i, sourceMsg := range req.Data {
+		msg, err := sourceMsg.ToConsensus()
+		if err != nil {
+			msgFailures = append(msgFailures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not convert request message to consensus message: " + err.Error(),
+			})
+			continue
+		}
+		validMessages = append(validMessages, msg)
+	}
+
+	for _, msg := range validMessages {
+		if err = s.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
+			http2.HandleError(w, "Could not submit message: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if len(msgFailures) > 0 {
+		failuresErr := &shared.IndexedVerificationFailureError{
+			Code:     http.StatusBadRequest,
+			Message:  "One or more messages failed validation",
+			Failures: msgFailures,
+		}
+		http2.WriteError(w, failuresErr)
+	}
+}

@@ -100,54 +100,6 @@ func TestWrapBLSChangesArray(t *testing.T) {
 	})
 }
 
-func TestWrapSyncCommitteeSignaturesArray(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitSyncCommitteeSignaturesRequestJson{},
-		}
-		unwrappedSigs := []*SyncCommitteeMessageJson{{
-			Slot:            "1",
-			BeaconBlockRoot: "root",
-			ValidatorIndex:  "1",
-			Signature:       "sig",
-		}}
-		unwrappedSigsJson, err := json.Marshal(unwrappedSigs)
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		_, err = body.Write(unwrappedSigsJson)
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedSigs := &SubmitSyncCommitteeSignaturesRequestJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedSigs))
-		require.Equal(t, 1, len(wrappedSigs.Data), "wrong number of wrapped items")
-		assert.Equal(t, "1", wrappedSigs.Data[0].Slot)
-		assert.Equal(t, "root", wrappedSigs.Data[0].BeaconBlockRoot)
-		assert.Equal(t, "1", wrappedSigs.Data[0].ValidatorIndex)
-		assert.Equal(t, "sig", wrappedSigs.Data[0].Signature)
-	})
-
-	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &SubmitSyncCommitteeSignaturesRequestJson{},
-		}
-		var body bytes.Buffer
-		_, err := body.Write([]byte("invalid"))
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapSyncCommitteeSignaturesArray(endpoint, nil, request)
-		require.Equal(t, false, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
-		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
-	})
-}
-
 func TestSetInitialPublishBlockPostRequest(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()

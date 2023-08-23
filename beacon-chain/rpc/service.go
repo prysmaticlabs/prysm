@@ -241,6 +241,7 @@ func (s *Service) Start() {
 		OperationNotifier:  s.cfg.OperationNotifier,
 		AttestationCache:   cache.NewAttestationCache(),
 		StateGen:           s.cfg.StateGen,
+		P2P:                s.cfg.Broadcaster,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{
@@ -400,6 +401,7 @@ func (s *Service) Start() {
 		BLSChangesPool:                s.cfg.BLSChangesPool,
 		FinalizationFetcher:           s.cfg.FinalizationFetcher,
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
+		CoreService:                   coreService,
 	}
 	httpServer := &httpserver.Server{
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,

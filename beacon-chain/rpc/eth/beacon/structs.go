@@ -31,7 +31,11 @@ type SubmitAttestationsRequest struct {
 }
 
 type ListVoluntaryExitsResponse struct {
-	Data []*shared.SignedVoluntaryExit
+	Data []*shared.SignedVoluntaryExit `json:"data"`
+}
+
+type SubmitSyncCommitteeSignaturesRequest struct {
+	Data []*shared.SyncCommitteeMessage `json:"data" validate:"required,dive"`
 }
 
 type SignedBeaconBlock struct {

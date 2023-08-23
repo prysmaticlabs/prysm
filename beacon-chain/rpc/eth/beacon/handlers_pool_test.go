@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,21 +11,27 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/go-bitfield"
+	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"google.golang.org/grpc"
 )
 
 func TestListAttestations(t *testing.T) {
@@ -170,7 +177,7 @@ func TestListAttestations(t *testing.T) {
 	})
 }
 
-func TestServer_SubmitAttestations(t *testing.T) {
+func TestSubmitAttestations(t *testing.T) {
 	transition.SkipSlotCache.Disable()
 	defer transition.SkipSlotCache.Enable()
 
@@ -484,6 +491,64 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not get exiting validator"))
+	})
+}
+
+func TestSubmitSyncCommitteeSignatures(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+
+	alphaServer := &validator.Server{
+		SyncCommitteePool: synccommittee.NewStore(),
+		P2P:               &mockp2p.MockBroadcaster{},
+		HeadFetcher: &mock.ChainService{
+			State: st,
+		},
+	}
+	s := &Server{
+		V1Alpha1ValidatorServer: alphaServer,
+	}
+
+	t.Run("Ok", func(t *testing.T) {
+		root, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 64))
+		require.NoError(t, err)
+		sig, err := bytesutil2.FromHexString("0x" + strings.Repeat("0", 192))
+		require.NoError(t, err)
+		_, err = s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
+			Data: []*ethpbv2.SyncCommitteeMessage{
+				{
+					Slot:            0,
+					BeaconBlockRoot: root,
+					ValidatorIndex:  0,
+					Signature:       sig,
+				},
+			},
+		})
+		assert.NoError(t, err)
+	})
+
+	t.Run("Invalid message gRPC header", func(t *testing.T) {
+		_, err := s.SubmitPoolSyncCommitteeSignatures(ctx, &ethpbv2.SubmitPoolSyncCommitteeSignatures{
+			Data: []*ethpbv2.SyncCommitteeMessage{
+				{
+					Slot:            0,
+					BeaconBlockRoot: nil,
+					ValidatorIndex:  0,
+					Signature:       nil,
+				},
+			},
+		})
+		assert.ErrorContains(t, "One or more messages failed validation", err)
+		sts, ok := grpc.ServerTransportStreamFromContext(ctx).(*runtime.ServerTransportStream)
+		require.Equal(t, true, ok, "type assertion failed")
+		md := sts.Header()
+		v, ok := md[strings.ToLower(grpcutil.CustomErrorMetadataKey)]
+		require.Equal(t, true, ok, "could not retrieve custom error metadata value")
+		assert.DeepEqual(
+			t,
+			[]string{"{\"failures\":[{\"index\":0,\"message\":\"invalid block root length\"}]}"},
+			v,
+		)
 	})
 }
 

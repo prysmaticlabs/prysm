@@ -145,12 +145,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
 		}
-	case "/eth/v1/beacon/pool/sync_committees":
-		endpoint.PostRequest = &SubmitSyncCommitteeSignaturesRequestJson{}
-		endpoint.Err = &IndexedVerificationFailureErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
-		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
