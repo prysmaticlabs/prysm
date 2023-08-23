@@ -1553,7 +1553,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			},
 			},
 			code:    http.StatusBadRequest,
-			wantErr: "Invalid fee recipient address",
+			wantErr: "Invalid Fee Recipient",
 		},
 	}
 	for _, tt := range tests {
@@ -1608,7 +1608,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 
 	// Same validator
 	hook.Reset()
@@ -1618,7 +1618,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
 
 	// Same validator with different fee recipient
 	hook.Reset()
@@ -1634,7 +1634,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 
 	// More than one validator
 	hook.Reset()
@@ -1656,7 +1656,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 
 	// Same validators
 	hook.Reset()
@@ -1668,7 +1668,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
 }
 
 func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {

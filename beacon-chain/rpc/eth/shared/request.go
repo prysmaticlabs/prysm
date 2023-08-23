@@ -44,7 +44,7 @@ func ValidateHex(w http.ResponseWriter, name string, s string, length int) ([]by
 		return nil, false
 	}
 	if len(hexBytes) != length {
-		http2.HandleError(w, fmt.Sprintf("%s %s is not length %d", name, s, length), http.StatusBadRequest)
+		http2.HandleError(w, fmt.Sprintf("Invalid %s: %s is not length %d", name, s, length), http.StatusBadRequest)
 		return nil, false
 	}
 	return hexBytes, true
