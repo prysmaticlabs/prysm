@@ -41,7 +41,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	defer span.End()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
-	valid := shared.ValidateHex(w, "Attestation data root", attDataRoot)
+	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
 	if !valid {
 		return
 	}
@@ -63,11 +63,6 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 			root, err := att.Data.HashTreeRoot()
 			if err != nil {
 				http2.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			attDataRootBytes, err := hexutil.Decode(attDataRoot)
-			if err != nil {
-				http2.HandleError(w, "Could not decode attestation data root into bytes: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			if bytes.Equal(root[:], attDataRootBytes) {
@@ -596,18 +591,13 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	var feeRecipients []common.Address
 	var validatorIndices []primitives.ValidatorIndex
 	// filter for found fee recipients
-	for i, r := range jsonFeeRecipients {
+	for _, r := range jsonFeeRecipients {
 		validatorIndex, valid := shared.ValidateUint(w, "Validator Index", r.ValidatorIndex)
 		if !valid {
 			return
 		}
-		feeRecipientBytes, err := hexutil.Decode(r.FeeRecipient)
-		if err != nil {
-			http2.HandleError(w, fmt.Sprintf("Fee recipient at index %d failed to decode: %v", i, err), http.StatusBadRequest)
-			return
-		}
-		if len(feeRecipientBytes) != fieldparams.FeeRecipientLength {
-			http2.HandleError(w, fmt.Sprintf("Invalid fee recipient address %s at index %d", r.FeeRecipient, i), http.StatusBadRequest)
+		feeRecipientBytes, valid := shared.ValidateHex(w, "Fee Recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
+		if !valid {
 			return
 		}
 		f, err := s.BeaconDB.FeeRecipientByValidatorID(ctx, primitives.ValidatorIndex(validatorIndex))
