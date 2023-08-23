@@ -5,12 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
@@ -100,12 +102,13 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitContributionAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitContributionAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -137,12 +140,13 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitAggregateAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitAggregateAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -196,12 +200,13 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitSyncCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitSyncCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -310,12 +315,13 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitBeaconCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitBeaconCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -522,4 +528,50 @@ func (s *Server) produceSyncCommitteeContribution(
 		AggregationBits:   hexutil.Encode(aggregatedBits),
 		Signature:         hexutil.Encode(sig),
 	}, true
+}
+
+// RegisterValidator requests that the beacon node stores valid validator registrations and calls the builder apis to update the custom builder
+func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.RegisterValidators")
+	defer span.End()
+
+	if s.BlockBuilder == nil || !s.BlockBuilder.Configured() {
+		http2.HandleError(w, fmt.Sprintf("Could not register block builder: %v", builder.ErrNoBuilder), http.StatusBadRequest)
+		return
+	}
+
+	var jsonRegistrations []*shared.SignedValidatorRegistration
+	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New()
+	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
+	for i, registration := range jsonRegistrations {
+		if err := validate.Struct(registration); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		reg, err := registration.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		registrations[i] = reg
+	}
+	if len(registrations) == 0 {
+		http2.HandleError(w, "Validator registration request is empty", http.StatusBadRequest)
+		return
+	}
+	if err := s.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
