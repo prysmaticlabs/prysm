@@ -11,6 +11,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -121,7 +122,8 @@ func (dc *DepositCache) InsertDepositContainers(ctx context.Context, ctrs []*eth
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
-func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
+func (dc *DepositCache) InsertFinalizedDeposits(ctx context.Context,
+	eth1DepositIndex int64, _ common.Hash, _ uint64) error {
 	ctx, span := trace.StartSpan(ctx, "DepositsCache.InsertFinalizedDeposits")
 	defer span.End()
 	dc.depositsLock.Lock()

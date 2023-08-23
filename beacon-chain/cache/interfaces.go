@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -31,7 +32,7 @@ type DepositFetcher interface {
 type DepositInserter interface {
 	InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error
 	InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer)
-	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error
+	InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64, executionHash common.Hash, executionNumber uint64) error
 }
 
 // FinalizedFetcher is a smaller interface defined to be the bare minimum to satisfy “Service”.

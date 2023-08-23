@@ -92,7 +92,7 @@ func Test_fromSnapshotParts(t *testing.T) {
 
 			// Test finalization
 			for i := 0; i < len(tt.finalized); i++ {
-				err = test.Finalize(int64(i), tt.finalized[i])
+				err = test.Finalize(int64(i), tt.finalized[i], 0)
 				require.NoError(t, err)
 			}
 

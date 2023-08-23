@@ -417,7 +417,7 @@ func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 		Index: 3,
 	})
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -476,9 +476,9 @@ func TestFinalizedDeposits_UtilizesPreviouslyCachedDeposits(t *testing.T) {
 		Index: 2,
 	}
 	dc.deposits = oldFinalizedDeposits
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1, [32]byte{}, 0))
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
 
 	dc.deposits = append(dc.deposits, []*ethpb.DepositContainer{newFinalizedDeposit}...)
 
@@ -506,7 +506,7 @@ func TestFinalizedDeposits_HandleZeroDeposits(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -552,7 +552,7 @@ func TestFinalizedDeposits_HandleSmallerThanExpectedDeposits(t *testing.T) {
 	}
 	dc.deposits = finalizedDeposits
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5, [32]byte{}, 0))
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -628,10 +628,10 @@ func TestFinalizedDeposits_HandleLowerEth1DepositIndex(t *testing.T) {
 	}
 	dc.deposits = finalizedDeposits
 
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 5, [32]byte{}, 0))
 
 	// Reinsert finalized deposits with a lower index.
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
 
 	cachedDeposits, err := dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)
@@ -700,7 +700,7 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 			},
 			Index: 3,
 		})
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1, [32]byte{}, 0))
 
 	deps := dc.NonFinalizedDeposits(context.Background(), 1, nil)
 	assert.Equal(t, 2, len(deps))
@@ -757,7 +757,7 @@ func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *test
 			},
 			Index: 3,
 		})
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 1, [32]byte{}, 0))
 
 	deps := dc.NonFinalizedDeposits(context.Background(), 1, big.NewInt(10))
 	assert.Equal(t, 1, len(deps))
@@ -805,10 +805,10 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Perform this in a non-sensical ordering
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 10))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 3))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 4))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 10, [32]byte{}, 0))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 2, [32]byte{}, 0))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 3, [32]byte{}, 0))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 4, [32]byte{}, 0))
 
 	// Mimic finalized deposit trie fetch.
 	fd, err := dc.FinalizedDeposits(context.Background())
@@ -824,9 +824,9 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 		}
 		insertIndex++
 	}
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15))
-	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 14))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15, [32]byte{}, 0))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 15, [32]byte{}, 0))
+	require.NoError(t, dc.InsertFinalizedDeposits(context.Background(), 14, [32]byte{}, 0))
 
 	fd, err = dc.FinalizedDeposits(context.Background())
 	require.NoError(t, err)

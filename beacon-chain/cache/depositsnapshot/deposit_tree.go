@@ -80,12 +80,12 @@ func fromSnapshot(snapshot DepositTreeSnapshot) (*DepositTree, error) {
 }
 
 // Finalize marks a deposit as finalized.
-func (d *DepositTree) Finalize(eth1DepositIndex int64, executionHash common.Hash) error {
+func (d *DepositTree) Finalize(eth1DepositIndex int64, executionHash common.Hash, executionNumber uint64) error {
 	var blockHash [32]byte
 	copy(blockHash[:], executionHash[:])
 	d.finalizedExecutionBlock = executionBlock{
-		Hash: blockHash,
-		//	Depth: 0, No easy way to retrieve this and it isn't used anywhere.
+		Hash:  blockHash,
+		Depth: executionNumber,
 	}
 	depositCount := uint64(eth1DepositIndex + 1)
 	_, err := d.tree.Finalize(depositCount, DepositContractDepth)

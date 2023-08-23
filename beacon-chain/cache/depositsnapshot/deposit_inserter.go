@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"sort"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -77,7 +78,8 @@ func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.Depos
 }
 
 // InsertFinalizedDeposits inserts deposits up to eth1DepositIndex (inclusive) into the finalized deposits cache.
-func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64) error {
+func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex int64,
+	executionHash common.Hash, executionNumber uint64) error {
 	ctx, span := trace.StartSpan(ctx, "Cache.InsertFinalizedDeposits")
 	defer span.End()
 	c.depositsLock.Lock()
@@ -101,7 +103,6 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	if int(eth1DepositIndex) < insertIndex {
 		return nil
 	}
-	depositCount := eth1DepositIndex + 1
 	currIdx := int64(depositTrie.depositCount) - 1
 
 	// Insert deposits into deposit trie.
@@ -117,15 +118,8 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 		}
 	}
 
-	tree, err := depositTrie.tree.Finalize(uint64(depositCount), DepositContractDepth)
-	if err != nil {
+	if err := depositTrie.Finalize(eth1DepositIndex, executionHash, executionNumber); err != nil {
 		return err
-	}
-	depositTrie.tree = tree
-	// Temporary workaround
-	depositTrie.finalizedExecutionBlock = executionBlock{
-		Hash:  [32]byte{'f', 'i', 'n', 'a', 'l', 'i', 'z', 'e'},
-		Depth: 0,
 	}
 
 	c.finalizedDeposits = finalizedDepositsContainer{
