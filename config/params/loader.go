@@ -207,6 +207,8 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("TERMINAL_BLOCK_HASH: %#x", cfg.TerminalBlockHash),
 		fmt.Sprintf("TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: %d", cfg.TerminalBlockHashActivationEpoch),
 		fmt.Sprintf("DEPOSIT_CONTRACT_ADDRESS: %s", cfg.DepositContractAddress),
+		fmt.Sprintf("DENEB_FORK_EPOCH: %d", cfg.DenebForkEpoch),
+		fmt.Sprintf("DENEB_FORK_VERSION: %#x", cfg.DenebForkVersion),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))

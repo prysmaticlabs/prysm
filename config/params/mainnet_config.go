@@ -212,6 +212,8 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BellatrixForkEpoch:   mainnetBellatrixForkEpoch,
 	CapellaForkVersion:   []byte{3, 0, 0, 0},
 	CapellaForkEpoch:     194048,
+	DenebForkVersion:     []byte{4, 0, 0, 0},
+	DenebForkEpoch:       math.MaxUint64,
 
 	// New values introduced in Altair hard fork 1.
 	// Participation flag indices.
@@ -279,14 +281,17 @@ func FillTestVersions(c *BeaconChainConfig, b byte) {
 	c.AltairForkVersion = make([]byte, fieldparams.VersionLength)
 	c.BellatrixForkVersion = make([]byte, fieldparams.VersionLength)
 	c.CapellaForkVersion = make([]byte, fieldparams.VersionLength)
+	c.DenebForkVersion = make([]byte, fieldparams.VersionLength)
 
 	c.GenesisForkVersion[fieldparams.VersionLength-1] = b
 	c.AltairForkVersion[fieldparams.VersionLength-1] = b
 	c.BellatrixForkVersion[fieldparams.VersionLength-1] = b
 	c.CapellaForkVersion[fieldparams.VersionLength-1] = b
+	c.DenebForkVersion[fieldparams.VersionLength-1] = b
 
 	c.GenesisForkVersion[0] = 0
 	c.AltairForkVersion[0] = 1
 	c.BellatrixForkVersion[0] = 2
 	c.CapellaForkVersion[0] = 3
+	c.DenebForkVersion[0] = 4
 }
