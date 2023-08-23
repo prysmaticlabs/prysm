@@ -12,6 +12,18 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 )
 
+func UintFromQuery(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+	raw := r.URL.Query().Get(name)
+	if raw != "" {
+		v, valid := ValidateUint(w, name, raw)
+		if !valid {
+			return false, "", 0
+		}
+		return true, raw, v
+	}
+	return true, "", 0
+}
+
 func ValidateHex(w http.ResponseWriter, name string, s string) bool {
 	if s == "" {
 		errJson := &http2.DefaultErrorJson{
@@ -95,4 +107,30 @@ func IsSyncing(
 		Code:    http.StatusServiceUnavailable}
 	http2.WriteError(w, errJson)
 	return true
+}
+
+// IsOptimistic checks whether the beacon node is currently optimistic and writes it to the response.
+func IsOptimistic(
+	ctx context.Context,
+	w http.ResponseWriter,
+	optimisticModeFetcher blockchain.OptimisticModeFetcher,
+) (bool, error) {
+	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		errJson := &http2.DefaultErrorJson{
+			Message: "Could not check optimistic status: " + err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+		http2.WriteError(w, errJson)
+		return true, err
+	}
+	if !isOptimistic {
+		return false, nil
+	}
+	errJson := &http2.DefaultErrorJson{
+		Code:    http.StatusServiceUnavailable,
+		Message: "Beacon node is currently optimistic and not serving validators",
+	}
+	http2.WriteError(w, errJson)
+	return true, nil
 }

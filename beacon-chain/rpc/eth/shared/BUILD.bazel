@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/sync:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/validator:go_default_library",
         "//encoding/bytesutil:go_default_library",

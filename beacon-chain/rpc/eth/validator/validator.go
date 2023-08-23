@@ -9,9 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
@@ -746,96 +744,6 @@ func (vs *Server) PrepareBeaconProposer(
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
-}
-
-// SubmitValidatorRegistration submits validator registrations.
-func (vs *Server) SubmitValidatorRegistration(ctx context.Context, reg *ethpbv1.SubmitValidatorRegistrationsRequest) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistration")
-	defer span.End()
-
-	if vs.BlockBuilder == nil || !vs.BlockBuilder.Configured() {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not register block builder: %v", builder.ErrNoBuilder)
-	}
-	var registrations []*ethpbalpha.SignedValidatorRegistrationV1
-	for i, registration := range reg.Registrations {
-		message := reg.Registrations[i].Message
-		registrations = append(registrations, &ethpbalpha.SignedValidatorRegistrationV1{
-			Message: &ethpbalpha.ValidatorRegistrationV1{
-				FeeRecipient: message.FeeRecipient,
-				GasLimit:     message.GasLimit,
-				Timestamp:    message.Timestamp,
-				Pubkey:       message.Pubkey,
-			},
-			Signature: registration.Signature,
-		})
-	}
-	if len(registrations) == 0 {
-		return &empty.Empty{}, status.Errorf(codes.InvalidArgument, "Validator registration request is empty")
-	}
-
-	if err := vs.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not register block builder: %v", err)
-	}
-
-	return &empty.Empty{}, nil
-}
-
-// ProduceAttestationData requests that the beacon node produces attestation data for
-// the requested committee index and slot based on the nodes current head.
-func (vs *Server) ProduceAttestationData(ctx context.Context, req *ethpbv1.ProduceAttestationDataRequest) (*ethpbv1.ProduceAttestationDataResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceAttestationData")
-	defer span.End()
-
-	v1alpha1req := &ethpbalpha.AttestationDataRequest{
-		Slot:           req.Slot,
-		CommitteeIndex: req.CommitteeIndex,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetAttestationData(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
-	}
-	attData := migration.V1Alpha1AttDataToV1(v1alpha1resp)
-
-	return &ethpbv1.ProduceAttestationDataResponse{Data: attData}, nil
-}
-
-// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
-func (vs *Server) ProduceSyncCommitteeContribution(
-	ctx context.Context,
-	req *ethpbv2.ProduceSyncCommitteeContributionRequest,
-) (*ethpbv2.ProduceSyncCommitteeContributionResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.ProduceSyncCommitteeContribution")
-	defer span.End()
-
-	msgs, err := vs.SyncCommitteePool.SyncCommitteeMessages(req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync subcommittee messages: %v", err)
-	}
-	if msgs == nil {
-		return nil, status.Errorf(codes.NotFound, "No subcommittee messages found")
-	}
-	v1alpha1Req := &ethpbalpha.AggregatedSigAndAggregationBitsRequest{
-		Msgs:      msgs,
-		Slot:      req.Slot,
-		SubnetId:  req.SubcommitteeIndex,
-		BlockRoot: req.BeaconBlockRoot,
-	}
-	v1alpha1Resp, err := vs.V1Alpha1Server.AggregatedSigAndAggregationBits(ctx, v1alpha1Req)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get contribution data: %v", err)
-	}
-	contribution := &ethpbv2.SyncCommitteeContribution{
-		Slot:              req.Slot,
-		BeaconBlockRoot:   req.BeaconBlockRoot,
-		SubcommitteeIndex: req.SubcommitteeIndex,
-		AggregationBits:   v1alpha1Resp.Bits,
-		Signature:         v1alpha1Resp.AggregatedSig,
-	}
-
-	return &ethpbv2.ProduceSyncCommitteeContributionResponse{
-		Data: contribution,
-	}, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.

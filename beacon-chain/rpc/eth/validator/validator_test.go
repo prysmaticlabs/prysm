@@ -14,16 +14,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
-	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
@@ -34,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
@@ -1242,139 +1237,6 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 }
 
-func TestProduceAttestationData(t *testing.T) {
-	block := util.NewBeaconBlock()
-	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
-	targetBlock := util.NewBeaconBlock()
-	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
-	justifiedBlock := util.NewBeaconBlock()
-	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
-	blockRoot, err := block.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not hash beacon block")
-	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root for justified block")
-	targetRoot, err := targetBlock.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root for target block")
-	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(slot))
-	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
-		Epoch: 2,
-		Root:  justifiedRoot[:],
-	})
-	require.NoError(t, err)
-
-	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot[:]
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
-	chainService := &mockChain.ChainService{
-		Genesis: time.Now(),
-	}
-	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	v1Alpha1Server := &v1alpha1validator.Server{
-		P2P:              &p2pmock.MockBroadcaster{},
-		SyncChecker:      &mockSync.Sync{IsSyncing: false},
-		AttestationCache: cache.NewAttestationCache(),
-		HeadFetcher: &mockChain.ChainService{
-			State: beaconState, Root: blockRoot[:],
-		},
-		FinalizationFetcher: &mockChain.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
-		},
-		TimeFetcher: &mockChain.ChainService{
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
-		},
-		StateNotifier: chainService.StateNotifier(),
-	}
-	v1Server := &Server{
-		V1Alpha1Server: v1Alpha1Server,
-	}
-
-	req := &ethpbv1.ProduceAttestationDataRequest{
-		CommitteeIndex: 0,
-		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
-	}
-	res, err := v1Server.ProduceAttestationData(context.Background(), req)
-	require.NoError(t, err, "Could not get attestation info at slot")
-
-	expectedInfo := &ethpbv1.AttestationData{
-		Slot:            3*params.BeaconConfig().SlotsPerEpoch + 1,
-		BeaconBlockRoot: blockRoot[:],
-		Source: &ethpbv1.Checkpoint{
-			Epoch: 2,
-			Root:  justifiedRoot[:],
-		},
-		Target: &ethpbv1.Checkpoint{
-			Epoch: 3,
-			Root:  blockRoot[:],
-		},
-	}
-
-	if !proto.Equal(res.Data, expectedInfo) {
-		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
-	}
-}
-
-func TestProduceSyncCommitteeContribution(t *testing.T) {
-	ctx := context.Background()
-	root := bytesutil.PadTo([]byte("root"), 32)
-	sig := bls.NewAggregateSignature().Marshal()
-	messsage := &ethpbalpha.SyncCommitteeMessage{
-		Slot:           0,
-		BlockRoot:      root,
-		ValidatorIndex: 0,
-		Signature:      sig,
-	}
-	syncCommitteePool := synccommittee.NewStore()
-	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
-	v1Server := &v1alpha1validator.Server{
-		SyncCommitteePool: syncCommitteePool,
-		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-		},
-	}
-	server := Server{
-		V1Alpha1Server:    v1Server,
-		SyncCommitteePool: syncCommitteePool,
-	}
-
-	req := &ethpbv2.ProduceSyncCommitteeContributionRequest{
-		Slot:              0,
-		SubcommitteeIndex: 0,
-		BeaconBlockRoot:   root,
-	}
-	resp, err := server.ProduceSyncCommitteeContribution(ctx, req)
-	require.NoError(t, err)
-	assert.Equal(t, primitives.Slot(0), resp.Data.Slot)
-	assert.Equal(t, uint64(0), resp.Data.SubcommitteeIndex)
-	assert.DeepEqual(t, root, resp.Data.BeaconBlockRoot)
-	aggregationBits := resp.Data.AggregationBits
-	assert.Equal(t, true, aggregationBits.BitAt(0))
-	assert.DeepEqual(t, sig, resp.Data.Signature)
-
-	syncCommitteePool = synccommittee.NewStore()
-	v1Server = &v1alpha1validator.Server{
-		SyncCommitteePool: syncCommitteePool,
-		HeadFetcher: &mockChain.ChainService{
-			SyncCommitteeIndices: []primitives.CommitteeIndex{0},
-		},
-	}
-	server = Server{
-		V1Alpha1Server:    v1Server,
-		SyncCommitteePool: syncCommitteePool,
-	}
-	req = &ethpbv2.ProduceSyncCommitteeContributionRequest{
-		Slot:              0,
-		SubcommitteeIndex: 0,
-		BeaconBlockRoot:   root,
-	}
-	_, err = server.ProduceSyncCommitteeContribution(ctx, req)
-	assert.ErrorContains(t, "No subcommittee messages found", err)
-}
-
 func TestPrepareBeaconProposer(t *testing.T) {
 	type args struct {
 		request *ethpbv1.PrepareBeaconProposerRequest
@@ -1513,64 +1375,6 @@ func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
-	}
-}
-
-func TestServer_SubmitValidatorRegistrations(t *testing.T) {
-	type args struct {
-		request *ethpbv1.SubmitValidatorRegistrationsRequest
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr string
-	}{
-		{
-			name: "Happy Path",
-			args: args{
-				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
-					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{
-						{
-							Message: &ethpbv1.SubmitValidatorRegistrationsRequest_ValidatorRegistration{
-								FeeRecipient: make([]byte, fieldparams.BLSPubkeyLength),
-								GasLimit:     30000000,
-								Timestamp:    uint64(time.Now().Unix()),
-								Pubkey:       make([]byte, fieldparams.BLSPubkeyLength),
-							},
-							Signature: make([]byte, fieldparams.BLSSignatureLength),
-						},
-					},
-				},
-			},
-			wantErr: "",
-		},
-		{
-			name: "Empty Request",
-			args: args{
-				request: &ethpbv1.SubmitValidatorRegistrationsRequest{
-					Registrations: []*ethpbv1.SubmitValidatorRegistrationsRequest_SignedValidatorRegistration{},
-				},
-			},
-			wantErr: "Validator registration request is empty",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := dbutil.SetupDB(t)
-			ctx := context.Background()
-			server := &Server{
-				BlockBuilder: &builderTest.MockBuilderService{
-					HasConfigured: true,
-				},
-				BeaconDB: db,
-			}
-			_, err := server.SubmitValidatorRegistration(ctx, tt.args.request)
-			if tt.wantErr != "" {
-				require.ErrorContains(t, tt.wantErr, err)
-				return
-			}
-			require.NoError(t, err)
-		})
 	}
 }
 

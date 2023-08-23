@@ -50,6 +50,8 @@ func ProcessVoluntaryExits(
 	beaconState state.BeaconState,
 	exits []*ethpb.SignedVoluntaryExit,
 ) (state.BeaconState, error) {
+	maxExitEpoch, churn := v.ValidatorsMaxExitEpochAndChurn(beaconState)
+	var exitEpoch primitives.Epoch
 	for idx, exit := range exits {
 		if exit == nil || exit.Exit == nil {
 			return nil, errors.New("nil voluntary exit in block body")
@@ -61,8 +63,15 @@ func ProcessVoluntaryExits(
 		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorsRoot()); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
-		beaconState, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex)
-		if err != nil {
+		beaconState, exitEpoch, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex, maxExitEpoch, churn)
+		if err == nil {
+			if exitEpoch > maxExitEpoch {
+				maxExitEpoch = exitEpoch
+				churn = 1
+			} else if exitEpoch == maxExitEpoch {
+				churn++
+			}
+		} else if !errors.Is(err, v.ValidatorAlreadyExitedErr) {
 			return nil, err
 		}
 	}

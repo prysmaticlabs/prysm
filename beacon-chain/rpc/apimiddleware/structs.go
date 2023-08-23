@@ -143,24 +143,12 @@ type BlockAttestationsResponseJson struct {
 	Finalized           bool               `json:"finalized"`
 }
 
-type AttestationsPoolResponseJson struct {
-	Data []*AttestationJson `json:"data"`
-}
-
-type SubmitAttestationRequestJson struct {
-	Data []*AttestationJson `json:"data"`
-}
-
 type AttesterSlashingsPoolResponseJson struct {
 	Data []*AttesterSlashingJson `json:"data"`
 }
 
 type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
-}
-
-type VoluntaryExitsPoolResponseJson struct {
-	Data []*SignedVoluntaryExitJson `json:"data"`
 }
 
 type SubmitSyncCommitteeSignaturesRequestJson struct {
@@ -266,10 +254,6 @@ type ProduceBlockResponseV2Json struct {
 type ProduceBlindedBlockResponseJson struct {
 	Version string                           `json:"version" enum:"true"`
 	Data    *BlindedBeaconBlockContainerJson `json:"data"`
-}
-
-type ProduceAttestationDataResponseJson struct {
-	Data *AttestationDataJson `json:"data"`
 }
 
 type AggregateAttestationResponseJson struct {
@@ -980,22 +964,6 @@ type SyncCommitteeContributionJson struct {
 	SubcommitteeIndex string `json:"subcommittee_index"`
 	AggregationBits   string `json:"aggregation_bits" hex:"true"`
 	Signature         string `json:"signature" hex:"true"`
-}
-
-type ValidatorRegistrationJson struct {
-	FeeRecipient string `json:"fee_recipient" hex:"true"`
-	GasLimit     string `json:"gas_limit"`
-	Timestamp    string `json:"timestamp"`
-	Pubkey       string `json:"pubkey" hex:"true"`
-}
-
-type SignedValidatorRegistrationJson struct {
-	Message   *ValidatorRegistrationJson `json:"message"`
-	Signature string                     `json:"signature" hex:"true"`
-}
-
-type SignedValidatorRegistrationsRequestJson struct {
-	Registrations []*SignedValidatorRegistrationJson `json:"registrations"`
 }
 
 type ForkChoiceNodeJson struct {

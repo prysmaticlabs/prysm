@@ -2,14 +2,17 @@ package validator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
@@ -99,12 +102,13 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitContributionAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitContributionAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -136,12 +140,13 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitAggregateAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitAggregateAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -195,12 +200,13 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitSyncCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitSyncCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -309,12 +315,13 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitBeaconCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitBeaconCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -396,5 +403,175 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		}
 		pubkey := val.PublicKey()
 		core.AssignValidatorToSubnet(pubkey[:], valStatus)
+	}
+}
+
+// GetAttestationData requests that the beacon node produces attestation data for
+// the requested committee index and slot based on the nodes current head.
+func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	if isOptimistic, err := shared.IsOptimistic(ctx, w, s.OptimisticModeFetcher); isOptimistic || err != nil {
+		return
+	}
+
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawCommitteeIndex := r.URL.Query().Get("committee_index")
+	committeeIndex, valid := shared.ValidateUint(w, "Committee Index", rawCommitteeIndex)
+	if !valid {
+		return
+	}
+
+	attestationData, rpcError := s.CoreService.GetAttestationData(ctx, &ethpbalpha.AttestationDataRequest{
+		Slot:           primitives.Slot(slot),
+		CommitteeIndex: primitives.CommitteeIndex(committeeIndex),
+	})
+
+	if rpcError != nil {
+		http2.HandleError(w, rpcError.Err.Error(), core.ErrorReasonToHTTP(rpcError.Reason))
+		return
+	}
+
+	response := &GetAttestationDataResponse{
+		Data: &shared.AttestationData{
+			Slot:            strconv.FormatUint(uint64(attestationData.Slot), 10),
+			CommitteeIndex:  strconv.FormatUint(uint64(attestationData.CommitteeIndex), 10),
+			BeaconBlockRoot: hexutil.Encode(attestationData.BeaconBlockRoot),
+			Source: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Source.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Source.Root),
+			},
+			Target: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(attestationData.Target.Epoch), 10),
+				Root:  hexutil.Encode(attestationData.Target.Root),
+			},
+		},
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
+	defer span.End()
+
+	subIndex := r.URL.Query().Get("subcommittee_index")
+	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	if !valid {
+		return
+	}
+	rawSlot := r.URL.Query().Get("slot")
+	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	if !valid {
+		return
+	}
+	rawBlockRoot := r.URL.Query().Get("beacon_block_root")
+	blockRoot, err := hexutil.Decode(rawBlockRoot)
+	if err != nil {
+		http2.HandleError(w, "Invalid Beacon Block Root: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
+	if !ok {
+		return
+	}
+	response := &ProduceSyncCommitteeContributionResponse{
+		Data: contribution,
+	}
+	http2.WriteJson(w, response)
+}
+
+// ProduceSyncCommitteeContribution requests that the beacon node produce a sync committee contribution.
+func (s *Server) produceSyncCommitteeContribution(
+	ctx context.Context,
+	w http.ResponseWriter,
+	slot primitives.Slot,
+	index uint64,
+	blockRoot []byte,
+) (*shared.SyncCommitteeContribution, bool) {
+	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
+	if err != nil {
+		http2.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+	if len(msgs) == 0 {
+		http2.HandleError(w, "No subcommittee messages found", http.StatusNotFound)
+		return nil, false
+	}
+	sig, aggregatedBits, err := s.CoreService.AggregatedSigAndAggregationBits(
+		ctx,
+		&ethpbalpha.AggregatedSigAndAggregationBitsRequest{
+			Msgs:      msgs,
+			Slot:      slot,
+			SubnetId:  index,
+			BlockRoot: blockRoot,
+		},
+	)
+	if err != nil {
+		http2.HandleError(w, "Could not get contribution data: "+err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+
+	return &shared.SyncCommitteeContribution{
+		Slot:              strconv.FormatUint(uint64(slot), 10),
+		BeaconBlockRoot:   hexutil.Encode(blockRoot),
+		SubcommitteeIndex: strconv.FormatUint(index, 10),
+		AggregationBits:   hexutil.Encode(aggregatedBits),
+		Signature:         hexutil.Encode(sig),
+	}, true
+}
+
+// RegisterValidator requests that the beacon node stores valid validator registrations and calls the builder apis to update the custom builder
+func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.RegisterValidators")
+	defer span.End()
+
+	if s.BlockBuilder == nil || !s.BlockBuilder.Configured() {
+		http2.HandleError(w, fmt.Sprintf("Could not register block builder: %v", builder.ErrNoBuilder), http.StatusBadRequest)
+		return
+	}
+
+	var jsonRegistrations []*shared.SignedValidatorRegistration
+	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	validate := validator.New()
+	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
+	for i, registration := range jsonRegistrations {
+		if err := validate.Struct(registration); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		reg, err := registration.ToConsensus()
+		if err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		registrations[i] = reg
+	}
+	if len(registrations) == 0 {
+		http2.HandleError(w, "Validator registration request is empty", http.StatusBadRequest)
+		return
+	}
+	if err := s.BlockBuilder.RegisterValidator(ctx, registrations); err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

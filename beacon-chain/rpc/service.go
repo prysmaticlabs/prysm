@@ -239,11 +239,12 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
 		OperationNotifier:  s.cfg.OperationNotifier,
+		AttestationCache:   cache.NewAttestationCache(),
+		StateGen:           s.cfg.StateGen,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
-		AttestationCache:       cache.NewAttestationCache(),
 		AttPool:                s.cfg.AttestationsPool,
 		ExitPool:               s.cfg.ExitPool,
 		HeadFetcher:            s.cfg.HeadFetcher,
@@ -300,8 +301,11 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/contribution_and_proofs", validatorServerV1.SubmitContributionAndProofs).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_and_proofs", validatorServerV1.SubmitAggregateAndProofs).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/sync_committee_contribution", validatorServerV1.ProduceSyncCommitteeContribution).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/sync_committee_subscriptions", validatorServerV1.SubmitSyncCommitteeSubscription).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/beacon_committee_subscriptions", validatorServerV1.SubmitBeaconCommitteeSubscription).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/attestation_data", validatorServerV1.GetAttestationData).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServerV1.RegisterValidator).Methods(http.MethodPost)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),
@@ -406,6 +410,12 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/root", beaconChainServerV1.GetBlockRoot).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconChainServerV1.ListAttestations).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconChainServerV1.SubmitAttestations).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.ListVoluntaryExits).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.SubmitVoluntaryExit).Methods(http.MethodPost)
+
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)

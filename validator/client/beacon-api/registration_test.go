@@ -10,7 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -33,9 +33,9 @@ func TestRegistration_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRegistrations := []*apimiddleware.SignedValidatorRegistrationJson{
+	jsonRegistrations := []*shared.SignedValidatorRegistration{
 		{
-			Message: &apimiddleware.ValidatorRegistrationJson{
+			Message: &shared.ValidatorRegistration{
 				FeeRecipient: feeRecipient1,
 				GasLimit:     "100",
 				Timestamp:    "1000",
@@ -44,7 +44,7 @@ func TestRegistration_Valid(t *testing.T) {
 			Signature: signature1,
 		},
 		{
-			Message: &apimiddleware.ValidatorRegistrationJson{
+			Message: &shared.ValidatorRegistration{
 				FeeRecipient: feeRecipient2,
 				GasLimit:     "200",
 				Timestamp:    "2000",
@@ -53,7 +53,7 @@ func TestRegistration_Valid(t *testing.T) {
 			Signature: signature2,
 		},
 		{
-			Message: &apimiddleware.ValidatorRegistrationJson{
+			Message: &shared.ValidatorRegistration{
 				FeeRecipient: feeRecipient3,
 				GasLimit:     "300",
 				Timestamp:    "3000",
