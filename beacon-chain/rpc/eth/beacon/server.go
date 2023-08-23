@@ -47,5 +47,5 @@ type Server struct {
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
-	CoreService                   core.Service
+	CoreService                   *core.Service
 }

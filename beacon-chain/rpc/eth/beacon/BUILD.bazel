@@ -101,7 +101,6 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//api:go_default_library",
-        "//api/grpc:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
@@ -117,8 +116,8 @@ go_test(
         "//beacon-chain/operations/voluntaryexits/mock:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/rpc/eth/helpers:go_default_library",
-        "//beacon-chain/rpc/eth/validator:go_default_library",
         "//beacon-chain/rpc/lookup:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
         "//beacon-chain/state:go_default_library",
