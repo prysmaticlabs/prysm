@@ -245,10 +245,13 @@ func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, bloc
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
 }
 
+// Deposits returns the cached internal deposit tree.
 func (fd *finalizedDepositsContainer) Deposits() cache.MerkleTree {
 	return fd.depositTree
 }
 
+// MerkleTrieIndex represents the last finalized index in
+// the finalized deposit container.
 func (fd *finalizedDepositsContainer) MerkleTrieIndex() int64 {
 	return fd.merkleTrieIndex
 }
@@ -260,6 +263,9 @@ func getFinalizedDeposits(deposits *DepositTree, index int64) finalizedDepositsC
 	}
 }
 
+// PendingDeposits returns a list of deposits until the given block number
+// (inclusive). If no block is specified then this method returns all pending
+// deposits.
 func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
 	ctx, span := trace.StartSpan(ctx, "Cache.PendingDeposits")
 	defer span.End()
@@ -274,6 +280,8 @@ func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb
 	return deposits
 }
 
+// PendingContainers returns a list of deposit containers until the given block number
+// (inclusive).
 func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
 	ctx, span := trace.StartSpan(ctx, "Cache.PendingContainers")
 	defer span.End()

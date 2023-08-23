@@ -169,6 +169,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	} else {
 		depositTrie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
 		if err != nil {
+			cancel()
 			return nil, errors.Wrap(err, "could not set up deposit trie")
 		}
 	}
