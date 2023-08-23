@@ -603,7 +603,7 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 		}
 		feeRecipientBytes, err := hexutil.Decode(r.FeeRecipient)
 		if err != nil {
-			http2.HandleError(w, fmt.Sprintf("fee recipient at index %d failed to decode: %v", i, err), http.StatusBadRequest)
+			http2.HandleError(w, fmt.Sprintf("Fee recipient at index %d failed to decode: %v", i, err), http.StatusBadRequest)
 			return
 		}
 		if len(feeRecipientBytes) != fieldparams.FeeRecipientLength {
