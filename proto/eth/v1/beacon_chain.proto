@@ -238,10 +238,6 @@ message ProposerSlashingPoolResponse {
     repeated ProposerSlashing data = 1;
 }
 
-message VoluntaryExitsPoolResponse {
-    repeated SignedVoluntaryExit data = 1;
-}
-
 // Beacon Config API related messages.
 
 message ForkScheduleResponse {

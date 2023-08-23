@@ -102,12 +102,13 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitContributionAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitContributionAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -139,12 +140,13 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
-	if r.Body == http.NoBody {
+	var req SubmitAggregateAndProofsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitAggregateAndProofsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -198,12 +200,13 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitSyncCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitSyncCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -312,12 +315,13 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if r.Body == http.NoBody {
+	var req SubmitBeaconCommitteeSubscriptionsRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
-	}
-	var req SubmitBeaconCommitteeSubscriptionsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req.Data); err != nil {
+	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
