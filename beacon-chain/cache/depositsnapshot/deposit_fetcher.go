@@ -19,7 +19,7 @@ import (
 var (
 	pendingDepositsCount = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "beacondb_pending_deposits_eip4881",
-		Help: "The number of pending deposits in the beaconDB in-memory database",
+		Help: "The number of pending deposits in memory",
 	})
 )
 
@@ -275,7 +275,7 @@ func (c *Cache) PendingDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb
 }
 
 func (c *Cache) PendingContainers(ctx context.Context, untilBlk *big.Int) []*ethpb.DepositContainer {
-	ctx, span := trace.StartSpan(ctx, "Cache.PendingDeposits")
+	ctx, span := trace.StartSpan(ctx, "Cache.PendingContainers")
 	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()

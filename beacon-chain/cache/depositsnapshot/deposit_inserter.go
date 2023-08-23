@@ -18,7 +18,7 @@ import (
 var (
 	historicalDepositsCount = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "beacondb_all_deposits_eip4881",
-		Help: "The number of total deposits in the beaconDB in-memory database",
+		Help: "The number of total deposits in memory",
 	})
 	log = logrus.WithField("prefix", "cache")
 )
@@ -69,7 +69,7 @@ func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.Depos
 	c.deposits = ctrs
 	for _, ctr := range ctrs {
 		// Use a new value, as the reference
-		// odeposf c changes in the next iteration.
+		// changes in the next iteration.
 		newPtr := ctr
 		pKey := bytesutil.ToBytes48(newPtr.Deposit.Data.PublicKey)
 		c.depositsByKey[pKey] = append(c.depositsByKey[pKey], newPtr)

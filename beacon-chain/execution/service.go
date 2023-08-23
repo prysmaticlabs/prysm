@@ -855,7 +855,7 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		if features.Get().EnableEIP4881 {
 			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 			if !ok {
-				return errors.New("deposit trie was not Deposit Tree")
+				return errors.New("deposit trie was not EIP4881 DepositTree")
 			}
 			snapshot, err := trie.GetSnapshot()
 			if err != nil {
