@@ -88,7 +88,7 @@ type SignedValidatorRegistration struct {
 
 type FeeRecipient struct {
 	ValidatorIndex string `json:"validator_index"`
-	FeeRecipient   string `json:"fee_recipient" hex:"true"`
+	FeeRecipient   string `json:"fee_recipient"`
 }
 
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
