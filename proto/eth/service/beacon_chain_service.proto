@@ -341,27 +341,6 @@ service BeaconChain {
     };
   }
 
-  // ListPoolVoluntaryExits retrieves voluntary exits known by the node but
-  // not necessarily incorporated into any block.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getPoolVoluntaryExits
-  rpc ListPoolVoluntaryExits(google.protobuf.Empty) returns (v1.VoluntaryExitsPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/voluntary_exits"
-    };
-  }
-
-  // SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
-  // and if passes validation node MUST broadcast it to network.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolVoluntaryExit
-  rpc SubmitVoluntaryExit(v1.SignedVoluntaryExit) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/voluntary_exits"
-      body: "*"
-    };
-  }
-
   // SubmitSignedBLSToExecutionChanges submits said object to node's pool
   // and if passes validation node MUST broadcast it to network.
   rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
