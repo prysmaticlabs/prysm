@@ -15,11 +15,15 @@ import (
 
 	"github.com/pkg/errors"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -1525,6 +1529,183 @@ func TestServer_RegisterValidator(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetAttesterDuties(t *testing.T) {
+	helpers.ClearCache()
+
+	ctx := context.Background()
+	genesis := util.NewBeaconBlock()
+	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
+	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
+	require.NoError(t, err)
+	eth1Data, err := util.DeterministicEth1Data(len(deposits))
+	require.NoError(t, err)
+	bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
+	require.NoError(t, err, "Could not set up genesis state")
+	// Set state to non-epoch start slot.
+	require.NoError(t, bs.SetSlot(5))
+	genesisRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	roots := make([][]byte, fieldparams.BlockRootsLength)
+	roots[0] = genesisRoot[:]
+	require.NoError(t, bs.SetBlockRoots(roots))
+	db := dbutil.SetupDB(t)
+
+	// Deactivate last validator.
+	vals := bs.Validators()
+	vals[len(vals)-1].ExitEpoch = 0
+	require.NoError(t, bs.SetValidators(vals))
+
+	pubKeys := make([][]byte, len(deposits))
+	for i := 0; i < len(deposits); i++ {
+		pubKeys[i] = deposits[i].Data.PublicKey
+	}
+
+	// nextEpochState must not be used for committee calculations when requesting next epoch
+	nextEpochState := bs.Copy()
+	require.NoError(t, nextEpochState.SetSlot(params.BeaconConfig().SlotsPerEpoch))
+	require.NoError(t, nextEpochState.SetValidators(vals[:512]))
+
+	chainSlot := primitives.Slot(0)
+	chain := &mockChain.ChainService{
+		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
+	}
+	vs := &Server{
+		Stater: &testutil.MockStater{
+			StatesBySlot: map[primitives.Slot]state.BeaconState{
+				0:                                   bs,
+				params.BeaconConfig().SlotsPerEpoch: nextEpochState,
+			},
+		},
+		TimeFetcher:           chain,
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		OptimisticModeFetcher: chain,
+	}
+
+	t.Run("Single validator", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.Equal(t, primitives.CommitteeIndex(1), duty.CommitteeIndex)
+		assert.Equal(t, primitives.Slot(0), duty.Slot)
+		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
+		assert.Equal(t, uint64(171), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, primitives.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
+	})
+
+	t.Run("Multiple validators", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0, 1},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(resp.Data))
+	})
+
+	t.Run("Next epoch", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: slots.ToEpoch(bs.Slot()) + 1,
+			Index: []primitives.ValidatorIndex{0},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.Equal(t, primitives.CommitteeIndex(0), duty.CommitteeIndex)
+		assert.Equal(t, primitives.Slot(62), duty.Slot)
+		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
+		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
+		assert.Equal(t, uint64(170), duty.CommitteeLength)
+		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
+		assert.Equal(t, primitives.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
+	})
+
+	t.Run("Epoch out of bound", func(t *testing.T) {
+		currentEpoch := slots.ToEpoch(bs.Slot())
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: currentEpoch + 2,
+			Index: []primitives.ValidatorIndex{0},
+		}
+		_, err := vs.GetAttesterDuties(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
+	})
+
+	t.Run("Validator index out of bound", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys))},
+		}
+		_, err := vs.GetAttesterDuties(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Invalid validator index", err)
+	})
+
+	t.Run("Inactive validator - no duties", func(t *testing.T) {
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys) - 1)},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(resp.Data))
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		blk.Block.Slot = 31
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainSlot := primitives.Slot(0)
+		chain := &mockChain.ChainService{
+			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
+		}
+		vs := &Server{
+			Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
+			TimeFetcher:           chain,
+			OptimisticModeFetcher: chain,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		}
+		req := &ethpbv1.AttesterDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0},
+		}
+		resp, err := vs.GetAttesterDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+}
+
+func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
+	vs := &Server{
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+	}
+	_, err = vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
+	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
 }
 
 var (

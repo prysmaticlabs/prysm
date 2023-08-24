@@ -33,96 +33,6 @@ import (
 var errInvalidValIndex = errors.New("invalid validator index")
 var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
 
-// GetAttesterDuties requests the beacon node to provide a set of attestation duties,
-// which should be performed by validators, for a particular epoch.
-func (vs *Server) GetAttesterDuties(ctx context.Context, req *ethpbv1.AttesterDutiesRequest) (*ethpbv1.AttesterDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetAttesterDuties")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	if req.Epoch > currentEpoch+1 {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
-	}
-
-	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
-	}
-
-	var startSlot primitives.Slot
-	if req.Epoch == currentEpoch+1 {
-		startSlot, err = slots.EpochStart(currentEpoch)
-	} else {
-		startSlot, err = slots.EpochStart(req.Epoch)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
-	}
-
-	s, err := vs.Stater.StateBySlot(ctx, startSlot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
-	}
-
-	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
-	}
-	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get active validator count: %v", err)
-	}
-	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
-
-	duties := make([]*ethpbv1.AttesterDuty, 0, len(req.Index))
-	for _, index := range req.Index {
-		pubkey := s.PubkeyAtIndex(index)
-		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
-		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid validator index")
-		}
-		committee := committeeAssignments[index]
-		if committee == nil {
-			continue
-		}
-		var valIndexInCommittee primitives.CommitteeIndex
-		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
-		// however it's an impossible condition because every validator must be assigned to a committee.
-		for cIndex, vIndex := range committee.Committee {
-			if vIndex == index {
-				valIndexInCommittee = primitives.CommitteeIndex(uint64(cIndex))
-				break
-			}
-		}
-		duties = append(duties, &ethpbv1.AttesterDuty{
-			Pubkey:                  pubkey[:],
-			ValidatorIndex:          index,
-			CommitteeIndex:          committee.CommitteeIndex,
-			CommitteeLength:         uint64(len(committee.Committee)),
-			CommitteesAtSlot:        committeesAtSlot,
-			ValidatorCommitteeIndex: valIndexInCommittee,
-			Slot:                    committee.AttesterSlot,
-		})
-	}
-
-	root, err := attestationDependentRoot(s, req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
-	}
-
-	return &ethpbv1.AttesterDutiesResponse{
-		DependentRoot:       root,
-		Data:                duties,
-		ExecutionOptimistic: isOptimistic,
-	}, nil
-}
-
 // GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
 func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDutiesRequest) (*ethpbv1.ProposerDutiesResponse, error) {
 	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
@@ -814,26 +724,6 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	}
 
 	return resp, nil
-}
-
-// attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
-// or the genesis block root in the case of underflow.
-func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
-	var dependentRootSlot primitives.Slot
-	if epoch <= 1 {
-		dependentRootSlot = 0
-	} else {
-		prevEpochStartSlot, err := slots.EpochStart(epoch.Sub(1))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-		dependentRootSlot = prevEpochStartSlot.Sub(1)
-	}
-	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get block root")
-	}
-	return root, nil
 }
 
 // proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)

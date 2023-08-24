@@ -1,6 +1,8 @@
 package validator
 
-import "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+import (
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+)
 
 type AggregateAttestationResponse struct {
 	Data *shared.Attestation `json:"data"`
@@ -28,4 +30,24 @@ type GetAttestationDataResponse struct {
 
 type ProduceSyncCommitteeContributionResponse struct {
 	Data *shared.SyncCommitteeContribution `json:"data"`
+}
+
+type GetAttesterDutiesRequest struct {
+	ValidatorIndices []string `json:"validator_indices"`
+}
+
+type GetAttesterDutiesResponse struct {
+	DependentRoot       string          `json:"dependent_root"`
+	Data                []*AttesterDuty `json:"data"`
+	ExecutionOptimistic bool            `json:"execution_optimistic"`
+}
+
+type AttesterDuty struct {
+	Pubkey                  string `json:"pubkey"`
+	ValidatorIndex          string `json:"validator_index"`
+	CommitteeIndex          string `json:"committee_index"`
+	CommitteeLength         string `json:"committee_length"`
+	CommitteesAtSlot        string `json:"committees_at_slot"`
+	ValidatorCommitteeIndex string `json:"validator_committee_index"`
+	Slot                    string `json:"slot"`
 }

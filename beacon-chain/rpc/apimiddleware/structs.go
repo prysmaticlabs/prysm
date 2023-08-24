@@ -225,12 +225,6 @@ type ValidatorIndicesJson struct {
 	Index []string `json:"index"`
 }
 
-type AttesterDutiesResponseJson struct {
-	DependentRoot       string              `json:"dependent_root" hex:"true"`
-	Data                []*AttesterDutyJson `json:"data"`
-	ExecutionOptimistic bool                `json:"execution_optimistic"`
-}
-
 type ProposerDutiesResponseJson struct {
 	DependentRoot       string              `json:"dependent_root" hex:"true"`
 	Data                []*ProposerDutyJson `json:"data"`
@@ -912,16 +906,6 @@ type V2ForkChoiceHeadJson struct {
 type DepositContractJson struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
-}
-
-type AttesterDutyJson struct {
-	Pubkey                  string `json:"pubkey" hex:"true"`
-	ValidatorIndex          string `json:"validator_index"`
-	CommitteeIndex          string `json:"committee_index"`
-	CommitteeLength         string `json:"committee_length"`
-	CommitteesAtSlot        string `json:"committees_at_slot"`
-	ValidatorCommitteeIndex string `json:"validator_committee_index"`
-	Slot                    string `json:"slot"`
 }
 
 type ProposerDutyJson struct {

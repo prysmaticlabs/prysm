@@ -55,7 +55,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
-		"/eth/v1/validator/duties/attester/{epoch}",
 		"/eth/v1/validator/duties/proposer/{epoch}",
 		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
@@ -193,14 +192,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
-	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &ValidatorIndicesJson{}
-		endpoint.PostResponse = &AttesterDutiesResponseJson{}
-		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &NodeSyncDetailsErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
-		}
 	case "/eth/v1/validator/duties/proposer/{epoch}":
 		endpoint.GetResponse = &ProposerDutiesResponseJson{}
 		endpoint.RequestURLLiterals = []string{"epoch"}

@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -152,17 +153,17 @@ var beaconPathsAndObjects = map[string]metadata{
 			return validatorIndices
 		}(),
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterDutiesResponseJson{},
+			"json": &validator.GetAttesterDutiesResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterDutiesResponseJson{},
+			"json": &validator.GetAttesterDutiesResponse{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedp, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			castedp, ok := lhouseResp.(*validator.GetAttesterDutiesResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
-			castedl, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			castedl, ok := lhouseResp.(*validator.GetAttesterDutiesResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
@@ -27,6 +29,8 @@ import (
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
@@ -574,4 +578,150 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// GetAttesterDuties requests the beacon node to provide a set of attestation duties,
+// which should be performed by validators, for a particular epoch.
+func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttesterDuties")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	rawEpoch := r.URL.Query().Get("epoch")
+	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	if !valid {
+		return
+	}
+	requestedEpoch := primitives.Epoch(requestedEpochUint)
+	var req GetAttesterDutiesRequest
+	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
+	for i, ix := range req.ValidatorIndices {
+		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
+		if !valid {
+			return
+		}
+		requestedValIndices[i] = primitives.ValidatorIndex(valIx)
+	}
+
+	cs := s.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	if requestedEpoch > currentEpoch+1 {
+		http2.HandleError(
+			w,
+			fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", requestedEpoch, currentEpoch+1),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	var startSlot primitives.Slot
+	if requestedEpoch == currentEpoch+1 {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(requestedEpoch)
+	}
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get start slot from epoch %d: %v", requestedEpoch, err), http.StatusInternalServerError)
+		return
+	}
+
+	st, err := s.Stater.StateBySlot(ctx, startSlot)
+	if err != nil {
+		http2.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get active validator count: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
+
+	duties := make([]*AttesterDuty, 0, len(requestedValIndices))
+	for _, index := range requestedValIndices {
+		pubkey := st.PubkeyAtIndex(index)
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
+		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
+			http2.HandleError(w, fmt.Sprintf("Invalid validator index %d", index), http.StatusBadRequest)
+			return
+		}
+		committee := committeeAssignments[index]
+		if committee == nil {
+			continue
+		}
+		var valIndexInCommittee int
+		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
+		// however it's an impossible condition because every validator must be assigned to a committee.
+		for cIndex, vIndex := range committee.Committee {
+			if vIndex == index {
+				valIndexInCommittee = cIndex
+				break
+			}
+		}
+		duties = append(duties, &AttesterDuty{
+			Pubkey:                  hexutil.Encode(pubkey[:]),
+			ValidatorIndex:          strconv.FormatUint(uint64(index), 10),
+			CommitteeIndex:          strconv.FormatUint(uint64(committee.CommitteeIndex), 10),
+			CommitteeLength:         strconv.Itoa(len(committee.Committee)),
+			CommitteesAtSlot:        strconv.FormatUint(committeesAtSlot, 10),
+			ValidatorCommitteeIndex: strconv.Itoa(valIndexInCommittee),
+			Slot:                    strconv.FormatUint(uint64(committee.AttesterSlot), 10),
+		})
+	}
+
+	dependentRoot, err := attestationDependentRoot(st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := &GetAttesterDutiesResponse{
+		DependentRoot:       hexutil.Encode(dependentRoot),
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
+	}
+	http2.WriteJson(w, response)
+}
+
+// attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+// or the genesis block root in the case of underflow.
+func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
+	if epoch <= 1 {
+		dependentRootSlot = 0
+	} else {
+		prevEpochStartSlot, err := slots.EpochStart(epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		dependentRootSlot = prevEpochStartSlot.Sub(1)
+	}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	return root, nil
 }
