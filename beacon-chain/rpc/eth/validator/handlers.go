@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -590,7 +591,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawEpoch := r.URL.Query().Get("epoch")
+	rawEpoch := mux.Vars(r)["epoch"]
 	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
 	if !valid {
 		return
