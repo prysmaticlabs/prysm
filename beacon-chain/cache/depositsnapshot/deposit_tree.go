@@ -136,7 +136,6 @@ func (d *DepositTree) pushLeaf(leaf [32]byte) error {
 
 // Insert is defined as part of MerkleTree interface and adds a new leaf to the tree.
 func (d *DepositTree) Insert(item []byte, _ int) error {
-	var err error
 	var leaf [32]byte
 	copy(leaf[:], item[:32])
 	return d.pushLeaf(leaf)
