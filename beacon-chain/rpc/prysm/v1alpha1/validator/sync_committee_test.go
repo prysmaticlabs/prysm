@@ -113,6 +113,7 @@ func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 		CoreService: &core.Service{
 			SyncCommitteePool: syncCommitteePool,
 			HeadFetcher:       headFetcher,
+			P2P:               &mockp2p.MockBroadcaster{},
 		},
 		SyncCommitteePool: syncCommitteePool,
 		HeadFetcher:       headFetcher,
