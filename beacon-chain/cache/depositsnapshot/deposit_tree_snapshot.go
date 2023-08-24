@@ -66,6 +66,7 @@ func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
 	return tree
 }
 
+// DepositTreeFromSnapshotProto generates a deposit tree object from a provided snapshot.
 func DepositTreeFromSnapshotProto(snapshotProto *protodb.DepositSnapshot) (*DepositTree, error) {
 	finalized := make([][32]byte, len(snapshotProto.Finalized))
 	for i := range snapshotProto.Finalized {

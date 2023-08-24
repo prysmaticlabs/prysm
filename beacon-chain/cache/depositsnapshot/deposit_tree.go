@@ -139,11 +139,7 @@ func (d *DepositTree) Insert(item []byte, _ int) error {
 	var err error
 	var leaf [32]byte
 	copy(leaf[:], item[:32])
-	err = d.pushLeaf(leaf)
-	if err != nil {
-		return err
-	}
-	return nil
+	return d.pushLeaf(leaf)
 }
 
 // HashTreeRoot is defined as part of MerkleTree interface and calculates the hash tree root.
