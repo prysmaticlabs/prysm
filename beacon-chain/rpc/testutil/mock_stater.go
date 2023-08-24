@@ -3,6 +3,8 @@ package testutil
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
@@ -22,7 +24,11 @@ func (m *MockStater) State(ctx context.Context, id []byte) (state.BeaconState, e
 		return m.StateProviderFunc(ctx, id)
 	}
 
-	return m.BeaconState, nil
+	if m.BeaconState != nil {
+		return m.BeaconState, nil
+	}
+
+	return m.StatesByRoot[bytesutil.ToBytes32(id)], nil
 }
 
 // StateRoot --
