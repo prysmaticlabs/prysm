@@ -300,6 +300,13 @@ func TestDepositByPubkey_ReturnsFirstMatchingDeposit(t *testing.T) {
 		fmt.Sprintf("Returned wrong block number %v", blkNum))
 }
 
+func TestInsertDepositContainers_NotNil(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+	dc.InsertDepositContainers(context.Background(), nil)
+	assert.Equal(t, []*ethpb.DepositContainer{}, dc.deposits)
+}
+
 func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)

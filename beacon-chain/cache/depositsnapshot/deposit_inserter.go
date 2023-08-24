@@ -65,6 +65,10 @@ func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.Depos
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
 
+	// Initialize slice if nil object provided.
+	if ctrs == nil {
+		ctrs = make([]*ethpb.DepositContainer, 0)
+	}
 	sort.SliceStable(ctrs, func(i int, j int) bool { return ctrs[i].Index < ctrs[j].Index })
 	c.deposits = ctrs
 	for _, ctr := range ctrs {
