@@ -2,6 +2,10 @@ package testutil
 
 import (
 	"context"
+	"strconv"
+	"strings"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -18,10 +22,23 @@ type MockStater struct {
 
 // State --
 func (m *MockStater) State(_ context.Context, id []byte) (state.BeaconState, error) {
-	if m.BeaconState != nil {
+	stateIdString := strings.ToLower(string(id))
+	switch stateIdString {
+	case "head", "genesis", "finalized", "justified":
 		return m.BeaconState, nil
+	default:
+		if len(id) == 32 {
+			return m.StatesByRoot[bytesutil.ToBytes32(id)], nil
+		} else {
+			_, parseErr := strconv.ParseUint(stateIdString, 10, 64)
+			if parseErr != nil {
+				// ID format does not match any valid options.
+				e := lookup.NewStateIdParseError(parseErr)
+				return nil, &e
+			}
+			return m.BeaconState, nil
+		}
 	}
-	return m.StatesByRoot[bytesutil.ToBytes32(id)], nil
 }
 
 // StateRoot --

@@ -1,19 +1,15 @@
 package validator
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	neturl "net/url"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 
 	"github.com/gorilla/mux"
@@ -25,43 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
-
-// MockStater is a fake implementation of lookup.Stater.
-// Note: This MockStater ensures the provided state identifier is correct.
-type MockStater struct {
-	BeaconState state.BeaconState
-}
-
-// State --
-func (m *MockStater) State(_ context.Context, stateId []byte) (state.BeaconState, error) {
-	stateIdString := strings.ToLower(string(stateId))
-	switch stateIdString {
-	case "head", "genesis", "finalized", "justified":
-		return m.BeaconState, nil
-	default:
-		if len(stateId) == 32 {
-			return m.BeaconState, nil
-		} else {
-			_, parseErr := strconv.ParseUint(stateIdString, 10, 64)
-			if parseErr != nil {
-				// ID format does not match any valid options.
-				e := lookup.NewStateIdParseError(parseErr)
-				return nil, &e
-			}
-			return m.BeaconState, nil
-		}
-	}
-}
-
-// StateRoot --
-func (m *MockStater) StateRoot(context.Context, []byte) ([]byte, error) {
-	return nil, nil
-}
-
-// StateBySlot --
-func (m *MockStater) StateBySlot(_ context.Context, s primitives.Slot) (state.BeaconState, error) {
-	return nil, nil
-}
 
 func TestGetValidatorCountInvalidRequest(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 10)
@@ -85,7 +44,7 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 		},
 		{
 			name:                 "invalid state ID",
-			stater:               &MockStater{},
+			stater:               &testutil.MockStater{},
 			stateID:              "helloworld",
 			expectedErrorMessage: "invalid state ID",
 			statusCode:           http.StatusBadRequest,
