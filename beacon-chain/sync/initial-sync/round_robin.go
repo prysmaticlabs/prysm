@@ -162,8 +162,10 @@ func (s *Service) processFetchedDataRegSync(
 	invalidBlocks := 0
 	blksWithoutParentCount := 0
 	for _, b := range data.bwb {
-		if err := s.cfg.DB.SaveBlobSidecar(ctx, b.Blobs); err != nil {
-			log.WithError(err).Warn("Failed to save blob sidecar")
+		if len(b.Blobs) > 0 {
+			if err := s.cfg.DB.SaveBlobSidecar(ctx, b.Blobs); err != nil {
+				log.WithError(err).Warn("Failed to save blob sidecar")
+			}
 		}
 
 		if err := s.processBlock(ctx, genesis, b, blockReceiver); err != nil {
