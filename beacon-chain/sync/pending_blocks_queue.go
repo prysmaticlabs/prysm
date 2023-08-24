@@ -250,6 +250,13 @@ func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnly
 	if err != nil {
 		return err
 	}
+
+	log.WithFields(logrus.Fields{
+		"slot":      b.Slot(),
+		"blockRoot": hex.EncodeToString(br),
+		"numBlobs":  len(blobSidecars),
+	}).Debug("Received blob sidecars by root")
+
 	return s.cfg.beaconDB.SaveBlobSidecar(ctx, blobSidecars)
 }
 

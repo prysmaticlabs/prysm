@@ -69,7 +69,16 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 				if err := decode(ctx, enc, sc); err != nil {
 					return err
 				}
-				sc.Sidecars = append(sc.Sidecars, scs...)
+				// Skip duplicates using indices
+				has := make(map[uint64]bool)
+				for _, sidecar := range sc.Sidecars {
+					has[sidecar.Index] = true
+				}
+				for _, sidecar := range scs {
+					if !has[sidecar.Index] {
+						sc.Sidecars = append(sc.Sidecars, sidecar)
+					}
+				}
 				sortSideCars(sc.Sidecars)
 				encodedBlobSidecar, err = encode(ctx, &ethpb.BlobSidecars{Sidecars: sc.Sidecars})
 				if err != nil {
