@@ -1,13 +1,18 @@
 package validator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	neturl "net/url"
+	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -24,6 +29,26 @@ import (
 
 func TestGetValidatorCountInvalidRequest(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 10)
+	stateIdCheckerStateFunc := func(_ context.Context, stateId []byte) (state.BeaconState, error) {
+		stateIdString := strings.ToLower(string(stateId))
+		switch stateIdString {
+		case "head", "genesis", "finalized", "justified":
+			return st, nil
+		default:
+			if len(stateId) == 32 {
+				return nil, nil
+			} else {
+				_, parseErr := strconv.ParseUint(stateIdString, 10, 64)
+				if parseErr != nil {
+					// ID format does not match any valid options.
+					e := lookup.NewStateIdParseError(parseErr)
+					return nil, &e
+				}
+				return st, nil
+			}
+		}
+	}
+
 	tests := []struct {
 		name                 string
 		stater               lookup.Stater
@@ -44,7 +69,7 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 		},
 		{
 			name:                 "invalid state ID",
-			stater:               &testutil.MockStater{},
+			stater:               &testutil.MockStater{StateProviderFunc: stateIdCheckerStateFunc},
 			stateID:              "helloworld",
 			expectedErrorMessage: "invalid state ID",
 			statusCode:           http.StatusBadRequest,
