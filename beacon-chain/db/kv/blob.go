@@ -29,6 +29,10 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
+	// return early if there is nothing to save
+	if len(scs) == 0 {
+		return nil
+	}
 	sortSideCars(scs)
 	if err := s.verifySideCars(scs); err != nil {
 		return err
