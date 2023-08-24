@@ -45,8 +45,5 @@ func PrepareStateFetchError(err error) error {
 	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
 		return fmt.Errorf("state not found: %v", stateNotFoundErr)
 	}
-	if parseErr, ok := err.(*lookup.StateIdParseError); ok {
-		return fmt.Errorf("invalid state ID: %v", parseErr)
-	}
-	return fmt.Errorf("invalid state ID: %v", err)
+	return fmt.Errorf("fetch state: %v", err)
 }

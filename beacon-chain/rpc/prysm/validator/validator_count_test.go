@@ -1,12 +1,20 @@
 package validator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	neturl "net/url"
+	"strconv"
+	"strings"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 
 	"github.com/gorilla/mux"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
@@ -17,6 +25,106 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
+
+// MockStater is a fake implementation of lookup.Stater.
+// Note: This MockStater ensures the provided state identifier is correct.
+type MockStater struct {
+	BeaconState state.BeaconState
+}
+
+// State --
+func (m *MockStater) State(_ context.Context, stateId []byte) (state.BeaconState, error) {
+	stateIdString := strings.ToLower(string(stateId))
+	switch stateIdString {
+	case "head", "genesis", "finalized", "justified":
+		return m.BeaconState, nil
+	default:
+		if len(stateId) == 32 {
+			return m.BeaconState, nil
+		} else {
+			_, parseErr := strconv.ParseUint(stateIdString, 10, 64)
+			if parseErr != nil {
+				// ID format does not match any valid options.
+				e := lookup.NewStateIdParseError(parseErr)
+				return nil, &e
+			}
+			return m.BeaconState, nil
+		}
+	}
+}
+
+// StateRoot --
+func (m *MockStater) StateRoot(context.Context, []byte) ([]byte, error) {
+	return nil, nil
+}
+
+// StateBySlot --
+func (m *MockStater) StateBySlot(_ context.Context, s primitives.Slot) (state.BeaconState, error) {
+	return nil, nil
+}
+
+func TestGetValidatorCountInvalidRequest(t *testing.T) {
+	st, _ := util.DeterministicGenesisState(t, 10)
+	tests := []struct {
+		name                 string
+		stater               lookup.Stater
+		status               string
+		stateID              string
+		expectedErrorMessage string
+		statusCode           int
+	}{
+		{
+			name: "invalid status",
+			stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			status:               "helloworld",
+			stateID:              "head",
+			expectedErrorMessage: "invalid status query parameter",
+			statusCode:           http.StatusBadRequest,
+		},
+		{
+			name:                 "invalid state ID",
+			stater:               &MockStater{},
+			stateID:              "helloworld",
+			expectedErrorMessage: "invalid state ID",
+			statusCode:           http.StatusBadRequest,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			chainService := &chainMock.ChainService{Optimistic: false, FinalizedRoots: make(map[[32]byte]bool)}
+
+			server := &Server{
+				OptimisticModeFetcher: chainService,
+				FinalizationFetcher:   chainService,
+				Stater:                test.stater,
+			}
+
+			testRouter := mux.NewRouter()
+			testRouter.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", server.GetValidatorCount)
+			s := httptest.NewServer(testRouter)
+			defer s.Close()
+
+			queryParams := neturl.Values{}
+			queryParams.Add("status", test.status)
+			resp, err := http.Get(s.URL + fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count?%s",
+				test.stateID, queryParams.Encode()))
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			var errJson http2.DefaultErrorJson
+			err = json.Unmarshal(body, &errJson)
+			require.NoError(t, err)
+			require.Equal(t, test.statusCode, errJson.Code)
+			require.StringContains(t, test.expectedErrorMessage, errJson.Message)
+		})
+	}
+}
 
 func TestGetValidatorCount(t *testing.T) {
 	st, _ := util.DeterministicGenesisState(t, 10)
@@ -94,169 +202,265 @@ func TestGetValidatorCount(t *testing.T) {
 	tests := []struct {
 		name             string
 		stateID          string
-		status           string
+		statuses         []string
 		currentEpoch     int
 		expectedResponse ValidatorCountResponse
 	}{
 		{
-			name:    "Head count active validators",
-			stateID: "head",
-			status:  "active",
+			name:     "Head count active validators",
+			stateID:  "head",
+			statuses: []string{"active"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "13",
+				Data: []*ValidatorCount{
+					{
+						Status: "active",
+						Count:  "13",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count active ongoing validators",
-			stateID: "head",
-			status:  "active_ongoing",
+			name:     "Head count active ongoing validators",
+			stateID:  "head",
+			statuses: []string{"active_ongoing"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "11",
+				Data: []*ValidatorCount{
+					{
+						Status: "active_ongoing",
+						Count:  "11",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count active exiting validators",
-			stateID: "head",
-			status:  "active_exiting",
+			name:     "Head count active exiting validators",
+			stateID:  "head",
+			statuses: []string{"active_exiting"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "1",
+				Data: []*ValidatorCount{
+					{
+						Status: "active_exiting",
+						Count:  "1",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count active slashed validators",
-			stateID: "head",
-			status:  "active_slashed",
+			name:     "Head count active slashed validators",
+			stateID:  "head",
+			statuses: []string{"active_slashed"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "1",
+				Data: []*ValidatorCount{
+					{
+						Status: "active_slashed",
+						Count:  "1",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count pending validators",
-			stateID: "head",
-			status:  "pending",
+			name:     "Head count pending validators",
+			stateID:  "head",
+			statuses: []string{"pending"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "6",
+				Data: []*ValidatorCount{
+					{
+						Status: "pending",
+						Count:  "6",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count pending initialized validators",
-			stateID: "head",
-			status:  "pending_initialized",
+			name:     "Head count pending initialized validators",
+			stateID:  "head",
+			statuses: []string{"pending_initialized"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "1",
+				Data: []*ValidatorCount{
+					{
+						Status: "pending_initialized",
+						Count:  "1",
+					},
 				},
 			},
 		},
 		{
-			name:    "Head count pending queued validators",
-			stateID: "head",
-			status:  "pending_queued",
+			name:     "Head count pending queued validators",
+			stateID:  "head",
+			statuses: []string{"pending_queued"},
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "5",
+				Data: []*ValidatorCount{
+					{
+						Status: "pending_queued",
+						Count:  "5",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count exited validators",
 			stateID:      "head",
-			status:       "exited",
+			statuses:     []string{"exited"},
 			currentEpoch: 35,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "6",
+				Data: []*ValidatorCount{
+					{
+						Status: "exited",
+						Count:  "6",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count exited slashed validators",
 			stateID:      "head",
-			status:       "exited_slashed",
+			statuses:     []string{"exited_slashed"},
 			currentEpoch: 35,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "2",
+				Data: []*ValidatorCount{
+					{
+						Status: "exited_slashed",
+						Count:  "2",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count exited unslashed validators",
 			stateID:      "head",
-			status:       "exited_unslashed",
+			statuses:     []string{"exited_unslashed"},
 			currentEpoch: 35,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "4",
+				Data: []*ValidatorCount{
+					{
+						Status: "exited_unslashed",
+						Count:  "4",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count withdrawal validators",
 			stateID:      "head",
-			status:       "withdrawal",
+			statuses:     []string{"withdrawal"},
 			currentEpoch: 45,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "2",
+				Data: []*ValidatorCount{
+					{
+						Status: "withdrawal",
+						Count:  "2",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count withdrawal possible validators",
 			stateID:      "head",
-			status:       "withdrawal_possible",
+			statuses:     []string{"withdrawal_possible"},
 			currentEpoch: 45,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "1",
+				Data: []*ValidatorCount{
+					{
+						Status: "withdrawal_possible",
+						Count:  "1",
+					},
 				},
 			},
 		},
 		{
 			name:         "Head count withdrawal done validators",
 			stateID:      "head",
-			status:       "withdrawal_done",
+			statuses:     []string{"withdrawal_done"},
 			currentEpoch: 45,
 			expectedResponse: ValidatorCountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: &ValidatorCount{
-					ValidatorCount: "1",
+				Data: []*ValidatorCount{
+					{
+						Status: "withdrawal_done",
+						Count:  "1",
+					},
+				},
+			},
+		},
+		{
+			name:     "Head count active and pending validators",
+			stateID:  "head",
+			statuses: []string{"active", "pending"},
+			expectedResponse: ValidatorCountResponse{
+				ExecutionOptimistic: "false",
+				Finalized:           "true",
+				Data: []*ValidatorCount{
+					{
+						Status: "active",
+						Count:  "13",
+					},
+					{
+						Status: "pending",
+						Count:  "6",
+					},
+				},
+			},
+		},
+		{
+			name:    "Head count of ALL validators",
+			stateID: "head",
+			expectedResponse: ValidatorCountResponse{
+				ExecutionOptimistic: "false",
+				Finalized:           "true",
+				Data: []*ValidatorCount{
+					{
+						Status: "active",
+						Count:  "13",
+					},
+					{
+						Status: "active_exiting",
+						Count:  "1",
+					},
+					{
+						Status: "active_ongoing",
+						Count:  "11",
+					},
+					{
+						Status: "active_slashed",
+						Count:  "1",
+					},
+					{
+						Status: "pending",
+						Count:  "6",
+					},
+					{
+						Status: "pending_initialized",
+						Count:  "1",
+					},
+					{
+						Status: "pending_queued",
+						Count:  "5",
+					},
 				},
 			},
 		},
@@ -283,13 +487,16 @@ func TestGetValidatorCount(t *testing.T) {
 			s := httptest.NewServer(testRouter)
 			defer s.Close()
 
-			resp, err := http.Get(s.URL + fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count?status=%s",
-				test.stateID, test.status))
+			queryParams := neturl.Values{}
+			for _, status := range test.statuses {
+				queryParams.Add("status", status)
+			}
+			resp, err := http.Get(s.URL + fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count?%s",
+				test.stateID, queryParams.Encode()))
 			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
-
-			t.Log(string(body))
 
 			var count ValidatorCountResponse
 			err = json.Unmarshal(body, &count)
