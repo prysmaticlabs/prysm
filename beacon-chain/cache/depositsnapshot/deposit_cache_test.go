@@ -677,6 +677,14 @@ func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits(t *testing.T) {
 	assert.Equal(t, 2, len(deps))
 }
 
+func TestNonFinalizedDeposits_ReturnsAllNonFinalizedDeposits_Nil(t *testing.T) {
+	dc, err := New()
+	require.NoError(t, err)
+
+	deps := dc.NonFinalizedDeposits(context.Background(), 0, nil)
+	assert.Equal(t, 0, len(deps))
+}
+
 func TestNonFinalizedDeposits_ReturnsNonFinalizedDepositsUpToBlockNumber(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
