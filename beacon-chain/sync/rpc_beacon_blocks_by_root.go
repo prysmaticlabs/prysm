@@ -19,7 +19,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
+	blks, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -31,6 +31,17 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		}
 		return nil
 	})
+
+	for _, blk := range blks {
+		blkRoot, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot[:], id); err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 

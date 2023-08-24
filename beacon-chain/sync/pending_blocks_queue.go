@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -161,11 +162,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
-			if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot[:]); err != nil {
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not request pending blobs")
-				continue
-			}
-
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
 					r := blockchain.InvalidBlockRoot(err)
@@ -214,7 +210,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
 }
 
-func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnlyBeaconBlock, br []byte) error {
+func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnlyBeaconBlock, br []byte, id peer.ID) error {
 	// Block before deneb has no blob.
 	if b.Version() < version.Deneb {
 		return nil
@@ -227,11 +223,7 @@ func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnly
 	if len(c) == 0 {
 		return nil
 	}
-	// Choose the best peer to request blob sidecars.
-	_, peers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
-	if len(peers) == 0 {
-		return errors.New("no peers to request blob sidecars")
-	}
+
 	// Build request for blob sidecars.
 	bid := make([]*eth.BlobIdentifier, len(c))
 	for i := range c {
@@ -245,8 +237,7 @@ func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnly
 	req := p2ptypes.BlobSidecarsByRootReq(bid)
 
 	// Send request to a random peer.
-	i := rand.NewGenerator().Int() % len(peers)
-	blobSidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peers[i], ctxByte, &req)
+	blobSidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, id, ctxByte, &req)
 	if err != nil {
 		return err
 	}
