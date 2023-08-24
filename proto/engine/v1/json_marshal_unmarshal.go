@@ -112,7 +112,7 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		dgu, has := decoded["dataGasUsed"]
 		if has && dgu != nil {
 			e.Version = version.Deneb
-			e.ExcessDataGas, err = hexutil.Decode(exDG.(string))
+			e.DataGasUsed, err = hexutil.DecodeUint64(dgu.(string))
 			if err != nil {
 				return err
 			}
