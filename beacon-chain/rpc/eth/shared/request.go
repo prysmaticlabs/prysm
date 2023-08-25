@@ -8,6 +8,8 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -139,4 +141,37 @@ func IsOptimistic(
 	}
 	http2.WriteError(w, errJson)
 	return true, nil
+}
+
+// DecodeWithLength takes a string and a length and validates the hex while returning an error
+func DecodeWithLength(s string, length int) ([]byte, error) {
+	bytes, err := hexutil.Decode(s)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("%s is invalid", s))
+	}
+	if len(bytes) != length {
+		return nil, fmt.Errorf(" %s is not length %d", s, length)
+	}
+	return bytes, nil
+}
+
+// DecodeWithMaxLength takes a string and a max byte length and validates the hex while returning an error
+func DecodeWithMaxLength(s string, length int) ([]byte, error) {
+	bytes, err := hexutil.Decode(s)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("%s is invalid", s))
+	}
+	err = VerifyMaxLength(s, len(bytes), length)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
+}
+
+// VerifyMaxLength takes in two lengths and returns an error
+func VerifyMaxLength(name string, length int, max int) error {
+	if length > max {
+		return fmt.Errorf("%s length %d exceeds max of %d", name, length, max)
+	}
+	return nil
 }
