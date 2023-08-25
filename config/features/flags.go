@@ -169,6 +169,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
+	enableEIP4881,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -223,7 +224,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.
 var E2EBeaconChainFlags = []string{
 	"--dev",
-	"--enable-eip-4881",
 }
 
 // NetworkFlags contains a list of network flags.
