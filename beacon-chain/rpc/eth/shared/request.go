@@ -147,7 +147,7 @@ func IsOptimistic(
 func DecodeWithLength(s string, length int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s is invalid", s))
+		return nil, errors.Wrap(err, fmt.Sprintf("%s is not a valid hex", s))
 	}
 	if len(bytes) != length {
 		return nil, fmt.Errorf("%s is not length %d bytes", s, length)
