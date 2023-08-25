@@ -16,8 +16,7 @@ import (
 )
 
 var (
-	ErrTooLate        = errors.New("attestation is too late")
-	ErrIncorrectEpoch = errors.New("attestation is from incorrect epoch")
+	ErrTooLate = errors.New("attestation is too late")
 )
 
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
@@ -198,7 +197,7 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 			currentEpoch,
 			prevEpoch,
 		)
-		return errors.Join(ErrIncorrectEpoch, attError)
+		return errors.Join(ErrTooLate, attError)
 	}
 
 	return nil
