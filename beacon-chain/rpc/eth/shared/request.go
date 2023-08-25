@@ -143,8 +143,8 @@ func IsOptimistic(
 	return true, nil
 }
 
-// DecodeWithLength takes a string and a length and validates the hex while returning an error
-func DecodeWithLength(s string, length int) ([]byte, error) {
+// DecodeHexWithLength takes a string and a length and validates the hex while returning an error
+func DecodeHexWithLength(s string, length int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("%s is not a valid hex", s))
@@ -155,8 +155,8 @@ func DecodeWithLength(s string, length int) ([]byte, error) {
 	return bytes, nil
 }
 
-// DecodeWithMaxLength takes a string and a max byte length and validates the hex while returning an error
-func DecodeWithMaxLength(s string, length int) ([]byte, error) {
+// DecodeHexWithMaxLength takes a string and a max byte length and validates the hex while returning an error
+func DecodeHexWithMaxLength(s string, length int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("%s is not a valid hex", s))

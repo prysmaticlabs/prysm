@@ -17,9 +17,9 @@ import (
 )
 
 func (phase0SignedBeaconBlock *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(phase0SignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(phase0SignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0SignedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 
 	bl, err := phase0SignedBeaconBlock.Message.ToConsensus()
@@ -45,57 +45,57 @@ func (phase0BeaconBlock *BeaconBlock) ToGeneric() (*eth.GenericBeaconBlock, erro
 func (phase0BeaconBlock *BeaconBlock) ToConsensus() (*eth.BeaconBlock, error) {
 	slot, err := strconv.ParseUint(phase0BeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(phase0BeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(phase0BeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(phase0BeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(phase0BeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(phase0BeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(phase0BeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(phase0BeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(phase0BeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(phase0BeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "could not decode phase0BeaconBlock.Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(phase0BeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(phase0BeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(phase0BeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(phase0BeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(phase0BeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode phase0BeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(phase0BeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(phase0BeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(phase0BeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(phase0BeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(phase0BeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(phase0BeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(phase0BeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(phase0BeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(phase0BeaconBlock.Body.Deposits)
+	if err != nil {
+		return nil, err
+	}
+	exits, err := ExitsToConsensus(phase0BeaconBlock.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -123,9 +123,9 @@ func (phase0BeaconBlock *BeaconBlock) ToConsensus() (*eth.BeaconBlock, error) {
 }
 
 func (altairSignedBeaconBlock *SignedBeaconBlockAltair) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(altairSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(altairSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairSignedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 	bl, err := altairSignedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -149,67 +149,67 @@ func (altairBeaconBlock *BeaconBlockAltair) ToGeneric() (*eth.GenericBeaconBlock
 func (altairBeaconBlock *BeaconBlockAltair) ToConsensus() (*eth.BeaconBlockAltair, error) {
 	slot, err := strconv.ParseUint(altairBeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(altairBeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(altairBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(altairBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(altairBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(altairBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(altairBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(altairBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(altairBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(altairBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(altairBeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(altairBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(altairBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(altairBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(altairBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(altairBeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(altairBeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(altairBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(altairBeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(altairBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(altairBeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(altairBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(altairBeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(altairBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(altairBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(altairBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(altairBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(altairBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode altairBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+	}
+	syncCommitteeSig, err := DecodeHexWithLength(altairBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
 	return &eth.BeaconBlockAltair{
 		Slot:          primitives.Slot(slot),
@@ -238,9 +238,9 @@ func (altairBeaconBlock *BeaconBlockAltair) ToConsensus() (*eth.BeaconBlockAltai
 }
 
 func (bellatrixSignedBeaconBlock *SignedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(bellatrixSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(bellatrixSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixSignedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, ".Signature")
 	}
 	bl, err := bellatrixSignedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -264,119 +264,119 @@ func (bellatrixBeaconBlock *BeaconBlockBellatrix) ToGeneric() (*eth.GenericBeaco
 func (bellatrixBeaconBlock *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBlockBellatrix, error) {
 	slot, err := strconv.ParseUint(bellatrixBeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(bellatrixBeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(bellatrixBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(bellatrixBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(bellatrixBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(bellatrixBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(bellatrixBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(bellatrixBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(bellatrixBeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(bellatrixBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(bellatrixBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(bellatrixBeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(bellatrixBeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(bellatrixBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(bellatrixBeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(bellatrixBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(bellatrixBeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(bellatrixBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(bellatrixBeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(bellatrixBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(bellatrixBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	payloadParentHash, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
+	syncCommitteeSig, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.ParentHash")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadParentHash, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.FeeRecipient")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadStateRoot, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.StateRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.ReceiptsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.LogsBloom")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadPrevRandao, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadLogsBloom, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.PrevRandao")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+	}
+	payloadPrevRandao, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(bellatrixBeaconBlock.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.BlockNumber")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(bellatrixBeaconBlock.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.GasLimit")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(bellatrixBeaconBlock.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.GasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(bellatrixBeaconBlock.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.Timestamp")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(bellatrixBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(bellatrixBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.ExtraData")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := uint256ToSSZBytes(bellatrixBeaconBlock.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.BaseFeePerGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithLength(bellatrixBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.BlockHash")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
 	err = VerifyMaxLength("signedBlock.Body.ExecutionPayload.Transactions", len(bellatrixBeaconBlock.Body.ExecutionPayload.Transactions), fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
@@ -384,7 +384,7 @@ func (bellatrixBeaconBlock *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBloc
 	}
 	payloadTxs := make([][]byte, len(bellatrixBeaconBlock.Body.ExecutionPayload.Transactions))
 	for i, tx := range bellatrixBeaconBlock.Body.ExecutionPayload.Transactions {
-		payloadTxs[i], err = DecodeWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		payloadTxs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decode bellatrixBeaconBlock.Body.ExecutionPayload.Transactions[%d]", i)
 		}
@@ -433,7 +433,7 @@ func (bellatrixBeaconBlock *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBloc
 }
 
 func (bellatrixSignedBlindedBeaconBlock *SignedBlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(bellatrixSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(bellatrixSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixSignedBlindedBeaconBlock.Signature")
 	}
@@ -465,19 +465,19 @@ func (bellatrixBlindedBeaconBlock *BlindedBeaconBlockBellatrix) ToConsensus() (*
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.Eth1Data.DepositRoot")
 	}
@@ -485,63 +485,63 @@ func (bellatrixBlindedBeaconBlock *BlindedBeaconBlockBellatrix) ToConsensus() (*
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(bellatrixBlindedBeaconBlock.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(bellatrixBlindedBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertAttesterSlashings(bellatrixBlindedBeaconBlock.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsToConsensus(bellatrixBlindedBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(bellatrixBlindedBeaconBlock.Body.Attestations)
+	atts, err := AttsToConsensus(bellatrixBlindedBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(bellatrixBlindedBeaconBlock.Body.Deposits)
+	deposits, err := DepositsToConsensus(bellatrixBlindedBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(bellatrixBlindedBeaconBlock.Body.VoluntaryExits)
+	exits, err := ExitsToConsensus(bellatrixBlindedBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	payloadParentHash, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao")
 	}
@@ -561,7 +561,7 @@ func (bellatrixBlindedBeaconBlock *BlindedBeaconBlockBellatrix) ToConsensus() (*
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData")
 	}
@@ -569,11 +569,11 @@ func (bellatrixBlindedBeaconBlock *BlindedBeaconBlockBellatrix) ToConsensus() (*
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := DecodeHexWithLength(bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode bellatrixBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
@@ -620,9 +620,9 @@ func (bellatrixBlindedBeaconBlock *BlindedBeaconBlockBellatrix) ToConsensus() (*
 }
 
 func (capellaSignedBeaconBlock *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(capellaSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(capellaSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaSignedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 	bl, err := capellaSignedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -646,119 +646,119 @@ func (capellaBeaconBlock *BeaconBlockCapella) ToGeneric() (*eth.GenericBeaconBlo
 func (capellaBeaconBlock *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 	slot, err := strconv.ParseUint(capellaBeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(capellaBeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(capellaBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(capellaBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(capellaBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(capellaBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(capellaBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(capellaBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(capellaBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(capellaBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(capellaBeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(capellaBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(capellaBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(capellaBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(capellaBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(capellaBeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(capellaBeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(capellaBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(capellaBeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(capellaBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(capellaBeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(capellaBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(capellaBeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(capellaBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(capellaBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	payloadParentHash, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
+	syncCommitteeSig, err := DecodeHexWithLength(capellaBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.ParentHash")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadParentHash, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.FeeRecipient")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadStateRoot, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.StateRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.ReceiptsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.LogsBloom")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadPrevRandao, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadLogsBloom, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.PrevRandao")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+	}
+	payloadPrevRandao, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(capellaBeaconBlock.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.BlockNumber")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(capellaBeaconBlock.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.GasLimit")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(capellaBeaconBlock.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.GasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(capellaBeaconBlock.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Timestamp")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(capellaBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(capellaBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.ExtraData")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := uint256ToSSZBytes(capellaBeaconBlock.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.BaseFeePerGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithLength(capellaBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithLength(capellaBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlock.Body.ExecutionPayload.BlockHash")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
 	err = VerifyMaxLength("signedBlock.Body.ExecutionPayload.Transactions", len(capellaBeaconBlock.Body.ExecutionPayload.Transactions), fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
@@ -766,9 +766,9 @@ func (capellaBeaconBlock *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCap
 	}
 	payloadTxs := make([][]byte, len(capellaBeaconBlock.Body.ExecutionPayload.Transactions))
 	for i, tx := range capellaBeaconBlock.Body.ExecutionPayload.Transactions {
-		payloadTxs[i], err = DecodeWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		payloadTxs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Transactions[%d]", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
 		}
 	}
 	err = VerifyMaxLength("signedBlock.Body.ExecutionPayload.Withdrawals", len(capellaBeaconBlock.Body.ExecutionPayload.Withdrawals), fieldparams.MaxWithdrawalsPerPayload)
@@ -779,19 +779,19 @@ func (capellaBeaconBlock *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCap
 	for i, w := range capellaBeaconBlock.Body.ExecutionPayload.Withdrawals {
 		withdrawalIndex, err := strconv.ParseUint(w.WithdrawalIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i))
 		}
 		validatorIndex, err := strconv.ParseUint(w.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
 		}
-		address, err := DecodeWithLength(w.ExecutionAddress, common.AddressLength)
+		address, err := DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
 		}
 		amount, err := strconv.ParseUint(w.Amount, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode capellaBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].Amount", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].Amount", i))
 		}
 		withdrawals[i] = &enginev1.Withdrawal{
 			Index:          withdrawalIndex,
@@ -800,7 +800,7 @@ func (capellaBeaconBlock *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCap
 			Amount:         amount,
 		}
 	}
-	blsChanges, err := ConvertBlsChanges(capellaBeaconBlock.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesToConsensus(capellaBeaconBlock.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -850,9 +850,9 @@ func (capellaBeaconBlock *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCap
 }
 
 func (capellaSignedBlindedBeaconBlock *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	sig, err := DecodeWithLength(capellaSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(capellaSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaSignedBlindedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 	bl, err := capellaSignedBlindedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -876,129 +876,129 @@ func (capellaBlindedBeaconBLock *BlindedBeaconBlockCapella) ToGeneric() (*eth.Ge
 func (capellaBlindedBeaconBLock *BlindedBeaconBlockCapella) ToConsensus() (*eth.BlindedBeaconBlockCapella, error) {
 	slot, err := strconv.ParseUint(capellaBlindedBeaconBLock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(capellaBlindedBeaconBLock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(capellaBlindedBeaconBLock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(capellaBlindedBeaconBLock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(capellaBlindedBeaconBLock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(capellaBlindedBeaconBLock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(capellaBlindedBeaconBLock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(capellaBlindedBeaconBLock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(capellaBlindedBeaconBLock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(capellaBlindedBeaconBLock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(capellaBlindedBeaconBLock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(capellaBlindedBeaconBLock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(capellaBlindedBeaconBLock.Body.Deposits)
+	atts, err := AttsToConsensus(capellaBlindedBeaconBLock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(capellaBlindedBeaconBLock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(capellaBlindedBeaconBLock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(capellaBlindedBeaconBLock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	payloadParentHash, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	syncCommitteeSig, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ParentHash")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadParentHash, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.FeeRecipient")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadStateRoot, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.StateRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ReceiptsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.LogsBloom")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadPrevRandao, err := DecodeWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadLogsBloom, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.PrevRandao")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
+	}
+	payloadPrevRandao, err := DecodeHexWithLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BlockNumber")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.GasLimit")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.GasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.Timestamp")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.ExtraData")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
 	payloadBaseFeePerGas, err := uint256ToSSZBytes(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BaseFeePerGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.BlockHash")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := DecodeHexWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.TransactionsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
-	payloadWithdrawalsRoot, err := DecodeWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
+	payloadWithdrawalsRoot, err := DecodeHexWithMaxLength(capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode capellaBlindedBeaconBLock.Body.ExecutionPayloadHeader.WithdrawalsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
-	blsChanges, err := ConvertBlsChanges(capellaBlindedBeaconBLock.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesToConsensus(capellaBlindedBeaconBLock.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -1193,119 +1193,119 @@ func (denebBlindedBeaconBlockContents *BlindedBeaconBlockContentsDeneb) ToGeneri
 func (denebBeaconBlock *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	slot, err := strconv.ParseUint(denebBeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(denebBeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(denebBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(denebBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(denebBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(denebBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(denebBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(denebBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(denebBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(denebBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(denebBeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(denebBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := DecodeHexWithLength(denebBeaconBlock.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(denebBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(denebBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(denebBeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(denebBeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(denebBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(denebBeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(denebBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(denebBeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(denebBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(denebBeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(denebBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(denebBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(denebBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(denebBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(denebBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	payloadParentHash, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
+	syncCommitteeSig, err := DecodeHexWithLength(denebBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.ParentHash")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadParentHash, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.FeeRecipient")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadStateRoot, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.StateRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.ReceiptsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.LogsBloom")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadPrevRandao, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadLogsBloom, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.PrevRandao")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+	}
+	payloadPrevRandao, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.BlockNumber")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.GasLimit")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.GasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayloadHeader.Timestamp")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(denebBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(denebBeaconBlock.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.ExtraData")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := uint256ToSSZBytes(denebBeaconBlock.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.BaseFeePerGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithLength(denebBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithLength(denebBeaconBlock.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.BlockHash")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
 	err = VerifyMaxLength("denebBeaconBlock.Body.ExecutionPayload.Transactions", len(denebBeaconBlock.Body.ExecutionPayload.Transactions), fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
@@ -1313,7 +1313,7 @@ func (denebBeaconBlock *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, 
 	}
 	txs := make([][]byte, len(denebBeaconBlock.Body.ExecutionPayload.Transactions))
 	for i, tx := range denebBeaconBlock.Body.ExecutionPayload.Transactions {
-		txs[i], err = DecodeWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		txs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.Transactions[%d]", i)
 		}
@@ -1332,7 +1332,7 @@ func (denebBeaconBlock *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, 
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i)
 		}
-		address, err := DecodeWithLength(w.ExecutionAddress, common.AddressLength)
+		address, err := DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i)
 		}
@@ -1350,13 +1350,13 @@ func (denebBeaconBlock *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, 
 
 	payloadBlobGasUsed, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.BlobGasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.BlobGasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
 	}
 	payloadExcessBlobGas, err := strconv.ParseUint(denebBeaconBlock.Body.ExecutionPayload.ExcessBlobGas, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBeaconBlock.Body.ExecutionPayload.ExcessBlobGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
-	blsChanges, err := ConvertBlsChanges(denebBeaconBlock.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesToConsensus(denebBeaconBlock.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -1366,9 +1366,9 @@ func (denebBeaconBlock *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, 
 	}
 	blobKzgCommitments := make([][]byte, len(denebBeaconBlock.Body.BlobKzgCommitments))
 	for i, b := range denebBeaconBlock.Body.BlobKzgCommitments {
-		kzg, err := DecodeWithLength(b, fieldparams.BLSPubkeyLength)
+		kzg, err := DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("blob kzg commitment at index %d failed to decode", i))
+			return nil, NewDecodeError(err, fmt.Sprintf("blob kzg commitment at index %d", i))
 		}
 		blobKzgCommitments[i] = kzg
 	}
@@ -1423,37 +1423,37 @@ func (blobSidecar *BlobSidecar) ToConsensus(i int) (*eth.BlobSidecar, error) {
 	if blobSidecar == nil {
 		return nil, fmt.Errorf("blobsidecar message was empty at index %d", i)
 	}
-	blockRoot, err := DecodeWithLength(blobSidecar.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := DecodeHexWithLength(blobSidecar.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.BlockRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.BlockRoot at index %d", i))
 	}
 	index, err := strconv.ParseUint(blobSidecar.Index, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.Index at index %d", i))
 	}
 	slot, err := strconv.ParseUint(blobSidecar.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.Index at index %d", i))
 	}
-	blockParentRoot, err := DecodeWithLength(blobSidecar.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := DecodeHexWithLength(blobSidecar.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.BlockParentRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.BlockParentRoot at index %d", i))
 	}
 	proposerIndex, err := strconv.ParseUint(blobSidecar.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.ProposerIndex at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.ProposerIndex at index %d", i))
 	}
-	blob, err := DecodeWithLength(blobSidecar.Blob, fieldparams.BlobLength)
+	blob, err := DecodeHexWithLength(blobSidecar.Blob, fieldparams.BlobLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.Blob at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.Blob at index %d", i))
 	}
-	kzgCommitment, err := DecodeWithLength(blobSidecar.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := DecodeHexWithLength(blobSidecar.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.KzgCommitment at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.KzgCommitment at index %d", i))
 	}
-	kzgProof, err := DecodeWithLength(blobSidecar.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := DecodeHexWithLength(blobSidecar.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blobSidecar.KzgProof at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blobSidecar.KzgProof at index %d", i))
 	}
 	bsc := &eth.BlobSidecar{
 		BlockRoot:       blockRoot,
@@ -1469,9 +1469,9 @@ func (blobSidecar *BlobSidecar) ToConsensus(i int) (*eth.BlobSidecar, error) {
 }
 
 func (denebSignedBeaconBlock *SignedBeaconBlockDeneb) ToConsensus() (*eth.SignedBeaconBlockDeneb, error) {
-	sig, err := DecodeWithLength(denebSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(denebSignedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebSignedBeaconBlock .Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 	block, err := denebSignedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -1484,44 +1484,44 @@ func (denebSignedBeaconBlock *SignedBeaconBlockDeneb) ToConsensus() (*eth.Signed
 }
 
 func (signedBlob *SignedBlobSidecar) ToConsensus(i int) (*eth.SignedBlobSidecar, error) {
-	blobSig, err := DecodeWithLength(signedBlob.Signature, fieldparams.BLSSignatureLength)
+	blobSig, err := DecodeHexWithLength(signedBlob.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode signedBlob.Signature")
+		return nil, NewDecodeError(err, "Signature")
 	}
 	if signedBlob.Message == nil {
 		return nil, fmt.Errorf("blobsidecar message was empty at index %d", i)
 	}
-	blockRoot, err := DecodeWithLength(signedBlob.Message.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := DecodeHexWithLength(signedBlob.Message.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.BlockRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.BlockRoot at index %d", i))
 	}
 	index, err := strconv.ParseUint(signedBlob.Message.Index, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.Index at index %d", i))
 	}
 	slot, err := strconv.ParseUint(signedBlob.Message.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.Index at index %d", i))
 	}
-	blockParentRoot, err := DecodeWithLength(signedBlob.Message.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := DecodeHexWithLength(signedBlob.Message.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.BlockParentRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.BlockParentRoot at index %d", i))
 	}
 	proposerIndex, err := strconv.ParseUint(signedBlob.Message.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.ProposerIndex at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.ProposerIndex at index %d", i))
 	}
-	blob, err := DecodeWithLength(signedBlob.Message.Blob, fieldparams.BlobLength)
+	blob, err := DecodeHexWithLength(signedBlob.Message.Blob, fieldparams.BlobLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.Blob at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.Blob at index %d", i))
 	}
-	kzgCommitment, err := DecodeWithLength(signedBlob.Message.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := DecodeHexWithLength(signedBlob.Message.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.KzgCommitment at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.KzgCommitment at index %d", i))
 	}
-	kzgProof, err := DecodeWithLength(signedBlob.Message.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := DecodeHexWithLength(signedBlob.Message.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode signedBlob.Message.KzgProof at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("signedBlob.Message.KzgProof at index %d", i))
 	}
 	bsc := &eth.BlobSidecar{
 		BlockRoot:       blockRoot,
@@ -1543,9 +1543,9 @@ func (denebSignedBlindedBeaconBlock *SignedBlindedBeaconBlockDeneb) ToConsensus(
 	if denebSignedBlindedBeaconBlock == nil {
 		return nil, errors.New("signed blinded block is empty")
 	}
-	sig, err := DecodeWithLength(denebSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
+	sig, err := DecodeHexWithLength(denebSignedBlindedBeaconBlock.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebSignedBlindedBeaconBlock.Signature")
+		return nil, NewDecodeError(err, ".Signature")
 	}
 	blindedBlock, err := denebSignedBlindedBeaconBlock.Message.ToConsensus()
 	if err != nil {
@@ -1563,139 +1563,139 @@ func (denebBlindedBeaconBlock *BlindedBeaconBlockDeneb) ToConsensus() (*eth.Blin
 	}
 	slot, err := strconv.ParseUint(denebBlindedBeaconBlock.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Slot")
+		return nil, NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(denebBlindedBeaconBlock.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.ProposerIndex")
+		return nil, NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeWithLength(denebBlindedBeaconBlock.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.ParentRoot")
+		return nil, NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeWithLength(denebBlindedBeaconBlock.StateRoot, fieldparams.RootLength)
+	stateRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.StateRoot")
+		return nil, NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeWithLength(denebBlindedBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.RandaoReveal")
+		return nil, NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeWithLength(denebBlindedBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.Eth1Data.DepositRoot")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.Eth1Data.DepositCount")
+		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeWithLength(denebBlindedBeaconBlock.Body.Eth1Data.BlockHash, fieldparams.RootLength)
+	blockHash, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.Eth1Data.BlockHash, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.Eth1Data.BlockHash")
+		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeWithLength(denebBlindedBeaconBlock.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.Graffiti")
+		return nil, NewDecodeError(err, "Body.Graffiti")
 	}
-	proposerSlashings, err := ConvertProposerSlashings(denebBlindedBeaconBlock.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := ConvertAttesterSlashings(denebBlindedBeaconBlock.Body.AttesterSlashings)
+	proposerSlashings, err := ProposerSlashingsToConsensus(denebBlindedBeaconBlock.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertAtts(denebBlindedBeaconBlock.Body.Attestations)
+	attesterSlashings, err := AttesterSlashingsToConsensus(denebBlindedBeaconBlock.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertDeposits(denebBlindedBeaconBlock.Body.Deposits)
+	atts, err := AttsToConsensus(denebBlindedBeaconBlock.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertExits(denebBlindedBeaconBlock.Body.VoluntaryExits)
+	deposits, err := DepositsToConsensus(denebBlindedBeaconBlock.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	syncCommitteeBits, err := DecodeWithLength(denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	exits, err := ExitsToConsensus(denebBlindedBeaconBlock.Body.VoluntaryExits)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits")
+		return nil, err
 	}
-	syncCommitteeSig, err := DecodeWithLength(denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeBits, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	payloadParentHash, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	syncCommitteeSig, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash")
+		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadFeeRecipient, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadParentHash, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadStateRoot, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadFeeRecipient, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadReceiptsRoot, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadStateRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadLogsBloom, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadReceiptsRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadPrevRandao, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadLogsBloom, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
+	}
+	payloadPrevRandao, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockNumber")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.GasLimit")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.GasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.Timestamp")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeWithMaxLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := DecodeHexWithMaxLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExtraData")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
 	payloadBaseFeePerGas, err := uint256ToSSZBytes(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BaseFeePerGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlockHash")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.TransactionsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
-	payloadWithdrawalsRoot, err := DecodeWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
+	payloadWithdrawalsRoot, err := DecodeHexWithLength(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.WithdrawalsRoot")
+		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
 
 	payloadBlobGasUsed, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.BlobGasUsed, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayload.BlobGasUsed")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
 	}
 	payloadExcessBlobGas, err := strconv.ParseUint(denebBlindedBeaconBlock.Body.ExecutionPayloadHeader.ExcessBlobGas, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not decode denebBlindedBeaconBlock.Body.ExecutionPayload.ExcessBlobGas")
+		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
 
-	blsChanges, err := ConvertBlsChanges(denebBlindedBeaconBlock.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesToConsensus(denebBlindedBeaconBlock.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -1705,9 +1705,9 @@ func (denebBlindedBeaconBlock *BlindedBeaconBlockDeneb) ToConsensus() (*eth.Blin
 	}
 	blobKzgCommitments := make([][]byte, len(denebBlindedBeaconBlock.Body.BlobKzgCommitments))
 	for i, b := range denebBlindedBeaconBlock.Body.BlobKzgCommitments {
-		kzg, err := DecodeWithLength(b, fieldparams.BLSPubkeyLength)
+		kzg, err := DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("blob kzg commitment at index %d failed to decode", i))
+			return nil, NewDecodeError(err, fmt.Sprintf("blob kzg commitment at index %d", i))
 		}
 		blobKzgCommitments[i] = kzg
 	}
@@ -1760,7 +1760,7 @@ func (denebBlindedBeaconBlock *BlindedBeaconBlockDeneb) ToConsensus() (*eth.Blin
 }
 
 func (signedBlindedBlob *SignedBlindedBlobSidecar) ToConensus(i int) (*eth.SignedBlindedBlobSidecar, error) {
-	blobSig, err := DecodeWithLength(signedBlindedBlob.Signature, fieldparams.BLSSignatureLength)
+	blobSig, err := DecodeHexWithLength(signedBlindedBlob.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not decode signedBlindedBlob.Signature")
 	}
@@ -1781,37 +1781,37 @@ func (blindedBlob *BlindedBlobSidecar) ToConsensus(i int) (*eth.BlindedBlobSidec
 	if blindedBlob == nil {
 		return nil, fmt.Errorf("blobsidecar message was empty at index %d", i)
 	}
-	blockRoot, err := DecodeWithLength(blindedBlob.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := DecodeHexWithLength(blindedBlob.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.BlockRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.BlockRoot at index %d", i))
 	}
 	index, err := strconv.ParseUint(blindedBlob.Index, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.Index at index %d", i))
 	}
 	denebSlot, err := strconv.ParseUint(blindedBlob.Slot, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.Index at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.Index at index %d", i))
 	}
-	blockParentRoot, err := DecodeWithLength(blindedBlob.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := DecodeHexWithLength(blindedBlob.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.BlockParentRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.BlockParentRoot at index %d", i))
 	}
 	proposerIndex, err := strconv.ParseUint(blindedBlob.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.ProposerIndex at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.ProposerIndex at index %d", i))
 	}
-	blobRoot, err := DecodeWithLength(blindedBlob.BlobRoot, fieldparams.RootLength)
+	blobRoot, err := DecodeHexWithLength(blindedBlob.BlobRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.BlobRoot at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.BlobRoot at index %d", i))
 	}
-	kzgCommitment, err := DecodeWithLength(blindedBlob.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := DecodeHexWithLength(blindedBlob.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.KzgCommitment at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.KzgCommitment at index %d", i))
 	}
-	kzgProof, err := DecodeWithLength(blindedBlob.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := DecodeHexWithLength(blindedBlob.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("could not decode blindedBlob.KzgProof at index %d", i))
+		return nil, NewDecodeError(err, fmt.Sprintf("blindedBlob.KzgProof at index %d", i))
 	}
 	bsc := &eth.BlindedBlobSidecar{
 		BlockRoot:       blockRoot,
@@ -1826,27 +1826,27 @@ func (blindedBlob *BlindedBlobSidecar) ToConsensus(i int) (*eth.BlindedBlobSidec
 	return bsc, nil
 }
 
-func ConvertInternalBeaconBlock(b *eth.BeaconBlock) (*BeaconBlock, error) {
+func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -1872,27 +1872,27 @@ func ConvertInternalBeaconBlock(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	}, nil
 }
 
-func ConvertInternalBeaconBlockAltair(b *eth.BeaconBlockAltair) (*BeaconBlockAltair, error) {
+func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltair, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -1923,27 +1923,27 @@ func ConvertInternalBeaconBlockAltair(b *eth.BeaconBlockAltair) (*BeaconBlockAlt
 	}, nil
 }
 
-func ConvertInternalBlindedBeaconBlockBellatrix(b *eth.BlindedBeaconBlockBellatrix) (*BlindedBeaconBlockBellatrix, error) {
+func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix) (*BlindedBeaconBlockBellatrix, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -1993,27 +1993,27 @@ func ConvertInternalBlindedBeaconBlockBellatrix(b *eth.BlindedBeaconBlockBellatr
 	}, nil
 }
 
-func ConvertInternalBeaconBlockBellatrix(b *eth.BeaconBlockBellatrix) (*BeaconBlockBellatrix, error) {
+func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBlockBellatrix, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -2067,27 +2067,27 @@ func ConvertInternalBeaconBlockBellatrix(b *eth.BeaconBlockBellatrix) (*BeaconBl
 	}, nil
 }
 
-func ConvertInternalBlindedBeaconBlockCapella(b *eth.BlindedBeaconBlockCapella) (*BlindedBeaconBlockCapella, error) {
+func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*BlindedBeaconBlockCapella, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -2095,7 +2095,7 @@ func ConvertInternalBlindedBeaconBlockCapella(b *eth.BlindedBeaconBlockCapella) 
 	if err != nil {
 		return nil, err
 	}
-	blsChanges, err := ConvertInternalBlsChanges(b.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -2144,27 +2144,27 @@ func ConvertInternalBlindedBeaconBlockCapella(b *eth.BlindedBeaconBlockCapella) 
 	}, nil
 }
 
-func ConvertInternalBeaconBlockCapella(b *eth.BeaconBlockCapella) (*BeaconBlockCapella, error) {
+func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCapella, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -2185,7 +2185,7 @@ func ConvertInternalBeaconBlockCapella(b *eth.BeaconBlockCapella) (*BeaconBlockC
 			Amount:           fmt.Sprintf("%d", w.Amount),
 		}
 	}
-	blsChanges, err := ConvertInternalBlsChanges(b.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -2233,7 +2233,7 @@ func ConvertInternalBeaconBlockCapella(b *eth.BeaconBlockCapella) (*BeaconBlockC
 	}, nil
 }
 
-func ConvertInternalBlindedBeaconBlockContentsDeneb(b *eth.BlindedBeaconBlockAndBlobsDeneb) (*BlindedBeaconBlockContentsDeneb, error) {
+func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBlobsDeneb) (*BlindedBeaconBlockContentsDeneb, error) {
 	if b == nil || b.Block == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
@@ -2241,14 +2241,14 @@ func ConvertInternalBlindedBeaconBlockContentsDeneb(b *eth.BlindedBeaconBlockAnd
 	if len(b.Blobs) != 0 {
 		blindedBlobSidecars = make([]*BlindedBlobSidecar, len(b.Blobs))
 		for i, s := range b.Blobs {
-			signedBlob, err := ConvertInternalToBlindedBlobSidecar(s)
+			signedBlob, err := BlindedBlobSidecarFromConsensus(s)
 			if err != nil {
 				return nil, err
 			}
 			blindedBlobSidecars[i] = signedBlob
 		}
 	}
-	blindedBlock, err := ConvertInternalToBlindedDenebBlock(b.Block)
+	blindedBlock, err := BlindedDenebBlockFromConsensus(b.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -2258,7 +2258,7 @@ func ConvertInternalBlindedBeaconBlockContentsDeneb(b *eth.BlindedBeaconBlockAnd
 	}, nil
 }
 
-func ConvertInternalBeaconBlockContentsDeneb(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
+func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
 	if b == nil || b.Block == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
@@ -2266,14 +2266,14 @@ func ConvertInternalBeaconBlockContentsDeneb(b *eth.BeaconBlockAndBlobsDeneb) (*
 	if len(b.Blobs) != 0 {
 		blobSidecars = make([]*BlobSidecar, len(b.Blobs))
 		for i, s := range b.Blobs {
-			blob, err := ConvertInternalToBlobSidecar(s)
+			blob, err := BlobSidecarFromConsensus(s)
 			if err != nil {
 				return nil, err
 			}
 			blobSidecars[i] = blob
 		}
 	}
-	block, err := ConvertInternalToDenebBlock(b.Block)
+	block, err := DenebBlockFromConsensus(b.Block)
 	if err != nil {
 		return nil, err
 	}
@@ -2283,27 +2283,27 @@ func ConvertInternalBeaconBlockContentsDeneb(b *eth.BeaconBlockAndBlobsDeneb) (*
 	}, nil
 }
 
-func ConvertInternalToBlindedDenebBlock(b *eth.BlindedBeaconBlockDeneb) (*BlindedBeaconBlockDeneb, error) {
+func BlindedDenebBlockFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*BlindedBeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -2311,7 +2311,7 @@ func ConvertInternalToBlindedDenebBlock(b *eth.BlindedBeaconBlockDeneb) (*Blinde
 	if err != nil {
 		return nil, err
 	}
-	blsChanges, err := ConvertInternalBlsChanges(b.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -2368,27 +2368,27 @@ func ConvertInternalToBlindedDenebBlock(b *eth.BlindedBeaconBlockDeneb) (*Blinde
 	}, nil
 }
 
-func ConvertInternalToDenebBlock(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, error) {
+func DenebBlockFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errors.New("block is empty, nothing to convert.")
 	}
-	proposerSlashings, err := ConvertInternalProposerSlashings(b.Body.ProposerSlashings)
+	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
 		return nil, err
 	}
-	attesterSlashings, err := ConvertInternalAttesterSlashings(b.Body.AttesterSlashings)
+	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	if err != nil {
 		return nil, err
 	}
-	atts, err := ConvertInternalAtts(b.Body.Attestations)
+	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
 	}
-	deposits, err := ConvertInternalDeposits(b.Body.Deposits)
+	deposits, err := DepositsFromConsensus(b.Body.Deposits)
 	if err != nil {
 		return nil, err
 	}
-	exits, err := ConvertInternalExits(b.Body.VoluntaryExits)
+	exits, err := ExitsFromConsensus(b.Body.VoluntaryExits)
 	if err != nil {
 		return nil, err
 	}
@@ -2409,7 +2409,7 @@ func ConvertInternalToDenebBlock(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, er
 			Amount:           fmt.Sprintf("%d", w.Amount),
 		}
 	}
-	blsChanges, err := ConvertInternalBlsChanges(b.Body.BlsToExecutionChanges)
+	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
@@ -2465,7 +2465,7 @@ func ConvertInternalToDenebBlock(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, er
 	}, nil
 }
 
-func ConvertInternalToBlindedBlobSidecar(b *eth.BlindedBlobSidecar) (*BlindedBlobSidecar, error) {
+func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) (*BlindedBlobSidecar, error) {
 	if b == nil {
 		return nil, errors.New("BlindedBlobSidecar is empty, nothing to convert.")
 	}
@@ -2481,7 +2481,7 @@ func ConvertInternalToBlindedBlobSidecar(b *eth.BlindedBlobSidecar) (*BlindedBlo
 	}, nil
 }
 
-func ConvertInternalToBlobSidecar(b *eth.BlobSidecar) (*BlobSidecar, error) {
+func BlobSidecarFromConsensus(b *eth.BlobSidecar) (*BlobSidecar, error) {
 	if b == nil {
 		return nil, errors.New("BlobSidecar is empty, nothing to convert.")
 	}
@@ -2497,7 +2497,7 @@ func ConvertInternalToBlobSidecar(b *eth.BlobSidecar) (*BlobSidecar, error) {
 	}, nil
 }
 
-func ConvertProposerSlashings(src []*ProposerSlashing) ([]*eth.ProposerSlashing, error) {
+func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlashing, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.ProposerSlashings")
 	}
@@ -2507,53 +2507,53 @@ func ConvertProposerSlashings(src []*ProposerSlashing) ([]*eth.ProposerSlashing,
 	}
 	proposerSlashings := make([]*eth.ProposerSlashing, len(src))
 	for i, s := range src {
-		h1Sig, err := DecodeWithLength(s.SignedHeader1.Signature, fieldparams.BLSSignatureLength)
+		h1Sig, err := DecodeHexWithLength(s.SignedHeader1.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Signature", i))
 		}
 		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Message.Slot", i))
 		}
 		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Message.ProposerIndex", i))
 		}
-		h1ParentRoot, err := DecodeWithLength(s.SignedHeader1.Message.ParentRoot, fieldparams.RootLength)
+		h1ParentRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.ParentRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Message.ParentRoot", i))
 		}
-		h1StateRoot, err := DecodeWithLength(s.SignedHeader1.Message.StateRoot, fieldparams.RootLength)
+		h1StateRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.StateRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Message.StateRoot", i))
 		}
-		h1BodyRoot, err := DecodeWithLength(s.SignedHeader1.Message.BodyRoot, fieldparams.RootLength)
+		h1BodyRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.BodyRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader1.Message.BodyRoot", i))
 		}
-		h2Sig, err := DecodeWithLength(s.SignedHeader2.Signature, fieldparams.BLSSignatureLength)
+		h2Sig, err := DecodeHexWithLength(s.SignedHeader2.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Signature", i))
 		}
 		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Message.Slot", i))
 		}
 		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Message.ProposerIndex", i))
 		}
-		h2ParentRoot, err := DecodeWithLength(s.SignedHeader2.Message.ParentRoot, fieldparams.RootLength)
+		h2ParentRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.ParentRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Message.ParentRoot", i))
 		}
-		h2StateRoot, err := DecodeWithLength(s.SignedHeader2.Message.StateRoot, fieldparams.RootLength)
+		h2StateRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.StateRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Message.StateRoot", i))
 		}
-		h2BodyRoot, err := DecodeWithLength(s.SignedHeader2.Message.BodyRoot, fieldparams.RootLength)
+		h2BodyRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.BodyRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.ProposerSlashings[%d].SignedHeader2.Message.BodyRoot", i))
 		}
 		proposerSlashings[i] = &eth.ProposerSlashing{
 			Header_1: &eth.SignedBeaconBlockHeader{
@@ -2581,7 +2581,7 @@ func ConvertProposerSlashings(src []*ProposerSlashing) ([]*eth.ProposerSlashing,
 	return proposerSlashings, nil
 }
 
-func ConvertInternalProposerSlashings(src []*eth.ProposerSlashing) ([]*ProposerSlashing, error) {
+func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) ([]*ProposerSlashing, error) {
 	if src == nil {
 		return nil, errors.New("proposer slashings are empty, nothing to convert.")
 	}
@@ -2613,7 +2613,7 @@ func ConvertInternalProposerSlashings(src []*eth.ProposerSlashing) ([]*ProposerS
 	return proposerSlashings, nil
 }
 
-func ConvertAttesterSlashings(src []*AttesterSlashing) ([]*eth.AttesterSlashing, error) {
+func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlashing, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.AttesterSlashings")
 	}
@@ -2623,9 +2623,9 @@ func ConvertAttesterSlashings(src []*AttesterSlashing) ([]*eth.AttesterSlashing,
 	}
 	attesterSlashings := make([]*eth.AttesterSlashing, len(src))
 	for i, s := range src {
-		a1Sig, err := DecodeWithLength(s.Attestation1.Signature, fieldparams.BLSSignatureLength)
+		a1Sig, err := DecodeHexWithLength(s.Attestation1.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Signature", i))
 		}
 		err = VerifyMaxLength(fmt.Sprintf("s.Attestation1.AttestingIndices at index %d", i), len(s.Attestation1.AttestingIndices), 2048)
 		if err != nil {
@@ -2635,41 +2635,41 @@ func ConvertAttesterSlashings(src []*AttesterSlashing) ([]*eth.AttesterSlashing,
 		for j, ix := range s.Attestation1.AttestingIndices {
 			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j)
+				return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.AttestingIndices[%d]", i, j))
 			}
 			a1AttestingIndices[j] = attestingIndex
 		}
 		a1Slot, err := strconv.ParseUint(s.Attestation1.Data.Slot, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Slot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Slot", i))
 		}
 		a1CommitteeIndex, err := strconv.ParseUint(s.Attestation1.Data.CommitteeIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Index", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Index", i))
 		}
-		a1BeaconBlockRoot, err := DecodeWithLength(s.Attestation1.Data.BeaconBlockRoot, fieldparams.RootLength)
+		a1BeaconBlockRoot, err := DecodeHexWithLength(s.Attestation1.Data.BeaconBlockRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.BeaconBlockRoot", i))
 		}
 		a1SourceEpoch, err := strconv.ParseUint(s.Attestation1.Data.Source.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Source.Epoch", i))
 		}
-		a1SourceRoot, err := DecodeWithLength(s.Attestation1.Data.Source.Root, fieldparams.RootLength)
+		a1SourceRoot, err := DecodeHexWithLength(s.Attestation1.Data.Source.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Source.Root", i))
 		}
 		a1TargetEpoch, err := strconv.ParseUint(s.Attestation1.Data.Target.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Target.Epoch", i))
 		}
-		a1TargetRoot, err := DecodeWithLength(s.Attestation1.Data.Target.Root, fieldparams.RootLength)
+		a1TargetRoot, err := DecodeHexWithLength(s.Attestation1.Data.Target.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation1.Data.Target.Root", i))
 		}
-		a2Sig, err := DecodeWithLength(s.Attestation2.Signature, fieldparams.BLSSignatureLength)
+		a2Sig, err := DecodeHexWithLength(s.Attestation2.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Signature", i))
 		}
 		err = VerifyMaxLength(fmt.Sprintf("s.Attestation2.AttestingIndices at index %d", i), len(s.Attestation2.AttestingIndices), 2048)
 		if err != nil {
@@ -2679,37 +2679,37 @@ func ConvertAttesterSlashings(src []*AttesterSlashing) ([]*eth.AttesterSlashing,
 		for j, ix := range s.Attestation2.AttestingIndices {
 			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j)
+				return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.AttestingIndices[%d]", i, j))
 			}
 			a2AttestingIndices[j] = attestingIndex
 		}
 		a2Slot, err := strconv.ParseUint(s.Attestation2.Data.Slot, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Slot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Slot", i))
 		}
 		a2CommitteeIndex, err := strconv.ParseUint(s.Attestation2.Data.CommitteeIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Index", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Index", i))
 		}
-		a2BeaconBlockRoot, err := DecodeWithLength(s.Attestation2.Data.BeaconBlockRoot, fieldparams.RootLength)
+		a2BeaconBlockRoot, err := DecodeHexWithLength(s.Attestation2.Data.BeaconBlockRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.BeaconBlockRoot", i))
 		}
 		a2SourceEpoch, err := strconv.ParseUint(s.Attestation2.Data.Source.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Source.Epoch", i))
 		}
-		a2SourceRoot, err := DecodeWithLength(s.Attestation2.Data.Source.Root, fieldparams.RootLength)
+		a2SourceRoot, err := DecodeHexWithLength(s.Attestation2.Data.Source.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Source.Root", i))
 		}
 		a2TargetEpoch, err := strconv.ParseUint(s.Attestation2.Data.Target.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Target.Epoch", i))
 		}
-		a2TargetRoot, err := DecodeWithLength(s.Attestation2.Data.Target.Root, fieldparams.RootLength)
+		a2TargetRoot, err := DecodeHexWithLength(s.Attestation2.Data.Target.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.AttesterSlashings[%d].Attestation2.Data.Target.Root", i))
 		}
 		attesterSlashings[i] = &eth.AttesterSlashing{
 			Attestation_1: &eth.IndexedAttestation{
@@ -2751,7 +2751,7 @@ func ConvertAttesterSlashings(src []*AttesterSlashing) ([]*eth.AttesterSlashing,
 	return attesterSlashings, nil
 }
 
-func ConvertInternalAttesterSlashings(src []*eth.AttesterSlashing) ([]*AttesterSlashing, error) {
+func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) ([]*AttesterSlashing, error) {
 	if src == nil {
 		return nil, errors.New("AttesterSlashings is empty, nothing to convert.")
 	}
@@ -2805,7 +2805,7 @@ func ConvertInternalAttesterSlashings(src []*eth.AttesterSlashing) ([]*AttesterS
 	return attesterSlashings, nil
 }
 
-func ConvertAtts(src []*Attestation) ([]*eth.Attestation, error) {
+func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.Attestations")
 	}
@@ -2815,41 +2815,41 @@ func ConvertAtts(src []*Attestation) ([]*eth.Attestation, error) {
 	}
 	atts := make([]*eth.Attestation, len(src))
 	for i, a := range src {
-		sig, err := DecodeWithLength(a.Signature, fieldparams.BLSSignatureLength)
+		sig, err := DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Signature", i))
 		}
 		slot, err := strconv.ParseUint(a.Data.Slot, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Slot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Slot", i))
 		}
 		committeeIndex, err := strconv.ParseUint(a.Data.CommitteeIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Index", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Index", i))
 		}
-		beaconBlockRoot, err := DecodeWithLength(a.Data.BeaconBlockRoot, fieldparams.RootLength)
+		beaconBlockRoot, err := DecodeHexWithLength(a.Data.BeaconBlockRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.BeaconBlockRoot", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.BeaconBlockRoot", i))
 		}
 		sourceEpoch, err := strconv.ParseUint(a.Data.Source.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Source.Epoch", i))
 		}
-		sourceRoot, err := DecodeWithLength(a.Data.Source.Root, fieldparams.RootLength)
+		sourceRoot, err := DecodeHexWithLength(a.Data.Source.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Source.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Source.Root", i))
 		}
 		targetEpoch, err := strconv.ParseUint(a.Data.Target.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Target.Epoch", i))
 		}
-		targetRoot, err := DecodeWithLength(a.Data.Target.Root, fieldparams.RootLength)
+		targetRoot, err := DecodeHexWithLength(a.Data.Target.Root, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].Data.Target.Root", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].Data.Target.Root", i))
 		}
-		aggregateBits, err := DecodeWithMaxLength(a.AggregationBits, 2048)
+		aggregateBits, err := DecodeHexWithMaxLength(a.AggregationBits, 2048)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Attestations[%d].AggregationBits", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Attestations[%d].AggregationBits", i))
 		}
 		atts[i] = &eth.Attestation{
 			AggregationBits: aggregateBits,
@@ -2872,7 +2872,7 @@ func ConvertAtts(src []*Attestation) ([]*eth.Attestation, error) {
 	return atts, nil
 }
 
-func ConvertInternalAtts(src []*eth.Attestation) ([]*Attestation, error) {
+func AttsFromConsensus(src []*eth.Attestation) ([]*Attestation, error) {
 	if src == nil {
 		return nil, errors.New("Attestations are empty, nothing to convert.")
 	}
@@ -2899,7 +2899,7 @@ func ConvertInternalAtts(src []*eth.Attestation) ([]*Attestation, error) {
 	return atts, nil
 }
 
-func ConvertDeposits(src []*Deposit) ([]*eth.Deposit, error) {
+func DepositsToConsensus(src []*Deposit) ([]*eth.Deposit, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.Deposits")
 	}
@@ -2916,26 +2916,26 @@ func ConvertDeposits(src []*Deposit) ([]*eth.Deposit, error) {
 		proof := make([][]byte, len(d.Proof))
 		for j, p := range d.Proof {
 			var err error
-			proof[j], err = DecodeWithLength(p, fieldparams.RootLength)
+			proof[j], err = DecodeHexWithLength(p, fieldparams.RootLength)
 			if err != nil {
-				return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Proof[%d]", i, j)
+				return nil, NewDecodeError(err, fmt.Sprintf("Body.Deposits[%d].Proof[%d]", i, j))
 			}
 		}
-		pubkey, err := DecodeWithLength(d.Data.Pubkey, fieldparams.BLSPubkeyLength)
+		pubkey, err := DecodeHexWithLength(d.Data.Pubkey, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Pubkey", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Deposits[%d].Pubkey", i))
 		}
-		withdrawalCreds, err := DecodeWithLength(d.Data.WithdrawalCredentials, fieldparams.RootLength)
+		withdrawalCreds, err := DecodeHexWithLength(d.Data.WithdrawalCredentials, fieldparams.RootLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].WithdrawalCredentials", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Deposits[%d].WithdrawalCredentials", i))
 		}
 		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Amount", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Deposits[%d].Amount", i))
 		}
-		sig, err := DecodeWithLength(d.Data.Signature, fieldparams.BLSSignatureLength)
+		sig, err := DecodeHexWithLength(d.Data.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.Deposits[%d].Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.Deposits[%d].Signature", i))
 		}
 		deposits[i] = &eth.Deposit{
 			Proof: proof,
@@ -2950,7 +2950,7 @@ func ConvertDeposits(src []*Deposit) ([]*eth.Deposit, error) {
 	return deposits, nil
 }
 
-func ConvertInternalDeposits(src []*eth.Deposit) ([]*Deposit, error) {
+func DepositsFromConsensus(src []*eth.Deposit) ([]*Deposit, error) {
 	if src == nil {
 		return nil, errors.New("deposits are empty, nothing to convert.")
 	}
@@ -2973,7 +2973,7 @@ func ConvertInternalDeposits(src []*eth.Deposit) ([]*Deposit, error) {
 	return deposits, nil
 }
 
-func ConvertExits(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error) {
+func ExitsToConsensus(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.VoluntaryExits")
 	}
@@ -2983,17 +2983,17 @@ func ConvertExits(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error
 	}
 	exits := make([]*eth.SignedVoluntaryExit, len(src))
 	for i, e := range src {
-		sig, err := DecodeWithLength(e.Signature, fieldparams.BLSSignatureLength)
+		sig, err := DecodeHexWithLength(e.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.VoluntaryExits[%d].Signature", i))
 		}
 		epoch, err := strconv.ParseUint(e.Message.Epoch, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].Epoch", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.VoluntaryExits[%d].Epoch", i))
 		}
 		validatorIndex, err := strconv.ParseUint(e.Message.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.VoluntaryExits[%d].ValidatorIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.VoluntaryExits[%d].ValidatorIndex", i))
 		}
 		exits[i] = &eth.SignedVoluntaryExit{
 			Exit: &eth.VoluntaryExit{
@@ -3006,7 +3006,7 @@ func ConvertExits(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryExit, error
 	return exits, nil
 }
 
-func ConvertInternalExits(src []*eth.SignedVoluntaryExit) ([]*SignedVoluntaryExit, error) {
+func ExitsFromConsensus(src []*eth.SignedVoluntaryExit) ([]*SignedVoluntaryExit, error) {
 	if src == nil {
 		return nil, errors.New("VoluntaryExits are empty, nothing to convert.")
 	}
@@ -3023,7 +3023,7 @@ func ConvertInternalExits(src []*eth.SignedVoluntaryExit) ([]*SignedVoluntaryExi
 	return exits, nil
 }
 
-func ConvertBlsChanges(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
+func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
 	if src == nil {
 		return nil, errors.New("nil b.Message.Body.BlsToExecutionChanges")
 	}
@@ -3033,21 +3033,21 @@ func ConvertBlsChanges(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExe
 	}
 	changes := make([]*eth.SignedBLSToExecutionChange, len(src))
 	for i, ch := range src {
-		sig, err := DecodeWithLength(ch.Signature, fieldparams.BLSSignatureLength)
+		sig, err := DecodeHexWithLength(ch.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Signature", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlsToExecutionChanges[%d].Signature", i))
 		}
 		index, err := strconv.ParseUint(ch.Message.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.ValidatorIndex", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlsToExecutionChanges[%d].Message.ValidatorIndex", i))
 		}
-		pubkey, err := DecodeWithLength(ch.Message.FromBlsPubkey, fieldparams.BLSPubkeyLength)
+		pubkey, err := DecodeHexWithLength(ch.Message.FromBlsPubkey, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.FromBlsPubkey", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlsToExecutionChanges[%d].Message.FromBlsPubkey", i))
 		}
-		address, err := DecodeWithLength(ch.Message.ToExecutionAddress, common.AddressLength)
+		address, err := DecodeHexWithLength(ch.Message.ToExecutionAddress, common.AddressLength)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not decode b.Message.Body.BlsToExecutionChanges[%d].Message.ToExecutionAddress", i)
+			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlsToExecutionChanges[%d].Message.ToExecutionAddress", i))
 		}
 		changes[i] = &eth.SignedBLSToExecutionChange{
 			Message: &eth.BLSToExecutionChange{
@@ -3061,7 +3061,7 @@ func ConvertBlsChanges(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExe
 	return changes, nil
 }
 
-func ConvertInternalBlsChanges(src []*eth.SignedBLSToExecutionChange) ([]*SignedBlsToExecutionChange, error) {
+func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBlsToExecutionChange, error) {
 	if src == nil {
 		return nil, errors.New("BlsToExecutionChanges are empty, nothing to convert.")
 	}
@@ -3085,7 +3085,7 @@ func uint256ToSSZBytes(num string) ([]byte, error) {
 		return nil, errors.New("could not parse Uint256")
 	}
 	if !math.IsValidUint256(uint256) {
-		return nil, errors.New("is")
+		return nil, fmt.Errorf("%s is not a valid Uint256", num)
 	}
 	return bytesutil2.PadTo(bytesutil2.ReverseByteOrder(uint256.Bytes()), 32), nil
 }

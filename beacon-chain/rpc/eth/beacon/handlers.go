@@ -873,7 +873,7 @@ func handleProducePhase0V3(context context.Context, isSSZ bool, phase0Block *eth
 		http2.WriteSsz(w, sszResp, "phase0Block.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBeaconBlock(phase0Block.Phase0)
+	block, err := shared.BeaconBlockFromConsensus(phase0Block.Phase0)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -903,7 +903,7 @@ func handleProduceAltairV3(context context.Context, isSSZ bool, altairBlock *eth
 		http2.WriteSsz(w, sszResp, "altairBlock.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBeaconBlockAltair(altairBlock.Altair)
+	block, err := shared.BeaconBlockAltairFromConsensus(altairBlock.Altair)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -933,7 +933,7 @@ func handleProduceBellatrixV3(context context.Context, isSSZ bool, bellatrixBloc
 		http2.WriteSsz(w, sszResp, "bellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBeaconBlockBellatrix(bellatrixBlock.Bellatrix)
+	block, err := shared.BeaconBlockBellatrixFromConsensus(bellatrixBlock.Bellatrix)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -963,7 +963,7 @@ func handleProduceBlindedBellatrixV3(context context.Context, isSSZ bool, blinde
 		http2.WriteSsz(w, sszResp, "blindeBellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBlindedBeaconBlockBellatrix(blindedBellatrixBlock.BlindedBellatrix)
+	block, err := shared.BlindedBeaconBlockBellatrixFromConsensus(blindedBellatrixBlock.BlindedBellatrix)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -993,7 +993,7 @@ func handleProduceBlindedCapellaV3(context context.Context, isSSZ bool, blindedC
 		http2.WriteSsz(w, sszResp, "blindedCapellaBlock.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBlindedBeaconBlockCapella(blindedCapellaBlock.BlindedCapella)
+	block, err := shared.BlindedBeaconBlockCapellaFromConsensus(blindedCapellaBlock.BlindedCapella)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1023,7 +1023,7 @@ func handleProduceCapellaV3(context context.Context, isSSZ bool, capellaBlock *e
 		http2.WriteSsz(w, sszResp, "capellaBlock.ssz")
 		return
 	}
-	block, err := shared.ConvertInternalBeaconBlockCapella(capellaBlock.Capella)
+	block, err := shared.BeaconBlockCapellaFromConsensus(capellaBlock.Capella)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1053,7 +1053,7 @@ func handleProduceBlindedDenebV3(context context.Context, isSSZ bool, blindedDen
 		http2.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.ConvertInternalBlindedBeaconBlockContentsDeneb(blindedDenebBlockContents.BlindedDeneb)
+	blockContents, err := shared.BlindedBeaconBlockContentsDenebFromConsensus(blindedDenebBlockContents.BlindedDeneb)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1083,7 +1083,7 @@ func handleProduceDenebV3(context context.Context, isSSZ bool, denebBlockContent
 		http2.WriteSsz(w, sszResp, "denebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.ConvertInternalBeaconBlockContentsDeneb(denebBlockContents.Deneb)
+	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(denebBlockContents.Deneb)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return

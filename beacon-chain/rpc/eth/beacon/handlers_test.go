@@ -44,7 +44,7 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			converted, err := shared.ConvertInternalBeaconBlock(block.Phase0.Block)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlock
 			err = json.Unmarshal([]byte(phase0Block), &signedblock)
@@ -67,7 +67,7 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			converted, err := shared.ConvertInternalBeaconBlockAltair(block.Altair.Block)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockAltair
 			err = json.Unmarshal([]byte(altairBlock), &signedblock)
@@ -90,7 +90,7 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
-			converted, err := shared.ConvertInternalBeaconBlockBellatrix(block.Bellatrix.Block)
+			converted, err := shared.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(bellatrixBlock), &signedblock)
@@ -113,7 +113,7 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
-			converted, err := shared.ConvertInternalBeaconBlockCapella(block.Capella.Block)
+			converted, err := shared.BeaconBlockCapellaFromConsensus(block.Capella.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockCapella
 			err = json.Unmarshal([]byte(capellaBlock), &signedblock)
@@ -136,7 +136,7 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-			converted, err := shared.ConvertInternalToDenebBlock(block.Deneb.Block.Block)
+			converted, err := shared.DenebBlockFromConsensus(block.Deneb.Block.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(denebBlockContents), &signedblock)
@@ -283,7 +283,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			converted, err := shared.ConvertInternalBeaconBlock(block.Phase0.Block)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlock
 			err = json.Unmarshal([]byte(phase0Block), &signedblock)
@@ -306,7 +306,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			converted, err := shared.ConvertInternalBeaconBlockAltair(block.Altair.Block)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockAltair
 			err = json.Unmarshal([]byte(altairBlock), &signedblock)
@@ -329,7 +329,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
-			converted, err := shared.ConvertInternalBlindedBeaconBlockBellatrix(block.BlindedBellatrix.Block)
+			converted, err := shared.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBlindedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(blindedBellatrixBlock), &signedblock)
@@ -352,7 +352,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
-			converted, err := shared.ConvertInternalBlindedBeaconBlockCapella(block.BlindedCapella.Block)
+			converted, err := shared.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBlindedBeaconBlockCapella
 			err = json.Unmarshal([]byte(blindedCapellaBlock), &signedblock)
@@ -375,7 +375,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.ConvertInternalToBlindedDenebBlock(block.BlindedDeneb.Block.Block)
+			converted, err := shared.BlindedDenebBlockFromConsensus(block.BlindedDeneb.Block.Block)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(blindedDenebBlockContents), &signedblock)
