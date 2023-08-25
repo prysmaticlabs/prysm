@@ -34,19 +34,16 @@ func TestConfigurePersistantLogging(t *testing.T) {
 	logFileName := "test.log"
 	existingDirectory := "test-1-existing-testing-dir"
 
-	fmt.Printf("RUNNING TEST 1")
 	err := ConfigurePersistentLogging(fmt.Sprintf("%s/%s/%s", testParentDir, existingDirectory, logFileName))
 	require.NoError(t, err)
 
 	// 2. Test creation of file along with parent directory
-	fmt.Printf("RUNNING TEST 2")
 	nonExistingDirectory := "test-2-non-existing-testing-dir"
 
 	err = ConfigurePersistentLogging(fmt.Sprintf("%s/%s/%s", testParentDir, nonExistingDirectory, logFileName))
 	require.NoError(t, err)
 
 	// 3. Test creation of file in an existing parent directory with a non-existing sub-directory
-	fmt.Printf("RUNNING TEST 3")
 	existingDirectory = "test-3-existing-testing-dir"
 	nonExistingSubDirectory := "test-3-non-existing-sub-dir"
 	err = os.Mkdir(fmt.Sprintf("%s/%s", testParentDir, existingDirectory), 0700)
