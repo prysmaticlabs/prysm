@@ -55,9 +55,9 @@ func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock exe
 func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
 	tree := &protodb.DepositSnapshot{
 		Finalized:      make([][]byte, len(ds.finalized)),
-		DepositRoot:    ds.depositRoot[:],
+		DepositRoot:    bytesutil.SafeCopyBytes(ds.depositRoot[:]),
 		DepositCount:   ds.depositCount,
-		ExecutionHash:  ds.executionBlock.Hash[:],
+		ExecutionHash:  bytesutil.SafeCopyBytes(ds.executionBlock.Hash[:]),
 		ExecutionDepth: ds.executionBlock.Depth,
 	}
 	for i := range ds.finalized {
