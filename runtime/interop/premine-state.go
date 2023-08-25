@@ -261,6 +261,12 @@ func (s *PremineGenesisConfig) populate(g state.BeaconState) error {
 	if err := s.setInactivityScores(g); err != nil {
 		return err
 	}
+	if err := s.setCurrentEpochParticipation(g); err != nil {
+		return err
+	}
+	if err := s.setPrevEpochParticipation(g); err != nil {
+		return err
+	}
 	if err := s.setSyncCommittees(g); err != nil {
 		return err
 	}
@@ -321,6 +327,42 @@ func (s *PremineGenesisConfig) setInactivityScores(g state.BeaconState) error {
 		}
 	}
 	return g.SetInactivityScores(scores)
+}
+
+func (s *PremineGenesisConfig) setCurrentEpochParticipation(g state.BeaconState) error {
+	if s.Version < version.Altair {
+		return nil
+	}
+
+	p, err := g.CurrentEpochParticipation()
+	if err != nil {
+		return err
+	}
+	missing := len(g.Validators()) - len(p)
+	if missing > 0 {
+		for i := 0; i < missing; i++ {
+			p = append(p, 0)
+		}
+	}
+	return g.SetCurrentParticipationBits(p)
+}
+
+func (s *PremineGenesisConfig) setPrevEpochParticipation(g state.BeaconState) error {
+	if s.Version < version.Altair {
+		return nil
+	}
+
+	p, err := g.PreviousEpochParticipation()
+	if err != nil {
+		return err
+	}
+	missing := len(g.Validators()) - len(p)
+	if missing > 0 {
+		for i := 0; i < missing; i++ {
+			p = append(p, 0)
+		}
+	}
+	return g.SetPreviousParticipationBits(p)
 }
 
 func (s *PremineGenesisConfig) setSyncCommittees(g state.BeaconState) error {
