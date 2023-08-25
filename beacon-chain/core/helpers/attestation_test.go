@@ -191,7 +191,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 					-500 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
-			wantedErr: "attestation slot 268 not within current epoch 15 or previous epoch 14",
+			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch 14",
 		},
 		{
 			name: "attestation.slot is well beyond current slot",

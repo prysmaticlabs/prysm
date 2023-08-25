@@ -16,7 +16,8 @@ import (
 )
 
 var (
-	ErrTooLate = errors.New("attestation is too late")
+	ErrTooLate        = errors.New("attestation is too late")
+	ErrIncorrectEpoch = errors.New("attestation is from incorrect epoch")
 )
 
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
@@ -191,7 +192,13 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	}
 	attSlotEpoch := slots.ToEpoch(attSlot)
 	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
-		return fmt.Errorf("attestation slot %d not within current epoch %d or previous epoch %d", attSlot, currentEpoch, prevEpoch)
+		attError = fmt.Errorf(
+			"attestation epoch %d not within current epoch %d or previous epoch %d",
+			attSlot/params.BeaconConfig().SlotsPerEpoch,
+			currentEpoch,
+			prevEpoch,
+		)
+		return errors.Join(ErrIncorrectEpoch, attError)
 	}
 
 	return nil
