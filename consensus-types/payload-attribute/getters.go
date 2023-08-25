@@ -61,7 +61,7 @@ func (a *data) PbV2() (*enginev1.PayloadAttributesV2, error) {
 	if a == nil {
 		return nil, errNilPayloadAttribute
 	}
-	if a.version < version.Capella {
+	if a.version != version.Capella {
 		return nil, consensus_types.ErrNotSupported("PbV2", a.version)
 	}
 	if a.timeStamp == 0 && len(a.prevRandao) == 0 {
