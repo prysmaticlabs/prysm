@@ -150,7 +150,7 @@ func DecodeWithLength(s string, length int) ([]byte, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("%s is invalid", s))
 	}
 	if len(bytes) != length {
-		return nil, fmt.Errorf(" %s is not length %d", s, length)
+		return nil, fmt.Errorf("%s is not length %d bytes", s, length)
 	}
 	return bytes, nil
 }
