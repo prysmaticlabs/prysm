@@ -103,9 +103,12 @@ type blobNotifier struct {
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
-	err := kzg.Start()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not initialize go-kzg context")
+	var err error
+	if params.DenebEnabled() {
+		err = kzg.Start()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize go-kzg context")
+		}
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	bn := &blobNotifier{
