@@ -18,7 +18,6 @@ package ethereum.eth.v1;
 import "google/protobuf/descriptor.proto";
 
 import "proto/eth/ext/options.proto";
-import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
