@@ -3093,7 +3093,7 @@ func uint256ToSSZBytes(num string) ([]byte, error) {
 func sszBytesToUint256String(b []byte) (string, error) {
 	bi := bytesutil2.LittleEndianBytesToBigInt(b)
 	if !math.IsValidUint256(bi) {
-		return "", fmt.Errorf("%s is not a valid uint356", bi.String())
+		return "", fmt.Errorf("%s is not a valid Uint256", bi.String())
 	}
 	return string([]byte(bi.String())), nil
 }
