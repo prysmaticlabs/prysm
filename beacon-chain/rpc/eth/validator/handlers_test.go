@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -1534,7 +1534,6 @@ func TestServer_RegisterValidator(t *testing.T) {
 func TestGetAttesterDuties(t *testing.T) {
 	helpers.ClearCache()
 
-	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
@@ -1550,7 +1549,6 @@ func TestGetAttesterDuties(t *testing.T) {
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	require.NoError(t, bs.SetBlockRoots(roots))
-	db := dbutil.SetupDB(t)
 
 	// Deactivate last validator.
 	vals := bs.Validators()
@@ -1571,7 +1569,7 @@ func TestGetAttesterDuties(t *testing.T) {
 	chain := &mockChain.ChainService{
 		State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 	}
-	vs := &Server{
+	s := &Server{
 		Stater: &testutil.MockStater{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0:                                   bs,
@@ -1583,92 +1581,127 @@ func TestGetAttesterDuties(t *testing.T) {
 		OptimisticModeFetcher: chain,
 	}
 
-	t.Run("Single validator", func(t *testing.T) {
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{0},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
+	t.Run("single validator", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(attDutiesSingleVal)
 		require.NoError(t, err)
-		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetAttesterDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, primitives.CommitteeIndex(1), duty.CommitteeIndex)
-		assert.Equal(t, primitives.Slot(0), duty.Slot)
-		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(171), duty.CommitteeLength)
-		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
-		assert.Equal(t, primitives.CommitteeIndex(80), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, "1", duty.CommitteeIndex)
+		assert.Equal(t, "0", duty.Slot)
+		assert.Equal(t, "0", duty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
+		assert.Equal(t, "171", duty.CommitteeLength)
+		assert.Equal(t, "3", duty.CommitteesAtSlot)
+		assert.Equal(t, "80", duty.ValidatorCommitteeIndex)
 	})
-
-	t.Run("Multiple validators", func(t *testing.T) {
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{0, 1},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
+	t.Run("multiple validators", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(attDutiesMultipleVals)
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(resp.Data))
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetAttesterDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
 	})
-
-	t.Run("Next epoch", func(t *testing.T) {
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: slots.ToEpoch(bs.Slot()) + 1,
-			Index: []primitives.ValidatorIndex{0},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
+	t.Run("next epoch", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(attDutiesSingleVal)
 		require.NoError(t, err)
-		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(slots.ToEpoch(bs.Slot())+1), 10)})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetAttesterDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
-		assert.Equal(t, primitives.CommitteeIndex(0), duty.CommitteeIndex)
-		assert.Equal(t, primitives.Slot(62), duty.Slot)
-		assert.Equal(t, primitives.ValidatorIndex(0), duty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[0], duty.Pubkey)
-		assert.Equal(t, uint64(170), duty.CommitteeLength)
-		assert.Equal(t, uint64(3), duty.CommitteesAtSlot)
-		assert.Equal(t, primitives.CommitteeIndex(110), duty.ValidatorCommitteeIndex)
+		assert.Equal(t, "0", duty.CommitteeIndex)
+		assert.Equal(t, "62", duty.Slot)
+		assert.Equal(t, "0", duty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[0]), duty.Pubkey)
+		assert.Equal(t, "170", duty.CommitteeLength)
+		assert.Equal(t, "3", duty.CommitteesAtSlot)
+		assert.Equal(t, "110", duty.ValidatorCommitteeIndex)
 	})
-
-	t.Run("Epoch out of bound", func(t *testing.T) {
+	t.Run("epoch out of bounds", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(attDutiesSingleVal)
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
 		currentEpoch := slots.ToEpoch(bs.Slot())
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: currentEpoch + 2,
-			Index: []primitives.ValidatorIndex{0},
-		}
-		_, err := vs.GetAttesterDuties(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
-	})
+		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(currentEpoch+2), 10)})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	t.Run("Validator index out of bound", func(t *testing.T) {
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys))},
-		}
-		_, err := vs.GetAttesterDuties(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, "Invalid validator index", err)
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1)))
 	})
-
-	t.Run("Inactive validator - no duties", func(t *testing.T) {
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(len(pubKeys) - 1)},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
+	t.Run("validator index out of bounds", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(fmt.Sprintf("[\"%d\"]", len(pubKeys)))
 		require.NoError(t, err)
-		assert.Equal(t, 0, len(resp.Data))
-	})
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, fmt.Sprintf("Invalid validator index %d", len(pubKeys))))
+	})
+	t.Run("inactive validator - no duties", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err = body.WriteString(fmt.Sprintf("[\"%d\"]", len(pubKeys)-1))
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetAttesterDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 0, len(resp.Data))
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
+		ctx := context.Background()
+
 		parentRoot := [32]byte{'a'}
 		blk := util.NewBeaconBlock()
 		blk.Block.ParentRoot = parentRoot[:]
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
+		db := dbutil.SetupDB(t)
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
@@ -1676,36 +1709,46 @@ func TestGetAttesterDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 		}
-		req := &ethpbv1.AttesterDutiesRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{0},
-		}
-		resp, err := vs.GetAttesterDuties(ctx, req)
+
+		var body bytes.Buffer
+		_, err = body.WriteString(attDutiesSingleVal)
 		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetAttesterDuties(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetAttesterDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
-}
+	t.Run("sync not ready", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		chainService := &mockChain.ChainService{State: st}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
 
-func TestGetAttesterDuties_SyncNotReady(t *testing.T) {
-	helpers.ClearCache()
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/attester/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	chainService := &mockChain.ChainService{State: st}
-	vs := &Server{
-		SyncChecker:           &mockSync.Sync{IsSyncing: true},
-		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
-		OptimisticModeFetcher: chainService,
-	}
-	_, err = vs.GetAttesterDuties(context.Background(), &ethpbv1.AttesterDutiesRequest{})
-	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+		s.GetAttesterDuties(writer, request)
+		require.Equal(t, http.StatusServiceUnavailable, writer.Code)
+	})
 }
 
 var (
@@ -2020,4 +2063,6 @@ var (
     },
     "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
   }]`
+	attDutiesSingleVal    = `["0"]`
+	attDutiesMultipleVals = `["0","1"]`
 )
