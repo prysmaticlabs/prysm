@@ -376,7 +376,8 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// to be included (rather than the last one to be processed). This was most likely
 		// done as the state cannot represent signed integers.
 		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex, common.Hash(fState.Eth1Data().BlockHash), 0); err != nil {
+		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex, common.Hash(fState.Eth1Data().BlockHash),
+			0 /* Setting a zero value as we have no access to block height */); err != nil {
 			return err
 		}
 

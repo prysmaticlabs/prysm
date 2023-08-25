@@ -236,7 +236,8 @@ func (s *Service) insertFinalizedDeposits(ctx context.Context, fRoot [32]byte) {
 	// to be included(rather than the last one to be processed). This was most likely
 	// done as the state cannot represent signed integers.
 	finalizedEth1DepIdx := eth1DepositIndex - 1
-	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(finalizedEth1DepIdx), common.Hash(finalizedState.Eth1Data().BlockHash), 0); err != nil {
+	if err = s.cfg.DepositCache.InsertFinalizedDeposits(ctx, int64(finalizedEth1DepIdx), common.Hash(finalizedState.Eth1Data().BlockHash),
+		0 /* Setting a zero value as we have no access to block height */); err != nil {
 		log.WithError(err).Error("could not insert finalized deposits")
 		return
 	}
