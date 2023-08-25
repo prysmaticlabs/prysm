@@ -304,7 +304,7 @@ func TestInsertDepositContainers_NotNil(t *testing.T) {
 	dc, err := New()
 	require.NoError(t, err)
 	dc.InsertDepositContainers(context.Background(), nil)
-	assert.Equal(t, []*ethpb.DepositContainer{}, dc.deposits)
+	assert.DeepEqual(t, []*ethpb.DepositContainer{}, dc.deposits)
 }
 
 func TestFinalizedDeposits_DepositsCachedCorrectly(t *testing.T) {
