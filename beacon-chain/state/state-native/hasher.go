@@ -34,7 +34,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	case version.Capella:
 		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	case version.Deneb:
-		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateCapellaFieldCount) // Deneb has the same state field count as Capella.
+		fieldRoots = make([][]byte, params.BeaconConfig().BeaconStateDenebFieldCount)
 	}
 
 	// Genesis time root.
