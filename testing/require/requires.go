@@ -77,3 +77,8 @@ func NotEmpty(tb assertions.AssertionTestingTB, obj interface{}, msg ...interfac
 func ErrorIs(tb assertions.AssertionTestingTB, err, target error, msg ...interface{}) {
 	assertions.ErrorIs(tb.Fatalf, err, target, msg)
 }
+
+// StringContains asserts that actual string contains expected message.
+func StringContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
+	assertions.StringContains(tb.Fatalf, expected, actual, true, msg)
+}
