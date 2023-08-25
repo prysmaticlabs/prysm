@@ -201,8 +201,6 @@ func (dc *DepositCache) AllDepositContainers(ctx context.Context) []*ethpb.Depos
 // AllDeposits returns a list of historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
 func (dc *DepositCache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
-	ctx, span := trace.StartSpan(ctx, "DepositsCache.AllDeposits")
-	defer span.End()
 	dc.depositsLock.RLock()
 	defer dc.depositsLock.RUnlock()
 
@@ -304,9 +302,6 @@ func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64
 	}
 
 	for i := untilDepositIndex; i >= 0; i-- {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
 		if dc.deposits[i].Deposit.Proof == nil {
 			break

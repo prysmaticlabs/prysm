@@ -857,11 +857,10 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			if !ok {
 				return errors.New("deposit trie was not EIP4881 DepositTree")
 			}
-			snapshot, err := trie.GetSnapshot()
+			eth1Data.DepositSnapshot, err = trie.ToProto()
 			if err != nil {
 				return err
 			}
-			eth1Data.DepositSnapshot = snapshot.ToProto()
 		} else {
 			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
 			if !ok {

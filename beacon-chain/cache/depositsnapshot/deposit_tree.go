@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
+	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 var (
@@ -176,4 +177,14 @@ func (d *DepositTree) Copy() (*DepositTree, error) {
 		return nil, err
 	}
 	return fromSnapshot(snapshot)
+}
+
+// ToProto returns a proto object of the deposit snapshot of
+// the tree.
+func (d *DepositTree) ToProto() (*protodb.DepositSnapshot, error) {
+	snapshot, err := d.GetSnapshot()
+	if err != nil {
+		return nil, err
+	}
+	return snapshot.ToProto(), nil
 }

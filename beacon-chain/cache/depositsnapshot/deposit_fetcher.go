@@ -50,15 +50,13 @@ func New() (*Cache, error) {
 		pendingDeposits:   []*ethpb.DepositContainer{},
 		deposits:          []*ethpb.DepositContainer{},
 		depositsByKey:     map[[fieldparams.BLSPubkeyLength]byte][]*ethpb.DepositContainer{},
-		finalizedDeposits: getFinalizedDeposits(finalizedDepositsTrie, -1),
+		finalizedDeposits: toFinalizedDepositsContainer(finalizedDepositsTrie, -1),
 	}, nil
 }
 
 // AllDeposits returns a list of historical deposits until the given block number
 // (inclusive). If no block is specified then this method returns all historical deposits.
 func (c *Cache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Deposit {
-	ctx, span := trace.StartSpan(ctx, "Cache.AllDeposits")
-	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
 
@@ -68,7 +66,8 @@ func (c *Cache) AllDeposits(ctx context.Context, untilBlk *big.Int) []*ethpb.Dep
 func (c *Cache) allDeposits(untilBlk *big.Int) []*ethpb.Deposit {
 	var deposits []*ethpb.Deposit
 	for _, ctnr := range c.deposits {
-		if untilBlk == nil || untilBlk.Uint64() >= ctnr.Eth1BlockHeight {
+		cBlk := big.NewInt(0).SetUint64(ctnr.Eth1BlockHeight)
+		if untilBlk == nil || untilBlk.Cmp(cBlk) >= 0 {
 			deposits = append(deposits, ctnr.Deposit)
 		}
 	}
@@ -128,7 +127,10 @@ func (c *Cache) DepositsNumberAndRootAtHeight(ctx context.Context, blockHeight *
 	defer span.End()
 	c.depositsLock.RLock()
 	defer c.depositsLock.RUnlock()
-	heightIdx := sort.Search(len(c.deposits), func(i int) bool { return c.deposits[i].Eth1BlockHeight > blockHeight.Uint64() })
+	heightIdx := sort.Search(len(c.deposits), func(i int) bool {
+		dBlkHeight := big.NewInt(0).SetUint64(c.deposits[i].Eth1BlockHeight)
+		return dBlkHeight.Cmp(blockHeight) > 0
+	})
 	// send the deposit root of the empty trie, if eth1follow distance is greater than the time of the earliest
 	// deposit.
 	if heightIdx == 0 {
@@ -188,9 +190,6 @@ func (c *Cache) PruneProofs(ctx context.Context, untilDepositIndex int64) error 
 	}
 
 	for i := untilDepositIndex; i >= 0; i-- {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		// Finding a nil proof means that all proofs up to this deposit have been already pruned.
 		if c.deposits[i].Deposit.Proof == nil {
 			break
@@ -256,7 +255,7 @@ func (fd *finalizedDepositsContainer) MerkleTrieIndex() int64 {
 	return fd.merkleTrieIndex
 }
 
-func getFinalizedDeposits(deposits *DepositTree, index int64) finalizedDepositsContainer {
+func toFinalizedDepositsContainer(deposits *DepositTree, index int64) finalizedDepositsContainer {
 	return finalizedDepositsContainer{
 		depositTree:     deposits,
 		merkleTrieIndex: index,

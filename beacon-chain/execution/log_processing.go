@@ -35,7 +35,7 @@ var (
 	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1DataSavingInterval = 10000
+const eth1DataSavingInterval = 1000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositLogRequestLimit = 10000
@@ -227,8 +227,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 		// deposit tree htr computation expensive.
 		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 		if !ok {
-			log.Errorf("Wrong trie type initialized: %T", dTrie)
-			return nil
+			return errors.Errorf("wrong trie type initialized: %T", dTrie)
 		}
 		if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
 			log.WithError(err).Error("Could not finalize trie")
@@ -584,11 +583,10 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		if !ok {
 			return errors.New("deposit tree was not EIP4881 DepositTree")
 		}
-		snapshot, err := tree.GetSnapshot()
+		eth1Data.DepositSnapshot, err = tree.ToProto()
 		if err != nil {
 			return err
 		}
-		eth1Data.DepositSnapshot = snapshot.ToProto()
 	} else {
 		tree, ok := s.depositTrie.(*trie.SparseMerkleTrie)
 		if !ok {
