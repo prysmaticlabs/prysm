@@ -30,6 +30,12 @@ func setKzgCommitments(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsB
 
 // coverts a blobs bundle to a sidecar format.
 func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+	if blk.Version() < version.Deneb {
+		return nil, nil
+	}
+	if bundle == nil || len(bundle.KzgCommitments) == 0 {
+		return nil, nil
+	}
 	r, err := blk.HashTreeRoot()
 	if err != nil {
 		return nil, err
@@ -55,6 +61,12 @@ func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnly
 
 // coverts a blinds blobs bundle to a sidecar format.
 func blindBlobsBundleToSidecars(bundle *enginev1.BlindedBlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlindedBlobSidecar, error) {
+	if blk.Version() < version.Deneb {
+		return nil, nil
+	}
+	if bundle == nil || len(bundle.KzgCommitments) == 0 {
+		return nil, nil
+	}
 	r, err := blk.HashTreeRoot()
 	if err != nil {
 		return nil, err
