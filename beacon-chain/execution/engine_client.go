@@ -730,11 +730,11 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			if b == nil {
 				return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
 			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
+			header, err := bblock.Block().Body().Execution()
 			if err != nil {
 				return nil, err
 			}
-			payload, err = fullPayloadFromPayloadBody(header, b, blindedBlocks[realIdx].Version())
+			payload, err = fullPayloadFromPayloadBody(header, b, bblock.Version())
 			if err != nil {
 				return nil, err
 			}
@@ -743,7 +743,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 			if b == nil {
 				return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
 			}
-			header, err := blindedBlocks[realIdx].Block().Body().Execution()
+			header, err := bblock.Block().Body().Execution()
 			if err != nil {
 				return nil, err
 			}
@@ -752,7 +752,7 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 				return nil, err
 			}
 		}
-		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(blindedBlocks[realIdx], payload.Proto())
+		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(bblock, payload.Proto())
 		if err != nil {
 			return nil, err
 		}
