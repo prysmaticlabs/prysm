@@ -224,7 +224,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	}
 	if features.Get().EnableEIP4881 {
 		// We finalize the trie here so that old deposits are not kept around, as they make
-		// deposit insertion expensive.
+		// deposit tree htr computation expensive.
 		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 		if !ok {
 			log.Errorf("Wrong trie type initialized: %T", dTrie)
