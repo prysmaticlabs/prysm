@@ -228,3 +228,68 @@ func TestGetSyncStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestGetVersion(t *testing.T) {
+	const versionEndpoint = "/eth/v1/node/version"
+
+	testCases := []struct {
+		name                 string
+		restEndpointResponse apimiddleware.VersionResponseJson
+		restEndpointError    error
+		expectedResponse     *ethpb.Version
+		expectedError        string
+	}{
+		{
+			name:              "fails to query REST endpoint",
+			restEndpointError: errors.New("foo error"),
+			expectedError:     "failed to query node version",
+		},
+		{
+			name:                 "returns nil version data",
+			restEndpointResponse: apimiddleware.VersionResponseJson{Data: nil},
+			expectedError:        "empty version response",
+		},
+		{
+			name: "returns proper version response",
+			restEndpointResponse: apimiddleware.VersionResponseJson{
+				Data: &apimiddleware.VersionJson{
+					Version: "prysm/local",
+				},
+			},
+			expectedResponse: &ethpb.Version{
+				Version: "prysm/local",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			ctx := context.Background()
+
+			var versionResponse apimiddleware.VersionResponseJson
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				versionEndpoint,
+				&versionResponse,
+			).Return(
+				nil,
+				testCase.restEndpointError,
+			).SetArg(
+				2,
+				testCase.restEndpointResponse,
+			)
+
+			nodeClient := &beaconApiNodeClient{jsonRestHandler: jsonRestHandler}
+			version, err := nodeClient.GetVersion(ctx, &emptypb.Empty{})
+
+			if testCase.expectedResponse == nil {
+				assert.ErrorContains(t, testCase.expectedError, err)
+			} else {
+				assert.DeepEqual(t, testCase.expectedResponse, version)
+			}
+		})
+	}
+}
