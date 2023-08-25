@@ -182,6 +182,22 @@ func TestPayloadAttributeGetters(t *testing.T) {
 				require.Equal(t, (*enginev1.PayloadAttributesV3)(nil), got)
 			},
 		},
+		{
+			name: "Get PbDeneb on pbv2 will fail",
+			tc: func(t *testing.T) {
+				p := &enginev1.PayloadAttributesV3{
+					Timestamp:             1,
+					PrevRandao:            []byte{1, 2, 3},
+					SuggestedFeeRecipient: []byte{4, 5, 6},
+					Withdrawals:           []*enginev1.Withdrawal{{Index: 1}, {Index: 2}, {Index: 3}},
+					ParentBeaconBlockRoot: []byte{'a'},
+				}
+				a, err := New(p)
+				require.NoError(t, err)
+				_, err = a.PbV2()
+				require.ErrorContains(t, "PbV2 is not supported for deneb", err)
+			},
+		},
 	}
 
 	for _, test := range tests {
