@@ -35,7 +35,7 @@ var (
 	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
-const eth1DataSavingInterval = 1000
+const eth1DataSavingInterval = 10000
 const maxTolerableDifference = 50
 const defaultEth1HeaderReqLimit = uint64(1000)
 const depositLogRequestLimit = 10000
@@ -222,6 +222,19 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
+	if features.Get().EnableEIP4881 {
+		// We finalize the trie here so that old deposits are not kept around, as they make
+		// deposit insertion expensive.
+		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		if !ok {
+			log.Errorf("Wrong trie type initialized: %T", dTrie)
+			return nil
+		}
+		if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
+			log.WithError(err).Error("Could not finalize trie")
+		}
+	}
+
 	return nil
 }
 

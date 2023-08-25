@@ -13,6 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 const nilDepositErr = "Ignoring nil deposit insertion"
@@ -1151,6 +1152,43 @@ func BenchmarkDepositTree_InsertOldImplementation(b *testing.B) {
 			err := dt.Insert(input[:], 0)
 			require.NoError(b, err)
 		}
+	}
+}
+
+func BenchmarkDepositTree_HashTreeRootNewImplementation(b *testing.B) {
+	tr := NewDepositTree()
+	deps, _, err := util.DeterministicDepositsAndKeys(1000)
+	require.NoError(b, err)
+	for _, d := range deps {
+		rt, err := d.Data.HashTreeRoot()
+		require.NoError(b, err)
+		require.NoError(b, tr.Insert(rt[:], 0))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err = tr.HashTreeRoot()
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkDepositTree_HashTreeRootOldImplementation(b *testing.B) {
+	dt, err := trie.NewTrie(33)
+	require.NoError(b, err)
+	deps, _, err := util.DeterministicDepositsAndKeys(1000)
+	require.NoError(b, err)
+	for i, d := range deps {
+		rt, err := d.Data.HashTreeRoot()
+		require.NoError(b, err)
+		require.NoError(b, dt.Insert(rt[:], i))
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err = dt.HashTreeRoot()
+		require.NoError(b, err)
 	}
 }
 
