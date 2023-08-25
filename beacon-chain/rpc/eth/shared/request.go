@@ -171,7 +171,7 @@ func DecodeWithMaxLength(s string, length int) ([]byte, error) {
 // VerifyMaxLength takes in two lengths and returns an error
 func VerifyMaxLength(name string, length int, max int) error {
 	if length > max {
-		return fmt.Errorf("%s length %d exceeds max of %d", name, length, max)
+		return fmt.Errorf("%s length of %d bytes exceeds max of %d", name, length, max)
 	}
 	return nil
 }
