@@ -243,11 +243,10 @@ func slotKey(slot types.Slot) []byte {
 
 func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
 	if err := db.Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket(epochsForBlobSidecarsRequestBucket)
-		k := []byte("epoch-key")
-		v := b.Get(k)
+		b := tx.Bucket(chainMetadataBucket)
+		v := b.Get(blobRetentionEpochsKey)
 		if v == nil {
-			if err := b.Put(k, bytesutil.Uint64ToBytesBigEndian(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest))); err != nil {
+			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest))); err != nil {
 				return err
 			}
 			return nil
