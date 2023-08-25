@@ -512,7 +512,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 		mixes[i] = bytesutil.ToBytes32(m)
 	}
 
-	fieldCount := params.BeaconConfig().BeaconStateCapellaFieldCount
+	fieldCount := params.BeaconConfig().BeaconStateDenebFieldCount
 	b := &BeaconState{
 		version:                           version.Deneb,
 		genesisTime:                       st.GenesisTime,
@@ -600,7 +600,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 	case version.Capella:
 		fieldCount = params.BeaconConfig().BeaconStateCapellaFieldCount
 	case version.Deneb:
-		fieldCount = params.BeaconConfig().BeaconStateCapellaFieldCount
+		fieldCount = params.BeaconConfig().BeaconStateDenebFieldCount
 	}
 
 	dst := &BeaconState{
@@ -756,7 +756,7 @@ func (b *BeaconState) initializeMerkleLayers(ctx context.Context) error {
 	case version.Capella:
 		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateCapellaFieldCount)
 	case version.Deneb:
-		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateCapellaFieldCount)
+		b.dirtyFields = make(map[types.FieldIndex]bool, params.BeaconConfig().BeaconStateDenebFieldCount)
 	}
 
 	return nil
