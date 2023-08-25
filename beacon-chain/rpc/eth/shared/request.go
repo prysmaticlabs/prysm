@@ -159,7 +159,7 @@ func DecodeWithLength(s string, length int) ([]byte, error) {
 func DecodeWithMaxLength(s string, length int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s is invalid", s))
+		return nil, errors.Wrap(err, fmt.Sprintf("%s is not a valid hex", s))
 	}
 	err = VerifyMaxLength(s, len(bytes), length)
 	if err != nil {
