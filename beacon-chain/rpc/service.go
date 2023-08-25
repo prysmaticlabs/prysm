@@ -402,12 +402,18 @@ func (s *Service) Start() {
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 	}
 	httpServer := &httpserver.Server{
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		HeadFetcher:        s.cfg.HeadFetcher,
-		SyncChecker:        s.cfg.SyncService,
-		CoreService:        coreService,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		CoreService:           coreService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		BeaconDB:              s.cfg.BeaconDB,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 	}
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", httpServer.GetValidatorCount).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/root", beaconChainServerV1.GetBlockRoot).Methods(http.MethodGet)
