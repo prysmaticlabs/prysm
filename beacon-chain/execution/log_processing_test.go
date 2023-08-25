@@ -90,7 +90,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 	require.LogsDoNotContain(t, hook, "deposit signature did not verify")
 	require.LogsDoNotContain(t, hook, "could not tree hash deposit data")
 	require.LogsDoNotContain(t, hook, "deposit merkle branch of deposit root did not verify for root")
-	require.LogsContain(t, hook, "deposit registered from deposit contract")
+	require.LogsContain(t, hook, "Deposit registered from deposit contract")
 
 	hook.Reset()
 }

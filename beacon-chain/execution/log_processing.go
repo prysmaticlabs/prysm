@@ -199,7 +199,7 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			"eth1Block":       depositLog.BlockNumber,
 			"publicKey":       fmt.Sprintf("%#x", depositData.PublicKey),
 			"merkleTreeIndex": index,
-		}).Debug("deposit registered from deposit contract")
+		}).Debug("Deposit registered from deposit contract")
 		validDepositsCount.Inc()
 		// Notify users what is going on, from time to time.
 		if !s.chainStartData.Chainstarted {
