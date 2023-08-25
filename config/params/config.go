@@ -2,6 +2,7 @@
 package params
 
 import (
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -274,4 +275,11 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// DenebEnabled centralizes the check to determine if code paths
+// that are specific to deneb should be allowed to execute. This will make it easier to find call sites that do this
+// kind of check and remove them post-deneb.
+func DenebEnabled() bool {
+	return BeaconConfig().DenebForkEpoch < math.MaxUint64
 }
