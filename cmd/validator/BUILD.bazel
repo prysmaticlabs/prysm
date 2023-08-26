@@ -60,10 +60,7 @@ container_image(
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/validator:latest": ":image_with_creation_time",
-        "gcr.io/prysmaticlabs/prysm/validator:{DOCKER_TAG}": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-validator:latest": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-validator:{DOCKER_TAG}": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/validator:nitro-deneb-integration": ":image_with_creation_time",
     },
     tags = ["manual"],
     visibility = ["//validator:__pkg__"],

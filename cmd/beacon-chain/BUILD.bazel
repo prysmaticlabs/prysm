@@ -65,10 +65,7 @@ container_image(
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:latest": ":image_with_creation_time",
-        "gcr.io/prysmaticlabs/prysm/beacon-chain:{DOCKER_TAG}": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:latest": ":image_with_creation_time",
-        "index.docker.io/prysmaticlabs/prysm-beacon-chain:{DOCKER_TAG}": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/beacon-chain:nitro-deneb-integration": ":image_with_creation_time",
     },
     tags = ["manual"],
     visibility = ["//beacon-chain:__pkg__"],

@@ -45,8 +45,7 @@ container_image(
 container_bundle(
     name = "image_bundle",
     images = {
-        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:latest": ":image_with_creation_time",
-        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:{DOCKER_TAG}": ":image_with_creation_time",
+        "gcr.io/prysmaticlabs/prysm/cmd/prysmctl:nitro-deneb-integration": ":image_with_creation_time",
     },
     tags = ["manual"],
     visibility = ["//cmd/prysmctl:__pkg__"],

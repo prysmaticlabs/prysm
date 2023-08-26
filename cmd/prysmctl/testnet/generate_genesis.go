@@ -34,6 +34,7 @@ var (
 		ConfigName         string
 		NumValidators      uint64
 		GenesisTime        uint64
+		GenesisTimeDelay        uint64
 		OutputSSZ          string
 		OutputJSON         string
 		OutputYaml         string
@@ -98,6 +99,11 @@ var (
 				Name:        "genesis-time",
 				Destination: &generateGenesisStateFlags.GenesisTime,
 				Usage:       "Unix timestamp seconds used as the genesis time in the genesis state. If unset, defaults to now()",
+			},
+			&cli.Uint64Flag{
+				Name:        "genesis-time-delay",
+				Destination: &generateGenesisStateFlags.GenesisTimeDelay,
+				Usage:       "Delay genesis time by N seconds",
 			},
 			&cli.BoolFlag{
 				Name:        "override-eth1data",
@@ -223,6 +229,9 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 		f.GenesisTime = uint64(time.Now().Unix())
 		log.Info("No genesis time specified, defaulting to now()")
 	}
+	log.Infof("Delaying genesis %v by %v seconds", f.GenesisTime, f.GenesisTimeDelay)
+	f.GenesisTime += f.GenesisTimeDelay
+	log.Infof("Genesis is now %v", f.GenesisTime)
 
 	v, err := version.FromString(f.ForkName)
 	if err != nil {
@@ -291,10 +300,12 @@ func generateGenesis(ctx context.Context) (state.BeaconState, error) {
 	gb := gen.ToBlock()
 
 	// TODO: expose the PregenesisCreds option with a cli flag - for now defaulting to no withdrawal credentials at genesis
+	log.Infof("Writing premined genesis with timestamp %d", f.GenesisTime)
 	genesisState, err := interop.NewPreminedGenesis(ctx, f.GenesisTime, nv, 0, v, gb, opts...)
 	if err != nil {
 		return nil, err
 	}
+	log.Infof("beacon state genesis time %d", genesisState.GenesisTime())
 
 	if f.OverrideEth1Data {
 		log.Print("Overriding Eth1Data with data from execution client")
