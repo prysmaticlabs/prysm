@@ -174,6 +174,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
+		"genesisTime":        vs.TimeFetcher.GenesisTime(),
+		"genesisTimeState":   head.GenesisTime(),
+		"denebForkEpoch":     params.BeaconConfig().DenebForkEpoch,
 	}).Info("Finished building block")
 
 	pb, err := sBlk.Block().Proto()
