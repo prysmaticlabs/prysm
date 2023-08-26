@@ -102,6 +102,8 @@ func GethCancunTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64
 			startTime := slots.StartTime(genesisTime, startSlot)
 			newTime := uint64(startTime.Unix())
 			cancunTime = &newTime
+			fmt.Printf("Read from beacon config, fork epoch: %d\n", cfg.DenebForkEpoch)
+			fmt.Printf("Genesis time %d, Computed cancun time: %d\n", genesisTime, *cancunTime)
 		}
 	}
 	return cancunTime
