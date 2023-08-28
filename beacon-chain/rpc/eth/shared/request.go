@@ -143,7 +143,8 @@ func IsOptimistic(
 	return true, nil
 }
 
-// DecodeHexWithLength takes a string and a length and validates the hex while returning an error
+// DecodeHexWithLength takes a string and a length in bytes,
+// and validates whether the string is a hex and has the correct length.
 func DecodeHexWithLength(s string, length int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
@@ -155,23 +156,25 @@ func DecodeHexWithLength(s string, length int) ([]byte, error) {
 	return bytes, nil
 }
 
-// DecodeHexWithMaxLength takes a string and a max byte length and validates the hex while returning an error
-func DecodeHexWithMaxLength(s string, length int) ([]byte, error) {
+// DecodeHexWithMaxLength takes a string and a length in bytes,
+// and validates whether the string is a hex and has the correct length.
+func DecodeHexWithMaxLength(s string, maxLength int) ([]byte, error) {
 	bytes, err := hexutil.Decode(s)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("%s is not a valid hex", s))
 	}
-	err = VerifyMaxLength(s, len(bytes), length)
+	err = VerifyMaxLength(bytes, maxLength)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, fmt.Sprintf("%s has too many bytes", s))
 	}
 	return bytes, nil
 }
 
-// VerifyMaxLength takes in two lengths and returns an error
-func VerifyMaxLength(name string, length int, max int) error {
-	if length > max {
-		return fmt.Errorf("%s length of %d bytes exceeds max of %d", name, length, max)
+// VerifyMaxLength takes a slice and a maximum length and validates the length.
+func VerifyMaxLength[T any](v []T, max int) error {
+	l := len(v)
+	if l > max {
+		return fmt.Errorf("length of %d exceeds max of %d", l, max)
 	}
 	return nil
 }
