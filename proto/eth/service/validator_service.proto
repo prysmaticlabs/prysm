@@ -36,20 +36,6 @@ option php_namespace = "Ethereum\\Eth\\Service";
 //
 // This service is defined in the upstream Ethereum consensus APIs repository (beacon-apis/apis/validator).
 service BeaconValidator {
-  // GetProposerDuties requests beacon node to provide all validators that are scheduled to
-  // propose a block in the given epoch.
-  //
-  // HTTP response usage:
-  //  - 200: Successful response
-  //  - 400: Invalid epoch
-  //  - 500: Beacon node internal error
-  //  - 503: Beacon node is currently syncing, try again later
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Validator/getProposerDuties
-  rpc GetProposerDuties(v1.ProposerDutiesRequest) returns (v1.ProposerDutiesResponse) {
-    option (google.api.http) = { get: "/internal/eth/v1/validator/duties/proposer/{epoch}" };
-  }
-
   // GetSyncCommitteeDuties requests the beacon node to provide a set of sync committee duties for a particular epoch.
   //
   // HTTP response usage:

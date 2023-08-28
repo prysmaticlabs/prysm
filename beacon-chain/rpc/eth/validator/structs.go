@@ -38,8 +38,8 @@ type GetAttesterDutiesRequest struct {
 
 type GetAttesterDutiesResponse struct {
 	DependentRoot       string          `json:"dependent_root"`
-	Data                []*AttesterDuty `json:"data"`
 	ExecutionOptimistic bool            `json:"execution_optimistic"`
+	Data                []*AttesterDuty `json:"data"`
 }
 
 type AttesterDuty struct {
@@ -50,4 +50,16 @@ type AttesterDuty struct {
 	CommitteesAtSlot        string `json:"committees_at_slot"`
 	ValidatorCommitteeIndex string `json:"validator_committee_index"`
 	Slot                    string `json:"slot"`
+}
+
+type GetProposerDutiesResponse struct {
+	DependentRoot       string          `json:"dependent_root"`
+	ExecutionOptimistic bool            `json:"execution_optimistic"`
+	Data                []*ProposerDuty `json:"data"`
+}
+
+type ProposerDuty struct {
+	Pubkey         string `json:"pubkey"`
+	ValidatorIndex string `json:"validator_index"`
+	Slot           string `json:"slot"`
 }

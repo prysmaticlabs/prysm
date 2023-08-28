@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -32,87 +30,6 @@ import (
 
 var errInvalidValIndex = errors.New("invalid validator index")
 var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
-
-// GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
-func (vs *Server) GetProposerDuties(ctx context.Context, req *ethpbv1.ProposerDutiesRequest) (*ethpbv1.ProposerDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetProposerDuties")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	isOptimistic, err := vs.OptimisticModeFetcher.IsOptimistic(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check optimistic status: %v", err)
-	}
-
-	cs := vs.TimeFetcher.CurrentSlot()
-	currentEpoch := slots.ToEpoch(cs)
-	nextEpoch := currentEpoch + 1
-	var nextEpochLookahead bool
-	if req.Epoch > nextEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Request epoch %d can not be greater than next epoch %d", req.Epoch, currentEpoch+1)
-	} else if req.Epoch == nextEpoch {
-		// If the request is for the next epoch, we use the current epoch's state to compute duties.
-		req.Epoch = currentEpoch
-		nextEpochLookahead = true
-	}
-
-	startSlot, err := slots.EpochStart(req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get start slot from epoch %d: %v", req.Epoch, err)
-	}
-	s, err := vs.Stater.StateBySlot(ctx, startSlot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get state: %v", err)
-	}
-
-	var proposals map[primitives.ValidatorIndex][]primitives.Slot
-	if nextEpochLookahead {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, s, nextEpoch)
-	} else {
-		_, proposals, err = helpers.CommitteeAssignments(ctx, s, req.Epoch)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
-	}
-
-	duties := make([]*ethpbv1.ProposerDuty, 0)
-	for index, ss := range proposals {
-		val, err := s.ValidatorAtIndexReadOnly(index)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator: %v", err)
-		}
-		pubkey48 := val.PublicKey()
-		pubkey := pubkey48[:]
-		for _, s := range ss {
-			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(s, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
-			duties = append(duties, &ethpbv1.ProposerDuty{
-				Pubkey:         pubkey,
-				ValidatorIndex: index,
-				Slot:           s,
-			})
-		}
-	}
-	sort.Slice(duties, func(i, j int) bool {
-		return duties[i].Slot < duties[j].Slot
-	})
-
-	root, err := proposalDependentRoot(s, req.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get dependent root: %v", err)
-	}
-
-	vs.ProposerSlotIndexCache.PrunePayloadIDs(startSlot)
-
-	return &ethpbv1.ProposerDutiesResponse{
-		DependentRoot:       root,
-		Data:                duties,
-		ExecutionOptimistic: isOptimistic,
-	}, nil
-}
 
 // GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
 //
@@ -724,26 +641,6 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	}
 
 	return resp, nil
-}
-
-// proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
-// or the genesis block root in the case of underflow.
-func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
-	var dependentRootSlot primitives.Slot
-	if epoch == 0 {
-		dependentRootSlot = 0
-	} else {
-		epochStartSlot, err := slots.EpochStart(epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
-		}
-		dependentRootSlot = epochStartSlot.Sub(1)
-	}
-	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get block root")
-	}
-	return root, nil
 }
 
 func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
