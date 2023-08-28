@@ -38,9 +38,11 @@ func (w *p2pWorker) handle(ctx context.Context, b batch) batch {
 	// if the batch is not successfully fetched and validated, increment the attempts counter
 	vb, err := w.v.verify(results)
 	if err != nil {
+		b.state = batchErrRetryable
 		b.err = err
 		return b
 	}
+	b.state = batchImportable
 	b.results = vb
 	return b
 }
