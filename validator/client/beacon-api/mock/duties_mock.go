@@ -68,10 +68,10 @@ func (mr *MockdutiesProviderMockRecorder) GetCommittees(ctx, epoch interface{}) 
 }
 
 // GetProposerDuties mocks base method.
-func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
+func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProposerDuties", ctx, epoch)
-	ret0, _ := ret[0].([]*apimiddleware.ProposerDutyJson)
+	ret0, _ := ret[0].([]*validator.ProposerDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -18,7 +18,7 @@ import (
 
 type dutiesProvider interface {
 	GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error)
-	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.ProposerDutyJson, error)
+	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error)
 	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error)
 	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.CommitteeJson, error)
 }
@@ -76,7 +76,7 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		}
 	}
 
-	var proposerDuties []*apimiddleware.ProposerDutyJson
+	var proposerDuties []*validator.ProposerDuty
 	if proposerDuties, err = c.dutiesProvider.GetProposerDuties(ctx, epoch); err != nil {
 		return nil, errors.Wrapf(err, "failed to get proposer duties for epoch `%d`", epoch)
 	}
@@ -250,8 +250,8 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 }
 
 // GetProposerDuties retrieves the proposer duties for the given epoch
-func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
-	proposerDuties := apimiddleware.ProposerDutiesResponseJson{}
+func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
+	proposerDuties := validator.GetProposerDutiesResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
 		return nil, errors.Wrapf(err, "failed to query proposer duties for epoch `%d`", epoch)
 	}

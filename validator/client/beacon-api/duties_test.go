@@ -142,8 +142,8 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 func TestGetProposerDuties_Valid(t *testing.T) {
 	const epoch = primitives.Epoch(1)
 
-	expectedProposerDuties := apimiddleware.ProposerDutiesResponseJson{
-		Data: []*apimiddleware.ProposerDutyJson{
+	expectedProposerDuties := validator.GetProposerDutiesResponse{
+		Data: []*validator.ProposerDuty{
 			{
 				Pubkey:         hexutil.Encode([]byte{1}),
 				ValidatorIndex: "2",
@@ -166,7 +166,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
-		&apimiddleware.ProposerDutiesResponseJson{},
+		&validator.GetProposerDutiesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -223,7 +223,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.ProposerDutiesResponseJson{
+		validator.GetProposerDutiesResponse{
 			Data: nil,
 		},
 	).Times(1)
@@ -251,8 +251,8 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.ProposerDutiesResponseJson{
-			Data: []*apimiddleware.ProposerDutyJson{nil},
+		validator.GetProposerDutiesResponse{
+			Data: []*validator.ProposerDuty{nil},
 		},
 	).Times(1)
 
@@ -543,7 +543,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		expectedError            string
 		generateAttesterDuties   func() []*validator.AttesterDuty
 		fetchAttesterDutiesError error
-		generateProposerDuties   func() []*apimiddleware.ProposerDutyJson
+		generateProposerDuties   func() []*validator.ProposerDuty
 		fetchProposerDutiesError error
 		generateSyncDuties       func() []*apimiddleware.SyncCommitteeDuty
 		fetchSyncDutiesError     error
@@ -601,7 +601,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad proposer validator index",
 			expectedError: "failed to parse proposer validator index `foo`",
-			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+			generateProposerDuties: func() []*validator.ProposerDuty {
 				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 				proposerDuties[0].ValidatorIndex = "foo"
 				return proposerDuties
@@ -610,7 +610,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad proposer slot",
 			expectedError: "failed to parse proposer slot `foo`",
-			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+			generateProposerDuties: func() []*validator.ProposerDuty {
 				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 				proposerDuties[0].Slot = "foo"
 				return proposerDuties
@@ -681,7 +681,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				attesterDuties = testCase.generateAttesterDuties()
 			}
 
-			var proposerDuties []*apimiddleware.ProposerDutyJson
+			var proposerDuties []*validator.ProposerDuty
 			if testCase.generateProposerDuties == nil {
 				proposerDuties = generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 			} else {
@@ -1438,8 +1438,8 @@ func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []primitives
 	}
 }
 
-func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, slots []primitives.Slot) []*apimiddleware.ProposerDutyJson {
-	return []*apimiddleware.ProposerDutyJson{
+func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, slots []primitives.Slot) []*validator.ProposerDuty {
+	return []*validator.ProposerDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[4]),
 			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
