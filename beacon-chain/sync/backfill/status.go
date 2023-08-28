@@ -26,30 +26,30 @@ func NewStatus(store BackfillDB) *StatusUpdater {
 // a node was initialized via checkpoint sync. With checkpoint sync, there will be a gap in node history from genesis
 // until the checkpoint sync origin block. StatusUpdater provides the means to update the value keeping track of the lower
 // end of the missing block range via the FillFwd() method, to check whether a Slot is missing from the database
-// via the SlotCovered() method, and to see the current StartGap() and EndGap().
+// via the AvailableBlock() method, and to see the current StartGap() and EndGap().
 type StatusUpdater struct {
 	sync.RWMutex
 	store       BackfillDB
 	genesisSync bool
-	status      *dbval.BackfillStatus
+	bs          *dbval.BackfillStatus
 }
 
-// SlotCovered determines if the given slot is covered by the current chain history.
+// AvailableBlock determines if the given slot is covered by the current chain history.
 // If the slot is <= backfill low slot, or >= backfill high slot, the result is true.
 // If the slot is between the backfill low and high slots, the result is false.
-func (s *StatusUpdater) SlotCovered(sl primitives.Slot) bool {
+func (s *StatusUpdater) AvailableBlock(sl primitives.Slot) bool {
 	s.RLock()
 	defer s.RUnlock()
 	// short circuit if the node was synced from genesis
-	if s.genesisSync || sl == 0 || s.status.LowSlot <= uint64(sl) {
+	if s.genesisSync || sl == 0 || s.bs.LowSlot <= uint64(sl) {
 		return true
 	}
 	return false
 }
 
-// FillBack moves the upper bound of the backfill status to the given slot & root,
+// fillBack moves the upper bound of the backfill bs to the given slot & root,
 // saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
-func (s *StatusUpdater) FillBack(ctx context.Context, block blocks.ROBlock) error {
+func (s *StatusUpdater) fillBack(ctx context.Context, block blocks.ROBlock) error {
 	r := block.Root()
 	pr := block.Block().ParentRoot()
 	status := s.Status()
@@ -101,14 +101,14 @@ func (s *StatusUpdater) Reload(ctx context.Context) error {
 func (s *StatusUpdater) updateStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
 	s.Lock()
 	defer s.Unlock()
-	if proto.Equal(s.status, bs) {
+	if proto.Equal(s.bs, bs) {
 		return nil
 	}
 	if err := s.store.SaveBackfillStatus(ctx, bs); err != nil {
 		return err
 	}
 
-	s.status = bs
+	s.bs = bs
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (s *StatusUpdater) originState(ctx context.Context) (state.BeaconState, err
 func (s *StatusUpdater) Status() *dbval.BackfillStatus {
 	s.RLock()
 	defer s.RUnlock()
-	return proto.Clone(s.status).(*dbval.BackfillStatus)
+	return proto.Clone(s.bs).(*dbval.BackfillStatus)
 }
 
 // BackfillDB describes the set of DB methods that the StatusUpdater type needs to function.

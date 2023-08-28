@@ -40,7 +40,7 @@ func TestServiceInit(t *testing.T) {
 	origin, err := util.NewBeaconState()
 	require.NoError(t, err)
 	db.states = map[[32]byte]state.BeaconState{originRoot: origin}
-	su.status = &dbval.BackfillStatus{
+	su.bs = &dbval.BackfillStatus{
 		LowSlot:    high,
 		OriginRoot: originRoot[:],
 	}

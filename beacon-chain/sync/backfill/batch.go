@@ -111,3 +111,10 @@ func (b batch) request() *eth.BeaconBlocksByRangeRequest {
 		Step:      1,
 	}
 }
+
+func (b batch) withRetryableError(err error) batch {
+	b.retries += 1
+	b.err = err
+	b.state = batchErrRetryable
+	return b
+}

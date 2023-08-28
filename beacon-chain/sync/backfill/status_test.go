@@ -104,19 +104,19 @@ func TestSlotCovered(t *testing.T) {
 	}{
 		{
 			name:   "genesis true",
-			status: &StatusUpdater{status: &dbval.BackfillStatus{LowSlot: 10}},
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 10}},
 			slot:   0,
 			result: true,
 		},
 		{
 			name:   "above end true",
-			status: &StatusUpdater{status: &dbval.BackfillStatus{LowSlot: 1}},
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 1}},
 			slot:   2,
 			result: true,
-			{}},
+		},
 		{
 			name:   "equal end true",
-			status: &StatusUpdater{status: &dbval.BackfillStatus{LowSlot: 1}},
+			status: &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 1}},
 			slot:   1,
 			result: true,
 		},
@@ -129,7 +129,7 @@ func TestSlotCovered(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			result := c.status.SlotCovered(c.slot)
+			result := c.status.AvailableBlock(c.slot)
 			require.Equal(t, c.result, result)
 		})
 	}
@@ -138,13 +138,13 @@ func TestSlotCovered(t *testing.T) {
 func TestStatusUpdater_FillBack(t *testing.T) {
 	ctx := context.Background()
 	mdb := &mockBackfillDB{}
-	s := &StatusUpdater{status: &dbval.BackfillStatus{LowSlot: 100}, store: mdb}
+	s := &StatusUpdater{bs: &dbval.BackfillStatus{LowSlot: 100}, store: mdb}
 	b, err := setupTestBlock(90)
 	require.NoError(t, err)
 	rob, err := blocks.NewROBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, s.FillBack(ctx, rob))
-	require.Equal(t, true, s.SlotCovered(95))
+	require.NoError(t, s.fillBack(ctx, rob))
+	require.Equal(t, true, s.AvailableBlock(95))
 }
 
 func goodBlockRoot(root [32]byte) func(ctx context.Context) ([32]byte, error) {
@@ -345,7 +345,7 @@ func TestReload(t *testing.T) {
 				backfillStatus: func(context.Context) (*dbval.BackfillStatus, error) { return nil, db.ErrNotFound },
 			},
 			err:      derp,
-			expected: &StatusUpdater{genesisSync: false, status: &dbval.BackfillStatus{LowSlot: uint64(originSlot)}},
+			expected: &StatusUpdater{genesisSync: false, bs: &dbval.BackfillStatus{LowSlot: uint64(originSlot)}},
 		},
 	}
 
@@ -363,6 +363,6 @@ func TestReload(t *testing.T) {
 			continue
 		}
 		require.Equal(t, c.expected.genesisSync, s.genesisSync)
-		require.Equal(t, c.expected.status.LowSlot, s.status.LowSlot)
+		require.Equal(t, c.expected.bs.LowSlot, s.bs.LowSlot)
 	}
 }

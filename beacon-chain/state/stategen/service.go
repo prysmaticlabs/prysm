@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill/coverage"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -50,7 +50,7 @@ type State struct {
 	finalizedInfo           *finalizedInfo
 	epochBoundaryStateCache *epochBoundaryState
 	saveHotStateDB          *saveHotStateDbConfig
-	backfillStatus          *backfill.StatusUpdater
+	avb                     coverage.AvailableBlocker
 	migrationLock           *sync.Mutex
 	fc                      forkchoice.ForkChoicer
 }
@@ -77,9 +77,9 @@ type finalizedInfo struct {
 // StateGenOption is a functional option for controlling the initialization of a *State value
 type StateGenOption func(*State)
 
-func WithBackfillStatus(bfs *backfill.StatusUpdater) StateGenOption {
+func WithAvailableBlocker(avb coverage.AvailableBlocker) StateGenOption {
 	return func(sg *State) {
-		sg.backfillStatus = bfs
+		sg.avb = avb
 	}
 }
 

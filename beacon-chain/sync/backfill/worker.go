@@ -35,12 +35,12 @@ func (w *p2pWorker) run(ctx context.Context) {
 
 func (w *p2pWorker) handle(ctx context.Context, b batch) batch {
 	results, err := sync.SendBeaconBlocksByRangeRequest(ctx, w.c, w.p2p, b.pid, b.request(), nil)
-	// if the batch is not successfully fetched and validated, increment the attempts counter
+	if err != nil {
+		return b.withRetryableError(err)
+	}
 	vb, err := w.v.verify(results)
 	if err != nil {
-		b.state = batchErrRetryable
-		b.err = err
-		return b
+		return b.withRetryableError(err)
 	}
 	b.state = batchImportable
 	b.results = vb

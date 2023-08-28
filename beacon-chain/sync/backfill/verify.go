@@ -105,7 +105,7 @@ func newBackfillVerifier(st state.BeaconState) (*verifier, error) {
 	for _, entry := range fsched {
 		d, err := signing.ComputeDomain(v.dt, entry.Version[:], v.vr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to pre-compute signing domain for fork version=%#d", entry.Version)
+			return nil, errors.Wrapf(err, "failed to pre-compute signing domain for fork version=%#x", entry.Version)
 		}
 		v.forkDomains[entry.Version] = d
 	}
