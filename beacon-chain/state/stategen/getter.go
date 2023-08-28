@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -58,7 +59,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		root, err := s.beaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get genesis block root")
+			return nil, stderrors.Join(ErrNoGenesisBlock, err)
 		}
 		blockRoot = root
 	}
