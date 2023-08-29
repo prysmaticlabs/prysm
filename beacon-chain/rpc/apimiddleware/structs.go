@@ -225,11 +225,6 @@ type ValidatorIndicesJson struct {
 	Index []string `json:"index"`
 }
 
-type SyncCommitteeDutiesResponseJson struct {
-	Data                []*SyncCommitteeDuty `json:"data"`
-	ExecutionOptimistic bool                 `json:"execution_optimistic"`
-}
-
 type ProduceBlockResponseJson struct {
 	Data *BeaconBlockJson `json:"data"`
 }
@@ -900,12 +895,6 @@ type V2ForkChoiceHeadJson struct {
 type DepositContractJson struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
-}
-
-type SyncCommitteeDuty struct {
-	Pubkey                        string   `json:"pubkey" hex:"true"`
-	ValidatorIndex                string   `json:"validator_index"`
-	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
 }
 
 type SignedAggregateAttestationAndProofJson struct {

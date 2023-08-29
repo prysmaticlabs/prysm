@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -1993,6 +1994,278 @@ func TestGetProposerDuties(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+	})
+}
+
+func TestGetSyncCommitteeDuties(t *testing.T) {
+	helpers.ClearCache()
+
+	ctx := context.Background()
+	genesisTime := time.Now()
+	numVals := uint64(11)
+	st, _ := util.DeterministicGenesisStateAltair(t, numVals)
+	require.NoError(t, st.SetGenesisTime(uint64(genesisTime.Unix())))
+	vals := st.Validators()
+	currCommittee := &ethpbalpha.SyncCommittee{}
+	for i := 0; i < 5; i++ {
+		currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+		currCommittee.AggregatePubkey = make([]byte, 48)
+	}
+	// add one public key twice - this is needed for one of the test cases
+	currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[0].PublicKey)
+	require.NoError(t, st.SetCurrentSyncCommittee(currCommittee))
+	nextCommittee := &ethpbalpha.SyncCommittee{}
+	for i := 5; i < 10; i++ {
+		nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+		nextCommittee.AggregatePubkey = make([]byte, 48)
+
+	}
+	require.NoError(t, st.SetNextSyncCommittee(nextCommittee))
+
+	mockChainService := &mockChain.ChainService{Genesis: genesisTime}
+	vs := &Server{
+		Stater:                &testutil.MockStater{BeaconState: st},
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		TimeFetcher:           mockChainService,
+		HeadFetcher:           mockChainService,
+		OptimisticModeFetcher: mockChainService,
+	}
+
+	t.Run("Single validator", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(1), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("Epoch not at period start", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 1,
+			Index: []primitives.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[1].PublicKey, duty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(1), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(1), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("Multiple validators", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{1, 2},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(resp.Data))
+	})
+
+	t.Run("Validator without duty not returned", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{1, 10},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(resp.Data))
+		assert.Equal(t, primitives.ValidatorIndex(1), resp.Data[0].ValidatorIndex)
+	})
+
+	t.Run("Multiple indices for validator", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{0},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		duty := resp.Data[0]
+		require.Equal(t, 2, len(duty.ValidatorSyncCommitteeIndices))
+		assert.DeepEqual(t, []uint64{0, 5}, duty.ValidatorSyncCommitteeIndices)
+	})
+
+	t.Run("Validator index out of bound", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 0,
+			Index: []primitives.ValidatorIndex{primitives.ValidatorIndex(numVals)},
+		}
+		_, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Invalid validator index", err)
+	})
+
+	t.Run("next sync committee period", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+			Index: []primitives.ValidatorIndex{5},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[5].PublicKey, duty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(5), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(0), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("epoch too far in the future", func(t *testing.T) {
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod * 2,
+			Index: []primitives.ValidatorIndex{5},
+		}
+		_, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NotNil(t, err)
+		assert.ErrorContains(t, "Epoch is too far in the future", err)
+	})
+
+	t.Run("correct sync committee is fetched", func(t *testing.T) {
+		// in this test we swap validators in the current and next sync committee inside the new state
+
+		newSyncPeriodStartSlot := primitives.Slot(uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * uint64(params.BeaconConfig().SlotsPerEpoch))
+		newSyncPeriodSt, _ := util.DeterministicGenesisStateAltair(t, numVals)
+		require.NoError(t, newSyncPeriodSt.SetSlot(newSyncPeriodStartSlot))
+		require.NoError(t, newSyncPeriodSt.SetGenesisTime(uint64(genesisTime.Unix())))
+		vals := newSyncPeriodSt.Validators()
+		currCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 5; i < 10; i++ {
+			currCommittee.Pubkeys = append(currCommittee.Pubkeys, vals[i].PublicKey)
+			currCommittee.AggregatePubkey = make([]byte, 48)
+		}
+		require.NoError(t, newSyncPeriodSt.SetCurrentSyncCommittee(currCommittee))
+		nextCommittee := &ethpbalpha.SyncCommittee{}
+		for i := 0; i < 5; i++ {
+			nextCommittee.Pubkeys = append(nextCommittee.Pubkeys, vals[i].PublicKey)
+			nextCommittee.AggregatePubkey = make([]byte, 48)
+
+		}
+		require.NoError(t, newSyncPeriodSt.SetNextSyncCommittee(nextCommittee))
+
+		stateFetchFn := func(slot primitives.Slot) state.BeaconState {
+			if slot < newSyncPeriodStartSlot {
+				return st
+			} else {
+				return newSyncPeriodSt
+			}
+		}
+		mockChainService := &mockChain.ChainService{Genesis: genesisTime, Slot: &newSyncPeriodStartSlot}
+		vs := &Server{
+			Stater:                &testutil.MockStater{BeaconState: stateFetchFn(newSyncPeriodStartSlot)},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+		}
+
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: params.BeaconConfig().EpochsPerSyncCommitteePeriod,
+			Index: []primitives.ValidatorIndex{8},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		require.NotNil(t, resp.Data)
+		require.Equal(t, 1, len(resp.Data))
+		duty := resp.Data[0]
+		assert.DeepEqual(t, vals[8].PublicKey, duty.Pubkey)
+		assert.Equal(t, primitives.ValidatorIndex(8), duty.ValidatorIndex)
+		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
+		assert.Equal(t, uint64(3), duty.ValidatorSyncCommitteeIndices[0])
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		db := dbutil.SetupDB(t)
+		require.NoError(t, db.SaveStateSummary(ctx, &ethpbalpha.StateSummary{Slot: 0, Root: []byte("root")}))
+		require.NoError(t, db.SaveLastValidatedCheckpoint(ctx, &ethpbalpha.Checkpoint{Epoch: 0, Root: []byte("root")}))
+
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		slot, err := slots.EpochStart(1)
+		require.NoError(t, err)
+
+		state, err := util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
+		require.NoError(t, state.SetSlot(slot))
+
+		mockChainService := &mockChain.ChainService{
+			Genesis:    genesisTime,
+			Optimistic: true,
+			Slot:       &slot,
+			FinalizedCheckPoint: &ethpbalpha.Checkpoint{
+				Root:  root[:],
+				Epoch: 1,
+			},
+			State: state,
+		}
+		vs := &Server{
+			Stater:                &testutil.MockStater{BeaconState: st},
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			TimeFetcher:           mockChainService,
+			HeadFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			ChainInfoFetcher:      mockChainService,
+			BeaconDB:              db,
+		}
+		req := &ethpbv2.SyncCommitteeDutiesRequest{
+			Epoch: 1,
+			Index: []primitives.ValidatorIndex{1},
+		}
+		resp, err := vs.GetSyncCommitteeDuties(ctx, req)
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+}
+
+func TestGetSyncCommitteeDuties_SyncNotReady(t *testing.T) {
+	helpers.ClearCache()
+
+	st, err := util.NewBeaconState()
+	require.NoError(t, err)
+	chainService := &mockChain.ChainService{State: st}
+	vs := &Server{
+		SyncChecker:           &mockSync.Sync{IsSyncing: true},
+		HeadFetcher:           chainService,
+		TimeFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+	}
+	_, err = vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
+	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+}
+
+func TestSyncCommitteeDutiesLastValidEpoch(t *testing.T) {
+	helpers.ClearCache()
+
+	t.Run("first epoch of current period", func(t *testing.T) {
+		assert.Equal(t, params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1, syncCommitteeDutiesLastValidEpoch(0))
+	})
+	t.Run("last epoch of current period", func(t *testing.T) {
+		assert.Equal(
+			t,
+			params.BeaconConfig().EpochsPerSyncCommitteePeriod*2-1,
+			syncCommitteeDutiesLastValidEpoch(params.BeaconConfig().EpochsPerSyncCommitteePeriod-1),
+		)
 	})
 }
 

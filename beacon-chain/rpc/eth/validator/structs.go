@@ -63,3 +63,18 @@ type ProposerDuty struct {
 	ValidatorIndex string `json:"validator_index"`
 	Slot           string `json:"slot"`
 }
+
+type GetSyncCommitteeDutiesRequest struct {
+	ValidatorIndices []string `json:"validator_indices"`
+}
+
+type GetSyncCommitteeDutiesResponse struct {
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
+	Data                []*SyncCommitteeDuty `json:"data"`
+}
+
+type SyncCommitteeDuty struct {
+	Pubkey                        string   `json:"pubkey"`
+	ValidatorIndex                string   `json:"validator_index"`
+	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
+}

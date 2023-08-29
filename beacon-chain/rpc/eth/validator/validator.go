@@ -1,10 +1,8 @@
 package validator
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -12,10 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
@@ -28,95 +23,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-var errInvalidValIndex = errors.New("invalid validator index")
 var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
-
-// GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
-//
-// The logic for calculating epoch validity comes from https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getSyncCommitteeDuties
-// where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
-//
-// Algorithm:
-//   - Get the last valid epoch. This is the last epoch of the next sync committee period.
-//   - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
-//     or an epoch from the next sync committee period, then get the current state.
-//   - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
-//   - Get duties.
-func (vs *Server) GetSyncCommitteeDuties(ctx context.Context, req *ethpbv2.SyncCommitteeDutiesRequest) (*ethpbv2.SyncCommitteeDutiesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetSyncCommitteeDuties")
-	defer span.End()
-
-	if err := rpchelpers.ValidateSyncGRPC(ctx, vs.SyncChecker, vs.HeadFetcher, vs.TimeFetcher, vs.OptimisticModeFetcher); err != nil {
-		// We simply return the error because it's already a gRPC error.
-		return nil, err
-	}
-
-	currentEpoch := slots.ToEpoch(vs.TimeFetcher.CurrentSlot())
-	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
-	if req.Epoch > lastValidEpoch {
-		return nil, status.Errorf(codes.InvalidArgument, "Epoch is too far in the future. Maximum valid epoch is %v.", lastValidEpoch)
-	}
-
-	requestedEpoch := req.Epoch
-	if requestedEpoch > currentEpoch {
-		requestedEpoch = currentEpoch
-	}
-	slot, err := slots.EpochStart(requestedEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee slot: %v", err)
-	}
-	st, err := vs.Stater.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get sync committee state: %v", err)
-	}
-
-	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(requestedEpoch)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Could not get sync committee period start epoch: %v.", err)
-	}
-	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	var committee *ethpbalpha.SyncCommittee
-	if req.Epoch >= nextSyncCommitteeFirstEpoch {
-		committee, err = st.NextSyncCommittee()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
-		}
-	} else {
-		committee, err = st.CurrentSyncCommittee()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get sync committee: %v", err)
-		}
-	}
-	committeePubkeys := make(map[[fieldparams.BLSPubkeyLength]byte][]uint64)
-	for j, pubkey := range committee.Pubkeys {
-		pubkey48 := bytesutil.ToBytes48(pubkey)
-		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], uint64(j))
-	}
-
-	duties, err := syncCommitteeDuties(req.Index, st, committeePubkeys)
-	if errors.Is(err, errInvalidValIndex) {
-		return nil, status.Error(codes.InvalidArgument, "Invalid validator index")
-	} else if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get duties: %v", err)
-	}
-
-	isOptimistic, err := rpchelpers.IsOptimistic(
-		ctx,
-		[]byte(strconv.FormatUint(uint64(slot), 10)),
-		vs.OptimisticModeFetcher,
-		vs.Stater,
-		vs.ChainInfoFetcher,
-		vs.BeaconDB,
-	)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-
-	return &ethpbv2.SyncCommitteeDutiesResponse{
-		Data:                duties,
-		ExecutionOptimistic: isOptimistic,
-	}, nil
-}
 
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 // By definition `/eth/v2/validator/blocks/{slot}`, does not produce block using mev-boost and relayer network.
@@ -641,37 +548,4 @@ func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessReque
 	}
 
 	return resp, nil
-}
-
-func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
-	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	// Return the last epoch of the next sync committee.
-	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
-	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
-}
-
-func syncCommitteeDuties(
-	valIndices []primitives.ValidatorIndex,
-	st state.BeaconState,
-	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]uint64,
-) ([]*ethpbv2.SyncCommitteeDuty, error) {
-	duties := make([]*ethpbv2.SyncCommitteeDuty, 0)
-	for _, index := range valIndices {
-		duty := &ethpbv2.SyncCommitteeDuty{
-			ValidatorIndex: index,
-		}
-		valPubkey48 := st.PubkeyAtIndex(index)
-		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
-		if bytes.Equal(valPubkey48[:], zeroPubkey[:]) {
-			return nil, errInvalidValIndex
-		}
-		valPubkey := valPubkey48[:]
-		duty.Pubkey = valPubkey
-		indices, ok := committeePubkeys[valPubkey48]
-		if ok {
-			duty.ValidatorSyncCommitteeIndices = indices
-			duties = append(duties, duty)
-		}
-	}
-	return duties, nil
 }
