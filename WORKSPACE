@@ -313,6 +313,22 @@ filegroup(
 )
 
 http_archive(
+    name = "holesky_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "custom_config_data/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "4116c8acb54eb3ca28cc4dc9bc688e08e25da91d70ed1f2622f02d3c33eba922",
+    strip_prefix = "holesky-76057d57ab1f585519ecb606a9e5f7780e925a37",
+    url = "https://github.com/eth-clients/holesky/archive/76057d57ab1f585519ecb606a9e5f7780e925a37.tar.gz",  # Aug 27, 2023
+)
+
+http_archive(
     name = "com_google_protobuf",
     sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
     strip_prefix = "protobuf-23.3",
