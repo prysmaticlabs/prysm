@@ -77,8 +77,9 @@ const (
 // ForkchoiceUpdatedResponse is the response kind received by the
 // engine_forkchoiceUpdatedV1 endpoint.
 type ForkchoiceUpdatedResponse struct {
-	Status    *pb.PayloadStatus  `json:"payloadStatus"`
-	PayloadId *pb.PayloadIDBytes `json:"payloadId"`
+	Status          *pb.PayloadStatus  `json:"payloadStatus"`
+	PayloadId       *pb.PayloadIDBytes `json:"payloadId"`
+	ValidationError string             `json:"validationError"`
 }
 
 // ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
@@ -205,6 +206,9 @@ func (s *Service) ForkchoiceUpdated(
 
 	if result.Status == nil {
 		return nil, nil, ErrNilResponse
+	}
+	if result.ValidationError != "" {
+		log.WithError(errors.New(result.ValidationError)).Error("Got a validation error in forkChoiceUpdated")
 	}
 	resp := result.Status
 	switch resp.Status {
