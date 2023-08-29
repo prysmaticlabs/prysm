@@ -32,8 +32,6 @@ type Service struct {
 	batchSize     uint64
 	pool          BatchWorkerPool
 	verifier      *verifier
-	initialized   chan struct{}
-	exited        chan struct{}
 	p2p           p2p.P2P
 	batchImporter batchImporter
 }
@@ -102,8 +100,6 @@ func NewService(ctx context.Context, su *StatusUpdater, cw startup.ClockWaiter, 
 		su:            su,
 		cw:            cw,
 		ms:            &defaultMinimumSlotter{cw: cw},
-		initialized:   make(chan struct{}),
-		exited:        make(chan struct{}),
 		p2p:           p,
 		batchImporter: defaultBatchImporter,
 	}
@@ -135,7 +131,6 @@ func (s *Service) Start() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer func() {
 		cancel()
-		close(s.exited)
 	}()
 	clock, err := s.cw.WaitForClock(ctx)
 	if err != nil {
@@ -161,7 +156,6 @@ func (s *Service) Start() {
 		log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
 	}
 
-	close(s.initialized)
 	for {
 		b, err := s.pool.Complete()
 		if err != nil {
