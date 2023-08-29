@@ -79,7 +79,7 @@ var _ minimumSlotter = &defaultMinimumSlotter{}
 type batchImporter func(ctx context.Context, b batch, su *StatusUpdater) error
 
 func defaultBatchImporter(ctx context.Context, b batch, su *StatusUpdater) error {
-	status := su.Status()
+	status := su.status()
 	if err := b.ensureParent(bytesutil.ToBytes32(status.LowParentRoot)); err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (s *Service) Start() {
 	}
 	s.ms.setClock(clock)
 
-	status := s.su.Status()
+	status := s.su.status()
 	s.batchSeq = newBatchSequencer(s.nWorkers, s.ms.minimumSlot(), primitives.Slot(status.LowSlot), primitives.Slot(s.batchSize))
 	// Exit early if there aren't going to be any batches to backfill.
 	if s.batchSeq.numTodo() == 0 {

@@ -205,8 +205,8 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	bfs := backfill.NewStatus(beacon.db)
-	if err := bfs.Reload(ctx); err != nil {
+	bfs, err := backfill.NewUpdater(ctx, beacon.db)
+	if err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
 	}
 	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, beacon.fetchP2P())

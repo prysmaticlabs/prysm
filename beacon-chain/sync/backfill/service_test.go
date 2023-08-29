@@ -31,7 +31,8 @@ func TestServiceInit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*300)
 	defer cancel()
 	db := &mockBackfillDB{}
-	su := NewStatus(db)
+	su, err := NewUpdater(ctx, db)
+	require.NoError(t, err)
 	nWorkers := 5
 	var batchSize uint64 = 100
 	nBatches := nWorkers * 2

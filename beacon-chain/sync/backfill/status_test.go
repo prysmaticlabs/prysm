@@ -350,10 +350,7 @@ func TestReload(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		s := &StatusUpdater{
-			store: c.db,
-		}
-		err := s.Reload(ctx)
+		s, err := NewUpdater(ctx, c.db)
 		if err != nil {
 			require.ErrorIs(t, err, c.err)
 			continue

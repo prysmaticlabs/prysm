@@ -12,14 +12,21 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
-	"google.golang.org/protobuf/proto"
 )
 
-// NewStatus correctly initializes a StatusUpdater value with the required database value.
-func NewStatus(store BackfillDB) *StatusUpdater {
-	return &StatusUpdater{
+// NewUpdater correctly initializes a StatusUpdater value with the required database value.
+func NewUpdater(ctx context.Context, store BackfillDB) (*StatusUpdater, error) {
+	s := &StatusUpdater{
 		store: store,
 	}
+	status, err := s.store.BackfillStatus(ctx)
+	if err != nil {
+		if errors.Is(err, db.ErrNotFound) {
+			return s, s.recoverLegacy(ctx)
+		}
+	}
+	s.swapStatus(status)
+	return s, nil
 }
 
 // StatusUpdater provides a way to update and query the status of a backfill process that may be necessary to track when
@@ -47,12 +54,25 @@ func (s *StatusUpdater) AvailableBlock(sl primitives.Slot) bool {
 	return false
 }
 
+// Status is a threadsafe method to access a copy of the BackfillStatus value.
+func (s *StatusUpdater) status() *dbval.BackfillStatus {
+	s.RLock()
+	defer s.RUnlock()
+	return &dbval.BackfillStatus{
+		LowSlot:       s.bs.LowSlot,
+		LowRoot:       s.bs.LowRoot,
+		LowParentRoot: s.bs.LowParentRoot,
+		OriginSlot:    s.bs.OriginSlot,
+		OriginRoot:    s.bs.OriginRoot,
+	}
+}
+
 // fillBack moves the upper bound of the backfill bs to the given slot & root,
 // saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
 func (s *StatusUpdater) fillBack(ctx context.Context, block blocks.ROBlock) error {
 	r := block.Root()
 	pr := block.Block().ParentRoot()
-	status := s.Status()
+	status := s.status()
 	status.LowSlot = uint64(block.Block().Slot())
 	status.LowRoot = r[:]
 	status.LowParentRoot = pr[:]
@@ -87,42 +107,26 @@ func (s *StatusUpdater) recoverLegacy(ctx context.Context) error {
 	return s.updateStatus(ctx, bs)
 }
 
-// Reload queries the database for backfill status, initializing the internal data and validating the database state.
-func (s *StatusUpdater) Reload(ctx context.Context) error {
-	status, err := s.store.BackfillStatus(ctx)
-	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			return s.recoverLegacy(ctx)
-		}
-	}
-	return s.updateStatus(ctx, status)
-}
-
 func (s *StatusUpdater) updateStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
-	s.Lock()
-	defer s.Unlock()
-	if proto.Equal(s.bs, bs) {
-		return nil
-	}
 	if err := s.store.SaveBackfillStatus(ctx, bs); err != nil {
 		return err
 	}
 
-	s.bs = bs
+	s.swapStatus(bs)
 	return nil
+}
+
+func (s *StatusUpdater) swapStatus(bs *dbval.BackfillStatus) {
+	s.Lock()
+	defer s.Unlock()
+	s.bs = bs
 }
 
 // originState looks up the state for the checkpoint sync origin. This is a hack, because StatusUpdater is the only
 // thing that needs db access and it has the origin root handy, so it's convenient to look it up here. The state is
 // needed by the verifier.
 func (s *StatusUpdater) originState(ctx context.Context) (state.BeaconState, error) {
-	return s.store.StateOrError(ctx, bytesutil.ToBytes32(s.Status().OriginRoot))
-}
-
-func (s *StatusUpdater) Status() *dbval.BackfillStatus {
-	s.RLock()
-	defer s.RUnlock()
-	return proto.Clone(s.bs).(*dbval.BackfillStatus)
+	return s.store.StateOrError(ctx, bytesutil.ToBytes32(s.status().OriginRoot))
 }
 
 // BackfillDB describes the set of DB methods that the StatusUpdater type needs to function.
