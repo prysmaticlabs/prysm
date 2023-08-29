@@ -44,11 +44,13 @@ func (s *Store) SaveOrigin(ctx context.Context, serState, serBlock []byte) error
 		return errors.Wrap(err, "could not compute HashTreeRoot of checkpoint block")
 	}
 
+	pr := blk.ParentRoot()
 	bf := &dbval.BackfillStatus{
-		LowSlot:    uint64(wblk.Block().Slot()),
-		LowRoot:    blockRoot[:],
-		OriginRoot: blockRoot[:],
-		OriginSlot: uint64(wblk.Block().Slot()),
+		LowSlot:       uint64(wblk.Block().Slot()),
+		LowRoot:       blockRoot[:],
+		LowParentRoot: pr[:],
+		OriginRoot:    blockRoot[:],
+		OriginSlot:    uint64(wblk.Block().Slot()),
 	}
 
 	if err = s.SaveBackfillStatus(ctx, bf); err != nil {
