@@ -147,7 +147,9 @@ func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionDa
 	default:
 		return nil, errors.New("unknown execution data type")
 	}
-
+	if result.ValidationError != "" {
+		log.WithError(errors.New(result.ValidationError)).Error("Got a validation error in newPayload")
+	}
 	switch result.Status {
 	case pb.PayloadStatus_INVALID_BLOCK_HASH:
 		return nil, ErrInvalidBlockHashPayloadStatus
