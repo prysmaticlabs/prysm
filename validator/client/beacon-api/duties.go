@@ -19,7 +19,7 @@ import (
 type dutiesProvider interface {
 	GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error)
 	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error)
-	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error)
+	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error)
 	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.CommitteeJson, error)
 }
 
@@ -69,7 +69,7 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 		return nil, errors.Wrapf(err, "failed to get attester duties for epoch `%d`", epoch)
 	}
 
-	var syncDuties []*apimiddleware.SyncCommitteeDuty
+	var syncDuties []*validator.SyncCommitteeDuty
 	if fetchSyncDuties {
 		if syncDuties, err = c.dutiesProvider.GetSyncDuties(ctx, epoch, multipleValidatorStatus.Indices); err != nil {
 			return nil, errors.Wrapf(err, "failed to get sync duties for epoch `%d`", epoch)
@@ -270,7 +270,7 @@ func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch pr
 }
 
 // GetSyncDuties retrieves the sync committee duties for the given epoch and validatorIndices
-func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
+func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error) {
 	jsonValidatorIndices := make([]string, len(validatorIndices))
 	for index, validatorIndex := range validatorIndices {
 		jsonValidatorIndices[index] = strconv.FormatUint(uint64(validatorIndex), 10)
@@ -281,7 +281,7 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primit
 		return nil, errors.Wrap(err, "failed to marshal validator indices")
 	}
 
-	syncDuties := apimiddleware.SyncCommitteeDutiesResponseJson{}
+	syncDuties := validator.GetSyncCommitteeDutiesResponse{}
 	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), &syncDuties); err != nil {
 		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
 	}

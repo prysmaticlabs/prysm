@@ -83,10 +83,10 @@ func (mr *MockdutiesProviderMockRecorder) GetProposerDuties(ctx, epoch interface
 }
 
 // GetSyncDuties mocks base method.
-func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
+func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSyncDuties", ctx, epoch, validatorIndices)
-	ret0, _ := ret[0].([]*apimiddleware.SyncCommitteeDuty)
+	ret0, _ := ret[0].([]*validator.SyncCommitteeDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

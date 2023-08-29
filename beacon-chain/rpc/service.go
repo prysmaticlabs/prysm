@@ -308,6 +308,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServerV1.RegisterValidator).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/attester/{epoch}", validatorServerV1.GetAttesterDuties).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/proposer/{epoch}", validatorServerV1.GetProposerDuties).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/sync/{epoch}", validatorServerV1.GetSyncCommitteeDuties).Methods(http.MethodPost)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),

@@ -268,8 +268,8 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	validatorIndicesBytes, err := json.Marshal(stringValidatorIndices)
 	require.NoError(t, err)
 
-	expectedSyncDuties := apimiddleware.SyncCommitteeDutiesResponseJson{
-		Data: []*apimiddleware.SyncCommitteeDuty{
+	expectedSyncDuties := validator.GetSyncCommitteeDutiesResponse{
+		Data: []*validator.SyncCommitteeDuty{
 			{
 				Pubkey:         hexutil.Encode([]byte{1}),
 				ValidatorIndex: "2",
@@ -301,7 +301,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
-		&apimiddleware.SyncCommitteeDutiesResponseJson{},
+		&validator.GetSyncCommitteeDutiesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -362,7 +362,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		apimiddleware.SyncCommitteeDutiesResponseJson{
+		validator.GetSyncCommitteeDutiesResponse{
 			Data: nil,
 		},
 	).Times(1)
@@ -392,8 +392,8 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		apimiddleware.SyncCommitteeDutiesResponseJson{
-			Data: []*apimiddleware.SyncCommitteeDuty{nil},
+		validator.GetSyncCommitteeDutiesResponse{
+			Data: []*validator.SyncCommitteeDuty{nil},
 		},
 	).Times(1)
 
@@ -545,7 +545,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		fetchAttesterDutiesError error
 		generateProposerDuties   func() []*validator.ProposerDuty
 		fetchProposerDutiesError error
-		generateSyncDuties       func() []*apimiddleware.SyncCommitteeDuty
+		generateSyncDuties       func() []*validator.SyncCommitteeDuty
 		fetchSyncDutiesError     error
 		generateCommittees       func() []*apimiddleware.CommitteeJson
 		fetchCommitteesError     error
@@ -619,7 +619,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad sync validator index",
 			expectedError: "failed to parse sync validator index `foo`",
-			generateSyncDuties: func() []*apimiddleware.SyncCommitteeDuty {
+			generateSyncDuties: func() []*validator.SyncCommitteeDuty {
 				syncDuties := generateValidSyncDuties(pubkeys, validatorIndices)
 				syncDuties[0].ValidatorIndex = "foo"
 				return syncDuties
@@ -688,7 +688,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				proposerDuties = testCase.generateProposerDuties()
 			}
 
-			var syncDuties []*apimiddleware.SyncCommitteeDuty
+			var syncDuties []*validator.SyncCommitteeDuty
 			if testCase.generateSyncDuties == nil {
 				syncDuties = generateValidSyncDuties(pubkeys, validatorIndices)
 			} else {
@@ -1483,8 +1483,8 @@ func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives
 	}
 }
 
-func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex) []*apimiddleware.SyncCommitteeDuty {
-	return []*apimiddleware.SyncCommitteeDuty{
+func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex) []*validator.SyncCommitteeDuty {
+	return []*validator.SyncCommitteeDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[5]),
 			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),
