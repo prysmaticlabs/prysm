@@ -69,17 +69,29 @@ func (s *StatusUpdater) status() *dbval.BackfillStatus {
 
 // fillBack moves the upper bound of the backfill bs to the given slot & root,
 // saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
-func (s *StatusUpdater) fillBack(ctx context.Context, block blocks.ROBlock) error {
-	r := block.Root()
-	pr := block.Block().ParentRoot()
+func (s *StatusUpdater) fillBack(ctx context.Context, blocks []blocks.ROBlock) error {
+	if len(blocks) == 0 {
+		return nil
+	}
+
+	for _, b := range blocks {
+		if err := s.store.SaveBlock(ctx, b); err != nil {
+			return errors.Wrapf(err, "error saving backfill block with root=%#x, slot=%d", b.Root(), b.Block().Slot())
+		}
+	}
+
+	// Update backfill status based on the block with the lowest slot in the batch.
+	lowest := blocks[0]
+	r := lowest.Root()
+	pr := lowest.Block().ParentRoot()
 	status := s.status()
-	status.LowSlot = uint64(block.Block().Slot())
+	status.LowSlot = uint64(lowest.Block().Slot())
 	status.LowRoot = r[:]
 	status.LowParentRoot = pr[:]
-	return s.updateStatus(ctx, status)
+	return s.saveStatus(ctx, status)
 }
 
-// recover will check to see if the db is from a legacy checkpoint sync and either build a new BackfillStatus
+// recoverLegacy will check to see if the db is from a legacy checkpoint sync, and either build a new BackfillStatus
 // or label the node as synced from genesis.
 func (s *StatusUpdater) recoverLegacy(ctx context.Context) error {
 	cpr, err := s.store.OriginCheckpointBlockRoot(ctx)
@@ -104,10 +116,10 @@ func (s *StatusUpdater) recoverLegacy(ctx context.Context) error {
 		OriginSlot:    os,
 		OriginRoot:    cpr[:],
 	}
-	return s.updateStatus(ctx, bs)
+	return s.saveStatus(ctx, bs)
 }
 
-func (s *StatusUpdater) updateStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
+func (s *StatusUpdater) saveStatus(ctx context.Context, bs *dbval.BackfillStatus) error {
 	if err := s.store.SaveBackfillStatus(ctx, bs); err != nil {
 		return err
 	}

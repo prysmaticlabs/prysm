@@ -81,14 +81,10 @@ func defaultBatchImporter(ctx context.Context, b batch, su *StatusUpdater) error
 	if err := b.ensureParent(bytesutil.ToBytes32(status.LowParentRoot)); err != nil {
 		return err
 	}
-	/*
-		for _, b := range b.results {
-			// TODO exposed block saving through su
-		}
-	*/
-	// Update db state to reflect the newly imported blocks. Other parts of the beacon node may look at the
-	// backfill status to determine if a range of blocks is available.
-	if err := su.fillBack(ctx, b.lowest()); err != nil {
+	// Import blocks to db and update db state to reflect the newly imported blocks.
+	// Other parts of the beacon node may use the same StatusUpdater instance
+	// via the coverage.AvailableBlocker interface to safely determine if a given slot has been backfilled.
+	if err := su.fillBack(ctx, b.results); err != nil {
 		log.WithError(err).Fatal("Non-recoverable db error in backfill service, quitting.")
 	}
 	return nil
