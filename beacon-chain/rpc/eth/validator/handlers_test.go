@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -1749,13 +1748,15 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		require.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
 	})
 }
 
 func TestGetProposerDuties(t *testing.T) {
 	helpers.ClearCache()
 
-	ctx := context.Background()
 	genesis := util.NewBeaconBlock()
 	depChainStart := params.BeaconConfig().MinGenesisActiveValidatorCount
 	deposits, _, err := util.DeterministicDepositsAndKeys(depChainStart)
@@ -1763,19 +1764,18 @@ func TestGetProposerDuties(t *testing.T) {
 	eth1Data, err := util.DeterministicEth1Data(len(deposits))
 	require.NoError(t, err)
 	genesisRoot, err := genesis.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, err)
 	roots := make([][]byte, fieldparams.BlockRootsLength)
 	roots[0] = genesisRoot[:]
 	// We DON'T WANT this root to be returned when testing the next epoch
 	roots[31] = []byte("next_epoch_dependent_root")
-	db := dbutil.SetupDB(t)
 
 	pubKeys := make([][]byte, len(deposits))
 	for i := 0; i < len(deposits); i++ {
 		pubKeys[i] = deposits[i].Data.PublicKey
 	}
 
-	t.Run("Ok", func(t *testing.T) {
+	t.Run("ok", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -1784,7 +1784,7 @@ func TestGetProposerDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -1793,29 +1793,32 @@ func TestGetProposerDuties(t *testing.T) {
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
 
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 0,
-		}
-		resp, err := vs.GetProposerDuties(ctx, req)
-		require.NoError(t, err)
-		assert.DeepEqual(t, genesisRoot[:], resp.DependentRoot)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		assert.Equal(t, 31, len(resp.Data))
 		// We expect a proposer duty for slot 11.
-		var expectedDuty *ethpbv1.ProposerDuty
+		var expectedDuty *ProposerDuty
 		for _, duty := range resp.Data {
-			if duty.Slot == 11 {
+			if duty.Slot == "11" {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
+		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
 		require.Equal(t, true, has)
 		require.Equal(t, primitives.ValidatorIndex(12289), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
-		assert.Equal(t, primitives.ValidatorIndex(12289), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[12289], expectedDuty.Pubkey)
+		assert.Equal(t, "12289", expectedDuty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[12289]), expectedDuty.Pubkey)
 	})
-
-	t.Run("Next epoch", func(t *testing.T) {
+	t.Run("next epoch", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		require.NoError(t, bs.SetBlockRoots(roots))
@@ -1823,7 +1826,7 @@ func TestGetProposerDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -1832,29 +1835,32 @@ func TestGetProposerDuties(t *testing.T) {
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
 
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 1,
-		}
-		resp, err := vs.GetProposerDuties(ctx, req)
-		require.NoError(t, err)
-		assert.DeepEqual(t, bytesutil.PadTo(genesisRoot[:], 32), resp.DependentRoot)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))
 		// We expect a proposer duty for slot 43.
-		var expectedDuty *ethpbv1.ProposerDuty
+		var expectedDuty *ProposerDuty
 		for _, duty := range resp.Data {
-			if duty.Slot == 43 {
+			if duty.Slot == "43" {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
+		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
 		require.Equal(t, true, has)
 		require.Equal(t, primitives.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
-		assert.Equal(t, primitives.ValidatorIndex(1360), expectedDuty.ValidatorIndex)
-		assert.DeepEqual(t, pubKeys[1360], expectedDuty.Pubkey)
+		assert.Equal(t, "1360", expectedDuty.ValidatorIndex)
+		assert.Equal(t, hexutil.Encode(pubKeys[1360]), expectedDuty.Pubkey)
 	})
-
-	t.Run("Prune payload ID cache ok", func(t *testing.T) {
+	t.Run("prune payload ID cache", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
@@ -1863,7 +1869,7 @@ func TestGetProposerDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -1872,28 +1878,28 @@ func TestGetProposerDuties(t *testing.T) {
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
 
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 1,
-		}
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
-		vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
+		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
+		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
+		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
 
-		_, err = vs.GetProposerDuties(ctx, req)
-		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-		vid, _, has := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
 		require.Equal(t, false, has)
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
+		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
 		require.Equal(t, false, has)
 		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = vs.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
+		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
 		require.Equal(t, true, has)
 		require.Equal(t, primitives.ValidatorIndex(10565), vid)
 	})
-
-	t.Run("Epoch out of bound", func(t *testing.T) {
+	t.Run("epoch out of bounds", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
@@ -1903,7 +1909,7 @@ func TestGetProposerDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -1913,15 +1919,20 @@ func TestGetProposerDuties(t *testing.T) {
 		}
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: currentEpoch + 2,
-		}
-		_, err = vs.GetProposerDuties(ctx, req)
-		require.NotNil(t, err)
-		assert.ErrorContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), err)
-	})
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": strconv.FormatUint(uint64(currentEpoch+2), 10)})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", currentEpoch+2, currentEpoch+1), e.Message)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
+		ctx := context.Background()
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
 		require.NoError(t, err, "Could not set up genesis state")
 		// Set state to non-epoch start slot.
@@ -1933,6 +1944,7 @@ func TestGetProposerDuties(t *testing.T) {
 		blk.Block.Slot = 31
 		root, err := blk.Block.HashTreeRoot()
 		require.NoError(t, err)
+		db := dbutil.SetupDB(t)
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
@@ -1940,7 +1952,7 @@ func TestGetProposerDuties(t *testing.T) {
 		chain := &mockChain.ChainService{
 			State: bs, Root: genesisRoot[:], Slot: &chainSlot, Optimistic: true,
 		}
-		vs := &Server{
+		s := &Server{
 			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{0: bs}},
 			HeadFetcher:            chain,
 			TimeFetcher:            chain,
@@ -1948,29 +1960,40 @@ func TestGetProposerDuties(t *testing.T) {
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
 			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 		}
-		req := &ethpbv1.ProposerDutiesRequest{
-			Epoch: 0,
-		}
-		resp, err := vs.GetProposerDuties(ctx, req)
-		require.NoError(t, err)
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetProposerDutiesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
-}
+	t.Run("sync not ready", func(t *testing.T) {
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		chainService := &mockChain.ChainService{State: st}
+		s := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
 
-func TestGetProposerDuties_SyncNotReady(t *testing.T) {
-	helpers.ClearCache()
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	chainService := &mockChain.ChainService{State: st}
-	vs := &Server{
-		SyncChecker:           &mockSync.Sync{IsSyncing: true},
-		HeadFetcher:           chainService,
-		TimeFetcher:           chainService,
-		OptimisticModeFetcher: chainService,
-	}
-	_, err = vs.GetProposerDuties(context.Background(), &ethpbv1.ProposerDutiesRequest{})
-	assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
+		s.GetProposerDuties(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+	})
 }
 
 var (
