@@ -87,7 +87,6 @@ func defaultBatchImporter(ctx context.Context, b batch, su *StatusUpdater) error
 		for _, b := range b.results {
 			// TODO exposed block saving through su
 		}
-
 	*/
 	// Update db state to reflect the newly imported blocks. Other parts of the beacon node may look at the
 	// backfill status to determine if a range of blocks is available.
@@ -146,6 +145,10 @@ func (s *Service) Start() {
 
 	status := s.su.Status()
 	s.batchSeq = newBatchSequencer(s.nWorkers, s.ms.minimumSlot(), primitives.Slot(status.LowSlot), primitives.Slot(s.batchSize))
+	// Exit early if there aren't going to be any batches to backfill.
+	if s.batchSeq.numTodo() == 0 {
+		return
+	}
 	originE := slots.ToEpoch(primitives.Slot(status.OriginSlot))
 	assigner := peers.NewAssigner(ctx, s.p2p.Peers(), params.BeaconConfig().MaxPeersToSync, originE)
 	s.verifier, err = s.initVerifier(ctx)

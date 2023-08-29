@@ -87,6 +87,29 @@ func (c *batchSequencer) sequence() ([]batch, error) {
 	return s, nil
 }
 
+// TODO: write a method to answer to determine how many batches are left and how many are in progress
+// look at .seq and check if there's an endseq in there.
+
+func (c *batchSequencer) numTodo() int {
+	if len(c.seq) == 0 {
+		return 0
+	}
+	lowest := c.seq[len(c.seq)-1]
+	todo := 0
+	if lowest.state != batchEndSequence {
+		todo = c.batcher.remaining(lowest.begin)
+	}
+	for _, b := range c.seq {
+		switch b.state {
+		case batchEndSequence, batchImportComplete, batchNil:
+			continue
+		default:
+			todo += 1
+		}
+	}
+	return todo
+}
+
 func (c *batchSequencer) importable() []batch {
 	for i := range c.seq {
 		if c.seq[i].state == batchImportable {
@@ -110,6 +133,17 @@ func newBatchSequencer(seqLen int, min, max, size primitives.Slot) *batchSequenc
 type batcher struct {
 	min  primitives.Slot
 	size primitives.Slot
+}
+
+func (r batcher) remaining(upTo primitives.Slot) int {
+	if r.min >= upTo {
+		return 0
+	}
+	delta := upTo - r.min
+	if delta%r.size != 0 {
+		return int(delta/r.size) + 1
+	}
+	return int(delta / r.size)
 }
 
 func (r batcher) beforeBatch(upTo batch) batch {
