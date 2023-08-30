@@ -2243,9 +2243,9 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		slot, err := slots.EpochStart(1)
 		require.NoError(t, err)
 
-		st, err := util.NewBeaconStateBellatrix()
+		st2, err := util.NewBeaconStateBellatrix()
 		require.NoError(t, err)
-		require.NoError(t, st.SetSlot(slot))
+		require.NoError(t, st2.SetSlot(slot))
 
 		mockChainService := &mockChain.ChainService{
 			Genesis:    genesisTime,
@@ -2255,7 +2255,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 				Root:  root[:],
 				Epoch: 1,
 			},
-			State: st,
+			State: st2,
 		}
 		s := &Server{
 			Stater:                &testutil.MockStater{BeaconState: st},
@@ -2281,19 +2281,28 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
-	/*t.Run("sync not ready", func(t *testing.T) {
+	t.Run("sync not ready", func(t *testing.T) {
 		st, err := util.NewBeaconState()
 		require.NoError(t, err)
 		chainService := &mockChain.ChainService{State: st}
-		vs := &Server{
+		s := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
 			TimeFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 		}
-		_, err = vs.GetSyncCommitteeDuties(context.Background(), &ethpbv2.SyncCommitteeDutiesRequest{})
-		assert.ErrorContains(t, "Syncing to latest head, not ready to respond", err)
-	})*/
+
+		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/sync/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetSyncCommitteeDuties(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusServiceUnavailable, e.Code)
+	})
 }
 
 var (
