@@ -54,8 +54,8 @@ func TestServiceInit(t *testing.T) {
 	require.NoError(t, err)
 	srv.ms = mockMinimumSlotter{min: primitives.Slot(high - batchSize*uint64(nBatches))}
 	srv.pool = pool
-	srv.batchImporter = func(context.Context, batch, *StatusUpdater) error {
-		return nil
+	srv.batchImporter = func(context.Context, batch, *StatusUpdater) (*dbval.BackfillStatus, error) {
+		return &dbval.BackfillStatus{}, nil
 	}
 	go srv.Start()
 	todo := make([]batch, 0)

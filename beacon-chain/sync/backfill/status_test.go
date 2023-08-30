@@ -143,7 +143,8 @@ func TestStatusUpdater_FillBack(t *testing.T) {
 	require.NoError(t, err)
 	rob, err := blocks.NewROBlock(b)
 	require.NoError(t, err)
-	require.NoError(t, s.fillBack(ctx, rob))
+	_, err = s.fillBack(ctx, []blocks.ROBlock{rob})
+	require.NoError(t, err)
 	require.Equal(t, true, s.AvailableBlock(95))
 }
 

@@ -67,16 +67,18 @@ func (s *StatusUpdater) status() *dbval.BackfillStatus {
 	}
 }
 
-// fillBack moves the upper bound of the backfill bs to the given slot & root,
-// saving the new state to the database and then updating StatusUpdater's in-memory copy with the saved value.
-func (s *StatusUpdater) fillBack(ctx context.Context, blocks []blocks.ROBlock) error {
+// fillBack saves the slice of blocks and updates the BackfillStatus LowSlot/Root/ParentRoot tracker to the values
+// from the first block in the slice. This method assumes that the block slice has been fully validated and
+// sorted in slot order by the calling function.
+func (s *StatusUpdater) fillBack(ctx context.Context, blocks []blocks.ROBlock) (*dbval.BackfillStatus, error) {
+	status := s.status()
 	if len(blocks) == 0 {
-		return nil
+		return status, nil
 	}
 
 	for _, b := range blocks {
 		if err := s.store.SaveBlock(ctx, b); err != nil {
-			return errors.Wrapf(err, "error saving backfill block with root=%#x, slot=%d", b.Root(), b.Block().Slot())
+			return nil, errors.Wrapf(err, "error saving backfill block with root=%#x, slot=%d", b.Root(), b.Block().Slot())
 		}
 	}
 
@@ -84,11 +86,10 @@ func (s *StatusUpdater) fillBack(ctx context.Context, blocks []blocks.ROBlock) e
 	lowest := blocks[0]
 	r := lowest.Root()
 	pr := lowest.Block().ParentRoot()
-	status := s.status()
 	status.LowSlot = uint64(lowest.Block().Slot())
 	status.LowRoot = r[:]
 	status.LowParentRoot = pr[:]
-	return s.saveStatus(ctx, status)
+	return status, s.saveStatus(ctx, status)
 }
 
 // recoverLegacy will check to see if the db is from a legacy checkpoint sync, and either build a new BackfillStatus

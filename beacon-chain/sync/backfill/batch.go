@@ -63,10 +63,14 @@ type batch struct {
 
 func (b batch) logFields() log.Fields {
 	return map[string]interface{}{
-		"batch_id":    b.id(),
-		"batch_state": b.state.String(),
-		"scheduled":   b.scheduled.String(),
-		"retries":     b.retries,
+		"batch_id":  b.id(),
+		"state":     b.state.String(),
+		"scheduled": b.scheduled.String(),
+		"seq":       b.seq,
+		"retries":   b.retries,
+		"begin":     b.begin,
+		"end":       b.end,
+		"pid":       b.pid,
 	}
 }
 

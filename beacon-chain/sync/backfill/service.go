@@ -164,14 +164,22 @@ func (s *Service) Start() {
 		}
 		s.batchSeq.update(b)
 		importable := s.batchSeq.importable()
+		imported := 0
 		for i := range importable {
 			ib := importable[i]
-			if err := s.batchImporter(ctx, ib, s.su); err != nil {
+			if len(ib.results) == 0 {
+				log.Error("wtf")
+			}
+			_, err := s.batchImporter(ctx, ib, s.su)
+			if err != nil {
+				log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import.")
 				s.downscore(ib)
 				ib.state = batchErrRetryable
 				s.batchSeq.update(b)
 				break
 			}
+			imported += 1
+			log.WithFields(ib.logFields()).Debug("Backfill batch imported.")
 			ib.state = batchImportComplete
 			// Calling update with state=batchImportComplete will advance the batch list.
 			s.batchSeq.update(ib)
@@ -179,6 +187,9 @@ func (s *Service) Start() {
 		if err := s.batchSeq.moveMinimum(s.ms.minimumSlot()); err != nil {
 			log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
 		}
+		log.WithField("imported", imported).WithField("importable", len(importable)).
+			WithField("batches_remaining", s.batchSeq.numTodo()).
+			Info("Backfill batches processed.")
 		batches, err := s.batchSeq.sequence()
 		if err != nil {
 			// This typically means we have several importable batches, but they are stuck behind a batch that needs
@@ -188,6 +199,7 @@ func (s *Service) Start() {
 			// and then we'll have the parent_root expected by 90 to ensure it matches the root for 89,
 			// at which point we know we can process [80..90).
 			if errors.Is(err, errMaxBatches) {
+				log.Debug("Backfill batches waiting for descendent batch to complete.")
 				continue
 			}
 		}
