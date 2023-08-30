@@ -69,12 +69,12 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	if err != nil {
 		return err
 	}
-	for _, filterLog := range logs {
+	for i, filterLog := range logs {
 		// ignore logs that are not of the required block number
 		if filterLog.BlockNumber != blkNum.Uint64() {
 			continue
 		}
-		if err := s.ProcessLog(ctx, filterLog); err != nil {
+		if err := s.ProcessLog(ctx, &logs[i]); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
@@ -88,7 +88,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the eth1 chain.
-func (s *Service) ProcessLog(ctx context.Context, depositLog gethtypes.Log) error {
+func (s *Service) ProcessLog(ctx context.Context, depositLog *gethtypes.Log) error {
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
 	// Process logs according to their event signature.
@@ -108,7 +108,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethtypes.Log) erro
 // ProcessDepositLog processes the log which had been received from
 // the eth1 chain by trying to ascertain which participant deposited
 // in the contract.
-func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Log) error {
+func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		return errors.Wrap(err, "Could not unpack log")
@@ -406,7 +406,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	lastReqBlock := s.latestEth1Data.LastRequestedBlock
 	s.latestEth1DataLock.RUnlock()
 
-	for _, filterLog := range logs {
+	for i, filterLog := range logs {
 		if filterLog.BlockNumber > currentBlockNum {
 			if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 				return 0, 0, err
@@ -417,7 +417,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 			s.latestEth1DataLock.Unlock()
 			currentBlockNum = filterLog.BlockNumber
 		}
-		if err := s.ProcessLog(ctx, filterLog); err != nil {
+		if err := s.ProcessLog(ctx, &logs[i]); err != nil {
 			// In the event the execution client gives us a garbled/bad log
 			// we reset the last requested block to the previous valid block range. This
 			// prevents the beacon from advancing processing of logs to another range

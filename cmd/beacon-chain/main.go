@@ -288,7 +288,7 @@ func startNode(ctx *cli.Context) error {
 
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start beacon node: %w", err)
 	}
 	beacon.Start()
 	return nil
