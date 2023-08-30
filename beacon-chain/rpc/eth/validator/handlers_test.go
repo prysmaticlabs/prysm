@@ -1998,6 +1998,10 @@ func TestGetProposerDuties(t *testing.T) {
 
 func TestGetSyncCommitteeDuties(t *testing.T) {
 	helpers.ClearCache()
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig()
+	cfg.AltairForkEpoch = 0
+	params.OverrideBeaconConfig(cfg)
 
 	genesisTime := time.Now()
 	numVals := uint64(11)

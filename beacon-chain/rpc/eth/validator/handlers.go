@@ -832,6 +832,10 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
+	if requestedEpoch < params.BeaconConfig().AltairForkEpoch {
+		http2.HandleError(w, "Sync committees are not supported for Phase0", http.StatusBadRequest)
+		return
+	}
 	var req GetSyncCommitteeDutiesRequest
 	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
 	switch {
