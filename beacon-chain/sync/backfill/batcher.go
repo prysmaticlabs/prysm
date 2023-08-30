@@ -89,9 +89,6 @@ func (c *batchSequencer) sequence() ([]batch, error) {
 	return s, nil
 }
 
-// TODO: write a method to answer to determine how many batches are left and how many are in progress
-// look at .seq and check if there's an endseq in there.
-
 func (c *batchSequencer) numTodo() int {
 	if len(c.seq) == 0 {
 		return 0
