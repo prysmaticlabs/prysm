@@ -208,7 +208,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	eth1Data, err := s.ensureValidPowchainData(ctx)
+	eth1Data, err := s.validPowchainData(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
@@ -818,7 +818,7 @@ func validateDepositContainers(ctrs []*ethpb.DepositContainer) bool {
 
 // Validates the current powchain data is saved and makes sure that any
 // embedded genesis state is correctly accounted for.
-func (s *Service) ensureValidPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error) {
+func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error) {
 	genState, err := s.cfg.beaconDB.GenesisState(ctx)
 	if err != nil {
 		return nil, err
