@@ -15,6 +15,7 @@ go_library(
         "minimal_config.go",
         "network_config.go",
         "testnet_e2e_config.go",
+        "testnet_holesky_config.go",
         "testnet_prater_config.go",
         "testnet_sepolia_config.go",
         "testutils.go",
@@ -47,6 +48,7 @@ go_test(
         "configset_test.go",
         "loader_test.go",
         "testnet_config_test.go",
+        "testnet_holesky_config_test.go",
         "testnet_prater_config_test.go",
     ],
     data = glob(["*.yaml"]) + [
@@ -55,6 +57,7 @@ go_test(
         "@consensus_spec_tests_mainnet//:test_data",
         "@consensus_spec_tests_minimal//:test_data",
         "@eth2_networks//:configs",
+        "@holesky_testnet//:configs",
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
