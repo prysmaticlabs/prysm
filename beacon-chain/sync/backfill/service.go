@@ -11,12 +11,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
-const defaultWorkerCount = 1
+const defaultWorkerCount = 5
 
 // TODO use the correct beacon param for blocks by range size instead
 const defaultBatchSize = 64
@@ -62,9 +63,17 @@ type minimumSlotter interface {
 type defaultMinimumSlotter struct {
 	clock *startup.Clock
 	cw    startup.ClockWaiter
+	ctx   context.Context
 }
 
 func (d defaultMinimumSlotter) minimumSlot() primitives.Slot {
+	if d.clock == nil {
+		var err error
+		d.clock, err = d.cw.WaitForClock(d.ctx)
+		if err != nil {
+			log.WithError(err).Fatal("failed to obtain system/genesis clock, unable to start backfill service")
+		}
+	}
 	return MinimumBackfillSlot(d.clock.CurrentSlot())
 }
 
@@ -74,20 +83,21 @@ func (d defaultMinimumSlotter) setClock(c *startup.Clock) {
 
 var _ minimumSlotter = &defaultMinimumSlotter{}
 
-type batchImporter func(ctx context.Context, b batch, su *StatusUpdater) error
+type batchImporter func(ctx context.Context, b batch, su *StatusUpdater) (*dbval.BackfillStatus, error)
 
-func defaultBatchImporter(ctx context.Context, b batch, su *StatusUpdater) error {
+func defaultBatchImporter(ctx context.Context, b batch, su *StatusUpdater) (*dbval.BackfillStatus, error) {
 	status := su.status()
 	if err := b.ensureParent(bytesutil.ToBytes32(status.LowParentRoot)); err != nil {
-		return err
+		return status, err
 	}
 	// Import blocks to db and update db state to reflect the newly imported blocks.
 	// Other parts of the beacon node may use the same StatusUpdater instance
 	// via the coverage.AvailableBlocker interface to safely determine if a given slot has been backfilled.
-	if err := su.fillBack(ctx, b.results); err != nil {
+	status, err := su.fillBack(ctx, b.results)
+	if err != nil {
 		log.WithError(err).Fatal("Non-recoverable db error in backfill service, quitting.")
 	}
-	return nil
+	return status, nil
 }
 
 func NewService(ctx context.Context, su *StatusUpdater, cw startup.ClockWaiter, p p2p.P2P, opts ...ServiceOption) (*Service, error) {
@@ -95,7 +105,7 @@ func NewService(ctx context.Context, su *StatusUpdater, cw startup.ClockWaiter, 
 		ctx:           ctx,
 		su:            su,
 		cw:            cw,
-		ms:            &defaultMinimumSlotter{cw: cw},
+		ms:            &defaultMinimumSlotter{cw: cw, ctx: ctx},
 		p2p:           p,
 		batchImporter: defaultBatchImporter,
 	}

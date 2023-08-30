@@ -110,16 +110,17 @@ func (c *batchSequencer) numTodo() int {
 }
 
 func (c *batchSequencer) importable() []batch {
+	imp := make([]batch, 0)
 	for i := range c.seq {
 		if c.seq[i].state == batchImportable {
+			imp = append(imp, c.seq[i])
 			continue
 		}
 		// as soon as we hit a batch with a different state, we return everything leading to it.
 		// if the first element isn't importable, we'll return slice [0:0] aka nothing.
-		return c.seq[0:i]
+		break
 	}
-	// if we hit this condition, it means every element had state = importable
-	return c.seq
+	return imp
 }
 
 func newBatchSequencer(seqLen int, min, max, size primitives.Slot) *batchSequencer {

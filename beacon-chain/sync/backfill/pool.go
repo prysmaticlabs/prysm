@@ -101,7 +101,7 @@ func (p *p2pBatchWorkerPool) Complete() (batch, error) {
 
 func (p *p2pBatchWorkerPool) batchRouter(pa peerAssigner) {
 	busy := make(map[peer.ID]bool)
-	todo := make([]batch, p.maxBatches)
+	todo := make([]batch, 0)
 	rt := time.NewTicker(time.Second)
 	for {
 		select {
