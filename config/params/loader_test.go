@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -20,10 +21,49 @@ import (
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "ATTESTATION_SUBNET_EXTRA_BITS", "RESP_TIMEOUT", "MAX_REQUEST_BLOCKS", "EPOCHS_PER_SUBNET_SUBSCRIPTION",
-	"EIP6110_FORK_EPOCH", "MESSAGE_DOMAIN_INVALID_SNAPPY", "MIN_EPOCHS_FOR_BLOCK_REQUESTS", "MAXIMUM_GOSSIP_CLOCK_DISPARITY", "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
-	"MESSAGE_DOMAIN_VALID_SNAPPY", "GOSSIP_MAX_SIZE", "SUBNETS_PER_NODE", "ATTESTATION_SUBNET_COUNT", "MAX_REQUEST_BLOCKS_DENEB", "MAX_REQUEST_BLOB_SIDECARS", "WHISK_FORK_VERSION", "WHISK_FORK_EPOCH", "EIP7002_FORK_EPOCH", "EIP7002_FORK_VERSION",
-	"MAX_CHUNK_SIZE", "ATTESTATION_PROPAGATION_SLOT_RANGE", "ATTESTATION_SUBNET_PREFIX_BITS", "EIP6110_FORK_VERSION", "TTFB_TIMEOUT", "BLOB_SIDECAR_SUBNET_COUNT", "MAX_BLOBS_PER_BLOCK"}
+// IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
+var placeholderFields = []string{
+	"ATTESTATION_PROPAGATION_SLOT_RANGE",
+	"ATTESTATION_SUBNET_COUNT",
+	"ATTESTATION_SUBNET_EXTRA_BITS",
+	"ATTESTATION_SUBNET_PREFIX_BITS",
+	"BLOB_SIDECAR_SUBNET_COUNT",
+	"EIP6110_FORK_EPOCH",
+	"EIP6110_FORK_VERSION",
+	"EIP7002_FORK_EPOCH",
+	"EIP7002_FORK_VERSION",
+	"EPOCHS_PER_SUBNET_SUBSCRIPTION",
+	"GOSSIP_MAX_SIZE",
+	"MAXIMUM_GOSSIP_CLOCK_DISPARITY",
+	"MAX_BLOBS_PER_BLOCK",
+	"MAX_CHUNK_SIZE",
+	"MAX_REQUEST_BLOB_SIDECARS",
+	"MAX_REQUEST_BLOCKS",
+	"MAX_REQUEST_BLOCKS_DENEB",
+	"MESSAGE_DOMAIN_INVALID_SNAPPY",
+	"MESSAGE_DOMAIN_VALID_SNAPPY",
+	"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
+	"MIN_EPOCHS_FOR_BLOCK_REQUESTS",
+	"RESP_TIMEOUT",
+	"SUBNETS_PER_NODE",
+	"TTFB_TIMEOUT",
+	"UPDATE_TIMEOUT",
+	"WHISK_FORK_EPOCH",
+	"WHISK_FORK_VERSION",
+}
+
+func TestPlaceholderFieldsDistinctSorted(t *testing.T) {
+	m := make(map[string]struct{})
+	for i := 0; i < len(placeholderFields)-1; i++ {
+		if _, ok := m[placeholderFields[i]]; ok {
+			t.Fatalf("duplicate placeholder field %s", placeholderFields[i])
+		}
+		m[placeholderFields[i]] = struct{}{}
+	}
+	if !sort.StringsAreSorted(placeholderFields) {
+		t.Fatal("placeholderFields must be sorted")
+	}
+}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
