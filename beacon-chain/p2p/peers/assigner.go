@@ -50,6 +50,10 @@ func (a *Assigner) freshPeers() ([]peer.ID, error) {
 	return peers, nil
 }
 
+// Assign uses the BestFinalized method to select the best peers that agree on a canonical block
+// for the configured finalized epoch. At most `n` peers will be returned. The `busy` param can be used
+// to filter out peers that we know we don't want to connect to, for instance if we are trying to limit
+// the number of outbound requests to each peer from a given component.
 func (a *Assigner) Assign(busy map[peer.ID]bool, n int) ([]peer.ID, error) {
 	best, err := a.freshPeers()
 	ps := make([]peer.ID, 0, n)
@@ -59,6 +63,9 @@ func (a *Assigner) Assign(busy map[peer.ID]bool, n int) ([]peer.ID, error) {
 	for _, p := range best {
 		if !busy[p] {
 			ps = append(ps, p)
+			if len(ps) == n {
+				return ps, nil
+			}
 		}
 	}
 	return ps, nil
