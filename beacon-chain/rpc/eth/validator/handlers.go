@@ -858,10 +858,11 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if requestedEpoch > currentEpoch {
-		requestedEpoch = currentEpoch
+	startingEpoch := requestedEpoch
+	if startingEpoch > currentEpoch {
+		startingEpoch = currentEpoch
 	}
-	slot, err := slots.EpochStart(requestedEpoch)
+	slot, err := slots.EpochStart(startingEpoch)
 	if err != nil {
 		http2.HandleError(w, "Could not get sync committee slot: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -872,7 +873,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(requestedEpoch)
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(startingEpoch)
 	if err != nil {
 		http2.HandleError(w, "Could not get sync committee period start epoch: "+err.Error(), http.StatusInternalServerError)
 		return
