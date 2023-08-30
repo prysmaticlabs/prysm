@@ -49,8 +49,10 @@ func (c *batchSequencer) update(b batch) {
 		c.seq[i-done] = c.seq[i]
 	}
 	// Overwrite the moved batches with the next ones in the sequence.
+	last := c.seq[len(c.seq)-1]
 	for i := len(c.seq) - done; i < len(c.seq); i++ {
-		c.seq[i] = c.batcher.beforeBatch(c.seq[i-1])
+		c.seq[i] = c.batcher.beforeBatch(last)
+		last = c.seq[i]
 	}
 }
 
