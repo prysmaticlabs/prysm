@@ -205,6 +205,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
+	log.Debugln("Registering P2P Service")
+	if err := beacon.registerP2P(cliCtx); err != nil {
+		return nil, err
+	}
+
 	bfs, err := backfill.NewUpdater(ctx, beacon.db)
 	if err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
@@ -219,11 +224,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
-		return nil, err
-	}
-
-	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
 	}
 
