@@ -609,6 +609,10 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	if len(req.ValidatorIndices) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
 	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
 	for i, ix := range req.ValidatorIndices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
@@ -844,6 +848,10 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	case err != nil:
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.ValidatorIndices) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
 	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
