@@ -31,10 +31,6 @@ type WeakSubjectivityResponse struct {
 	} `json:"data"`
 }
 
-type FeeRecipientsRequestJSON struct {
-	Recipients []*FeeRecipientJson `json:"recipients"`
-}
-
 type StateRootResponseJson struct {
 	Data                *StateRootResponse_StateRootJson `json:"data"`
 	ExecutionOptimistic bool                             `json:"execution_optimistic"`
@@ -792,11 +788,6 @@ type IndexedAttestationJson struct {
 	AttestingIndices []string             `json:"attesting_indices"`
 	Data             *AttestationDataJson `json:"data"`
 	Signature        string               `json:"signature" hex:"true"`
-}
-
-type FeeRecipientJson struct {
-	ValidatorIndex string `json:"validator_index"`
-	FeeRecipient   string `json:"fee_recipient" hex:"true"`
 }
 
 type AttestationJson struct {
