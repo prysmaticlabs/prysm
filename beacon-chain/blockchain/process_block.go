@@ -24,6 +24,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -40,6 +41,87 @@ const depositDeadline = 20 * time.Second
 
 // This defines size of the upper bound for initial sync block cache.
 var initialSyncBlockCacheSize = uint64(2 * params.BeaconConfig().SlotsPerEpoch)
+
+// sendLightClientFinalityUpdate sends a light client finality update notification of  to the state feed.
+func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	// Get finalized block
+	var finalizedBlock interfaces.ReadOnlySignedBeaconBlock
+	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
+	if finalizedCheckPoint != nil {
+		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
+		finalizedBlock, err = s.cfg.BeaconDB.Block(ctx, finalizedRoot)
+		if err != nil {
+			finalizedBlock = nil
+		}
+	}
+
+	update, err := NewLightClientFinalityUpdateFromBeaconState(
+		ctx,
+		postState,
+		signed,
+		attestedState,
+		finalizedBlock,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	// Return the result
+	result := &ethpbv2.LightClientFinalityUpdateWithVersion{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    CreateLightClientFinalityUpdate(update),
+	}
+
+	// Send event
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientFinalityUpdate,
+		Data: result,
+	}), nil
+}
+
+// sendLightClientOptimisticUpdate sends a light client optimistic update notification of  to the state feed.
+func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
+	postState state.BeaconState) (int, error) {
+
+	// Get attested state
+	attestedRoot := signed.Block().ParentRoot()
+	attestedState, err := s.cfg.StateGen.StateByRoot(ctx, attestedRoot)
+	if err != nil {
+		return 0, errors.Wrap(err, "could not get attested state")
+	}
+
+	update, err := NewLightClientOptimisticUpdateFromBeaconState(
+		ctx,
+		postState,
+		signed,
+		attestedState,
+	)
+
+	if err != nil {
+		return 0, errors.Wrap(err, "could not create light client update")
+	}
+
+	// Return the result
+	result := &ethpbv2.LightClientOptimisticUpdateWithVersion{
+		Version: ethpbv2.Version(signed.Version()),
+		Data:    CreateLightClientOptimisticUpdate(update),
+	}
+
+	return s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.LightClientOptimisticUpdate,
+		Data: result,
+	}), nil
+}
 
 // postBlockProcess is called when a gossip block is received. This function performs
 // several duties most importantly informing the engine if head was updated,
@@ -115,6 +197,16 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 		},
 	})
 
+	if _, err := s.sendLightClientOptimisticUpdate(ctx, signed, postState); err != nil {
+		log.WithError(err)
+	}
+
+	// Save finalized check point to db and more.
+	finalized := s.ForkChoicer().FinalizedCheckpoint()
+
+	// LightClientFinalityUpdate needs super majority
+	s.tryPublishLightClientFinalityUpdate(ctx, signed, finalized, postState)
+
 	defer reportAttestationInclusion(b)
 	if headRoot == blockRoot {
 		// Updating next slot state cache can happen in the background
@@ -142,6 +234,33 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	}
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
+}
+
+func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, finalized *forkchoicetypes.Checkpoint, postState state.BeaconState) {
+	if finalized.Epoch <= s.lastPublishedLightClientEpoch {
+		return
+	}
+
+	config := params.BeaconConfig()
+	if finalized.Epoch < config.AltairForkEpoch {
+		return
+	}
+
+	syncAggregate, err := signed.Block().Body().SyncAggregate()
+	if err != nil || syncAggregate == nil {
+		return
+	}
+
+	if syncAggregate.SyncCommitteeBits.Count()*3 < config.SyncCommitteeSize*2 {
+		return
+	}
+
+	_, err = s.sendLightClientFinalityUpdate(ctx, signed, postState)
+	if err != nil {
+		log.WithError(err)
+	} else {
+		s.lastPublishedLightClientEpoch = finalized.Epoch
+	}
 }
 
 func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionData, error) {
