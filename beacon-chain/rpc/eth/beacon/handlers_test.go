@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -756,7 +757,7 @@ func TestGetStateFork(t *testing.T) {
 
 	server.GetStateFork(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	var stateForkReponse *StateForkResponse
+	var stateForkReponse *shared.StateForkResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
 	require.NoError(t, err)
 	expectedFork := fakeState.Fork()
