@@ -3,12 +3,13 @@ package shared
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 )
 
@@ -24,24 +25,29 @@ func UintFromQuery(w http.ResponseWriter, r *http.Request, name string) (bool, s
 	return true, "", 0
 }
 
-func ValidateHex(w http.ResponseWriter, name string, s string) bool {
+func ValidateHex(w http.ResponseWriter, name string, s string, length int) ([]byte, bool) {
 	if s == "" {
 		errJson := &http2.DefaultErrorJson{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
 		http2.WriteError(w, errJson)
-		return false
+		return nil, false
 	}
-	if !bytesutil.IsHex([]byte(s)) {
+	hexBytes, err := hexutil.Decode(s)
+	if err != nil {
 		errJson := &http2.DefaultErrorJson{
-			Message: name + " is invalid",
+			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
 		http2.WriteError(w, errJson)
-		return false
+		return nil, false
 	}
-	return true
+	if len(hexBytes) != length {
+		http2.HandleError(w, fmt.Sprintf("Invalid %s: %s is not length %d", name, s, length), http.StatusBadRequest)
+		return nil, false
+	}
+	return hexBytes, true
 }
 
 func ValidateUint(w http.ResponseWriter, name string, s string) (uint64, bool) {
