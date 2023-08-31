@@ -42,7 +42,6 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
-        "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",
         "//beacon-chain/rpc/prysm/validator:go_default_library",
@@ -109,7 +108,6 @@ go_test(
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
-        "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",
         "//beacon-chain/rpc/prysm/validator:go_default_library",

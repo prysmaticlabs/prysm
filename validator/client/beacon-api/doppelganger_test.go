@@ -10,7 +10,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -49,7 +48,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
-		getForkOutput               *beacon.StateForkResponse
+		getForkOutput               *shared.StateForkResponse
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
 		getStateValidatorsInterface *struct {
 			input  []string
@@ -113,7 +112,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.StateForkResponse{
+			getForkOutput: &shared.StateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x00000000",
 					CurrentVersion:  "0x00000000",
@@ -148,7 +147,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.StateForkResponse{
+			getForkOutput: &shared.StateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
@@ -194,7 +193,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.StateForkResponse{
+			getForkOutput: &shared.StateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
@@ -318,7 +317,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := beacon.StateForkResponse{}
+				stateForkResponseJson := shared.StateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -420,7 +419,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetForkOutput := &beacon.StateForkResponse{
+	standardGetForkOutput := &shared.StateForkResponse{
 		Data: &shared.Fork{
 			CurrentVersion: "0x02000000",
 		},
@@ -462,7 +461,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
 		getSyncingError             error
-		getForkOutput               *beacon.StateForkResponse
+		getForkOutput               *shared.StateForkResponse
 		getForkError                error
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
 		getHeadersError             error
@@ -505,7 +504,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &beacon.StateForkResponse{},
+			getForkOutput:          &shared.StateForkResponse{},
 			getForkError:           errors.New("custom error"),
 		},
 		{
@@ -513,7 +512,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput: &beacon.StateForkResponse{
+			getForkOutput: &shared.StateForkResponse{
 				Data: &shared.Fork{CurrentVersion: "not a version"},
 			},
 		},
@@ -776,7 +775,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := beacon.StateForkResponse{}
+				stateForkResponseJson := shared.StateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,

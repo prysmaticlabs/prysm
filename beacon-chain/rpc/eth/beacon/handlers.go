@@ -877,7 +877,7 @@ func (bs *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
-	response := &StateForkResponse{
+	response := &shared.StateForkResponse{
 		Data: &shared.Fork{
 			PreviousVersion: hexutil.Encode(fork.PreviousVersion),
 			CurrentVersion:  hexutil.Encode(fork.CurrentVersion),

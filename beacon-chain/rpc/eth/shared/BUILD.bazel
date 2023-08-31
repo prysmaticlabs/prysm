@@ -6,6 +6,7 @@ go_library(
         "errors.go",
         "request.go",
         "structs.go",
+        "structs_request_and_responses.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared",
     visibility = ["//visibility:public"],
