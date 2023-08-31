@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -331,6 +332,11 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 		return [fieldparams.BLSPubkeyLength]byte{}, err
 	}
 	return v.PublicKey(), nil
+}
+
+// ForkChoicer returns the forkchoice interface.
+func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
+	return s.cfg.ForkChoiceStore
 }
 
 // IsOptimistic returns true if the current head is optimistic.
