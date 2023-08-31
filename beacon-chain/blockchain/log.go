@@ -61,6 +61,14 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 			txsPerSlotCount.Set(float64(len(txs)))
 		}
 	}
+	if b.Version() >= version.Deneb {
+		kzgs, err := b.Body().BlobKzgCommitments()
+		if err != nil {
+			log.WithError(err).Error("Failed to get blob KZG commitments")
+		} else if len(kzgs) > 0 {
+			log = log.WithField("blobCommitmentCount", len(kzgs))
+		}
+	}
 	log.Info("Finished applying state transition")
 	return nil
 }
@@ -73,7 +81,7 @@ func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte
 	level := log.Logger.GetLevel()
 	if level >= logrus.DebugLevel {
 		parentRoot := block.ParentRoot()
-		log.WithFields(logrus.Fields{
+		lf := logrus.Fields{
 			"slot":                      block.Slot(),
 			"slotInEpoch":               block.Slot() % params.BeaconConfig().SlotsPerEpoch,
 			"block":                     fmt.Sprintf("0x%s...", hex.EncodeToString(blockRoot[:])[:8]),
@@ -87,7 +95,8 @@ func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
 			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
 			"deposits":                  len(block.Body().Deposits()),
-		}).Debug("Synced new block")
+		}
+		log.WithFields(lf).Debug("Synced new block")
 	} else {
 		log.WithFields(logrus.Fields{
 			"slot":           block.Slot(),

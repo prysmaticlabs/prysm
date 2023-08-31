@@ -28,7 +28,7 @@ func TestProposeBeaconBlock_BlindedCapella(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = blindedCapellaBlock
 
-	jsonBlindedCapellaBlock := &apimiddleware.SignedBlindedBeaconBlockCapellaContainerJson{
+	jsonBlindedCapellaBlock := &apimiddleware.SignedBlindedBeaconBlockCapellaJson{
 		Signature: hexutil.Encode(blindedCapellaBlock.BlindedCapella.Signature),
 		Message: &apimiddleware.BlindedBeaconBlockCapellaJson{
 			ParentRoot:    hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.ParentRoot),

@@ -133,6 +133,13 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
+	} else if ctx.Bool(HoleskyTestnet.Name) {
+		log.Warn("Running on the Holesky Beacon Chain Testnet")
+		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
+			return err
+		}
+		applyHoleskyFeatureFlags(ctx)
+		params.UseHoleskyNetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
@@ -152,6 +159,10 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
 func applySepoliaFeatureFlags(ctx *cli.Context) {
+}
+
+// Insert feature flags within the function to be enabled for Holesky testnet.
+func applyHoleskyFeatureFlags(ctx *cli.Context) {
 }
 
 // ConfigureBeaconChain sets the global config based

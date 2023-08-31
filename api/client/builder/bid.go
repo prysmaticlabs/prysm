@@ -1,14 +1,12 @@
 package builder
 
 import (
-	"math/big"
-
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/math"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -24,6 +22,7 @@ type SignedBid interface {
 // Bid is an interface describing the method set of a builder bid.
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
+	BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error)
 	Value() []byte
 	Pubkey() []byte
 	Version() int
@@ -116,6 +115,11 @@ func (b builderBid) Header() (interfaces.ExecutionData, error) {
 	return blocks.WrappedExecutionPayloadHeader(b.p.Header)
 }
 
+// BlindedBlobsBundle --
+func (b builderBid) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
+	return nil, errors.New("blinded blobs bundle not available before Deneb")
+}
+
 // Version --
 func (b builderBid) Version() int {
 	return version.Bellatrix
@@ -162,8 +166,12 @@ func WrappedBuilderBidCapella(p *ethpb.BuilderBidCapella) (Bid, error) {
 // Header returns the execution data interface.
 func (b builderBidCapella) Header() (interfaces.ExecutionData, error) {
 	// We have to convert big endian to little endian because the value is coming from the execution layer.
-	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.p.Value))
-	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, math.WeiToGwei(v))
+	return blocks.WrappedExecutionPayloadHeaderCapella(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+}
+
+// BlindedBlobsBundle --
+func (b builderBidCapella) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
+	return nil, errors.New("blinded blobs bundle not available before Deneb")
 }
 
 // Version --
@@ -194,4 +202,91 @@ func (b builderBidCapella) HashTreeRoot() ([32]byte, error) {
 // HashTreeRootWith --
 func (b builderBidCapella) HashTreeRootWith(hh *ssz.Hasher) error {
 	return b.p.HashTreeRootWith(hh)
+}
+
+type builderBidDeneb struct {
+	p *ethpb.BuilderBidDeneb
+}
+
+// WrappedBuilderBidDeneb is a constructor which wraps a protobuf bid into an interface.
+func WrappedBuilderBidDeneb(p *ethpb.BuilderBidDeneb) (Bid, error) {
+	w := builderBidDeneb{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Version --
+func (b builderBidDeneb) Version() int {
+	return version.Deneb
+}
+
+// Value --
+func (b builderBidDeneb) Value() []byte {
+	return b.p.Value
+}
+
+// Pubkey --
+func (b builderBidDeneb) Pubkey() []byte {
+	return b.p.Pubkey
+}
+
+// IsNil --
+func (b builderBidDeneb) IsNil() bool {
+	return b.p == nil
+}
+
+// HashTreeRoot --
+func (b builderBidDeneb) HashTreeRoot() ([32]byte, error) {
+	return b.p.HashTreeRoot()
+}
+
+// HashTreeRootWith --
+func (b builderBidDeneb) HashTreeRootWith(hh *ssz.Hasher) error {
+	return b.p.HashTreeRootWith(hh)
+}
+
+// Header --
+func (b builderBidDeneb) Header() (interfaces.ExecutionData, error) {
+	// We have to convert big endian to little endian because the value is coming from the execution layer.
+	return blocks.WrappedExecutionPayloadHeaderDeneb(b.p.Header, blocks.PayloadValueToGwei(b.p.Value))
+}
+
+// BlindedBlobsBundle --
+func (b builderBidDeneb) BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error) {
+	return b.p.BlindedBlobsBundle, nil
+}
+
+type signedBuilderBidDeneb struct {
+	p *ethpb.SignedBuilderBidDeneb
+}
+
+// WrappedSignedBuilderBidDeneb is a constructor which wraps a protobuf signed bit into an interface.
+func WrappedSignedBuilderBidDeneb(p *ethpb.SignedBuilderBidDeneb) (SignedBid, error) {
+	w := signedBuilderBidDeneb{p: p}
+	if w.IsNil() {
+		return nil, consensus_types.ErrNilObjectWrapped
+	}
+	return w, nil
+}
+
+// Message --
+func (b signedBuilderBidDeneb) Message() (Bid, error) {
+	return WrappedBuilderBidDeneb(b.p.Message)
+}
+
+// Signature --
+func (b signedBuilderBidDeneb) Signature() []byte {
+	return b.p.Signature
+}
+
+// Version --
+func (b signedBuilderBidDeneb) Version() int {
+	return version.Deneb
+}
+
+// IsNil --
+func (b signedBuilderBidDeneb) IsNil() bool {
+	return b.p == nil
 }

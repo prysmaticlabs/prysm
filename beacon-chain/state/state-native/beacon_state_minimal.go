@@ -49,6 +49,7 @@ type BeaconState struct {
 	nextSyncCommittee                   *ethpb.SyncCommittee
 	latestExecutionPayloadHeader        *enginev1.ExecutionPayloadHeader
 	latestExecutionPayloadHeaderCapella *enginev1.ExecutionPayloadHeaderCapella
+	latestExecutionPayloadHeaderDeneb   *enginev1.ExecutionPayloadHeaderDeneb
 	nextWithdrawalIndex                 uint64
 	nextWithdrawalValidatorIndex        primitives.ValidatorIndex
 

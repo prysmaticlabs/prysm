@@ -5,6 +5,7 @@ package stategen
 
 import (
 	"context"
+	stderrors "errors"
 	"sync"
 	"time"
 
@@ -125,7 +126,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		// Save genesis state in the hot state cache.
 		gbr, err := s.beaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get genesis block root")
+			return nil, stderrors.Join(ErrNoGenesisBlock, err)
 		}
 		return st, s.SaveState(ctx, gbr, st)
 	}

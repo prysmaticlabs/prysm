@@ -49,6 +49,9 @@ func (s *Service) registerRPCHandlers() {
 			s.pingHandler,
 		)
 		s.registerRPCHandlersAltair()
+		if currEpoch >= params.BeaconConfig().DenebForkEpoch {
+			s.registerRPCHandlersDeneb()
+		}
 		return
 	}
 	s.registerRPC(
@@ -93,6 +96,17 @@ func (s *Service) registerRPCHandlersAltair() {
 	)
 }
 
+func (s *Service) registerRPCHandlersDeneb() {
+	s.registerRPC(
+		p2p.RPCBlobSidecarsByRangeTopicV1,
+		s.blobSidecarsByRangeRPCHandler,
+	)
+	s.registerRPC(
+		p2p.RPCBlobSidecarsByRootTopicV1,
+		s.blobSidecarByRootRPCHandler,
+	)
+}
+
 // Remove all v1 Stream handlers that are no longer supported
 // from altair onwards.
 func (s *Service) unregisterPhase0Handlers() {
@@ -112,10 +126,13 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 	s.cfg.p2p.SetStreamHandler(topic, func(stream network.Stream) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.WithField("error", r).Error("Panic occurred")
-				log.Errorf("%s", debug.Stack())
+				log.WithField("error", r).
+					WithField("recovered_at", "registerRPC").
+					WithField("stack", string(debug.Stack())).
+					Error("Panic occurred")
 			}
 		}()
+
 		ctx, cancel := context.WithTimeout(s.ctx, ttfbTimeout)
 		defer cancel()
 
