@@ -313,6 +313,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/beacon_committee_subscriptions", validatorServerV1.SubmitBeaconCommitteeSubscription).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/attestation_data", validatorServerV1.GetAttestationData).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServerV1.RegisterValidator).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),

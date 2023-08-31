@@ -7,11 +7,8 @@ import (
 	"sort"
 	"strconv"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -23,11 +20,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var errInvalidValIndex = errors.New("invalid validator index")
@@ -783,49 +778,6 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		}, nil
 	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
-}
-
-// PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
-func (vs *Server) PrepareBeaconProposer(
-	ctx context.Context, request *ethpbv1.PrepareBeaconProposerRequest,
-) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
-	defer span.End()
-	var feeRecipients []common.Address
-	var validatorIndices []primitives.ValidatorIndex
-	newRecipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
-	for _, r := range request.Recipients {
-		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
-		switch {
-		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-			newRecipients = append(newRecipients, r)
-		case err != nil:
-			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
-		default:
-			if common.BytesToAddress(r.FeeRecipient) != f {
-				newRecipients = append(newRecipients, r)
-			}
-		}
-	}
-	if len(newRecipients) == 0 {
-		return &emptypb.Empty{}, nil
-	}
-	for _, recipientContainer := range newRecipients {
-		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
-		if !common.IsHexAddress(recipient) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
-		}
-		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
-		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
-	}
-	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
-	}
-
-	log.WithFields(log.Fields{
-		"validatorIndices": validatorIndices,
-	}).Info("Updated fee recipient addresses for validator indices")
-	return &emptypb.Empty{}, nil
 }
 
 // GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
