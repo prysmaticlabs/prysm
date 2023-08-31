@@ -22,6 +22,39 @@ const (
 	Withdrawal
 )
 
+func (s ValidatorStatus) String() string {
+	switch s {
+	case PendingInitialized:
+		return "pending_initialized"
+	case PendingQueued:
+		return "pending_queued"
+	case ActiveOngoing:
+		return "active_ongoing"
+	case ActiveExiting:
+		return "active_exiting"
+	case ActiveSlashed:
+		return "active_slashed"
+	case ExitedUnslashed:
+		return "exited_unslashed"
+	case ExitedSlashed:
+		return "exited_slashed"
+	case WithdrawalPossible:
+		return "withdrawal_possible"
+	case WithdrawalDone:
+		return "withdrawal_done"
+	case Active:
+		return "active"
+	case Pending:
+		return "pending"
+	case Exited:
+		return "exited"
+	case Withdrawal:
+		return "withdrawal"
+	default:
+		return "unknown"
+	}
+}
+
 type SyncCommitteeSubscription struct {
 	ValidatorIndex       primitives.ValidatorIndex
 	SyncCommitteeIndices []uint64

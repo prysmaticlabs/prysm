@@ -2,7 +2,11 @@ package shared
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 )
 
 // DecodeError represents an error resulting from trying to decode an HTTP request.
@@ -42,4 +46,16 @@ func (e *IndexedVerificationFailureError) StatusCode() int {
 type IndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+// WriteStateFetchError writes an appropriate error based on the supplied argument.
+// The argument error should be a result of fetching state.
+func WriteStateFetchError(w http.ResponseWriter, err error) {
+	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
+		http2.HandleError(w, "Could not get state: "+stateNotFoundErr.Error(), http.StatusNotFound)
+	}
+	if parseErr, ok := err.(*lookup.StateIdParseError); ok {
+		http2.HandleError(w, "Invalid state ID: "+parseErr.Error(), http.StatusBadRequest)
+	}
+	http2.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
 }

@@ -8,6 +8,7 @@ go_library(
         "config.go",
         "handlers.go",
         "handlers_pool.go",
+        "handlers_validator.go",
         "log.go",
         "pool.go",
         "server.go",
