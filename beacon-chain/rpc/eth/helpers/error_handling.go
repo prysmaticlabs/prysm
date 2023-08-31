@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -33,4 +34,16 @@ type IndexedVerificationFailure struct {
 type SingleIndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+// PrepareStateFetchError returns an appropriate error based on the supplied argument.
+// The argument error should be a result of fetching state.
+func PrepareStateFetchError(err error) error {
+	if errors.Is(err, stategen.ErrNoDataForSlot) {
+		return errors.New("lacking historical data needed to fulfill request")
+	}
+	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
+		return fmt.Errorf("state not found: %v", stateNotFoundErr)
+	}
+	return fmt.Errorf("could not fetch state: %v", err)
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -228,13 +227,11 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			s, _ := minimalTestService(t, WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
 			err := s.saveGenesisData(ctx, genesis)
 			require.NoError(t, err)
-			root, err := tt.args.block.Block.HashTreeRoot()
-			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			blks := []interfaces.ReadOnlySignedBeaconBlock{wsb}
-			roots := [][32]byte{root}
-			err = s.ReceiveBlockBatch(ctx, blks, roots)
+			rwsb, err := blocks.NewROBlock(wsb)
+			require.NoError(t, err)
+			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb})
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
