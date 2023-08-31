@@ -205,6 +205,98 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address"), 20), withdrawal.Address)
 		require.Equal(t, uint64(1), withdrawal.Amount)
 	})
+	t.Run("execution payload deneb", func(t *testing.T) {
+		parentHash := common.BytesToHash([]byte("parent"))
+		feeRecipient := common.BytesToAddress([]byte("feeRecipient"))
+		stateRoot := common.BytesToHash([]byte("stateRoot"))
+		receiptsRoot := common.BytesToHash([]byte("receiptsRoot"))
+		logsBloom := hexutil.Bytes(bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength))
+		random := common.BytesToHash([]byte("random"))
+		extra := common.BytesToHash([]byte("extra"))
+		hash := common.BytesToHash([]byte("hash"))
+		bn := hexutil.Uint64(1)
+		gl := hexutil.Uint64(2)
+		gu := hexutil.Uint64(3)
+		ts := hexutil.Uint64(4)
+		bgu := hexutil.Uint64(5)
+		ebg := hexutil.Uint64(6)
+
+		resp := &enginev1.GetPayloadV3ResponseJson{
+			BlobsBundle: &enginev1.BlobBundleJSON{
+				Commitments: []hexutil.Bytes{{'a'}, {'b'}, {'c'}, {'d'}},
+				Proofs:      []hexutil.Bytes{{'e'}, {'f'}, {'g'}, {'h'}},
+				Blobs:       []hexutil.Bytes{{'i'}, {'j'}, {'k'}, {'l'}},
+			},
+			BlockValue: fmt.Sprint("0x123"),
+			ExecutionPayload: &enginev1.ExecutionPayloadDenebJSON{
+				ParentHash:    &parentHash,
+				FeeRecipient:  &feeRecipient,
+				StateRoot:     &stateRoot,
+				ReceiptsRoot:  &receiptsRoot,
+				LogsBloom:     &logsBloom,
+				PrevRandao:    &random,
+				BlockNumber:   &bn,
+				GasLimit:      &gl,
+				GasUsed:       &gu,
+				Timestamp:     &ts,
+				ExtraData:     hexutil.Bytes(extra[:]),
+				BaseFeePerGas: "0x123",
+				BlockHash:     &hash,
+				Transactions:  []hexutil.Bytes{{}},
+				Withdrawals: []*enginev1.Withdrawal{{
+					Index:          1,
+					ValidatorIndex: 1,
+					Address:        bytesutil.PadTo([]byte("address"), 20),
+					Amount:         1,
+				}},
+				BlobGasUsed:   &bgu,
+				ExcessBlobGas: &ebg,
+			},
+		}
+		enc, err := json.Marshal(resp)
+		require.NoError(t, err)
+		pb := &enginev1.ExecutionPayloadDenebWithValueAndBlobsBundle{}
+		require.NoError(t, json.Unmarshal(enc, pb))
+		require.DeepEqual(t, parentHash.Bytes(), pb.Payload.ParentHash)
+		require.DeepEqual(t, feeRecipient.Bytes(), pb.Payload.FeeRecipient)
+		require.DeepEqual(t, stateRoot.Bytes(), pb.Payload.StateRoot)
+		require.DeepEqual(t, receiptsRoot.Bytes(), pb.Payload.ReceiptsRoot)
+		require.DeepEqual(t, logsBloom, hexutil.Bytes(pb.Payload.LogsBloom))
+		require.DeepEqual(t, random.Bytes(), pb.Payload.PrevRandao)
+		require.DeepEqual(t, uint64(1), pb.Payload.BlockNumber)
+		require.DeepEqual(t, uint64(2), pb.Payload.GasLimit)
+		require.DeepEqual(t, uint64(3), pb.Payload.GasUsed)
+		require.DeepEqual(t, uint64(4), pb.Payload.Timestamp)
+		require.DeepEqual(t, uint64(5), pb.Payload.BlobGasUsed)
+		require.DeepEqual(t, uint64(6), pb.Payload.ExcessBlobGas)
+		require.DeepEqual(t, extra.Bytes(), pb.Payload.ExtraData)
+		feePerGas := new(big.Int).SetBytes(pb.Payload.BaseFeePerGas)
+		require.Equal(t, "15832716547479101977395928904157292820330083199902421483727713169783165812736", feePerGas.String())
+		require.DeepEqual(t, hash.Bytes(), pb.Payload.BlockHash)
+		require.DeepEqual(t, [][]byte{{}}, pb.Payload.Transactions)
+		require.Equal(t, 1, len(pb.Payload.Withdrawals))
+		withdrawal := pb.Payload.Withdrawals[0]
+		require.Equal(t, uint64(1), withdrawal.Index)
+		require.Equal(t, primitives.ValidatorIndex(1), withdrawal.ValidatorIndex)
+		require.DeepEqual(t, bytesutil.PadTo([]byte("address"), 20), withdrawal.Address)
+		require.Equal(t, uint64(1), withdrawal.Amount)
+		require.DeepEqual(t, [][]byte{
+			bytesutil.PadTo([]byte{'e'}, 48),
+			bytesutil.PadTo([]byte{'f'}, 48),
+			bytesutil.PadTo([]byte{'g'}, 48),
+			bytesutil.PadTo([]byte{'h'}, 48)}, pb.BlobsBundle.Proofs)
+		require.DeepEqual(t, [][]byte{
+			bytesutil.PadTo([]byte{'a'}, 48),
+			bytesutil.PadTo([]byte{'b'}, 48),
+			bytesutil.PadTo([]byte{'c'}, 48),
+			bytesutil.PadTo([]byte{'d'}, 48)}, pb.BlobsBundle.KzgCommitments)
+		require.DeepEqual(t, [][]byte{
+			bytesutil.PadTo([]byte{'i'}, 131072),
+			bytesutil.PadTo([]byte{'j'}, 131072),
+			bytesutil.PadTo([]byte{'k'}, 131072),
+			bytesutil.PadTo([]byte{'l'}, 131072)}, pb.BlobsBundle.Blobs)
+	})
+
 	t.Run("execution block", func(t *testing.T) {
 		baseFeePerGas := big.NewInt(1770307273)
 		want := &gethtypes.Header{
@@ -491,13 +583,13 @@ func TestExecutionPayloadBody_MarshalUnmarshalJSON(t *testing.T) {
 	pBody := &enginev1.ExecutionPayloadBodyV1{
 		Transactions: [][]byte{[]byte("random1"), []byte("random2"), []byte("random3")},
 		Withdrawals: []*enginev1.Withdrawal{
-			&enginev1.Withdrawal{
+			{
 				Index:          200,
 				ValidatorIndex: 20303,
 				Amount:         3200000000,
 				Address:        bytesutil.PadTo([]byte("junk"), 20),
 			},
-			&enginev1.Withdrawal{
+			{
 				Index:          200,
 				ValidatorIndex: 70303,
 				Amount:         3200000800,
