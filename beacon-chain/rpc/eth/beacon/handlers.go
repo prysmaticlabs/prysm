@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -846,6 +847,44 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		},
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
+	}
+	http2.WriteJson(w, response)
+}
+
+// GetStateFork returns Fork object for state with given 'stateId'.
+func (bs *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateFork")
+	defer span.End()
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+	st, err := bs.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		http2.HandleError(w, helpers.PrepareStateFetchGRPCError(err).Error(), http.StatusBadRequest)
+		return
+	}
+	fork := st.Fork()
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not check if slot's block is optimistic").Error(), http.StatusInternalServerError)
+		return
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header", http.StatusInternalServerError)
+		return
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	response := &StateForkResponse{
+		Data: &shared.Fork{
+			PreviousVersion: hexutil.Encode(fork.PreviousVersion),
+			CurrentVersion:  hexutil.Encode(fork.CurrentVersion),
+			Epoch:           fmt.Sprintf("%d", fork.Epoch),
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}
 	http2.WriteJson(w, response)
 }

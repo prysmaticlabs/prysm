@@ -96,6 +96,32 @@ type VoluntaryExit struct {
 	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
 }
 
+type Fork struct {
+	PreviousVersion string `json:"previous_version"`
+	CurrentVersion  string `json:"current_version"`
+	Epoch           string `json:"epoch"`
+}
+
+func (s *Fork) ToConsensus() (*eth.Fork, error) {
+	previousVersion, err := hexutil.Decode(s.PreviousVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousVersion")
+	}
+	currentVersion, err := hexutil.Decode(s.CurrentVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "CurrentVersion")
+	}
+	epoch, err := strconv.ParseUint(s.Epoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Epoch")
+	}
+	return &eth.Fork{
+		PreviousVersion: previousVersion,
+		CurrentVersion:  currentVersion,
+		Epoch:           primitives.Epoch(epoch),
+	}, nil
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {

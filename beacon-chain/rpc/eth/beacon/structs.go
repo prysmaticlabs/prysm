@@ -35,6 +35,12 @@ type ListVoluntaryExitsResponse struct {
 	Data []*shared.SignedVoluntaryExit
 }
 
+type StateForkResponse struct {
+	Data                *shared.Fork `json:"data"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
+}
+
 type SignedBeaconBlock struct {
 	Message   *BeaconBlock `json:"message" validate:"required"`
 	Signature string       `json:"signature" validate:"required"`
