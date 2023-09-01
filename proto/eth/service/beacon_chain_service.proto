@@ -350,16 +350,6 @@ service BeaconChain {
     };
   }
 
-  // Submits sync committee signature objects to the node.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolSyncCommitteeSignatures
-  rpc SubmitPoolSyncCommitteeSignatures(v2.SubmitPoolSyncCommitteeSignatures) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/sync_committees"
-      body: "*"
-    };
-  }
-
   // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getPoolBLSToExecutionChanges
