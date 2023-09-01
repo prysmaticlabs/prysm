@@ -165,7 +165,7 @@ func DecodeHexWithMaxLength(s string, maxLength int) ([]byte, error) {
 	}
 	err = VerifyMaxLength(bytes, maxLength)
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("%s has too many bytes", s))
+		return nil, errors.Wrap(err, fmt.Sprintf("length of %s exceeds max of %d bytes", s, maxLength))
 	}
 	return bytes, nil
 }

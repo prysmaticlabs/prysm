@@ -796,7 +796,6 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "a valid randao reveal is required as a query parameter"))
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &testing2.ChainService{}
