@@ -13,6 +13,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 // BeaconBlockIsNil checks if any composite field of input signed beacon block is nil.
@@ -341,8 +342,24 @@ func (b *SignedBeaconBlock) Version() int {
 	return b.version
 }
 
+// IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
 	return b.block.body.isBlinded
+}
+
+// ValueInGwei metadata on the payload value returned by the builder. Value is 0 by default if local.
+func (b *SignedBeaconBlock) ValueInGwei() uint64 {
+	exec, err := b.block.body.Execution()
+	if err != nil {
+		log.WithError(err).Warn("failed to retrieve execution payload")
+		return 0
+	}
+	val, err := exec.ValueInGwei()
+	if err != nil {
+		log.WithError(err).Warn("failed to retrieve value in gwei")
+		return 0
+	}
+	return val
 }
 
 // Header converts the underlying protobuf object from blinded block to header format.

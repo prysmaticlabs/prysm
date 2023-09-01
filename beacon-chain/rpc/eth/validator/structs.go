@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"encoding/json"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
@@ -77,4 +79,12 @@ type SyncCommitteeDuty struct {
 	Pubkey                        string   `json:"pubkey"`
 	ValidatorIndex                string   `json:"validator_index"`
 	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
+}
+
+// ProduceBlockV3Response is a wrapper json object for the returned block from the ProduceBlockV3 endpoint
+type ProduceBlockV3Response struct {
+	Version                 string          `json:"version"`
+	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
+	ExecutionPayloadValue   string          `json:"execution_payload_value"`
+	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
 }

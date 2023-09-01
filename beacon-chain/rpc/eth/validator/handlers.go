@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -31,6 +33,7 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,7 +45,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	defer span.End()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
-	valid := shared.ValidateHex(w, "Attestation data root", attDataRoot)
+	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
 	if !valid {
 		return
 	}
@@ -64,11 +67,6 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 			root, err := att.Data.HashTreeRoot()
 			if err != nil {
 				http2.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			attDataRootBytes, err := hexutil.Decode(attDataRoot)
-			if err != nil {
-				http2.HandleError(w, "Could not decode attestation data root into bytes: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			if bytes.Equal(root[:], attDataRootBytes) {
@@ -581,6 +579,60 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+// PrepareBeaconProposer endpoint saves the fee recipient given a validator index, this is used when proposing a block.
+func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.PrepareBeaconProposer")
+	defer span.End()
+
+	var jsonFeeRecipients []*shared.FeeRecipient
+	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	var feeRecipients []common.Address
+	var validatorIndices []primitives.ValidatorIndex
+	// filter for found fee recipients
+	for _, r := range jsonFeeRecipients {
+		validatorIndex, valid := shared.ValidateUint(w, "Validator Index", r.ValidatorIndex)
+		if !valid {
+			return
+		}
+		feeRecipientBytes, valid := shared.ValidateHex(w, "Fee Recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
+		if !valid {
+			return
+		}
+		f, err := s.BeaconDB.FeeRecipientByValidatorID(ctx, primitives.ValidatorIndex(validatorIndex))
+		switch {
+		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
+			feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
+			validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
+		case err != nil:
+			http2.HandleError(w, fmt.Sprintf("Could not get fee recipient by validator index: %v", err), http.StatusInternalServerError)
+			return
+		default:
+			if common.BytesToAddress(feeRecipientBytes) != f {
+				feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
+				validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
+			}
+		}
+	}
+	if len(validatorIndices) == 0 {
+		return
+	}
+	if err := s.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not save fee recipients: %v", err), http.StatusInternalServerError)
+		return
+	}
+	log.WithFields(log.Fields{
+		"validatorIndices": validatorIndices,
+	}).Info("Updated fee recipient addresses")
 }
 
 // GetAttesterDuties requests the beacon node to provide a set of attestation duties,
