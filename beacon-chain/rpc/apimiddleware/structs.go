@@ -141,10 +141,6 @@ type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
 }
 
-type SubmitSyncCommitteeSignaturesRequestJson struct {
-	Data []*SyncCommitteeMessageJson `json:"data"`
-}
-
 type BLSToExecutionChangesPoolResponseJson struct {
 	Data []*SignedBLSToExecutionChangeJson `json:"data"`
 }
@@ -833,13 +829,6 @@ type SignedVoluntaryExitJson struct {
 type VoluntaryExitJson struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
-}
-
-type SyncCommitteeMessageJson struct {
-	Slot            string `json:"slot"`
-	BeaconBlockRoot string `json:"beacon_block_root" hex:"true"`
-	ValidatorIndex  string `json:"validator_index"`
-	Signature       string `json:"signature" hex:"true"`
 }
 
 type IdentityJson struct {
