@@ -230,3 +230,8 @@ func WeiToGwei(v Wei) Gwei {
 	copied.Div(copied, gweiPerEth)
 	return Gwei(copied.Uint64())
 }
+
+// IsValidUint256 given a bigint checks if the value is a valid Uint256
+func IsValidUint256(bi *big.Int) bool {
+	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256
+}

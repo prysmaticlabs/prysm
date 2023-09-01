@@ -54,6 +54,8 @@ message GenericSignedBeaconBlock {
         // Representing a signed, post-Deneb fork blinded beacon block content.
         SignedBlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
     }
+    bool is_blinded = 100;
+    uint64 payload_value = 101;
 }
 
 message GenericBeaconBlock {
@@ -82,6 +84,8 @@ message GenericBeaconBlock {
         // Representing a signed, post-Deneb fork blinded beacon block content.
         BlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
     }
+    bool is_blinded = 100;
+    uint64 payload_value = 101;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.

@@ -32,6 +32,7 @@ type ReadOnlySignedBeaconBlock interface {
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
+	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 

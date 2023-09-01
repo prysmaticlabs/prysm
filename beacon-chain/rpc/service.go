@@ -315,6 +315,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServerV1.RegisterValidator).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
 
+	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServerV1.ProduceBlockV3).Methods(http.MethodGet)
+
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),
 		StreamLogsBufferSize: 1000, // Enough to handle bursts of beacon node logs for gRPC streaming.

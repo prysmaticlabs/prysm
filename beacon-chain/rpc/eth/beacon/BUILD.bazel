@@ -117,6 +117,8 @@ go_test(
         "//beacon-chain/p2p/testing:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/eth/helpers:go_default_library",
+        "//beacon-chain/rpc/eth/shared:go_default_library",
+        "//beacon-chain/rpc/eth/shared/testing:go_default_library",
         "//beacon-chain/rpc/lookup:go_default_library",
         "//beacon-chain/rpc/prysm/v1alpha1/validator:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",

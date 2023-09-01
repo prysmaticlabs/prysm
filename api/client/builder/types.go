@@ -11,6 +11,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -104,14 +105,10 @@ type Uint256 struct {
 	*big.Int
 }
 
-func isValidUint256(bi *big.Int) bool {
-	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256
-}
-
 func stringToUint256(s string) (Uint256, error) {
 	bi := new(big.Int)
 	_, ok := bi.SetString(s, 10)
-	if !ok || !isValidUint256(bi) {
+	if !ok || !math.IsValidUint256(bi) {
 		return Uint256{}, errors.Wrapf(errDecodeUint256, "value=%s", s)
 	}
 	return Uint256{Int: bi}, nil
@@ -120,7 +117,7 @@ func stringToUint256(s string) (Uint256, error) {
 // sszBytesToUint256 creates a Uint256 from a ssz-style (little-endian byte slice) representation.
 func sszBytesToUint256(b []byte) (Uint256, error) {
 	bi := bytesutil.LittleEndianBytesToBigInt(b)
-	if !isValidUint256(bi) {
+	if !math.IsValidUint256(bi) {
 		return Uint256{}, errors.Wrapf(errDecodeUint256, "value=%s", b)
 	}
 	return Uint256{Int: bi}, nil
@@ -128,7 +125,7 @@ func sszBytesToUint256(b []byte) (Uint256, error) {
 
 // SSZBytes creates an ssz-style (little-endian byte slice) representation of the Uint256.
 func (s Uint256) SSZBytes() []byte {
-	if !isValidUint256(s.Int) {
+	if !math.IsValidUint256(s.Int) {
 		return []byte{}
 	}
 	return bytesutil.PadTo(bytesutil.ReverseByteOrder(s.Int.Bytes()), 32)
@@ -155,7 +152,7 @@ func (s *Uint256) UnmarshalText(t []byte) error {
 	if !ok {
 		return errors.Wrapf(errDecodeUint256, "value=%s", t)
 	}
-	if !isValidUint256(z) {
+	if !math.IsValidUint256(z) {
 		return errors.Wrapf(errDecodeUint256, "value=%s", t)
 	}
 	s.Int = z
@@ -175,7 +172,7 @@ func (s Uint256) MarshalJSON() ([]byte, error) {
 
 // MarshalText returns a text byte representation of Uint256.
 func (s Uint256) MarshalText() ([]byte, error) {
-	if !isValidUint256(s.Int) {
+	if !math.IsValidUint256(s.Int) {
 		return nil, errors.Wrapf(errInvalidUint256, "value=%s", s.Int)
 	}
 	return []byte(s.String()), nil
