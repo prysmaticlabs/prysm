@@ -519,7 +519,7 @@ message BeaconBlockBodyDeneb {
   bytes graffiti = 3 [(ethereum.eth.ext.ssz_size) = "32"];
 
   // Block operations
-  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/core/0_beacon-chain.md#max-operations-per-block
+  // Refer to spec constants at https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/beacon-chain.md#max-operations-per-block
 
   // At most MAX_PROPOSER_SLASHINGS.
   repeated  v1.ProposerSlashing proposer_slashings = 4 [(ethereum.eth.ext.ssz_max) = "16"];
