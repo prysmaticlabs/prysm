@@ -196,6 +196,21 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(newScs, got))
 	})
+	t.Run("saving same blob twice", func(t *testing.T) {
+		scs := generateBlobSidecars(t, 1)
+		require.Equal(t, 1, len(scs))
+		db := setupDB(t)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+
+		saved, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, saved))
+
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		saved, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, saved))
+	})
 }
 
 func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
