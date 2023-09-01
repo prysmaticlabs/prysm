@@ -2,6 +2,7 @@
 package params
 
 import (
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -140,6 +141,7 @@ type BeaconChainConfig struct {
 	BeaconStateAltairFieldCount    int             // BeaconStateAltairFieldCount defines how many fields are in the beacon state post upgrade to Altair.
 	BeaconStateBellatrixFieldCount int             // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to Bellatrix.
 	BeaconStateCapellaFieldCount   int             // BeaconStateCapellaFieldCount defines how many fields are in beacon state post upgrade to Capella.
+	BeaconStateDenebFieldCount     int             // BeaconStateDenebFieldCount defines how many fields are in beacon state post upgrade to Deneb.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    primitives.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -274,4 +276,11 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// DenebEnabled centralizes the check to determine if code paths
+// that are specific to deneb should be allowed to execute. This will make it easier to find call sites that do this
+// kind of check and remove them post-deneb.
+func DenebEnabled() bool {
+	return BeaconConfig().DenebForkEpoch < math.MaxUint64
 }

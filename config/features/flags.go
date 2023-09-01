@@ -18,6 +18,11 @@ var (
 		Name:  "sepolia",
 		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
 	}
+	// HoleskyTestnet flag for the multiclient Ethereum consensus testnet.
+	HoleskyTestnet = &cli.BoolFlag{
+		Name:  "holesky",
+		Usage: "Run Prysm configured for the Holesky beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -171,6 +176,7 @@ var devModeFlags = []cli.Flag{
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
+	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
@@ -191,6 +197,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
+	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
@@ -225,4 +232,5 @@ var NetworkFlags = []cli.Flag{
 	Mainnet,
 	PraterTestnet,
 	SepoliaTestnet,
+	HoleskyTestnet,
 }

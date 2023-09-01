@@ -86,6 +86,11 @@ type SignedValidatorRegistration struct {
 	Signature string                 `json:"signature" validate:"required,hexadecimal"`
 }
 
+type FeeRecipient struct {
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient"`
+}
+
 type SignedVoluntaryExit struct {
 	Message   *VoluntaryExit `json:"message" validate:"required"`
 	Signature string         `json:"signature" validate:"required,hexadecimal"`

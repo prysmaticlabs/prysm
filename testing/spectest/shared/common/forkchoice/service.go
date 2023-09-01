@@ -2,6 +2,7 @@ package forkchoice
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -80,18 +81,25 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
+	return nil, nil, false, nil
+}
+func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil
 }
-
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
+
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash, *common.Hash) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
+func (m *engineMock) ForkchoiceUpdatedV2(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, m.latestValidHash, m.payloadStatus
+}
+
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
 	return nil, nil
 }
 
@@ -105,7 +113,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 		return nil, nil
 	}
 
-	td := bytesutil.LittleEndianBytesToBigInt(b.TotalDifficulty)
+	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
 	tdHex := hexutil.EncodeBig(td)
 	return &pb.ExecutionBlock{
 		Header: gethtypes.Header{

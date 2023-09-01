@@ -4,7 +4,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
 // Specifies the fixed size context length.
@@ -45,18 +47,16 @@ func readContextFromStream(stream network.Stream) ([]byte, error) {
 }
 
 func expectRpcContext(stream network.Stream) (bool, error) {
-	_, _, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
+	_, message, version, err := p2p.TopicDeconstructor(string(stream.Protocol()))
 	if err != nil {
 		return false, err
 	}
-	switch version {
-	case p2p.SchemaVersionV1:
+	// For backwards compatibility, we want to omit context bytes for certain v1 methods that were defined before
+	// context bytes were introduced into the protocol.
+	if version == p2p.SchemaVersionV1 && p2p.OmitContextBytesV1[message] {
 		return false, nil
-	case p2p.SchemaVersionV2:
-		return true, nil
-	default:
-		return false, errors.New("invalid version of %s registered for topic: %s")
 	}
+	return true, nil
 }
 
 // Minimal interface for a stream with a protocol.
@@ -74,4 +74,23 @@ func validateVersion(version string, stream withProtocol) error {
 		return errors.Errorf("stream version of %s doesn't match provided version %s", streamVersion, version)
 	}
 	return nil
+}
+
+// ContextByteVersions is a mapping between expected values for context bytes
+// and the runtime/version identifier they correspond to. This can be used to look up the type
+// needed to unmarshal a wire-encoded value.
+type ContextByteVersions map[[4]byte]int
+
+// ContextByteVersionsForValRoot computes a mapping between all possible context bytes values
+// and the runtime/version identifier for the corresponding fork.
+func ContextByteVersionsForValRoot(valRoot [32]byte) (ContextByteVersions, error) {
+	m := make(ContextByteVersions)
+	for fv, v := range params.ConfigForkVersions(params.BeaconConfig()) {
+		digest, err := signing.ComputeForkDigest(fv[:], valRoot[:])
+		if err != nil {
+			return nil, errors.Wrapf(err, "unable to compute fork digest for fork version %#x", fv)
+		}
+		m[digest] = v
+	}
+	return m, nil
 }

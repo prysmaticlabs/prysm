@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/blob"
 	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
@@ -232,6 +233,12 @@ func (s *Service) Start() {
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals).Methods(http.MethodGet)
 
+	blobServer := &blob.Server{
+		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		BeaconDB:         s.cfg.BeaconDB,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blob_sidecars/{block_id}", blobServer.Blobs).Methods(http.MethodGet)
+
 	coreService := &core.Service{
 		HeadFetcher:        s.cfg.HeadFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
@@ -307,6 +314,9 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/beacon_committee_subscriptions", validatorServerV1.SubmitBeaconCommitteeSubscription).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/attestation_data", validatorServerV1.GetAttestationData).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/register_validator", validatorServerV1.RegisterValidator).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
+
+	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServerV1.ProduceBlockV3).Methods(http.MethodGet)
 
 	nodeServer := &nodev1alpha1.Server{
 		LogsStreamer:         logs.NewStreamServer(),

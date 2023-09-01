@@ -245,7 +245,7 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if err = blocks.VerifyExitAndSignature(val, headState.Slot(), headState.Fork(), exit, headState.GenesisValidatorsRoot()); err != nil {
+	if err = blocks.VerifyExitAndSignature(val, headState, exit); err != nil {
 		http2.HandleError(w, "Invalid exit: "+err.Error(), http.StatusBadRequest)
 		return
 	}

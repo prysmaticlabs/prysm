@@ -13,6 +13,7 @@ import (
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -363,9 +364,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: &ethpbv1.BeaconBlock{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_Phase0Block{Phase0Block: &ethpbv1.SignedBeaconBlock{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -378,9 +378,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: &ethpbv2.BeaconBlockAltair{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_AltairBlock{AltairBlock: &ethpbv2.SignedBeaconBlockAltair{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -393,9 +392,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.BeaconBlockBellatrix{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.SignedBeaconBlockBellatrix{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -408,9 +406,27 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: &ethpbv2.BeaconBlockCapella{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: &ethpbv2.SignedBeaconBlockCapella{}},
+		}
+		_, err := server.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBeaconBlockContentsDeneb{
+					SignedBlock:        &ethpbv2.SignedBeaconBlockDeneb{},
+					SignedBlobSidecars: []*ethpbv2.SignedBlobSidecar{},
+				},
+			},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -547,6 +563,49 @@ func TestServer_SubmitBlockSSZ(t *testing.T) {
 		}
 		md := metadata.MD{}
 		md.Set(api.VersionHeader, "capella")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NotNil(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		b, err := util.NewBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		// TODO: update to deneb fork epoch
+		b.SignedBlock.Message.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(api.VersionHeader, "deneb")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb blinded", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		// TODO: update to deneb fork epoch
+		b.SignedBlindedBlock.Message.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(api.VersionHeader, "deneb")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)
