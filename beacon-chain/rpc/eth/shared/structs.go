@@ -456,7 +456,7 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 	if err != nil {
 		return nil, NewDecodeError(err, "Slot")
 	}
-	root, err := hexutil.Decode(m.BeaconBlockRoot)
+	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "BeaconBlockRoot")
 	}
@@ -464,7 +464,7 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 	if err != nil {
 		return nil, NewDecodeError(err, "ValidatorIndex")
 	}
-	sig, err := hexutil.Decode(m.Signature)
+	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
