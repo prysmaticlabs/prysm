@@ -6,6 +6,7 @@ go_library(
         "config.go",
         "helpers.go",
         "store.go",
+        "update.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/lightclient",
     visibility = ["//visibility:public"],
