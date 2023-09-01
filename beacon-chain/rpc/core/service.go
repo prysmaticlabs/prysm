@@ -19,4 +19,5 @@ type Service struct {
 	OperationNotifier  opfeed.Notifier
 	AttestationCache   *cache.AttestationCache
 	StateGen           stategen.StateManager
+	P2P                p2p.Broadcaster
 }

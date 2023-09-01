@@ -69,7 +69,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &ListAttestationsResponse{Data: filteredAtts})
 }
 
-// SubmitAttestations submits an Attestation object to node. If the attestation passes all validation
+// SubmitAttestations submits an attestation object to node. If the attestation passes all validation
 // constraints, node MUST publish the attestation on an appropriate subnet.
 func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttestations")
@@ -193,7 +193,7 @@ func (s *Server) ListVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &ListVoluntaryExitsResponse{Data: exits})
 }
 
-// SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
+// SubmitVoluntaryExit submits a SignedVoluntaryExit object to node's pool
 // and if passes validation node MUST broadcast it to network.
 func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitVoluntaryExit")
@@ -254,5 +254,56 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	if err = s.Broadcaster.Broadcast(ctx, exit); err != nil {
 		http2.HandleError(w, "Could not broadcast exit: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+}
+
+// SubmitSyncCommitteeSignatures submits sync committee signature objects to the node.
+func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitPoolSyncCommitteeSignatures")
+	defer span.End()
+
+	var req SubmitSyncCommitteeSignaturesRequest
+	err := json.NewDecoder(r.Body).Decode(&req.Data)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Data) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	var validMessages []*ethpbalpha.SyncCommitteeMessage
+	var msgFailures []*shared.IndexedVerificationFailure
+	for i, sourceMsg := range req.Data {
+		msg, err := sourceMsg.ToConsensus()
+		if err != nil {
+			msgFailures = append(msgFailures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not convert request message to consensus message: " + err.Error(),
+			})
+			continue
+		}
+		validMessages = append(validMessages, msg)
+	}
+
+	for _, msg := range validMessages {
+		if err = s.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
+			http2.HandleError(w, "Could not submit message: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	if len(msgFailures) > 0 {
+		failuresErr := &shared.IndexedVerificationFailureError{
+			Code:     http.StatusBadRequest,
+			Message:  "One or more messages failed validation",
+			Failures: msgFailures,
+		}
+		http2.WriteError(w, failuresErr)
 	}
 }
