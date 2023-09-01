@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["config.go"],
+    srcs = [
+        "config.go",
+        "helpers.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/lightclient",
     visibility = ["//visibility:public"],
     deps = [
