@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
@@ -23,13 +22,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestGetAttesterDuties(t *testing.T) {
@@ -801,6 +800,49 @@ func TestProduceBlockV2(t *testing.T) {
 		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared Capella beacon block is blinded", err)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+				Deneb: &ethpbalpha.BeaconBlockAndBlobsDeneb{
+					Block: &ethpbalpha.BeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BeaconBlockContainerV2_DenebContents)
+		require.Equal(t, true, ok)
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.Block.Slot)
+		require.Equal(t, 1, len(containerBlock.DenebContents.BlobSidecars))
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.BlobSidecars[0].Slot)
+	})
+	t.Run("Deneb blinded", func(t *testing.T) {
+		blk := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
+					Block: &ethpbalpha.BlindedBeaconBlockDeneb{Slot: 123},
+					Blobs: []*ethpbalpha.BlindedBlobSidecar{{Slot: 123}},
+				}}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon block contents are blinded", err)
+	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
 		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
@@ -927,6 +969,75 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 
 		_, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared Capella beacon block is blinded", err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b, err := util.NewBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		b.SignedBlock.Message.Slot = 123
+		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		v2blobs := make([]*ethpbv2.BlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+			v2blobs[i] = b.SignedBlobSidecars[i].Message
+		}
+
+		blkContents := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+			Deneb: &ethpbalpha.BeaconBlockAndBlobsDeneb{
+				Block: blk,
+				Blobs: blobs,
+			},
+		}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+		expectedObject := &ethpbv2.BeaconBlockContentsDeneb{
+			Block:        b.SignedBlock.Message,
+			BlobSidecars: v2blobs,
+		}
+		expectedData, err := expectedObject.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
+	t.Run("Deneb blinded", func(t *testing.T) {
+		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		blk, err := migration.BlindedDenebToV1Alpha1SignedBlock(b.SignedBlindedBlock)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(b.SignedBlindedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlindedBlobSidecar, len(signedBlobs))
+		v2blobs := make([]*ethpbv2.BlindedBlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+			v2blobs[i] = b.SignedBlindedBlobSidecars[i].Message
+		}
+		genericBlock := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
+					Block: blk.Block,
+					Blobs: blobs,
+				},
+			},
+		}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err = server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon blockcontent is blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
@@ -1060,6 +1171,73 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 		_, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared beacon block is not blinded", err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		b.SignedBlindedBlock.Message.Slot = 123
+		blk, err := migration.BlindedDenebToV1Alpha1SignedBlock(b.SignedBlindedBlock)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(b.SignedBlindedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlindedBlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+		}
+		genericBlock := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
+					Block: blk.Block,
+					Blobs: blobs,
+				},
+			},
+		}
+
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, ethpbv2.Version_DENEB, resp.Version)
+		containerBlock, ok := resp.Data.Block.(*ethpbv2.BlindedBeaconBlockContainer_DenebContents)
+		require.Equal(t, true, ok)
+		assert.Equal(t, primitives.Slot(123), containerBlock.DenebContents.BlindedBlock.Slot)
+		assert.Equal(t, fieldparams.MaxBlobsPerBlock, len(containerBlock.DenebContents.BlindedBlobSidecars))
+	})
+	t.Run("Deneb full", func(t *testing.T) {
+		b, err := util.NewBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		b.SignedBlock.Message.Slot = 123
+		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+		}
+		blkContents := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+			Deneb: &ethpbalpha.BeaconBlockAndBlobsDeneb{
+				Block: blk,
+				Blobs: blobs,
+			},
+		}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err = server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon block contents are not blinded", err)
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
@@ -1202,6 +1380,76 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		_, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
 		assert.ErrorContains(t, "Prepared Capella beacon block is not blinded", err)
 	})
+	t.Run("Deneb", func(t *testing.T) {
+		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		b.SignedBlindedBlock.Message.Slot = 123
+		blk, err := migration.BlindedDenebToV1Alpha1SignedBlock(b.SignedBlindedBlock)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(b.SignedBlindedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlindedBlobSidecar, len(signedBlobs))
+		v2blobs := make([]*ethpbv2.BlindedBlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+			v2blobs[i] = b.SignedBlindedBlobSidecars[i].Message
+		}
+		genericBlock := &ethpbalpha.GenericBeaconBlock{
+			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
+				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
+					Block: blk.Block,
+					Blobs: blobs,
+				},
+			},
+		}
+
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		resp, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
+		require.NoError(t, err)
+		expectedObject := &ethpbv2.BlindedBeaconBlockContentsDeneb{
+			BlindedBlock:        b.SignedBlindedBlock.Message,
+			BlindedBlobSidecars: v2blobs,
+		}
+		expectedData, err := expectedObject.MarshalSSZ()
+		assert.NoError(t, err)
+		assert.DeepEqual(t, expectedData, resp.Data)
+	})
+	t.Run("Deneb full", func(t *testing.T) {
+		b, err := util.NewBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		b.SignedBlock.Message.Slot = 123
+		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
+		require.NoError(t, err)
+		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
+		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		for i := range signedBlobs {
+			blobs[i] = signedBlobs[i].Message
+		}
+		blkContents := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Deneb{
+			Deneb: &ethpbalpha.BeaconBlockAndBlobsDeneb{
+				Block: blk,
+				Blobs: blobs,
+			},
+		}}
+		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		server := &Server{
+			V1Alpha1Server:        v1alpha1Server,
+			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
+			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
+		}
+
+		_, err = server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
+		assert.ErrorContains(t, "Prepared Deneb beacon block content is not blinded", err)
+	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
 		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1235,147 +1483,6 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		_, err := v1Server.ProduceBlindedBlockSSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
 	})
-}
-
-func TestPrepareBeaconProposer(t *testing.T) {
-	type args struct {
-		request *ethpbv1.PrepareBeaconProposerRequest
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr string
-	}{
-		{
-			name: "Happy Path",
-			args: args{
-				request: &ethpbv1.PrepareBeaconProposerRequest{
-					Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-						{
-							FeeRecipient:   make([]byte, fieldparams.FeeRecipientLength),
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			wantErr: "",
-		},
-		{
-			name: "invalid fee recipient length",
-			args: args{
-				request: &ethpbv1.PrepareBeaconProposerRequest{
-					Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-						{
-							FeeRecipient:   make([]byte, fieldparams.BLSPubkeyLength),
-							ValidatorIndex: 1,
-						},
-					},
-				},
-			},
-			wantErr: "Invalid fee recipient address",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			db := dbutil.SetupDB(t)
-			ctx := context.Background()
-			hook := logTest.NewGlobal()
-			server := &Server{
-				BeaconDB: db,
-			}
-			_, err := server.PrepareBeaconProposer(ctx, tt.args.request)
-			if tt.wantErr != "" {
-				require.ErrorContains(t, tt.wantErr, err)
-				return
-			}
-			require.NoError(t, err)
-			address, err := server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
-			require.NoError(t, err)
-			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
-			indexs := make([]primitives.ValidatorIndex, len(tt.args.request.Recipients))
-			for i, recipient := range tt.args.request.Recipients {
-				indexs[i] = recipient.ValidatorIndex
-			}
-			require.LogsContain(t, hook, fmt.Sprintf(`validatorIndices="%v"`, indexs))
-		})
-	}
-}
-func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
-	hook := logTest.NewGlobal()
-	db := dbutil.SetupDB(t)
-	ctx := context.Background()
-	proposerServer := &Server{BeaconDB: db}
-
-	// New validator
-	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
-	req := &ethpbv1.PrepareBeaconProposerRequest{
-		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{FeeRecipient: f, ValidatorIndex: 1},
-		},
-	}
-	_, err := proposerServer.PrepareBeaconProposer(ctx, req)
-	require.NoError(t, err)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
-
-	// Same validator
-	hook.Reset()
-	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
-	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
-
-	// Same validator with different fee recipient
-	hook.Reset()
-	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
-	req = &ethpbv1.PrepareBeaconProposerRequest{
-		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{FeeRecipient: f, ValidatorIndex: 1},
-		},
-	}
-	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
-	require.NoError(t, err)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
-
-	// More than one validator
-	hook.Reset()
-	f = bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
-	req = &ethpbv1.PrepareBeaconProposerRequest{
-		Recipients: []*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{
-			{FeeRecipient: f, ValidatorIndex: 1},
-			{FeeRecipient: f, ValidatorIndex: 2},
-		},
-	}
-	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
-	require.NoError(t, err)
-	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
-
-	// Same validators
-	hook.Reset()
-	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
-	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
-}
-
-func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
-	db := dbutil.SetupDB(b)
-	ctx := context.Background()
-	proposerServer := &Server{BeaconDB: db}
-
-	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
-	recipients := make([]*ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
-	for i := 0; i < 10000; i++ {
-		recipients = append(recipients, &ethpbv1.PrepareBeaconProposerRequest_FeeRecipientContainer{FeeRecipient: f, ValidatorIndex: primitives.ValidatorIndex(i)})
-	}
-
-	req := &ethpbv1.PrepareBeaconProposerRequest{
-		Recipients: recipients,
-	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := proposerServer.PrepareBeaconProposer(ctx, req)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
 }
 
 func TestGetLiveness(t *testing.T) {

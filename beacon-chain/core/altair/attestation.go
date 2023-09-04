@@ -289,13 +289,13 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
-	slotsPerEpoch := cfg.SlotsPerEpoch
 	sqtRootSlots := cfg.SqrRootSlotsPerEpoch
 	if matchedSrc && delay <= sqtRootSlots {
 		participatedFlags[sourceFlagIndex] = true
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
-	if matchedSrcTgt && delay <= slotsPerEpoch {
+	// Before Deneb no attestation should pass validation without having delay <= slotsPerEpoch.
+	if matchedSrcTgt {
 		participatedFlags[targetFlagIndex] = true
 	}
 	matchedSrcTgtHead := matchedHead && matchedSrcTgt

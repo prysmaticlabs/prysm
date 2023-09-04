@@ -25,11 +25,14 @@ type ReadOnlySignedBeaconBlock interface {
 	PbBellatrixBlock() (*ethpb.SignedBeaconBlockBellatrix, error)
 	PbBlindedBellatrixBlock() (*ethpb.SignedBlindedBeaconBlockBellatrix, error)
 	PbCapellaBlock() (*ethpb.SignedBeaconBlockCapella, error)
+	PbDenebBlock() (*ethpb.SignedBeaconBlockDeneb, error)
 	PbBlindedCapellaBlock() (*ethpb.SignedBlindedBeaconBlockCapella, error)
+	PbBlindedDenebBlock() (*ethpb.SignedBlindedBeaconBlockDeneb, error)
 	ssz.Marshaler
 	ssz.Unmarshaler
 	Version() int
 	IsBlinded() bool
+	ValueInGwei() uint64
 	Header() (*ethpb.SignedBeaconBlockHeader, error)
 }
 
@@ -70,12 +73,14 @@ type ReadOnlyBeaconBlockBody interface {
 	Proto() (proto.Message, error)
 	Execution() (ExecutionData, error)
 	BLSToExecutionChanges() ([]*ethpb.SignedBLSToExecutionChange, error)
+	BlobKzgCommitments() ([][]byte, error)
 }
 
 type SignedBeaconBlock interface {
 	ReadOnlySignedBeaconBlock
 	SetExecution(ExecutionData) error
 	SetBLSToExecutionChanges([]*ethpb.SignedBLSToExecutionChange) error
+	SetBlobKzgCommitments(c [][]byte) error
 	SetSyncAggregate(*ethpb.SyncAggregate) error
 	SetVoluntaryExits([]*ethpb.SignedVoluntaryExit)
 	SetDeposits([]*ethpb.Deposit)
@@ -114,6 +119,8 @@ type ExecutionData interface {
 	Timestamp() uint64
 	ExtraData() []byte
 	BaseFeePerGas() []byte
+	BlobGasUsed() (uint64, error)
+	ExcessBlobGas() (uint64, error)
 	BlockHash() []byte
 	Transactions() ([][]byte, error)
 	TransactionsRoot() ([]byte, error)

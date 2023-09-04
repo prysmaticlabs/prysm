@@ -13,23 +13,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
-	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
-
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	dbutil "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -41,6 +40,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestGetAggregateAttestation(t *testing.T) {
@@ -1524,6 +1525,175 @@ func TestServer_RegisterValidator(t *testing.T) {
 				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
 			}
 		})
+	}
+}
+
+func TestPrepareBeaconProposer(t *testing.T) {
+	tests := []struct {
+		name    string
+		request []*shared.FeeRecipient
+		code    int
+		wantErr string
+	}{
+		{
+			name: "Happy Path",
+			request: []*shared.FeeRecipient{{
+				FeeRecipient:   "0xb698D697092822185bF0311052215d5B5e1F3934",
+				ValidatorIndex: "1",
+			},
+			},
+			code:    http.StatusOK,
+			wantErr: "",
+		},
+		{
+			name: "invalid fee recipient length",
+			request: []*shared.FeeRecipient{{
+				FeeRecipient:   "0xb698D697092822185bF0311052",
+				ValidatorIndex: "1",
+			},
+			},
+			code:    http.StatusBadRequest,
+			wantErr: "Invalid Fee Recipient",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := json.Marshal(tt.request)
+			require.NoError(t, err)
+			var body bytes.Buffer
+			_, err = body.WriteString(string(b))
+			require.NoError(t, err)
+			url := "http://example.com/eth/v1/validator/prepare_beacon_proposer"
+			request := httptest.NewRequest(http.MethodPost, url, &body)
+			writer := httptest.NewRecorder()
+			db := dbutil.SetupDB(t)
+			ctx := context.Background()
+			server := &Server{
+				BeaconDB: db,
+			}
+			server.PrepareBeaconProposer(writer, request)
+			require.Equal(t, tt.code, writer.Code)
+			if tt.wantErr != "" {
+				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
+			} else {
+				require.NoError(t, err)
+				address, err := server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
+				require.NoError(t, err)
+				feebytes, err := hexutil.Decode(tt.request[0].FeeRecipient)
+				require.NoError(t, err)
+				require.Equal(t, common.BytesToAddress(feebytes), address)
+			}
+		})
+	}
+}
+
+func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
+	hook := logTest.NewGlobal()
+	db := dbutil.SetupDB(t)
+
+	// New validator
+	proposerServer := &Server{BeaconDB: db}
+	req := []*shared.FeeRecipient{{
+		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
+		ValidatorIndex: "1",
+	}}
+	b, err := json.Marshal(req)
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.WriteString(string(b))
+	require.NoError(t, err)
+	url := "http://example.com/eth/v1/validator/prepare_beacon_proposer"
+	request := httptest.NewRequest(http.MethodPost, url, &body)
+	writer := httptest.NewRecorder()
+
+	proposerServer.PrepareBeaconProposer(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
+
+	// Same validator
+	hook.Reset()
+	_, err = body.WriteString(string(b))
+	require.NoError(t, err)
+	request = httptest.NewRequest(http.MethodPost, url, &body)
+	writer = httptest.NewRecorder()
+	proposerServer.PrepareBeaconProposer(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+
+	// Same validator with different fee recipient
+	hook.Reset()
+	req = []*shared.FeeRecipient{{
+		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
+		ValidatorIndex: "1",
+	}}
+	b, err = json.Marshal(req)
+	require.NoError(t, err)
+	_, err = body.WriteString(string(b))
+	require.NoError(t, err)
+	request = httptest.NewRequest(http.MethodPost, url, &body)
+	writer = httptest.NewRecorder()
+	proposerServer.PrepareBeaconProposer(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
+
+	// More than one validator
+	hook.Reset()
+	req = []*shared.FeeRecipient{
+		{
+			FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
+			ValidatorIndex: "1",
+		},
+		{
+			FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
+			ValidatorIndex: "2",
+		},
+	}
+	b, err = json.Marshal(req)
+	require.NoError(t, err)
+	_, err = body.WriteString(string(b))
+	require.NoError(t, err)
+	request = httptest.NewRequest(http.MethodPost, url, &body)
+	writer = httptest.NewRecorder()
+	proposerServer.PrepareBeaconProposer(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
+
+	// Same validators
+	hook.Reset()
+	b, err = json.Marshal(req)
+	require.NoError(t, err)
+	_, err = body.WriteString(string(b))
+	require.NoError(t, err)
+	request = httptest.NewRequest(http.MethodPost, url, &body)
+	writer = httptest.NewRecorder()
+	proposerServer.PrepareBeaconProposer(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+}
+
+func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
+	db := dbutil.SetupDB(b)
+	proposerServer := &Server{BeaconDB: db}
+
+	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
+	recipients := make([]*shared.FeeRecipient, 0)
+	for i := 0; i < 10000; i++ {
+		recipients = append(recipients, &shared.FeeRecipient{FeeRecipient: hexutil.Encode(f), ValidatorIndex: fmt.Sprint(i)})
+	}
+	byt, err := json.Marshal(recipients)
+	require.NoError(b, err)
+	var body bytes.Buffer
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err = body.WriteString(string(byt))
+		require.NoError(b, err)
+		url := "http://example.com/eth/v1/validator/prepare_beacon_proposer"
+		request := httptest.NewRequest(http.MethodPost, url, &body)
+		writer := httptest.NewRecorder()
+		proposerServer.PrepareBeaconProposer(writer, request)
+		if writer.Code != http.StatusOK {
+			b.Fatal()
+		}
 	}
 }
 

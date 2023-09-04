@@ -176,6 +176,12 @@ func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *
 	return nil
 }
 
+// BroadcastBlob broadcasts a blob for mock.
+func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
+	p.BroadcastCalled = true
+	return nil
+}
+
 // SetStreamHandler for RPC.
 func (p *TestP2P) SetStreamHandler(topic string, handler network.StreamHandler) {
 	p.BHost.SetStreamHandler(protocol.ID(topic), handler)
