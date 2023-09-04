@@ -26,7 +26,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = altairBlock
 
-	jsonAltairBlock := &apimiddleware.SignedBeaconBlockAltairContainerJson{
+	jsonAltairBlock := &apimiddleware.SignedBeaconBlockAltairJson{
 		Signature: hexutil.Encode(altairBlock.Altair.Signature),
 		Message: &apimiddleware.BeaconBlockAltairJson{
 			ParentRoot:    hexutil.Encode(altairBlock.Altair.Block.ParentRoot),

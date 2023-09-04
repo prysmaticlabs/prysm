@@ -272,6 +272,62 @@ func TestBeaconState_NoDeadlock_Capella(t *testing.T) {
 	wg.Wait()
 }
 
+func TestBeaconState_NoDeadlock_Deneb(t *testing.T) {
+	count := uint64(100)
+	vals := make([]*ethpb.Validator, 0, count)
+	for i := uint64(1); i < count; i++ {
+		var someRoot [32]byte
+		var someKey [fieldparams.BLSPubkeyLength]byte
+		copy(someRoot[:], strconv.Itoa(int(i)))
+		copy(someKey[:], strconv.Itoa(int(i)))
+		vals = append(vals, &ethpb.Validator{
+			PublicKey:                  someKey[:],
+			WithdrawalCredentials:      someRoot[:],
+			EffectiveBalance:           params.BeaconConfig().MaxEffectiveBalance,
+			Slashed:                    false,
+			ActivationEligibilityEpoch: 1,
+			ActivationEpoch:            1,
+			ExitEpoch:                  1,
+			WithdrawableEpoch:          1,
+		})
+	}
+	st, err := InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+		Validators: vals,
+	})
+	assert.NoError(t, err)
+	s, ok := st.(*BeaconState)
+	require.Equal(t, true, ok)
+
+	wg := new(sync.WaitGroup)
+
+	wg.Add(1)
+	go func() {
+		// Continuously lock and unlock the state
+		// by acquiring the lock.
+		for i := 0; i < 1000; i++ {
+			for _, f := range s.stateFieldLeaves {
+				f.Lock()
+				if f.Empty() {
+					f.InsertFieldLayer(make([][]*[32]byte, 10))
+				}
+				f.Unlock()
+				f.FieldReference().AddRef()
+			}
+		}
+		wg.Done()
+	}()
+	// Constantly read from the offending portion
+	// of the code to ensure there is no possible
+	// recursive read locking.
+	for i := 0; i < 1000; i++ {
+		go func() {
+			_ = st.FieldReferencesCount()
+		}()
+	}
+	// Test will not terminate in the event of a deadlock.
+	wg.Wait()
+}
+
 func TestBeaconState_AppendBalanceWithTrie(t *testing.T) {
 
 	newState := generateState(t)

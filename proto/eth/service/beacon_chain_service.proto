@@ -171,7 +171,7 @@ service BeaconChain {
   // still broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlock(v2.SignedBeaconBlockContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlock(v2.SignedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
       body: "*"
@@ -204,7 +204,7 @@ service BeaconChain {
   // broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlindedBlock
-  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blinded_blocks"
       body: "*"
@@ -346,16 +346,6 @@ service BeaconChain {
   rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
-      body: "*"
-    };
-  }
-
-  // Submits sync committee signature objects to the node.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolSyncCommitteeSignatures
-  rpc SubmitPoolSyncCommitteeSignatures(v2.SubmitPoolSyncCommitteeSignatures) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/sync_committees"
       body: "*"
     };
   }

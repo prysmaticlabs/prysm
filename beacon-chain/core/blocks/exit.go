@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -60,7 +61,7 @@ func ProcessVoluntaryExits(
 		if err != nil {
 			return nil, err
 		}
-		if err := VerifyExitAndSignature(val, beaconState.Slot(), beaconState.Fork(), exit, beaconState.GenesisValidatorsRoot()); err != nil {
+		if err := VerifyExitAndSignature(val, beaconState, exit); err != nil {
 			return nil, errors.Wrapf(err, "could not verify exit %d", idx)
 		}
 		beaconState, exitEpoch, err = v.InitiateValidatorExit(ctx, beaconState, exit.Exit.ValidatorIndex, maxExitEpoch, churn)
@@ -101,13 +102,25 @@ func ProcessVoluntaryExits(
 //	 initiate_validator_exit(state, voluntary_exit.validator_index)
 func VerifyExitAndSignature(
 	validator state.ReadOnlyValidator,
-	currentSlot primitives.Slot,
-	fork *ethpb.Fork,
+	state state.ReadOnlyBeaconState,
 	signed *ethpb.SignedVoluntaryExit,
-	genesisRoot []byte,
 ) error {
 	if signed == nil || signed.Exit == nil {
 		return errors.New("nil exit")
+	}
+
+	currentSlot := state.Slot()
+	fork := state.Fork()
+	genesisRoot := state.GenesisValidatorsRoot()
+
+	// EIP-7044: Beginning in Deneb, fix the fork version to Capella.
+	// This allows for signed validator exits to be valid forever.
+	if state.Version() >= version.Deneb {
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		}
 	}
 
 	exit := signed.Exit
