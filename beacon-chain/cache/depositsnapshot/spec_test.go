@@ -352,12 +352,6 @@ func TestSnapshotCases(t *testing.T) {
 	}
 }
 
-func TestEmptyTreeSnapshot(t *testing.T) {
-	t.Skip("Skipped as we need to be able to generate empty snapshots")
-	_, err := NewDepositTree().GetSnapshot()
-	require.ErrorContains(t, "empty execution block", err)
-}
-
 func TestInvalidSnapshot(t *testing.T) {
 	invalidSnapshot := DepositTreeSnapshot{
 		finalized:    nil,
