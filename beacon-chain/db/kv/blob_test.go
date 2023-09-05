@@ -196,6 +196,22 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(newScs, got))
 	})
+	t.Run("save multiple blobs after new rotation (individually)", func(t *testing.T) {
+		db := setupDB(t)
+
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		for _, sc := range scs {
+			sc.Slot = sc.Slot + newRetentionSlot
+		}
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+	})
 }
 
 func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
