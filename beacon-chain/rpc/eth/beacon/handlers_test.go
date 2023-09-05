@@ -174,14 +174,15 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadBlindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadCapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		body := writer.Body.String()
 		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("Could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Capella))))
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &testing2.ChainService{}
@@ -436,7 +437,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		body := writer.Body.String()
 		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("Could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &testing2.ChainService{}

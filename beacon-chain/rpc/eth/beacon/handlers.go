@@ -158,7 +158,7 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 			return
 		}
 		if versionHeader == version.String(version.Deneb) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Deneb), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Deneb), err.Error())
 		}
 	}
 
@@ -174,7 +174,7 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 			return
 		}
 		if versionHeader == version.String(version.Capella) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Capella), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Capella), err.Error())
 		}
 	}
 
@@ -190,7 +190,7 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 			return
 		}
 		if versionHeader == version.String(version.Bellatrix) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Bellatrix), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Bellatrix), err.Error())
 		}
 	}
 	var altairBlock *shared.SignedBeaconBlockAltair
@@ -220,13 +220,13 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 			return
 		}
 		if versionHeader == version.String(version.Phase0) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Phase0), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Phase0), err.Error())
 		}
 	}
 	if versionHeader == "" {
-		blockVersionError = fmt.Sprintf("please add the api header %s to see specific type errors", api.VersionHeader)
+		blockVersionError = fmt.Sprintf(": please add the api header %s to see specific type errors", api.VersionHeader)
 	}
-	http2.HandleError(w, "Body does not represent a valid block type: "+blockVersionError, http.StatusBadRequest)
+	http2.HandleError(w, "Body does not represent a valid block type"+blockVersionError, http.StatusBadRequest)
 }
 
 // PublishBlockV2 instructs the beacon node to broadcast a newly signed beacon block to the beacon network,
@@ -350,7 +350,7 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 			return
 		}
 		if versionHeader == version.String(version.Deneb) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Deneb), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Deneb), err.Error())
 		}
 	}
 	var capellaBlock *shared.SignedBeaconBlockCapella
@@ -365,7 +365,7 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 			return
 		}
 		if versionHeader == version.String(version.Capella) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Capella), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Capella), err.Error())
 		}
 	}
 	var bellatrixBlock *shared.SignedBeaconBlockBellatrix
@@ -380,7 +380,7 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 			return
 		}
 		if versionHeader == version.String(version.Bellatrix) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Bellatrix), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Bellatrix), err.Error())
 		}
 	}
 	var altairBlock *shared.SignedBeaconBlockAltair
@@ -395,7 +395,7 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 			return
 		}
 		if versionHeader == version.String(version.Altair) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Altair), err.Error())
+			blockVersionError = fmt.Sprintf(": could not decode %s request body into consensus block: %v", version.String(version.Altair), err.Error())
 		}
 	}
 	var phase0Block *shared.SignedBeaconBlock
@@ -410,13 +410,13 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 			return
 		}
 		if versionHeader == version.String(version.Phase0) {
-			blockVersionError = fmt.Sprintf("Could not decode %s request body into consensus block: %v", version.String(version.Phase0), err.Error())
+			blockVersionError = fmt.Sprintf(": Could not decode %s request body into consensus block: %v", version.String(version.Phase0), err.Error())
 		}
 	}
 	if versionHeader == "" {
-		blockVersionError = fmt.Sprintf("please add the api header %s to see specific type errors", api.VersionHeader)
+		blockVersionError = fmt.Sprintf(": please add the api header %s to see specific type errors", api.VersionHeader)
 	}
-	http2.HandleError(w, "Body does not represent a valid block type: "+blockVersionError, http.StatusBadRequest)
+	http2.HandleError(w, "Body does not represent a valid block type"+blockVersionError, http.StatusBadRequest)
 }
 
 func (bs *Server) proposeBlock(ctx context.Context, w http.ResponseWriter, blk *eth.GenericSignedBeaconBlock) {
