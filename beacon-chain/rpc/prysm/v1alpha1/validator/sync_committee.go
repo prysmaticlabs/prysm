@@ -5,10 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -37,29 +35,7 @@ func (vs *Server) GetSyncMessageBlockRoot(
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
 func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) (*emptypb.Empty, error) {
-	errs, ctx := errgroup.WithContext(ctx)
-
-	headSyncCommitteeIndices, err := vs.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, msg.Slot)
-	if err != nil {
-		return &emptypb.Empty{}, err
-	}
-	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
-	// This broadcasts for all subnets.
-	for _, index := range headSyncCommitteeIndices {
-		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
-		subnet := uint64(index) / subCommitteeSize
-		errs.Go(func() error {
-			return vs.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
-		})
-	}
-
-	if err := vs.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
-		return &emptypb.Empty{}, err
-	}
-
-	// Wait for p2p broadcast to complete and return the first error (if any)
-	err = errs.Wait()
-	return &emptypb.Empty{}, err
+	return &emptypb.Empty{}, vs.CoreService.SubmitSyncMessage(ctx, msg)
 }
 
 // GetSyncSubcommitteeIndex is called by a sync committee participant to get

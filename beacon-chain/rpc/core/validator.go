@@ -456,3 +456,30 @@ func (s *Service) GetAttestationData(
 	}
 	return res, nil
 }
+
+// SubmitSyncMessage submits the sync committee message to the network.
+// It also saves the sync committee message into the pending pool for block inclusion.
+func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) error {
+	errs, ctx := errgroup.WithContext(ctx)
+
+	headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, msg.Slot)
+	if err != nil {
+		return err
+	}
+	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
+	// This broadcasts for all subnets.
+	for _, index := range headSyncCommitteeIndices {
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := uint64(index) / subCommitteeSize
+		errs.Go(func() error {
+			return s.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
+		})
+	}
+
+	if err := s.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
+		return err
+	}
+
+	// Wait for p2p broadcast to complete and return the first error (if any)
+	return errs.Wait()
+}

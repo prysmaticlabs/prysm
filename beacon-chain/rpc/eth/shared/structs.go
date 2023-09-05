@@ -101,6 +101,13 @@ type VoluntaryExit struct {
 	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
 }
 
+type SyncCommitteeMessage struct {
+	Slot            string `json:"slot" validate:"required,number,gte=0"`
+	BeaconBlockRoot string `json:"beacon_block_root" validate:"required,hexadecimal"`
+	ValidatorIndex  string `json:"validator_index" validate:"required,number,gte=0"`
+	Signature       string `json:"signature" validate:"required,hexadecimal"`
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
@@ -442,6 +449,32 @@ func VoluntaryExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
 		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
 		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
 	}
+}
+
+func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) {
+	slot, err := strconv.ParseUint(m.Slot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "BeaconBlockRoot")
+	}
+	valIndex, err := strconv.ParseUint(m.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+
+	return &eth.SyncCommitteeMessage{
+		Slot:           primitives.Slot(slot),
+		BlockRoot:      root,
+		ValidatorIndex: primitives.ValidatorIndex(valIndex),
+		Signature:      sig,
+	}, nil
 }
 
 // SyncDetails contains information about node sync status.
