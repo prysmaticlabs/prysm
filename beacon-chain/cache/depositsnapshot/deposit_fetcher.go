@@ -240,7 +240,7 @@ func (c *Cache) InsertPendingDeposit(ctx context.Context, d *ethpb.Deposit, bloc
 	defer c.depositsLock.Unlock()
 	c.pendingDeposits = append(c.pendingDeposits,
 		&ethpb.DepositContainer{Deposit: d, Eth1BlockHeight: blockNum, Index: index, DepositRoot: depositRoot[:]})
-	pendingDepositsCount.Inc()
+	pendingDepositsCount.Set(float64(len(c.pendingDeposits)))
 	span.AddAttributes(trace.Int64Attribute("count", int64(len(c.pendingDeposits))))
 }
 

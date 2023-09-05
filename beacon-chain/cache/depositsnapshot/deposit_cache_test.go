@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -16,9 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-const nilDepositErr = "Ignoring nil deposit insertion"
-
-//var _ cache.DepositCache = (*Cache)(nil)
+var _ cache.DepositCache = (*Cache)(nil)
 
 func TestAllDeposits_ReturnsAllDeposits(t *testing.T) {
 	dc, err := New()
@@ -899,7 +898,6 @@ func TestMin(t *testing.T) {
 		if err = fd.Deposits().Insert(depHash[:], int(insertIndex)); err != nil {
 			assert.NoError(t, err)
 		}
-		t.Log(fd.Deposits().NumOfItems(), deps)
 		insertIndex++
 	}
 

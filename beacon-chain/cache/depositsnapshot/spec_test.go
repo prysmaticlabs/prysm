@@ -178,6 +178,9 @@ func readTestCases() ([]testCase, error) {
 			if err != nil {
 				return []testCase{}, err
 			}
+			if len(testCases) == 0 {
+				return nil, errors.New("no test cases found")
+			}
 			return testCases, nil
 		}
 	}
@@ -185,11 +188,8 @@ func readTestCases() ([]testCase, error) {
 }
 
 func TestRead(t *testing.T) {
-	tcs, err := readTestCases()
+	_, err := readTestCases()
 	require.NoError(t, err)
-	for _, tc := range tcs {
-		t.Log(tc)
-	}
 }
 
 func hexStringToByteArray(s string) (b [32]byte, err error) {
