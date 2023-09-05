@@ -35,6 +35,10 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	})
 
 	for _, blk := range blks {
+		// Skip blocks before deneb because they have no blob.
+		if blk.Version() < version.Deneb {
+			continue
+		}
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
