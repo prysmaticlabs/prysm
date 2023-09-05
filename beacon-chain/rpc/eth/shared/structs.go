@@ -125,6 +125,7 @@ func (s *Fork) ToConsensus() (*eth.Fork, error) {
 		CurrentVersion:  currentVersion,
 		Epoch:           primitives.Epoch(epoch),
 	}, nil
+}
 
 type SyncCommitteeMessage struct {
 	Slot            string `json:"slot" validate:"required,number,gte=0"`
