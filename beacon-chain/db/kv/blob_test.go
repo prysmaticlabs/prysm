@@ -236,6 +236,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
 		}
 
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
+
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -259,6 +262,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
 		}
 
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
+
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -279,6 +285,9 @@ func TestStore_BlobSidecars(t *testing.T) {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
 
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
