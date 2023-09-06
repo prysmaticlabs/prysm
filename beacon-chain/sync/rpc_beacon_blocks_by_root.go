@@ -11,6 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -19,7 +21,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	_, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
+	blks, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
@@ -31,6 +33,21 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		}
 		return nil
 	})
+
+	for _, blk := range blks {
+		// Skip blocks before deneb because they have no blob.
+		if blk.Version() < version.Deneb {
+			continue
+		}
+		blkRoot, err := blk.Block().HashTreeRoot()
+		if err != nil {
+			return err
+		}
+		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot[:], id); err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 
@@ -95,4 +112,38 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 
 	closeStream(stream, log)
 	return nil
+}
+
+func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnlyBeaconBlock, br []byte, id peer.ID) error {
+	// Block before deneb has no blob.
+	if b.Version() < version.Deneb {
+		return nil
+	}
+	c, err := b.Body().BlobKzgCommitments()
+	if err != nil {
+		return err
+	}
+	// No op if the block has no blob commitments.
+	if len(c) == 0 {
+		return nil
+	}
+
+	// Build request for blob sidecars.
+	blobId := make([]*eth.BlobIdentifier, len(c))
+	for i := range c {
+		blobId[i] = &eth.BlobIdentifier{Index: uint64(i), BlockRoot: br}
+	}
+
+	ctxByte, err := ContextByteVersionsForValRoot(s.cfg.chain.GenesisValidatorsRoot())
+	if err != nil {
+		return err
+	}
+	req := types.BlobSidecarsByRootReq(blobId)
+
+	// Send request to a random peer.
+	blobSidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, id, ctxByte, &req)
+	if err != nil {
+		return err
+	}
+	return s.cfg.beaconDB.SaveBlobSidecar(ctx, blobSidecars)
 }
