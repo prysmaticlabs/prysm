@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
@@ -415,4 +416,15 @@ func Test_checkEpochsForBlobSidecarsRequestBucket(t *testing.T) {
 	nConfig.MinEpochsForBlobsSidecarsRequest = 42069
 	params.OverrideBeaconNetworkConfig(nConfig)
 	require.ErrorContains(t, "epochs for blobs request value in DB 4096 does not match config value 42069", checkEpochsForBlobSidecarsRequestBucket(dbStore.db))
+}
+
+func TestBlobRotatingKey(t *testing.T) {
+	k := blobSidecarKey(&ethpb.BlobSidecar{
+		Slot:      1,
+		BlockRoot: []byte{2},
+	})
+
+	require.Equal(t, types.Slot(1), k.Slot())
+	require.DeepEqual(t, []byte{2}, k.BlockRoot())
+	require.DeepEqual(t, slotKey(types.Slot(1)), k.BufferPrefix())
 }
