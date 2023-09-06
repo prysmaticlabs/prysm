@@ -566,7 +566,7 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 				return kzg.IsDataAvailable(kzgCommitments, sidecars)
 			}
 		case <-ctx.Done():
-			return errors.Wrap(err, "context deadline waiting for blob sidecars")
+			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}
 	}
 }
