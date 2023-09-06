@@ -54,7 +54,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
 		if len(replacingKey) != 0 {
-			slotBytes := replacingKey[:8]
+			slotBytes := replacingKey[8:16]
 			oldSlot := bytesutil.BytesToSlotBigEndian(slotBytes)
 			oldEpoch := slots.ToEpoch(oldSlot)
 			// The blob we are replacing is too old, so we delete it.
