@@ -1131,9 +1131,12 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
-	bundle, err := bb.BlindedBlobsBundle.ToProto()
-	if err != nil {
-		return nil, err
+	var bundle *v1.BlindedBlobsBundle
+	if bb.BlindedBlobsBundle != nil {
+		bundle, err = bb.BlindedBlobsBundle.ToProto()
+		if err != nil {
+			return nil, err
+		}
 	}
 	return &eth.BuilderBidDeneb{
 		Header:             header,

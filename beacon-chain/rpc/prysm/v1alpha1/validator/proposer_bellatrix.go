@@ -215,7 +215,9 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get blinded blobs bundle")
 		}
-		log.WithField("blindBlobCount", len(bundle.BlobRoots))
+		if bundle != nil {
+			log.WithField("blindBlobCount", len(bundle.BlobRoots))
+		}
 	}
 
 	log.WithFields(logrus.Fields{
