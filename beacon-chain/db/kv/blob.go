@@ -17,6 +17,26 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// A blob rotating key is represented as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
+type blobRotatingKey []byte
+
+// BufferPrefix returns the first 8 bytes of the rotating key.
+// This represents bytes(slot_to_rotating_buffer(blob.slot)) in the rotating key.
+func (rk blobRotatingKey) BufferPrefix() []byte {
+	return rk[0:8]
+}
+
+// Slot returns the information from the key.
+func (rk blobRotatingKey) Slot() types.Slot {
+	slotBytes := rk[8:16]
+	return bytesutil.BytesToSlotBigEndian(slotBytes)
+}
+
+// BlockRoot returns the block root information from the key.
+func (rk blobRotatingKey) BlockRoot() []byte {
+	return rk[16:]
+}
+
 // SaveBlobSidecar saves the blobs for a given epoch in the sidecar bucket. When we receive a blob:
 //
 //  1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = MAX_BLOB_EPOCHS*SLOTS_PER_EPOCH
@@ -43,8 +63,8 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
 		newKey := blobSidecarKey(scs[0])
-		rotatingBufferPrefix := newKey[0:8]
-		var replacingKey []byte
+		rotatingBufferPrefix := newKey.BufferPrefix()
+		var replacingKey blobRotatingKey
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
 			if len(k) != 0 {
 				replacingKey = k
@@ -54,8 +74,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
 		if len(replacingKey) != 0 {
-			slotBytes := replacingKey[8:16]
-			oldSlot := bytesutil.BytesToSlotBigEndian(slotBytes)
+			oldSlot := replacingKey.Slot()
 			oldEpoch := slots.ToEpoch(oldSlot)
 			// The blob we are replacing is too old, so we delete it.
 			if slots.ToEpoch(scs[0].Slot) >= oldEpoch.Add(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)) {
@@ -227,7 +246,7 @@ func (s *Store) DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte)
 
 // We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
-func blobSidecarKey(blob *ethpb.BlobSidecar) []byte {
+func blobSidecarKey(blob *ethpb.BlobSidecar) blobRotatingKey {
 	key := slotKey(blob.Slot)
 	key = append(key, bytesutil.SlotToBytesBigEndian(blob.Slot)...)
 	key = append(key, blob.BlockRoot...)
