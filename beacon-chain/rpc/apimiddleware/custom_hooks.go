@@ -15,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 // https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/submitPoolBLSToExecutionChange
@@ -144,12 +143,7 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 		return false, apimiddleware.InternalServerErrorWithMessage(err, "slot is not an unsigned integer")
 	}
 	currentEpoch := slots.ToEpoch(primitives.Slot(slot))
-	log.Info("setInitialPublishBlockPostRequest !!!!!!!!!!!!!!!!!!!!!")
-	fmt.Println("setInitialPublishBlockPostRequest !!!!!!!!!!!!!!!!!!!!!")
-	fmt.Println(currentEpoch)
-	log.Info(currentEpoch)
 	if currentEpoch < params.BeaconConfig().AltairForkEpoch {
-		log.Info("is it here?")
 		endpoint.PostRequest = &SignedBeaconBlockJson{}
 	} else if currentEpoch < params.BeaconConfig().BellatrixForkEpoch {
 		endpoint.PostRequest = &SignedBeaconBlockAltairJson{}
