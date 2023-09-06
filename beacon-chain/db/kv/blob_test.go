@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
@@ -62,11 +63,22 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
-	t.Run("save and retrieve by root (max)", func(t *testing.T) {
+	t.Run("save and retrieve by root (max), per batch", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+	})
+	t.Run("save and retrieve by root, max and individually", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -116,6 +128,17 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
+	t.Run("save and retrieve by slot, max and individually", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
+		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+	})
 	t.Run("save and retrieve valid subset by slot", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
@@ -161,18 +184,17 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 
-		scs0 := scs[0:2]
-		scs1 := scs[2:4]
-		scs2 := scs[4:6]
-		require.NoError(t, db.SaveBlobSidecar(ctx, scs0))
-		require.NoError(t, db.SaveBlobSidecar(ctx, scs1))
-		require.NoError(t, db.SaveBlobSidecar(ctx, scs2))
-
-		saved, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs0[0].BlockRoot))
-		require.NoError(t, err)
-		require.NoError(t, equalBlobSlices(saved, scs))
+		for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
+			scs[i].Slot = primitives.Slot(i)
+			scs[i].BlockRoot = bytesutil.PadTo([]byte{byte(i)}, 32)
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{scs[i]}))
+			br := bytesutil.ToBytes32(scs[i].BlockRoot)
+			saved, err := db.BlobSidecarsByRoot(ctx, br)
+			require.NoError(t, err)
+			require.NoError(t, equalBlobSlices([]*ethpb.BlobSidecar{scs[i]}, saved))
+		}
 	})
-	t.Run("saving a new blob for rotation", func(t *testing.T) {
+	t.Run("saving a new blob for rotation (batch)", func(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
@@ -195,6 +217,82 @@ func TestStore_BlobSidecars(t *testing.T) {
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(newScs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(newScs, got))
+	})
+	t.Run("save multiple blobs after new rotation (individually)", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+
+		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		for _, sc := range scs {
+			sc.Slot = sc.Slot + newRetentionSlot
+		}
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
+
+		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+	})
+	t.Run("save multiple blobs after new rotation (batch then individually)", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
+		oldBlockRoot := scs[0].BlockRoot
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(oldBlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+
+		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		for _, sc := range scs {
+			sc.Slot = sc.Slot + newRetentionSlot
+		}
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
+
+		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+	})
+	t.Run("save multiple blobs after new rotation (individually then batch)", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		for _, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+		}
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+
+		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		for _, sc := range scs {
+			sc.Slot = sc.Slot + newRetentionSlot
+		}
+		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
+
+		_, err = db.BlobSidecarsBySlot(ctx, 100)
+		require.ErrorIs(t, ErrNotFound, err)
+
+		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
 	})
 	t.Run("saving same blob twice", func(t *testing.T) {
 		scs := generateBlobSidecars(t, 1)
@@ -333,4 +431,15 @@ func Test_checkEpochsForBlobSidecarsRequestBucket(t *testing.T) {
 	nConfig.MinEpochsForBlobsSidecarsRequest = 42069
 	params.OverrideBeaconNetworkConfig(nConfig)
 	require.ErrorContains(t, "epochs for blobs request value in DB 4096 does not match config value 42069", checkEpochsForBlobSidecarsRequestBucket(dbStore.db))
+}
+
+func TestBlobRotatingKey(t *testing.T) {
+	k := blobSidecarKey(&ethpb.BlobSidecar{
+		Slot:      1,
+		BlockRoot: []byte{2},
+	})
+
+	require.Equal(t, types.Slot(1), k.Slot())
+	require.DeepEqual(t, []byte{2}, k.BlockRoot())
+	require.DeepEqual(t, slotKey(types.Slot(1)), k.BufferPrefix())
 }
