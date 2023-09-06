@@ -285,7 +285,7 @@ func DenebEnabled() bool {
 	return BeaconConfig().DenebForkEpoch < math.MaxUint64
 }
 
-// WithinDAPeriod checks if the block slot is within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS of the given current slot.
+// WithinDAPeriod checks if the block epoch is within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS of the given current epoch.
 func WithinDAPeriod(block, current primitives.Epoch) bool {
 	return block+BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= current
 }
