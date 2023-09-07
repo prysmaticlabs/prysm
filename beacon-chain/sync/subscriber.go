@@ -142,7 +142,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateBlob,   /* validator */
 			s.blobSubscriber, /* message handler */
 			digest,
-			params.BeaconNetworkConfig().BlobsidecarSubnetCount,
+			params.BeaconConfig().BlobsidecarSubnetCount,
 		)
 	}
 }
