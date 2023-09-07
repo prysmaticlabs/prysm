@@ -1018,8 +1018,8 @@ def prysm_deps():
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],
-        sum = "h1:4vRvOM+PhYCGmZEBEsp91FVTuqAO5pzWdF4268OKCCI=",
-        version = "v1.12.2-0.20230906102951-2e02c1ffd9df",
+        sum = "h1:eGHJ4ij7oyVqUQn48LBz3B7pvQ8sV0wGJiIE6gDq/6Y=",
+        version = "v1.12.2",
     )
 
     go_repository(
@@ -1906,8 +1906,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_holiman_goevmlab",
         importpath = "github.com/holiman/goevmlab",
-        sum = "h1:I5Cp9Y1fugGwcNGVVc69Fmgho0fkmtDHl6cej51+PJM=",
-        version = "v0.0.0-20230705203227-bf95bd5b9b75",
+        sum = "h1:gkZslX8Pr6eIy0e8dxevRsQsmMTZZu8133XG4OItggU=",
+        version = "v0.0.0-20230904100228-1a43b2c7e70d",
     )
 
     go_repository(
