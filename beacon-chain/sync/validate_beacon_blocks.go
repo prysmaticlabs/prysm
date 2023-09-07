@@ -95,7 +95,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
-		return pubsub.ValidationReject, nil
+		return pubsub.ValidationReject, err
 	}
 
 	// Verify the block is the first block received for the proposer for the slot.
