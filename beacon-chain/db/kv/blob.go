@@ -49,6 +49,9 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
+	if len(scs) == 0 {
+		return errEmptySidecar
+	}
 	newKey := blobSidecarKey(scs[0])
 	rotatingBufferPrefix := newKey.BufferPrefix()
 	return s.db.Update(func(tx *bolt.Tx) error {
