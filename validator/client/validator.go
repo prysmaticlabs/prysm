@@ -603,9 +603,9 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
 		v.dutiesLock.Lock()
-		defer v.dutiesLock.Unlock()
 		v.duties = nil // Clear assignments so we know to retry the request.
-		log.Error(err)
+		v.dutiesLock.Unlock()
+		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
 
