@@ -78,6 +78,7 @@ type validator struct {
 	walletInitializedFeed              *event.Feed
 	attLogs                            map[[32]byte]*attSubmitted
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
+	dutiesLock                         sync.RWMutex
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
@@ -601,8 +602,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	// If duties is nil it means we have had no prior duties and just started up.
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
+		v.dutiesLock.Lock()
 		v.duties = nil // Clear assignments so we know to retry the request.
-		log.Error(err)
+		v.dutiesLock.Unlock()
+		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
 
@@ -616,8 +619,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return ErrValidatorsAllExited
 	}
 
+	v.dutiesLock.Lock()
 	v.duties = resp
 	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
+	v.dutiesLock.Unlock()
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	// Make sure to copy metadata into a new context
@@ -713,6 +718,8 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
+	v.dutiesLock.RLock()
+	defer v.dutiesLock.RUnlock()
 	rolesAt := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.Duties {
 		var roles []iface.ValidatorRole
