@@ -102,7 +102,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 	case "deneb":
 		jsonDenebBlockContents := shared.BeaconBlockContentsDeneb{}
 		if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
-			return nil, errors.Wrap(err, "failed to decode capella block response json")
+			return nil, errors.Wrap(err, "failed to decode deneb block response json")
 		}
 		genericBlock, err := jsonDenebBlockContents.ToGeneric()
 		if err != nil {

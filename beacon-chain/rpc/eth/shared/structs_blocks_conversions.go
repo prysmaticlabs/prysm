@@ -2664,7 +2664,8 @@ func SignedBeaconBlockDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*Signed
 		return nil, err
 	}
 	return &SignedBeaconBlockDeneb{
-		Message: beaconBlock,
+		Message:   beaconBlock,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
