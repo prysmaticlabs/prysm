@@ -16,12 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -29,7 +31,8 @@ import (
 )
 
 var (
-	ErrOptimisticParent = errors.New("parent of the block is optimistic")
+	ErrOptimisticParent    = errors.New("parent of the block is optimistic")
+	errRejectCommitmentLen = errors.New("[REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -89,6 +92,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			}
 			s.cfg.slasherBlockHeadersFeed.Send(blockHeader)
 		}()
+	}
+
+	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+		return pubsub.ValidationReject, err
 	}
 
 	// Verify the block is the first block received for the proposer for the slot.
@@ -221,6 +228,10 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
 
+	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+		return err
+	}
+
 	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		return blockchain.ErrNotDescendantOfFinalized
@@ -258,6 +269,22 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		// for other kinds of errors, set this block as a bad block.
 		s.setBadBlock(ctx, blockRoot)
 		return err
+	}
+	return nil
+}
+
+func validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
+	if blk.Version() < version.Deneb {
+		return nil
+	}
+	commits, err := blk.Body().BlobKzgCommitments()
+	if err != nil {
+		return errors.New("unable to read commitments from deneb block")
+	}
+	// [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
+	// -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+	if len(commits) > fieldparams.MaxBlobsPerBlock {
+		return errors.Wrapf(errRejectCommitmentLen, "%d > %d", len(commits), fieldparams.MaxBlobsPerBlock)
 	}
 	return nil
 }
