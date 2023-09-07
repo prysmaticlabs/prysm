@@ -50,7 +50,7 @@ type Server struct {
 	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           execution.POWBlockFetcher
-	DepositFetcher         depositcache.DepositFetcher
+	DepositFetcher         cache.DepositFetcher
 	ChainStartFetcher      execution.ChainStartFetcher
 	Eth1InfoFetcher        execution.ChainInfoFetcher
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher

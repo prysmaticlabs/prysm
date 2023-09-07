@@ -3,6 +3,7 @@ package depositsnapshot
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/math"
 )
@@ -58,9 +59,8 @@ func create(leaves [][32]byte, depth uint64) MerkleTreeNode {
 }
 
 // fromSnapshotParts creates a new Merkle tree from a list of finalized leaves, number of deposits and specified depth.
-//
-//nolint:unused
-func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (_ MerkleTreeNode, err error) {
+func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (MerkleTreeNode, error) {
+	var err error
 	if len(finalized) < 1 || deposits == 0 {
 		return &ZeroNode{
 			depth: level,
@@ -96,8 +96,6 @@ func fromSnapshotParts(finalized [][32]byte, deposits uint64, level uint64) (_ M
 }
 
 // generateProof returns a merkle proof and root
-//
-//nolint:unused
 func generateProof(tree MerkleTreeNode, index uint64, depth uint64) ([32]byte, [][32]byte) {
 	var proof [][32]byte
 	node := tree
@@ -219,7 +217,8 @@ func (n *InnerNode) IsFull() bool {
 }
 
 // Finalize marks deposits of the Merkle tree as finalized.
-func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) (_ MerkleTreeNode, err error) {
+func (n *InnerNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
+	var err error
 	deposits := math.PowerOf2(depth)
 	if deposits <= depositsToFinalize {
 		return &FinalizedNode{deposits, n.GetRoot()}, nil
@@ -286,9 +285,9 @@ type ZeroNode struct {
 // GetRoot returns the root of the Merkle tree.
 func (z *ZeroNode) GetRoot() [32]byte {
 	if z.depth == DepositContractDepth {
-		return hash.Hash(append(Zerohashes[z.depth-1][:], Zerohashes[z.depth-1][:]...))
+		return hash.Hash(append(trie.ZeroHashes[z.depth-1][:], trie.ZeroHashes[z.depth-1][:]...))
 	}
-	return Zerohashes[z.depth]
+	return trie.ZeroHashes[z.depth]
 }
 
 // IsFull returns wh   ether there is space left for deposits.
@@ -300,7 +299,7 @@ func (_ *ZeroNode) IsFull() bool {
 
 // Finalize marks deposits of the Merkle tree as finalized.
 func (_ *ZeroNode) Finalize(depositsToFinalize uint64, depth uint64) (MerkleTreeNode, error) {
-	return nil, nil
+	return &ZeroNode{}, nil
 }
 
 // GetFinalized returns a list of hashes of all the finalized nodes and the number of deposits.
