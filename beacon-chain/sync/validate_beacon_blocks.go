@@ -284,7 +284,7 @@ func validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
 	// [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
 	// -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
 	if len(commits) > fieldparams.MaxBlobsPerBlock {
-		return errRejectCommitmentLen
+		return errors.Wrapf(errRejectCommitmentLen, "%d > %d", len(commits), fieldparams.MaxBlobsPerBlock)
 	}
 	return nil
 }
