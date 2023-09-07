@@ -33,7 +33,7 @@ var PeersConnect = e2etypes.Evaluator{
 // HealthzCheck pings healthz and errors if it doesn't have the expected OK status.
 var HealthzCheck = e2etypes.Evaluator{
 	Name:       "healthz_check_epoch_%d",
-	Policy:     policies.AfterNthEpoch(0),
+	Policy:     policies.AllEpochs,
 	Evaluation: healthzCheck,
 }
 
