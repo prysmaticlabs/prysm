@@ -752,12 +752,10 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		// the validator checks whether it's in the sync committee of following epoch.
 		inSyncCommittee := false
 		if slots.IsEpochEnd(slot) {
-			v.dutiesLock.RLock()
 			if v.duties.NextEpochDuties[validator].IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
 				inSyncCommittee = true
 			}
-			v.dutiesLock.RUnlock()
 		} else {
 			if duty.IsSyncCommittee {
 				roles = append(roles, iface.RoleSyncCommittee)
