@@ -265,6 +265,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return err
 			}
 		}
+		if err := s.databaseDACheck(ctx, b); err != nil {
+			return errors.Wrap(err, "could not validate blob data availability")
+		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedCheckpoint: jCheckpoints[i],
 			FinalizedCheckpoint: fCheckpoints[i]}
@@ -328,6 +331,33 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
+}
+
+func commitmentsToCheck(b consensusblocks.ROBlock, current primitives.Slot) [][]byte {
+	if b.Version() < version.Deneb {
+		return nil
+	}
+	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(current)) {
+		return nil
+	}
+	kzgCommitments, err := b.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil
+	}
+	return kzgCommitments
+}
+
+func (s *Service) databaseDACheck(ctx context.Context, b consensusblocks.ROBlock) error {
+	commitments := commitmentsToCheck(b, s.CurrentSlot())
+	if len(commitments) == 0 {
+		return nil
+	}
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, b.Root())
+	if err != nil {
+		return errors.Wrap(err, "could not get blob sidecars")
+	}
+	return kzg.IsDataAvailable(commitments, sidecars)
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
@@ -508,9 +538,10 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 		return errors.New("invalid nil beacon block")
 	}
 	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-	if slots.ToEpoch(block.Slot())+params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest > primitives.Epoch(s.CurrentSlot()) {
+	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
 		return nil
 	}
+
 	body := block.Body()
 	if body == nil {
 		return errors.New("invalid nil beacon block body")
