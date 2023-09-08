@@ -64,7 +64,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 				break
 			}
 		}
-		existing := []byte{}
+		var existing []byte
 		sc := &ethpb.BlobSidecars{}
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
@@ -99,7 +99,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		}
 
 		// don't write if the merged result is the same as before
-		if bytes.Equal(existing, updated) {
+		if len(existing) == len(updated) && bytes.Equal(existing, updated) {
 			return nil
 		}
 
