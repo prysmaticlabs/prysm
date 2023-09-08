@@ -49,21 +49,14 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
 
-	sortSideCars(scs)
-	if err := s.verifySideCars(scs); err != nil {
-		return err
+	if len(scs) == 0 {
+		return errEmptySidecar
 	}
-
+	newKey := blobSidecarKey(scs[0])
+	rotatingBufferPrefix := newKey.BufferPrefix()
 	return s.db.Update(func(tx *bolt.Tx) error {
-		encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
-		if err != nil {
-			return err
-		}
-
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
-		newKey := blobSidecarKey(scs[0])
-		rotatingBufferPrefix := newKey.BufferPrefix()
 		var replacingKey blobRotatingKey
 		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
 			if len(k) != 0 {
@@ -71,6 +64,8 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 				break
 			}
 		}
+		var existing []byte
+		sc := &ethpb.BlobSidecars{}
 		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
 		// store the blob by key and exit early.
 		if len(replacingKey) != 0 {
@@ -80,59 +75,93 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 			if slots.ToEpoch(scs[0].Slot) >= oldEpoch.Add(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)) {
 				if err := bkt.Delete(replacingKey); err != nil {
 					log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
+					return err
 				}
 			} else {
 				// Otherwise, we need to merge the new blob with the old blob.
-				enc := bkt.Get(replacingKey)
-				sc := &ethpb.BlobSidecars{}
-				if err := decode(ctx, enc, sc); err != nil {
-					return err
-				}
-				sc.Sidecars = append(sc.Sidecars, scs...)
-				sortSideCars(sc.Sidecars)
-				encodedBlobSidecar, err = encode(ctx, &ethpb.BlobSidecars{Sidecars: sc.Sidecars})
-				if err != nil {
+				existing = bkt.Get(replacingKey)
+				if err := decode(ctx, existing, sc); err != nil {
 					return err
 				}
 			}
 		}
-		return bkt.Put(newKey, encodedBlobSidecar)
+
+		sc.Sidecars = append(sc.Sidecars, scs...)
+		sortSidecars(sc.Sidecars)
+		var err error
+		sc.Sidecars, err = validUniqueSidecars(sc.Sidecars)
+		if err != nil {
+			return err
+		}
+		updated, err := encode(ctx, sc)
+		if err != nil {
+			return err
+		}
+
+		// don't write if the merged result is the same as before
+		if len(existing) == len(updated) && bytes.Equal(existing, updated) {
+			return nil
+		}
+
+		return bkt.Put(newKey, updated)
 	})
 }
 
-// verifySideCars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and no more than MAX_BLOB_EPOCHS.
-func (s *Store) verifySideCars(scs []*ethpb.BlobSidecar) error {
+var (
+	errBlobSlotMismatch     = errors.New("sidecar slot mismatch")
+	errBlobParentMismatch   = errors.New("sidecar parent root mismatch")
+	errBlobRootMismatch     = errors.New("sidecar root mismatch")
+	errBlobProposerMismatch = errors.New("sidecar proposer index mismatch")
+	errBlobSidecarLimit     = errors.New("sidecar exceeds maximum number of blobs")
+	errEmptySidecar         = errors.New("nil or empty blob sidecars")
+)
+
+// validUniqueSidecars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and no more than MAX_BLOB_EPOCHS.
+func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
 	if len(scs) == 0 {
-		return errors.New("nil or empty blob sidecars")
-	}
-	if uint64(len(scs)) > fieldparams.MaxBlobsPerBlock {
-		return fmt.Errorf("too many sidecars: %d > %d", len(scs), fieldparams.MaxBlobsPerBlock)
+		return nil, errEmptySidecar
 	}
 
-	sl := scs[0].Slot
-	pr := scs[0].BlockParentRoot
-	r := scs[0].BlockRoot
-	p := scs[0].ProposerIndex
-
-	for _, sc := range scs {
-		if sc.Slot != sl {
-			return fmt.Errorf("sidecar slot mismatch: %d != %d", sc.Slot, sl)
-		}
-		if !bytes.Equal(sc.BlockParentRoot, pr) {
-			return fmt.Errorf("sidecar parent root mismatch: %x != %x", sc.BlockParentRoot, pr)
-		}
-		if !bytes.Equal(sc.BlockRoot, r) {
-			return fmt.Errorf("sidecar root mismatch: %x != %x", sc.BlockRoot, r)
-		}
-		if sc.ProposerIndex != p {
-			return fmt.Errorf("sidecar proposer index mismatch: %d != %d", sc.ProposerIndex, p)
-		}
+	// If there's only 1 sidecar, we've got nothing to compare.
+	if len(scs) == 1 {
+		return scs, nil
 	}
-	return nil
+
+	prev := scs[0]
+	didx := 1
+	for i := 1; i < len(scs); i++ {
+		sc := scs[i]
+		if sc.Slot != prev.Slot {
+			return nil, errors.Wrapf(errBlobSlotMismatch, "%d != %d", sc.Slot, prev.Slot)
+		}
+		if !bytes.Equal(sc.BlockParentRoot, prev.BlockParentRoot) {
+			return nil, errors.Wrapf(errBlobParentMismatch, "%x != %x", sc.BlockParentRoot, prev.BlockParentRoot)
+		}
+		if !bytes.Equal(sc.BlockRoot, prev.BlockRoot) {
+			return nil, errors.Wrapf(errBlobRootMismatch, "%x != %x", sc.BlockRoot, prev.BlockRoot)
+		}
+		if sc.ProposerIndex != prev.ProposerIndex {
+			return nil, errors.Wrapf(errBlobProposerMismatch, "%d != %d", sc.ProposerIndex, prev.ProposerIndex)
+		}
+		// skip duplicate
+		if sc.Index == prev.Index {
+			continue
+		}
+		if didx != i {
+			scs[didx] = scs[i]
+		}
+		prev = scs[i]
+		didx += 1
+	}
+
+	if didx > fieldparams.MaxBlobsPerBlock {
+		return nil, errors.Wrapf(errBlobSidecarLimit, "%d > %d", didx, fieldparams.MaxBlobsPerBlock)
+	}
+	return scs[0:didx], nil
 }
 
-// sortSideCars sorts the sidecars by their index.
-func sortSideCars(scs []*ethpb.BlobSidecar) {
+// sortSidecars sorts the sidecars by their index.
+func sortSidecars(scs []*ethpb.BlobSidecar) {
 	sort.Slice(scs, func(i, j int) bool {
 		return scs[i].Index < scs[j].Index
 	})

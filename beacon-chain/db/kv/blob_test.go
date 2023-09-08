@@ -327,29 +327,84 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	}
 }
 
-func TestStore_verifySideCars(t *testing.T) {
-	s := setupDB(t)
+func Test_validUniqueSidecars_validation(t *testing.T) {
 	tests := []struct {
-		name  string
-		scs   []*ethpb.BlobSidecar
-		error string
+		name string
+		scs  []*ethpb.BlobSidecar
+		err  error
 	}{
-		{name: "empty", scs: []*ethpb.BlobSidecar{}, error: "nil or empty blob sidecars"},
-		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), error: "too many sidecars: 7 > 6"},
-		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, error: "sidecar slot mismatch: 2 != 1"},
-		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, error: "sidecar proposer index mismatch: 2 != 1"},
-		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, error: "sidecar root mismatch: 02 != 01"},
-		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, error: "sidecar parent root mismatch: 02 != 01"},
-		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 1}}, error: ""},
+		{name: "empty", scs: []*ethpb.BlobSidecar{}, err: errEmptySidecar},
+		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), err: errBlobSidecarLimit},
+		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, err: errBlobSlotMismatch},
+		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, err: errBlobProposerMismatch},
+		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, err: errBlobRootMismatch},
+		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, err: errBlobParentMismatch},
+		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 1}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := s.verifySideCars(tt.scs)
-			if tt.error != "" {
-				require.Equal(t, tt.error, err.Error())
+			_, err := validUniqueSidecars(tt.scs)
+			if tt.err != nil {
+				require.ErrorIs(t, err, tt.err)
 			} else {
 				require.NoError(t, err)
 			}
+		})
+	}
+}
+
+func Test_validUniqueSidecars_dedup(t *testing.T) {
+	cases := []struct {
+		name     string
+		scs      []*ethpb.BlobSidecar
+		expected []*ethpb.BlobSidecar
+		err      error
+	}{
+		{
+			name:     "duplicate sidecar",
+			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 1}},
+			expected: []*ethpb.BlobSidecar{{Index: 1}},
+		},
+		{
+			name:     "single sidecar",
+			scs:      []*ethpb.BlobSidecar{{Index: 1}},
+			expected: []*ethpb.BlobSidecar{{Index: 1}},
+		},
+		{
+			name:     "multiple duplicates",
+			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
+			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
+		},
+		{
+			name:     "ok number after de-dupe, > 6 before",
+			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
+			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
+		},
+		{
+			name:     "max unique, no dupes",
+			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
+			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
+		},
+		{
+			name: "too many unique",
+			scs:  []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
+			err:  errBlobSidecarLimit,
+		},
+		{
+			name: "too many unique with dupes",
+			scs:  []*ethpb.BlobSidecar{{Index: 1}, {Index: 1}, {Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
+			err:  errBlobSidecarLimit,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			u, err := validUniqueSidecars(c.scs)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, len(c.expected), len(u))
 		})
 	}
 }
@@ -364,7 +419,7 @@ func TestStore_sortSidecars(t *testing.T) {
 		{Index: 5},
 		{},
 	}
-	sortSideCars(scs)
+	sortSidecars(scs)
 	for i := 0; i < len(scs)-1; i++ {
 		require.Equal(t, uint64(i), scs[i].Index)
 	}
