@@ -12,6 +12,13 @@ type BlockRootResponse struct {
 	Finalized           bool `json:"finalized"`
 }
 
+type DepositContractResponse struct {
+	Data *struct {
+		ChainId uint64 `json:"chain_id"`
+		Address string `json:"address"`
+	} `json:"data"`
+}
+
 type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }
