@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -852,4 +853,20 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
 	}
 	http2.WriteJson(w, response)
+}
+
+// GetDepositContract retrieves deposit contract address and genesis fork version.
+func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")
+	defer span.End()
+
+	http2.WriteJson(w, &DepositContractResponse{
+		Data: &struct {
+			ChainId uint64 `json:"chain_id"`
+			Address string `json:"address"`
+		}{
+			ChainId: params.BeaconConfig().DepositChainID,
+			Address: params.BeaconConfig().DepositContractAddress,
+		},
+	})
 }
