@@ -3,9 +3,11 @@ package helpers
 import (
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,6 +25,25 @@ func PrepareStateFetchGRPCError(err error) error {
 		return status.Errorf(codes.InvalidArgument, "Invalid state ID: %v", parseErr)
 	}
 	return status.Errorf(codes.Internal, "Invalid state ID: %v", err)
+}
+
+// PrepareStateFetchHTTPError returns an appropriate HTTP error based on the supplied argument.
+// The argument error should be a result of fetching state.
+func PrepareStateFetchHTTPError(w http.ResponseWriter, err error) {
+	if errors.Is(err, stategen.ErrNoDataForSlot) {
+		http2.HandleError(w, "Lacking historical data needed to fulfill request", http.StatusNotFound)
+		return
+	}
+	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
+		http2.HandleError(w, "State not found: "+stateNotFoundErr.Error(), http.StatusNotFound)
+		return
+	}
+	if parseErr, ok := err.(*lookup.StateIdParseError); ok {
+		http2.HandleError(w, "Invalid state ID: "+parseErr.Error(), http.StatusBadRequest)
+		return
+	}
+	http2.HandleError(w, "Invalid state ID: "+err.Error(), http.StatusInternalServerError)
+	return
 }
 
 // IndexedVerificationFailure represents a collection of verification failures.

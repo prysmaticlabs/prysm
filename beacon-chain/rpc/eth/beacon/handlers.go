@@ -14,7 +14,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -26,6 +28,7 @@ import (
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -852,4 +855,94 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
 	}
 	http2.WriteJson(w, response)
+}
+
+// ListCommittees retrieves the committees for the given state at the given epoch.
+// If the requested slot and index are defined, only those committees are returned.
+func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.ListCommittees")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	ok, _, e := shared.UintFromQuery(w, r, "epoch")
+	if !ok {
+		return
+	}
+	ok, _, i := shared.UintFromQuery(w, r, "index")
+	if !ok {
+		return
+	}
+	ok, _, s := shared.UintFromQuery(w, r, "slot")
+	if !ok {
+		return
+	}
+
+	st, err := bs.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		helpers.PrepareStateFetchHTTPError(w, err)
+		return
+	}
+
+	epoch := slots.ToEpoch(st.Slot())
+	if e != 0 {
+		epoch = primitives.Epoch(e)
+	}
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get active validator count: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	startSlot, err := slots.EpochStart(epoch)
+	if err != nil {
+		http2.HandleError(w, "Invalid epoch: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	endSlot, err := slots.EpochEnd(epoch)
+	if err != nil {
+		http2.HandleError(w, "Invalid epoch: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
+	committees := make([]*shared.Committee, 0)
+	for slot := startSlot; slot <= endSlot; slot++ {
+		if s != 0 {
+			continue
+		}
+		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
+			if i != 0 {
+				continue
+			}
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
+			if err != nil {
+				http2.HandleError(w, "Could not get committee: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			committeeContainer := &shared.Committee{
+				Index:      index,
+				Slot:       slot,
+				Validators: committee,
+			}
+			committees = append(committees, committeeContainer)
+		}
+	}
+
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header", http.StatusInternalServerError)
+		return
+	}
+	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	http2.WriteJson(w, &StateCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
 }

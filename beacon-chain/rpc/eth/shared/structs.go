@@ -108,6 +108,12 @@ type SyncCommitteeMessage struct {
 	Signature       string `json:"signature" validate:"required,hexadecimal"`
 }
 
+type Committee struct {
+	Index      primitives.CommitteeIndex   `json:"index"`
+	Slot       primitives.Slot             `json:"slot"`
+	Validators []primitives.ValidatorIndex `json:"validators"`
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
