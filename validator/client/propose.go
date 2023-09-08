@@ -79,7 +79,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		Graffiti:     g,
 	})
 	if err != nil {
-		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
+		log.WithField("blockSlot", slot).WithField("time", time.Now().Unix()).WithError(err).Error("Failed to request block from beacon node")
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
 		}
