@@ -1415,3 +1415,16 @@ func Test_getBlockFields(t *testing.T) {
 	require.LogsContain(t, hook, "nil block")
 	require.LogsContain(t, hook, "bad block")
 }
+
+func Test_validateDenebBeaconBlock(t *testing.T) {
+	bb := util.NewBeaconBlockBellatrix()
+	b, err := blocks.NewSignedBeaconBlock(bb)
+	require.NoError(t, err)
+	require.NoError(t, validateDenebBeaconBlock(b.Block()))
+
+	bd := util.NewBeaconBlockDeneb()
+	bd.Block.Body.BlobKzgCommitments = make([][]byte, 7)
+	bdb, err := blocks.NewSignedBeaconBlock(bd)
+	require.NoError(t, err)
+	require.ErrorIs(t, validateDenebBeaconBlock(bdb.Block()), errRejectCommitmentLen)
+}

@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -38,6 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -2035,4 +2037,72 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) - delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
+}
+
+func Test_commitmentsToCheck(t *testing.T) {
+	windowSlots, err := slots.EpochEnd(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+	require.NoError(t, err)
+	commits := [][]byte{
+		bytesutil.PadTo([]byte("a"), 48),
+		bytesutil.PadTo([]byte("b"), 48),
+		bytesutil.PadTo([]byte("c"), 48),
+		bytesutil.PadTo([]byte("d"), 48),
+	}
+	cases := []struct {
+		name    string
+		commits [][]byte
+		block   func(*testing.T) consensusblocks.ROBlock
+		slot    primitives.Slot
+	}{
+		{
+			name: "pre deneb",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				bb := util.NewBeaconBlockBellatrix()
+				sb, err := consensusblocks.NewSignedBeaconBlock(bb)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+		},
+		{
+			name: "commitments within da",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				d := util.NewBeaconBlockDeneb()
+				d.Block.Body.BlobKzgCommitments = commits
+				d.Block.Slot = 100
+				sb, err := consensusblocks.NewSignedBeaconBlock(d)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+			commits: commits,
+			slot:    100,
+		},
+		{
+			name: "commitments outside da",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				d := util.NewBeaconBlockDeneb()
+				// block is from slot 0, "current slot" is window size +1 (so outside the window)
+				d.Block.Body.BlobKzgCommitments = commits
+				sb, err := consensusblocks.NewSignedBeaconBlock(d)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+			slot: windowSlots + 1,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := c.block(t)
+			co := commitmentsToCheck(b, c.slot)
+			require.Equal(t, len(c.commits), len(co))
+			for i := 0; i < len(c.commits); i++ {
+				require.Equal(t, true, bytes.Equal(c.commits[i], co[i]))
+			}
+		})
+	}
 }
