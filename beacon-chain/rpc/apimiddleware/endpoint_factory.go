@@ -51,7 +51,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
 		"/eth/v1/config/fork_schedule",
-		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
 		"/eth/v1/validator/duties/attester/{epoch}",
@@ -179,8 +178,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &ForkScheduleResponseJson{}
-	case "/eth/v1/config/deposit_contract":
-		endpoint.GetResponse = &DepositContractResponseJson{}
 	case "/eth/v1/config/spec":
 		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":

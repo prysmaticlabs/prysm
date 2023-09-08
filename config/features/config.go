@@ -66,6 +66,7 @@ type Flags struct {
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
+	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
@@ -249,6 +250,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
+	}
+	if ctx.IsSet(enableEIP4881.Name) {
+		logEnabled(enableEIP4881)
+		cfg.EnableEIP4881 = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)

@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -38,6 +39,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -699,7 +701,7 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	gs = gs.Copy()
-	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10, BlockHash: make([]byte, 32)}))
 	assert.NoError(t, gs.SetEth1DepositIndex(8))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
 	var zeroSig [96]byte
@@ -713,8 +715,9 @@ func TestInsertFinalizedDeposits(t *testing.T) {
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
-	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	fDeposits, err := depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
@@ -728,7 +731,7 @@ func TestInsertFinalizedDeposits_PrunePendingDeposits(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	gs = gs.Copy()
-	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10}))
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 10, BlockHash: make([]byte, 32)}))
 	assert.NoError(t, gs.SetEth1DepositIndex(8))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
 	var zeroSig [96]byte
@@ -748,8 +751,9 @@ func TestInsertFinalizedDeposits_PrunePendingDeposits(t *testing.T) {
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root))
 	}
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
-	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	fDeposits, err := depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 7, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps := depositCache.AllDeposits(ctx, big.NewInt(107))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
@@ -767,11 +771,11 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 	gs = gs.Copy()
-	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 7}))
+	assert.NoError(t, gs.SetEth1Data(&ethpb.Eth1Data{DepositCount: 7, BlockHash: make([]byte, 32)}))
 	assert.NoError(t, gs.SetEth1DepositIndex(6))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k'}, gs))
 	gs2 := gs.Copy()
-	assert.NoError(t, gs2.SetEth1Data(&ethpb.Eth1Data{DepositCount: 15}))
+	assert.NoError(t, gs2.SetEth1Data(&ethpb.Eth1Data{DepositCount: 15, BlockHash: make([]byte, 32)}))
 	assert.NoError(t, gs2.SetEth1DepositIndex(13))
 	assert.NoError(t, service.cfg.StateGen.SaveState(ctx, [32]byte{'m', 'o', 'c', 'k', '2'}, gs2))
 	var zeroSig [96]byte
@@ -785,11 +789,11 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 		}, Proof: [][]byte{root}}, 100+i, int64(i), bytesutil.ToBytes32(root)))
 	}
 	// Insert 3 deposits before hand.
-	require.NoError(t, depositCache.InsertFinalizedDeposits(ctx, 2))
-
+	require.NoError(t, depositCache.InsertFinalizedDeposits(ctx, 2, [32]byte{}, 0))
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k'})
-	fDeposits := depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	fDeposits, err := depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 5, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 
 	deps := depositCache.AllDeposits(ctx, big.NewInt(105))
 	for _, d := range deps {
@@ -798,8 +802,9 @@ func TestInsertFinalizedDeposits_MultipleFinalizedRoutines(t *testing.T) {
 
 	// Insert New Finalized State with higher deposit count.
 	service.insertFinalizedDeposits(ctx, [32]byte{'m', 'o', 'c', 'k', '2'})
-	fDeposits = depositCache.FinalizedDeposits(ctx)
-	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex), "Finalized deposits not inserted correctly")
+	fDeposits, err = depositCache.FinalizedDeposits(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 12, int(fDeposits.MerkleTrieIndex()), "Finalized deposits not inserted correctly")
 	deps = depositCache.AllDeposits(ctx, big.NewInt(112))
 	for _, d := range deps {
 		assert.DeepEqual(t, [][]byte(nil), d.Proof, "Proofs are not empty")
@@ -2032,4 +2037,72 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) - delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
+}
+
+func Test_commitmentsToCheck(t *testing.T) {
+	windowSlots, err := slots.EpochEnd(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+	require.NoError(t, err)
+	commits := [][]byte{
+		bytesutil.PadTo([]byte("a"), 48),
+		bytesutil.PadTo([]byte("b"), 48),
+		bytesutil.PadTo([]byte("c"), 48),
+		bytesutil.PadTo([]byte("d"), 48),
+	}
+	cases := []struct {
+		name    string
+		commits [][]byte
+		block   func(*testing.T) consensusblocks.ROBlock
+		slot    primitives.Slot
+	}{
+		{
+			name: "pre deneb",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				bb := util.NewBeaconBlockBellatrix()
+				sb, err := consensusblocks.NewSignedBeaconBlock(bb)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+		},
+		{
+			name: "commitments within da",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				d := util.NewBeaconBlockDeneb()
+				d.Block.Body.BlobKzgCommitments = commits
+				d.Block.Slot = 100
+				sb, err := consensusblocks.NewSignedBeaconBlock(d)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+			commits: commits,
+			slot:    100,
+		},
+		{
+			name: "commitments outside da",
+			block: func(t *testing.T) consensusblocks.ROBlock {
+				d := util.NewBeaconBlockDeneb()
+				// block is from slot 0, "current slot" is window size +1 (so outside the window)
+				d.Block.Body.BlobKzgCommitments = commits
+				sb, err := consensusblocks.NewSignedBeaconBlock(d)
+				require.NoError(t, err)
+				rb, err := consensusblocks.NewROBlock(sb)
+				require.NoError(t, err)
+				return rb
+			},
+			slot: windowSlots + 1,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			b := c.block(t)
+			co := commitmentsToCheck(b, c.slot)
+			require.Equal(t, len(c.commits), len(co))
+			for i := 0; i < len(c.commits); i++ {
+				require.Equal(t, true, bytes.Equal(c.commits[i], co[i]))
+			}
+		})
+	}
 }
