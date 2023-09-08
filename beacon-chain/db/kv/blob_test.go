@@ -294,6 +294,24 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 	})
+	t.Run("save equivocating blobs", func(t *testing.T) {
+		db := setupDB(t)
+		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock/2)
+		eScs := generateEquivocatingBlobSidecars(t, fieldparams.MaxBlobsPerBlock/2)
+
+		for i, sc := range scs {
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{eScs[i]}))
+		}
+
+		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(scs, got))
+
+		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(eScs[0].BlockRoot))
+		require.NoError(t, err)
+		require.NoError(t, equalBlobSlices(eScs, got))
+	})
 }
 
 func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
@@ -321,6 +339,37 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 		Slot:            100,
 		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
 		ProposerIndex:   101,
+		Blob:            blob,
+		KzgCommitment:   kzgCommitment,
+		KzgProof:        kzgProof,
+	}
+}
+
+func generateEquivocatingBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
+	blobSidecars := make([]*ethpb.BlobSidecar, n)
+	for i := uint64(0); i < n; i++ {
+		blobSidecars[i] = generateEquivocatingBlobSidecar(t, i)
+	}
+	return blobSidecars
+}
+
+func generateEquivocatingBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
+	blob := make([]byte, 131072)
+	_, err := rand.Read(blob)
+	require.NoError(t, err)
+	kzgCommitment := make([]byte, 48)
+	_, err = rand.Read(kzgCommitment)
+	require.NoError(t, err)
+	kzgProof := make([]byte, 48)
+	_, err = rand.Read(kzgProof)
+	require.NoError(t, err)
+
+	return &ethpb.BlobSidecar{
+		BlockRoot:       bytesutil.PadTo([]byte{'c'}, 32),
+		Index:           index,
+		Slot:            100,
+		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
+		ProposerIndex:   102,
 		Blob:            blob,
 		KzgCommitment:   kzgCommitment,
 		KzgProof:        kzgProof,
