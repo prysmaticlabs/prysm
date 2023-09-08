@@ -87,7 +87,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		}
 
 		sc.Sidecars = append(sc.Sidecars, scs...)
-		sortSideCars(sc.Sidecars)
+		sortSidecars(sc.Sidecars)
 		var err error
 		sc.Sidecars, err = validUniqueSidecars(sc.Sidecars)
 		if err != nil {
@@ -160,10 +160,10 @@ func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 	return scs[0:didx], nil
 }
 
-// sortSideCars sorts the sidecars by their index.
-func sortSideCars(sc []*ethpb.BlobSidecar) {
-	sort.Slice(sc, func(i, j int) bool {
-		return sc[i].Index < sc[j].Index
+// sortSidecars sorts the sidecars by their index.
+func sortSidecars(scs []*ethpb.BlobSidecar) {
+	sort.Slice(scs, func(i, j int) bool {
+		return scs[i].Index < scs[j].Index
 	})
 }
 

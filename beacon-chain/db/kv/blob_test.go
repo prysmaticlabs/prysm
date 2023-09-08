@@ -419,7 +419,7 @@ func TestStore_sortSidecars(t *testing.T) {
 		{Index: 5},
 		{},
 	}
-	sortSideCars(scs)
+	sortSidecars(scs)
 	for i := 0; i < len(scs)-1; i++ {
 		require.Equal(t, uint64(i), scs[i].Index)
 	}
