@@ -911,11 +911,11 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
 	committees := make([]*shared.Committee, 0)
 	for slot := startSlot; slot <= endSlot; slot++ {
-		if s != 0 {
+		if s != 0 && slot != primitives.Slot(s) {
 			continue
 		}
 		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
-			if i != 0 {
+			if i != 0 && index != primitives.CommitteeIndex(i) {
 				continue
 			}
 			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
