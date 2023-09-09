@@ -909,7 +909,7 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
-	committees := make([]*shared.Committee, 0)
+	committees := make([]*Committee, 0)
 	for slot := startSlot; slot <= endSlot; slot++ {
 		if s != 0 && slot != primitives.Slot(s) {
 			continue
@@ -923,7 +923,7 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, "Could not get committee: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			committeeContainer := &shared.Committee{
+			committeeContainer := &Committee{
 				Index:      index,
 				Slot:       slot,
 				Validators: committee,

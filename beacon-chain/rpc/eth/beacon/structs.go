@@ -13,17 +13,16 @@ type BlockRootResponse struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type StateCommitteesRequest struct {
-	StateId byte                      `json:"state_id"`
-	Epoch   primitives.Epoch          `json:"epoch"`
-	Index   primitives.CommitteeIndex `json:"index"`
-	Slot    primitives.Slot           `json:"slot"`
+type StateCommitteesResponse struct {
+	Data                []*Committee `json:"data"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
 }
 
-type StateCommitteesResponse struct {
-	Data                []*shared.Committee `json:"data"`
-	ExecutionOptimistic bool                `json:"execution_optimistic"`
-	Finalized           bool                `json:"finalized"`
+type Committee struct {
+	Index      primitives.CommitteeIndex   `json:"index"`
+	Slot       primitives.Slot             `json:"slot"`
+	Validators []primitives.ValidatorIndex `json:"validators"`
 }
 
 type ListAttestationsResponse struct {
