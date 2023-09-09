@@ -86,7 +86,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 			// The slot isn't older or newer, so it must be equal.
 			// If the roots match, then we want to merge the new sidecars with the existing data.
 			if bytes.Equal(first.BlockRoot, key.BlockRoot()) {
-				existing = v[:]
+				existing = v
 				if err := decode(ctx, v, sc); err != nil {
 					return err
 				}
