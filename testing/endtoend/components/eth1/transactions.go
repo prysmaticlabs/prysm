@@ -83,7 +83,11 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-			err := SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, false)
+			err = SendBlobTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, false)
+			if err != nil {
+				return err
+			}
+			err = SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, false)
 			if err != nil {
 				return err
 			}
@@ -116,36 +120,8 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		gasPrice = expectedPrice
 	}
 	g, _ := errgroup.WithContext(context.Background())
-	normaltxLim := N - 3
 	for i := uint64(0); i < N; i++ {
 		index := i
-		if i > normaltxLim {
-			g.Go(func() error {
-				tx, err := RandomBlobTx(client, f, sender, nonce+index, gasPrice, nil, al)
-				if err != nil {
-					// In the event the transaction constructed is not valid, we continue with the routine
-					// rather than complete stop it.
-					//nolint:nilerr
-					return nil
-				}
-				signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
-				if err != nil {
-					// We continue on in the event there is a reason we can't sign this
-					// transaction(unlikely).
-					//nolint:nilerr
-					return nil
-				}
-				err = backend.SendTransaction(context.Background(), signedTx)
-				if err != nil {
-					// We continue on if the constructed transaction is invalid
-					// and can't be submitted on chain.
-					//nolint:nilerr
-					return nil
-				}
-				return nil
-			})
-			continue
-		}
 		g.Go(func() error {
 			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, nil, al)
 			if err != nil {
@@ -163,6 +139,60 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 			}
 			err = backend.SendTransaction(context.Background(), signedTx)
 			if err != nil {
+				// We continue on if the constructed transaction is invalid
+				// and can't be submitted on chain.
+				//nolint:nilerr
+				return nil
+			}
+			return nil
+		})
+	}
+	return g.Wait()
+}
+
+func SendBlobTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int, addr string, N uint64, al bool) error {
+	backend := ethclient.NewClient(client)
+
+	sender := common.HexToAddress(addr)
+	chainid, err := backend.ChainID(context.Background())
+	if err != nil {
+		return err
+	}
+	nonce, err := backend.PendingNonceAt(context.Background(), sender)
+	if err != nil {
+		return err
+	}
+	expectedPrice, err := backend.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+	if expectedPrice.Cmp(gasPrice) > 0 {
+		gasPrice = expectedPrice
+	}
+	g, _ := errgroup.WithContext(context.Background())
+	for i := uint64(0); i < 10; i++ {
+		index := i
+		g.Go(func() error {
+			tx, err := RandomBlobTx(client, f, sender, nonce+index, gasPrice, nil, al)
+			if err != nil {
+				logrus.WithError(err).Error("Could not create blob tx")
+				// In the event the transaction constructed is not valid, we continue with the routine
+				// rather than complete stop it.
+				//nolint:nilerr
+				return nil
+			}
+			signedTx, err := types.SignTx(tx, types.NewCancunSigner(chainid), key)
+			if err != nil {
+				logrus.WithError(err).Error("Could not sign blob tx")
+				// We continue on in the event there is a reason we can't sign this
+				// transaction(unlikely).
+				//nolint:nilerr
+				return nil
+			}
+			err = backend.SendTransaction(context.Background(), signedTx)
+			if err != nil {
+				logrus.WithError(err).Errorf("Could not send blob tx: %d , %d", len(signedTx.BlobTxSidecar().Blobs),
+					len(signedTx.BlobTxSidecar().Blobs[0]))
 				// We continue on if the constructed transaction is invalid
 				// and can't be submitted on chain.
 				//nolint:nilerr
@@ -252,7 +282,7 @@ func RandomBlobTx(rpc *rpc.Client, f *filler.Filler, sender common.Address, nonc
 }
 
 func New4844Tx(nonce uint64, to *common.Address, gasLimit uint64, chainID, tip, feeCap, value *big.Int, code []byte, blobFeeCap *big.Int, blobData []byte, al types.AccessList) *types.Transaction {
-	_, _, _, versionedHashes, err := EncodeBlobs(blobData)
+	blobs, comms, proofs, versionedHashes, err := EncodeBlobs(blobData)
 	if err != nil {
 		panic(err)
 	}
@@ -268,6 +298,11 @@ func New4844Tx(nonce uint64, to *common.Address, gasLimit uint64, chainID, tip, 
 		AccessList: al,
 		BlobFeeCap: uint256.MustFromBig(blobFeeCap),
 		BlobHashes: versionedHashes,
+		Sidecar: &types.BlobTxSidecar{
+			Blobs:       blobs,
+			Commitments: comms,
+			Proofs:      proofs,
+		},
 	})
 	return tx
 }
@@ -279,6 +314,9 @@ func encodeBlobs(data []byte) []kzg4844.Blob {
 	for i := 0; i < len(data); i += 31 {
 		fieldIndex++
 		if fieldIndex == fieldparams.MaxBlobCommitmentsPerBlock {
+			if blobIndex >= 1 {
+				break
+			}
 			blobs = append(blobs, kzg4844.Blob{})
 			blobIndex++
 			fieldIndex = 0

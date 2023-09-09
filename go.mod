@@ -14,7 +14,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.4-0.20210318174700-74754f61e018
 	github.com/dustin/go-humanize v1.0.0
 	github.com/emicklei/dot v0.11.0
-	github.com/ethereum/go-ethereum v1.12.2-0.20230906102951-2e02c1ffd9df
+	github.com/ethereum/go-ethereum v1.12.2
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/ghodss/yaml v1.0.0
@@ -46,7 +46,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
-	github.com/minio/highwayhash v1.0.1
+	github.com/minio/highwayhash v1.0.2
 	github.com/minio/sha256-simd v1.0.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/multiformats/go-multiaddr v0.9.0
@@ -78,7 +78,7 @@ require (
 	github.com/wealdtech/go-bytesutil v1.1.1
 	github.com/wealdtech/go-eth2-util v1.6.3
 	github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4 v1.1.3
-	go.etcd.io/bbolt v1.3.5
+	go.etcd.io/bbolt v1.3.6
 	go.opencensus.io v0.24.0
 	go.uber.org/automaxprocs v1.5.2
 	golang.org/x/crypto v0.13.0
@@ -99,6 +99,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/DataDog/zstd v1.5.2 // indirect
+	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -238,7 +239,6 @@ require (
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
-	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
@@ -257,7 +257,7 @@ require (
 	github.com/peterh/liner v1.2.0 // indirect
 	github.com/prysmaticlabs/gohashtree v0.0.3-alpha
 	golang.org/x/sys v0.12.0 // indirect
-	google.golang.org/api v0.34.0 // indirect
+	google.golang.org/api v0.44.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	k8s.io/klog/v2 v2.80.0 // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
@@ -267,3 +267,5 @@ replace github.com/json-iterator/go => github.com/prestonvanloon/go v1.1.7-0.201
 
 // See https://github.com/prysmaticlabs/grpc-gateway/issues/2
 replace github.com/grpc-ecosystem/grpc-gateway/v2 => github.com/prysmaticlabs/grpc-gateway/v2 v2.3.1-0.20230315201114-09284ba20446
+
+replace github.com/ethereum/go-ethereum => github.com/lightclient/go-ethereum v1.10.10-0.20230829211949-79f3c2d9c96b
