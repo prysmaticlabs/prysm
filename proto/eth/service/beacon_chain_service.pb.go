@@ -550,7 +550,6 @@ type BeaconChainClient interface {
 	ListBLSToExecutionChanges(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v2.BLSToExecutionChangesPoolResponse, error)
 	GetForkSchedule(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.ForkScheduleResponse, error)
 	GetSpec(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.SpecResponse, error)
-	GetDepositContract(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.DepositContractResponse, error)
 }
 
 type beaconChainClient struct {
@@ -843,15 +842,6 @@ func (c *beaconChainClient) GetSpec(ctx context.Context, in *empty.Empty, opts .
 	return out, nil
 }
 
-func (c *beaconChainClient) GetDepositContract(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.DepositContractResponse, error) {
-	out := new(v1.DepositContractResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetDepositContract", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // BeaconChainServer is the server API for BeaconChain service.
 type BeaconChainServer interface {
 	GetGenesis(context.Context, *empty.Empty) (*v1.GenesisResponse, error)
@@ -888,7 +878,6 @@ type BeaconChainServer interface {
 	ListBLSToExecutionChanges(context.Context, *empty.Empty) (*v2.BLSToExecutionChangesPoolResponse, error)
 	GetForkSchedule(context.Context, *empty.Empty) (*v1.ForkScheduleResponse, error)
 	GetSpec(context.Context, *empty.Empty) (*v1.SpecResponse, error)
-	GetDepositContract(context.Context, *empty.Empty) (*v1.DepositContractResponse, error)
 }
 
 // UnimplementedBeaconChainServer can be embedded to have forward compatible implementations.
@@ -987,9 +976,6 @@ func (*UnimplementedBeaconChainServer) GetForkSchedule(context.Context, *empty.E
 }
 func (*UnimplementedBeaconChainServer) GetSpec(context.Context, *empty.Empty) (*v1.SpecResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSpec not implemented")
-}
-func (*UnimplementedBeaconChainServer) GetDepositContract(context.Context, *empty.Empty) (*v1.DepositContractResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetDepositContract not implemented")
 }
 
 func RegisterBeaconChainServer(s *grpc.Server, srv BeaconChainServer) {
@@ -1554,24 +1540,6 @@ func _BeaconChain_GetSpec_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconChain_GetDepositContract_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(empty.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).GetDepositContract(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/GetDepositContract",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).GetDepositContract(ctx, req.(*empty.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.eth.service.BeaconChain",
 	HandlerType: (*BeaconChainServer)(nil),
@@ -1699,10 +1667,6 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetSpec",
 			Handler:    _BeaconChain_GetSpec_Handler,
-		},
-		{
-			MethodName: "GetDepositContract",
-			Handler:    _BeaconChain_GetDepositContract_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

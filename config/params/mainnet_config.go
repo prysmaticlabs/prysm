@@ -31,7 +31,6 @@ var mainnetNetworkConfig = &NetworkConfig{
 	MaxChunkSize:                     1 << 20,      // 1 MiB
 	MaxChunkSizeBellatrix:            10 * 1 << 20, // 10 MiB
 	AttestationSubnetCount:           64,
-	BlobsidecarSubnetCount:           4,
 	AttestationPropagationSlotRange:  32,
 	MaxRequestBlocks:                 1 << 10, // 1024
 	TtfbTimeout:                      5 * time.Second,
@@ -268,6 +267,9 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxBuilderEpochMissedSlots:       5,
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+
+	// Subnet value
+	BlobsidecarSubnetCount: 6,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
