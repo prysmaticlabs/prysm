@@ -59,37 +59,13 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	if len(scs) == 0 {
 		return errEmptySidecar
 	}
-
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
 	defer span.End()
-
-	// After we update the new data, prune the old data. It's not important for this to be done in the
-	// same tx from a consistency pov, so we can save some overhead by doing it in a goroutine.
-	var prune []blobRotatingKey
-	defer func() {
-		if len(prune) == 0 {
-			return
-		}
-		go func() {
-			err := s.db.Update(func(tx *bolt.Tx) error {
-				bkt := tx.Bucket(blobsBucket)
-				for _, k := range prune {
-					if err := bkt.Delete(k); err != nil {
-						// note: attempting to delete a key that does not exist should not return an error.
-						log.WithError(err).Warnf("Could not delete blob key %#x.", k)
-					}
-				}
-				return nil
-			})
-			if err != nil {
-				log.WithError(err).Error("Unhandled DB error while pruning old blob data.")
-			}
-		}()
-	}()
 
 	first := scs[0]
 	newKey := blobSidecarKey(first)
 	prefix := newKey.BufferPrefix()
+	var prune []blobRotatingKey
 	return s.db.Update(func(tx *bolt.Tx) error {
 		var existing []byte
 		sc := &ethpb.BlobSidecars{}
@@ -133,6 +109,13 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		// don't write if the merged result is the same as before
 		if len(existing) == len(encoded) && bytes.Equal(existing, encoded) {
 			return nil
+		}
+		// Only prune if we're actually going through with the update.
+		for _, k := range prune {
+			if err := bkt.Delete(k); err != nil {
+				// note: attempting to delete a key that does not exist should not return an error.
+				log.WithError(err).Warnf("Could not delete blob key %#x.", k)
+			}
 		}
 		return bkt.Put(newKey, encoded)
 	})
