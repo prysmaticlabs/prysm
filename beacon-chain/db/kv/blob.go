@@ -12,9 +12,18 @@ import (
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
+)
+
+var (
+	errBlobSlotMismatch     = errors.New("sidecar slot mismatch")
+	errBlobParentMismatch   = errors.New("sidecar parent root mismatch")
+	errBlobRootMismatch     = errors.New("sidecar root mismatch")
+	errBlobProposerMismatch = errors.New("sidecar proposer index mismatch")
+	errBlobSidecarLimit     = errors.New("sidecar exceeds maximum number of blobs")
+	errEmptySidecar         = errors.New("nil or empty blob sidecars")
+	errNewerBlobExists      = errors.New("Will not overwrite newer blobs in db")
 )
 
 // A blob rotating key is represented as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
@@ -45,47 +54,47 @@ func (rk blobRotatingKey) BlockRoot() []byte {
 //
 //  3. Begin the save algorithm:  If the incoming blob has a slot bigger than the saved slot at the spot
 //     in the rotating keys buffer, we overwrite all elements for that slot. Otherwise, we merge the blob with an existing one.
+//     Trying to replace a newer blob with an older one is an error.
 func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
-	defer span.End()
-
 	if len(scs) == 0 {
 		return errEmptySidecar
 	}
-	newKey := blobSidecarKey(scs[0])
-	rotatingBufferPrefix := newKey.BufferPrefix()
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlobSidecar")
+	defer span.End()
+
+	first := scs[0]
+	newKey := blobSidecarKey(first)
+	prefix := newKey.BufferPrefix()
+	var prune []blobRotatingKey
 	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blobsBucket)
-		c := bkt.Cursor()
-		var replacingKey blobRotatingKey
-		for k, _ := c.Seek(rotatingBufferPrefix); bytes.HasPrefix(k, rotatingBufferPrefix); k, _ = c.Next() {
-			if len(k) != 0 {
-				replacingKey = k
-				break
-			}
-		}
 		var existing []byte
 		sc := &ethpb.BlobSidecars{}
-		// If there is no element stored at blob.slot % MAX_SLOTS_TO_PERSIST_BLOBS, then we simply
-		// store the blob by key and exit early.
-		if len(replacingKey) != 0 {
-			oldSlot := replacingKey.Slot()
-			oldEpoch := slots.ToEpoch(oldSlot)
-			// The blob we are replacing is too old, so we delete it.
-			if slots.ToEpoch(scs[0].Slot) >= oldEpoch.Add(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)) {
-				if err := bkt.Delete(replacingKey); err != nil {
-					log.WithError(err).Warnf("Could not delete blob with key %#x", replacingKey)
-					return err
-				}
-			} else {
-				// Otherwise, we need to merge the new blob with the old blob.
-				existing = bkt.Get(replacingKey)
-				if err := decode(ctx, existing, sc); err != nil {
+		bkt := tx.Bucket(blobsBucket)
+		c := bkt.Cursor()
+		for k, v := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, v = c.Next() {
+			key := blobRotatingKey(k)
+			ks := key.Slot()
+			if ks < first.Slot {
+				// Mark older blobs at the same position of the ring buffer for deletion.
+				prune = append(prune, key)
+				continue
+			}
+			if ks > first.Slot {
+				// We shouldn't be overwriting newer blobs with older blobs. Something is wrong.
+				return errNewerBlobExists
+			}
+			// The slot isn't older or newer, so it must be equal.
+			// If the roots match, then we want to merge the new sidecars with the existing data.
+			if bytes.Equal(first.BlockRoot, key.BlockRoot()) {
+				existing = v
+				if err := decode(ctx, v, sc); err != nil {
 					return err
 				}
 			}
+			// If the slot is equal but the roots don't match, leave the existing key alone and allow the sidecar
+			// to be written to the new key with the same prefix. In this case sc will be empty, so it will just
+			// contain the incoming sidecars when we write it.
 		}
-
 		sc.Sidecars = append(sc.Sidecars, scs...)
 		sortSidecars(sc.Sidecars)
 		var err error
@@ -93,28 +102,24 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		if err != nil {
 			return err
 		}
-		updated, err := encode(ctx, sc)
+		encoded, err := encode(ctx, sc)
 		if err != nil {
 			return err
 		}
-
 		// don't write if the merged result is the same as before
-		if len(existing) == len(updated) && bytes.Equal(existing, updated) {
+		if len(existing) == len(encoded) && bytes.Equal(existing, encoded) {
 			return nil
 		}
-
-		return bkt.Put(newKey, updated)
+		// Only prune if we're actually going through with the update.
+		for _, k := range prune {
+			if err := bkt.Delete(k); err != nil {
+				// note: attempting to delete a key that does not exist should not return an error.
+				log.WithError(err).Warnf("Could not delete blob key %#x.", k)
+			}
+		}
+		return bkt.Put(newKey, encoded)
 	})
 }
-
-var (
-	errBlobSlotMismatch     = errors.New("sidecar slot mismatch")
-	errBlobParentMismatch   = errors.New("sidecar parent root mismatch")
-	errBlobRootMismatch     = errors.New("sidecar root mismatch")
-	errBlobProposerMismatch = errors.New("sidecar proposer index mismatch")
-	errBlobSidecarLimit     = errors.New("sidecar exceeds maximum number of blobs")
-	errEmptySidecar         = errors.New("nil or empty blob sidecars")
-)
 
 // validUniqueSidecars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and no more than MAX_BLOB_EPOCHS.
 func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
