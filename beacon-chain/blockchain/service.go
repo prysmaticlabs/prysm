@@ -90,11 +90,6 @@ type config struct {
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
 
-type blobNotifier struct {
-	indices map[uint64]bool
-	channel chan uint64
-}
-
 type blobNotifierMap struct {
 	sync.RWMutex
 	notifiers map[[32]byte]chan uint64
