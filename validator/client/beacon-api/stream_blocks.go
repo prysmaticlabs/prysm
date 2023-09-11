@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"google.golang.org/grpc"
@@ -183,6 +184,25 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		}
 
 		slot = capellaBlock.Slot
+	case "deneb":
+		jsonDenebBlock := shared.SignedBeaconBlockDeneb{}
+		if err := decoder.Decode(&jsonDenebBlock); err != nil {
+			return nil, errors.Wrap(err, "failed to decode signed deneb block response json")
+		}
+
+		denebBlock, err := jsonDenebBlock.ToConsensus()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get signed deneb block")
+		}
+
+		response.Block = &ethpb.StreamBlocksResponse_DenebBlock{
+			DenebBlock: &ethpb.SignedBeaconBlockDeneb{
+				Signature: denebBlock.Signature,
+				Block:     denebBlock.Block,
+			},
+		}
+
+		slot = denebBlock.Block.Slot
 
 	default:
 		return nil, errors.Errorf("unsupported consensus version `%s`", signedBlockResponseJson.Version)
