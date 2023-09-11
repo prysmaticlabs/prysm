@@ -307,6 +307,9 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	if err != nil {
 		return err
 	}
+	if len(bwb) == 0 {
+		return nil
+	}
 
 	first := bwb[0].Block
 	if !s.cfg.Chain.HasBlock(ctx, first.Block().ParentRoot()) {
@@ -324,7 +327,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		}
 		blobCount += len(bb.Blobs)
 	}
-	if len(bwb) > 0 {
+	if blobCount > 0 {
 		log.WithFields(logrus.Fields{
 			"startSlot": bwb[0].Block.Block().Slot(),
 			"endSlot":   bwb[len(bwb)-1].Block.Block().Slot(),

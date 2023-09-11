@@ -352,7 +352,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		for i, sc := range scs {
 			log.WithFields(logrus.Fields{
 				"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),
-				"indices":   i,
+				"index":     sc.Message.Index,
 			}).Debug("Broadcasting blob sidecar")
 			if err := vs.P2P.BroadcastBlob(ctx, sc.Message.Index, sc); err != nil {
 				log.WithError(err).Errorf("Could not broadcast blob sidecar index %d / %d", i, len(scs))
