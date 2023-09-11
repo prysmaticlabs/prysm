@@ -17,11 +17,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
 
 func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
+	receivedTime := prysmTime.Now()
+
 	if pid == s.cfg.p2p.PeerID() {
 		return pubsub.ValidationAccept, nil
 	}
@@ -125,6 +128,14 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, err
 	}
 
+	startTime, err := slots.ToTime(genesisTime, blob.Slot)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	fields := blobFields(blob)
+	fields["sinceSlotStartTime"] = receivedTime.Sub(startTime)
+	fields["validationTime"] = prysmTime.Now().Sub(receivedTime)
+	log.WithFields(fields).Debug("Received blob sidecar gossip")
 	msg.ValidatorData = sBlob
 
 	return pubsub.ValidationAccept, nil
