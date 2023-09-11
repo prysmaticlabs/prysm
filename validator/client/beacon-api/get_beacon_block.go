@@ -106,7 +106,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		}
 		genericBlock, err := jsonDenebBlockContents.ToGeneric()
 		if err != nil {
-			return nil, errors.Wrap(err, "could not convert deneb blockcontents to generic")
+			return nil, errors.Wrap(err, "could not convert deneb block contents to generic block")
 		}
 		response = genericBlock
 	default:
