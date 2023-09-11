@@ -676,17 +676,18 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 
 	cs := s.TimeFetcher.CurrentSlot()
 	currentEpoch := slots.ToEpoch(cs)
-	if requestedEpoch > currentEpoch+1 {
+	nextEpoch := currentEpoch + 1
+	if requestedEpoch > nextEpoch {
 		http2.HandleError(
 			w,
-			fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", requestedEpoch, currentEpoch+1),
+			fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", requestedEpoch, nextEpoch),
 			http.StatusBadRequest,
 		)
 		return
 	}
 
 	var startSlot primitives.Slot
-	if requestedEpoch == currentEpoch+1 {
+	if requestedEpoch == nextEpoch {
 		startSlot, err = slots.EpochStart(currentEpoch)
 	} else {
 		startSlot, err = slots.EpochStart(requestedEpoch)
