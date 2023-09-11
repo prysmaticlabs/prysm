@@ -38,7 +38,7 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 				})
 				require.NoError(t, err)
 			} else if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
-				err := json.NewEncoder(w).Encode(&shared.StateForkResponse{
+				err := json.NewEncoder(w).Encode(&shared.GetStateForkResponse{
 					Data: &shared.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
@@ -229,7 +229,7 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 			if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 				w.WriteHeader(200)
 				w.Header().Set("Content-Type", "application/json")
-				err := json.NewEncoder(w).Encode(&shared.StateForkResponse{
+				err := json.NewEncoder(w).Encode(&shared.GetStateForkResponse{
 					Data: &shared.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
@@ -287,7 +287,7 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 
-			err := json.NewEncoder(w).Encode(&shared.StateForkResponse{
+			err := json.NewEncoder(w).Encode(&shared.GetStateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
 					CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),

@@ -49,10 +49,10 @@ func buildURL(path string, queryParams ...neturl.Values) string {
 	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
 
-func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*shared.StateForkResponse, error) {
+func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*shared.GetStateForkResponse, error) {
 	const endpoint = "/eth/v1/beacon/states/head/fork"
 
-	stateForkResponseJson := &shared.StateForkResponse{}
+	stateForkResponseJson := &shared.GetStateForkResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,

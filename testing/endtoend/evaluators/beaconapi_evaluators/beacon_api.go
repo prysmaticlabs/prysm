@@ -97,10 +97,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{"finalized"}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &shared.StateForkResponse{},
+			"json": &shared.GetStateForkResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &shared.StateForkResponse{},
+			"json": &shared.GetStateForkResponse{},
 		},
 	},
 	"/debug/beacon/states/{param1}": {
@@ -300,11 +300,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisData *v1.GenesisResponse) error {
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	prysmForkData, ok := forkPathData.prysmResps["json"].(*shared.StateForkResponse)
+	prysmForkData, ok := forkPathData.prysmResps["json"].(*shared.GetStateForkResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*shared.StateForkResponse)
+	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*shared.GetStateForkResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}

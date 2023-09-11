@@ -96,10 +96,10 @@ func TestGetFork_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stateForkResponseJson := shared.StateForkResponse{}
+	stateForkResponseJson := shared.GetStateForkResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	expected := shared.StateForkResponse{
+	expected := shared.GetStateForkResponse{
 		Data: &shared.Fork{
 			PreviousVersion: "0x1",
 			CurrentVersion:  "0x2",

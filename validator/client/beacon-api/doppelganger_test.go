@@ -48,7 +48,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
-		getForkOutput               *shared.StateForkResponse
+		getForkOutput               *shared.GetStateForkResponse
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
 		getStateValidatorsInterface *struct {
 			input  []string
@@ -112,7 +112,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &shared.StateForkResponse{
+			getForkOutput: &shared.GetStateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x00000000",
 					CurrentVersion:  "0x00000000",
@@ -147,7 +147,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &shared.StateForkResponse{
+			getForkOutput: &shared.GetStateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
@@ -193,7 +193,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &shared.StateForkResponse{
+			getForkOutput: &shared.GetStateForkResponse{
 				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
@@ -317,7 +317,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := shared.StateForkResponse{}
+				stateForkResponseJson := shared.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -419,7 +419,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetForkOutput := &shared.StateForkResponse{
+	standardGetForkOutput := &shared.GetStateForkResponse{
 		Data: &shared.Fork{
 			CurrentVersion: "0x02000000",
 		},
@@ -461,7 +461,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
 		getSyncingError             error
-		getForkOutput               *shared.StateForkResponse
+		getForkOutput               *shared.GetStateForkResponse
 		getForkError                error
 		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
 		getHeadersError             error
@@ -504,7 +504,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &shared.StateForkResponse{},
+			getForkOutput:          &shared.GetStateForkResponse{},
 			getForkError:           errors.New("custom error"),
 		},
 		{
@@ -512,7 +512,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput: &shared.StateForkResponse{
+			getForkOutput: &shared.GetStateForkResponse{
 				Data: &shared.Fork{CurrentVersion: "not a version"},
 			},
 		},
@@ -775,7 +775,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := shared.StateForkResponse{}
+				stateForkResponseJson := shared.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
