@@ -118,7 +118,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		}
 		marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall blinded deneb beacon block content")
+			return nil, errors.Wrap(err, "failed to marshal blinded deneb beacon block contents")
 		}
 	default:
 		return nil, errors.Errorf("unsupported block type %T", in.Block)
