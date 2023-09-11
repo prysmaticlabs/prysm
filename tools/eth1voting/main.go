@@ -85,6 +85,8 @@ func wrapBlock(b *v1alpha1.BeaconBlockContainer) interfaces.ReadOnlyBeaconBlock 
 		wb, err = blocks.NewSignedBeaconBlock(bb.BellatrixBlock)
 	case *v1alpha1.BeaconBlockContainer_CapellaBlock:
 		wb, err = blocks.NewSignedBeaconBlock(bb.CapellaBlock)
+	case *v1alpha1.BeaconBlockContainer_BlindedCapellaBlock:
+		wb, err = blocks.NewSignedBeaconBlock(bb.BlindedCapellaBlock)
 	}
 	if err != nil {
 		panic("no block")

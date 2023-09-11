@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
@@ -94,7 +95,7 @@ type BeaconNode struct {
 	slashingsPool           slashings.PoolManager
 	syncCommitteePool       synccommittee.Pool
 	blsToExecPool           blstoexec.PoolManager
-	depositCache            *depositcache.DepositCache
+	depositCache            cache.DepositCache
 	proposerIdsCache        *cache.ProposerPayloadIDsCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
@@ -406,10 +407,16 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	b.db = d
 
-	depositCache, err := depositcache.New()
+	var depositCache cache.DepositCache
+	if features.Get().EnableEIP4881 {
+		depositCache, err = depositsnapshot.New()
+	} else {
+		depositCache, err = depositcache.New()
+	}
 	if err != nil {
 		return errors.Wrap(err, "could not create deposit cache")
 	}
+
 	b.depositCache = depositCache
 
 	if b.GenesisInitializer != nil {
@@ -781,7 +788,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	}
 
 	genesisValidators := b.cliCtx.Uint64(flags.InteropNumValidatorsFlag.Name)
-	var depositFetcher depositcache.DepositFetcher
+	var depositFetcher cache.DepositFetcher
 	var chainStartFetcher execution.ChainStartFetcher
 	if genesisValidators > 0 {
 		var interopService *interopcoldstart.Service

@@ -37,7 +37,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
-		"/eth/v1/beacon/pool/sync_committees",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
@@ -52,7 +51,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
 		"/eth/v1/config/fork_schedule",
-		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
 		"/eth/v1/validator/blocks/{slot}",
@@ -141,12 +139,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
 		}
-	case "/eth/v1/beacon/pool/sync_committees":
-		endpoint.PostRequest = &SubmitSyncCommitteeSignaturesRequestJson{}
-		endpoint.Err = &IndexedVerificationFailureErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapSyncCommitteeSignaturesArray,
-		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
@@ -183,8 +175,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &ForkScheduleResponseJson{}
-	case "/eth/v1/config/deposit_contract":
-		endpoint.GetResponse = &DepositContractResponseJson{}
 	case "/eth/v1/config/spec":
 		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":

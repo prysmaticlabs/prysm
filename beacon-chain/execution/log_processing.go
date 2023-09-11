@@ -13,13 +13,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -141,7 +144,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 	if err != nil {
 		return errors.Wrap(err, "unable to determine hashed value of deposit")
 	}
-
 	// Defensive check to validate incoming index.
 	if s.depositTrie.NumOfItems() != int(index) {
 		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
@@ -149,7 +151,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
 		return err
 	}
-
 	deposit := &ethpb.Deposit{
 		Data: depositData,
 	}
@@ -221,6 +222,18 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.L
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
+	if features.Get().EnableEIP4881 {
+		// We finalize the trie here so that old deposits are not kept around, as they make
+		// deposit tree htr computation expensive.
+		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		if !ok {
+			return errors.Errorf("wrong trie type initialized: %T", dTrie)
+		}
+		if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
+			log.WithError(err).Error("Could not finalize trie")
+		}
+	}
+
 	return nil
 }
 
@@ -337,7 +350,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }
@@ -559,8 +572,27 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!
-		Trie:              s.depositTrie.ToProto(),
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
+	}
+	if features.Get().EnableEIP4881 {
+		fd, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+		if err != nil {
+			return errors.Errorf("could not get finalized deposit tree: %v", err)
+		}
+		tree, ok := fd.Deposits().(*depositsnapshot.DepositTree)
+		if !ok {
+			return errors.New("deposit tree was not EIP4881 DepositTree")
+		}
+		eth1Data.DepositSnapshot, err = tree.ToProto()
+		if err != nil {
+			return err
+		}
+	} else {
+		tree, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+		if !ok {
+			return errors.New("deposit tree was not SparseMerkleTrie")
+		}
+		eth1Data.Trie = tree.ToProto()
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 }

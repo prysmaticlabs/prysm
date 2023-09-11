@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	log "github.com/sirupsen/logrus"
 )
 
 var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
@@ -37,8 +36,6 @@ type ExecutionBlock struct {
 	Transactions    []*gethtypes.Transaction `json:"transactions"`
 	TotalDifficulty string                   `json:"totalDifficulty"`
 	Withdrawals     []*Withdrawal            `json:"withdrawals"`
-	BlobGasUsed     *hexutil.Uint64          `json:"blobGasUsed"`
-	ExcessBlobGas   *hexutil.Uint64          `json:"excessBlobGas"`
 }
 
 func (e *ExecutionBlock) MarshalJSON() ([]byte, error) {
@@ -111,22 +108,11 @@ func (e *ExecutionBlock) UnmarshalJSON(enc []byte) error {
 		edg, has := decoded["excessBlobGas"]
 		if has && edg != nil {
 			e.Version = version.Deneb
-			uedg, err := hexutil.DecodeUint64(edg.(string))
-			if err != nil {
-				return errors.Wrap(err, "unable to unmarshal excessBlobGas as hexutil.Uint64")
-			}
-			*e.ExcessBlobGas = hexutil.Uint64(uedg)
 		}
 
 		dgu, has := decoded["blobGasUsed"]
-		log.Error(has, dgu != nil)
 		if has && dgu != nil {
 			e.Version = version.Deneb
-			udgu, err := hexutil.DecodeUint64(dgu.(string))
-			if err != nil {
-				return errors.Wrap(err, "blobGasUsed is not a string, can not decode")
-			}
-			*e.BlobGasUsed = hexutil.Uint64(udgu)
 		}
 	}
 

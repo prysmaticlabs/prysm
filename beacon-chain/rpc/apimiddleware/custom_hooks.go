@@ -62,30 +62,13 @@ func wrapValidatorIndicesArray(
 	return true, nil
 }
 
-// https://ethereum.github.io/beacon-APIs/#/Beacon/submitPoolSyncCommitteeSignatures expects posting a top-level array.
-// We make it more proto-friendly by wrapping it in a struct with a 'data' field.
-func wrapSyncCommitteeSignaturesArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitSyncCommitteeSignaturesRequestJson); ok {
-		data := make([]*SyncCommitteeMessageJson, 0)
-		if err := json.NewDecoder(req.Body).Decode(&data); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &SubmitSyncCommitteeSignaturesRequestJson{Data: data}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
+type v1alpha1SignedPhase0Block struct {
+	Block     *BeaconBlockJson `json:"block"` // tech debt on phase 0 called this block instead of "message"
+	Signature string           `json:"signature" hex:"true"`
 }
 
 type phase0PublishBlockRequestJson struct {
-	Phase0Block *SignedBeaconBlockJson `json:"phase0_block"`
+	Message *v1alpha1SignedPhase0Block `json:"phase0_block"`
 }
 
 type altairPublishBlockRequestJson struct {
@@ -182,42 +165,40 @@ func setInitialPublishBlockPostRequest(endpoint *apimiddleware.Endpoint,
 func preparePublishedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &phase0PublishBlockRequestJson{
-			Phase0Block: block,
+		endpoint.PostRequest = &phase0PublishBlockRequestJson{
+			Message: &v1alpha1SignedPhase0Block{
+				Block:     block.Message,
+				Signature: block.Signature,
+			},
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &altairPublishBlockRequestJson{
+		endpoint.PostRequest = &altairPublishBlockRequestJson{
 			AltairBlock: block,
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockBellatrixJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &bellatrixPublishBlockRequestJson{
+		endpoint.PostRequest = &bellatrixPublishBlockRequestJson{
 			BellatrixBlock: block,
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockCapellaJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &capellaPublishBlockRequestJson{
+		endpoint.PostRequest = &capellaPublishBlockRequestJson{
 			CapellaBlock: block,
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockContentsDenebJson); ok {
 		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &denebPublishBlockRequestJson{
+		endpoint.PostRequest = &denebPublishBlockRequestJson{
 			DenebContents: block,
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
@@ -288,11 +269,12 @@ func setInitialPublishBlindedBlockPostRequest(endpoint *apimiddleware.Endpoint,
 // (which was filled out previously in setInitialPublishBlockPostRequest).
 func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.ResponseWriter, _ *http.Request) apimiddleware.ErrorJson {
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockJson); ok {
-		// Prepare post request that can be properly decoded on gRPC side.
-		actualPostReq := &phase0PublishBlockRequestJson{
-			Phase0Block: block,
+		endpoint.PostRequest = &phase0PublishBlockRequestJson{
+			Message: &v1alpha1SignedPhase0Block{
+				Block:     block.Message,
+				Signature: block.Signature,
+			},
 		}
-		endpoint.PostRequest = actualPostReq
 		return nil
 	}
 	if block, ok := endpoint.PostRequest.(*SignedBeaconBlockAltairJson); ok {

@@ -22,9 +22,15 @@ func setKzgCommitments(blk interfaces.SignedBeaconBlock, bundle *enginev1.BlobsB
 	}
 
 	if blk.IsBlinded() {
+		if blindBundle == nil {
+			return nil
+		}
 		return blk.SetBlobKzgCommitments(blindBundle.KzgCommitments)
 	}
 
+	if bundle == nil {
+		return nil
+	}
 	return blk.SetBlobKzgCommitments(bundle.KzgCommitments)
 }
 

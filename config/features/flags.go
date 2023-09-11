@@ -149,6 +149,10 @@ var (
 		Name:  "disable-build-block-parallel",
 		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
+	enableEIP4881 = &cli.BoolFlag{
+		Name:  "enable-eip-4881",
+		Usage: "Enables the deposit tree specified in EIP4881",
+	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager",
@@ -170,6 +174,7 @@ var (
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
+	enableEIP4881,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -217,6 +222,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
+	enableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	disableAggregateParallel,

@@ -67,19 +67,6 @@ func (_ *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResp
 	return &ethpb.SpecResponse{Data: data}, nil
 }
 
-// GetDepositContract retrieves deposit contract address and genesis fork version.
-func (_ *Server) GetDepositContract(ctx context.Context, _ *emptypb.Empty) (*ethpb.DepositContractResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconv1.GetDepositContract")
-	defer span.End()
-
-	return &ethpb.DepositContractResponse{
-		Data: &ethpb.DepositContract{
-			ChainId: params.BeaconConfig().DepositChainID,
-			Address: params.BeaconConfig().DepositContractAddress,
-		},
-	}, nil
-}
-
 func prepareConfigSpec() (map[string]string, error) {
 	data := make(map[string]string)
 	config := *params.BeaconConfig()
