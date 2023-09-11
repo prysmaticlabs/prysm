@@ -16,6 +16,13 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	if mixes == nil {
 		return nil
 	}
+	if features.Get().EnableExperimentalState {
+		mixesSlice := make([][]byte, len(mixes))
+		for i, m := range mixes {
+			mixesSlice[i] = m[:]
+		}
+		return mixesSlice
+	}
 	mixesCopy := make([][]byte, len(mixes))
 	for i, m := range mixes {
 		mixesCopy[i] = make([]byte, 32)

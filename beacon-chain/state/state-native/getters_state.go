@@ -284,6 +284,13 @@ func (b *BeaconState) StateRoots() [][]byte {
 	if roots == nil {
 		return nil
 	}
+	if features.Get().EnableExperimentalState {
+		rootsSlice := make([][]byte, len(roots))
+		for i, r := range roots {
+			rootsSlice[i] = r[:]
+		}
+		return rootsSlice
+	}
 	rootsCopy := make([][]byte, len(roots))
 	for i, r := range roots {
 		rootsCopy[i] = make([]byte, 32)

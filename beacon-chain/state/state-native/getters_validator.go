@@ -230,21 +230,17 @@ func (b *BeaconState) Balances() []uint64 {
 }
 
 func (b *BeaconState) balancesVal() []uint64 {
-	var bals []uint64
 	if features.Get().EnableExperimentalState {
 		if b.balancesMultiValue == nil {
 			return nil
 		}
-		bals = b.balancesMultiValue.Value(b)
-	} else {
-		if b.balances == nil {
-			return nil
-		}
-		bals = b.balances
+		return b.balancesMultiValue.Value(b)
 	}
-
-	res := make([]uint64, len(bals))
-	copy(res, bals)
+	if b.balances == nil {
+		return nil
+	}
+	res := make([]uint64, len(b.balances))
+	copy(res, b.balances)
 	return res
 }
 
@@ -323,20 +319,16 @@ func (b *BeaconState) InactivityScores() ([]uint64, error) {
 }
 
 func (b *BeaconState) inactivityScoresVal() []uint64 {
-	var scores []uint64
 	if features.Get().EnableExperimentalState {
 		if b.inactivityScoresMultiValue == nil {
 			return nil
 		}
-		scores = b.inactivityScoresMultiValue.Value(b)
-	} else {
-		if b.inactivityScores == nil {
-			return nil
-		}
-		scores = b.inactivityScores
+		return b.inactivityScoresMultiValue.Value(b)
 	}
-
-	res := make([]uint64, len(scores))
-	copy(res, scores)
+	if b.inactivityScores == nil {
+		return nil
+	}
+	res := make([]uint64, len(b.inactivityScores))
+	copy(res, b.inactivityScores)
 	return res
 }
