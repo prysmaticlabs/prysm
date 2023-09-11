@@ -103,7 +103,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		}
 		marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshall deneb beacon block content")
+			return nil, errors.Wrap(err, "failed to marshal deneb beacon block contents")
 		}
 	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
 		blinded = true
