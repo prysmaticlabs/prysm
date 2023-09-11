@@ -817,7 +817,7 @@ func TestGetStateFork(t *testing.T) {
 
 	server.GetStateFork(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	var stateForkReponse *shared.GetStateForkResponse
+	var stateForkReponse *GetStateForkResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
 	require.NoError(t, err)
 	expectedFork := fakeState.Fork()

@@ -882,7 +882,7 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
-	response := &shared.GetStateForkResponse{
+	response := &GetStateForkResponse{
 		Data: &shared.Fork{
 			PreviousVersion: hexutil.Encode(fork.PreviousVersion),
 			CurrentVersion:  hexutil.Encode(fork.CurrentVersion),

@@ -13,7 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -97,10 +97,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{"finalized"}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &shared.GetStateForkResponse{},
+			"json": &beacon.GetStateForkResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &shared.GetStateForkResponse{},
+			"json": &beacon.GetStateForkResponse{},
 		},
 	},
 	"/debug/beacon/states/{param1}": {
@@ -300,11 +300,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisData *v1.GenesisResponse) error {
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
-	prysmForkData, ok := forkPathData.prysmResps["json"].(*shared.GetStateForkResponse)
+	prysmForkData, ok := forkPathData.prysmResps["json"].(*beacon.GetStateForkResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
-	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*shared.GetStateForkResponse)
+	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*beacon.GetStateForkResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
