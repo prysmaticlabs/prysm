@@ -114,7 +114,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		}
 		signedBlock, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(blockType.BlindedDeneb)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block content")
+			return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block contents")
 		}
 		marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
 		if err != nil {
