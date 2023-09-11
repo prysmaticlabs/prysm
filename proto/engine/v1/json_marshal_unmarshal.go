@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	log "github.com/sirupsen/logrus"
 )
 
 var errExecutionUnmarshal = errors.New("unable to unmarshal execution engine data")
@@ -806,6 +807,10 @@ func (e *ExecutionPayloadDenebWithValueAndBlobsBundle) UnmarshalJSON(enc []byte)
 	dec := GetPayloadV3ResponseJson{}
 	if err := json.Unmarshal(enc, &dec); err != nil {
 		return err
+	}
+	for _, b := range dec.BlobsBundle.Blobs {
+		log.Infof("length of bundle: %d", len(b))
+
 	}
 
 	if dec.ExecutionPayload.ParentHash == nil {

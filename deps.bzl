@@ -1013,6 +1013,7 @@ def prysm_deps():
         ],
         importpath = "github.com/ethereum/go-ethereum",
         patch_args = ["-p1"],
+        build_tags = ["ckzg"],
         patches = [
             "//third_party:com_github_ethereum_go_ethereum_secp256k1.patch",
         ],

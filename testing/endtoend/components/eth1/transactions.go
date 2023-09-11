@@ -74,6 +74,9 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
+	if err := kzg4844.UseCKZG(true); err != nil {
+		return err
+	}
 	// Broadcast Transactions every 3 blocks
 	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
@@ -365,12 +368,8 @@ func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
 	return h
 }
 
-const (
-	maxDataPerTx = 1 << 17 // 128Kb
-)
-
 func randomBlobData() ([]byte, error) {
-	size := mathRand.Intn(maxDataPerTx)
+	size := mathRand.Intn(fieldparams.BlobSize)
 	data := make([]byte, size)
 	n, err := mathRand.Read(data)
 	if err != nil {
