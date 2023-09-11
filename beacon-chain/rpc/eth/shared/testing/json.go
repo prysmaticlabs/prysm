@@ -677,18 +677,23 @@ const (
   },
   "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
 }`
+
+	// BadBlindedBellatrixBlock contains wrong data to create a block that does not pass ToConsensus conversion
+	// "parent_root" length too short
+	// "block_hash" length too short
+	// "state_root" length too short
 	BadBlindedBellatrixBlock = `{
   "message": {
     "slot": "1",
     "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e95872",
+    "parent_root": "0xcf8e0d4e95872", 
     "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
     "body": {
       "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
       "eth1_data": {
         "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e95872"
+        "block_hash": "0xcf8e0d4e95872" 
       },
       "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
       "proposer_slashings": [
@@ -698,7 +703,7 @@ const (
               "slot": "1",
               "proposer_index": "1",
               "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9580f2",
+              "state_root": "0xcf8e0d4e9580f2", 
               "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
             },
             "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
@@ -1051,6 +1056,11 @@ const (
   },
   "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
 }`
+	// BadCapellaBlock contains wrong data to create a block that does not pass ToConsensus conversion
+	// "state_root" length too short
+	// "block_hash" length too short
+	// "graffiti" length too short
+	// "state_root" length too short
 	BadCapellaBlock = `{
   "message": {
     "slot": "1",
