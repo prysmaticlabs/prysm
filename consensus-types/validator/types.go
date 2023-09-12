@@ -55,6 +55,39 @@ func (s ValidatorStatus) String() string {
 	}
 }
 
+func ValidatorStatusFromString(s string) (bool, ValidatorStatus) {
+	switch s {
+	case "pending_initialized":
+		return true, PendingInitialized
+	case "pending_queued":
+		return true, PendingQueued
+	case "active_ongoing":
+		return true, ActiveOngoing
+	case "active_exiting":
+		return true, ActiveExiting
+	case "active_slashed":
+		return true, ActiveSlashed
+	case "exited_unslashed":
+		return true, ExitedUnslashed
+	case "exited_slashed":
+		return true, ExitedSlashed
+	case "withdrawal_possible":
+		return true, WithdrawalPossible
+	case "withdrawal_done":
+		return true, WithdrawalDone
+	case "active":
+		return true, Active
+	case "pending":
+		return true, Pending
+	case "exited":
+		return true, Exited
+	case "withdrawal":
+		return true, Withdrawal
+	default:
+		return false, -1
+	}
+}
+
 type SyncCommitteeSubscription struct {
 	ValidatorIndex       primitives.ValidatorIndex
 	SyncCommitteeIndices []uint64

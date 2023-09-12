@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -18,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -42,12 +42,15 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		shared.WriteStateFetchError(w, err)
 		return
 	}
-	valContainers, ok := valContainersFromIds(w, st, r.URL.Query()["id"])
+	readOnlyVals, ok := valsFromIds(w, st, r.URL.Query()["id"])
 	if !ok {
 		return
 	}
 
 	statuses := r.URL.Query()["status"]
+	for i, ss := range statuses {
+		statuses[i] = strings.ToLower(ss)
+	}
 
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
@@ -62,45 +65,51 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	// Exit early if no matching validators we found or we don't want to further filter validators by status.
-	if len(valContainers) == 0 || len(statuses) == 0 {
+	if len(readOnlyVals) == 0 || len(statuses) == 0 {
+
 		resp := &GetValidatorsResponse{
-			Data:                valContainers,
+			Data:                readOnlyVals,
 			ExecutionOptimistic: isOptimistic,
 			Finalized:           isFinalized,
 		}
 		http2.WriteJson(w, resp)
 	}
 
-	filterStatus := make(map[validator.ValidatorStatus]bool, len(statuses))
-	const lastValidStatusValue = 12
-	for _, ss := range req.Status {
-		if ss > lastValidStatusValue {
-			return nil, status.Errorf(codes.InvalidArgument, "Invalid status "+ss.String())
+	filteredStatuses := make(map[validator.ValidatorStatus]bool, len(statuses))
+	for _, ss := range statuses {
+		ok, vs := validator.ValidatorStatusFromString(ss)
+		if !ok {
+			http2.HandleError(w, "Invalid status "+ss, http.StatusBadRequest)
+			return
 		}
-		filterStatus[validator.ValidatorStatus(ss)] = true
+		filteredStatuses[vs] = true
 	}
 	epoch := slots.ToEpoch(st.Slot())
-	filteredVals := make([]*ethpb.ValidatorContainer, 0, len(valContainers))
-	for _, vc := range valContainers {
-		readOnlyVal, err := statenative.NewValidator(migration.V1ValidatorToV1Alpha1(vc.Validator))
+	valContainers := make([]*ValidatorContainer, 0, len(readOnlyVals))
+	for _, val := range readOnlyVals {
+		valStatus, err := helpers.ValidatorStatus(val, epoch)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not convert validator: %v", err)
+			http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
-		valStatus, err := helpers.ValidatorStatus(readOnlyVal, epoch)
+		valSubStatus, err := helpers.ValidatorSubStatus(val, epoch)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator status: %v", err)
+			http2.HandleError(w, "Could not get validator sub status: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
-		valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get validator sub status: %v", err)
+		container := &ValidatorContainer{
+			Index:     "",
+			Balance:   "",
+			Status:    "",
+			Validator: nil,
 		}
-		if filterStatus[valStatus] || filterStatus[valSubStatus] {
-			filteredVals = append(filteredVals, vc)
+		if filteredStatuses[valStatus] || filteredStatuses[valSubStatus] {
+			valContainers = append(valContainers, container)
 		}
 	}
 
 	resp := &GetValidatorsResponse{
-		Data:                filteredVals,
+		Data:                valContainers,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
 	}
@@ -177,50 +186,29 @@ func (bs *Server) GetValidatorBalances(ctx context.Context, req *ethpb.Validator
 	return &ethpb.ValidatorBalancesResponse{Data: valBalances, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
-// This function returns a list of validator containers based on IDs. A validator ID can be its public key or its index.
-func valContainersFromIds(w http.ResponseWriter, state state.BeaconState, validatorIds []string) ([]*ValidatorContainer, bool) {
-	epoch := slots.ToEpoch(state.Slot())
-	var valContainers []*ValidatorContainer
-	allBalances := state.Balances()
-	if len(validatorIds) == 0 {
-		allValidators := state.Validators()
-		valContainers = make([]*ValidatorContainer, len(allValidators))
-		for i, val := range allValidators {
+// This function returns a list of read-only validators based on IDs. A validator ID can be its public key or its index.
+func valsFromIds(w http.ResponseWriter, st state.BeaconState, valIds []string) ([]state.ReadOnlyValidator, bool) {
+	var vals []state.ReadOnlyValidator
+	if len(valIds) == 0 {
+		allVals := st.Validators()
+		vals = make([]state.ReadOnlyValidator, len(allVals))
+		for i, val := range allVals {
 			readOnlyVal, err := statenative.NewValidator(val)
 			if err != nil {
 				http2.HandleError(w, "Could not convert validator: "+err.Error(), http.StatusInternalServerError)
 				return nil, false
 			}
-			subStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
-			if err != nil {
-				http2.HandleError(w, "Could not get validator sub status: "+err.Error(), http.StatusInternalServerError)
-				return nil, false
-			}
-			valContainers[i] = &ValidatorContainer{
-				Index:   strconv.Itoa(i),
-				Balance: strconv.FormatUint(allBalances[i], 10),
-				Status:  subStatus.String(),
-				Validator: &Validator{
-					Pubkey:                     hexutil.Encode(val.PublicKey),
-					WithdrawalCredentials:      hexutil.Encode(val.WithdrawalCredentials),
-					EffectiveBalance:           strconv.FormatUint(val.EffectiveBalance, 10),
-					Slashed:                    val.Slashed,
-					ActivationEligibilityEpoch: strconv.FormatUint(uint64(val.ActivationEligibilityEpoch), 10),
-					ActivationEpoch:            strconv.FormatUint(uint64(val.ActivationEpoch), 10),
-					ExitEpoch:                  strconv.FormatUint(uint64(val.ExitEpoch), 10),
-					WithdrawableEpoch:          strconv.FormatUint(uint64(val.WithdrawableEpoch), 10),
-				},
-			}
+			vals[i] = readOnlyVal
 		}
 	} else {
-		valContainers = make([]*ValidatorContainer, 0, len(validatorIds))
-		for _, validatorId := range validatorIds {
+		vals = make([]state.ReadOnlyValidator, 0, len(valIds))
+		for _, valId := range valIds {
 			var valIndex primitives.ValidatorIndex
-			pubkey, err := hexutil.Decode(validatorId)
+			pubkey, err := hexutil.Decode(valId)
 			if err == nil {
 				if len(pubkey) == fieldparams.BLSPubkeyLength {
 					var ok bool
-					valIndex, ok = state.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
+					valIndex, ok = st.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubkey))
 					if !ok {
 						// Ignore well-formed yet unknown public keys.
 						continue
@@ -230,13 +218,13 @@ func valContainersFromIds(w http.ResponseWriter, state state.BeaconState, valida
 				return nil, false
 			}
 
-			index, err := strconv.ParseUint(validatorId, 10, 64)
+			index, err := strconv.ParseUint(valId, 10, 64)
 			if err != nil {
-				http2.HandleError(w, fmt.Sprintf("Invalid validator ID %s", validatorId), http.StatusBadRequest)
+				http2.HandleError(w, fmt.Sprintf("Invalid validator ID %s", valId), http.StatusBadRequest)
 				return nil, false
 			}
 			valIndex = primitives.ValidatorIndex(index)
-			val, err := state.ValidatorAtIndex(valIndex)
+			val, err := st.ValidatorAtIndex(valIndex)
 			if err != nil {
 				if _, ok := err.(*statenative.ValidatorIndexOutOfRangeError); ok {
 					// Ignore well-formed yet unknown indexes.
@@ -251,28 +239,9 @@ func valContainersFromIds(w http.ResponseWriter, state state.BeaconState, valida
 				http2.HandleError(w, "Could not convert validator: "+err.Error(), http.StatusInternalServerError)
 				return nil, false
 			}
-			subStatus, err := helpers.ValidatorSubStatus(readOnlyVal, epoch)
-			if err != nil {
-				http2.HandleError(w, "Could not get validator sub status: "+err.Error(), http.StatusInternalServerError)
-				return nil, false
-			}
-			valContainers = append(valContainers, &ValidatorContainer{
-				Index:   strconv.FormatUint(uint64(valIndex), 10),
-				Balance: strconv.FormatUint(allBalances[valIndex], 10),
-				Status:  subStatus.String(),
-				Validator: &Validator{
-					Pubkey:                     hexutil.Encode(val.PublicKey),
-					WithdrawalCredentials:      hexutil.Encode(val.WithdrawalCredentials),
-					EffectiveBalance:           strconv.FormatUint(val.EffectiveBalance, 10),
-					Slashed:                    val.Slashed,
-					ActivationEligibilityEpoch: strconv.FormatUint(uint64(val.ActivationEligibilityEpoch), 10),
-					ActivationEpoch:            strconv.FormatUint(uint64(val.ActivationEpoch), 10),
-					ExitEpoch:                  strconv.FormatUint(uint64(val.ExitEpoch), 10),
-					WithdrawableEpoch:          strconv.FormatUint(uint64(val.WithdrawableEpoch), 10),
-				},
-			})
+			vals = append(vals, readOnlyVal)
 		}
 	}
 
-	return valContainers, true
+	return vals, true
 }
