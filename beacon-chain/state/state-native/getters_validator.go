@@ -199,14 +199,34 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 			b.lock.RUnlock()
 			return state.ErrNilValidatorsInState
 		}
-		validators = b.validatorsMultiValue.Value(b)
-	} else {
-		if b.validators == nil {
-			b.lock.RUnlock()
-			return state.ErrNilValidatorsInState
+		l := b.validatorsMultiValue.Len(b)
+		for i := 0; i < l; i++ {
+			v, err := b.validatorsMultiValue.At(b, uint64(i))
+			if err != nil {
+				b.lock.RUnlock()
+				return err
+			}
+			rov, err := NewValidator(v)
+			if err != nil {
+				b.lock.RUnlock()
+				return err
+			}
+			if err = f(i, rov); err != nil {
+				b.lock.RUnlock()
+				return err
+			}
 		}
-		validators = b.validators
+		b.lock.RUnlock()
+		return nil
 	}
+
+	if b.validators == nil {
+		b.lock.RUnlock()
+		return state.ErrNilValidatorsInState
+	}
+
+	validators = b.validators
+
 	b.lock.RUnlock()
 
 	for i, v := range validators {
