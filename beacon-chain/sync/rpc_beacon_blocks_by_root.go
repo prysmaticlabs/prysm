@@ -145,5 +145,10 @@ func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnly
 	if err != nil {
 		return err
 	}
+
+	for _, sidecar := range blobSidecars {
+		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")
+	}
+
 	return s.cfg.beaconDB.SaveBlobSidecar(ctx, blobSidecars)
 }

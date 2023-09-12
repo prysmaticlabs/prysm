@@ -532,6 +532,8 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if signed.Version() < version.Deneb {
 		return nil
 	}
+	t := time.Now()
+
 	block := signed.Block()
 	if block == nil {
 		return errors.New("invalid nil beacon block")
@@ -559,7 +561,11 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if err == nil {
 		if len(sidecars) >= expected {
 			s.blobNotifiers.delete(root)
-			return kzg.IsDataAvailable(kzgCommitments, sidecars)
+			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
+				return err
+			}
+			logBlobSidecar(sidecars, t)
+			return nil
 		}
 	}
 
@@ -580,7 +586,11 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			if err != nil {
 				return errors.Wrap(err, "could not get blob sidecars")
 			}
-			return kzg.IsDataAvailable(kzgCommitments, sidecars)
+			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
+				return err
+			}
+			logBlobSidecar(sidecars, t)
+			return nil
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}

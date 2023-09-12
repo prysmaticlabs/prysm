@@ -7,9 +7,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -822,6 +825,151 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 					CapellaBlock: &eth.SignedBeaconBlockCapella{
 						Block:     capellaProtoBeaconBlock2,
 						Signature: []byte{2},
+					},
+				},
+			}
+
+			assert.DeepEqual(t, expectedStreamBlocksResponse2, streamBlocksResponse2)
+		})
+	}
+}
+
+func TestStreamBlocks_DenebValid(t *testing.T) {
+	testCases := []struct {
+		name         string
+		verifiedOnly bool
+	}{
+		{
+			name:         "verified optional",
+			verifiedOnly: false,
+		},
+		{
+			name:         "verified only",
+			verifiedOnly: true,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+
+			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+
+			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
+			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
+			var blockContents shared.SignedBeaconBlockContentsDeneb
+			err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents)
+			require.NoError(t, err)
+			sig := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+			denebBlock := blockContents.SignedBlock
+			denebBlock.Message.Slot = "1"
+			denebBlock.Signature = sig
+
+			marshalledSignedBeaconBlockContainer1, err := json.Marshal(denebBlock)
+			require.NoError(t, err)
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				"/eth/v2/beacon/blocks/head",
+				&signedBlockResponseJson,
+			).Return(
+				nil,
+				nil,
+			).SetArg(
+				2,
+				abstractSignedBlockResponseJson{
+					Version:             "deneb",
+					ExecutionOptimistic: false,
+					Data:                marshalledSignedBeaconBlockContainer1,
+				},
+			).Times(2)
+
+			// For the third call, return a block with a different slot than the previous one, but with the verifiedOnly condition not satisfied.
+			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
+
+			var blockContents2 shared.SignedBeaconBlockContentsDeneb
+			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents2)
+			require.NoError(t, err)
+			sig2 := "0x2b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+			denebBlock2 := blockContents.SignedBlock
+			denebBlock2.Message.Slot = "2"
+			denebBlock2.Signature = sig2
+
+			marshalledSignedBeaconBlockContainer2, err := json.Marshal(denebBlock2)
+			require.NoError(t, err)
+
+			jsonRestHandler.EXPECT().GetRestJsonResponse(
+				ctx,
+				"/eth/v2/beacon/blocks/head",
+				&signedBlockResponseJson,
+			).Return(
+				nil,
+				nil,
+			).SetArg(
+				2,
+				abstractSignedBlockResponseJson{
+					Version:             "deneb",
+					ExecutionOptimistic: true,
+					Data:                marshalledSignedBeaconBlockContainer2,
+				},
+			).Times(1)
+
+			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
+			if testCase.verifiedOnly {
+				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
+					"/eth/v2/beacon/blocks/head",
+					&signedBlockResponseJson,
+				).Return(
+					nil,
+					nil,
+				).SetArg(
+					2,
+					abstractSignedBlockResponseJson{
+						Version:             "deneb",
+						ExecutionOptimistic: false,
+						Data:                marshalledSignedBeaconBlockContainer2,
+					},
+				).Times(1)
+			}
+
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
+
+			// Get the first block
+			streamBlocksResponse1, err := streamBlocksClient.Recv()
+			require.NoError(t, err)
+			consensusBlock, err := denebBlock.Message.ToConsensus()
+			consensusBlock.Slot = 1
+			require.NoError(t, err)
+			sigBytes, err := hexutil.Decode(sig)
+			require.NoError(t, err)
+			expectedStreamBlocksResponse1 := &eth.StreamBlocksResponse{
+				Block: &eth.StreamBlocksResponse_DenebBlock{
+					DenebBlock: &eth.SignedBeaconBlockDeneb{
+						Block:     consensusBlock,
+						Signature: sigBytes,
+					},
+				},
+			}
+
+			assert.DeepEqual(t, expectedStreamBlocksResponse1, streamBlocksResponse1)
+
+			// Get the second block
+			streamBlocksResponse2, err := streamBlocksClient.Recv()
+			require.NoError(t, err)
+			consensusBlock.Slot = 2
+			sig2Bytes, err := hexutil.Decode(sig2)
+			require.NoError(t, err)
+			expectedStreamBlocksResponse2 := &eth.StreamBlocksResponse{
+				Block: &eth.StreamBlocksResponse_DenebBlock{
+					DenebBlock: &eth.SignedBeaconBlockDeneb{
+						Block:     consensusBlock,
+						Signature: sig2Bytes,
 					},
 				},
 			}

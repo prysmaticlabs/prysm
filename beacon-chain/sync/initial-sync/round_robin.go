@@ -307,6 +307,9 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	if err != nil {
 		return err
 	}
+	if len(bwb) == 0 {
+		return nil
+	}
 
 	first := bwb[0].Block
 	if !s.cfg.Chain.HasBlock(ctx, first.Block().ParentRoot()) {
@@ -314,6 +317,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
 	s.logBatchSyncStatus(genesis, first, len(bwb))
+	blobCount := 0
 	for _, bb := range bwb {
 		if len(bb.Blobs) == 0 {
 			continue
@@ -321,7 +325,16 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.Blobs); err != nil {
 			return errors.Wrapf(err, "failed to save blobs for block %#x", bb.Block.Root())
 		}
+		blobCount += len(bb.Blobs)
 	}
+	if blobCount > 0 {
+		log.WithFields(logrus.Fields{
+			"startSlot": bwb[0].Block.Block().Slot(),
+			"endSlot":   bwb[len(bwb)-1].Block.Block().Slot(),
+			"count":     blobCount,
+		}).Info("Processed blob sidecars")
+	}
+
 	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks())
 }
 
