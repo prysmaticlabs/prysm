@@ -87,65 +87,6 @@ enum ValidatorStatus {
     WITHDRAWAL = 12;
 }
 
-message AttesterDutiesRequest {
-    // Epoch to request, should only be allowed 1 epoch ahead.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-
-    // Validator indices to request duties for.
-    repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-}
-
-message AttesterDutiesResponse {
-    bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    repeated AttesterDuty data = 2;
-    bool execution_optimistic = 3;
-}
-
-message AttesterDuty {
-    // 48 byte BLS public key for the validator who's assigned to perform a duty.
-    bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
-
-    // The index of the validator in the beacon state.
-    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-    // The index of the committee where the validator belongs to.
-    uint64 committee_index = 3  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-
-    // The length of the committee the validator belongs to.
-    uint64 committee_length = 4;
-
-    // The total amount of committees for this slot.
-    uint64 committees_at_slot = 5;
-
-    // The index of the validator in the committee.
-    uint64 validator_committee_index = 6  [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-
-    // The slot this duty is for.
-    uint64 slot = 7 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-}
-
-message ProposerDutiesRequest {
-    // Epoch to request duties for.
-    uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-}
-
-message ProposerDutiesResponse {
-    bytes dependent_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    repeated ProposerDuty data = 2;
-    bool execution_optimistic = 3;
-}
-
-message ProposerDuty {
-    // 48 byte BLS public key for the validator who's assigned to perform a duty.
-    bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
-
-    // The index of the validator in the beacon state.
-    uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-    // The slot this duty is for.
-    uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-}
-
 message ProduceBlockRequest {
     // The slot to request a block for.
     uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];

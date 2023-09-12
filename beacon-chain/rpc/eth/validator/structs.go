@@ -34,6 +34,53 @@ type ProduceSyncCommitteeContributionResponse struct {
 	Data *shared.SyncCommitteeContribution `json:"data"`
 }
 
+type GetAttesterDutiesRequest struct {
+	ValidatorIndices []string `json:"validator_indices"`
+}
+
+type GetAttesterDutiesResponse struct {
+	DependentRoot       string          `json:"dependent_root"`
+	ExecutionOptimistic bool            `json:"execution_optimistic"`
+	Data                []*AttesterDuty `json:"data"`
+}
+
+type AttesterDuty struct {
+	Pubkey                  string `json:"pubkey"`
+	ValidatorIndex          string `json:"validator_index"`
+	CommitteeIndex          string `json:"committee_index"`
+	CommitteeLength         string `json:"committee_length"`
+	CommitteesAtSlot        string `json:"committees_at_slot"`
+	ValidatorCommitteeIndex string `json:"validator_committee_index"`
+	Slot                    string `json:"slot"`
+}
+
+type GetProposerDutiesResponse struct {
+	DependentRoot       string          `json:"dependent_root"`
+	ExecutionOptimistic bool            `json:"execution_optimistic"`
+	Data                []*ProposerDuty `json:"data"`
+}
+
+type ProposerDuty struct {
+	Pubkey         string `json:"pubkey"`
+	ValidatorIndex string `json:"validator_index"`
+	Slot           string `json:"slot"`
+}
+
+type GetSyncCommitteeDutiesRequest struct {
+	ValidatorIndices []string `json:"validator_indices"`
+}
+
+type GetSyncCommitteeDutiesResponse struct {
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
+	Data                []*SyncCommitteeDuty `json:"data"`
+}
+
+type SyncCommitteeDuty struct {
+	Pubkey                        string   `json:"pubkey"`
+	ValidatorIndex                string   `json:"validator_index"`
+	ValidatorSyncCommitteeIndices []string `json:"validator_sync_committee_indices"`
+}
+
 // ProduceBlockV3Response is a wrapper json object for the returned block from the ProduceBlockV3 endpoint
 type ProduceBlockV3Response struct {
 	Version                 string          `json:"version"`

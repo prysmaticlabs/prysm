@@ -26,30 +26,6 @@ option java_outer_classname = "ValidatorProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
 
-message SyncCommitteeDutiesRequest {
-  // Must fulfill: epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1
-  uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-
-  // Validator indices to request duties for.
-  repeated uint64 index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-}
-
-message SyncCommitteeDutiesResponse {
-  repeated SyncCommitteeDuty data = 1;
-  bool execution_optimistic = 2;
-}
-
-message SyncCommitteeDuty {
-  // The validator's BLS public key, uniquely identifying them.
-  bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
-
-  // Index of validator in validator registry.
-  uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-  // The indices of the validator in the sync committee.
-  repeated uint64 validator_sync_committee_indices = 3;
-}
-
 message ProduceBlockResponseV2 {
   Version version = 1;
   BeaconBlockContainerV2 data = 2;
