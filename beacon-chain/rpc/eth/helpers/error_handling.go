@@ -43,7 +43,6 @@ func PrepareStateFetchHTTPError(w http.ResponseWriter, err error) {
 		return
 	}
 	http2.HandleError(w, "Invalid state ID: "+err.Error(), http.StatusInternalServerError)
-	return
 }
 
 // IndexedVerificationFailure represents a collection of verification failures.

@@ -23,7 +23,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/validators",
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
-		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/states/{state_id}/randao",
 		"/eth/v1/beacon/headers",

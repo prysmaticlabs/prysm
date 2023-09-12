@@ -13,7 +13,7 @@ type BlockRootResponse struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type StateCommitteesResponse struct {
+type GetCommitteesResponse struct {
 	Data                []*Committee `json:"data"`
 	ExecutionOptimistic bool         `json:"execution_optimistic"`
 	Finalized           bool         `json:"finalized"`

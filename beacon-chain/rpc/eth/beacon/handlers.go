@@ -858,10 +858,10 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, response)
 }
 
-// ListCommittees retrieves the committees for the given state at the given epoch.
+// GetCommittees retrieves the committees for the given state at the given epoch.
 // If the requested slot and index are defined, only those committees are returned.
-func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.ListCommittees")
+func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
 	defer span.End()
 
 	stateId := mux.Vars(r)["state_id"]
@@ -870,27 +870,27 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, _, e := shared.UintFromQuery(w, r, "epoch")
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
 	if !ok {
 		return
 	}
-	ok, _, i := shared.UintFromQuery(w, r, "index")
+	ok, rawIndex, i := shared.UintFromQuery(w, r, "index")
 	if !ok {
 		return
 	}
-	ok, _, s := shared.UintFromQuery(w, r, "slot")
+	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot")
 	if !ok {
 		return
 	}
 
-	st, err := bs.Stater.State(ctx, []byte(stateId))
+	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
 		helpers.PrepareStateFetchHTTPError(w, err)
 		return
 	}
 
 	epoch := slots.ToEpoch(st.Slot())
-	if e != 0 {
+	if rawEpoch != "" {
 		epoch = primitives.Epoch(e)
 	}
 	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
@@ -901,22 +901,22 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 
 	startSlot, err := slots.EpochStart(epoch)
 	if err != nil {
-		http2.HandleError(w, "Invalid epoch: "+err.Error(), http.StatusBadRequest)
+		http2.HandleError(w, "Could not get epoch start slot: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	endSlot, err := slots.EpochEnd(epoch)
 	if err != nil {
-		http2.HandleError(w, "Invalid epoch: "+err.Error(), http.StatusBadRequest)
+		http2.HandleError(w, "Could not get epoch end slot: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
 	committees := make([]*Committee, 0)
 	for slot := startSlot; slot <= endSlot; slot++ {
-		if s != 0 && slot != primitives.Slot(s) {
+		if rawSlot != "" && slot != primitives.Slot(sl) {
 			continue
 		}
 		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
-			if i != 0 && index != primitives.CommitteeIndex(i) {
+			if rawIndex != "" && index != primitives.CommitteeIndex(i) {
 				continue
 			}
 			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
@@ -933,7 +933,7 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
 		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -941,13 +941,13 @@ func (bs *Server) ListCommittees(w http.ResponseWriter, r *http.Request) {
 
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		http2.HandleError(w, "Could not calculate root of latest block header", http.StatusInternalServerError)
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
-	http2.WriteJson(w, &StateCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
-} 
- 
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	http2.WriteJson(w, &GetCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
+}
+
 // GetDepositContract retrieves deposit contract address and genesis fork version.
 func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")

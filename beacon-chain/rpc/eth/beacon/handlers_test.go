@@ -795,7 +795,7 @@ func TestListCommittees(t *testing.T) {
 	epoch := slots.ToEpoch(st.Slot())
 
 	chainService := &testing2.ChainService{}
-	bs := &Server{
+	s := &Server{
 		Stater: &testutil.MockStater{
 			BeaconState: st,
 		},
@@ -811,9 +811,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
@@ -828,9 +828,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		for _, datum := range resp.Data {
 			assert.Equal(t, true, datum.Slot >= 320 && datum.Slot <= 351)
@@ -843,9 +843,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 
@@ -865,9 +865,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
 
@@ -888,9 +888,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 1, len(resp.Data))
 
@@ -912,7 +912,7 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 		chainService = &testing2.ChainService{Optimistic: true}
-		bs = &Server{
+		s = &Server{
 			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
@@ -927,9 +927,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -949,7 +949,7 @@ func TestListCommittees(t *testing.T) {
 				headerRoot: true,
 			},
 		}
-		bs = &Server{
+		s = &Server{
 			Stater: &testutil.MockStater{
 				BeaconState: st,
 			},
@@ -964,9 +964,9 @@ func TestListCommittees(t *testing.T) {
 		writer := httptest.NewRecorder()
 
 		writer.Body = &bytes.Buffer{}
-		bs.ListCommittees(writer, request)
+		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &StateCommitteesResponse{}
+		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.Finalized)
