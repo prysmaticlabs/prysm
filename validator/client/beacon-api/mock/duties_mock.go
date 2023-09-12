@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	apimiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
@@ -37,10 +38,10 @@ func (m *MockdutiesProvider) EXPECT() *MockdutiesProviderMockRecorder {
 }
 
 // GetAttesterDuties mocks base method.
-func (m *MockdutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.AttesterDutyJson, error) {
+func (m *MockdutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAttesterDuties", ctx, epoch, validatorIndices)
-	ret0, _ := ret[0].([]*apimiddleware.AttesterDutyJson)
+	ret0, _ := ret[0].([]*validator.AttesterDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -67,10 +68,10 @@ func (mr *MockdutiesProviderMockRecorder) GetCommittees(ctx, epoch interface{}) 
 }
 
 // GetProposerDuties mocks base method.
-func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.ProposerDutyJson, error) {
+func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProposerDuties", ctx, epoch)
-	ret0, _ := ret[0].([]*apimiddleware.ProposerDutyJson)
+	ret0, _ := ret[0].([]*validator.ProposerDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -82,10 +83,10 @@ func (mr *MockdutiesProviderMockRecorder) GetProposerDuties(ctx, epoch interface
 }
 
 // GetSyncDuties mocks base method.
-func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*apimiddleware.SyncCommitteeDuty, error) {
+func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSyncDuties", ctx, epoch, validatorIndices)
-	ret0, _ := ret[0].([]*apimiddleware.SyncCommitteeDuty)
+	ret0, _ := ret[0].([]*validator.SyncCommitteeDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
