@@ -678,6 +678,7 @@ func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 	}
 	return &v1.BlobSidecarSignRequest{
 		Type:        "BLOB_SIDECAR",
+		ForkInfo:    MockForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		BlobSidecar: &v1.BlobSidecar{
 			BlockRoot:       make([]byte, fieldparams.RootLength),

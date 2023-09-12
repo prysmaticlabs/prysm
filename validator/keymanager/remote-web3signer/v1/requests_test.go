@@ -494,7 +494,7 @@ func TestGetBlobSignRequest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := v1.GetBlobSignRequest(tt.args.request)
+			got, err := v1.GetBlobSignRequest(tt.args.request, make([]byte, fieldparams.RootLength))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetBlobSignRequest() error = %v, wantErr %v", err, tt.wantErr)
 				return
