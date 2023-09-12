@@ -152,7 +152,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	case *validatorpb.SignRequest_ContributionAndProof:
 		return handleContributionAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Registration:
-		return handleRegistration(ctx, validator, request, genesisValidatorsRoot)
+		return handleRegistration(ctx, validator, request)
 	case *validatorpb.SignRequest_Blob:
 		return handleBlob(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlindedBlob:
@@ -354,7 +354,7 @@ func handleContributionAndProof(ctx context.Context, validator *validator.Valida
 	return json.Marshal(contributionAndProofRequest)
 }
 
-func handleRegistration(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+func handleRegistration(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest) ([]byte, error) {
 	validatorRegistrationRequest, err := web3signerv1.GetValidatorRegistrationSignRequest(request)
 	if err != nil {
 		return nil, err
@@ -367,7 +367,7 @@ func handleRegistration(ctx context.Context, validator *validator.Validate, requ
 }
 
 func handleBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blobRequest, err := web3signerv1.GetBlobSignRequest(request)
+	blobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +379,7 @@ func handleBlob(ctx context.Context, validator *validator.Validate, request *val
 }
 
 func handleBlindedBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request)
+	blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
 	}

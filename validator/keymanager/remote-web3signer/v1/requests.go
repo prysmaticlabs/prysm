@@ -417,9 +417,13 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 }
 
 // GetBlobSignRequest maps the request for signing type BLOB_SIDECAR
-func GetBlobSignRequest(request *validatorpb.SignRequest) (*BlobSidecarSignRequest, error) {
+func GetBlobSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlobSidecarSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
+	}
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
 	}
 	var blobSidecar *BlobSidecar
 	switch request.Object.(type) {
@@ -469,6 +473,7 @@ func GetBlobSignRequest(request *validatorpb.SignRequest) (*BlobSidecarSignReque
 
 	return &BlobSidecarSignRequest{
 		Type:        "BLOB_SIDECAR",
+		ForkInfo:    fork,
 		SigningRoot: request.SigningRoot,
 		BlobSidecar: blobSidecar,
 	}, nil
