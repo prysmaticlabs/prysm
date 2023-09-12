@@ -15,7 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
-	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
