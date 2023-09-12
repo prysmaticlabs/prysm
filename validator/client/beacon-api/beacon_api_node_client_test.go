@@ -19,7 +19,7 @@ import (
 func TestGetGenesis(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		genesisResponse         *apimiddleware.GenesisResponse_GenesisJson
+		genesisResponse         *shared.GenesisResponse
 		genesisError            error
 		depositContractResponse apimiddleware.DepositContractResponseJson
 		depositContractError    error
@@ -34,7 +34,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to decode genesis validator root",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: "foo",
 			},
@@ -42,7 +42,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to parse genesis time",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "foo",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{1}),
 			},
@@ -50,7 +50,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to query contract information",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -60,7 +60,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to read nil deposit contract data",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -72,7 +72,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to decode deposit contract address",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -86,7 +86,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "successfully retrieves genesis info",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &shared.GenesisResponse{
 				GenesisTime:           "654812",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},

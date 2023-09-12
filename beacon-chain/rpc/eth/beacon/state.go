@@ -1,7 +1,6 @@
 package beacon
 
 import (
-	"bytes"
 	"context"
 	"strconv"
 
@@ -17,40 +16,11 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type stateRequest struct {
 	epoch   *primitives.Epoch
 	stateId []byte
-}
-
-// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-func (bs *Server) GetGenesis(ctx context.Context, _ *emptypb.Empty) (*ethpb.GenesisResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetGenesis")
-	defer span.End()
-
-	genesisTime := bs.GenesisTimeFetcher.GenesisTime()
-	if genesisTime.IsZero() {
-		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
-	}
-	validatorRoot := bs.ChainInfoFetcher.GenesisValidatorsRoot()
-	if bytes.Equal(validatorRoot[:], params.BeaconConfig().ZeroHash[:]) {
-		return nil, status.Errorf(codes.NotFound, "Chain genesis info is not yet known")
-	}
-	forkVersion := params.BeaconConfig().GenesisForkVersion
-
-	return &ethpb.GenesisResponse{
-		Data: &ethpb.GenesisResponse_Genesis{
-			GenesisTime: &timestamppb.Timestamp{
-				Seconds: genesisTime.Unix(),
-				Nanos:   0,
-			},
-			GenesisValidatorsRoot: validatorRoot[:],
-			GenesisForkVersion:    forkVersion,
-		},
-	}, nil
 }
 
 // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.

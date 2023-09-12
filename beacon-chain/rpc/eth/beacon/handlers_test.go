@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -577,7 +578,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	url := "http://example.com/eth/v1/beacon/blocks/{block_id}/root"
+	url := "http://example.com/eth/v1/beacon/blocks/{block_id}}/root"
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	t.Run("get root", func(t *testing.T) {
@@ -890,5 +891,72 @@ func TestGetStateFork(t *testing.T) {
 		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
 		require.NoError(t, err)
 		assert.DeepEqual(t, true, stateForkReponse.Finalized)
+	})
+}
+
+func TestGetGenesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.GenesisForkVersion = []byte("genesis")
+	params.OverrideBeaconConfig(config)
+	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	validatorsRoot := [32]byte{1, 2, 3, 4, 5, 6}
+	url := "http://example.com/eth/v1/beacon/genesis"
+	t.Run("OK", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &struct {
+			Data *shared.GenesisResponse `json:"data"`
+		}{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, fmt.Sprintf("%d", genesis.Unix()), resp.Data.GenesisTime)
+		assert.DeepEqual(t, hexutil.Encode(validatorsRoot[:]), resp.Data.GenesisValidatorsRoot)
+		assert.DeepEqual(t, hexutil.Encode([]byte("genesis")), resp.Data.GenesisForkVersion)
+	})
+
+	t.Run("No genesis time", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        time.Time{},
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Chain genesis info is not yet known"))
+	})
+
+	t.Run("No genesis validators root", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: [32]byte{},
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Chain genesis info is not yet known"))
 	})
 }

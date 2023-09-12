@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"testing"
-	"time"
 
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -17,61 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
-
-func TestGetGenesis(t *testing.T) {
-	ctx := context.Background()
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig().Copy()
-	config.GenesisForkVersion = []byte("genesis")
-	params.OverrideBeaconConfig(config)
-	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
-	validatorsRoot := [32]byte{1, 2, 3, 4, 5, 6}
-
-	t.Run("OK", func(t *testing.T) {
-		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
-			ValidatorsRoot: validatorsRoot,
-		}
-		s := Server{
-			GenesisTimeFetcher: chainService,
-			ChainInfoFetcher:   chainService,
-		}
-		resp, err := s.GetGenesis(ctx, &emptypb.Empty{})
-		require.NoError(t, err)
-		assert.Equal(t, genesis.Unix(), resp.Data.GenesisTime.Seconds)
-		assert.Equal(t, int32(0), resp.Data.GenesisTime.Nanos)
-		assert.DeepEqual(t, validatorsRoot[:], resp.Data.GenesisValidatorsRoot)
-		assert.DeepEqual(t, []byte("genesis"), resp.Data.GenesisForkVersion)
-	})
-
-	t.Run("No genesis time", func(t *testing.T) {
-		chainService := &chainMock.ChainService{
-			Genesis:        time.Time{},
-			ValidatorsRoot: validatorsRoot,
-		}
-		s := Server{
-			GenesisTimeFetcher: chainService,
-			ChainInfoFetcher:   chainService,
-		}
-		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
-	})
-
-	t.Run("No genesis validators root", func(t *testing.T) {
-		chainService := &chainMock.ChainService{
-			Genesis:        genesis,
-			ValidatorsRoot: [32]byte{},
-		}
-		s := Server{
-			GenesisTimeFetcher: chainService,
-			ChainInfoFetcher:   chainService,
-		}
-		_, err := s.GetGenesis(ctx, &emptypb.Empty{})
-		assert.ErrorContains(t, "Chain genesis info is not yet known", err)
-	})
-}
 
 func TestGetStateRoot(t *testing.T) {
 	ctx := context.Background()

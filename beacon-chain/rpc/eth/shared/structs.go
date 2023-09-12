@@ -134,6 +134,18 @@ type SyncCommitteeMessage struct {
 	Signature       string `json:"signature" validate:"required,hexadecimal"`
 }
 
+type GenesisData struct {
+	GenesisTime           string `json:"genesis_time"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root" hex:"true"`
+	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
+}
+
+type GenesisResponse struct {
+	GenesisTime           string `json:"genesis_time"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root" hex:"true"`
+	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
