@@ -9,7 +9,7 @@ def e2e_deps():
         urls = ["https://artifacts.consensys.net/public/web3signer/raw/names/web3signer.tar.gz/versions/23.9.0/web3signer-23.9.0.tar.gz"],
         sha256 = "7af5cd0589f6105f2267b6c9e6eedda077d597e6410975e1687a6a20e7f1518c",
         build_file = "@prysm//testing/endtoend:web3signer.BUILD",
-        strip_prefix = "web3signer-23.3.1",
+        strip_prefix = "web3signer-23.9.0",
     )
 
     http_archive(
