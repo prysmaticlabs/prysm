@@ -133,6 +133,67 @@ func (s *Service) initVerifier(ctx context.Context) (*verifier, error) {
 	return newBackfillVerifier(cps)
 }
 
+func (s *Service) updateComplete() {
+	b, err := s.pool.Complete()
+	if err != nil {
+		if errors.Is(err, errEndSequence) {
+			log.WithField("backfill_slot", b.begin).Info("Backfill is complete")
+		} else {
+			log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
+		}
+		return
+	}
+	s.batchSeq.update(b)
+}
+
+func (s *Service) importBatches(ctx context.Context) {
+	importable := s.batchSeq.importable()
+	imported := 0
+	for i := range importable {
+		ib := importable[i]
+		// TODO: can we have an entire batch of skipped slots?
+		if len(ib.results) == 0 {
+			log.Error("wtf")
+		}
+		_, err := s.batchImporter(ctx, ib, s.su)
+		if err != nil {
+			log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import.")
+			s.downscore(ib)
+			ib.state = batchErrRetryable
+			s.batchSeq.update(ib)
+			// If a batch fails, the subsequent batches are no longer considered importable.
+			break
+		}
+		imported += 1
+		log.WithFields(ib.logFields()).Debug("Backfill batch imported.")
+		ib.state = batchImportComplete
+		// Calling update with state=batchImportComplete will advance the batch list.
+		s.batchSeq.update(ib)
+	}
+	log.WithField("imported", imported).WithField("importable", len(importable)).
+		WithField("batches_remaining", s.batchSeq.numTodo()).
+		Info("Backfill batches processed.")
+}
+
+func (s *Service) scheduleTodos() {
+	batches, err := s.batchSeq.sequence()
+	if err != nil {
+		// This typically means we have several importable batches, but they are stuck behind a batch that needs
+		// to complete first so that we can chain parent roots across batches.
+		// ie backfilling [[90..100), [80..90), [70..80)], if we complete [70..80) and [80..90) but not [90..100),
+		// we can't move forward until [90..100) completes, because we need to confirm 99 connects to 100,
+		// and then we'll have the parent_root expected by 90 to ensure it matches the root for 89,
+		// at which point we know we can process [80..90).
+		if errors.Is(err, errMaxBatches) {
+			log.Debug("Backfill batches waiting for descendent batch to complete.")
+			return
+		}
+	}
+	for _, b := range batches {
+		s.pool.Todo(b)
+	}
+}
+
 func (s *Service) Start() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer func() {
@@ -163,59 +224,12 @@ func (s *Service) Start() {
 	}
 
 	for {
-		b, err := s.pool.Complete()
-		if err != nil {
-			if errors.Is(err, errEndSequence) {
-				log.WithField("backfill_slot", b.begin).Info("Backfill is complete")
-			} else {
-				log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
-			}
-			return
-		}
-		s.batchSeq.update(b)
-		importable := s.batchSeq.importable()
-		imported := 0
-		for i := range importable {
-			ib := importable[i]
-			if len(ib.results) == 0 {
-				log.Error("wtf")
-			}
-			_, err := s.batchImporter(ctx, ib, s.su)
-			if err != nil {
-				log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import.")
-				s.downscore(ib)
-				ib.state = batchErrRetryable
-				s.batchSeq.update(b)
-				break
-			}
-			imported += 1
-			log.WithFields(ib.logFields()).Debug("Backfill batch imported.")
-			ib.state = batchImportComplete
-			// Calling update with state=batchImportComplete will advance the batch list.
-			s.batchSeq.update(ib)
-		}
+		s.updateComplete()
+		s.importBatches(ctx)
 		if err := s.batchSeq.moveMinimum(s.ms.minimumSlot()); err != nil {
 			log.WithError(err).Fatal("Non-recoverable error in backfill service, quitting.")
 		}
-		log.WithField("imported", imported).WithField("importable", len(importable)).
-			WithField("batches_remaining", s.batchSeq.numTodo()).
-			Info("Backfill batches processed.")
-		batches, err := s.batchSeq.sequence()
-		if err != nil {
-			// This typically means we have several importable batches, but they are stuck behind a batch that needs
-			// to complete first so that we can chain parent roots across batches.
-			// ie backfilling [[90..100), [80..90), [70..80)], if we complete [70..80) and [80..90) but not [90..100),
-			// we can't move forward until [90..100) completes, because we need to confirm 99 connects to 100,
-			// and then we'll have the parent_root expected by 90 to ensure it matches the root for 89,
-			// at which point we know we can process [80..90).
-			if errors.Is(err, errMaxBatches) {
-				log.Debug("Backfill batches waiting for descendent batch to complete.")
-				continue
-			}
-		}
-		for _, b := range batches {
-			s.pool.Todo(b)
-		}
+		s.scheduleTodos()
 	}
 }
 
