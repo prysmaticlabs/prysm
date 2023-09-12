@@ -68,15 +68,6 @@ service BeaconChain {
     };
   }
 
-  // GetStateFork returns Fork object for state with given 'stateId'.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateFork
-  rpc GetStateFork(v1.StateRequest) returns (v1.StateForkResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/fork"
-    };
-  }
-
   // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
   // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
   //
