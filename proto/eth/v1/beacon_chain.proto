@@ -63,12 +63,6 @@ message StateRootResponse {
     }
 }
 
-message StateForkResponse {
-    Fork data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
 message StateFinalityCheckpointResponse {
     StateFinalityCheckpoint data = 1;
     bool execution_optimistic = 2;

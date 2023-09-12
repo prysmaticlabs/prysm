@@ -181,12 +181,12 @@ func cliActionRequestBlobs(cliCtx *cli.Context) error {
 				"index":      b.Index,
 				"commitment": fmt.Sprintf("%#x", b.KzgCommitment),
 				"kzgProof":   fmt.Sprintf("%#x", b.KzgProof),
-			}).Info("Received blob")
+			}).Info("Received blob sidecar")
 		}
 		log.WithFields(logrus.Fields{
 			"numBlobs": len(blobs),
 			"peer":     pr.String(),
-		}).Info("Received blobs from peer")
+		}).Info("Received blob sidecars from peer")
 	}
 	return nil
 }
