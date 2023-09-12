@@ -67,7 +67,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	// Exit early if no matching validators we found or we don't want to further filter validators by status.
+	// Exit early if no matching validators were found or we don't want to further filter validators by status.
 	if len(readOnlyVals) == 0 || len(statuses) == 0 {
 		containers := make([]*ValidatorContainer, len(readOnlyVals))
 		for i, val := range readOnlyVals {
