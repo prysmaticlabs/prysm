@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -33,6 +35,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
@@ -629,4 +633,423 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{
 		"validatorIndices": validatorIndices,
 	}).Info("Updated fee recipient addresses")
+}
+
+// GetAttesterDuties requests the beacon node to provide a set of attestation duties,
+// which should be performed by validators, for a particular epoch.
+func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttesterDuties")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	rawEpoch := mux.Vars(r)["epoch"]
+	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	if !valid {
+		return
+	}
+	requestedEpoch := primitives.Epoch(requestedEpochUint)
+	var req GetAttesterDutiesRequest
+	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.ValidatorIndices) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
+	for i, ix := range req.ValidatorIndices {
+		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
+		if !valid {
+			return
+		}
+		requestedValIndices[i] = primitives.ValidatorIndex(valIx)
+	}
+
+	cs := s.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	nextEpoch := currentEpoch + 1
+	if requestedEpoch > nextEpoch {
+		http2.HandleError(
+			w,
+			fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", requestedEpoch, nextEpoch),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	var startSlot primitives.Slot
+	if requestedEpoch == nextEpoch {
+		startSlot, err = slots.EpochStart(currentEpoch)
+	} else {
+		startSlot, err = slots.EpochStart(requestedEpoch)
+	}
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get start slot from epoch %d: %v", requestedEpoch, err), http.StatusInternalServerError)
+		return
+	}
+
+	st, err := s.Stater.StateBySlot(ctx, startSlot)
+	if err != nil {
+		http2.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	committeeAssignments, _, err := helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get active validator count: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
+
+	duties := make([]*AttesterDuty, 0, len(requestedValIndices))
+	for _, index := range requestedValIndices {
+		pubkey := st.PubkeyAtIndex(index)
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
+		if bytes.Equal(pubkey[:], zeroPubkey[:]) {
+			http2.HandleError(w, fmt.Sprintf("Invalid validator index %d", index), http.StatusBadRequest)
+			return
+		}
+		committee := committeeAssignments[index]
+		if committee == nil {
+			continue
+		}
+		var valIndexInCommittee int
+		// valIndexInCommittee will be 0 in case we don't get a match. This is a potential false positive,
+		// however it's an impossible condition because every validator must be assigned to a committee.
+		for cIndex, vIndex := range committee.Committee {
+			if vIndex == index {
+				valIndexInCommittee = cIndex
+				break
+			}
+		}
+		duties = append(duties, &AttesterDuty{
+			Pubkey:                  hexutil.Encode(pubkey[:]),
+			ValidatorIndex:          strconv.FormatUint(uint64(index), 10),
+			CommitteeIndex:          strconv.FormatUint(uint64(committee.CommitteeIndex), 10),
+			CommitteeLength:         strconv.Itoa(len(committee.Committee)),
+			CommitteesAtSlot:        strconv.FormatUint(committeesAtSlot, 10),
+			ValidatorCommitteeIndex: strconv.Itoa(valIndexInCommittee),
+			Slot:                    strconv.FormatUint(uint64(committee.AttesterSlot), 10),
+		})
+	}
+
+	dependentRoot, err := attestationDependentRoot(st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := &GetAttesterDutiesResponse{
+		DependentRoot:       hexutil.Encode(dependentRoot),
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
+	}
+	http2.WriteJson(w, response)
+}
+
+// GetProposerDuties requests beacon node to provide all validators that are scheduled to propose a block in the given epoch.
+func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetProposerDuties")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	rawEpoch := mux.Vars(r)["epoch"]
+	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	if !valid {
+		return
+	}
+	requestedEpoch := primitives.Epoch(requestedEpochUint)
+
+	cs := s.TimeFetcher.CurrentSlot()
+	currentEpoch := slots.ToEpoch(cs)
+	nextEpoch := currentEpoch + 1
+	var nextEpochLookahead bool
+	if requestedEpoch > nextEpoch {
+		http2.HandleError(
+			w,
+			fmt.Sprintf("Request epoch %d can not be greater than next epoch %d", requestedEpoch, currentEpoch+1),
+			http.StatusBadRequest,
+		)
+		return
+	} else if requestedEpoch == nextEpoch {
+		// If the request is for the next epoch, we use the current epoch's state to compute duties.
+		requestedEpoch = currentEpoch
+		nextEpochLookahead = true
+	}
+
+	epochStartSlot, err := slots.EpochStart(requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get start slot of epoch %d: %v", requestedEpoch, err), http.StatusInternalServerError)
+		return
+	}
+	st, err := s.Stater.StateBySlot(ctx, epochStartSlot)
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get state for slot %d: %v ", epochStartSlot, err), http.StatusInternalServerError)
+		return
+	}
+
+	var proposals map[primitives.ValidatorIndex][]primitives.Slot
+	if nextEpochLookahead {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, st, nextEpoch)
+	} else {
+		_, proposals, err = helpers.CommitteeAssignments(ctx, st, requestedEpoch)
+	}
+	if err != nil {
+		http2.HandleError(w, "Could not compute committee assignments: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	duties := make([]*ProposerDuty, 0)
+	for index, proposalSlots := range proposals {
+		val, err := st.ValidatorAtIndexReadOnly(index)
+		if err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not get validator at index %d: %v", index, err), http.StatusInternalServerError)
+			return
+		}
+		pubkey48 := val.PublicKey()
+		pubkey := pubkey48[:]
+		for _, slot := range proposalSlots {
+			s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
+			duties = append(duties, &ProposerDuty{
+				Pubkey:         hexutil.Encode(pubkey),
+				ValidatorIndex: strconv.FormatUint(uint64(index), 10),
+				Slot:           strconv.FormatUint(uint64(slot), 10),
+			})
+		}
+	}
+	sort.Slice(duties, func(i, j int) bool {
+		return duties[i].Slot < duties[j].Slot
+	})
+
+	s.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
+
+	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get dependent root: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := &GetProposerDutiesResponse{
+		DependentRoot:       hexutil.Encode(dependentRoot),
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
+	}
+	http2.WriteJson(w, resp)
+}
+
+// GetSyncCommitteeDuties provides a set of sync committee duties for a particular epoch.
+//
+// The logic for calculating epoch validity comes from https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Validator/getSyncCommitteeDuties
+// where `epoch` is described as `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`.
+//
+// Algorithm:
+//   - Get the last valid epoch. This is the last epoch of the next sync committee period.
+//   - Get the state for the requested epoch. If it's a future epoch from the current sync committee period
+//     or an epoch from the next sync committee period, then get the current state.
+//   - Get the state's current sync committee. If it's an epoch from the next sync committee period, then get the next sync committee.
+//   - Get duties.
+func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetSyncCommitteeDuties")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	rawEpoch := mux.Vars(r)["epoch"]
+	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	if !valid {
+		return
+	}
+	requestedEpoch := primitives.Epoch(requestedEpochUint)
+	if requestedEpoch < params.BeaconConfig().AltairForkEpoch {
+		http2.HandleError(w, "Sync committees are not supported for Phase0", http.StatusBadRequest)
+		return
+	}
+	var req GetSyncCommitteeDutiesRequest
+	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.ValidatorIndices) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
+	for i, ix := range req.ValidatorIndices {
+		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
+		if !valid {
+			return
+		}
+		requestedValIndices[i] = primitives.ValidatorIndex(valIx)
+	}
+
+	currentEpoch := slots.ToEpoch(s.TimeFetcher.CurrentSlot())
+	lastValidEpoch := syncCommitteeDutiesLastValidEpoch(currentEpoch)
+	if requestedEpoch > lastValidEpoch {
+		http2.HandleError(w, fmt.Sprintf("Epoch is too far in the future, maximum valid epoch is %d", lastValidEpoch), http.StatusBadRequest)
+		return
+	}
+
+	startingEpoch := requestedEpoch
+	if startingEpoch > currentEpoch {
+		startingEpoch = currentEpoch
+	}
+	slot, err := slots.EpochStart(startingEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get sync committee slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	st, err := s.Stater.State(ctx, []byte(strconv.FormatUint(uint64(slot), 10)))
+	if err != nil {
+		http2.HandleError(w, "Could not get sync committee state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	currentSyncCommitteeFirstEpoch, err := slots.SyncCommitteePeriodStartEpoch(startingEpoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get sync committee period start epoch: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	var committee *ethpbalpha.SyncCommittee
+	if requestedEpoch >= nextSyncCommitteeFirstEpoch {
+		committee, err = st.NextSyncCommittee()
+		if err != nil {
+			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		committee, err = st.CurrentSyncCommittee()
+		if err != nil {
+			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	committeePubkeys := make(map[[fieldparams.BLSPubkeyLength]byte][]string)
+	for j, pubkey := range committee.Pubkeys {
+		pubkey48 := bytesutil.ToBytes48(pubkey)
+		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], strconv.FormatUint(uint64(j), 10))
+	}
+	duties, err := syncCommitteeDuties(requestedValIndices, st, committeePubkeys)
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := &GetSyncCommitteeDutiesResponse{
+		Data:                duties,
+		ExecutionOptimistic: isOptimistic,
+	}
+	http2.WriteJson(w, resp)
+}
+
+// attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+// or the genesis block root in the case of underflow.
+func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
+	if epoch <= 1 {
+		dependentRootSlot = 0
+	} else {
+		prevEpochStartSlot, err := slots.EpochStart(epoch.Sub(1))
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		dependentRootSlot = prevEpochStartSlot.Sub(1)
+	}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	return root, nil
+}
+
+// proposalDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
+// or the genesis block root in the case of underflow.
+func proposalDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
+	var dependentRootSlot primitives.Slot
+	if epoch == 0 {
+		dependentRootSlot = 0
+	} else {
+		epochStartSlot, err := slots.EpochStart(epoch)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not obtain epoch's start slot: %v", err)
+		}
+		dependentRootSlot = epochStartSlot.Sub(1)
+	}
+	root, err := helpers.BlockRootAtSlot(s, dependentRootSlot)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get block root")
+	}
+	return root, nil
+}
+
+func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives.Epoch {
+	currentSyncPeriodIndex := currentEpoch / params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	// Return the last epoch of the next sync committee.
+	// To do this we go two periods ahead to find the first invalid epoch, and then subtract 1.
+	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
+}
+
+func syncCommitteeDuties(
+	valIndices []primitives.ValidatorIndex,
+	st state.BeaconState,
+	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]string,
+) ([]*SyncCommitteeDuty, error) {
+	duties := make([]*SyncCommitteeDuty, 0)
+	for _, index := range valIndices {
+		duty := &SyncCommitteeDuty{
+			ValidatorIndex: strconv.FormatUint(uint64(index), 10),
+		}
+		valPubkey := st.PubkeyAtIndex(index)
+		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
+		if bytes.Equal(valPubkey[:], zeroPubkey[:]) {
+			return nil, errors.Errorf("Invalid validator index %d", index)
+		}
+		duty.Pubkey = hexutil.Encode(valPubkey[:])
+		indices, ok := committeePubkeys[valPubkey]
+		if ok {
+			duty.ValidatorSyncCommitteeIndices = indices
+			duties = append(duties, duty)
+		}
+	}
+	return duties, nil
 }

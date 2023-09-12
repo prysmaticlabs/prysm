@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
@@ -121,13 +122,13 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{fmt.Sprintf("%v", e)}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerDutiesResponseJson{},
+			"json": &validator.GetProposerDutiesResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerDutiesResponseJson{},
+			"json": &validator.GetProposerDutiesResponse{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedl, ok := lhouseResp.(*apimiddleware.ProposerDutiesResponseJson)
+			castedl, ok := lhouseResp.(*validator.GetProposerDutiesResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
@@ -153,17 +154,17 @@ var beaconPathsAndObjects = map[string]metadata{
 			return validatorIndices
 		}(),
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterDutiesResponseJson{},
+			"json": &validator.GetAttesterDutiesResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterDutiesResponseJson{},
+			"json": &validator.GetAttesterDutiesResponse{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedp, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			castedp, ok := lhouseResp.(*validator.GetAttesterDutiesResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
-			castedl, ok := lhouseResp.(*apimiddleware.AttesterDutiesResponseJson)
+			castedl, ok := lhouseResp.(*validator.GetAttesterDutiesResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
@@ -376,7 +377,7 @@ func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, gen
 		return errors.New("failed to cast type")
 	}
 	proposerdutiesData := beaconPathsAndObjects["/validator/duties/proposer/{param1}"]
-	prysmDuties, ok := proposerdutiesData.prysmResps["json"].(*apimiddleware.ProposerDutiesResponseJson)
+	prysmDuties, ok := proposerdutiesData.prysmResps["json"].(*validator.GetProposerDutiesResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}
