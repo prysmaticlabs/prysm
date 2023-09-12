@@ -426,7 +426,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
-	url := "http://example.com/eth/v1/beacon/blocks/{block_id}}/root"
+	url := "http://example.com/eth/v1/beacon/blocks/{block_id}/root"
 	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
 	headBlock := blkContainers[len(blkContainers)-1]
 	t.Run("get root", func(t *testing.T) {
