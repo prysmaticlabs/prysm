@@ -27,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -35,6 +36,7 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -927,7 +929,6 @@ func TestGetStateFork(t *testing.T) {
 	})
 }
 
-
 func TestListCommittees(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
@@ -937,7 +938,7 @@ func TestListCommittees(t *testing.T) {
 	st, _ = util.DeterministicGenesisState(t, 8192)
 	epoch := slots.ToEpoch(st.Slot())
 
-	chainService := &testing2.ChainService{}
+	chainService := &chainMock.ChainService{}
 	s := &Server{
 		Stater: &testutil.MockStater{
 			BeaconState: st,
@@ -1054,7 +1055,7 @@ func TestListCommittees(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		chainService = &testing2.ChainService{Optimistic: true}
+		chainService = &chainMock.ChainService{Optimistic: true}
 		s = &Server{
 			Stater: &testutil.MockStater{
 				BeaconState: st,
@@ -1087,7 +1088,7 @@ func TestListCommittees(t *testing.T) {
 
 		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
-		chainService = &testing2.ChainService{
+		chainService = &chainMock.ChainService{
 			FinalizedRoots: map[[32]byte]bool{
 				headerRoot: true,
 			},
