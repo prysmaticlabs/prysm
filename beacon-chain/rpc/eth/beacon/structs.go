@@ -12,6 +12,13 @@ type BlockRootResponse struct {
 	Finalized           bool `json:"finalized"`
 }
 
+type DepositContractResponse struct {
+	Data *struct {
+		ChainId uint64 `json:"chain_id"`
+		Address string `json:"address"`
+	} `json:"data"`
+}
+
 type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }
@@ -26,4 +33,10 @@ type ListVoluntaryExitsResponse struct {
 
 type SubmitSyncCommitteeSignaturesRequest struct {
 	Data []*shared.SyncCommitteeMessage `json:"data"`
+}
+
+type GetStateForkResponse struct {
+	Data                *shared.Fork `json:"data"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
 }

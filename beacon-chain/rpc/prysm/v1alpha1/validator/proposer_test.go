@@ -548,6 +548,11 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	got, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
 	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
+
+	require.Equal(t, 3, len(got.GetDeneb().Blobs))
+	blockRoot, err := got.GetDeneb().Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, blockRoot[:], got.GetDeneb().Blobs[0].BlockRoot)
 }
 
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
