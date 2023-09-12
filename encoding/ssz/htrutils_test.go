@@ -122,6 +122,43 @@ func TestTransactionsRoot(t *testing.T) {
 	}
 }
 
+func TestByteSliceRoot(t *testing.T) {
+	tests := []struct {
+		name    string
+		slice   []byte
+		want    [32]byte
+		wantErr bool
+	}{
+		{
+			name:  "nil",
+			slice: nil,
+			want:  [32]byte{148, 207, 155, 226, 2, 65, 69, 197, 173, 124, 141, 137, 63, 194, 41, 46, 78, 190, 32, 126, 164, 35, 80, 252, 124, 243, 232, 121, 138, 195, 76, 217},
+		},
+		{
+			name:  "empty",
+			slice: []byte{},
+			want:  [32]byte{148, 207, 155, 226, 2, 65, 69, 197, 173, 124, 141, 137, 63, 194, 41, 46, 78, 190, 32, 126, 164, 35, 80, 252, 124, 243, 232, 121, 138, 195, 76, 217},
+		},
+		{
+			name:  "one byte array",
+			slice: []byte{1, 2, 3},
+			want:  [32]byte{178, 178, 211, 29, 114, 144, 33, 226, 243, 104, 236, 206, 165, 208, 22, 56, 208, 212, 43, 198, 72, 172, 226, 183, 103, 205, 28, 115, 93, 46, 76, 207},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ssz.ByteSliceRoot(tt.slice)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ByteSliceRoot() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ByteSliceRoot() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestPackByChunk_SingleList(t *testing.T) {
 	tests := []struct {
 		name  string
