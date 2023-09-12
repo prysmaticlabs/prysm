@@ -15,6 +15,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -686,14 +687,14 @@ func unmarshalStrict(data []byte, v interface{}) error {
 	return dec.Decode(v)
 }
 
-func (bs *Server) validateBroadcast(ctx context.Context, r *http.Request, blk *eth.GenericSignedBeaconBlock) error {
+func (s *Server) validateBroadcast(ctx context.Context, r *http.Request, blk *eth.GenericSignedBeaconBlock) error {
 	switch r.URL.Query().Get(broadcastValidationQueryParam) {
 	case broadcastValidationConsensus:
 		b, err := blocks.NewSignedBeaconBlock(blk.Block)
 		if err != nil {
 			return errors.Wrapf(err, "could not create signed beacon block")
 		}
-		if err = bs.validateConsensus(ctx, b); err != nil {
+		if err = s.validateConsensus(ctx, b); err != nil {
 			return errors.Wrap(err, "consensus validation failed")
 		}
 	case broadcastValidationConsensusAndEquivocation:
@@ -701,10 +702,10 @@ func (bs *Server) validateBroadcast(ctx context.Context, r *http.Request, blk *e
 		if err != nil {
 			return errors.Wrapf(err, "could not create signed beacon block")
 		}
-		if err = bs.validateConsensus(r.Context(), b); err != nil {
+		if err = s.validateConsensus(r.Context(), b); err != nil {
 			return errors.Wrap(err, "consensus validation failed")
 		}
-		if err = bs.validateEquivocation(b.Block()); err != nil {
+		if err = s.validateEquivocation(b.Block()); err != nil {
 			return errors.Wrap(err, "equivocation validation failed")
 		}
 	default:
@@ -713,14 +714,14 @@ func (bs *Server) validateBroadcast(ctx context.Context, r *http.Request, blk *e
 	return nil
 }
 
-func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
+func (s *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) error {
 	parentBlockRoot := blk.Block().ParentRoot()
-	parentBlock, err := bs.Blocker.Block(ctx, parentBlockRoot[:])
+	parentBlock, err := s.Blocker.Block(ctx, parentBlockRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "could not get parent block")
 	}
 	parentStateRoot := parentBlock.Block().StateRoot()
-	parentState, err := bs.Stater.State(ctx, parentStateRoot[:])
+	parentState, err := s.Stater.State(ctx, parentStateRoot[:])
 	if err != nil {
 		return errors.Wrap(err, "could not get parent state")
 	}
@@ -731,15 +732,15 @@ func (bs *Server) validateConsensus(ctx context.Context, blk interfaces.ReadOnly
 	return nil
 }
 
-func (bs *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
-	if bs.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
+func (s *Server) validateEquivocation(blk interfaces.ReadOnlyBeaconBlock) error {
+	if s.ForkchoiceFetcher.HighestReceivedBlockSlot() == blk.Slot() {
 		return fmt.Errorf("block for slot %d already exists in fork choice", blk.Slot())
 	}
 	return nil
 }
 
 // GetBlockRoot retrieves the root of a block.
-func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockRoot")
 	defer span.End()
 
@@ -752,7 +753,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	switch blockID {
 	case "head":
-		root, err = bs.ChainInfoFetcher.HeadRoot(ctx)
+		root, err = s.ChainInfoFetcher.HeadRoot(ctx)
 		if err != nil {
 			http2.HandleError(w, "Could not retrieve head root: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -762,10 +763,10 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	case "finalized":
-		finalized := bs.ChainInfoFetcher.FinalizedCheckpt()
+		finalized := s.ChainInfoFetcher.FinalizedCheckpt()
 		root = finalized.Root
 	case "genesis":
-		blk, err := bs.BeaconDB.GenesisBlock(ctx)
+		blk, err := s.BeaconDB.GenesisBlock(ctx)
 		if err != nil {
 			http2.HandleError(w, "Could not retrieve genesis block: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -793,7 +794,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			blockID32 := bytesutil.ToBytes32(blockIDBytes)
-			blk, err := bs.BeaconDB.Block(ctx, blockID32)
+			blk, err := s.BeaconDB.Block(ctx, blockID32)
 			if err != nil {
 				http2.HandleError(w, fmt.Sprintf("Could not retrieve block for block root %#x: %v", blockID, err), http.StatusInternalServerError)
 				return
@@ -809,7 +810,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, "Could not parse block ID: "+err.Error(), http.StatusBadRequest)
 				return
 			}
-			hasRoots, roots, err := bs.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+			hasRoots, roots, err := s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
 			if err != nil {
 				http2.HandleError(w, fmt.Sprintf("Could not retrieve blocks for slot %d: %v", slot, err), http.StatusInternalServerError)
 				return
@@ -824,7 +825,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 			for _, blockRoot := range roots {
-				canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
+				canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
 				if err != nil {
 					http2.HandleError(w, "Could not determine if block root is canonical: "+err.Error(), http.StatusInternalServerError)
 					return
@@ -838,7 +839,7 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	b32Root := bytesutil.ToBytes32(root)
-	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, b32Root)
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, b32Root)
 	if err != nil {
 		http2.HandleError(w, "Could not check if block is optimistic: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -850,7 +851,45 @@ func (bs *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 			Root: hexutil.Encode(root),
 		},
 		ExecutionOptimistic: isOptimistic,
-		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, b32Root),
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, b32Root),
+	}
+	http2.WriteJson(w, response)
+}
+
+// GetStateFork returns Fork object for state with given 'stateId'.
+func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetStateFork")
+	defer span.End()
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fork := st.Fork()
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not check if slot's block is optimistic").Error(), http.StatusInternalServerError)
+		return
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not calculate root of latest block header: ").Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	response := &GetStateForkResponse{
+		Data: &shared.Fork{
+			PreviousVersion: hexutil.Encode(fork.PreviousVersion),
+			CurrentVersion:  hexutil.Encode(fork.CurrentVersion),
+			Epoch:           fmt.Sprintf("%d", fork.Epoch),
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
 	}
 	http2.WriteJson(w, response)
 }

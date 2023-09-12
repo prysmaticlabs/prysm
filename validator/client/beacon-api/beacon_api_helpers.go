@@ -11,6 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -48,10 +49,10 @@ func buildURL(path string, queryParams ...neturl.Values) string {
 	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
 
-func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*apimiddleware.StateForkResponseJson, error) {
+func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStateForkResponse, error) {
 	const endpoint = "/eth/v1/beacon/states/head/fork"
 
-	stateForkResponseJson := &apimiddleware.StateForkResponseJson{}
+	stateForkResponseJson := &beacon.GetStateForkResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,

@@ -34,3 +34,9 @@ type ListVoluntaryExitsResponse struct {
 type SubmitSyncCommitteeSignaturesRequest struct {
 	Data []*shared.SyncCommitteeMessage `json:"data"`
 }
+
+type GetStateForkResponse struct {
+	Data                *shared.Fork `json:"data"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
+}

@@ -41,12 +41,6 @@ type StateRootResponse_StateRootJson struct {
 	StateRoot string `json:"root" hex:"true"`
 }
 
-type StateForkResponseJson struct {
-	Data                *ForkJson `json:"data"`
-	ExecutionOptimistic bool      `json:"execution_optimistic"`
-	Finalized           bool      `json:"finalized"`
-}
-
 type StateFinalityCheckpointResponseJson struct {
 	Data                *StateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
 	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
