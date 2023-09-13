@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -697,10 +698,7 @@ func TestGetValidator(t *testing.T) {
 	})
 }
 
-/*func TestGetValidatorBalances(t *testing.T) {
-	ctx := context.Background()
-	db := dbTest.SetupDB(t)
-
+func TestGetValidatorBalances(t *testing.T) {
 	var st state.BeaconState
 	count := uint64(8192)
 	st, _ = util.DeterministicGenesisState(t, count)
@@ -710,7 +708,7 @@ func TestGetValidator(t *testing.T) {
 	}
 	require.NoError(t, st.SetBalances(balances))
 
-	t.Run("Head List Validators Balance by index", func(t *testing.T) {
+	t.Run("get by index", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &testutil.MockStater{
@@ -719,23 +717,28 @@ func TestGetValidator(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
-		idNums := []primitives.ValidatorIndex{15, 26, 400}
-		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("head"),
-			Id:      ids,
-		})
-		require.NoError(t, err)
-		for i, val := range resp.Data {
-			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, balances[val.Index], val.Balance)
-		}
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=15&id=26",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "15", resp.Data[0].Index)
+		assert.Equal(t, strconv.FormatUint(balances[15], 10), resp.Data[0].Balance)
+		assert.Equal(t, "26", resp.Data[1].Index)
+		assert.Equal(t, strconv.FormatUint(balances[26], 10), resp.Data[1].Balance)
 	})
-
-	t.Run("Head List Validators Balance by pubkey", func(t *testing.T) {
+	t.Run("get by pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &testutil.MockStater{
@@ -744,26 +747,30 @@ func TestGetValidator(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
-		idNums := []primitives.ValidatorIndex{20, 66, 90, 100}
 		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
 		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(66))
-		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(90))
-		pubkey4 := st.PubkeyAtIndex(primitives.ValidatorIndex(100))
-		pubKeys := [][]byte{pubkey1[:], pubkey2[:], pubkey3[:], pubkey4[:]}
-		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("head"),
-			Id:      pubKeys,
-		})
-		require.NoError(t, err)
-		for i, val := range resp.Data {
-			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, balances[val.Index], val.Balance)
-		}
-	})
+		hexPubkey1 := hexutil.Encode(pubkey1[:])
+		hexPubkey2 := hexutil.Encode(pubkey2[:])
 
-	t.Run("Head List Validators Balance by both index and pubkey", func(t *testing.T) {
+		request := httptest.NewRequest(
+			http.MethodGet,
+			fmt.Sprintf("http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=%s&id=%s", hexPubkey1, hexPubkey2),
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "20", resp.Data[0].Index)
+		assert.Equal(t, "66", resp.Data[1].Index)
+	})
+	t.Run("get by both index and pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &testutil.MockStater{
@@ -772,33 +779,47 @@ func TestGetValidator(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		idNums := []primitives.ValidatorIndex{20, 90, 170, 129}
-		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
-		pubkey3 := st.PubkeyAtIndex(primitives.ValidatorIndex(170))
-		ids := [][]byte{pubkey1[:], []byte("90"), pubkey3[:], []byte("129")}
-		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("head"),
-			Id:      ids,
-		})
-		require.NoError(t, err)
-		for i, val := range resp.Data {
-			assert.Equal(t, idNums[i], val.Index)
-			assert.Equal(t, balances[val.Index], val.Balance)
-		}
+		pubkey := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		hexPubkey := hexutil.Encode(pubkey[:])
+		request := httptest.NewRequest(
+			http.MethodGet,
+			fmt.Sprintf("http://example.com/eth/v1/beacon/states/{state_id}/validators?id=%s&id=60", hexPubkey),
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "20", resp.Data[0].Index)
+		assert.Equal(t, "60", resp.Data[1].Index)
 	})
+	t.Run("state ID required", func(t *testing.T) {
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher: &chainMock.ChainService{},
+		}
 
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidator(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "state_id is required in URL params", e.Message)
+	})
 	t.Run("execution optimistic", func(t *testing.T) {
-		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
-		blk.Block.ParentRoot = parentRoot[:]
-		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
-		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := Server{
 			Stater: &testutil.MockStater{
@@ -807,27 +828,24 @@ func TestGetValidator(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
-		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("head"),
-			Id:      ids,
-		})
-		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=15",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
-
 	t.Run("finalized", func(t *testing.T) {
-		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
-		blk.Block.ParentRoot = parentRoot[:]
-		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
-		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-
 		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{
@@ -842,15 +860,21 @@ func TestGetValidator(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		ids := [][]byte{[]byte("15"), []byte("26"), []byte("400")}
-		resp, err := s.ListValidatorBalances(ctx, &ethpb.ValidatorBalancesRequest{
-			StateId: []byte("head"),
-			Id:      ids,
-		})
-		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances?id=15",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
-}*/
+}

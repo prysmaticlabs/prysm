@@ -1682,6 +1682,12 @@ type GetValidatorResponse struct {
 	Data                *ValidatorContainer `json:"data"`
 }
 
+type GetValidatorBalancesResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                []*ValidatorBalance `json:"data"`
+}
+
 type ValidatorContainer struct {
 	Index     string     `json:"index"`
 	Balance   string     `json:"balance"`
@@ -1698,4 +1704,9 @@ type Validator struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+type ValidatorBalance struct {
+	Index   string `json:"index"`
+	Balance string `json:"balance"`
 }

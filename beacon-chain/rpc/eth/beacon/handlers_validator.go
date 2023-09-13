@@ -191,40 +191,52 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetValidatorBalances returns a filterable list of validator balances.
-/*func (bs *Server) GetValidatorBalances(ctx context.Context, req *ethpb.ValidatorBalancesRequest) (*ethpb.ValidatorBalancesResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListValidatorBalances")
+func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
 
-	st, err := bs.Stater.State(ctx, req.StateId)
-	if err != nil {
-		return nil, helpers.PrepareStateFetchGRPCError(err)
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
 	}
-
-	valContainers, err := valContainersFromIds(st, req.Id)
+	st, err := bs.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		return nil, handleValContainerErr(err)
+		shared.WriteStateFetchError(w, err)
+		return
 	}
-	valBalances := make([]*ethpb.ValidatorBalance, len(valContainers))
-	for i := 0; i < len(valContainers); i++ {
-		valBalances[i] = &ethpb.ValidatorBalance{
-			Index:   valContainers[i].Index,
-			Balance: valContainers[i].Balance,
+	ids, ok := decodeIds(w, st, r.URL.Query()["id"], true /* ignore unknown */)
+	if !ok {
+		return
+	}
+	bals := st.Balances()
+	valBalances := make([]*ValidatorBalance, len(ids))
+	for i, id := range ids {
+		valBalances[i] = &ValidatorBalance{
+			Index:   strconv.FormatUint(uint64(id), 10),
+			Balance: strconv.FormatUint(bals[id], 10),
 		}
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
 	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	return &ethpb.ValidatorBalancesResponse{Data: valBalances, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
-}*/
+	resp := &GetValidatorBalancesResponse{
+		Data:                valBalances,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, resp)
+}
 
 func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ignoreUnknown bool) ([]primitives.ValidatorIndex, bool) {
 	ids := make([]primitives.ValidatorIndex, 0, len(rawIds))
