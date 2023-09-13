@@ -9,7 +9,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -20,7 +21,7 @@ type dutiesProvider interface {
 	GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error)
 	GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error)
 	GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error)
-	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.CommitteeJson, error)
+	GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error)
 }
 
 type beaconApiDutiesProvider struct {
@@ -200,12 +201,12 @@ func (c beaconApiValidatorClient) getDutiesForEpoch(
 }
 
 // GetCommittees retrieves the committees for the given epoch
-func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error) {
 	committeeParams := url.Values{}
 	committeeParams.Add("epoch", strconv.FormatUint(uint64(epoch), 10))
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
 
-	var stateCommittees apimiddleware.StateCommitteesResponseJson
+	var stateCommittees beacon.GetCommitteesResponse
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, committeesRequest, &stateCommittees); err != nil {
 		return nil, errors.Wrapf(err, "failed to query committees for epoch `%d`", epoch)
 	}

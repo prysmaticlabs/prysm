@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -929,7 +930,7 @@ func TestGetStateFork(t *testing.T) {
 	})
 }
 
-func TestListCommittees(t *testing.T) {
+func TestGetCommittees(t *testing.T) {
 	db := dbTest.SetupDB(t)
 	ctx := context.Background()
 	url := "http://example.com/eth/v1/beacon/states/{state_id}/committees"
@@ -961,8 +962,12 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
-			assert.Equal(t, true, datum.Index == primitives.CommitteeIndex(0) || datum.Index == primitives.CommitteeIndex(1))
-			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, index == 0 || index == 1)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
 		}
 	})
 	t.Run("Head all committees of epoch 10", func(t *testing.T) {
@@ -977,7 +982,9 @@ func TestListCommittees(t *testing.T) {
 		resp := &GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		for _, datum := range resp.Data {
-			assert.Equal(t, true, datum.Slot >= 320 && datum.Slot <= 351)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, slot >= 320 && slot <= 351)
 		}
 	})
 	t.Run("Head all committees of slot 4", func(t *testing.T) {
@@ -993,13 +1000,17 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 
-		slot := primitives.Slot(4)
-		index := primitives.CommitteeIndex(0)
+		exSlot := uint64(4)
+		exIndex := uint64(0)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
-			assert.Equal(t, slot, datum.Slot)
-			assert.Equal(t, index, datum.Index)
-			index++
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exIndex++
 		}
 	})
 	t.Run("Head all committees of index 1", func(t *testing.T) {
@@ -1015,17 +1026,20 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
 
-		slot := primitives.Slot(0)
-		index := primitives.CommitteeIndex(1)
+		exSlot := uint64(0)
+		exIndex := uint64(1)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
-			assert.Equal(t, slot, datum.Slot)
-			assert.Equal(t, index, datum.Index)
-			slot++
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exSlot++
 		}
 	})
 	t.Run("Head all committees of slot 2, index 1", func(t *testing.T) {
-
 		query := url + "?slot=2&index=1"
 		request := httptest.NewRequest(http.MethodGet, query, nil)
 		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
@@ -1038,12 +1052,16 @@ func TestListCommittees(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 1, len(resp.Data))
 
-		index := primitives.CommitteeIndex(1)
-		slot := primitives.Slot(2)
+		exIndex := uint64(1)
+		exSlot := uint64(2)
 		for _, datum := range resp.Data {
-			assert.Equal(t, epoch, slots.ToEpoch(datum.Slot))
-			assert.Equal(t, slot, datum.Slot)
-			assert.Equal(t, index, datum.Index)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
 		}
 	})
 	t.Run("Execution optimistic", func(t *testing.T) {
