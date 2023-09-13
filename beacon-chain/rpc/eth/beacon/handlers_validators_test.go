@@ -12,10 +12,13 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -254,10 +257,7 @@ func TestGetValidators(t *testing.T) {
 	})
 }
 
-/*func TestListValidators_Status(t *testing.T) {
-	ctx := context.Background()
-	db := dbTest.SetupDB(t)
-
+func TestListValidators_FilterByStatus(t *testing.T) {
 	var st state.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
@@ -290,14 +290,14 @@ func TestGetValidators(t *testing.T) {
 			ExitEpoch:       30,
 			Slashed:         false,
 		},
-		// Exit slashed (at epoch 35).
+		// Exited slashed (at epoch 35).
 		{
 			ActivationEpoch:   3,
 			ExitEpoch:         30,
 			WithdrawableEpoch: 40,
 			Slashed:           true,
 		},
-		// Exit unslashed (at epoch 35).
+		// Exited unslashed (at epoch 35).
 		{
 			ActivationEpoch:   3,
 			ExitEpoch:         30,
@@ -321,12 +321,12 @@ func TestGetValidators(t *testing.T) {
 			Slashed:           false,
 		},
 	}
-	for _, validator := range validators {
-		require.NoError(t, st.AppendValidator(validator))
+	for _, val := range validators {
+		require.NoError(t, st.AppendValidator(val))
 		require.NoError(t, st.AppendBalance(params.BeaconConfig().MaxEffectiveBalance))
 	}
 
-	t.Run("Head List All ACTIVE Validators", func(t *testing.T) {
+	t.Run("active", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &lookup.BeaconDbStater{
@@ -335,36 +335,29 @@ func TestGetValidators(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("head"),
-			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_ACTIVE},
-		})
-		require.NoError(t, err)
-		assert.Equal(t, len(resp.Data), 8192+2) // 2 active
-		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
-			require.NoError(t, err)
-			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 0)
-			require.NoError(t, err)
-			require.Equal(
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validators?status=active", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 8192+2, len(resp.Data))
+		for _, vc := range resp.Data {
+			assert.Equal(
 				t,
 				true,
-				status == validator.Active,
-			)
-			require.Equal(
-				t,
-				true,
-				datum.Status == ethpb.ValidatorStatus_ACTIVE_ONGOING ||
-					datum.Status == ethpb.ValidatorStatus_ACTIVE_EXITING ||
-					datum.Status == ethpb.ValidatorStatus_ACTIVE_SLASHED,
+				vc.Status == "active_ongoing" ||
+					vc.Status == "active_exiting" ||
+					vc.Status == "active_slashed",
 			)
 		}
 	})
-
-	t.Run("Head List All ACTIVE_ONGOING Validators", func(t *testing.T) {
+	t.Run("active_ongoing", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &lookup.BeaconDbStater{
@@ -373,35 +366,28 @@ func TestGetValidators(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("head"),
-			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_ACTIVE_ONGOING},
-		})
-		require.NoError(t, err)
-		assert.Equal(t, len(resp.Data), 8192+1) // 1 active_ongoing
-		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
-			require.NoError(t, err)
-			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 0)
-			require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validators?status=active_ongoing", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 8192+1, len(resp.Data))
+		for _, vc := range resp.Data {
 			require.Equal(
 				t,
 				true,
-				status == validator.ActiveOngoing,
-			)
-			require.Equal(
-				t,
-				true,
-				datum.Status == ethpb.ValidatorStatus_ACTIVE_ONGOING,
+				vc.Status == "active_ongoing",
 			)
 		}
 	})
-
 	require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*35))
-	t.Run("Head List All EXITED Validators", func(t *testing.T) {
+	t.Run("exited", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &lookup.BeaconDbStater{
@@ -410,34 +396,27 @@ func TestGetValidators(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("head"),
-			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_EXITED},
-		})
-		require.NoError(t, err)
-		assert.Equal(t, 4, len(resp.Data)) // 4 exited
-		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
-			require.NoError(t, err)
-			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
-			require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validators?status=exited", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 4, len(resp.Data))
+		for _, vc := range resp.Data {
 			require.Equal(
 				t,
 				true,
-				status == validator.Exited,
-			)
-			require.Equal(
-				t,
-				true,
-				datum.Status == ethpb.ValidatorStatus_EXITED_UNSLASHED || datum.Status == ethpb.ValidatorStatus_EXITED_SLASHED,
+				vc.Status == "exited_unslashed" || vc.Status == "exited_slashed",
 			)
 		}
 	})
-
-	t.Run("Head List All PENDING_INITIALIZED and EXITED_UNSLASHED Validators", func(t *testing.T) {
+	t.Run("pending_initialized and exited_unslashed", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &lookup.BeaconDbStater{
@@ -446,34 +425,31 @@ func TestGetValidators(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("head"),
-			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_PENDING_INITIALIZED, ethpb.ValidatorStatus_EXITED_UNSLASHED},
-		})
-		require.NoError(t, err)
-		assert.Equal(t, 4, len(resp.Data)) // 4 exited
-		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
-			require.NoError(t, err)
-			status, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 35)
-			require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validators?status=pending_initialized&status=exited_unslashed",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 4, len(resp.Data))
+		for _, vc := range resp.Data {
 			require.Equal(
 				t,
 				true,
-				status == validator.PendingInitialized || status == validator.ExitedUnslashed,
-			)
-			require.Equal(
-				t,
-				true,
-				datum.Status == ethpb.ValidatorStatus_PENDING_INITIALIZED || datum.Status == ethpb.ValidatorStatus_EXITED_UNSLASHED,
+				vc.Status == "pending_initialized" || vc.Status == "exited_unslashed",
 			)
 		}
 	})
-
-	t.Run("Head List All PENDING and EXITED Validators", func(t *testing.T) {
+	t.Run("pending and exited_slashed", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
 			Stater: &lookup.BeaconDbStater{
@@ -482,35 +458,31 @@ func TestGetValidators(t *testing.T) {
 			HeadFetcher:           chainService,
 			OptimisticModeFetcher: chainService,
 			FinalizationFetcher:   chainService,
-			BeaconDB:              db,
 		}
 
-		resp, err := s.ListValidators(ctx, &ethpb.StateValidatorsRequest{
-			StateId: []byte("head"),
-			Status:  []ethpb.ValidatorStatus{ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_EXITED_SLASHED},
-		})
-		require.NoError(t, err)
-		assert.Equal(t, 2, len(resp.Data)) // 1 pending, 1 exited
-		for _, datum := range resp.Data {
-			readOnlyVal, err := state_native.NewValidator(migration.V1ValidatorToV1Alpha1(datum.Validator))
-			require.NoError(t, err)
-			status, err := rpchelpers.ValidatorStatus(readOnlyVal, 35)
-			require.NoError(t, err)
-			subStatus, err := rpchelpers.ValidatorSubStatus(readOnlyVal, 35)
-			require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validators?status=pending&status=exited_slashed",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 2, len(resp.Data))
+		for _, vc := range resp.Data {
 			require.Equal(
 				t,
 				true,
-				status == validator.Pending || subStatus == validator.ExitedSlashed,
-			)
-			require.Equal(
-				t,
-				true,
-				datum.Status == ethpb.ValidatorStatus_PENDING_INITIALIZED || datum.Status == ethpb.ValidatorStatus_EXITED_SLASHED,
+				vc.Status == "pending_initialized" || vc.Status == "exited_slashed",
 			)
 		}
 	})
-}*/
+}
 
 /*func TestGetValidator(t *testing.T) {
 	ctx := context.Background()
