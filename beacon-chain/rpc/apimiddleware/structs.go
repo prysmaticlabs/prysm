@@ -1001,11 +1001,6 @@ type ValidatorJson struct {
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
 }
 
-type ValidatorBalanceJson struct {
-	Index   string `json:"index"`
-	Balance string `json:"balance"`
-}
-
 type CommitteeJson struct {
 	Index      string   `json:"index"`
 	Slot       string   `json:"slot"`
