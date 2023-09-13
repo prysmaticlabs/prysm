@@ -1676,6 +1676,12 @@ type GetValidatorsResponse struct {
 	Data                []*ValidatorContainer `json:"data"`
 }
 
+type GetValidatorResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                *ValidatorContainer `json:"data"`
+}
+
 type ValidatorContainer struct {
 	Index     string     `json:"index"`
 	Balance   string     `json:"balance"`
