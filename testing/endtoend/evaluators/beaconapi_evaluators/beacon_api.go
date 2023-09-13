@@ -2,22 +2,20 @@ package beaconapi_evaluators
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -251,14 +249,24 @@ var beaconPathsAndObjects = map[string]metadata{
 	},
 }
 
-func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
-	ctx := context.Background()
-	beaconClient := service.NewBeaconChainClient(conn)
-	genesisData, err := beaconClient.GetGenesis(ctx, &empty.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "error getting genesis data")
+func withCompareBeaconAPIs(beaconNodeIdx int, _ *grpc.ClientConn) error {
+
+	genesisResponse := &struct {
+		Data *shared.GenesisResponse `json:"data"`
+	}{}
+	if err := doMiddlewareJSONGetRequest(
+		v1MiddlewarePathTemplate,
+		"/eth/v1/beacon/genesis",
+		beaconNodeIdx,
+		genesisResponse,
+	); err != nil {
+		return errors.Wrap(err, "could not perform GET request for Prysm JSON")
 	}
-	currentEpoch := slots.EpochsSinceGenesis(genesisData.Data.GenesisTime.AsTime())
+	genesisTime, err := strconv.ParseInt(genesisResponse.Data.GenesisTime, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	currentEpoch := slots.EpochsSinceGenesis(time.Unix(genesisTime, 0))
 
 	for path, meta := range beaconPathsAndObjects {
 		for key := range meta.prysmResps {
@@ -295,10 +303,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int, conn *grpc.ClientConn) error {
 			}
 		}
 	}
-	return orderedEvaluationOnResponses(beaconPathsAndObjects, genesisData)
+	return orderedEvaluationOnResponses(beaconPathsAndObjects, genesisTime)
 }
 
-func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisData *v1.GenesisResponse) error {
+func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisTime int64) error {
 	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
 	prysmForkData, ok := forkPathData.prysmResps["json"].(*beacon.GetStateForkResponse)
 	if !ok {
@@ -381,7 +389,7 @@ func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, gen
 		return errors.New("failed to cast type")
 	}
 	if prysmHeader.Data.Root != prysmDuties.DependentRoot {
-		fmt.Printf("current slot: %v\n", slots.CurrentSlot(uint64(genesisData.Data.GenesisTime.AsTime().Unix())))
+		fmt.Printf("current slot: %v\n", slots.CurrentSlot(uint64(genesisTime)))
 		return fmt.Errorf("header root %s does not match duties root %s ", prysmHeader.Data.Root, prysmDuties.DependentRoot)
 	}
 

@@ -16,7 +16,6 @@ syntax = "proto3";
 package ethereum.eth.v1;
 
 import "google/protobuf/descriptor.proto";
-import "google/protobuf/timestamp.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
@@ -32,20 +31,6 @@ option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
 // Beacon State API related messages.
-
-message GenesisResponse {
-    Genesis data = 1;
-
-    message Genesis {
-        // UTC time specified in the chain start event in the deposit contract.
-        google.protobuf.Timestamp genesis_time = 1;
-        // 32 byte hash tree root of the genesis validator set.
-        bytes genesis_validators_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-        // 4 byte genesis fork version.
-        bytes genesis_fork_version = 3 [(ethereum.eth.ext.ssz_size) = "4"];
-    }
-}
-
 message StateRequest {
     // The state id which can be any of: "head" (canonical head in node's view),
     // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
