@@ -27,9 +27,9 @@ func PrepareStateFetchGRPCError(err error) error {
 	return status.Errorf(codes.Internal, "Invalid state ID: %v", err)
 }
 
-// PrepareStateFetchHTTPError returns an appropriate HTTP error based on the supplied argument.
+// HandleStateFetchError returns an appropriate HTTP error based on the supplied argument.
 // The argument error should be a result of fetching state.
-func PrepareStateFetchHTTPError(w http.ResponseWriter, err error) {
+func HandleStateFetchError(w http.ResponseWriter, err error) {
 	if errors.Is(err, stategen.ErrNoDataForSlot) {
 		http2.HandleError(w, "Lacking historical data needed to fulfill request", http.StatusNotFound)
 		return

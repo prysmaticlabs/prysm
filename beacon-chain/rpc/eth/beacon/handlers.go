@@ -13,8 +13,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -26,8 +26,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -671,7 +671,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.PrepareStateFetchHTTPError(w, err)
+		helpers.HandleStateFetchError(w, err)
 		return
 	}
 
