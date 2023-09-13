@@ -105,15 +105,6 @@ service BeaconChain {
     };
   }
 
-  // ListCommittees retrieves the committees for the given state at the given epoch.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getEpochCommittees
-  rpc ListCommittees(v1.StateCommitteesRequest) returns (v1.StateCommitteesResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/committees"
-    };
-  }
-
   // ListSyncCommittees retrieves the sync committees for the given state at the given epoch.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getEpochSyncCommittees

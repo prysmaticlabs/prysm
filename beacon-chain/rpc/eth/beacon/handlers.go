@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -26,6 +27,7 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -640,6 +642,100 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 		Finalized:           isFinalized,
 	}
 	http2.WriteJson(w, response)
+}
+
+// GetCommittees retrieves the committees for the given state at the given epoch.
+// If the requested slot and index are defined, only those committees are returned.
+func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
+	if !ok {
+		return
+	}
+	ok, rawIndex, i := shared.UintFromQuery(w, r, "index")
+	if !ok {
+		return
+	}
+	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot")
+	if !ok {
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		helpers.HandleStateFetchError(w, err)
+		return
+	}
+
+	epoch := slots.ToEpoch(st.Slot())
+	if rawEpoch != "" {
+		epoch = primitives.Epoch(e)
+	}
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get active validator count: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	startSlot, err := slots.EpochStart(epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get epoch start slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	endSlot, err := slots.EpochEnd(epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get epoch end slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
+	committees := make([]*shared.Committee, 0)
+	for slot := startSlot; slot <= endSlot; slot++ {
+		if rawSlot != "" && slot != primitives.Slot(sl) {
+			continue
+		}
+		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
+			if rawIndex != "" && index != primitives.CommitteeIndex(i) {
+				continue
+			}
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
+			if err != nil {
+				http2.HandleError(w, "Could not get committee: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			var validators []string
+			for _, v := range committee {
+				validators = append(validators, strconv.FormatUint(uint64(v), 10))
+			}
+			committeeContainer := &shared.Committee{
+				Index:      strconv.FormatUint(uint64(index), 10),
+				Slot:       strconv.FormatUint(uint64(slot), 10),
+				Validators: validators,
+			}
+			committees = append(committees, committeeContainer)
+		}
+	}
+
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	http2.WriteJson(w, &GetCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.

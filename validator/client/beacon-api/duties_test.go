@@ -12,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -405,8 +407,8 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 func TestGetCommittees_Valid(t *testing.T) {
 	const epoch = primitives.Epoch(1)
 
-	expectedCommittees := apimiddleware.StateCommitteesResponseJson{
-		Data: []*apimiddleware.CommitteeJson{
+	expectedCommittees := beacon.GetCommitteesResponse{
+		Data: []*shared.Committee{
 			{
 				Index: "1",
 				Slot:  "2",
@@ -435,7 +437,7 @@ func TestGetCommittees_Valid(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
-		&apimiddleware.StateCommitteesResponseJson{},
+		&beacon.GetCommitteesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -492,7 +494,7 @@ func TestGetCommittees_NilData(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.StateCommitteesResponseJson{
+		beacon.GetCommitteesResponse{
 			Data: nil,
 		},
 	).Times(1)
@@ -520,8 +522,8 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.StateCommitteesResponseJson{
-			Data: []*apimiddleware.CommitteeJson{nil},
+		beacon.GetCommitteesResponse{
+			Data: []*shared.Committee{nil},
 		},
 	).Times(1)
 
@@ -547,7 +549,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		fetchProposerDutiesError error
 		generateSyncDuties       func() []*validator.SyncCommitteeDuty
 		fetchSyncDutiesError     error
-		generateCommittees       func() []*apimiddleware.CommitteeJson
+		generateCommittees       func() []*shared.Committee
 		fetchCommitteesError     error
 	}{
 		{
@@ -628,7 +630,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad committee index",
 			expectedError: "failed to parse committee index `foo`",
-			generateCommittees: func() []*apimiddleware.CommitteeJson {
+			generateCommittees: func() []*shared.Committee {
 				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
 				committees[0].Index = "foo"
 				return committees
@@ -637,7 +639,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad committee slot",
 			expectedError: "failed to parse slot `foo`",
-			generateCommittees: func() []*apimiddleware.CommitteeJson {
+			generateCommittees: func() []*shared.Committee {
 				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
 				committees[0].Slot = "foo"
 				return committees
@@ -646,7 +648,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad committee validator index",
 			expectedError: "failed to parse committee validator index `foo`",
-			generateCommittees: func() []*apimiddleware.CommitteeJson {
+			generateCommittees: func() []*shared.Committee {
 				committees := generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
 				committees[0].Validators[0] = "foo"
 				return committees
@@ -661,8 +663,8 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				attesterDuties[0].Slot = "2"
 				return attesterDuties
 			},
-			generateCommittees: func() []*apimiddleware.CommitteeJson {
-				return []*apimiddleware.CommitteeJson{}
+			generateCommittees: func() []*shared.Committee {
+				return []*shared.Committee{}
 			},
 		},
 	}
@@ -695,7 +697,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				syncDuties = testCase.generateSyncDuties()
 			}
 
-			var committees []*apimiddleware.CommitteeJson
+			var committees []*shared.Committee
 			if testCase.generateCommittees == nil {
 				committees = generateValidCommittees(committeeIndices, committeeSlots, validatorIndices)
 			} else {
@@ -1368,8 +1370,8 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	assert.ErrorContains(t, "foo error", err)
 }
 
-func generateValidCommittees(committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot, validatorIndices []primitives.ValidatorIndex) []*apimiddleware.CommitteeJson {
-	return []*apimiddleware.CommitteeJson{
+func generateValidCommittees(committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot, validatorIndices []primitives.ValidatorIndex) []*shared.Committee {
+	return []*shared.Committee{
 		{
 			Index: strconv.FormatUint(uint64(committeeIndices[0]), 10),
 			Slot:  strconv.FormatUint(uint64(slots[0]), 10),
