@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,10 +14,13 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
-	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/api"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -24,7 +28,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -38,7 +44,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlock
+			err = json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -46,7 +58,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(phase0Block)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -55,7 +67,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err = json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -63,7 +81,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(altairBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -72,7 +90,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
+			converted, err := shared.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockBellatrix
+			err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -80,7 +104,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -89,7 +113,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Capella", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
+			converted, err := shared.BeaconBlockCapellaFromConsensus(block.Capella.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockCapella
+			err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -97,7 +127,30 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(capellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			converted, err := shared.BeaconBlockDenebFromConsensus(block.Deneb.Block.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockContentsDeneb
+			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.SignedBlock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.DenebBlockContents)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -108,15 +161,31 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
 	})
+	t.Run("invalid block with version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadCapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		body := writer.Body.String()
+		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Capella))))
+	})
 	t.Run("syncing", func(t *testing.T) {
-		chainService := &testing2.ChainService{}
+		chainService := &chainMock.ChainService{}
 		server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -135,7 +204,6 @@ func TestPublishBlockV2(t *testing.T) {
 
 func TestPublishBlockV2SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -146,8 +214,8 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var bellablock SignedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(bellatrixBlock), &bellablock)
+		var bellablock shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &bellablock)
 		require.NoError(t, err)
 		genericBlock, err := bellablock.ToGeneric()
 		require.NoError(t, err)
@@ -171,12 +239,39 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock SignedBeaconBlockCapella
-		err := json.Unmarshal([]byte(capellaBlock), &cblock)
+		var cblock shared.SignedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &cblock)
 		require.NoError(t, err)
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var dblock shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		require.NoError(t, err)
+		genericBlock, err := dblock.ToGeneric()
+		require.NoError(t, err)
+		v2block, err := migration.V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(genericBlock.GetDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v2block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -190,7 +285,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -204,7 +299,13 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlock
+			err = json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -212,7 +313,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(phase0Block)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -221,7 +322,13 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err = json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -229,16 +336,22 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(altairBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
-	t.Run("Bellatrix", func(t *testing.T) {
+	t.Run("Blinded Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
+			converted, err := shared.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockBellatrix
+			err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -246,16 +359,22 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
-	t.Run("Capella", func(t *testing.T) {
+	t.Run("Blinded Capella", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
+			converted, err := shared.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockCapella
+			err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -263,7 +382,30 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedCapellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Blinded Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Block.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
+			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.SignedBlindedBlock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlockContents)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -274,15 +416,31 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
 	})
+	t.Run("invalid block with version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadBlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		body := writer.Body.String()
+		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+	})
 	t.Run("syncing", func(t *testing.T) {
-		chainService := &testing2.ChainService{}
+		chainService := &chainMock.ChainService{}
 		server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -312,8 +470,8 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var bellablock SignedBlindedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(blindedBellatrixBlock), &bellablock)
+		var bellablock shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &bellablock)
 		require.NoError(t, err)
 		genericBlock, err := bellablock.ToGeneric()
 		require.NoError(t, err)
@@ -337,12 +495,39 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock SignedBlindedBeaconBlockCapella
-		err := json.Unmarshal([]byte(blindedCapellaBlock), &cblock)
+		var cblock shared.SignedBlindedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &cblock)
 		require.NoError(t, err)
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetBlindedCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var cblock shared.SignedBlindedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &cblock)
+		require.NoError(t, err)
+		genericBlock, err := cblock.ToGeneric()
+		require.NoError(t, err)
+		v1block, err := migration.V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(genericBlock.GetBlindedDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v1block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -356,7 +541,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -397,7 +582,7 @@ func TestValidateEquivocation(t *testing.T) {
 		fc := doublylinkedtree.New()
 		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
 		server := &Server{
-			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+			ForkchoiceFetcher: &chainMock.ChainService{ForkChoiceStore: fc},
 		}
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -412,7 +597,7 @@ func TestValidateEquivocation(t *testing.T) {
 		fc := doublylinkedtree.New()
 		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
 		server := &Server{
-			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+			ForkchoiceFetcher: &chainMock.ChainService{ForkChoiceStore: fc},
 		}
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -433,7 +618,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
 
-		mockChainFetcher := &testing2.ChainService{
+		mockChainFetcher := &chainMock.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
@@ -552,7 +737,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
 
-		mockChainFetcher := &testing2.ChainService{
+		mockChainFetcher := &chainMock.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
@@ -587,7 +772,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
 
-		mockChainFetcher := &testing2.ChainService{
+		mockChainFetcher := &chainMock.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
@@ -633,1062 +818,111 @@ func TestServer_GetBlockRoot(t *testing.T) {
 	})
 }
 
-const (
-	phase0Block = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	altairBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x01",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	bellatrixBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
- 			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions": [
-          "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
-        ]
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	blindedBellatrixBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"	
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload_header": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	capellaBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions": [
-          "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
-        ],
-        "withdrawals": [
-          {
-            "index": "1",
-            "validator_index": "1",
-            "address": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-            "amount": "1"
-          }
-        ]
-      },
-      "bls_to_execution_changes": [
-        {
-          "message": {
-            "validator_index": "1",
-            "from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	blindedCapellaBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload_header": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "bls_to_execution_changes": [
-        {
-          "message": {
-            "validator_index": "1",
-            "from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-)
+func TestGetStateFork(t *testing.T) {
+	ctx := context.Background()
+	request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+	request.Header.Set("Accept", "application/octet-stream")
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	fillFork := func(state *eth.BeaconState) error {
+		state.Fork = &eth.Fork{
+			PreviousVersion: []byte("prev"),
+			CurrentVersion:  []byte("curr"),
+			Epoch:           123,
+		}
+		return nil
+	}
+	fakeState, err := util.NewBeaconState(fillFork)
+	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
+
+	chainService := &chainMock.ChainService{}
+	server := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: fakeState,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		BeaconDB:              db,
+	}
+
+	server.GetStateFork(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	var stateForkReponse *GetStateForkResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+	require.NoError(t, err)
+	expectedFork := fakeState.Fork()
+	assert.Equal(t, fmt.Sprint(expectedFork.Epoch), stateForkReponse.Data.Epoch)
+	assert.DeepEqual(t, hexutil.Encode(expectedFork.CurrentVersion), stateForkReponse.Data.CurrentVersion)
+	assert.DeepEqual(t, hexutil.Encode(expectedFork.PreviousVersion), stateForkReponse.Data.PreviousVersion)
+	t.Run("execution optimistic", func(t *testing.T) {
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.Header.Set("Accept", "application/octet-stream")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService = &chainMock.ChainService{Optimistic: true}
+		server = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		server.GetStateFork(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+		require.NoError(t, err)
+		assert.DeepEqual(t, true, stateForkReponse.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.Header.Set("Accept", "application/octet-stream")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService = &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		server.GetStateFork(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+		require.NoError(t, err)
+		assert.DeepEqual(t, true, stateForkReponse.Finalized)
+	})
+}

@@ -86,6 +86,11 @@ type SignedValidatorRegistration struct {
 	Signature string                 `json:"signature" validate:"required,hexadecimal"`
 }
 
+type FeeRecipient struct {
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient"`
+}
+
 type SignedVoluntaryExit struct {
 	Message   *VoluntaryExit `json:"message" validate:"required"`
 	Signature string         `json:"signature" validate:"required,hexadecimal"`
@@ -94,6 +99,39 @@ type SignedVoluntaryExit struct {
 type VoluntaryExit struct {
 	Epoch          string `json:"epoch" validate:"required,number,gte=0"`
 	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
+}
+
+type Fork struct {
+	PreviousVersion string `json:"previous_version"`
+	CurrentVersion  string `json:"current_version"`
+	Epoch           string `json:"epoch"`
+}
+
+func (s *Fork) ToConsensus() (*eth.Fork, error) {
+	previousVersion, err := hexutil.Decode(s.PreviousVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousVersion")
+	}
+	currentVersion, err := hexutil.Decode(s.CurrentVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "CurrentVersion")
+	}
+	epoch, err := strconv.ParseUint(s.Epoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Epoch")
+	}
+	return &eth.Fork{
+		PreviousVersion: previousVersion,
+		CurrentVersion:  currentVersion,
+		Epoch:           primitives.Epoch(epoch),
+	}, nil
+}
+
+type SyncCommitteeMessage struct {
+	Slot            string `json:"slot" validate:"required,number,gte=0"`
+	BeaconBlockRoot string `json:"beacon_block_root" validate:"required,hexadecimal"`
+	ValidatorIndex  string `json:"validator_index" validate:"required,number,gte=0"`
+	Signature       string `json:"signature" validate:"required,hexadecimal"`
 }
 
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
@@ -437,6 +475,32 @@ func VoluntaryExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
 		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
 		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
 	}
+}
+
+func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) {
+	slot, err := strconv.ParseUint(m.Slot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "BeaconBlockRoot")
+	}
+	valIndex, err := strconv.ParseUint(m.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+
+	return &eth.SyncCommitteeMessage{
+		Slot:           primitives.Slot(slot),
+		BlockRoot:      root,
+		ValidatorIndex: primitives.ValidatorIndex(valIndex),
+		Signature:      sig,
+	}, nil
 }
 
 // SyncDetails contains information about node sync status.

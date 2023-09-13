@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -32,8 +33,8 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 	validatorIndicesBytes, err := json.Marshal(stringValidatorIndices)
 	require.NoError(t, err)
 
-	expectedAttesterDuties := apimiddleware.AttesterDutiesResponseJson{
-		Data: []*apimiddleware.AttesterDutyJson{
+	expectedAttesterDuties := validator.GetAttesterDutiesResponse{
+		Data: []*validator.AttesterDuty{
 			{
 				Pubkey:                  hexutil.Encode([]byte{1}),
 				ValidatorIndex:          "2",
@@ -67,7 +68,7 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 		fmt.Sprintf("%s/%d", getAttesterDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
-		&apimiddleware.AttesterDutiesResponseJson{},
+		&validator.GetAttesterDutiesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -128,8 +129,8 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		apimiddleware.AttesterDutiesResponseJson{
-			Data: []*apimiddleware.AttesterDutyJson{nil},
+		validator.GetAttesterDutiesResponse{
+			Data: []*validator.AttesterDuty{nil},
 		},
 	).Times(1)
 
@@ -141,8 +142,8 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 func TestGetProposerDuties_Valid(t *testing.T) {
 	const epoch = primitives.Epoch(1)
 
-	expectedProposerDuties := apimiddleware.ProposerDutiesResponseJson{
-		Data: []*apimiddleware.ProposerDutyJson{
+	expectedProposerDuties := validator.GetProposerDutiesResponse{
+		Data: []*validator.ProposerDuty{
 			{
 				Pubkey:         hexutil.Encode([]byte{1}),
 				ValidatorIndex: "2",
@@ -165,7 +166,7 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
-		&apimiddleware.ProposerDutiesResponseJson{},
+		&validator.GetProposerDutiesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -222,7 +223,7 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.ProposerDutiesResponseJson{
+		validator.GetProposerDutiesResponse{
 			Data: nil,
 		},
 	).Times(1)
@@ -250,8 +251,8 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.ProposerDutiesResponseJson{
-			Data: []*apimiddleware.ProposerDutyJson{nil},
+		validator.GetProposerDutiesResponse{
+			Data: []*validator.ProposerDuty{nil},
 		},
 	).Times(1)
 
@@ -267,8 +268,8 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 	validatorIndicesBytes, err := json.Marshal(stringValidatorIndices)
 	require.NoError(t, err)
 
-	expectedSyncDuties := apimiddleware.SyncCommitteeDutiesResponseJson{
-		Data: []*apimiddleware.SyncCommitteeDuty{
+	expectedSyncDuties := validator.GetSyncCommitteeDutiesResponse{
+		Data: []*validator.SyncCommitteeDuty{
 			{
 				Pubkey:         hexutil.Encode([]byte{1}),
 				ValidatorIndex: "2",
@@ -300,7 +301,7 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 		fmt.Sprintf("%s/%d", getSyncDutiesTestEndpoint, epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
-		&apimiddleware.SyncCommitteeDutiesResponseJson{},
+		&validator.GetSyncCommitteeDutiesResponse{},
 	).Return(
 		nil,
 		nil,
@@ -361,7 +362,7 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		apimiddleware.SyncCommitteeDutiesResponseJson{
+		validator.GetSyncCommitteeDutiesResponse{
 			Data: nil,
 		},
 	).Times(1)
@@ -391,8 +392,8 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		apimiddleware.SyncCommitteeDutiesResponseJson{
-			Data: []*apimiddleware.SyncCommitteeDuty{nil},
+		validator.GetSyncCommitteeDutiesResponse{
+			Data: []*validator.SyncCommitteeDuty{nil},
 		},
 	).Times(1)
 
@@ -540,11 +541,11 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		expectedError            string
-		generateAttesterDuties   func() []*apimiddleware.AttesterDutyJson
+		generateAttesterDuties   func() []*validator.AttesterDuty
 		fetchAttesterDutiesError error
-		generateProposerDuties   func() []*apimiddleware.ProposerDutyJson
+		generateProposerDuties   func() []*validator.ProposerDuty
 		fetchProposerDutiesError error
-		generateSyncDuties       func() []*apimiddleware.SyncCommitteeDuty
+		generateSyncDuties       func() []*validator.SyncCommitteeDuty
 		fetchSyncDutiesError     error
 		generateCommittees       func() []*apimiddleware.CommitteeJson
 		fetchCommitteesError     error
@@ -573,7 +574,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad attester validator index",
 			expectedError: "failed to parse attester validator index `foo`",
-			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+			generateAttesterDuties: func() []*validator.AttesterDuty {
 				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
 				attesterDuties[0].ValidatorIndex = "foo"
 				return attesterDuties
@@ -582,7 +583,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad attester slot",
 			expectedError: "failed to parse attester slot `foo`",
-			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+			generateAttesterDuties: func() []*validator.AttesterDuty {
 				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
 				attesterDuties[0].Slot = "foo"
 				return attesterDuties
@@ -591,7 +592,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad attester committee index",
 			expectedError: "failed to parse attester committee index `foo`",
-			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+			generateAttesterDuties: func() []*validator.AttesterDuty {
 				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
 				attesterDuties[0].CommitteeIndex = "foo"
 				return attesterDuties
@@ -600,7 +601,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad proposer validator index",
 			expectedError: "failed to parse proposer validator index `foo`",
-			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+			generateProposerDuties: func() []*validator.ProposerDuty {
 				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 				proposerDuties[0].ValidatorIndex = "foo"
 				return proposerDuties
@@ -609,7 +610,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad proposer slot",
 			expectedError: "failed to parse proposer slot `foo`",
-			generateProposerDuties: func() []*apimiddleware.ProposerDutyJson {
+			generateProposerDuties: func() []*validator.ProposerDuty {
 				proposerDuties := generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 				proposerDuties[0].Slot = "foo"
 				return proposerDuties
@@ -618,7 +619,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "bad sync validator index",
 			expectedError: "failed to parse sync validator index `foo`",
-			generateSyncDuties: func() []*apimiddleware.SyncCommitteeDuty {
+			generateSyncDuties: func() []*validator.SyncCommitteeDuty {
 				syncDuties := generateValidSyncDuties(pubkeys, validatorIndices)
 				syncDuties[0].ValidatorIndex = "foo"
 				return syncDuties
@@ -654,7 +655,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 		{
 			name:          "committee index and slot not found in committees mapping",
 			expectedError: "failed to find validators for committee index `1` and slot `2`",
-			generateAttesterDuties: func() []*apimiddleware.AttesterDutyJson {
+			generateAttesterDuties: func() []*validator.AttesterDuty {
 				attesterDuties := generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
 				attesterDuties[0].CommitteeIndex = "1"
 				attesterDuties[0].Slot = "2"
@@ -673,21 +674,21 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 
 			ctx := context.Background()
 
-			var attesterDuties []*apimiddleware.AttesterDutyJson
+			var attesterDuties []*validator.AttesterDuty
 			if testCase.generateAttesterDuties == nil {
 				attesterDuties = generateValidAttesterDuties(pubkeys, validatorIndices, committeeIndices, committeeSlots)
 			} else {
 				attesterDuties = testCase.generateAttesterDuties()
 			}
 
-			var proposerDuties []*apimiddleware.ProposerDutyJson
+			var proposerDuties []*validator.ProposerDuty
 			if testCase.generateProposerDuties == nil {
 				proposerDuties = generateValidProposerDuties(pubkeys, validatorIndices, proposerSlots)
 			} else {
 				proposerDuties = testCase.generateProposerDuties()
 			}
 
-			var syncDuties []*apimiddleware.SyncCommitteeDuty
+			var syncDuties []*validator.SyncCommitteeDuty
 			if testCase.generateSyncDuties == nil {
 				syncDuties = generateValidSyncDuties(pubkeys, validatorIndices)
 			} else {
@@ -1396,8 +1397,8 @@ func generateValidCommittees(committeeIndices []primitives.CommitteeIndex, slots
 	}
 }
 
-func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot) []*apimiddleware.AttesterDutyJson {
-	return []*apimiddleware.AttesterDutyJson{
+func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, committeeIndices []primitives.CommitteeIndex, slots []primitives.Slot) []*validator.AttesterDuty {
+	return []*validator.AttesterDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[0]),
 			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[0]), 10),
@@ -1437,8 +1438,8 @@ func generateValidAttesterDuties(pubkeys [][]byte, validatorIndices []primitives
 	}
 }
 
-func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, slots []primitives.Slot) []*apimiddleware.ProposerDutyJson {
-	return []*apimiddleware.ProposerDutyJson{
+func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex, slots []primitives.Slot) []*validator.ProposerDuty {
+	return []*validator.ProposerDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[4]),
 			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[4]), 10),
@@ -1482,8 +1483,8 @@ func generateValidProposerDuties(pubkeys [][]byte, validatorIndices []primitives
 	}
 }
 
-func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex) []*apimiddleware.SyncCommitteeDuty {
-	return []*apimiddleware.SyncCommitteeDuty{
+func generateValidSyncDuties(pubkeys [][]byte, validatorIndices []primitives.ValidatorIndex) []*validator.SyncCommitteeDuty {
+	return []*validator.SyncCommitteeDuty{
 		{
 			Pubkey:         hexutil.Encode(pubkeys[5]),
 			ValidatorIndex: strconv.FormatUint(uint64(validatorIndices[5]), 10),

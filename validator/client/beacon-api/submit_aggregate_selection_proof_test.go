@@ -36,7 +36,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		committeeIndex               = primitives.CommitteeIndex(1)
 	)
 
-	attesterDuties := []*apimiddleware.AttesterDutyJson{
+	attesterDuties := []*validator.AttesterDuty{
 		{
 			Pubkey:          pubkeyStr,
 			ValidatorIndex:  validatorIndex,
@@ -69,7 +69,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
-		duties                     []*apimiddleware.AttesterDutyJson
+		duties                     []*validator.AttesterDuty
 		validatorsCalled           int
 		attesterDutiesCalled       int
 		attestationDataCalled      int
@@ -129,7 +129,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name: "validator is not an aggregator",
-			duties: []*apimiddleware.AttesterDutyJson{
+			duties: []*validator.AttesterDuty{
 				{
 					Pubkey:          pubkeyStr,
 					ValidatorIndex:  validatorIndex,
@@ -144,7 +144,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name:                 "no attester duties",
-			duties:               []*apimiddleware.AttesterDutyJson{},
+			duties:               []*validator.AttesterDuty{},
 			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
@@ -204,10 +204,10 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				fmt.Sprintf("%s/%d", attesterDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&apimiddleware.AttesterDutiesResponseJson{},
+				&validator.GetAttesterDutiesResponse{},
 			).SetArg(
 				4,
-				apimiddleware.AttesterDutiesResponseJson{
+				validator.GetAttesterDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(
