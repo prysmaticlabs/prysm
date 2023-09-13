@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	apimiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
@@ -53,10 +53,10 @@ func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(ctx, epoch, validato
 }
 
 // GetCommittees mocks base method.
-func (m *MockdutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*apimiddleware.CommitteeJson, error) {
+func (m *MockdutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCommittees", ctx, epoch)
-	ret0, _ := ret[0].([]*apimiddleware.CommitteeJson)
+	ret0, _ := ret[0].([]*shared.Committee)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
