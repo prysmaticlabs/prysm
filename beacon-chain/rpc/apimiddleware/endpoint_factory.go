@@ -19,9 +19,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/genesis",
 		"/eth/v1/beacon/states/{state_id}/root",
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints",
-		"/eth/v1/beacon/states/{state_id}/validators",
-		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
-		"/eth/v1/beacon/states/{state_id}/validator_balances",
 		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/states/{state_id}/randao",
@@ -69,14 +66,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &StateRootResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
 		endpoint.GetResponse = &StateFinalityCheckpointResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validators":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}}
-		endpoint.GetResponse = &StateValidatorsResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
-		endpoint.GetResponse = &StateValidatorResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validator_balances":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}}
-		endpoint.GetResponse = &ValidatorBalancesResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/committees":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
 		endpoint.GetResponse = &StateCommitteesResponseJson{}

@@ -53,24 +53,6 @@ type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
 	Finalized         *CheckpointJson `json:"finalized"`
 }
 
-type StateValidatorsResponseJson struct {
-	Data                []*ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
-}
-
-type StateValidatorResponseJson struct {
-	Data                *ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
-type ValidatorBalancesResponseJson struct {
-	Data                []*ValidatorBalanceJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
 type StateCommitteesResponseJson struct {
 	Data                []*CommitteeJson `json:"data"`
 	ExecutionOptimistic bool             `json:"execution_optimistic"`
