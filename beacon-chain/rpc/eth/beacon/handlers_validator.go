@@ -31,26 +31,10 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
 		shared.WriteStateFetchError(w, err)
 		return
-	}
-	ids, ok := decodeIds(w, st, r.URL.Query()["id"], true /* ignore unknown */)
-	if !ok {
-		return
-	}
-	readOnlyVals, ok := valsFromIds(w, st, ids)
-	if !ok {
-		return
-	}
-	epoch := slots.ToEpoch(st.Slot())
-	allBalances := st.Balances()
-
-	statuses := r.URL.Query()["status"]
-	for i, ss := range statuses {
-		statuses[i] = strings.ToLower(ss)
 	}
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
@@ -64,6 +48,34 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	rawIds := r.URL.Query()["id"]
+	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
+	if !ok {
+		return
+	}
+	// return no data if all IDs are ignored
+	if len(rawIds) > 0 && len(ids) == 0 {
+		resp := &GetValidatorsResponse{
+			Data:                []*ValidatorContainer{},
+			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
+		}
+		http2.WriteJson(w, resp)
+		return
+	}
+
+	readOnlyVals, ok := valsFromIds(w, st, ids)
+	if !ok {
+		return
+	}
+	epoch := slots.ToEpoch(st.Slot())
+	allBalances := st.Balances()
+
+	statuses := r.URL.Query()["status"]
+	for i, ss := range statuses {
+		statuses[i] = strings.ToLower(ss)
+	}
 
 	// Exit early if no matching validators were found or we don't want to further filter validators by status.
 	if len(readOnlyVals) == 0 || len(statuses) == 0 {
@@ -205,18 +217,6 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		shared.WriteStateFetchError(w, err)
 		return
 	}
-	ids, ok := decodeIds(w, st, r.URL.Query()["id"], true /* ignore unknown */)
-	if !ok {
-		return
-	}
-	bals := st.Balances()
-	valBalances := make([]*ValidatorBalance, len(ids))
-	for i, id := range ids {
-		valBalances[i] = &ValidatorBalance{
-			Index:   strconv.FormatUint(uint64(id), 10),
-			Balance: strconv.FormatUint(bals[id], 10),
-		}
-	}
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
 	if err != nil {
@@ -229,6 +229,42 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	rawIds := r.URL.Query()["id"]
+	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
+	if !ok {
+		return
+	}
+	// return no data if all IDs are ignored
+	if len(rawIds) > 0 && len(ids) == 0 {
+		resp := &GetValidatorBalancesResponse{
+			Data:                []*ValidatorBalance{},
+			ExecutionOptimistic: isOptimistic,
+			Finalized:           isFinalized,
+		}
+		http2.WriteJson(w, resp)
+		return
+	}
+
+	bals := st.Balances()
+	var valBalances []*ValidatorBalance
+	if len(ids) == 0 {
+		valBalances = make([]*ValidatorBalance, len(bals))
+		for i, b := range bals {
+			valBalances[i] = &ValidatorBalance{
+				Index:   strconv.FormatUint(uint64(i), 10),
+				Balance: strconv.FormatUint(b, 10),
+			}
+		}
+	} else {
+		valBalances = make([]*ValidatorBalance, len(ids))
+		for i, id := range ids {
+			valBalances[i] = &ValidatorBalance{
+				Index:   strconv.FormatUint(uint64(id), 10),
+				Balance: strconv.FormatUint(bals[id], 10),
+			}
+		}
+	}
 
 	resp := &GetValidatorBalancesResponse{
 		Data:                valBalances,

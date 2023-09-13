@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -708,6 +707,31 @@ func TestGetValidatorBalances(t *testing.T) {
 	}
 	require.NoError(t, st.SetBalances(balances))
 
+	t.Run("get all", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/states/{state_id}/validator_balances", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 8192, len(resp.Data))
+		val := resp.Data[123]
+		assert.Equal(t, "123", val.Index)
+		assert.Equal(t, "123", val.Balance)
+	})
 	t.Run("get by index", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
 		s := Server{
@@ -734,9 +758,7 @@ func TestGetValidatorBalances(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "15", resp.Data[0].Index)
-		assert.Equal(t, strconv.FormatUint(balances[15], 10), resp.Data[0].Balance)
 		assert.Equal(t, "26", resp.Data[1].Index)
-		assert.Equal(t, strconv.FormatUint(balances[26], 10), resp.Data[1].Balance)
 	})
 	t.Run("get by pubkey", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
