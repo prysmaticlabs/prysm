@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -435,7 +436,7 @@ func GetBlobSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if blob == nil || blob.Blob == nil {
 			return nil, errors.New("invalid sign request: blob sidecar is nil")
 		}
-		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob)
+		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob, fieldparams.RootLength)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get blob root from ssz roots")
 		}
