@@ -30,6 +30,12 @@ type Checkpoint struct {
 	Root  string `json:"root" validate:"required,hexadecimal"`
 }
 
+type Committee struct {
+	Index      string   `json:"index"`
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"`
+}
+
 type SignedContributionAndProof struct {
 	Message   *ContributionAndProof `json:"message" validate:"required"`
 	Signature string                `json:"signature" validate:"required,hexadecimal"`

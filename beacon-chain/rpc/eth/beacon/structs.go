@@ -12,6 +12,12 @@ type BlockRootResponse struct {
 	Finalized           bool `json:"finalized"`
 }
 
+type GetCommitteesResponse struct {
+	Data                []*shared.Committee `json:"data"`
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+}
+
 type DepositContractResponse struct {
 	Data *struct {
 		ChainId uint64 `json:"chain_id"`

@@ -15,7 +15,6 @@ go_library(
         "state.go",
         "structs.go",
         "sync_committee.go",
-        "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon",
     visibility = ["//visibility:public"],
@@ -96,7 +95,6 @@ go_test(
         "server_test.go",
         "state_test.go",
         "sync_committee_test.go",
-        "validator_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
