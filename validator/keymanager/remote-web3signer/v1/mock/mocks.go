@@ -484,7 +484,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningSlot: 0,
 		}
 	case "BLINDED_BLOB_SIDECAR":
-		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.RootLength)
 		if err != nil {
 			log.Error(err)
 			return nil
@@ -671,7 +671,7 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 
 // MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
 func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
-	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength))
+	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.RootLength)
 	if err != nil {
 		log.Error(err)
 		return nil
