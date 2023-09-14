@@ -14,8 +14,6 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)
 	}
 
-	log.WithFields(blobFields(b.Message)).Debug("Received blob sidecar")
-
 	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
 
 	if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, []*eth.BlobSidecar{b.Message}); err != nil {

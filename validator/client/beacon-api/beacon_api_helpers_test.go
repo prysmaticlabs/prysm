@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -96,11 +97,11 @@ func TestGetFork_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+	stateForkResponseJson := beacon.GetStateForkResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	expected := apimiddleware.StateForkResponseJson{
-		Data: &apimiddleware.ForkJson{
+	expected := beacon.GetStateForkResponse{
+		Data: &shared.Fork{
 			PreviousVersion: "0x1",
 			CurrentVersion:  "0x2",
 			Epoch:           "3",

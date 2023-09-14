@@ -2405,6 +2405,28 @@ func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBl
 	}, nil
 }
 
+func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeaconBlockAndBlobsDeneb) (*SignedBlindedBeaconBlockContentsDeneb, error) {
+	var blindedBlobSidecars []*SignedBlindedBlobSidecar
+	if len(b.Blobs) != 0 {
+		blindedBlobSidecars = make([]*SignedBlindedBlobSidecar, len(b.Blobs))
+		for i, s := range b.Blobs {
+			signedBlob, err := SignedBlindedBlobSidecarFromConsensus(s)
+			if err != nil {
+				return nil, err
+			}
+			blindedBlobSidecars[i] = signedBlob
+		}
+	}
+	blindedBlock, err := SignedBlindedBeaconBlockDenebFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockContentsDeneb{
+		SignedBlindedBlock:        blindedBlock,
+		SignedBlindedBlobSidecars: blindedBlobSidecars,
+	}, nil
+}
+
 func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
 	var blobSidecars []*BlobSidecar
 	if len(b.Blobs) != 0 {
@@ -2424,6 +2446,28 @@ func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*Be
 	return &BeaconBlockContentsDeneb{
 		Block:        block,
 		BlobSidecars: blobSidecars,
+	}, nil
+}
+
+func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockAndBlobsDeneb) (*SignedBeaconBlockContentsDeneb, error) {
+	var blobSidecars []*SignedBlobSidecar
+	if len(b.Blobs) != 0 {
+		blobSidecars = make([]*SignedBlobSidecar, len(b.Blobs))
+		for i, s := range b.Blobs {
+			blob, err := SignedBlobSidecarFromConsensus(s)
+			if err != nil {
+				return nil, err
+			}
+			blobSidecars[i] = blob
+		}
+	}
+	block, err := SignedBeaconBlockDenebFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockContentsDeneb{
+		SignedBlock:        block,
+		SignedBlobSidecars: blobSidecars,
 	}, nil
 }
 
@@ -2506,6 +2550,17 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 			BlsToExecutionChanges: blsChanges,         // new in capella
 			BlobKzgCommitments:    blobKzgCommitments, // new in deneb
 		},
+	}, nil
+}
+
+func SignedBlindedBeaconBlockDenebFromConsensus(b *eth.SignedBlindedBeaconBlockDeneb) (*SignedBlindedBeaconBlockDeneb, error) {
+	block, err := BlindedBeaconBlockDenebFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockDeneb{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2603,6 +2658,17 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 	}, nil
 }
 
+func SignedBeaconBlockDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*SignedBeaconBlockDeneb, error) {
+	beaconBlock, err := BeaconBlockDenebFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockDeneb{
+		Message:   beaconBlock,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) (*BlindedBlobSidecar, error) {
 	return &BlindedBlobSidecar{
 		BlockRoot:       hexutil.Encode(b.BlockRoot),
@@ -2616,6 +2682,17 @@ func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) (*BlindedBlobSid
 	}, nil
 }
 
+func SignedBlindedBlobSidecarFromConsensus(b *eth.SignedBlindedBlobSidecar) (*SignedBlindedBlobSidecar, error) {
+	blobSidecar, err := BlindedBlobSidecarFromConsensus(b.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBlobSidecar{
+		Message:   blobSidecar,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BlobSidecarFromConsensus(b *eth.BlobSidecar) (*BlobSidecar, error) {
 	return &BlobSidecar{
 		BlockRoot:       hexutil.Encode(b.BlockRoot),
@@ -2626,6 +2703,17 @@ func BlobSidecarFromConsensus(b *eth.BlobSidecar) (*BlobSidecar, error) {
 		Blob:            hexutil.Encode(b.Blob),
 		KzgCommitment:   hexutil.Encode(b.KzgCommitment),
 		KzgProof:        hexutil.Encode(b.KzgProof),
+	}, nil
+}
+
+func SignedBlobSidecarFromConsensus(b *eth.SignedBlobSidecar) (*SignedBlobSidecar, error) {
+	blobSidecar, err := BlobSidecarFromConsensus(b.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlobSidecar{
+		Message:   blobSidecar,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
