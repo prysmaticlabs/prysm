@@ -251,7 +251,7 @@ var beaconPathsAndObjects = map[string]metadata{
 func withCompareBeaconAPIs(beaconNodeIdx int) error {
 	genesisResp := &beacon.GetGenesisResponse{}
 	err := doMiddlewareJSONGetRequest(
-		beaconPathsAndObjects["/beacon/genesis"].basepath,
+		v1MiddlewarePathTemplate,
 		"/beacon/genesis",
 		beaconNodeIdx,
 		genesisResp,
