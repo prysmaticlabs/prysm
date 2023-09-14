@@ -18,16 +18,15 @@ const (
 	v2MiddlewarePathTemplate = "http://localhost:%d/eth/v2"
 )
 
-type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
+type apiComparisonFunc func(beaconNodeIdx int) error
 
 func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconAPIs,
 	}
-	for beaconNodeIdx, conn := range conns {
+	for beaconNodeIdx := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
 			beacon...,
 		); err != nil {
 			return err
@@ -36,9 +35,9 @@ func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) e
 	return nil
 }
 
-func runAPIComparisonFunctions(beaconNodeIdx int, conn *grpc.ClientConn, fs ...apiComparisonFunc) error {
+func runAPIComparisonFunctions(beaconNodeIdx int, fs ...apiComparisonFunc) error {
 	for _, f := range fs {
-		if err := f(beaconNodeIdx, conn); err != nil {
+		if err := f(beaconNodeIdx); err != nil {
 			return err
 		}
 	}
