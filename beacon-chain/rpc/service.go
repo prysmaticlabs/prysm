@@ -429,6 +429,7 @@ func (s *Service) Start() {
 	}
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", httpServer.GetValidatorCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/committees", beaconChainServerV1.GetCommittees).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/fork", beaconChainServerV1.GetStateFork).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)

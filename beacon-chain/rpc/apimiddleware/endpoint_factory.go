@@ -22,7 +22,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/validators",
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
-		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/states/{state_id}/randao",
 		"/eth/v1/beacon/headers",
@@ -77,9 +76,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}}
 		endpoint.GetResponse = &ValidatorBalancesResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/committees":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
-		endpoint.GetResponse = &StateCommitteesResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/sync_committees":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
 		endpoint.GetResponse = &SyncCommitteesResponseJson{}
