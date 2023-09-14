@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	eth2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -135,17 +134,4 @@ func (bs *Server) stateFromRequest(ctx context.Context, req *stateRequest) (stat
 		return nil, helpers.PrepareStateFetchGRPCError(err)
 	}
 	return st, nil
-}
-
-func checkpoint(sourceCheckpoint *eth.Checkpoint) *ethpb.Checkpoint {
-	if sourceCheckpoint != nil {
-		return &ethpb.Checkpoint{
-			Epoch: sourceCheckpoint.Epoch,
-			Root:  sourceCheckpoint.Root,
-		}
-	}
-	return &ethpb.Checkpoint{
-		Epoch: 0,
-		Root:  params.BeaconConfig().ZeroHash[:],
-	}
 }
