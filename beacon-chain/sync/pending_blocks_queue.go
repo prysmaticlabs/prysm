@@ -242,9 +242,8 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	defer span.End()
 
 	roots = dedupRoots(roots)
-	syncingRoot := s.cfg.chain.BlockBeingSynced()
 	for i, root := range roots {
-		if root == syncingRoot {
+		if s.cfg.chain.BlockBeingSynced(root) {
 			roots = append(roots[:i], roots[i+1:]...)
 			break
 		}

@@ -135,7 +135,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 		blobNotifiers:        bn,
 		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
-		blockBeingSynced:     &currentlySyncingBlock{},
+		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {

@@ -4,21 +4,24 @@ import "sync"
 
 type currentlySyncingBlock struct {
 	sync.Mutex
-	root [32]byte
+	roots map[[32]byte]struct{}
 }
 
 func (b *currentlySyncingBlock) set(root [32]byte) {
 	b.Lock()
 	defer b.Unlock()
-	b.root = root
+	b.roots[root] = struct{}{}
 }
 
-func (b *currentlySyncingBlock) unset() {
-	b.set([32]byte{})
-}
-
-func (b *currentlySyncingBlock) get() [32]byte {
+func (b *currentlySyncingBlock) unset(root [32]byte) {
 	b.Lock()
 	defer b.Unlock()
-	return b.root
+	delete(b.roots, root)
+}
+
+func (b *currentlySyncingBlock) isSyncing(root [32]byte) bool {
+	b.Lock()
+	defer b.Unlock()
+	_, ok := b.roots[root]
+	return ok
 }
