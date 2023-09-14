@@ -133,27 +133,6 @@ message StateValidatorResponse {
     bool finalized = 3;
 }
 
-message StateCommitteesRequest {
-    // The state id which can be any of: "head" (canonical head in node's view),
-    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-    bytes state_id = 1;
-
-    // The epoch to retrieve the committees of.
-    optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-
-    // Committee index requested.
-    optional uint64 index = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
-
-    // Committee slot requested.
-    optional uint64 slot = 4 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-}
-
-message StateCommitteesResponse {
-    repeated Committee data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
 // Beacon Block API related messages.
 
 message BlockAttestationsResponse {
