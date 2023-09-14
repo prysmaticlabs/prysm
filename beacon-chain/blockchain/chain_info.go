@@ -525,3 +525,8 @@ func (s *Service) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (
 	}
 	return nil, errBlockDoesNotExist
 }
+
+// BlockBeingSynced returns the HTR of the block being currently synced
+func (s *Service) BlockBeingSynced() [32]byte {
+	return s.blockBeingSynced.get()
+}
