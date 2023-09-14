@@ -91,12 +91,6 @@ type RandaoResponseJson struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type BlockHeadersResponseJson struct {
-	Data                []*BlockHeaderContainerJson `json:"data"`
-	ExecutionOptimistic bool                        `json:"execution_optimistic"`
-	Finalized           bool                        `json:"finalized"`
-}
-
 type BlockHeaderResponseJson struct {
 	Data                *BlockHeaderContainerJson `json:"data"`
 	ExecutionOptimistic bool                      `json:"execution_optimistic"`
