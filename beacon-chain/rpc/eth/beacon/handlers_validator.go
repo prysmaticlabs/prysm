@@ -274,6 +274,8 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, resp)
 }
 
+// decodeIds takes in a list of validator ID strings (as either a pubkey or a validator index)
+// and returns the corresponding validator indices. It can be configured to ignore well-formed but unknown indices.
 func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ignoreUnknown bool) ([]primitives.ValidatorIndex, bool) {
 	ids := make([]primitives.ValidatorIndex, 0, len(rawIds))
 	numVals := uint64(st.NumValidators())
@@ -313,6 +315,7 @@ func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ign
 	return ids, true
 }
 
+// valsFromIds returns read-only validators based on the supplied validator indices.
 func valsFromIds(w http.ResponseWriter, st state.BeaconState, ids []primitives.ValidatorIndex) ([]state.ReadOnlyValidator, bool) {
 	var vals []state.ReadOnlyValidator
 	if len(ids) == 0 {
