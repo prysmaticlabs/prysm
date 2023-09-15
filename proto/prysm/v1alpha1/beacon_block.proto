@@ -767,9 +767,9 @@ message SignedBuilderBidCapella {
 
 message BuilderBidDeneb {
     ethereum.engine.v1.ExecutionPayloadHeaderDeneb header = 1;
-    bytes value = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-    bytes pubkey = 3 [(ethereum.eth.ext.ssz_size) = "48"];
-    ethereum.engine.v1.BlindedBlobsBundle blinded_blobs_bundle = 4; // new in deneb
+    ethereum.engine.v1.BlindedBlobsBundle blinded_blobs_bundle = 2; // new in deneb
+    bytes value = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes pubkey = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
 message SignedBuilderBidDeneb {
