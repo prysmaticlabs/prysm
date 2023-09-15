@@ -606,4 +606,9 @@ func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 }
 
 // SendNewBlobEvent mocks the same method in the chain service
-func (s *ChainService) SendNewBlobEvent(_ [32]byte, _ uint64) {}
+func (*ChainService) SendNewBlobEvent(_ [32]byte, _ uint64) {}
+
+// BlockBeingSynced mocks the same method in the chain service
+func (*ChainService) BlockBeingSynced(_ [32]byte) bool {
+	return false
+}
