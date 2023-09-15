@@ -211,7 +211,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				log.WithError(err).Error("Failed to get blob KZG commitments")
 				return
 			} else if len(kzgs) != 0 {
-				log = log.WithField("blobCommitmentCount", len(kzgs))
+				log = log.WithField("kzgCommitmentCount", len(kzgs))
 			}
 		}
 	}

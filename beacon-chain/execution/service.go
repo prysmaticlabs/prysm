@@ -20,7 +20,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
@@ -29,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
@@ -119,7 +121,7 @@ func (RPCClientEmpty) CallContext(context.Context, interface{}, string, ...inter
 type config struct {
 	depositContractAddr     common.Address
 	beaconDB                db.HeadAccessDatabase
-	depositCache            *depositcache.DepositCache
+	depositCache            cache.DepositCache
 	stateNotifier           statefeed.Notifier
 	stateGen                *stategen.State
 	eth1HeaderReqLimit      uint64
@@ -149,7 +151,7 @@ type Service struct {
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
 	depositContractCaller   *contracts.DepositContractCaller
-	depositTrie             *trie.SparseMerkleTrie
+	depositTrie             cache.MerkleTree
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.
 	runError                error
@@ -160,10 +162,15 @@ type Service struct {
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	_ = cancel // govet fix for lost cancel. Cancel is handled in service.Stop()
-	depositTrie, err := trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
-	if err != nil {
-		cancel()
-		return nil, errors.Wrap(err, "could not set up deposit trie")
+	var depositTrie cache.MerkleTree
+	var err error
+	if features.Get().EnableEIP4881 {
+		depositTrie = depositsnapshot.NewDepositTree()
+	} else {
+		depositTrie, err = trie.NewTrie(params.BeaconConfig().DepositContractTreeDepth)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not set up deposit trie")
+		}
 	}
 	genState, err := transition.EmptyGenesisState()
 	if err != nil {
@@ -209,7 +216,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
 	}
-
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
 	}
@@ -370,7 +376,8 @@ func (s *Service) initDepositCaches(ctx context.Context, ctrs []*ethpb.DepositCo
 		// to be included (rather than the last one to be processed). This was most likely
 		// done as the state cannot represent signed integers.
 		actualIndex := int64(currIndex) - 1 // lint:ignore uintcast -- deposit index will not exceed int64 in your lifetime.
-		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex); err != nil {
+		if err = s.cfg.depositCache.InsertFinalizedDeposits(ctx, actualIndex, common.Hash(fState.Eth1Data().BlockHash),
+			0 /* Setting a zero value as we have no access to block height */); err != nil {
 			return err
 		}
 
@@ -742,7 +749,17 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		return nil
 	}
 	var err error
-	s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	if features.Get().EnableEIP4881 {
+		if eth1DataInDB.DepositSnapshot != nil {
+			s.depositTrie, err = depositsnapshot.DepositTreeFromSnapshotProto(eth1DataInDB.DepositSnapshot)
+		} else {
+			if err := s.migrateOldDepositTree(eth1DataInDB); err != nil {
+				return err
+			}
+		}
+	} else {
+		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	}
 	if err != nil {
 		return err
 	}
@@ -754,6 +771,24 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 		}
 	}
 	s.latestEth1Data = eth1DataInDB.CurrentEth1Data
+	if features.Get().EnableEIP4881 {
+		ctrs := eth1DataInDB.DepositContainers
+		// Look at previously finalized index, as we are building off a finalized
+		// snapshot rather than the full trie.
+		lastFinalizedIndex := int64(s.depositTrie.NumOfItems() - 1)
+		// Correctly initialize missing deposits into active trie.
+		for _, c := range ctrs {
+			if c.Index > lastFinalizedIndex {
+				depRoot, err := c.Deposit.Data.HashTreeRoot()
+				if err != nil {
+					return err
+				}
+				if err := s.depositTrie.Insert(depRoot[:], int(c.Index)); err != nil {
+					return err
+				}
+			}
+		}
+	}
 	numOfItems := s.depositTrie.NumOfItems()
 	s.lastReceivedMerkleIndex = int64(numOfItems - 1)
 	if err := s.initDepositCaches(ctx, eth1DataInDB.DepositContainers); err != nil {
@@ -816,8 +851,23 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 			CurrentEth1Data:   s.latestEth1Data,
 			ChainstartData:    s.chainStartData,
 			BeaconState:       pbState,
-			Trie:              s.depositTrie.ToProto(),
 			DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
+		}
+		if features.Get().EnableEIP4881 {
+			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+			if !ok {
+				return errors.New("deposit trie was not EIP4881 DepositTree")
+			}
+			eth1Data.DepositSnapshot, err = trie.ToProto()
+			if err != nil {
+				return err
+			}
+		} else {
+			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+			if !ok {
+				return errors.New("deposit trie was not SparseMerkleTrie")
+			}
+			eth1Data.Trie = trie.ToProto()
 		}
 		return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 	}
@@ -835,4 +885,30 @@ func dedupEndpoints(endpoints []string) []string {
 		selectionMap[point] = true
 	}
 	return newEndpoints
+}
+
+func (s *Service) migrateOldDepositTree(eth1DataInDB *ethpb.ETH1ChainData) error {
+	oldDepositTrie, err := trie.CreateTrieFromProto(eth1DataInDB.Trie)
+	if err != nil {
+		return err
+	}
+	newDepositTrie := depositsnapshot.NewDepositTree()
+	for i, item := range oldDepositTrie.Items() {
+		if err = newDepositTrie.Insert(item, i); err != nil {
+			return errors.Wrapf(err, "could not insert item at index %d into deposit snapshot tree", i)
+		}
+	}
+	newDepositRoot, err := newDepositTrie.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	depositRoot, err := oldDepositTrie.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if newDepositRoot != depositRoot {
+		return errors.Wrapf(err, "mismatched deposit roots, old %#x != new %#x", depositRoot, newDepositRoot)
+	}
+	s.depositTrie = newDepositTrie
+	return nil
 }

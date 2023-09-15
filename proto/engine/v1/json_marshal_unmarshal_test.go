@@ -566,6 +566,71 @@ func TestJsonMarshalUnmarshal(t *testing.T) {
 		require.DeepEqual(t, bytesutil.PadTo([]byte("address2"), 20), payloadPb.Withdrawals[1].Address)
 		require.Equal(t, uint64(200), payloadPb.Withdrawals[1].Amount)
 	})
+	t.Run("execution block with deneb blob data", func(t *testing.T) {
+		baseFeePerGas := big.NewInt(1770307273)
+		blobGas := uint64(3000)
+		excessGas := uint64(7000)
+		want := &gethtypes.Header{
+			Number:        big.NewInt(1),
+			ParentHash:    common.BytesToHash([]byte("parent")),
+			UncleHash:     common.BytesToHash([]byte("uncle")),
+			Coinbase:      common.BytesToAddress([]byte("coinbase")),
+			Root:          common.BytesToHash([]byte("uncle")),
+			TxHash:        common.BytesToHash([]byte("txHash")),
+			ReceiptHash:   common.BytesToHash([]byte("receiptHash")),
+			Bloom:         gethtypes.BytesToBloom([]byte("bloom")),
+			Difficulty:    big.NewInt(2),
+			GasLimit:      3,
+			GasUsed:       4,
+			Time:          5,
+			BaseFee:       baseFeePerGas,
+			Extra:         []byte("extraData"),
+			MixDigest:     common.BytesToHash([]byte("mix")),
+			Nonce:         gethtypes.EncodeNonce(6),
+			BlobGasUsed:   &blobGas,
+			ExcessBlobGas: &excessGas,
+		}
+		enc, err := json.Marshal(want)
+		require.NoError(t, err)
+
+		payloadItems := make(map[string]interface{})
+		require.NoError(t, json.Unmarshal(enc, &payloadItems))
+
+		blockHash := want.Hash()
+		payloadItems["hash"] = blockHash.String()
+		payloadItems["totalDifficulty"] = "0x393a2e53de197c"
+		payloadItems["transactions"] = []string{"0xd57870623ea84ac3e2ffafbee9417fd1263b825b1107b8d606c25460dabeb693"}
+
+		encodedPayloadItems, err := json.Marshal(payloadItems)
+		require.NoError(t, err)
+
+		payloadPb := &enginev1.ExecutionBlock{}
+		require.NoError(t, json.Unmarshal(encodedPayloadItems, payloadPb))
+
+		require.DeepEqual(t, blockHash, payloadPb.Hash)
+		require.DeepEqual(t, want.Number, payloadPb.Number)
+		require.DeepEqual(t, want.ParentHash, payloadPb.ParentHash)
+		require.DeepEqual(t, want.UncleHash, payloadPb.UncleHash)
+		require.DeepEqual(t, want.Coinbase, payloadPb.Coinbase)
+		require.DeepEqual(t, want.Root, payloadPb.Root)
+		require.DeepEqual(t, want.TxHash, payloadPb.TxHash)
+		require.DeepEqual(t, want.ReceiptHash, payloadPb.ReceiptHash)
+		require.DeepEqual(t, want.Bloom, payloadPb.Bloom)
+		require.DeepEqual(t, want.Difficulty, payloadPb.Difficulty)
+		require.DeepEqual(t, payloadItems["totalDifficulty"], payloadPb.TotalDifficulty)
+		require.DeepEqual(t, want.GasUsed, payloadPb.GasUsed)
+		require.DeepEqual(t, want.GasLimit, payloadPb.GasLimit)
+		require.DeepEqual(t, want.Time, payloadPb.Time)
+		require.DeepEqual(t, want.BaseFee, payloadPb.BaseFee)
+		require.DeepEqual(t, want.Extra, payloadPb.Extra)
+		require.DeepEqual(t, want.MixDigest, payloadPb.MixDigest)
+		require.DeepEqual(t, want.Nonce, payloadPb.Nonce)
+		require.DeepEqual(t, want.BlobGasUsed, payloadPb.BlobGasUsed)
+		require.DeepEqual(t, want.ExcessBlobGas, payloadPb.ExcessBlobGas)
+
+		// Expect no transaction objects in the unmarshaled data.
+		require.Equal(t, 0, len(payloadPb.Transactions))
+	})
 }
 
 func TestPayloadIDBytes_MarshalUnmarshalJSON(t *testing.T) {

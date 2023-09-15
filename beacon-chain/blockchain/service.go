@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -33,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -61,7 +61,7 @@ type Service struct {
 	clockSetter          startup.ClockSetter
 	clockWaiter          startup.ClockWaiter
 	syncComplete         chan struct{}
-	blobNotifier         *blobNotifier
+	blobNotifiers        *blobNotifierMap
 }
 
 // config options for the service.
@@ -69,7 +69,7 @@ type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
+	DepositCache            cache.DepositCache
 	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
@@ -90,14 +90,26 @@ type config struct {
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
 
-type blobNotifierChan struct {
-	indices map[uint64]struct{}
-	channel chan struct{}
+type blobNotifierMap struct {
+	sync.RWMutex
+	notifiers map[[32]byte]chan uint64
 }
 
-type blobNotifier struct {
-	sync.RWMutex
-	chanForRoot map[[32]byte]*blobNotifierChan
+func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
+	bn.Lock()
+	defer bn.Unlock()
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+	return c
+}
+
+func (bn *blobNotifierMap) delete(root [32]byte) {
+	bn.Lock()
+	defer bn.Unlock()
+	delete(bn.notifiers, root)
 }
 
 // NewService instantiates a new block service instance that will
@@ -111,8 +123,8 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 	ctx, cancel := context.WithCancel(ctx)
-	bn := &blobNotifier{
-		chanForRoot: make(map[[32]byte]*blobNotifierChan),
+	bn := &blobNotifierMap{
+		notifiers: make(map[[32]byte]chan uint64),
 	}
 	srv := &Service{
 		ctx:                  ctx,
@@ -120,7 +132,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
-		blobNotifier:         bn,
+		blobNotifiers:        bn,
 		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
 	}
 	for _, opt := range opts {
@@ -368,7 +380,7 @@ func (s *Service) startFromExecutionChain() error {
 				log.Debug("Context closed, exiting goroutine")
 				return
 			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
+				log.WithError(err).Error("Subscription to state forRoot failed")
 				return
 			}
 		}
