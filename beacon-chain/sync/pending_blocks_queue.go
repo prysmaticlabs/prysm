@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -102,7 +103,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 			// No need to process the same block if we are already processing it
 			if s.cfg.chain.BlockBeingSynced(blkRoot) {
-				log.Infof("Skipping pending block %#x that is already being processed", blkRoot)
+				rootString := fmt.Sprintf("%#x", blkRoot)
+				log.WithField("BlockRoot", rootString).Info("Skipping pending block already being processed")
 				continue
 			}
 
