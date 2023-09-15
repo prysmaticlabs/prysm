@@ -865,7 +865,9 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 			}
 			eth1Data.Trie = trie.ToProto()
 		}
-		return eth1Data, s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
+		if err := s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data); err != nil {
+			return nil, err
+		}
 	}
 	return eth1Data, nil
 }
