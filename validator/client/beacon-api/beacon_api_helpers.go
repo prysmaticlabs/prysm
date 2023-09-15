@@ -65,10 +65,10 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStat
 	return stateForkResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*apimiddleware.BlockHeadersResponseJson, error) {
+func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetBlockHeadersResponse, error) {
 	const endpoint = "/eth/v1/beacon/headers"
 
-	blockHeadersResponseJson := &apimiddleware.BlockHeadersResponseJson{}
+	blockHeadersResponseJson := &beacon.GetBlockHeadersResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,

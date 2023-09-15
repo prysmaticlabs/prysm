@@ -47,6 +47,12 @@ type GetStateForkResponse struct {
 	Finalized           bool         `json:"finalized"`
 }
 
+type GetBlockHeadersResponse struct {
+	Data                []*shared.SignedBeaconBlockHeaderContainer `json:"data"`
+	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
+	Finalized           bool                                       `json:"finalized"`
+}
+
 type GetValidatorsResponse struct {
 	ExecutionOptimistic bool                  `json:"execution_optimistic"`
 	Finalized           bool                  `json:"finalized"`
