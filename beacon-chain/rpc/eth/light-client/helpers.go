@@ -161,7 +161,6 @@ func CreateLightClientUpdate(
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
 	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*LightClientUpdate, error) {
-
 	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
@@ -211,6 +210,20 @@ func CreateLightClientUpdate(
 
 	result.NextSyncCommittee = nextSyncCommittee
 	result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
+	return NewLightClientUpdateToJSON(result), nil
+}
+
+func NewLightClientFinalityUpdateFromBeaconState(
+	ctx context.Context,
+	state state.BeaconState,
+	block interfaces.ReadOnlySignedBeaconBlock,
+	attestedState state.BeaconState,
+	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*LightClientUpdate, error) {
+	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
+	if err != nil {
+		return nil, err
+	}
+
 	return NewLightClientUpdateToJSON(result), nil
 }
 
