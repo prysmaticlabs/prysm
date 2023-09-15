@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -100,6 +101,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
+			// No need to process the same block if we are already processing it
+			if s.cfg.chain.BlockBeingSynced(blkRoot) {
+				rootString := fmt.Sprintf("%#x", blkRoot)
+				log.WithField("BlockRoot", rootString).Info("Skipping pending block already being processed")
+				continue
+			}
 
 			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
 			// No need to process the same block twice.
@@ -126,12 +133,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, b.Block().ParentRoot())
+			parentRoot := b.Block().ParentRoot()
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
-			parentRoot := b.Block().ParentRoot()
 			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
