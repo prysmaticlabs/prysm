@@ -241,6 +241,12 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	ctx, span := trace.StartSpan(ctx, "sendBatchRootRequest")
 	defer span.End()
 
+	roots = dedupRoots(roots)
+	for i := len(roots) - 1; i >= 0; i-- {
+		if s.cfg.chain.BlockBeingSynced(roots[i]) {
+			roots = append(roots[:i], roots[i+1:]...)
+		}
+	}
 	if len(roots) == 0 {
 		return nil
 	}
@@ -249,7 +255,6 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(bestPeers) == 0 {
 		return nil
 	}
-	roots = dedupRoots(roots)
 	// Randomly choose a peer to query from our best peers. If that peer cannot return
 	// all the requested blocks, we randomly select another peer.
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
