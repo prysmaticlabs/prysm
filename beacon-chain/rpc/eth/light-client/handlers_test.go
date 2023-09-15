@@ -35,7 +35,6 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	b.Block.Slot = slot
 
 	signedBlock, err := blocks.NewSignedBeaconBlock(b)
-
 	require.NoError(t, err)
 	header, err := signedBlock.Header()
 	require.NoError(t, err)

@@ -489,6 +489,13 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/finality_update", lightClientServer.GetLightClientFinalityUpdate).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/optimistic_update", lightClientServer.GetLightClientOptimisticUpdate).Methods(http.MethodGet)
 
+	lightClientServer := &lightclient.Server{
+		BeaconDB:    s.cfg.BeaconDB,
+		Stater:      stater,
+		HeadFetcher: s.cfg.HeadFetcher,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/bootstrap/{block_root}", lightClientServer.GetLightClientBootstrap).Methods(http.MethodGet)
+
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
