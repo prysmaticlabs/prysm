@@ -218,6 +218,9 @@ type BeaconChainConfig struct {
 
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue uint64 // ExecutionEngineTimeoutValue defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+
+	// Subnet value
+	BlobsidecarSubnetCount uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT"` // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
@@ -283,4 +286,9 @@ func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 // kind of check and remove them post-deneb.
 func DenebEnabled() bool {
 	return BeaconConfig().DenebForkEpoch < math.MaxUint64
+}
+
+// WithinDAPeriod checks if the block epoch is within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS of the given current epoch.
+func WithinDAPeriod(block, current primitives.Epoch) bool {
+	return block+BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= current
 }

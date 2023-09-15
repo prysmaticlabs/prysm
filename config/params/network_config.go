@@ -14,7 +14,6 @@ type NetworkConfig struct {
 	MaxChunkSize                     uint64           `yaml:"MAX_CHUNK_SIZE"`                        // MaxChunkSize is the maximum allowed size of uncompressed req/resp chunked responses.
 	MaxChunkSizeBellatrix            uint64           `yaml:"MAX_CHUNK_SIZE_BELLATRIX"`              // MaxChunkSizeBellatrix is the maximum allowed size of uncompressed req/resp chunked responses after the bellatrix epoch.
 	AttestationSubnetCount           uint64           `yaml:"ATTESTATION_SUBNET_COUNT"`              // AttestationSubnetCount is the number of attestation subnets used in the gossipsub protocol.
-	BlobsidecarSubnetCount           uint64           `yaml:"BLOBSIDECAR_SUBNET_COUNT"`              // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
 	AttestationPropagationSlotRange  primitives.Slot  `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE"`    // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
 	MaxRequestBlocks                 uint64           `yaml:"MAX_REQUEST_BLOCKS"`                    // MaxRequestBlocks is the maximum number of blocks in a single request.
 	TtfbTimeout                      time.Duration    `yaml:"TTFB_TIMEOUT"`                          // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).

@@ -18,12 +18,10 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/beacon/genesis",
 		"/eth/v1/beacon/states/{state_id}/root",
-		"/eth/v1/beacon/states/{state_id}/fork",
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints",
 		"/eth/v1/beacon/states/{state_id}/validators",
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
 		"/eth/v1/beacon/states/{state_id}/validator_balances",
-		"/eth/v1/beacon/states/{state_id}/committees",
 		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/states/{state_id}/randao",
 		"/eth/v1/beacon/headers",
@@ -51,12 +49,8 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
 		"/eth/v1/config/fork_schedule",
-		"/eth/v1/config/deposit_contract",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
-		"/eth/v1/validator/duties/attester/{epoch}",
-		"/eth/v1/validator/duties/proposer/{epoch}",
-		"/eth/v1/validator/duties/sync/{epoch}",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v2/validator/blocks/{slot}",
 		"/eth/v1/validator/blinded_blocks/{slot}",
@@ -72,8 +66,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &GenesisResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/root":
 		endpoint.GetResponse = &StateRootResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/fork":
-		endpoint.GetResponse = &StateForkResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/finality_checkpoints":
 		endpoint.GetResponse = &StateFinalityCheckpointResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/validators":
@@ -84,9 +76,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/states/{state_id}/validator_balances":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}}
 		endpoint.GetResponse = &ValidatorBalancesResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/committees":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}, {Name: "index"}, {Name: "slot"}}
-		endpoint.GetResponse = &StateCommitteesResponseJson{}
 	case "/eth/v1/beacon/states/{state_id}/sync_committees":
 		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
 		endpoint.GetResponse = &SyncCommitteesResponseJson{}
@@ -179,32 +168,10 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &ForkScheduleResponseJson{}
-	case "/eth/v1/config/deposit_contract":
-		endpoint.GetResponse = &DepositContractResponseJson{}
 	case "/eth/v1/config/spec":
 		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
-	case "/eth/v1/validator/duties/attester/{epoch}":
-		endpoint.PostRequest = &ValidatorIndicesJson{}
-		endpoint.PostResponse = &AttesterDutiesResponseJson{}
-		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &NodeSyncDetailsErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
-		}
-	case "/eth/v1/validator/duties/proposer/{epoch}":
-		endpoint.GetResponse = &ProposerDutiesResponseJson{}
-		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &NodeSyncDetailsErrorJson{}
-	case "/eth/v1/validator/duties/sync/{epoch}":
-		endpoint.PostRequest = &ValidatorIndicesJson{}
-		endpoint.PostResponse = &SyncCommitteeDutiesResponseJson{}
-		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &NodeSyncDetailsErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
-		}
 	case "/eth/v1/validator/blocks/{slot}":
 		endpoint.GetResponse = &ProduceBlockResponseJson{}
 		endpoint.RequestURLLiterals = []string{"slot"}

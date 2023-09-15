@@ -16,7 +16,6 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -265,6 +264,9 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return err
 			}
 		}
+		if err := s.databaseDACheck(ctx, b); err != nil {
+			return errors.Wrap(err, "could not validate blob data availability")
+		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedCheckpoint: jCheckpoints[i],
 			FinalizedCheckpoint: fCheckpoints[i]}
@@ -328,6 +330,33 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
+}
+
+func commitmentsToCheck(b consensusblocks.ROBlock, current primitives.Slot) [][]byte {
+	if b.Version() < version.Deneb {
+		return nil
+	}
+	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
+	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(current)) {
+		return nil
+	}
+	kzgCommitments, err := b.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return nil
+	}
+	return kzgCommitments
+}
+
+func (s *Service) databaseDACheck(ctx context.Context, b consensusblocks.ROBlock) error {
+	commitments := commitmentsToCheck(b, s.CurrentSlot())
+	if len(commitments) == 0 {
+		return nil
+	}
+	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, b.Root())
+	if err != nil {
+		return errors.Wrap(err, "could not get blob sidecars")
+	}
+	return kzg.IsDataAvailable(commitments, sidecars)
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
@@ -503,14 +532,17 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if signed.Version() < version.Deneb {
 		return nil
 	}
+	t := time.Now()
+
 	block := signed.Block()
 	if block == nil {
 		return errors.New("invalid nil beacon block")
 	}
 	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-	if slots.ToEpoch(block.Slot())+params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest > primitives.Epoch(s.CurrentSlot()) {
+	if !params.WithinDAPeriod(slots.ToEpoch(block.Slot()), slots.ToEpoch(s.CurrentSlot())) {
 		return nil
 	}
+
 	body := block.Body()
 	if body == nil {
 		return errors.New("invalid nil beacon block body")
@@ -519,54 +551,48 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if err != nil {
 		return errors.Wrap(err, "could not get KZG commitments")
 	}
-	existingBlobs := len(kzgCommitments)
-	if existingBlobs == 0 {
+	expected := len(kzgCommitments)
+	if expected == 0 {
 		return nil
 	}
 
 	// Read first from db in case we have the blobs
-	s.blobNotifier.Lock()
-	var nc *blobNotifierChan
-	var ok bool
-	nc, ok = s.blobNotifier.chanForRoot[root]
 	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
 	if err == nil {
-		if len(sidecars) >= existingBlobs {
-			delete(s.blobNotifier.chanForRoot, root)
-			s.blobNotifier.Unlock()
-			return kzg.IsDataAvailable(kzgCommitments, sidecars)
+		if len(sidecars) >= expected {
+			s.blobNotifiers.delete(root)
+			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
+				return err
+			}
+			logBlobSidecar(sidecars, t)
+			return nil
 		}
 	}
-	// Create the channel if it didn't exist already the index map will be
-	// created later anyway
-	if !ok {
-		nc = &blobNotifierChan{channel: make(chan struct{}, fieldparams.MaxBlobsPerBlock)}
-		s.blobNotifier.chanForRoot[root] = nc
+
+	found := map[uint64]struct{}{}
+	for _, sc := range sidecars {
+		found[sc.Index] = struct{}{}
 	}
-	// We have more commitments in the block than blobs in database
-	// We sync the channel indices with the sidecars
-	nc.indices = make(map[uint64]struct{})
-	for _, sidecar := range sidecars {
-		nc.indices[sidecar.Index] = struct{}{}
-	}
-	s.blobNotifier.Unlock()
-	channelWrites := len(sidecars)
+	nc := s.blobNotifiers.forRoot(root)
 	for {
 		select {
-		case <-nc.channel:
-			channelWrites++
-			if channelWrites == existingBlobs {
-				s.blobNotifier.Lock()
-				delete(s.blobNotifier.chanForRoot, root)
-				s.blobNotifier.Unlock()
-				sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-				if err != nil {
-					return errors.Wrap(err, "could not get blob sidecars")
-				}
-				return kzg.IsDataAvailable(kzgCommitments, sidecars)
+		case idx := <-nc:
+			found[idx] = struct{}{}
+			if len(found) != expected {
+				continue
 			}
+			s.blobNotifiers.delete(root)
+			sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
+			if err != nil {
+				return errors.Wrap(err, "could not get blob sidecars")
+			}
+			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
+				return err
+			}
+			logBlobSidecar(sidecars, t)
+			return nil
 		case <-ctx.Done():
-			return errors.Wrap(err, "context deadline waiting for blob sidecars")
+			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")
 		}
 	}
 }

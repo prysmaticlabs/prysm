@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -98,7 +99,16 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		response.Block = &ethpb.GenericBeaconBlock_Capella{
 			Capella: capellaBlock,
 		}
-
+	case "deneb":
+		jsonDenebBlockContents := shared.BeaconBlockContentsDeneb{}
+		if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
+			return nil, errors.Wrap(err, "failed to decode deneb block response json")
+		}
+		genericBlock, err := jsonDenebBlockContents.ToGeneric()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not convert deneb block contents to generic block")
+		}
+		response = genericBlock
 	default:
 		return nil, errors.Errorf("unsupported consensus version `%s`", produceBlockResponseJson.Version)
 	}

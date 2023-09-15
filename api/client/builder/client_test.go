@@ -283,6 +283,42 @@ func TestClient_GetHeader(t *testing.T) {
 			require.Equal(t, len(bundle.Proofs[i]) == 48, true)
 		}
 	})
+	t.Run("deneb, no bundle", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponseDenebNoBundle)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		h, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.NoError(t, err)
+		expectedWithdrawalsRoot := ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+		bid, err := h.Message()
+		require.NoError(t, err)
+		bidHeader, err := bid.Header()
+		require.NoError(t, err)
+		withdrawalsRoot, err := bidHeader.WithdrawalsRoot()
+		require.NoError(t, err)
+		require.Equal(t, true, bytes.Equal(expectedWithdrawalsRoot, withdrawalsRoot))
+		value, err := stringToUint256("652312848583266388373324160190187140051835877600158453279131187530910662656")
+		require.NoError(t, err)
+		require.Equal(t, fmt.Sprintf("%#x", value.SSZBytes()), fmt.Sprintf("%#x", bid.Value()))
+		bidValue := bytesutil.ReverseByteOrder(bid.Value())
+		require.DeepEqual(t, bidValue, value.Bytes())
+		require.DeepEqual(t, big.NewInt(0).SetBytes(bidValue), value.Int)
+		bundle, err := bid.BlindedBlobsBundle()
+		require.NoError(t, err)
+		require.Equal(t, (*v1.BlindedBlobsBundle)(nil), bundle)
+	})
+
 	t.Run("unsupported version", func(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {

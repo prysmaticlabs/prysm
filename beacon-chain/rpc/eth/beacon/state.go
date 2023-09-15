@@ -90,37 +90,6 @@ func (bs *Server) GetStateRoot(ctx context.Context, req *ethpb.StateRequest) (*e
 	}, nil
 }
 
-// GetStateFork returns Fork object for state with given 'stateId'.
-func (bs *Server) GetStateFork(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateForkResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetStateFork")
-	defer span.End()
-
-	st, err := bs.Stater.State(ctx, req.StateId)
-	if err != nil {
-		return nil, helpers.PrepareStateFetchGRPCError(err)
-	}
-	fork := st.Fork()
-	isOptimistic, err := helpers.IsOptimistic(ctx, req.StateId, bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if slot's block is optimistic: %v", err)
-	}
-	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not calculate root of latest block header")
-	}
-	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
-
-	return &ethpb.StateForkResponse{
-		Data: &ethpb.Fork{
-			PreviousVersion: fork.PreviousVersion,
-			CurrentVersion:  fork.CurrentVersion,
-			Epoch:           fork.Epoch,
-		},
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           isFinalized,
-	}, nil
-}
-
 // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
 // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
 func (bs *Server) GetFinalityCheckpoints(ctx context.Context, req *ethpb.StateRequest) (*ethpb.StateFinalityCheckpointResponse, error) {
