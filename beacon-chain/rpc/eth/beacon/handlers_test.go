@@ -395,7 +395,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Block.Block)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.SignedBlindedBlock.Message)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
