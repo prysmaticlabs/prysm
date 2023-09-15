@@ -839,9 +839,6 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	sort.Slice(duties, func(i, j int) bool {
-		return duties[i].Slot < duties[j].Slot
-	})
 
 	s.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 
@@ -853,6 +850,9 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !sortProposerDuties(w, duties) {
 		return
 	}
 
@@ -1052,4 +1052,24 @@ func syncCommitteeDuties(
 		}
 	}
 	return duties, nil
+}
+
+func sortProposerDuties(w http.ResponseWriter, duties []*ProposerDuty) bool {
+	ok := true
+	sort.Slice(duties, func(i, j int) bool {
+		si, err := strconv.ParseUint(duties[i].Slot, 10, 64)
+		if err != nil {
+			http2.HandleError(w, "Could not parse slot: "+err.Error(), http.StatusInternalServerError)
+			ok = false
+			return false
+		}
+		sj, err := strconv.ParseUint(duties[j].Slot, 10, 64)
+		if err != nil {
+			http2.HandleError(w, "Could not parse slot: "+err.Error(), http.StatusInternalServerError)
+			ok = false
+			return false
+		}
+		return si < sj
+	})
+	return ok
 }
