@@ -104,6 +104,7 @@ ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
         "beacon_block.proto",
+        "beacon_lightclient.proto",
         "beacon_state.proto",
         "blobs.proto",
         "sync_committee.proto",
