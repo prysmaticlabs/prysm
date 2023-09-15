@@ -29,7 +29,7 @@ func NewSignedBeaconBlockFromGeneric(gb *eth.GenericSignedBeaconBlock) (interfac
 	case *eth.GenericSignedBeaconBlock_Deneb:
 		return blocks.NewSignedBeaconBlock(bb.Deneb.Block)
 	case *eth.GenericSignedBeaconBlock_BlindedDeneb:
-		return blocks.NewSignedBeaconBlock(bb.BlindedDeneb.Block)
+		return blocks.NewSignedBeaconBlock(bb.BlindedDeneb.SignedBlindedBlock)
 	// Generic Signed Beacon Block Deneb can't be used here as it is not a block, but block content with blobs
 	default:
 		return nil, errors.Wrapf(blocks.ErrUnsupportedSignedBeaconBlock, "unable to create block from type %T", gb)

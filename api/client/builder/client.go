@@ -366,7 +366,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
 
-		b := &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{Block: psb, Blobs: blobs}
+		b := &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: psb, SignedBlindedBlobSidecars: blobs}
 		body, err := json.Marshal(b)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockDeneb value body in SubmitBlindedBlockDeneb")
