@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -752,4 +753,94 @@ func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	})
+}
+
+// GetBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
+func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
+	defer span.End()
+
+	rawSlot := r.URL.Query().Get("slot")
+	rawParentRoot := r.URL.Query().Get("parent_root")
+
+	var err error
+	var blks []interfaces.ReadOnlySignedBeaconBlock
+	var blkRoots [][32]byte
+
+	if rawParentRoot != "" {
+		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, 32)
+		if !valid {
+			return
+		}
+		blks, blkRoots, err = s.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(parentRoot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for parent root %s", parentRoot).Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		slot := uint64(s.ChainInfoFetcher.HeadSlot())
+		if rawSlot != "" {
+			var valid bool
+			slot, valid = shared.ValidateUint(w, "Slot", rawSlot)
+			if !valid {
+				return
+			}
+		}
+		blks, err = s.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+		_, blkRoots, err = s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	isOptimistic := false
+	isFinalized := true
+	blkHdrs := make([]*shared.SignedBeaconBlockHeaderContainer, len(blks))
+	for i, bl := range blks {
+		v1alpha1Header, err := bl.Header()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not get block header from block").Error(), http.StatusInternalServerError)
+			return
+		}
+		headerRoot, err := v1alpha1Header.Header.HashTreeRoot()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not hash block header").Error(), http.StatusInternalServerError)
+			return
+		}
+		canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not determine if block root is canonical").Error(), http.StatusInternalServerError)
+			return
+		}
+		if !isOptimistic {
+			isOptimistic, err = s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			if err != nil {
+				http2.HandleError(w, errors.Wrapf(err, "Could not check if block is optimistic").Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		if isFinalized {
+			isFinalized = s.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
+		}
+		blkHdrs[i] = &shared.SignedBeaconBlockHeaderContainer{
+			Header: &shared.SignedBeaconBlockHeader{
+				Message:   shared.BeaconBlockHeaderFromConsensus(v1alpha1Header.Header),
+				Signature: hexutil.Encode(v1alpha1Header.Signature),
+			},
+			Root:      hexutil.Encode(headerRoot[:]),
+			Canonical: canonical,
+		}
+	}
+
+	response := &GetBlockHeadersResponse{
+		Data:                blkHdrs,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, response)
 }

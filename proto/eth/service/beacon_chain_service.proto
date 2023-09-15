@@ -126,17 +126,6 @@ service BeaconChain {
     };
   }
 
-  // Beacon blocks API related endpoints.
-
-  // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockHeaders
-  rpc ListBlockHeaders(v1.BlockHeadersRequest) returns (v1.BlockHeadersResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/headers"
-    };
-  }
-
   // GetBlockHeader retrieves block header for given block id.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockHeader
