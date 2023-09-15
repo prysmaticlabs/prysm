@@ -311,6 +311,12 @@ type DepositData struct {
 	Signature             string `json:"signature" validate:"required"`
 }
 
+type SignedBeaconBlockHeaderContainer struct {
+	Header    *SignedBeaconBlockHeader `json:"header"`
+	Root      string                   `json:"root"`
+	Canonical bool                     `json:"canonical"`
+}
+
 type SignedBeaconBlockHeader struct {
 	Message   *BeaconBlockHeader `json:"message" validate:"required"`
 	Signature string             `json:"signature" validate:"required"`

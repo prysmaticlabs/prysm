@@ -1994,6 +1994,16 @@ func (s *BlindedBlobSidecar) ToConsensus() (*eth.BlindedBlobSidecar, error) {
 	return bsc, nil
 }
 
+func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader {
+	return &BeaconBlockHeader{
+		Slot:          strconv.FormatUint(uint64(h.Slot), 10),
+		ProposerIndex: strconv.FormatUint(uint64(h.ProposerIndex), 10),
+		ParentRoot:    hexutil.Encode(h.ParentRoot),
+		StateRoot:     hexutil.Encode(h.StateRoot),
+		BodyRoot:      hexutil.Encode(h.BodyRoot),
+	}
+}
+
 func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
