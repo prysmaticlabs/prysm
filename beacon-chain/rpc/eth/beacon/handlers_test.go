@@ -1134,3 +1134,209 @@ func TestGetCommittees(t *testing.T) {
 		assert.Equal(t, true, resp.Finalized)
 	})
 }
+
+func TestListBlockHeaders(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	headBlock := blkContainers[len(blkContainers)-1]
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 30
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b1)
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := util.NewBeaconBlock()
+	b3.Block.Slot = 31
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := util.NewBeaconBlock()
+	b4.Block.Slot = 28
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b4)
+
+	url := "http://example.com/eth/v1/beacon/headers"
+
+	t.Run("list headers", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		tests := []struct {
+			name       string
+			slot       primitives.Slot
+			parentRoot string
+			want       []*eth.SignedBeaconBlock
+			wantErr    bool
+		}{
+			{
+				name:       "slot",
+				slot:       primitives.Slot(30),
+				parentRoot: "",
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[30].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b2,
+				},
+			},
+			{
+				name:       "parent root",
+				parentRoot: hexutil.Encode(b1.Block.ParentRoot),
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[1].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b3,
+					b4,
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				urlWithParams := fmt.Sprintf("%s?slot=%d&parent_root=%s", url, tt.slot, tt.parentRoot)
+				request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+				writer := httptest.NewRecorder()
+
+				writer.Body = &bytes.Buffer{}
+
+				bs.GetBlockHeaders(writer, request)
+				resp := &GetBlockHeadersResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+				require.Equal(t, len(tt.want), len(resp.Data))
+				for i, blk := range tt.want {
+					expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+					require.NoError(t, err)
+					expectedHeader := &eth.BeaconBlockHeader{
+						Slot:          blk.Block.Slot,
+						ProposerIndex: blk.Block.ProposerIndex,
+						ParentRoot:    blk.Block.ParentRoot,
+						StateRoot:     make([]byte, 32),
+						BodyRoot:      expectedBodyRoot[:],
+					}
+					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+					require.NoError(t, err)
+					assert.DeepEqual(t, hexutil.Encode(expectedHeaderRoot[:]), resp.Data[i].Root)
+					assert.DeepEqual(t, shared.BeaconBlockHeaderFromConsensus(expectedHeader), resp.Data[i].Header.Message)
+				}
+			})
+		}
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+		slot := primitives.Slot(30)
+		urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+		request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+
+		bs.GetBlockHeaders(writer, request)
+		resp := &GetBlockHeadersResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		child1 := util.NewBeaconBlock()
+		child1.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child1.Block.Slot = 999
+		util.SaveBlock(t, ctx, beaconDB, child1)
+		child2 := util.NewBeaconBlock()
+		child2.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child2.Block.Slot = 1000
+		util.SaveBlock(t, ctx, beaconDB, child2)
+		child1Root, err := child1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		child2Root, err := child2.Block.HashTreeRoot()
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			slot := primitives.Slot(999)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, true, resp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			slot := primitives.Slot(1000)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+		t.Run("false when at least one not finalized", func(t *testing.T) {
+			urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(child1.Block.ParentRoot))
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+	})
+}

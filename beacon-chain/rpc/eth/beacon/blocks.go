@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -124,76 +123,6 @@ func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest)
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, blkRoot),
 	}, nil
-}
-
-// ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
-func (bs *Server) ListBlockHeaders(ctx context.Context, req *ethpbv1.BlockHeadersRequest) (*ethpbv1.BlockHeadersResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListBlockHeaders")
-	defer span.End()
-
-	var err error
-	var blks []interfaces.ReadOnlySignedBeaconBlock
-	var blkRoots [][32]byte
-	if len(req.ParentRoot) == 32 {
-		blks, blkRoots, err = bs.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(req.ParentRoot))
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks: %v", err)
-		}
-	} else {
-		slot := bs.ChainInfoFetcher.HeadSlot()
-		if req.Slot != nil {
-			slot = *req.Slot
-		}
-		blks, err = bs.BeaconDB.BlocksBySlot(ctx, slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve blocks for slot %d: %v", req.Slot, err)
-		}
-		_, blkRoots, err = bs.BeaconDB.BlockRootsBySlot(ctx, slot)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not retrieve block roots for slot %d: %v", req.Slot, err)
-		}
-	}
-	if len(blks) == 0 {
-		return nil, status.Error(codes.NotFound, "Could not find requested blocks")
-	}
-
-	isOptimistic := false
-	isFinalized := true
-	blkHdrs := make([]*ethpbv1.BlockHeaderContainer, len(blks))
-	for i, bl := range blks {
-		v1alpha1Header, err := bl.Header()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
-		}
-		header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-		headerRoot, err := header.Message.HashTreeRoot()
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
-		}
-		canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
-		}
-		if !isOptimistic {
-			isOptimistic, err = bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
-			if err != nil {
-				return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-			}
-		}
-		if isFinalized {
-			isFinalized = bs.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
-		}
-		blkHdrs[i] = &ethpbv1.BlockHeaderContainer{
-			Root:      headerRoot[:],
-			Canonical: canonical,
-			Header: &ethpbv1.BeaconBlockHeaderContainer{
-				Message:   header.Message,
-				Signature: header.Signature,
-			},
-		}
-	}
-
-	return &ethpbv1.BlockHeadersResponse{Data: blkHdrs, ExecutionOptimistic: isOptimistic, Finalized: isFinalized}, nil
 }
 
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
