@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "chain_info.go",
         "chain_info_forkchoice.go",
+        "currently_syncing_block.go",
         "error.go",
         "execution_engine.go",
         "forkchoice_update_execution.go",
