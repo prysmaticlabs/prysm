@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -56,7 +59,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
@@ -70,7 +73,11 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, errors.New("failed stream")).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	beaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validator2.ValidatorStatus{validator2.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
 	clientStream.EXPECT().Recv().Return(resp, nil)
@@ -81,7 +88,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
@@ -95,7 +102,11 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	beaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validator2.ValidatorStatus{validator2.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	// A stream fails the first time, but succeeds the second time.
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -111,7 +122,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
@@ -128,7 +139,11 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	beaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validator2.ValidatorStatus{validator2.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil,
@@ -141,7 +156,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
@@ -157,7 +172,11 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	beaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validator2.ValidatorStatus{validator2.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil,
@@ -176,7 +195,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
-	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 
 	kp := randKeypair(t)
 	km := newMockKeymanager(t, kp)
@@ -196,7 +215,11 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 			PublicKeys: [][]byte{kp.pub[:]},
 		},
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	beaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validator2.ValidatorStatus{validator2.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
 		nil)
@@ -216,7 +239,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		active := randKeypair(t)
 		km := newMockKeymanager(t, inactive)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 		v := validator{
 			validatorClient: validatorClient,
 			keyManager:      km,
@@ -231,7 +254,11 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 				PublicKeys: [][]byte{inactive.pub[:]},
 			},
 		).Return(inactiveClientStream, nil)
-		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).AnyTimes()
+		beaconClient.EXPECT().GetValidatorCount(
+			gomock.Any(),
+			"head",
+			[]validator2.ValidatorStatus{validator2.Active},
+		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
 			nil,
@@ -296,7 +323,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		err = km.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", 1)
 		require.NoError(t, err)
 		validatorClient := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		beaconClient := validatormock.NewMockMockBeaconChainClientComposed(ctrl)
 		v := validator{
 			validatorClient: validatorClient,
 			keyManager:      km,
@@ -313,7 +340,11 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 				PublicKeys: [][]byte{inactivePubKey[:]},
 			},
 		).Return(inactiveClientStream, nil)
-		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).AnyTimes()
+		beaconClient.EXPECT().GetValidatorCount(
+			gomock.Any(),
+			"head",
+			[]validator2.ValidatorStatus{validator2.Active},
+		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
 			nil,

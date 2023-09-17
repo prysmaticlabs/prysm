@@ -56,7 +56,7 @@ done
 # github.com/prysmaticlabs/prysm/v4/validator/client/iface
 # --------------------------------------------------------
 iface_mocks=(
-      "$iface_mock_path/beacon_chain_client_mock.go BeaconChainClient"
+      "$iface_mock_path/beacon_chain_client_mock.go BeaconChainClient,MockBeaconChainClientComposed"
       "$iface_mock_path/node_client_mock.go NodeClient"
       "$iface_mock_path/slasher_client_mock.go SlasherClient"
       "$iface_mock_path/validator_client_mock.go ValidatorClient"

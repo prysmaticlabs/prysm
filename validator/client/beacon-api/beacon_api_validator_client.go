@@ -20,6 +20,7 @@ type beaconApiValidatorClient struct {
 	stateValidatorsProvider stateValidatorsProvider
 	jsonRestHandler         jsonRestHandler
 	beaconBlockConverter    beaconBlockConverter
+	validatorCountProvider  iface.ValidatorCountProvider
 }
 
 func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
@@ -34,6 +35,10 @@ func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.Valid
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
+		validatorCountProvider: beaconApiBeaconChainClient{
+			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
+			jsonRestHandler: jsonRestHandler,
+		},
 	}
 }
 

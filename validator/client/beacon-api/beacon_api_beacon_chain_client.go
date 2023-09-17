@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	neturl "net/url"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -15,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
@@ -22,6 +26,7 @@ import (
 
 type beaconApiBeaconChainClient struct {
 	fallbackClient          iface.BeaconChainClient
+	nodeClient              iface.NodeClient
 	jsonRestHandler         jsonRestHandler
 	stateValidatorsProvider stateValidatorsProvider
 }
@@ -362,7 +367,54 @@ func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Contex
 	panic("beaconApiBeaconChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
+func (c beaconApiBeaconChainClient) GetValidatorCount(ctx context.Context, stateID string, statuses []validator2.ValidatorStatus) ([]iface.ValidatorCount, error) {
+	// Check node version for prysm beacon node as it is a custom endpoint for prysm beacon node.
+	nodeVersion, err := c.nodeClient.GetVersion(ctx, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get node version")
+	}
+
+	if !strings.Contains(strings.ToLower(nodeVersion.Version), "prysm") {
+		return nil, iface.ErrNotSupported
+	}
+
+	queryParams := neturl.Values{}
+	for _, status := range statuses {
+		queryParams.Add("status", status.String())
+	}
+
+	queryUrl := buildURL(fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count", stateID), queryParams)
+
+	var validatorCountResponse validator.ValidatorCountResponse
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &validatorCountResponse); err != nil {
+		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	}
+
+	if validatorCountResponse.Data == nil {
+		return nil, errors.New("validator count data is nil")
+	}
+
+	if len(statuses) != 0 && len(statuses) != len(validatorCountResponse.Data) {
+		return nil, errors.New("invalid validator count response")
+	}
+
+	var resp []iface.ValidatorCount
+	for _, vc := range validatorCountResponse.Data {
+		count, err := strconv.ParseUint(vc.Count, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse validator count: %s", vc.Count)
+		}
+
+		resp = append(resp, iface.ValidatorCount{
+			Status: vc.Status,
+			Count:  count,
+		})
+	}
+
+	return resp, nil
+}
+
+func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, nodeClient iface.NodeClient, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
 		host:       host,
@@ -370,6 +422,7 @@ func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duratio
 
 	return &beaconApiBeaconChainClient{
 		jsonRestHandler:         jsonRestHandler,
+		nodeClient:              nodeClient,
 		fallbackClient:          fallbackClient,
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 	}
