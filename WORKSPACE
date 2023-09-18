@@ -323,9 +323,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-    sha256 = "4116c8acb54eb3ca28cc4dc9bc688e08e25da91d70ed1f2622f02d3c33eba922",
-    strip_prefix = "holesky-76057d57ab1f585519ecb606a9e5f7780e925a37",
-    url = "https://github.com/eth-clients/holesky/archive/76057d57ab1f585519ecb606a9e5f7780e925a37.tar.gz",  # Aug 27, 2023
+    sha256 = "fcf8a8af93f883200daf6035acdd45d990f0dd4e9064e7846005a0b4723ed08f",
+    strip_prefix = "holesky-19c0d4c8f131cd828ba3512e564f8bb433d8aaef",
+    url = "https://github.com/eth-clients/holesky/archive/19c0d4c8f131cd828ba3512e564f8bb433d8aaef.tar.gz",  # https://github.com/eth-clients/holesky/pull/73
 )
 
 http_archive(

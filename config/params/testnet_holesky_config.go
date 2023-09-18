@@ -20,19 +20,19 @@ func UseHoleskyNetworkConfig() {
 // HoleskyConfig defines the config for the Holesky beacon chain testnet.
 func HoleskyConfig() *BeaconChainConfig {
 	cfg := MainnetConfig().Copy()
-	cfg.MinGenesisTime = 1694786100
+	cfg.MinGenesisTime = 1695902100
 	cfg.GenesisDelay = 300
 	cfg.ConfigName = HoleskyName
-	cfg.GenesisForkVersion = []byte{0x00, 0x01, 0x70, 0x00}
+	cfg.GenesisForkVersion = []byte{0x01, 0x01, 0x70, 0x00}
 	cfg.SecondsPerETH1Block = 14
 	cfg.DepositChainID = 17000
 	cfg.DepositNetworkID = 17000
 	cfg.AltairForkEpoch = 0
-	cfg.AltairForkVersion = []byte{0x10, 0x1, 0x70, 0x0}
+	cfg.AltairForkVersion = []byte{0x2, 0x1, 0x70, 0x0}
 	cfg.BellatrixForkEpoch = 0
-	cfg.BellatrixForkVersion = []byte{0x20, 0x1, 0x70, 0x0}
+	cfg.BellatrixForkVersion = []byte{0x3, 0x1, 0x70, 0x0}
 	cfg.CapellaForkEpoch = 256
-	cfg.CapellaForkVersion = []byte{0x30, 0x1, 0x70, 0x0}
+	cfg.CapellaForkVersion = []byte{0x4, 0x1, 0x70, 0x0}
 	cfg.DenebForkEpoch = math.MaxUint64
 	cfg.DenebForkVersion = []byte{0x40, 0x1, 0x70, 0x0}
 	cfg.TerminalTotalDifficulty = "0"
