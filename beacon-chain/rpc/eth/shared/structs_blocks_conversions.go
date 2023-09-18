@@ -1268,8 +1268,8 @@ func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedB
 		return nil, NewDecodeError(err, "SignedBlindedBlock")
 	}
 	block := &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-		Block: signedBlindedBlock,
-		Blobs: signedBlindedBlobSidecars,
+		SignedBlindedBlock:        signedBlindedBlock,
+		SignedBlindedBlobSidecars: signedBlindedBlobSidecars,
 	}
 	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
 }
@@ -1706,7 +1706,7 @@ func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconB
 		return nil, err
 	}
 	return &eth.SignedBlindedBeaconBlockDeneb{
-		Block:     blindedBlock,
+		Message:   blindedBlock,
 		Signature: sig,
 	}, nil
 }
@@ -2417,9 +2417,9 @@ func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBl
 
 func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeaconBlockAndBlobsDeneb) (*SignedBlindedBeaconBlockContentsDeneb, error) {
 	var blindedBlobSidecars []*SignedBlindedBlobSidecar
-	if len(b.Blobs) != 0 {
-		blindedBlobSidecars = make([]*SignedBlindedBlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
+	if len(b.SignedBlindedBlobSidecars) != 0 {
+		blindedBlobSidecars = make([]*SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
+		for i, s := range b.SignedBlindedBlobSidecars {
 			signedBlob, err := SignedBlindedBlobSidecarFromConsensus(s)
 			if err != nil {
 				return nil, err
@@ -2427,7 +2427,7 @@ func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeac
 			blindedBlobSidecars[i] = signedBlob
 		}
 	}
-	blindedBlock, err := SignedBlindedBeaconBlockDenebFromConsensus(b.Block)
+	blindedBlock, err := SignedBlindedBeaconBlockDenebFromConsensus(b.SignedBlindedBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -2564,7 +2564,7 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 }
 
 func SignedBlindedBeaconBlockDenebFromConsensus(b *eth.SignedBlindedBeaconBlockDeneb) (*SignedBlindedBeaconBlockDeneb, error) {
-	block, err := BlindedBeaconBlockDenebFromConsensus(b.Block)
+	block, err := BlindedBeaconBlockDenebFromConsensus(b.Message)
 	if err != nil {
 		return nil, err
 	}

@@ -413,10 +413,10 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 		}
 		test := testSignedBlindedBeaconBlockAndBlobsDeneb(t)
-		sbb, err := blocks.NewSignedBeaconBlock(test.Block)
+		sbb, err := blocks.NewSignedBeaconBlock(test.SignedBlindedBlock)
 		require.NoError(t, err)
 
-		ep, blobBundle, err := c.SubmitBlindedBlock(ctx, sbb, test.Blobs)
+		ep, blobBundle, err := c.SubmitBlindedBlock(ctx, sbb, test.SignedBlindedBlobSidecars)
 		require.NoError(t, err)
 		withdrawals, err := ep.Withdrawals()
 		require.NoError(t, err)
@@ -745,8 +745,8 @@ func testSignedBlindedBeaconBlockCapella(t *testing.T) *eth.SignedBlindedBeaconB
 
 func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedBeaconBlockAndBlobsDeneb {
 	return &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-		Block: &eth.SignedBlindedBeaconBlockDeneb{
-			Block: &eth.BlindedBeaconBlockDeneb{
+		SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{
+			Message: &eth.BlindedBeaconBlockDeneb{
 				Slot:          1,
 				ProposerIndex: 1,
 				ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -887,7 +887,7 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 			},
 			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 		},
-		Blobs: []*eth.SignedBlindedBlobSidecar{
+		SignedBlindedBlobSidecars: []*eth.SignedBlindedBlobSidecar{
 			{
 				Message: &eth.BlindedBlobSidecar{
 					BlockRoot:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
