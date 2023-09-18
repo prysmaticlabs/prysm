@@ -89,9 +89,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 			return payload, blobsBundle, overrideBuilder, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
-			// Get local payload should not fail block construction. Validator can still propose a block if builder is specified.
-			log.WithError(err).Error("could not get payload from execution client")
-			return nil, nil, false, nil
+			return nil, nil, false, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
 
@@ -204,9 +202,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	}
 	payload, blobsBundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
-		// Get local payload should not fail block construction. Validator can still propose a block if builder is specified.
-		log.WithError(err).Error("could not get payload from execution client")
-		return nil, nil, false, nil
+		return nil, nil, false, err
 	}
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	return payload, blobsBundle, overrideBuilder, nil
