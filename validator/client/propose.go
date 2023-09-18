@@ -124,17 +124,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
 	if blk.Version() >= version.Deneb {
 		if !blk.IsBlinded() {
-			signedBlobs := make([]*ethpb.SignedBlobSidecar, len(b.GetDeneb().Blobs))
-			for i, blob := range b.GetDeneb().Blobs {
-				blobSig, err := v.signBlob(ctx, blob, pubKey)
-				if err != nil {
-					log.WithError(err).Error("Failed to sign blob")
-					return
-				}
-				signedBlobs[i] = &ethpb.SignedBlobSidecar{
-					Message:   blob,
-					Signature: blobSig,
-				}
+			signedBlobs, err := v.signDenebBlobs(ctx, b.GetDeneb().Blobs, pubKey)
+			if err != nil {
+				log.WithError(err).Error("Failed to sign blobs")
+				return
 			}
 			denebBlock, err := blk.PbDenebBlock()
 			if err != nil {
@@ -150,17 +143,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				},
 			}
 		} else {
-			signedBlindBlobs := make([]*ethpb.SignedBlindedBlobSidecar, len(b.GetBlindedDeneb().Blobs))
-			for i, blob := range b.GetBlindedDeneb().Blobs {
-				blobSig, err := v.signBlindBlob(ctx, blob, pubKey)
-				if err != nil {
-					log.WithError(err).Error("Failed to sign blinded blob sidecar")
-					return
-				}
-				signedBlindBlobs[i] = &ethpb.SignedBlindedBlobSidecar{
-					Message:   blob,
-					Signature: blobSig,
-				}
+			signedBlindBlobs, err := v.signBlindedDenebBlobs(ctx, b.GetBlindedDeneb().Blobs, pubKey)
+			if err != nil {
+				log.WithError(err).Error("Failed to sign blinded blob sidecar")
+				return
 			}
 			blindedDenebBlock, err := blk.PbBlindedDenebBlock()
 			if err != nil {
@@ -177,7 +163,6 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			}
 		}
 	} else {
-		// Propose and broadcast block via beacon node
 		genericSignedBlock, err = blk.PbGenericBlock()
 		if err != nil {
 			log.WithError(err).Error("Failed to create proposal request")

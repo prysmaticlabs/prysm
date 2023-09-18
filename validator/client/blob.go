@@ -71,3 +71,35 @@ func (v *validator) signBlindBlob(ctx context.Context, blob *ethpb.BlindedBlobSi
 	}
 	return sig.Marshal(), nil
 }
+
+// signDenebBlobs signs an array of Deneb blobs using the provided public key.
+func (v *validator) signDenebBlobs(ctx context.Context, blobs []*ethpb.BlobSidecar, pubKey [48]byte) ([]*ethpb.SignedBlobSidecar, error) {
+	signedBlobs := make([]*ethpb.SignedBlobSidecar, len(blobs))
+	for i, blob := range blobs {
+		blobSig, err := v.signBlob(ctx, blob, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		signedBlobs[i] = &ethpb.SignedBlobSidecar{
+			Message:   blob,
+			Signature: blobSig,
+		}
+	}
+	return signedBlobs, nil
+}
+
+// signBlindedDenebBlobs signs an array of blinded Deneb blobs using the provided public key.
+func (v *validator) signBlindedDenebBlobs(ctx context.Context, blobs []*ethpb.BlindedBlobSidecar, pubKey [48]byte) ([]*ethpb.SignedBlindedBlobSidecar, error) {
+	signedBlindBlobs := make([]*ethpb.SignedBlindedBlobSidecar, len(blobs))
+	for i, blob := range blobs {
+		blobSig, err := v.signBlindBlob(ctx, blob, pubKey)
+		if err != nil {
+			return nil, err
+		}
+		signedBlindBlobs[i] = &ethpb.SignedBlindedBlobSidecar{
+			Message:   blob,
+			Signature: blobSig,
+		}
+	}
+	return signedBlindBlobs, nil
+}
