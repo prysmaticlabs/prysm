@@ -629,9 +629,9 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
 					BlindedDeneb: func() *ethpb.BlindedBeaconBlockAndBlobsDeneb {
 						blk := util.NewBlindedBeaconBlockDeneb()
-						blk.Block.Body.Graffiti = graffiti
+						blk.Message.Body.Graffiti = graffiti
 						return &ethpb.BlindedBeaconBlockAndBlobsDeneb{
-							Block: blk.Block,
+							Block: blk.Message,
 							Blobs: []*ethpb.BlindedBlobSidecar{
 								{
 									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
@@ -715,7 +715,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 					case tt.name == "deneb block and blobs":
 						require.Equal(t, 2, len(block.GetDeneb().Blobs))
 					case tt.name == "deneb blind block and blobs":
-						require.Equal(t, 2, len(block.GetBlindedDeneb().Blobs))
+						require.Equal(t, 2, len(block.GetBlindedDeneb().SignedBlindedBlobSidecars))
 					}
 				}
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
