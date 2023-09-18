@@ -570,6 +570,8 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			return nil
 		}
 	case errors.Is(err, db.ErrNotFound):
+		// If the blob sidecars haven't arrived yet, the subsequent code will wait for them.
+		// Note: The system will not exit with an error in this scenario.
 	default:
 		log.WithError(err).Error("could not get blob sidecars from DB")
 	}
