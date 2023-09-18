@@ -141,20 +141,6 @@ message BlockAttestationsResponse {
     bool finalized  = 3;
 }
 
-message BlockHeadersRequest {
-    // Beacon chain slot of the requested block.
-    optional uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-
-    // 32 byte merkle tree root of the ssz encoded parent block.
-    optional bytes parent_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-}
-
-message BlockHeadersResponse {
-    repeated BlockHeaderContainer data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
 message BlockRequest {
     // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
     // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
