@@ -270,11 +270,11 @@ func V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(
 func V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(
 	v1Alpha1BlkAndBlobs *ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb,
 ) (*ethpbv2.SignedBlindedBeaconBlockContentsDeneb, error) {
-	v2Block, err := V1Alpha1SignedBeaconBlockBlindedDenebToV2Blinded(v1Alpha1BlkAndBlobs.Block)
+	v2Block, err := V1Alpha1SignedBeaconBlockBlindedDenebToV2Blinded(v1Alpha1BlkAndBlobs.SignedBlindedBlock)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block")
 	}
-	v2Blobs := V1Alpha1SignedBlindedBlobSidecarsToV2(v1Alpha1BlkAndBlobs.Blobs)
+	v2Blobs := V1Alpha1SignedBlindedBlobSidecarsToV2(v1Alpha1BlkAndBlobs.SignedBlindedBlobSidecars)
 	return &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
 		SignedBlindedBlock:        v2Block,
 		SignedBlindedBlobSidecars: v2Blobs,

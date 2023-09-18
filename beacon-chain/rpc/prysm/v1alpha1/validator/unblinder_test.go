@@ -276,9 +276,9 @@ func Test_unblindBuilderBlock(t *testing.T) {
 			}(),
 			blk: func() interfaces.SignedBeaconBlock {
 				b := util.NewBlindedBeaconBlockDeneb()
-				b.Block.Slot = 1
-				b.Block.ProposerIndex = 2
-				b.Block.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
+				b.Message.Slot = 1
+				b.Message.ProposerIndex = 2
+				b.Message.Body.BlsToExecutionChanges = []*eth.SignedBLSToExecutionChange{
 					{
 						Message: &eth.BLSToExecutionChange{
 							ValidatorIndex:     123,
@@ -300,7 +300,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
-				b.Block.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeaderDeneb{
+				b.Message.Body.ExecutionPayloadHeader = &v1.ExecutionPayloadHeaderDeneb{
 					ParentHash:       make([]byte, fieldparams.RootLength),
 					FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 					StateRoot:        make([]byte, fieldparams.RootLength),

@@ -198,7 +198,7 @@ func (u *unblinder) blindedProtoBlock() (proto.Message, error) {
 		}, nil
 	case version.Deneb:
 		return &ethpb.SignedBlindedBeaconBlockDeneb{
-			Block: &ethpb.BlindedBeaconBlockDeneb{
+			Message: &ethpb.BlindedBeaconBlockDeneb{
 				Body: &ethpb.BlindedBeaconBlockBodyDeneb{},
 			},
 		}, nil
