@@ -91,12 +91,6 @@ type RandaoResponseJson struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type BlockHeaderResponseJson struct {
-	Data                *BlockHeaderContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
-}
-
 type BlockResponseJson struct {
 	Data *SignedBeaconBlockJson `json:"data"`
 }
@@ -698,17 +692,6 @@ type ExecutionPayloadHeaderDenebJson struct {
 type SyncAggregateJson struct {
 	SyncCommitteeBits      string `json:"sync_committee_bits" hex:"true"`
 	SyncCommitteeSignature string `json:"sync_committee_signature" hex:"true"`
-}
-
-type BlockHeaderContainerJson struct {
-	Root      string                          `json:"root" hex:"true"`
-	Canonical bool                            `json:"canonical"`
-	Header    *BeaconBlockHeaderContainerJson `json:"header"`
-}
-
-type BeaconBlockHeaderContainerJson struct {
-	Message   *BeaconBlockHeaderJson `json:"message"`
-	Signature string                 `json:"signature" hex:"true"`
 }
 
 type SignedBeaconBlockHeaderJson struct {

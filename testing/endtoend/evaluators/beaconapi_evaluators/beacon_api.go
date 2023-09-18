@@ -186,10 +186,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{fmt.Sprintf("%v", slot)}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.BlockHeaderResponseJson{},
+			"json": &beacon.GetBlockHeaderResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.BlockHeaderResponseJson{},
+			"json": &beacon.GetBlockHeaderResponse{},
 		},
 	},
 	"/node/identity": {
@@ -372,7 +372,7 @@ func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, gen
 		}
 	}
 	blockheaderData := beaconPathsAndObjects["/beacon/headers/{param1}"]
-	prysmHeader, ok := blockheaderData.prysmResps["json"].(*apimiddleware.BlockHeaderResponseJson)
+	prysmHeader, ok := blockheaderData.prysmResps["json"].(*beacon.GetBlockHeaderResponse)
 	if !ok {
 		return errors.New("failed to cast type")
 	}

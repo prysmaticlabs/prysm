@@ -79,52 +79,6 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 	}, nil
 }
 
-// GetBlockHeader retrieves block header for given block id.
-func (bs *Server) GetBlockHeader(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockHeaderResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockHeader")
-	defer span.End()
-
-	blk, err := bs.Blocker.Block(ctx, req.BlockId)
-	err = handleGetBlockError(blk, err)
-	if err != nil {
-		return nil, err
-	}
-	v1alpha1Header, err := blk.Header()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get block header from block: %v", err)
-	}
-	header := migration.V1Alpha1SignedHeaderToV1(v1alpha1Header)
-	headerRoot, err := header.Message.HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not hash block header: %v", err)
-	}
-	blkRoot, err := blk.Block().HashTreeRoot()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not hash block: %v", err)
-	}
-	canonical, err := bs.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not determine if block root is canonical: %v", err)
-	}
-	isOptimistic, err := bs.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not check if block is optimistic: %v", err)
-	}
-
-	return &ethpbv1.BlockHeaderResponse{
-		Data: &ethpbv1.BlockHeaderContainer{
-			Root:      headerRoot[:],
-			Canonical: canonical,
-			Header: &ethpbv1.BeaconBlockHeaderContainer{
-				Message:   header.Message,
-				Signature: header.Signature,
-			},
-		},
-		ExecutionOptimistic: isOptimistic,
-		Finalized:           bs.FinalizationFetcher.IsFinalized(ctx, blkRoot),
-	}, nil
-}
-
 // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
 // included in the beacon chain. The beacon node is not required to validate the signed ReadOnlyBeaconBlock, and a successful
 // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the

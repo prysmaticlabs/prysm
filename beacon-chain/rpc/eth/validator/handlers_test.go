@@ -2599,7 +2599,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2618,7 +2618,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2637,7 +2637,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "2"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2656,7 +2656,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2672,7 +2672,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
@@ -2687,7 +2687,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "foo"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2700,7 +2700,7 @@ func TestGetLiveness(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "Epoch is invalid"))
 	})
 	t.Run("no body", func(t *testing.T) {
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", nil)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", nil)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2716,7 +2716,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
@@ -2732,7 +2732,7 @@ func TestGetLiveness(t *testing.T) {
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"0\",\"1\",\"2\"]")
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
 		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
