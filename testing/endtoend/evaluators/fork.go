@@ -23,11 +23,6 @@ var startingFork = version.Phase0
 var AltairForkTransition = types.Evaluator{
 	Name: "altair_fork_transition_%d",
 	Policy: func(e primitives.Epoch) bool {
-		altair := policies.OnEpoch(helpers.AltairE2EForkEpoch)
-		// TODO (11750): modify policies to take an end to end config
-		if startingFork == version.Phase0 {
-			return altair(e)
-		}
 		return false
 	},
 	Evaluation: altairForkOccurs,

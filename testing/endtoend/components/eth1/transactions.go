@@ -74,9 +74,6 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
-	if err := kzg4844.UseCKZG(true); err != nil {
-		return err
-	}
 	// Broadcast Transactions every 3 blocks
 	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
