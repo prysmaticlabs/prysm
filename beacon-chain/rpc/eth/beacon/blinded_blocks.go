@@ -261,8 +261,8 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
 				BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-					Block: b,
-					Blobs: migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blkContent.SignedBlindedBlobSidecars),
+					SignedBlindedBlock:        b,
+					SignedBlindedBlobSidecars: migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blkContent.SignedBlindedBlobSidecars),
 				},
 			},
 		})
@@ -563,7 +563,7 @@ func (bs *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadO
 				if blindedDenebBlk == nil {
 					return nil, errNilBlock
 				}
-				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlk.Block)
+				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlk.Message)
 				if err != nil {
 					return nil, errors.Wrapf(err, "Could not convert beacon block")
 				}
@@ -601,7 +601,7 @@ func (bs *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadO
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlock.Block)
+	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlock.Message)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not convert beacon block")
 	}
@@ -783,7 +783,7 @@ func (bs *Server) getBlindedSSZBlockDeneb(ctx context.Context, blk interfaces.Re
 				if blindedDenebBlk == nil {
 					return nil, errNilBlock
 				}
-				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlk.Block)
+				v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlk.Message)
 				if err != nil {
 					return nil, errors.Wrapf(err, "could not get signed beacon block")
 				}
@@ -825,7 +825,7 @@ func (bs *Server) getBlindedSSZBlockDeneb(ctx context.Context, blk interfaces.Re
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
-	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlock.Block)
+	v2Blk, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(blindedDenebBlock.Message)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get signed beacon block")
 	}
@@ -905,8 +905,8 @@ func (bs *Server) submitBlindedDenebContents(ctx context.Context, blindedDenebCo
 	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
 			BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-				Block: blk,
-				Blobs: blobs,
+				SignedBlindedBlock:        blk,
+				SignedBlindedBlobSidecars: blobs,
 			},
 		},
 	})

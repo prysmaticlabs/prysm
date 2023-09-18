@@ -342,7 +342,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		genericBlock := &ethpbalpha.GenericBeaconBlock{
 			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
 				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
-					Block: blk.Block,
+					Block: blk.Message,
 					Blobs: blobs,
 				},
 			},
@@ -505,7 +505,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		genericBlock := &ethpbalpha.GenericBeaconBlock{
 			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
 				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
-					Block: blk.Block,
+					Block: blk.Message,
 					Blobs: blobs,
 				},
 			},
@@ -715,7 +715,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		genericBlock := &ethpbalpha.GenericBeaconBlock{
 			Block: &ethpbalpha.GenericBeaconBlock_BlindedDeneb{
 				BlindedDeneb: &ethpbalpha.BlindedBeaconBlockAndBlobsDeneb{
-					Block: blk.Block,
+					Block: blk.Message,
 					Blobs: blobs,
 				},
 			},
