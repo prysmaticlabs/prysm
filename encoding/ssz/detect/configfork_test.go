@@ -512,7 +512,7 @@ func signedTestBlockDeneb(t *testing.T, slot primitives.Slot) interfaces.ReadOnl
 
 func signedTestBlindedBlockDeneb(t *testing.T, slot primitives.Slot) interfaces.ReadOnlySignedBeaconBlock {
 	b := util.NewBlindedBeaconBlockDeneb()
-	b.Block.Slot = slot
+	b.Message.Slot = slot
 	s, err := blocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
 	return s

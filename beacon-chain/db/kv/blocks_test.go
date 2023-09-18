@@ -111,10 +111,10 @@ var blockTests = []struct {
 		name: "deneb blind",
 		newBlock: func(slot primitives.Slot, root []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 			b := util.NewBlindedBeaconBlockDeneb()
-			b.Block.Slot = slot
+			b.Message.Slot = slot
 			if root != nil {
-				b.Block.ParentRoot = root
-				b.Block.Body.BlobKzgCommitments = [][]byte{
+				b.Message.ParentRoot = root
+				b.Message.Body.BlobKzgCommitments = [][]byte{
 					bytesutil.PadTo([]byte{0x05}, 48),
 					bytesutil.PadTo([]byte{0x06}, 48),
 					bytesutil.PadTo([]byte{0x07}, 48),
