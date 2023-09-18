@@ -296,6 +296,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 						Signature: []byte("sig456"),
 					},
 				}
+				b.Message.Body.BlobKzgCommitments = [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}, {'c', 5}}
 				txRoot, err := ssz.TransactionsRoot([][]byte{})
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*v1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
@@ -350,6 +351,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 						Signature: []byte("sig456"),
 					},
 				}
+				b.Block.Body.BlobKzgCommitments = [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}, {'c', 5}}
 				b.Block.Body.ExecutionPayload = pDeneb
 				wb, err := blocks.NewSignedBeaconBlock(b)
 				require.NoError(t, err)
