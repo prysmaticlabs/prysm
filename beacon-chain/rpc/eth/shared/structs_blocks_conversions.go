@@ -423,7 +423,7 @@ func (b *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBlockBellatrix, error) 
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
@@ -638,7 +638,7 @@ func (b *BlindedBeaconBlockBellatrix) ToConsensus() (*eth.BlindedBeaconBlockBell
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
@@ -845,7 +845,7 @@ func (b *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
@@ -1095,7 +1095,7 @@ func (b *BlindedBeaconBlockCapella) ToConsensus() (*eth.BlindedBeaconBlockCapell
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
@@ -1444,7 +1444,7 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
@@ -1836,7 +1836,7 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
-	payloadBaseFeePerGas, err := uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	payloadBaseFeePerGas, err := Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
@@ -3178,7 +3178,7 @@ func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBl
 	return changes, nil
 }
 
-func uint256ToSSZBytes(num string) ([]byte, error) {
+func Uint256ToSSZBytes(num string) ([]byte, error) {
 	uint256, ok := new(big.Int).SetString(num, 10)
 	if !ok {
 		return nil, errors.New("could not parse Uint256")

@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -365,8 +366,10 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-
-		b := &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: psb, SignedBlindedBlobSidecars: blobs}
+		b, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: psb, SignedBlindedBlobSidecars: blobs})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockContentsDeneb to json marshalable type")
+		}
 		body, err := json.Marshal(b)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockDeneb value body in SubmitBlindedBlockDeneb")
