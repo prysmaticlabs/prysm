@@ -979,7 +979,7 @@ func genBlindedBeaconBlockDeneb() *v1alpha1.BlindedBeaconBlockDeneb {
 
 func genSignedBlindedBeaconBlockDeneb() *v1alpha1.SignedBlindedBeaconBlockDeneb {
 	return &v1alpha1.SignedBlindedBeaconBlockDeneb{
-		Block:     genBlindedBeaconBlockDeneb(),
+		Message:   genBlindedBeaconBlockDeneb(),
 		Signature: bytes(32),
 	}
 }

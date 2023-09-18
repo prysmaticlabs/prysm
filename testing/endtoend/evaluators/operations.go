@@ -507,7 +507,7 @@ func validatorsVoteWithTheMajority(ec *e2etypes.EvaluationContext, conns ...*grp
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
 		case *ethpb.BeaconBlockContainer_BlindedDenebBlock:
-			b := blk.GetBlindedDenebBlock().Block
+			b := blk.GetBlindedDenebBlock().Message
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
 		default:

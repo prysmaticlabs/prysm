@@ -750,17 +750,17 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			name: "blind capella",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBlindedBeaconBlockDeneb()
-				blockToPropose.Block.Slot = 5
-				blockToPropose.Block.ParentRoot = parent[:]
+				blockToPropose.Message.Slot = 5
+				blockToPropose.Message.ParentRoot = parent[:]
 				txRoot, err := ssz.TransactionsRoot([][]byte{})
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
-				blockToPropose.Block.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
-				blockToPropose.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
-					Block: blockToPropose,
-					Blobs: []*ethpb.SignedBlindedBlobSidecar{
+					SignedBlindedBlock: blockToPropose,
+					SignedBlindedBlobSidecars: []*ethpb.SignedBlindedBlobSidecar{
 						{
 							Message: &ethpb.BlindedBlobSidecar{
 								BlockRoot:       []byte{0x01},

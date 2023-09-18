@@ -1269,7 +1269,7 @@ func HydrateSignedBlindedBeaconBlockDeneb(b *ethpb.SignedBlindedBeaconBlockDeneb
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
-	b.Block = HydrateBlindedBeaconBlockDeneb(b.Block)
+	b.Message = HydrateBlindedBeaconBlockDeneb(b.Message)
 	return b
 }
 
