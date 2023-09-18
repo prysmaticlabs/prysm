@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -66,8 +67,21 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
 
+	oldHeadRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve old head root: %v", err)
+	}
+
 	// process attestations and update head in forkchoice
 	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+
+	newHeadRoot, err := vs.HeadFetcher.HeadRoot(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to retrieve new head root: %v", err)
+	}
+
+	headChanged := !bytes.Equal(oldHeadRoot, newHeadRoot)
+
 	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
@@ -110,7 +124,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	var blobBundle *enginev1.BlobsBundle
 	var blindBlobBundle *enginev1.BlindedBlobsBundle
 	if features.Get().BuildBlockParallel {
-		blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head)
+		blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head, headChanged)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
@@ -148,9 +162,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
 		var overrideBuilder bool
 		var localPayload interfaces.ExecutionData
-		localPayload, blobBundle, overrideBuilder, err = vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+		localPayload, blobBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+			log.WithError(err).Warn("failed to retrieve local payload; attempting builder payload if available")
+			if errors.Is(err, errLastMinFCU) && headChanged {
+				return nil, status.Errorf(codes.Internal, "failed to retrieve local payload: %v", err)
+			}
 		}
 		// There's no reason to try to get a builder bid if local override is true.
 		var builderPayload interfaces.ExecutionData
@@ -232,7 +249,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}, IsBlinded: false, PayloadValue: 0}, nil
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, headChanged bool) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -275,7 +292,10 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	localPayload, blobsBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+		log.WithError(err).Warn("failed to retrieve local payload; attempting builder payload if available")
+		if errors.Is(err, errLastMinFCU) && headChanged {
+			return nil, nil, status.Errorf(codes.Internal, "failed to retrieve local payload: %v", err)
+		}
 	}
 
 	// There's no reason to try to get a builder bid if local override is true.

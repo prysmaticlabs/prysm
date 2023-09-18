@@ -41,6 +41,8 @@ var (
 	})
 )
 
+var errLastMinFCU = errors.New("last minute fork choice update")
+
 // This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
 // It also returns the blobs bundle.
 func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, bool, error) {
@@ -195,7 +197,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	}
 	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
-		return nil, nil, false, errors.Wrap(err, "could not prepare payload")
+		return nil, nil, false, errors.Wrap(errLastMinFCU, err.Error())
 	}
 	if payloadID == nil {
 		return nil, nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
