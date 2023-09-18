@@ -49,3 +49,50 @@ func Test_validator_signBlob(t *testing.T) {
 
 	require.Equal(t, true, signature.Verify(pb, sr[:]))
 }
+
+func TestValidatorSignBlindBlob(t *testing.T) {
+	// Setup
+	v, m, vk, finish := setup(t)
+	defer finish()
+
+	const domainSignature = "signatureDomain"
+
+	// Mock expectations
+	m.validatorClient.EXPECT().
+		DomainData(gomock.Any(), // context
+			&ethpb.DomainRequest{
+				Domain: params.BeaconConfig().DomainBlobSidecar[:],
+			}).
+		Return(&ethpb.DomainResponse{
+			SignatureDomain: bytesutil.PadTo([]byte(domainSignature), 32),
+		}, nil)
+
+	blobData := &ethpb.BlindedBlobSidecar{
+		BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
+		Index:           1,
+		Slot:            2,
+		BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot"), 32),
+		ProposerIndex:   3,
+		BlobRoot:        bytesutil.PadTo([]byte("blobRoot"), 32),
+		KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment"), 48),
+		KzgProof:        bytesutil.PadTo([]byte("kzgProof"), 48),
+	}
+
+	ctx := context.Background()
+
+	// Test signature creation and validation
+	signatureBytes, err := v.signBlindBlob(ctx, blobData, [48]byte(vk.PublicKey().Marshal()))
+	require.NoError(t, err)
+
+	publicKey, err := bls.PublicKeyFromBytes(vk.PublicKey().Marshal())
+	require.NoError(t, err)
+
+	signature, err := bls.SignatureFromBytes(signatureBytes)
+	require.NoError(t, err)
+
+	signingRoot, err := signing.ComputeSigningRoot(blobData, bytesutil.PadTo([]byte(domainSignature), 32))
+	require.NoError(t, err)
+
+	// Assert that the signature is valid
+	require.Equal(t, true, signature.Verify(publicKey, signingRoot[:]))
+}

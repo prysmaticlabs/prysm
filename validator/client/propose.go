@@ -122,31 +122,59 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
-	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
-		signedBlobs := make([]*ethpb.SignedBlobSidecar, len(b.GetDeneb().Blobs))
-		for i, blob := range b.GetDeneb().Blobs {
-			blobSig, err := v.signBlob(ctx, blob, pubKey)
+	if blk.Version() >= version.Deneb {
+		if !blk.IsBlinded() {
+			signedBlobs := make([]*ethpb.SignedBlobSidecar, len(b.GetDeneb().Blobs))
+			for i, blob := range b.GetDeneb().Blobs {
+				blobSig, err := v.signBlob(ctx, blob, pubKey)
+				if err != nil {
+					log.WithError(err).Error("Failed to sign blob")
+					return
+				}
+				signedBlobs[i] = &ethpb.SignedBlobSidecar{
+					Message:   blob,
+					Signature: blobSig,
+				}
+			}
+			denebBlock, err := blk.PbDenebBlock()
 			if err != nil {
-				log.WithError(err).Error("Failed to sign blob")
+				log.WithError(err).Error("Failed to get deneb block")
 				return
 			}
-			signedBlobs[i] = &ethpb.SignedBlobSidecar{
-				Message:   blob,
-				Signature: blobSig,
-			}
-		}
-		denebBlock, err := blk.PbDenebBlock()
-		if err != nil {
-			log.WithError(err).Error("Failed to get deneb block")
-			return
-		}
-		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
-				Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-					Block: denebBlock,
-					Blobs: signedBlobs,
+			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+				Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+					Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+						Block: denebBlock,
+						Blobs: signedBlobs,
+					},
 				},
-			},
+			}
+		} else {
+			signedBlindBlobs := make([]*ethpb.SignedBlindedBlobSidecar, len(b.GetBlindedDeneb().Blobs))
+			for i, blob := range b.GetBlindedDeneb().Blobs {
+				blobSig, err := v.signBlindBlob(ctx, blob, pubKey)
+				if err != nil {
+					log.WithError(err).Error("Failed to sign blinded blob sidecar")
+					return
+				}
+				signedBlindBlobs[i] = &ethpb.SignedBlindedBlobSidecar{
+					Message:   blob,
+					Signature: blobSig,
+				}
+			}
+			blindedDenebBlock, err := blk.PbBlindedDenebBlock()
+			if err != nil {
+				log.WithError(err).Error("Failed to get blinded deneb block")
+				return
+			}
+			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+				Block: &ethpb.GenericSignedBeaconBlock_BlindedDeneb{
+					BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
+						SignedBlindedBlock:        blindedDenebBlock,
+						SignedBlindedBlobSidecars: signedBlindBlobs,
+					},
+				},
+			}
 		}
 	} else {
 		// Propose and broadcast block via beacon node
