@@ -38,8 +38,9 @@ func (dl *APIInitializer) Initialize(ctx context.Context, d db.Database) error {
 		if err != nil {
 			return errors.Wrap(err, "error while computing hash_tree_root of existing genesis state")
 		}
-		log.Warnf("database contains genesis with htr=%#x, ignoring remote genesis state parameter", htr)
-		return nil
+
+		// if use remote genesis state, ignore local state.
+		log.Warnf("database contains genesis with htr=%#x, will ignoring it, use remote genesis state instead", htr)
 	}
 	sb, err := dl.c.GetState(ctx, beacon.IdGenesis)
 	if err != nil {
