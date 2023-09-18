@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -271,6 +272,43 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 	return nil
 }
 
+// AggregatedSigAndAggregationBits returns the aggregated signature and aggregation bits
+// associated with a particular set of sync committee messages.
+func (s *Service) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	req *ethpb.AggregatedSigAndAggregationBitsRequest) ([]byte, []byte, error) {
+	subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+	sigs := make([][]byte, 0, subCommitteeSize)
+	bits := ethpb.NewSyncCommitteeAggregationBits()
+	for _, msg := range req.Msgs {
+		if bytes.Equal(req.BlockRoot, msg.BlockRoot) {
+			headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, req.Slot)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "could not get sync subcommittee index")
+			}
+			for _, index := range headSyncCommitteeIndices {
+				i := uint64(index)
+				subnetIndex := i / subCommitteeSize
+				indexMod := i % subCommitteeSize
+				if subnetIndex == req.SubnetId && !bits.BitAt(indexMod) {
+					bits.SetBitAt(indexMod, true)
+					sigs = append(sigs, msg.Signature)
+				}
+			}
+		}
+	}
+	aggregatedSig := make([]byte, 96)
+	aggregatedSig[0] = 0xC0
+	if len(sigs) != 0 {
+		uncompressedSigs, err := bls.MultipleSignaturesFromBytes(sigs)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not decompress signatures")
+		}
+		aggregatedSig = bls.AggregateSignatures(uncompressedSigs).Marshal()
+	}
+	return aggregatedSig, bits, nil
+}
+
 // AssignValidatorToSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
 func AssignValidatorToSubnet(pubkey []byte, status validator.ValidatorStatus) {
@@ -417,4 +455,31 @@ func (s *Service) GetAttestationData(
 		log.WithError(err).Error("could not store attestation data in cache")
 	}
 	return res, nil
+}
+
+// SubmitSyncMessage submits the sync committee message to the network.
+// It also saves the sync committee message into the pending pool for block inclusion.
+func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) error {
+	errs, ctx := errgroup.WithContext(ctx)
+
+	headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, msg.Slot)
+	if err != nil {
+		return err
+	}
+	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
+	// This broadcasts for all subnets.
+	for _, index := range headSyncCommitteeIndices {
+		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
+		subnet := uint64(index) / subCommitteeSize
+		errs.Go(func() error {
+			return s.P2P.BroadcastSyncCommitteeMessage(ctx, subnet, msg)
+		})
+	}
+
+	if err := s.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
+		return err
+	}
+
+	// Wait for p2p broadcast to complete and return the first error (if any)
+	return errs.Wait()
 }

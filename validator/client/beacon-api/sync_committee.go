@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -18,14 +19,14 @@ import (
 func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
 	const endpoint = "/eth/v1/beacon/pool/sync_committees"
 
-	jsonSyncCommitteeMessage := &apimiddleware.SyncCommitteeMessageJson{
+	jsonSyncCommitteeMessage := &shared.SyncCommitteeMessage{
 		Slot:            strconv.FormatUint(uint64(syncMessage.Slot), 10),
 		BeaconBlockRoot: hexutil.Encode(syncMessage.BlockRoot),
 		ValidatorIndex:  strconv.FormatUint(uint64(syncMessage.ValidatorIndex), 10),
 		Signature:       hexutil.Encode(syncMessage.Signature),
 	}
 
-	marshalledJsonSyncCommitteeMessage, err := json.Marshal([]*apimiddleware.SyncCommitteeMessageJson{jsonSyncCommitteeMessage})
+	marshalledJsonSyncCommitteeMessage, err := json.Marshal([]*shared.SyncCommitteeMessage{jsonSyncCommitteeMessage})
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal sync committee message")
 	}

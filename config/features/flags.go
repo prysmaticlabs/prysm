@@ -18,6 +18,11 @@ var (
 		Name:  "sepolia",
 		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
 	}
+	// HoleskyTestnet flag for the multiclient Ethereum consensus testnet.
+	HoleskyTestnet = &cli.BoolFlag{
+		Name:  "holesky",
+		Usage: "Run Prysm configured for the Holesky beacon chain test network",
+	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
@@ -57,7 +62,7 @@ var (
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
 		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value:  6500 * time.Millisecond,
+		Value:  7000 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
@@ -144,6 +149,10 @@ var (
 		Name:  "disable-build-block-parallel",
 		Usage: "Disables building a beacon block in parallel for consensus and execution",
 	}
+	enableEIP4881 = &cli.BoolFlag{
+		Name:  "enable-eip-4881",
+		Usage: "Enables the deposit tree specified in EIP4881",
+	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager",
@@ -151,7 +160,7 @@ var (
 
 	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
 	DisableRegistrationCache = &cli.BoolFlag{
-		Name:  "diable-registration-cache",
+		Name:  "disable-registration-cache",
 		Usage: "A temporary flag for disabling the validator registration cache instead of using the db. note: registrations do not clear on restart while using the db",
 	}
 
@@ -165,12 +174,14 @@ var (
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
 	enableOptionalEngineMethods,
+	enableEIP4881,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
 	enableExternalSlasherProtectionFlag,
+	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
@@ -191,6 +202,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	devModeFlag,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
+	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
@@ -210,6 +222,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
+	enableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	disableAggregateParallel,
@@ -225,4 +238,5 @@ var NetworkFlags = []cli.Flag{
 	Mainnet,
 	PraterTestnet,
 	SepoliaTestnet,
+	HoleskyTestnet,
 }

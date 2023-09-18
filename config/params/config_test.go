@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 // Test cases can be executed in an arbitrary order. TestOverrideBeaconConfigTestTeardown checks
@@ -50,4 +52,43 @@ func TestConfig_DataRace(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestConfig_WithinDAPeriod(t *testing.T) {
+	cases := []struct {
+		name    string
+		block   primitives.Epoch
+		current primitives.Epoch
+		within  bool
+	}{
+		{
+			name:    "before",
+			block:   0,
+			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1,
+			within:  false,
+		},
+		{
+			name:    "same",
+			block:   0,
+			current: 0,
+			within:  true,
+		},
+		{
+			name:    "boundary",
+			block:   0,
+			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			within:  true,
+		},
+		{
+			name:    "one less",
+			block:   params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest - 1,
+			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			within:  true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.within, params.WithinDAPeriod(c.block, c.current))
+		})
+	}
 }

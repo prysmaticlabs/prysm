@@ -34,6 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -44,6 +45,7 @@ var _ runtime.Service = (*Service)(nil)
 
 const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
+const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
@@ -91,6 +93,7 @@ type config struct {
 // This defines the interface for interacting with block chain service
 type blockchainService interface {
 	blockchain.BlockReceiver
+	blockchain.BlobReceiver
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
@@ -110,6 +113,7 @@ type Service struct {
 	ctx                              context.Context
 	cancel                           context.CancelFunc
 	slotToPendingBlocks              *gcache.Cache
+	slotToPendingBlobs               *gcache.Cache
 	seenPendingBlocks                map[[32]byte]bool
 	blkRootToPendingAtts             map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof
 	subHandler                       *subTopicHandler
@@ -120,6 +124,8 @@ type Service struct {
 	rateLimiter                      *limiter
 	seenBlockLock                    sync.RWMutex
 	seenBlockCache                   *lru.Cache
+	seenBlobLock                     sync.RWMutex
+	seenBlobCache                    *lru.Cache
 	seenAggregatedAttestationLock    sync.RWMutex
 	seenAggregatedAttestationCache   *lru.Cache
 	seenUnAggregatedAttestationLock  sync.RWMutex
@@ -146,6 +152,7 @@ type Service struct {
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
 	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	pendingBlobCache := gcache.New(0 /* exp time */, 0 /* prune time */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -153,6 +160,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		chainStarted:         abool.New(),
 		cfg:                  &config{clock: startup.NewClock(time.Unix(0, 0), [32]byte{})},
 		slotToPendingBlocks:  c,
+		slotToPendingBlobs:   pendingBlobCache,
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
@@ -223,6 +231,7 @@ func (s *Service) Status() error {
 // and prevent DoS.
 func (s *Service) initCaches() {
 	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenBlobCache = lruwrpr.New(seenBlobSize)
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
@@ -275,6 +284,10 @@ func (s *Service) registerHandlers() {
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
+}
+
+func (s *Service) setRateCollector(topic string, c *leakybucket.Collector) {
+	s.rateLimiter.limiterMap[topic] = c
 }
 
 // marks the chain as having started.

@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -27,6 +28,12 @@ type AttestationData struct {
 type Checkpoint struct {
 	Epoch string `json:"epoch" validate:"required,number,gte=0"`
 	Root  string `json:"root" validate:"required,hexadecimal"`
+}
+
+type Committee struct {
+	Index      string   `json:"index"`
+	Slot       string   `json:"slot"`
+	Validators []string `json:"validators"`
 }
 
 type SignedContributionAndProof struct {
@@ -71,6 +78,115 @@ type BeaconCommitteeSubscription struct {
 	CommitteesAtSlot string `json:"committees_at_slot" validate:"required,number,gte=0"`
 	Slot             string `json:"slot" validate:"required,number,gte=0"`
 	IsAggregator     bool   `json:"is_aggregator"`
+}
+
+type ValidatorRegistration struct {
+	FeeRecipient string `json:"fee_recipient" validate:"required,hexadecimal"`
+	GasLimit     string `json:"gas_limit" validate:"required,number,gte=0"`
+	Timestamp    string `json:"timestamp" validate:"required,number,gte=0"`
+	Pubkey       string `json:"pubkey" validate:"required,hexadecimal"`
+}
+
+type SignedValidatorRegistration struct {
+	Message   *ValidatorRegistration `json:"message" validate:"required"`
+	Signature string                 `json:"signature" validate:"required,hexadecimal"`
+}
+
+type FeeRecipient struct {
+	ValidatorIndex string `json:"validator_index"`
+	FeeRecipient   string `json:"fee_recipient"`
+}
+
+type SignedVoluntaryExit struct {
+	Message   *VoluntaryExit `json:"message" validate:"required"`
+	Signature string         `json:"signature" validate:"required,hexadecimal"`
+}
+
+type VoluntaryExit struct {
+	Epoch          string `json:"epoch" validate:"required,number,gte=0"`
+	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
+}
+
+type Fork struct {
+	PreviousVersion string `json:"previous_version"`
+	CurrentVersion  string `json:"current_version"`
+	Epoch           string `json:"epoch"`
+}
+
+func (s *Fork) ToConsensus() (*eth.Fork, error) {
+	previousVersion, err := hexutil.Decode(s.PreviousVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousVersion")
+	}
+	currentVersion, err := hexutil.Decode(s.CurrentVersion)
+	if err != nil {
+		return nil, NewDecodeError(err, "CurrentVersion")
+	}
+	epoch, err := strconv.ParseUint(s.Epoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Epoch")
+	}
+	return &eth.Fork{
+		PreviousVersion: previousVersion,
+		CurrentVersion:  currentVersion,
+		Epoch:           primitives.Epoch(epoch),
+	}, nil
+}
+
+type SyncCommitteeMessage struct {
+	Slot            string `json:"slot" validate:"required,number,gte=0"`
+	BeaconBlockRoot string `json:"beacon_block_root" validate:"required,hexadecimal"`
+	ValidatorIndex  string `json:"validator_index" validate:"required,number,gte=0"`
+	Signature       string `json:"signature" validate:"required,hexadecimal"`
+}
+
+func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
+	msg, err := s.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+	sig, err := hexutil.Decode(s.Signature)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	if len(sig) != fieldparams.BLSSignatureLength {
+		return nil, fmt.Errorf("Signature length was %d when expecting length %d", len(sig), fieldparams.BLSSignatureLength)
+	}
+	return &eth.SignedValidatorRegistrationV1{
+		Message:   msg,
+		Signature: sig,
+	}, nil
+}
+
+func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
+	feeRecipient, err := hexutil.Decode(s.FeeRecipient)
+	if err != nil {
+		return nil, NewDecodeError(err, "FeeRecipient")
+	}
+	if len(feeRecipient) != fieldparams.FeeRecipientLength {
+		return nil, fmt.Errorf("feeRecipient length was %d when expecting length %d", len(feeRecipient), fieldparams.FeeRecipientLength)
+	}
+	pubKey, err := hexutil.Decode(s.Pubkey)
+	if err != nil {
+		return nil, NewDecodeError(err, "FeeRecipient")
+	}
+	if len(pubKey) != fieldparams.BLSPubkeyLength {
+		return nil, fmt.Errorf("FeeRecipient length was %d when expecting length %d", len(pubKey), fieldparams.BLSPubkeyLength)
+	}
+	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "GasLimit")
+	}
+	timestamp, err := strconv.ParseUint(s.Timestamp, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Timestamp")
+	}
+	return &eth.ValidatorRegistrationV1{
+		FeeRecipient: feeRecipient,
+		GasLimit:     gasLimit,
+		Timestamp:    timestamp,
+		Pubkey:       pubKey,
+	}, nil
 }
 
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
@@ -198,6 +314,14 @@ func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
 	}, nil
 }
 
+func AttestationFromConsensus(a *eth.Attestation) *Attestation {
+	return &Attestation{
+		AggregationBits: hexutil.Encode(a.AggregationBits),
+		Data:            AttestationDataFromConsensus(a.Data),
+		Signature:       hexutil.Encode(a.Signature),
+	}
+}
+
 func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	slot, err := strconv.ParseUint(a.Slot, 10, 64)
 	if err != nil {
@@ -229,6 +353,16 @@ func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	}, nil
 }
 
+func AttestationDataFromConsensus(a *eth.AttestationData) *AttestationData {
+	return &AttestationData{
+		Slot:            strconv.FormatUint(uint64(a.Slot), 10),
+		CommitteeIndex:  strconv.FormatUint(uint64(a.CommitteeIndex), 10),
+		BeaconBlockRoot: hexutil.Encode(a.BeaconBlockRoot),
+		Source:          CheckpointFromConsensus(a.Source),
+		Target:          CheckpointFromConsensus(a.Target),
+	}
+}
+
 func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 	epoch, err := strconv.ParseUint(c.Epoch, 10, 64)
 	if err != nil {
@@ -243,6 +377,13 @@ func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 		Epoch: primitives.Epoch(epoch),
 		Root:  root,
 	}, nil
+}
+
+func CheckpointFromConsensus(c *eth.Checkpoint) *Checkpoint {
+	return &Checkpoint{
+		Epoch: strconv.FormatUint(uint64(c.Epoch), 10),
+		Root:  hexutil.Encode(c.Root),
+	}
 }
 
 func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubscription, error) {
@@ -293,6 +434,78 @@ func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeS
 		CommitteesAtSlot: committeesAtSlot,
 		Slot:             primitives.Slot(slot),
 		IsAggregator:     b.IsAggregator,
+	}, nil
+}
+
+func (e *SignedVoluntaryExit) ToConsensus() (*eth.SignedVoluntaryExit, error) {
+	sig, err := hexutil.Decode(e.Signature)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	exit, err := e.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+
+	return &eth.SignedVoluntaryExit{
+		Exit:      exit,
+		Signature: sig,
+	}, nil
+}
+
+func SignedVoluntaryExitFromConsensus(e *eth.SignedVoluntaryExit) *SignedVoluntaryExit {
+	return &SignedVoluntaryExit{
+		Message:   VoluntaryExitFromConsensus(e.Exit),
+		Signature: hexutil.Encode(e.Signature),
+	}
+}
+
+func (e *VoluntaryExit) ToConsensus() (*eth.VoluntaryExit, error) {
+	epoch, err := strconv.ParseUint(e.Epoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Epoch")
+	}
+	valIndex, err := strconv.ParseUint(e.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+
+	return &eth.VoluntaryExit{
+		Epoch:          primitives.Epoch(epoch),
+		ValidatorIndex: primitives.ValidatorIndex(valIndex),
+	}, nil
+}
+
+func VoluntaryExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
+	return &VoluntaryExit{
+		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
+		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
+	}
+}
+
+func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) {
+	slot, err := strconv.ParseUint(m.Slot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "BeaconBlockRoot")
+	}
+	valIndex, err := strconv.ParseUint(m.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+
+	return &eth.SyncCommitteeMessage{
+		Slot:           primitives.Slot(slot),
+		BlockRoot:      root,
+		ValidatorIndex: primitives.ValidatorIndex(valIndex),
+		Signature:      sig,
 	}, nil
 }
 

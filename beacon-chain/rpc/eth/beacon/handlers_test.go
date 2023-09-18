@@ -4,27 +4,40 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	testing2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
+	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -34,7 +47,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlock
+			err = json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -42,7 +61,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(phase0Block)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -51,7 +70,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err = json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -59,7 +84,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(altairBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -68,7 +93,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
+			converted, err := shared.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockBellatrix
+			err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -76,7 +107,7 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -85,7 +116,13 @@ func TestPublishBlockV2(t *testing.T) {
 	t.Run("Capella", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
+			converted, err := shared.BeaconBlockCapellaFromConsensus(block.Capella.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockCapella
+			err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -93,7 +130,30 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(capellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			converted, err := shared.BeaconBlockDenebFromConsensus(block.Deneb.Block.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockContentsDeneb
+			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.SignedBlock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.DenebBlockContents)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -104,15 +164,31 @@ func TestPublishBlockV2(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
 	})
+	t.Run("invalid block with version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadCapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		body := writer.Body.String()
+		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Capella))))
+	})
 	t.Run("syncing", func(t *testing.T) {
-		chainService := &testing2.ChainService{}
+		chainService := &chainMock.ChainService{}
 		server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -131,7 +207,6 @@ func TestPublishBlockV2(t *testing.T) {
 
 func TestPublishBlockV2SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -142,8 +217,8 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var bellablock SignedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(bellatrixBlock), &bellablock)
+		var bellablock shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &bellablock)
 		require.NoError(t, err)
 		genericBlock, err := bellablock.ToGeneric()
 		require.NoError(t, err)
@@ -167,12 +242,39 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock SignedBeaconBlockCapella
-		err := json.Unmarshal([]byte(capellaBlock), &cblock)
+		var cblock shared.SignedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &cblock)
 		require.NoError(t, err)
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var dblock shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		require.NoError(t, err)
+		genericBlock, err := dblock.ToGeneric()
+		require.NoError(t, err)
+		v2block, err := migration.V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(genericBlock.GetDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v2block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -186,7 +288,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -200,7 +302,13 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			converted, err := shared.BeaconBlockFromConsensus(block.Phase0.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlock
+			err = json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -208,7 +316,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(phase0Block)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -217,7 +325,13 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			converted, err := shared.BeaconBlockAltairFromConsensus(block.Altair.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err = json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -225,16 +339,22 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(altairBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
-	t.Run("Bellatrix", func(t *testing.T) {
+	t.Run("Blinded Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
+			converted, err := shared.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockBellatrix
+			err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -242,16 +362,22 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedBellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
-	t.Run("Capella", func(t *testing.T) {
+	t.Run("Blinded Capella", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
+			converted, err := shared.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockCapella
+			err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -259,7 +385,30 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(blindedCapellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Blinded Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.SignedBlindedBlock.Message)
+			require.NoError(t, err)
+			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
+			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, converted, signedblock.SignedBlindedBlock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlockContents)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -270,15 +419,31 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
 	})
+	t.Run("invalid block with version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadBlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		body := writer.Body.String()
+		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
+		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+	})
 	t.Run("syncing", func(t *testing.T) {
-		chainService := &testing2.ChainService{}
+		chainService := &chainMock.ChainService{}
 		server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -308,8 +473,8 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var bellablock SignedBlindedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(blindedBellatrixBlock), &bellablock)
+		var bellablock shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &bellablock)
 		require.NoError(t, err)
 		genericBlock, err := bellablock.ToGeneric()
 		require.NoError(t, err)
@@ -333,12 +498,39 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock SignedBlindedBeaconBlockCapella
-		err := json.Unmarshal([]byte(blindedCapellaBlock), &cblock)
+		var cblock shared.SignedBlindedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &cblock)
 		require.NoError(t, err)
 		genericBlock, err := cblock.ToGeneric()
 		require.NoError(t, err)
 		sszvalue, err := genericBlock.GetBlindedCapella().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var cblock shared.SignedBlindedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &cblock)
+		require.NoError(t, err)
+		genericBlock, err := cblock.ToGeneric()
+		require.NoError(t, err)
+		v1block, err := migration.V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(genericBlock.GetBlindedDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v1block.MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
 		request.Header.Set("Accept", "application/octet-stream")
@@ -352,7 +544,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(bellatrixBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -393,7 +585,7 @@ func TestValidateEquivocation(t *testing.T) {
 		fc := doublylinkedtree.New()
 		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
 		server := &Server{
-			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+			ForkchoiceFetcher: &chainMock.ChainService{ForkChoiceStore: fc},
 		}
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -408,7 +600,7 @@ func TestValidateEquivocation(t *testing.T) {
 		fc := doublylinkedtree.New()
 		require.NoError(t, fc.InsertNode(context.Background(), st, bytesutil.ToBytes32([]byte("root"))))
 		server := &Server{
-			ForkchoiceFetcher: &testing2.ChainService{ForkChoiceStore: fc},
+			ForkchoiceFetcher: &chainMock.ChainService{ForkChoiceStore: fc},
 		}
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -418,1062 +610,733 @@ func TestValidateEquivocation(t *testing.T) {
 	})
 }
 
-const (
-	phase0Block = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	altairBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x01",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	bellatrixBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
- 			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions": [
-          "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
-        ]
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	blindedBellatrixBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"	
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload_header": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      }
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	capellaBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions": [
-          "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
-        ],
-        "withdrawals": [
-          {
-            "index": "1",
-            "validator_index": "1",
-            "address": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-            "amount": "1"
-          }
-        ]
-      },
-      "bls_to_execution_changes": [
-        {
-          "message": {
-            "validator_index": "1",
-            "from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-	blindedCapellaBlock = `{
-  "message": {
-    "slot": "1",
-    "proposer_index": "1",
-    "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-    "body": {
-      "randao_reveal": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-      "eth1_data": {
-        "deposit_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "deposit_count": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "graffiti": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-      "proposer_slashings": [
-        {
-          "signed_header_1": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          },
-          "signed_header_2": {
-            "message": {
-              "slot": "1",
-              "proposer_index": "1",
-              "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "attester_slashings": [
-        {
-          "attestation_1": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          },
-          "attestation_2": {
-            "attesting_indices": [
-              "1"
-            ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-            "data": {
-              "slot": "1",
-              "index": "1",
-              "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-              "source": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              },
-              "target": {
-                "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-              }
-            }
-          }
-        }
-      ],
-      "attestations": [
-        {
-          "aggregation_bits": "0x01",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
-          "data": {
-            "slot": "1",
-            "index": "1",
-            "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "source": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            },
-            "target": {
-              "epoch": "1",
-              "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-            }
-          }
-        }
-      ],
-      "deposits": [
-        {
-          "proof": [
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-			"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-          ],
-          "data": {
-            "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "withdrawal_credentials": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-            "amount": "1",
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-          }
-        }
-      ],
-      "voluntary_exits": [
-        {
-          "message": {
-            "epoch": "1",
-            "validator_index": "1"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ],
-      "sync_aggregate": {
-        "sync_committee_bits": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "sync_committee_signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-      },
-      "execution_payload_header": {
-        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
-        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "block_number": "1",
-        "gas_limit": "1",
-        "gas_used": "1",
-        "timestamp": "1",
-        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "base_fee_per_gas": "1",
-        "block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-      },
-      "bls_to_execution_changes": [
-        {
-          "message": {
-            "validator_index": "1",
-            "from_bls_pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a",
-            "to_execution_address": "0xabcf8e0d4e9587369b2301d0790347320302cc09"
-          },
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-        }
-      ]
-    }
-  },
-  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-}`
-)
+func TestServer_GetBlockRoot(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	url := "http://example.com/eth/v1/beacon/blocks/{block_id}/root"
+	genBlk, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	headBlock := blkContainers[len(blkContainers)-1]
+	t.Run("get root", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		root, err := genBlk.Block.HashTreeRoot()
+		require.NoError(t, err)
+
+		tests := []struct {
+			name     string
+			blockID  map[string]string
+			want     string
+			wantErr  string
+			wantCode int
+		}{
+			{
+				name:     "bad formatting",
+				blockID:  map[string]string{"block_id": "3bad0"},
+				wantErr:  "Could not parse block ID",
+				wantCode: http.StatusBadRequest,
+			},
+			{
+				name:     "canonical slot",
+				blockID:  map[string]string{"block_id": "30"},
+				want:     hexutil.Encode(blkContainers[30].BlockRoot),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "head",
+				blockID:  map[string]string{"block_id": "head"},
+				want:     hexutil.Encode(headBlock.BlockRoot),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "finalized",
+				blockID:  map[string]string{"block_id": "finalized"},
+				want:     hexutil.Encode(blkContainers[64].BlockRoot),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "genesis",
+				blockID:  map[string]string{"block_id": "genesis"},
+				want:     hexutil.Encode(root[:]),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "genesis root",
+				blockID:  map[string]string{"block_id": hexutil.Encode(root[:])},
+				want:     hexutil.Encode(root[:]),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "root",
+				blockID:  map[string]string{"block_id": hexutil.Encode(blkContainers[20].BlockRoot)},
+				want:     hexutil.Encode(blkContainers[20].BlockRoot),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "non-existent root",
+				blockID:  map[string]string{"block_id": hexutil.Encode(bytesutil.PadTo([]byte("hi there"), 32))},
+				wantErr:  "Could not find block",
+				wantCode: http.StatusNotFound,
+			},
+			{
+				name:     "slot",
+				blockID:  map[string]string{"block_id": "40"},
+				want:     hexutil.Encode(blkContainers[40].BlockRoot),
+				wantErr:  "",
+				wantCode: http.StatusOK,
+			},
+			{
+				name:     "no block",
+				blockID:  map[string]string{"block_id": "105"},
+				wantErr:  "Could not find any blocks with given slot",
+				wantCode: http.StatusNotFound,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				request := httptest.NewRequest(http.MethodGet, url, nil)
+				request = mux.SetURLVars(request, tt.blockID)
+				writer := httptest.NewRecorder()
+
+				writer.Body = &bytes.Buffer{}
+
+				bs.GetBlockRoot(writer, request)
+				assert.Equal(t, tt.wantCode, writer.Code)
+				resp := &BlockRootResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+				if tt.wantErr != "" {
+					require.ErrorContains(t, tt.wantErr, errors.New(writer.Body.String()))
+					return
+				}
+				require.NotNil(t, resp)
+				require.DeepEqual(t, resp.Data.Root, tt.want)
+			})
+		}
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(headBlock.BlockRoot): true,
+			},
+		}
+
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		bs.GetBlockRoot(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &BlockRootResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.DeepEqual(t, resp.ExecutionOptimistic, true)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[32].BlockRoot): true,
+				bytesutil.ToBytes32(blkContainers[64].BlockRoot): false,
+			},
+		}
+
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			HeadFetcher:           mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+		t.Run("true", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": "32"})
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockRoot(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			resp := &BlockRootResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.DeepEqual(t, resp.Finalized, true)
+		})
+		t.Run("false", func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, url, nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": "64"})
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockRoot(writer, request)
+			assert.Equal(t, http.StatusOK, writer.Code)
+			resp := &BlockRootResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			require.DeepEqual(t, resp.Finalized, false)
+		})
+	})
+}
+
+func TestGetStateFork(t *testing.T) {
+	ctx := context.Background()
+	request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+	request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+	request.Header.Set("Accept", "application/octet-stream")
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	fillFork := func(state *eth.BeaconState) error {
+		state.Fork = &eth.Fork{
+			PreviousVersion: []byte("prev"),
+			CurrentVersion:  []byte("curr"),
+			Epoch:           123,
+		}
+		return nil
+	}
+	fakeState, err := util.NewBeaconState(fillFork)
+	require.NoError(t, err)
+	db := dbTest.SetupDB(t)
+
+	chainService := &chainMock.ChainService{}
+	server := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: fakeState,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		BeaconDB:              db,
+	}
+
+	server.GetStateFork(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	var stateForkReponse *GetStateForkResponse
+	err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+	require.NoError(t, err)
+	expectedFork := fakeState.Fork()
+	assert.Equal(t, fmt.Sprint(expectedFork.Epoch), stateForkReponse.Data.Epoch)
+	assert.DeepEqual(t, hexutil.Encode(expectedFork.CurrentVersion), stateForkReponse.Data.CurrentVersion)
+	assert.DeepEqual(t, hexutil.Encode(expectedFork.PreviousVersion), stateForkReponse.Data.PreviousVersion)
+	t.Run("execution optimistic", func(t *testing.T) {
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.Header.Set("Accept", "application/octet-stream")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService = &chainMock.ChainService{Optimistic: true}
+		server = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		server.GetStateFork(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+		require.NoError(t, err)
+		assert.DeepEqual(t, true, stateForkReponse.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		request = httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v1/beacon/states/{state_id}/fork", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		request.Header.Set("Accept", "application/octet-stream")
+		writer = httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService = &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		server = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+		server.GetStateFork(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
+		require.NoError(t, err)
+		assert.DeepEqual(t, true, stateForkReponse.Finalized)
+	})
+}
+
+func TestGetCommittees(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+	url := "http://example.com/eth/v1/beacon/states/{state_id}/committees"
+
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
+	epoch := slots.ToEpoch(st.Slot())
+
+	chainService := &chainMock.ChainService{}
+	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		BeaconDB:              db,
+	}
+
+	t.Run("Head all committees", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
+		for _, datum := range resp.Data {
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, index == 0 || index == 1)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+		}
+	})
+	t.Run("Head all committees of epoch 10", func(t *testing.T) {
+		query := url + "?epoch=10"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, slot >= 320 && slot <= 351)
+		}
+	})
+	t.Run("Head all committees of slot 4", func(t *testing.T) {
+		query := url + "?slot=4"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 2, len(resp.Data))
+
+		exSlot := uint64(4)
+		exIndex := uint64(0)
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exIndex++
+		}
+	})
+	t.Run("Head all committees of index 1", func(t *testing.T) {
+		query := url + "?index=1"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
+
+		exSlot := uint64(0)
+		exIndex := uint64(1)
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exSlot++
+		}
+	})
+	t.Run("Head all committees of slot 2, index 1", func(t *testing.T) {
+		query := url + "?slot=2&index=1"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 1, len(resp.Data))
+
+		exIndex := uint64(1)
+		exSlot := uint64(2)
+		for _, datum := range resp.Data {
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+		}
+	})
+	t.Run("Execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService = &chainMock.ChainService{Optimistic: true}
+		s = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("Finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService = &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestListBlockHeaders(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	headBlock := blkContainers[len(blkContainers)-1]
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 30
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b1)
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := util.NewBeaconBlock()
+	b3.Block.Slot = 31
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := util.NewBeaconBlock()
+	b4.Block.Slot = 28
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b4)
+
+	url := "http://example.com/eth/v1/beacon/headers"
+
+	t.Run("list headers", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		tests := []struct {
+			name       string
+			slot       primitives.Slot
+			parentRoot string
+			want       []*eth.SignedBeaconBlock
+			wantErr    bool
+		}{
+			{
+				name:       "slot",
+				slot:       primitives.Slot(30),
+				parentRoot: "",
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[30].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b2,
+				},
+			},
+			{
+				name:       "parent root",
+				parentRoot: hexutil.Encode(b1.Block.ParentRoot),
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[1].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b3,
+					b4,
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				urlWithParams := fmt.Sprintf("%s?slot=%d&parent_root=%s", url, tt.slot, tt.parentRoot)
+				request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+				writer := httptest.NewRecorder()
+
+				writer.Body = &bytes.Buffer{}
+
+				bs.GetBlockHeaders(writer, request)
+				resp := &GetBlockHeadersResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+				require.Equal(t, len(tt.want), len(resp.Data))
+				for i, blk := range tt.want {
+					expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+					require.NoError(t, err)
+					expectedHeader := &eth.BeaconBlockHeader{
+						Slot:          blk.Block.Slot,
+						ProposerIndex: blk.Block.ProposerIndex,
+						ParentRoot:    blk.Block.ParentRoot,
+						StateRoot:     make([]byte, 32),
+						BodyRoot:      expectedBodyRoot[:],
+					}
+					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+					require.NoError(t, err)
+					assert.DeepEqual(t, hexutil.Encode(expectedHeaderRoot[:]), resp.Data[i].Root)
+					assert.DeepEqual(t, shared.BeaconBlockHeaderFromConsensus(expectedHeader), resp.Data[i].Header.Message)
+				}
+			})
+		}
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+		slot := primitives.Slot(30)
+		urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+		request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+
+		bs.GetBlockHeaders(writer, request)
+		resp := &GetBlockHeadersResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		child1 := util.NewBeaconBlock()
+		child1.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child1.Block.Slot = 999
+		util.SaveBlock(t, ctx, beaconDB, child1)
+		child2 := util.NewBeaconBlock()
+		child2.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child2.Block.Slot = 1000
+		util.SaveBlock(t, ctx, beaconDB, child2)
+		child1Root, err := child1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		child2Root, err := child2.Block.HashTreeRoot()
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			slot := primitives.Slot(999)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, true, resp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			slot := primitives.Slot(1000)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+		t.Run("false when at least one not finalized", func(t *testing.T) {
+			urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(child1.Block.ParentRoot))
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+	})
+}

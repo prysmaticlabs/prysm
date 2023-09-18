@@ -132,3 +132,8 @@ func TestBlockBatchNext(t *testing.T) {
 		})
 	}
 }
+
+func TestZeroSizeNoOp(t *testing.T) {
+	_, more := newBlockBatch(12345, 12345, 0)
+	require.Equal(t, false, more)
+}

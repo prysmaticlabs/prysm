@@ -10,6 +10,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -48,8 +49,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
-		getForkOutput               *apimiddleware.StateForkResponseJson
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getForkOutput               *beacon.GetStateForkResponse
+		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
 			output *apimiddleware.StateValidatorsResponseJson
@@ -112,8 +113,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &beacon.GetStateForkResponse{
+				Data: &shared.Fork{
 					PreviousVersion: "0x00000000",
 					CurrentVersion:  "0x00000000",
 					Epoch:           "42",
@@ -147,18 +148,18 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &beacon.GetStateForkResponse{
+				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "99",
 							},
 						},
@@ -193,18 +194,18 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			getForkOutput: &beacon.GetStateForkResponse{
+				Data: &shared.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "3201",
 							},
 						},
@@ -317,7 +318,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+				stateForkResponseJson := beacon.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -333,7 +334,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -419,17 +420,17 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetForkOutput := &apimiddleware.StateForkResponseJson{
-		Data: &apimiddleware.ForkJson{
+	standardGetForkOutput := &beacon.GetStateForkResponse{
+		Data: &shared.Fork{
 			CurrentVersion: "0x02000000",
 		},
 	}
 
-	standardGetHeadersOutput := &apimiddleware.BlockHeadersResponseJson{
-		Data: []*apimiddleware.BlockHeaderContainerJson{
+	standardGetHeadersOutput := &beacon.GetBlockHeadersResponse{
+		Data: []*shared.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-					Message: &apimiddleware.BeaconBlockHeaderJson{
+				Header: &shared.SignedBeaconBlockHeader{
+					Message: &shared.BeaconBlockHeader{
 						Slot: "1000",
 					},
 				},
@@ -461,9 +462,9 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
 		getSyncingError             error
-		getForkOutput               *apimiddleware.StateForkResponseJson
+		getForkOutput               *beacon.GetStateForkResponse
 		getForkError                error
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
@@ -504,7 +505,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &apimiddleware.StateForkResponseJson{},
+			getForkOutput:          &beacon.GetStateForkResponse{},
 			getForkError:           errors.New("custom error"),
 		},
 		{
@@ -512,7 +513,9 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &apimiddleware.StateForkResponseJson{Data: &apimiddleware.ForkJson{CurrentVersion: "not a version"}},
+			getForkOutput: &beacon.GetStateForkResponse{
+				Data: &shared.Fork{CurrentVersion: "not a version"},
+			},
 		},
 		{
 			name:                   "get headers on error",
@@ -520,7 +523,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput:       &apimiddleware.BlockHeadersResponseJson{},
+			getHeadersOutput:       &beacon.GetBlockHeadersResponse{},
 			getHeadersError:        errors.New("custom error"),
 		},
 		{
@@ -529,11 +532,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "not a slot",
 							},
 						},
@@ -773,7 +776,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := apimiddleware.StateForkResponseJson{}
+				stateForkResponseJson := beacon.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -789,7 +792,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,

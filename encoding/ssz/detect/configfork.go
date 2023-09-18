@@ -68,6 +68,8 @@ func FromForkVersion(cv [fieldparams.VersionLength]byte) (*VersionedUnmarshaler,
 		fork = version.Bellatrix
 	case bytesutil.ToBytes4(cfg.CapellaForkVersion):
 		fork = version.Capella
+	case bytesutil.ToBytes4(cfg.DenebForkVersion):
+		fork = version.Deneb
 	default:
 		return nil, errors.Wrapf(ErrForkNotFound, "version=%#x", cv)
 	}
@@ -123,6 +125,16 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconState(marshaled []byte) (s state.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
 		}
+	case version.Deneb:
+		st := &ethpb.BeaconStateDeneb{}
+		err = st.UnmarshalSSZ(marshaled)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to unmarshal state, detected fork=%s", forkName)
+		}
+		s, err = state_native.InitializeFromProtoUnsafeDeneb(st)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to init state trie from state, detected fork=%s", forkName)
+		}
 	default:
 		return nil, fmt.Errorf("unable to initialize BeaconState for fork version=%s", forkName)
 	}
@@ -169,6 +181,8 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 		blk = &ethpb.SignedBeaconBlockBellatrix{}
 	case version.Capella:
 		blk = &ethpb.SignedBeaconBlockCapella{}
+	case version.Deneb:
+		blk = &ethpb.SignedBeaconBlockDeneb{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)
@@ -202,6 +216,8 @@ func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (i
 		blk = &ethpb.SignedBlindedBeaconBlockBellatrix{}
 	case version.Capella:
 		blk = &ethpb.SignedBlindedBeaconBlockCapella{}
+	case version.Deneb:
+		blk = &ethpb.SignedBlindedBeaconBlockDeneb{}
 	default:
 		forkName := version.String(cf.Fork)
 		return nil, fmt.Errorf("unable to initialize ReadOnlyBeaconBlock for fork version=%s at slot=%d", forkName, slot)

@@ -19,8 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -238,8 +236,8 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 	start := time.Now()
 	dctx, cancel := context.WithDeadline(ctx, start.Add(timeout))
 	defer cancel()
-	checkClient := service.NewBeaconChainClient(check)
-	refClient := service.NewBeaconChainClient(ref)
+	checkClient := eth.NewBeaconChainClient(check)
+	refClient := eth.NewBeaconChainClient(ref)
 	for {
 		select {
 		case <-dctx.Done():
@@ -247,7 +245,7 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 			elapsed := time.Since(start)
 			return fmt.Errorf("deadline exceeded after %s waiting for known good block to appear in checkpoint-synced node", elapsed)
 		default:
-			cResp, err := checkClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			cResp, err := checkClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
 				errStatus, ok := status.FromError(err)
 				// in the happy path we expect NotFound results until the node has synced
@@ -256,11 +254,11 @@ func (r *testRunner) waitForMatchingHead(ctx context.Context, timeout time.Durat
 				}
 				return fmt.Errorf("error requesting head from 'check' beacon node")
 			}
-			rResp, err := refClient.GetBlockRoot(ctx, &v1.BlockRequest{BlockId: []byte("head")})
+			rResp, err := refClient.GetChainHead(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(err, "unexpected error requesting head block root from 'ref' beacon node")
 			}
-			if bytesutil.ToBytes32(cResp.Data.Root) == bytesutil.ToBytes32(rResp.Data.Root) {
+			if bytesutil.ToBytes32(cResp.HeadBlockRoot) == bytesutil.ToBytes32(rResp.HeadBlockRoot) {
 				return nil
 			}
 		}

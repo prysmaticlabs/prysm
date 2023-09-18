@@ -12,8 +12,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -32,6 +32,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -60,6 +61,8 @@ type Service struct {
 	clockSetter          startup.ClockSetter
 	clockWaiter          startup.ClockWaiter
 	syncComplete         chan struct{}
+	blobNotifiers        *blobNotifierMap
+	blockBeingSynced     *currentlySyncingBlock
 }
 
 // config options for the service.
@@ -67,7 +70,7 @@ type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
+	DepositCache            cache.DepositCache
 	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
@@ -88,17 +91,51 @@ type config struct {
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
 
+type blobNotifierMap struct {
+	sync.RWMutex
+	notifiers map[[32]byte]chan uint64
+}
+
+func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
+	bn.Lock()
+	defer bn.Unlock()
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+	return c
+}
+
+func (bn *blobNotifierMap) delete(root [32]byte) {
+	bn.Lock()
+	defer bn.Unlock()
+	delete(bn.notifiers, root)
+}
+
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
+	var err error
+	if params.DenebEnabled() {
+		err = kzg.Start()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize go-kzg context")
+		}
+	}
 	ctx, cancel := context.WithCancel(ctx)
+	bn := &blobNotifierMap{
+		notifiers: make(map[[32]byte]chan uint64),
+	}
 	srv := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
+		blobNotifiers:        bn,
 		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
+		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
@@ -108,7 +145,6 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	if srv.clockSetter == nil {
 		return nil, ErrMissingClockSetter
 	}
-	var err error
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err
@@ -346,7 +382,7 @@ func (s *Service) startFromExecutionChain() error {
 				log.Debug("Context closed, exiting goroutine")
 				return
 			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
+				log.WithError(err).Error("Subscription to state forRoot failed")
 				return
 			}
 		}

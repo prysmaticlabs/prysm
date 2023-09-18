@@ -8,17 +8,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,121 +23,6 @@ import (
 )
 
 const broadcastBLSChangesRateLimit = 128
-
-// ListPoolAttestations retrieves attestations known by the node but
-// not necessarily incorporated into any block. Allows filtering by committee index or slot.
-func (bs *Server) ListPoolAttestations(ctx context.Context, req *ethpbv1.AttestationsPoolRequest) (*ethpbv1.AttestationsPoolResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.ListPoolAttestations")
-	defer span.End()
-
-	attestations := bs.AttestationsPool.AggregatedAttestations()
-	unaggAtts, err := bs.AttestationsPool.UnaggregatedAttestations()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get unaggregated attestations: %v", err)
-	}
-	attestations = append(attestations, unaggAtts...)
-	isEmptyReq := req.Slot == nil && req.CommitteeIndex == nil
-	if isEmptyReq {
-		allAtts := make([]*ethpbv1.Attestation, len(attestations))
-		for i, att := range attestations {
-			allAtts[i] = migration.V1Alpha1AttestationToV1(att)
-		}
-		return &ethpbv1.AttestationsPoolResponse{Data: allAtts}, nil
-	}
-
-	filteredAtts := make([]*ethpbv1.Attestation, 0, len(attestations))
-	for _, att := range attestations {
-		bothDefined := req.Slot != nil && req.CommitteeIndex != nil
-		committeeIndexMatch := req.CommitteeIndex != nil && att.Data.CommitteeIndex == *req.CommitteeIndex
-		slotMatch := req.Slot != nil && att.Data.Slot == *req.Slot
-
-		if bothDefined && committeeIndexMatch && slotMatch {
-			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
-		} else if !bothDefined && (committeeIndexMatch || slotMatch) {
-			filteredAtts = append(filteredAtts, migration.V1Alpha1AttestationToV1(att))
-		}
-	}
-	return &ethpbv1.AttestationsPoolResponse{Data: filteredAtts}, nil
-}
-
-// SubmitAttestations submits Attestation object to node. If attestation passes all validation
-// constraints, node MUST publish attestation on appropriate subnet.
-func (bs *Server) SubmitAttestations(ctx context.Context, req *ethpbv1.SubmitAttestationsRequest) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitAttestation")
-	defer span.End()
-
-	var validAttestations []*ethpbalpha.Attestation
-	var attFailures []*helpers.SingleIndexedVerificationFailure
-	for i, sourceAtt := range req.Data {
-		att := migration.V1AttToV1Alpha1(sourceAtt)
-		if _, err := bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &helpers.SingleIndexedVerificationFailure{
-				Index:   i,
-				Message: "Incorrect attestation signature: " + err.Error(),
-			})
-			continue
-		}
-
-		// Broadcast the unaggregated attestation on a feed to notify other services in the beacon node
-		// of a received unaggregated attestation.
-		// Note we can't send for aggregated att because we don't have selection proof.
-		if !corehelpers.IsAggregated(att) {
-			bs.OperationNotifier.OperationFeed().Send(&feed.Event{
-				Type: operation.UnaggregatedAttReceived,
-				Data: &operation.UnAggregatedAttReceivedData{
-					Attestation: att,
-				},
-			})
-		}
-
-		validAttestations = append(validAttestations, att)
-	}
-
-	broadcastFailed := false
-	for _, att := range validAttestations {
-		// Determine subnet to broadcast attestation to
-		wantedEpoch := slots.ToEpoch(att.Data.Slot)
-		vals, err := bs.HeadFetcher.HeadValidatorsIndices(ctx, wantedEpoch)
-		if err != nil {
-			return nil, err
-		}
-		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
-
-		if err := bs.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			broadcastFailed = true
-		}
-
-		if corehelpers.IsAggregated(att) {
-			if err := bs.AttestationsPool.SaveAggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save aggregated att")
-			}
-		} else {
-			if err := bs.AttestationsPool.SaveUnaggregatedAttestation(att); err != nil {
-				log.WithError(err).Error("could not save unaggregated att")
-			}
-		}
-	}
-	if broadcastFailed {
-		return nil, status.Errorf(
-			codes.Internal,
-			"Could not publish one or more attestations. Some attestations could be published successfully.")
-	}
-
-	if len(attFailures) > 0 {
-		failuresContainer := &helpers.IndexedVerificationFailure{Failures: attFailures}
-		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"One or more attestations failed validation. Could not prepare attestation failure information: %v",
-				err,
-			)
-		}
-		return nil, status.Errorf(codes.InvalidArgument, "One or more attestations failed validation")
-	}
-
-	return &emptypb.Empty{}, nil
-}
 
 // ListPoolAttesterSlashings retrieves attester slashings known by the node but
 // not necessarily incorporated into any block.
@@ -249,63 +131,6 @@ func (bs *Server) SubmitProposerSlashing(ctx context.Context, req *ethpbv1.Propo
 		if err := bs.Broadcaster.Broadcast(ctx, alphaSlashing); err != nil {
 			return nil, status.Errorf(codes.Internal, "Could not broadcast slashing object: %v", err)
 		}
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-// ListPoolVoluntaryExits retrieves voluntary exits known by the node but
-// not necessarily incorporated into any block.
-func (bs *Server) ListPoolVoluntaryExits(ctx context.Context, _ *emptypb.Empty) (*ethpbv1.VoluntaryExitsPoolResponse, error) {
-	_, span := trace.StartSpan(ctx, "beacon.ListPoolVoluntaryExits")
-	defer span.End()
-
-	sourceExits, err := bs.VoluntaryExitsPool.PendingExits()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get exits from the pool")
-	}
-	exits := make([]*ethpbv1.SignedVoluntaryExit, len(sourceExits))
-	for i, s := range sourceExits {
-		exits[i] = migration.V1Alpha1ExitToV1(s)
-	}
-
-	return &ethpbv1.VoluntaryExitsPoolResponse{
-		Data: exits,
-	}, nil
-}
-
-// SubmitVoluntaryExit submits SignedVoluntaryExit object to node's pool
-// and if passes validation node MUST broadcast it to network.
-func (bs *Server) SubmitVoluntaryExit(ctx context.Context, req *ethpbv1.SignedVoluntaryExit) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitVoluntaryExit")
-	defer span.End()
-
-	headState, err := bs.ChainInfoFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	s, err := slots.EpochStart(req.Message.Epoch)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get epoch from message: %v", err)
-	}
-	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, s)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots: %v", err)
-	}
-
-	validator, err := headState.ValidatorAtIndexReadOnly(req.Message.ValidatorIndex)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get exiting validator: %v", err)
-	}
-	alphaExit := migration.V1ExitToV1Alpha1(req)
-	err = blocks.VerifyExitAndSignature(validator, headState.Slot(), headState.Fork(), alphaExit, headState.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid voluntary exit: %v", err)
-	}
-
-	bs.VoluntaryExitsPool.InsertVoluntaryExit(alphaExit)
-	if err := bs.Broadcaster.Broadcast(ctx, alphaExit); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not broadcast voluntary exit object: %v", err)
 	}
 
 	return &emptypb.Empty{}, nil

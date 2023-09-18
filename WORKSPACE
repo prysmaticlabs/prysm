@@ -288,7 +288,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0-alpha.1"
+consensus_spec_version = "v1.4.0-beta.1"
 
 bls_test_version = "v0.1.1"
 
@@ -304,7 +304,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "1118a663be4a00ba00f0635eb20287157f2b2f993aed64335bfbcd04af424c2b",
+    sha256 = "24399b60ce3fbeb2311952d213dc3731b6dcb0f8881b016c283de5b518d2bbba",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
@@ -320,7 +320,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "acde6e10940d14f22277eda5b55b65a24623ac88e4c7a2e34134a6069f5eea82",
+    sha256 = "8e656ee48d2e2ebc9cf9baedb81f27925bc625b3e3fbb2883444a08758a5884a",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
@@ -336,7 +336,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "49c022f3a3478cea849ba8f877a9f7e4c1ded549edddc09993550bbc5bb192e1",
+    sha256 = "8bd137da6cc57a25383bfac5bc37e31265098145278bd8002b88e24c8b4718b9",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
@@ -351,7 +351,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c3e246ff01f6b7b9e9e41939954a6ff89dfca7297415f88781809165fa83267c",
+    sha256 = "2bc1edb6e4a4f86c00317c04618a90b0ca29ee1eba833d0a64dd67fdd83fdbe3",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -388,6 +388,22 @@ filegroup(
 )
 
 http_archive(
+    name = "holesky_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "custom_config_data/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+""",
+    sha256 = "4116c8acb54eb3ca28cc4dc9bc688e08e25da91d70ed1f2622f02d3c33eba922",
+    strip_prefix = "holesky-76057d57ab1f585519ecb606a9e5f7780e925a37",
+    url = "https://github.com/eth-clients/holesky/archive/76057d57ab1f585519ecb606a9e5f7780e925a37.tar.gz",  # Aug 27, 2023
+)
+
+http_archive(
     name = "com_google_protobuf",
     sha256 = "4e176116949be52b0408dfd24f8925d1eb674a781ae242a75296b17a1c721395",
     strip_prefix = "protobuf-23.3",
@@ -397,22 +413,6 @@ http_archive(
 )
 
 # External dependencies
-
-http_archive(
-    name = "prysm_web_ui",
-    build_file_content = """
-filegroup(
-    name = "site",
-    srcs = glob(["**/*"]),
-    visibility = ["//visibility:public"],
-)
-""",
-    sha256 = "cc5b2dc9c4ea27b617ab3f31d068134f0b5c4fd173919b32b00613b0016b029a",
-    urls = [
-        "https://github.com/prysmaticlabs/prysm-web-ui/releases/download/v2.0.4/prysm-web-ui.tar.gz",
-    ],
-)
-
 load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps
@@ -443,10 +443,6 @@ load(
 )
 
 _cc_image_repos()
-
-load("@io_bazel_rules_go//extras:embed_data_deps.bzl", "go_embed_data_dependencies")
-
-go_embed_data_dependencies()
 
 load("@com_github_atlassian_bazel_tools//gometalinter:deps.bzl", "gometalinter_dependencies")
 

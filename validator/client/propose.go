@@ -121,16 +121,46 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	// Propose and broadcast block via beacon node
-	proposal, err := blk.PbGenericBlock()
-	if err != nil {
-		log.WithError(err).Error("Failed to create proposal request")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
+	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
+		signedBlobs := make([]*ethpb.SignedBlobSidecar, len(b.GetDeneb().Blobs))
+		for i, blob := range b.GetDeneb().Blobs {
+			blobSig, err := v.signBlob(ctx, blob, pubKey)
+			if err != nil {
+				log.WithError(err).Error("Failed to sign blob")
+				return
+			}
+			signedBlobs[i] = &ethpb.SignedBlobSidecar{
+				Message:   blob,
+				Signature: blobSig,
+			}
 		}
-		return
+		denebBlock, err := blk.PbDenebBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to get deneb block")
+			return
+		}
+		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+				Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: denebBlock,
+					Blobs: signedBlobs,
+				},
+			},
+		}
+	} else {
+		// Propose and broadcast block via beacon node
+		genericSignedBlock, err = blk.PbGenericBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to create proposal request")
+			if v.emitAccountMetrics {
+				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
-	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, proposal)
+
+	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to propose block")
 		if v.emitAccountMetrics {
@@ -174,6 +204,15 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 				return
 			}
 			log = log.WithField("withdrawalCount", len(withdrawals))
+		}
+		if blk.Version() >= version.Deneb {
+			kzgs, err := blk.Block().Body().BlobKzgCommitments()
+			if err != nil {
+				log.WithError(err).Error("Failed to get blob KZG commitments")
+				return
+			} else if len(kzgs) != 0 {
+				log = log.WithField("kzgCommitmentCount", len(kzgs))
+			}
 		}
 	}
 

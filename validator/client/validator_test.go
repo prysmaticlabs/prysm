@@ -949,6 +949,37 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	require.Equal(t, slot, v.highestValidSlot)
 }
 
+func TestService_ReceiveBlocks_SetHighestDeneb(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	v := validator{
+		validatorClient: client,
+		blockFeed:       new(event.Feed),
+	}
+	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
+	ctx, cancel := context.WithCancel(context.Background())
+	client.EXPECT().StreamBlocksAltair(
+		gomock.Any(),
+		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
+	).Return(stream, nil)
+	stream.EXPECT().Context().Return(ctx).AnyTimes()
+	slot := primitives.Slot(100)
+	stream.EXPECT().Recv().Return(
+		&ethpb.StreamBlocksResponse{
+			Block: &ethpb.StreamBlocksResponse_DenebBlock{
+				DenebBlock: &ethpb.SignedBeaconBlockDeneb{Block: &ethpb.BeaconBlockDeneb{Slot: slot, Body: &ethpb.BeaconBlockBodyDeneb{}}}},
+		},
+		nil,
+	).Do(func() {
+		cancel()
+	})
+	connectionErrorChannel := make(chan error)
+	v.ReceiveBlocks(ctx, connectionErrorChannel)
+	require.Equal(t, slot, v.highestValidSlot)
+}
+
 type doppelGangerRequestMatcher struct {
 	req *ethpb.DoppelGangerRequest
 }
@@ -2358,6 +2389,64 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 		return nil, errors.New("custom error")
 	}
 
+	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0, len(actual))
+}
+
+func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
+	// Public keys
+	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
+
+	// Fee recipients
+	feeRecipient1 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
+
+	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	signature := blsmock.NewMockSignature(ctrl)
+
+	v := validator{
+		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
+		validatorClient:              client,
+		genesisTime:                  uint64(time.Now().UTC().Unix() + 1000),
+		proposerSettings: &validatorserviceconfig.ProposerSettings{
+			DefaultConfig: &validatorserviceconfig.ProposerOption{
+				FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+					FeeRecipient: defaultFeeRecipient,
+				},
+				BuilderConfig: &validatorserviceconfig.BuilderConfig{
+					Enabled:  true,
+					GasLimit: 9999,
+				},
+			},
+			ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+				pubkey1: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient1,
+					},
+					BuilderConfig: &validatorserviceconfig.BuilderConfig{
+						Enabled:  true,
+						GasLimit: 1111,
+					},
+				},
+			},
+		},
+		pubkeyToValidatorIndex: make(map[[48]byte]primitives.ValidatorIndex),
+	}
+
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1}
+
+	var signer = func(_ context.Context, _ *validatorpb.SignRequest) (bls.Signature, error) {
+		return signature, nil
+	}
+	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	require.NoError(t, err)
 
