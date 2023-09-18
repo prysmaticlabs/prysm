@@ -201,10 +201,6 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type ValidatorIndicesJson struct {
-	Index []string `json:"index"`
-}
-
 type ProduceBlockResponseJson struct {
 	Data *BeaconBlockJson `json:"data"`
 }
@@ -269,13 +265,6 @@ type ForkChoiceResponseExtraDataJson struct {
 	ProposerBoostRoot             string          `json:"proposer_boost_root" hex:"true"`
 	PreviousProposerBoostRoot     string          `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string          `json:"head_root" hex:"true"`
-}
-
-type LivenessResponseJson struct {
-	Data []*struct {
-		Index  string `json:"index"`
-		IsLive bool   `json:"is_live"`
-	} `json:"data"`
 }
 
 //----------------
@@ -1282,11 +1271,6 @@ type IndexedVerificationFailureErrorJson struct {
 type SingleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
-}
-
-type NodeSyncDetailsErrorJson struct {
-	apimiddleware.DefaultErrorJson
-	SyncDetails shared.SyncDetails `json:"sync_details"`
 }
 
 type EventErrorJson struct {

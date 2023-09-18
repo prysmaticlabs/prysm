@@ -53,7 +53,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v2/validator/blocks/{slot}",
 		"/eth/v1/validator/blinded_blocks/{slot}",
-		"/eth/v1/validator/liveness/{epoch}",
 	}
 }
 
@@ -188,14 +187,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedBlindedBlock,
 		}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlindedBlockSSZ}
-	case "/eth/v1/validator/liveness/{epoch}":
-		endpoint.PostRequest = &ValidatorIndicesJson{}
-		endpoint.PostResponse = &LivenessResponseJson{}
-		endpoint.RequestURLLiterals = []string{"epoch"}
-		endpoint.Err = &NodeSyncDetailsErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapValidatorIndicesArray,
-		}
 	default:
 		return nil, errors.New("invalid path")
 	}

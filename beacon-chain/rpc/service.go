@@ -318,6 +318,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/proposer/{epoch}", validatorServerV1.GetProposerDuties).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/sync/{epoch}", validatorServerV1.GetSyncCommitteeDuties).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/liveness/{epoch}", validatorServerV1.GetLiveness).Methods(http.MethodPost)
 
 	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServerV1.ProduceBlockV3).Methods(http.MethodGet)
 

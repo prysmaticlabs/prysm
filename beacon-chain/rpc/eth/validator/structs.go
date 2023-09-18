@@ -88,3 +88,16 @@ type ProduceBlockV3Response struct {
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
 }
+
+type GetLivenessRequest struct {
+	ValidatorIndices []string `json:"validator_indices"`
+}
+
+type GetLivenessResponse struct {
+	Data []*ValidatorLiveness `json:"data"`
+}
+
+type ValidatorLiveness struct {
+	Index  string `json:"index"`
+	IsLive bool   `json:"is_live"`
+}
