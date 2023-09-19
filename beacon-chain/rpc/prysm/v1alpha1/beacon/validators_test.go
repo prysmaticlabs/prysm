@@ -1803,7 +1803,7 @@ func TestGetValidatorPerformance_Syncing(t *testing.T) {
 		},
 	}
 
-	wanted := "Syncing to latest head, not ready to respond"
+	wanted := "syncing to latest head, not ready to respond"
 	_, err := bs.GetValidatorPerformance(ctx, nil)
 	assert.ErrorContains(t, wanted, err)
 }
