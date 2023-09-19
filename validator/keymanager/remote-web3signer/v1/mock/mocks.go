@@ -671,7 +671,7 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 
 // MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
 func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
-	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.RootLength)
+	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
 	if err != nil {
 		log.Error(err)
 		return nil
