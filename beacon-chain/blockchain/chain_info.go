@@ -41,7 +41,7 @@ type ForkchoiceFetcher interface {
 	CachedHeadRoot() [32]byte
 	GetProposerHead() [32]byte
 	SetForkChoiceGenesisTime(uint64)
-	UpdateHead(context.Context, primitives.Slot)
+	UpdateHead(context.Context, primitives.Slot) bool
 	HighestReceivedBlockSlot() primitives.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
 	InsertNode(context.Context, state.BeaconState, [32]byte) error

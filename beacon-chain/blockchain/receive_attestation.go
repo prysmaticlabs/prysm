@@ -115,9 +115,10 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 	}()
 }
 
-// UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
-// The caller of this function MUST hold a lock in forkchoice
-func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) {
+// UpdateHead determines the canonical head of the chain by evaluating fork-choice attestations and votes.
+// It returns a boolean indicating whether the head has been modified.
+// Note: Before invoking this function, ensure a lock is held in forkchoice.
+func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot) bool {
 	ctx, span := trace.StartSpan(ctx, "beacon-chain.blockchain.UpdateHead")
 	defer span.End()
 
@@ -156,6 +157,7 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		}).Debug("Head changed due to attestations")
 		s.headLock.RUnlock()
 	}
+	return changed
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.

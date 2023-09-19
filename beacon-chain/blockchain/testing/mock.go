@@ -471,7 +471,7 @@ func (s *ChainService) IsOptimisticForRoot(_ context.Context, root [32]byte) (bo
 }
 
 // UpdateHead mocks the same method in the chain service.
-func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
+func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) bool {
 	ojc := &ethpb.Checkpoint{}
 	st, root, err := prepareForkchoiceState(ctx, slot, bytesutil.ToBytes32(s.Root), [32]byte{}, [32]byte{}, ojc, ojc)
 	if err != nil {
@@ -481,6 +481,7 @@ func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 	if err != nil {
 		logrus.WithError(err).Error("could not insert node to forkchoice")
 	}
+	return false
 }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
