@@ -223,7 +223,7 @@ type BeaconChainConfig struct {
 	BlobsidecarSubnetCount uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT"` // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
 
 	// Values introduced in Deneb hard fork
-	MaxPerEpochChurnLimit uint64 `yaml:"MAX_PER_EPOCH_CHURN_LIMIT" spec:"true"` // MaxPerEpochChurnLimit is the maximum amount of churn allotted for validator activation.
+	MaxPerEpochActivationChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" spec:"true"` // MaxPerEpochActivationChurnLimit is the maximum amount of churn allotted for validator activation.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
