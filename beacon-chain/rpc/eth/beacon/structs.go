@@ -68,3 +68,9 @@ type Genesis struct {
 	GenesisValidatorsRoot string `json:"genesis_validators_root"`
 	GenesisForkVersion    string `json:"genesis_fork_version"`
 }
+
+type GetBlockHeadersResponse struct {
+	Data                []*shared.SignedBeaconBlockHeaderContainer `json:"data"`
+	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
+	Finalized           bool                                       `json:"finalized"`
+}

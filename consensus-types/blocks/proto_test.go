@@ -274,7 +274,7 @@ func Test_SignedBeaconBlock_Proto(t *testing.T) {
 	})
 	t.Run("DenebBlind", func(t *testing.T) {
 		expectedBlock := &eth.SignedBlindedBeaconBlockDeneb{
-			Block: &eth.BlindedBeaconBlockDeneb{
+			Message: &eth.BlindedBeaconBlockDeneb{
 				Slot:          128,
 				ProposerIndex: 128,
 				ParentRoot:    f.root[:],
@@ -830,7 +830,7 @@ func Test_initSignedBlockFromProtoDeneb(t *testing.T) {
 func Test_initBlindedSignedBlockFromProtoDeneb(t *testing.T) {
 	f := getFields()
 	expectedBlock := &eth.SignedBlindedBeaconBlockDeneb{
-		Block: &eth.BlindedBeaconBlockDeneb{
+		Message: &eth.BlindedBeaconBlockDeneb{
 			Slot:          128,
 			ProposerIndex: 128,
 			ParentRoot:    f.root[:],
@@ -843,7 +843,7 @@ func Test_initBlindedSignedBlockFromProtoDeneb(t *testing.T) {
 	require.NoError(t, err)
 	resultHTR, err := resultBlock.block.HashTreeRoot()
 	require.NoError(t, err)
-	expectedHTR, err := expectedBlock.Block.HashTreeRoot()
+	expectedHTR, err := expectedBlock.Message.HashTreeRoot()
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedHTR, resultHTR)
 	assert.DeepEqual(t, expectedBlock.Signature, resultBlock.signature[:])

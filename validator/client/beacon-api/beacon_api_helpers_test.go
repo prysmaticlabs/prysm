@@ -162,14 +162,14 @@ func TestGetHeaders_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+	blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	expected := apimiddleware.BlockHeadersResponseJson{
-		Data: []*apimiddleware.BlockHeaderContainerJson{
+	expected := beacon.GetBlockHeadersResponse{
+		Data: []*shared.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-					Message: &apimiddleware.BeaconBlockHeaderJson{
+				Header: &shared.SignedBeaconBlockHeader{
+					Message: &shared.BeaconBlockHeader{
 						Slot: "42",
 					},
 				},
