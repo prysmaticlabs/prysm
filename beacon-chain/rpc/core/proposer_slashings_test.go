@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -12,10 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func TestServer_getSlashings(t *testing.T) {
+func TestProposer_getSlashings(t *testing.T) {
 	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
 
-	proposerServer := &Server{
+	s := &Service{
 		SlashingsPool: slashings.NewPool(),
 	}
 
@@ -24,7 +24,7 @@ func TestServer_getSlashings(t *testing.T) {
 		proposerSlashing, err := util.GenerateProposerSlashingForValidator(beaconState, privKeys[i], i)
 		require.NoError(t, err)
 		proposerSlashings[i] = proposerSlashing
-		err = proposerServer.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
+		err = s.SlashingsPool.InsertProposerSlashing(context.Background(), beaconState, proposerSlashing)
 		require.NoError(t, err)
 	}
 
@@ -37,11 +37,11 @@ func TestServer_getSlashings(t *testing.T) {
 		)
 		require.NoError(t, err)
 		attSlashings[i] = attesterSlashing
-		err = proposerServer.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
+		err = s.SlashingsPool.InsertAttesterSlashing(context.Background(), beaconState, attesterSlashing)
 		require.NoError(t, err)
 	}
 
-	p, a := proposerServer.getSlashings(context.Background(), beaconState)
+	p, a := s.getSlashings(context.Background(), beaconState)
 	require.Equal(t, len(p), int(params.BeaconConfig().MaxProposerSlashings))
 	require.Equal(t, len(a), int(params.BeaconConfig().MaxAttesterSlashings))
 	require.DeepEqual(t, p, proposerSlashings)

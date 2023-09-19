@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"bytes"
@@ -43,8 +43,12 @@ var (
 
 // This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
 // It also returns the blobs bundle.
-func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, *enginev1.BlobsBundle, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getLocalPayload")
+func (s *Service) getLocalPayloadAndBlobs(
+	ctx context.Context,
+	blk interfaces.ReadOnlyBeaconBlock,
+	st state.BeaconState,
+) (interfaces.ExecutionData, *enginev1.BlobsBundle, bool, error) {
+	ctx, span := trace.StartSpan(ctx, "core.getLocalPayloadAndBlobs")
 	defer span.End()
 
 	if blk.Version() < version.Bellatrix {
@@ -54,9 +58,9 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	slot := blk.Slot()
 	vIdx := blk.ProposerIndex()
 	headRoot := blk.ParentRoot()
-	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
+	proposerID, payloadId, ok := s.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
 	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
+	recipient, err := s.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
 	switch err == nil {
 	case true:
 		feeRecipient = recipient
@@ -64,7 +68,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 		// If fee recipient is not found in DB and not set from beacon node CLI,
 		// use the burn address.
 		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
-			logrus.WithFields(logrus.Fields{
+			log.WithFields(logrus.Fields{
 				"validatorIndex": vIdx,
 				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
 			}).Warn("Fee recipient is currently using the burn address, " +
@@ -80,7 +84,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		payload, blobsBundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, blobsBundle, overrideBuilder, err := s.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
@@ -116,7 +120,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 			}
 			return p, nil, false, nil
 		}
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
+		parentHash, hasTerminalBlock, err = s.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -139,8 +143,8 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	justifiedBlockHash := [32]byte{}
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 	if st.Version() >= version.Altair {
-		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
-		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
+		finalizedBlockHash = s.FinalizationFetcher.FinalizedBlockHash()
+		justifiedBlockHash = s.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
 
 	f := &enginev1.ForkchoiceState{
@@ -191,14 +195,14 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 	default:
 		return nil, nil, false, errors.New("unknown beacon state version")
 	}
-	payloadID, _, err := vs.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
+	payloadID, _, err := s.ExecutionEngineCaller.ForkchoiceUpdated(ctx, f, attr)
 	if err != nil {
 		return nil, nil, false, errors.Wrap(err, "could not prepare payload")
 	}
 	if payloadID == nil {
 		return nil, nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	payload, blobsBundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, blobsBundle, overrideBuilder, err := s.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -211,7 +215,7 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
 	// Warn if the fee recipient is not the value we expect.
 	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
-		logrus.WithFields(logrus.Fields{
+		log.WithFields(logrus.Fields{
 			"wantedFeeRecipient": fmt.Sprintf("%#x", feeRecipient),
 			"received":           fmt.Sprintf("%#x", payload.FeeRecipient()),
 		}).Warn("Fee recipient address from execution client is not what was expected. " +
@@ -232,11 +236,11 @@ func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient co
 //	        return None
 //
 //	return get_pow_block_at_terminal_total_difficulty(pow_chain)
-func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
+func (s *Service) getTerminalBlockHashIfExists(ctx context.Context, transitionTime uint64) ([]byte, bool, error) {
 	terminalBlockHash := params.BeaconConfig().TerminalBlockHash
 	// Terminal block hash override takes precedence over terminal total difficulty.
 	if params.BeaconConfig().TerminalBlockHash != params.BeaconConfig().ZeroHash {
-		exists, _, err := vs.Eth1BlockFetcher.BlockExists(ctx, terminalBlockHash)
+		exists, _, err := s.Eth1BlockFetcher.BlockExists(ctx, terminalBlockHash)
 		if err != nil {
 			return nil, false, err
 		}
@@ -247,19 +251,19 @@ func (vs *Server) getTerminalBlockHashIfExists(ctx context.Context, transitionTi
 		return terminalBlockHash.Bytes(), true, nil
 	}
 
-	return vs.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
+	return s.ExecutionEngineCaller.GetTerminalBlockHash(ctx, transitionTime)
 }
 
-func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
+func (s *Service) getBuilderPayloadAndBlobs(ctx context.Context,
 	slot primitives.Slot,
 	vIdx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getBuilderPayloadAndBlobs")
+	ctx, span := trace.StartSpan(ctx, "core.getBuilderPayloadAndBlobs")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil, nil, nil
 	}
-	canUseBuilder, err := vs.canUseBuilder(ctx, slot, vIdx)
+	canUseBuilder, err := s.canUseBuilder(ctx, slot, vIdx)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to check if we can use the builder")
 	}
@@ -268,7 +272,7 @@ func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 		return nil, nil, nil
 	}
 
-	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)
+	return s.getPayloadHeaderFromBuilder(ctx, slot, vIdx)
 }
 
 // activationEpochNotReached returns true if activation epoch has not been reach.

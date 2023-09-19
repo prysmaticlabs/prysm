@@ -1864,8 +1864,8 @@ func TestGetValidatorPerformance_OK(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -1928,8 +1928,8 @@ func TestGetValidatorPerformance_Indices(t *testing.T) {
 				// 10 epochs into the future.
 				State: headState,
 			},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
 	}
 	c := headState.Copy()
@@ -2000,8 +2000,8 @@ func TestGetValidatorPerformance_IndicesPubkeys(t *testing.T) {
 				// 10 epochs into the future.
 				State: headState,
 			},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
 	}
 	c := headState.Copy()
@@ -2077,8 +2077,8 @@ func TestGetValidatorPerformanceAltair_OK(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2147,8 +2147,8 @@ func TestGetValidatorPerformanceBellatrix_OK(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{
@@ -2217,8 +2217,8 @@ func TestGetValidatorPerformanceCapella_OK(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: headState,
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		},
 	}
 	want := &ethpb.ValidatorPerformanceResponse{

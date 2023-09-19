@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"bytes"
@@ -14,20 +14,22 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.BeaconState, eth1Data *ethpb.Eth1Data) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
+func (s *Service) packDepositsAndAttestations(
+	ctx context.Context,
+	head state.BeaconState,
+	eth1Data *ethpb.Eth1Data,
+) ([]*ethpb.Deposit, []*ethpb.Attestation, error) {
 	eg, egctx := errgroup.WithContext(ctx)
 	var deposits []*ethpb.Deposit
 	var atts []*ethpb.Attestation
 
 	eg.Go(func() error {
 		// Pack ETH1 deposits which have not been included in the beacon chain.
-		localDeposits, err := vs.deposits(egctx, head, eth1Data)
+		localDeposits, err := s.deposits(egctx, head, eth1Data)
 		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get ETH1 deposits: %v", err)
+			return errors.Wrap(err, "Could not get ETH1 deposits")
 		}
 		// if the original context is cancelled, then cancel this routine too
 		select {
@@ -41,9 +43,9 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 
 	eg.Go(func() error {
 		// Pack aggregated attestations which have not been included in the beacon chain.
-		localAtts, err := vs.packAttestations(egctx, head)
+		localAtts, err := s.packAttestations(egctx, head)
 		if err != nil {
-			return status.Errorf(codes.Internal, "Could not get attestations to pack into block: %v", err)
+			return errors.Wrap(err, "could not get attestations to pack into block")
 		}
 		// if the original context is cancelled, then cancel this routine too
 		select {
@@ -63,7 +65,7 @@ func (vs *Server) packDepositsAndAttestations(ctx context.Context, head state.Be
 // this eth1data has enough support to be considered for deposits inclusion. If current vote has
 // enough support, then use that vote for basis of determining deposits, otherwise use current state
 // eth1data.
-func (vs *Server) deposits(
+func (s *Service) deposits(
 	ctx context.Context,
 	beaconState state.BeaconState,
 	currentVote *ethpb.Eth1Data,
@@ -71,34 +73,34 @@ func (vs *Server) deposits(
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.deposits")
 	defer span.End()
 
-	if vs.MockEth1Votes {
+	if s.MockEth1Votes {
 		return []*ethpb.Deposit{}, nil
 	}
 
-	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
+	if !s.Eth1InfoFetcher.ExecutionClientConnected() {
 		log.Warn("not connected to eth1 node, skip pending deposit insertion")
 		return []*ethpb.Deposit{}, nil
 	}
 	// Need to fetch if the deposits up to the state's latest eth1 data matches
 	// the number of all deposits in this RPC call. If not, then we return nil.
-	canonicalEth1Data, canonicalEth1DataHeight, err := vs.canonicalEth1Data(ctx, beaconState, currentVote)
+	canonicalEth1Data, canonicalEth1DataHeight, err := s.canonicalEth1Data(ctx, beaconState, currentVote)
 	if err != nil {
 		return nil, err
 	}
 
-	_, genesisEth1Block := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+	_, genesisEth1Block := s.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	if genesisEth1Block.Cmp(canonicalEth1DataHeight) == 0 {
 		return []*ethpb.Deposit{}, nil
 	}
 
 	// If there are no pending deposits, exit early.
-	allPendingContainers := vs.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
+	allPendingContainers := s.PendingDepositsFetcher.PendingContainers(ctx, canonicalEth1DataHeight)
 	if len(allPendingContainers) == 0 {
 		log.Debug("no pending deposits for inclusion in block")
 		return []*ethpb.Deposit{}, nil
 	}
 
-	depositTrie, err := vs.depositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+	depositTrie, err := s.depositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve deposit trie")
 	}
@@ -130,18 +132,18 @@ func (vs *Server) deposits(
 	return pendingDeposits, nil
 }
 
-func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (cache.MerkleTree, error) {
+func (s *Service) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (cache.MerkleTree, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.depositTrie")
 	defer span.End()
 
 	var depositTrie cache.MerkleTree
 
-	finalizedDeposits, err := vs.DepositFetcher.FinalizedDeposits(ctx)
+	finalizedDeposits, err := s.DepositFetcher.FinalizedDeposits(ctx)
 	if err != nil {
 		return nil, err
 	}
 	depositTrie = finalizedDeposits.Deposits()
-	upToEth1DataDeposits := vs.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex(), canonicalEth1DataHeight)
+	upToEth1DataDeposits := s.DepositFetcher.NonFinalizedDeposits(ctx, finalizedDeposits.MerkleTrieIndex(), canonicalEth1DataHeight)
 	insertIndex := finalizedDeposits.MerkleTrieIndex() + 1
 
 	if shouldRebuildTrie(canonicalEth1Data.DepositCount, uint64(len(upToEth1DataDeposits))) {
@@ -149,7 +151,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 			"unfinalized deposits": len(upToEth1DataDeposits),
 			"total deposit count":  canonicalEth1Data.DepositCount,
 		}).Warn("Too many unfinalized deposits, building a deposit trie from scratch.")
-		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+		return s.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 	for _, dep := range upToEth1DataDeposits {
 		depHash, err := dep.Data.HashTreeRoot()
@@ -165,7 +167,7 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 	// Log a warning here, as the cached trie is invalid.
 	if !valid {
 		log.WithError(err).Warn("Cached deposit trie is invalid, rebuilding it now")
-		return vs.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
+		return s.rebuildDepositTrie(ctx, canonicalEth1Data, canonicalEth1DataHeight)
 	}
 
 	return depositTrie, nil
@@ -173,11 +175,11 @@ func (vs *Server) depositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1
 
 // rebuilds our deposit trie by recreating it from all processed deposits till
 // specified eth1 block height.
-func (vs *Server) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (cache.MerkleTree, error) {
+func (s *Service) rebuildDepositTrie(ctx context.Context, canonicalEth1Data *ethpb.Eth1Data, canonicalEth1DataHeight *big.Int) (cache.MerkleTree, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.rebuildDepositTrie")
 	defer span.End()
 
-	deposits := vs.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
+	deposits := s.DepositFetcher.AllDeposits(ctx, canonicalEth1DataHeight)
 	trieItems := make([][]byte, 0, len(deposits))
 	for _, dep := range deposits {
 		depHash, err := dep.Data.HashTreeRoot()

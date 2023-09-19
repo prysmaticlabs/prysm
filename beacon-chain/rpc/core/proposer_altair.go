@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -15,12 +15,12 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBeaconBlock) {
+func (s *Service) setSyncAggregate(ctx context.Context, blk interfaces.SignedBeaconBlock) {
 	if blk.Version() < version.Altair {
 		return
 	}
 
-	syncAggregate, err := vs.getSyncAggregate(ctx, blk.Block().Slot()-1, blk.Block().ParentRoot())
+	syncAggregate, err := s.getSyncAggregate(ctx, blk.Block().Slot()-1, blk.Block().ParentRoot())
 	if err != nil {
 		log.WithError(err).Error("Could not get sync aggregate")
 		emptySig := [96]byte{0xC0}
@@ -42,15 +42,15 @@ func (vs *Server) setSyncAggregate(ctx context.Context, blk interfaces.SignedBea
 
 // getSyncAggregate retrieves the sync contributions from the pool to construct the sync aggregate object.
 // The contributions are filtered based on matching of the input root and slot then profitability.
-func (vs *Server) getSyncAggregate(ctx context.Context, slot primitives.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getSyncAggregate")
+func (s *Service) getSyncAggregate(ctx context.Context, slot primitives.Slot, root [32]byte) (*ethpb.SyncAggregate, error) {
+	ctx, span := trace.StartSpan(ctx, "proposer.getSyncAggregate")
 	defer span.End()
 
-	if vs.SyncCommitteePool == nil {
+	if s.SyncCommitteePool == nil {
 		return nil, errors.New("sync committee pool is nil")
 	}
 	// Contributions have to match the input root
-	contributions, err := vs.SyncCommitteePool.SyncCommitteeContributions(slot)
+	contributions, err := s.SyncCommitteePool.SyncCommitteeContributions(slot)
 	if err != nil {
 		return nil, err
 	}

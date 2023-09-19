@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func TestServer_getExits(t *testing.T) {
+func TestProposer_getExits(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig()
 	config.ShardCommitteePeriod = 0
@@ -19,7 +19,7 @@ func TestServer_getExits(t *testing.T) {
 
 	beaconState, privKeys := util.DeterministicGenesisState(t, 256)
 
-	proposerServer := &Server{
+	s := &Service{
 		ExitPool: voluntaryexits.NewPool(),
 	}
 
@@ -27,11 +27,11 @@ func TestServer_getExits(t *testing.T) {
 	for i := primitives.ValidatorIndex(0); uint64(i) < params.BeaconConfig().MaxVoluntaryExits; i++ {
 		exit, err := util.GenerateVoluntaryExits(beaconState, privKeys[i], i)
 		require.NoError(t, err)
-		proposerServer.ExitPool.InsertVoluntaryExit(exit)
+		s.ExitPool.InsertVoluntaryExit(exit)
 		exits[i] = exit
 	}
 
-	e := proposerServer.getExits(beaconState, 1)
+	e := s.getExits(beaconState, 1)
 	require.Equal(t, len(e), int(params.BeaconConfig().MaxVoluntaryExits))
 	require.DeepEqual(t, e, exits)
 }

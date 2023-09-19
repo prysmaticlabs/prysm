@@ -56,14 +56,14 @@ func (s *Service) ComputeValidatorPerformance(
 	req *ethpb.ValidatorPerformanceRequest,
 ) (*ethpb.ValidatorPerformanceResponse, *RpcError) {
 	if s.SyncChecker.Syncing() {
-		return nil, &RpcError{Reason: Unavailable, Err: errors.New("Syncing to latest head, not ready to respond")}
+		return nil, &RpcError{Reason: Unavailable, Err: errors.New("syncing to latest head, not ready to respond")}
 	}
 
 	headState, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		return nil, &RpcError{Err: errors.Wrap(err, "could not get head state"), Reason: Internal}
 	}
-	currSlot := s.GenesisTimeFetcher.CurrentSlot()
+	currSlot := s.TimeFetcher.CurrentSlot()
 	if currSlot > headState.Slot() {
 		headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 		if err != nil {
@@ -254,7 +254,7 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
 	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		s.GenesisTimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		s.TimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
 		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
 	}
 
@@ -356,7 +356,7 @@ func (s *Service) GetAttestationData(
 ) (*ethpb.AttestationData, *RpcError) {
 	if err := helpers.ValidateAttestationTime(
 		req.Slot,
-		s.GenesisTimeFetcher.GenesisTime(),
+		s.TimeFetcher.GenesisTime(),
 		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
 	); err != nil {
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}

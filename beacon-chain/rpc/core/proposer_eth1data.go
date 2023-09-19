@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -30,22 +30,22 @@ import (
 //   - Otherwise:
 //   - Determine the vote with the highest count. Prefer the vote with the highest eth1 block height in the event of a tie.
 //   - This vote's block is the eth1 block to use for the block proposal.
-func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.BeaconState) (*ethpb.Eth1Data, error) {
+func (s *Service) eth1DataMajorityVote(ctx context.Context, beaconState state.BeaconState) (*ethpb.Eth1Data, error) {
 	ctx, cancel := context.WithTimeout(ctx, eth1dataTimeout)
 	defer cancel()
 
 	slot := beaconState.Slot()
-	votingPeriodStartTime := vs.slotStartTime(slot)
+	votingPeriodStartTime := s.slotStartTime(slot)
 
-	if vs.MockEth1Votes {
-		return vs.mockETH1DataVote(ctx, slot)
+	if s.MockEth1Votes {
+		return s.mockETH1DataVote(ctx, slot)
 	}
-	if !vs.Eth1InfoFetcher.ExecutionClientConnected() {
-		return vs.randomETH1DataVote(ctx)
+	if !s.Eth1InfoFetcher.ExecutionClientConnected() {
+		return s.randomETH1DataVote(ctx)
 	}
 	eth1DataNotification = false
 
-	genesisTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+	genesisTime, _ := s.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	followDistanceSeconds := params.BeaconConfig().Eth1FollowDistance * params.BeaconConfig().SecondsPerETH1Block
 	latestValidTime := votingPeriodStartTime - followDistanceSeconds
 	earliestValidTime := votingPeriodStartTime - 2*followDistanceSeconds
@@ -55,28 +55,28 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 	// trust the existing head for the right eth1 vote until we can get a meaningful value from the deposit contract.
 	if latestValidTime < genesisTime+followDistanceSeconds {
 		log.WithField("genesisTime", genesisTime).WithField("latestValidTime", latestValidTime).Warn("voting period before genesis + follow distance, using eth1data from head")
-		return vs.HeadFetcher.HeadETH1Data(), nil
+		return s.HeadFetcher.HeadETH1Data(), nil
 	}
 
-	lastBlockByLatestValidTime, err := vs.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
+	lastBlockByLatestValidTime, err := s.Eth1BlockFetcher.BlockByTimestamp(ctx, latestValidTime)
 	if err != nil {
 		log.WithError(err).Error("Could not get last block by latest valid time")
-		return vs.randomETH1DataVote(ctx)
+		return s.randomETH1DataVote(ctx)
 	}
 	if lastBlockByLatestValidTime.Time < earliestValidTime {
-		return vs.HeadFetcher.HeadETH1Data(), nil
+		return s.HeadFetcher.HeadETH1Data(), nil
 	}
 
-	lastBlockDepositCount, lastBlockDepositRoot := vs.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
+	lastBlockDepositCount, lastBlockDepositRoot := s.DepositFetcher.DepositsNumberAndRootAtHeight(ctx, lastBlockByLatestValidTime.Number)
 	if lastBlockDepositCount == 0 {
-		return vs.ChainStartFetcher.ChainStartEth1Data(), nil
+		return s.ChainStartFetcher.ChainStartEth1Data(), nil
 	}
 
-	if lastBlockDepositCount >= vs.HeadFetcher.HeadETH1Data().DepositCount {
-		h, err := vs.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
+	if lastBlockDepositCount >= s.HeadFetcher.HeadETH1Data().DepositCount {
+		h, err := s.Eth1BlockFetcher.BlockHashByHeight(ctx, lastBlockByLatestValidTime.Number)
 		if err != nil {
 			log.WithError(err).Error("Could not get hash of last block by latest valid time")
-			return vs.randomETH1DataVote(ctx)
+			return s.randomETH1DataVote(ctx)
 		}
 		return &ethpb.Eth1Data{
 			BlockHash:    h.Bytes(),
@@ -84,16 +84,16 @@ func (vs *Server) eth1DataMajorityVote(ctx context.Context, beaconState state.Be
 			DepositRoot:  lastBlockDepositRoot[:],
 		}, nil
 	}
-	return vs.HeadFetcher.HeadETH1Data(), nil
+	return s.HeadFetcher.HeadETH1Data(), nil
 }
 
-func (vs *Server) slotStartTime(slot primitives.Slot) uint64 {
-	startTime, _ := vs.Eth1InfoFetcher.GenesisExecutionChainInfo()
+func (s *Service) slotStartTime(slot primitives.Slot) uint64 {
+	startTime, _ := s.Eth1InfoFetcher.GenesisExecutionChainInfo()
 	return slots.VotingPeriodStartTime(startTime, slot)
 }
 
 // canonicalEth1Data determines the canonical eth1data and eth1 block height to use for determining deposits.
-func (vs *Server) canonicalEth1Data(
+func (s *Service) canonicalEth1Data(
 	ctx context.Context,
 	beaconState state.BeaconState,
 	currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
@@ -118,14 +118,14 @@ func (vs *Server) canonicalEth1Data(
 	if features.Get().DisableStakinContractCheck && eth1BlockHash == [32]byte{} {
 		return canonicalEth1Data, new(big.Int).SetInt64(0), nil
 	}
-	_, canonicalEth1DataHeight, err := vs.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
+	_, canonicalEth1DataHeight, err := s.Eth1BlockFetcher.BlockExists(ctx, eth1BlockHash)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not fetch eth1data height")
 	}
 	return canonicalEth1Data, canonicalEth1DataHeight, nil
 }
 
-func (vs *Server) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*ethpb.Eth1Data, error) {
+func (s *Service) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now mocked.")
 		eth1DataNotification = true
@@ -140,7 +140,7 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*
 	//   BlockHash = hash(hash(current_epoch + slot_in_voting_period)),
 	// )
 	slotInVotingPeriod := slot.ModSlot(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().EpochsPerEth1VotingPeriod)))
-	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
+	headState, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -155,12 +155,12 @@ func (vs *Server) mockETH1DataVote(ctx context.Context, slot primitives.Slot) (*
 	}, nil
 }
 
-func (vs *Server) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
+func (s *Service) randomETH1DataVote(ctx context.Context) (*ethpb.Eth1Data, error) {
 	if !eth1DataNotification {
 		log.Warn("Beacon Node is no longer connected to an ETH1 chain, so ETH1 data votes are now random.")
 		eth1DataNotification = true
 	}
-	headState, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
+	headState, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		return nil, err
 	}

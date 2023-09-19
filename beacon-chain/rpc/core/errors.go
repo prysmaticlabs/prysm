@@ -1,10 +1,13 @@
 package core
 
 import (
+	"errors"
 	"net/http"
 
 	"google.golang.org/grpc/codes"
 )
+
+var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 
 type ErrorReason uint8
 

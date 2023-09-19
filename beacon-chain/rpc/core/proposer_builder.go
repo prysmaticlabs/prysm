@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -16,14 +16,14 @@ import (
 // Returns true if builder (ie outsourcing block construction) can be used. Both conditions have to meet:
 // - Validator has registered to use builder (ie called registerBuilder API end point)
 // - Circuit breaker has not been activated (ie the liveness of the chain is healthy)
-func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.canUseBuilder")
+func (s *Service) canUseBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (bool, error) {
+	ctx, span := trace.StartSpan(ctx, "proposer.canUseBuilder")
 	defer span.End()
 
-	if !vs.BlockBuilder.Configured() {
+	if !s.BlockBuilder.Configured() {
 		return false, nil
 	}
-	activated, err := vs.circuitBreakBuilder(slot)
+	activated, err := s.circuitBreakBuilder(slot)
 	span.AddAttributes(trace.BoolAttribute("circuitBreakerActivated", activated))
 	if err != nil {
 		tracing.AnnotateError(span, err)
@@ -32,15 +32,15 @@ func (vs *Server) canUseBuilder(ctx context.Context, slot primitives.Slot, idx p
 	if activated {
 		return false, nil
 	}
-	return vs.validatorRegistered(ctx, idx)
+	return s.validatorRegistered(ctx, idx)
 }
 
 // validatorRegistered returns true if validator with index `id` was previously registered in the database.
-func (vs *Server) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
-	if vs.BlockBuilder == nil {
+func (s *Service) validatorRegistered(ctx context.Context, id primitives.ValidatorIndex) (bool, error) {
+	if s.BlockBuilder == nil {
 		return false, nil
 	}
-	_, err := vs.BlockBuilder.RegistrationByValidatorID(ctx, id)
+	_, err := s.BlockBuilder.RegistrationByValidatorID(ctx, id)
 	switch {
 	case errors.Is(err, kv.ErrNotFoundFeeRecipient), errors.Is(err, cache.ErrNotFoundRegistration):
 		return false, nil
@@ -51,15 +51,15 @@ func (vs *Server) validatorRegistered(ctx context.Context, id primitives.Validat
 }
 
 // circuitBreakBuilder returns true if the builder is not allowed to be used due to circuit breaker conditions.
-func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
-	if vs.ForkchoiceFetcher == nil {
+func (s *Service) circuitBreakBuilder(slot primitives.Slot) (bool, error) {
+	if s.ForkchoiceFetcher == nil {
 		return true, errors.New("no fork choicer configured")
 	}
 
 	// Circuit breaker is active if the missing consecutive slots greater than `MaxBuilderConsecutiveMissedSlots`.
-	highestReceivedSlot := vs.ForkchoiceFetcher.HighestReceivedBlockSlot()
+	highestReceivedSlot := s.ForkchoiceFetcher.HighestReceivedBlockSlot()
 	maxConsecutiveSkipSlotsAllowed := params.BeaconConfig().MaxBuilderConsecutiveMissedSlots
-	diff, err := s.SafeSubSlot(highestReceivedSlot)
+	diff, err := slot.SafeSubSlot(highestReceivedSlot)
 	if err != nil {
 		return true, err
 	}
@@ -74,12 +74,12 @@ func (vs *Server) circuitBreakBuilder(s primitives.Slot) (bool, error) {
 	}
 
 	// Not much reason to check missed slots epoch rolling window if input slot is less than epoch.
-	if s < params.BeaconConfig().SlotsPerEpoch {
+	if slot < params.BeaconConfig().SlotsPerEpoch {
 		return false, nil
 	}
 
 	// Circuit breaker is active if the missing slots per epoch (rolling window) greater than `MaxBuilderEpochMissedSlots`.
-	receivedCount, err := vs.ForkchoiceFetcher.ReceivedBlocksLastEpoch()
+	receivedCount, err := s.ForkchoiceFetcher.ReceivedBlocksLastEpoch()
 	if err != nil {
 		return true, err
 	}

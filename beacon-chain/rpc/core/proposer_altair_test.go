@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -11,10 +11,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func TestServer_SetSyncAggregate_EmptyCase(t *testing.T) {
+func TestProposer_SetSyncAggregate_EmptyCase(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
 	require.NoError(t, err)
-	s := &Server{} // Sever is not initialized with sync committee pool.
+	s := &Service{} // Sever is not initialized with sync committee pool.
 	s.setSyncAggregate(context.Background(), b)
 	agg, err := b.Block().Body().SyncAggregate()
 	require.NoError(t, err)

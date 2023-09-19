@@ -434,7 +434,7 @@ func TestSubmitSignedAggregateSelectionProof_InvalidSlot(t *testing.T) {
 	c := &mock.ChainService{Genesis: time.Now()}
 	aggregatorServer := &Server{
 		CoreService: &core.Service{
-			GenesisTimeFetcher: c,
+			TimeFetcher: c,
 		},
 	}
 	req := &ethpb.SignedAggregateSubmitRequest{

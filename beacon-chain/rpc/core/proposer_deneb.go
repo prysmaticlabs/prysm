@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"

@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -6,8 +6,8 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-func (vs *Server) getExits(head state.BeaconState, slot primitives.Slot) []*ethpb.SignedVoluntaryExit {
-	exits, err := vs.ExitPool.ExitsForInclusion(head, slot)
+func (s *Service) getExits(head state.BeaconState, slot primitives.Slot) []*ethpb.SignedVoluntaryExit {
+	exits, err := s.ExitPool.ExitsForInclusion(head, slot)
 	if err != nil {
 		log.WithError(err).Error("Could not get exits")
 		return []*ethpb.SignedVoluntaryExit{}

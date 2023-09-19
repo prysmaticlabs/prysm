@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestServer_activationEpochNotReached(t *testing.T) {
+func TestProposer_activationEpochNotReached(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	require.Equal(t, false, activationEpochNotReached(0))
 
@@ -36,7 +36,7 @@ func TestServer_activationEpochNotReached(t *testing.T) {
 	require.Equal(t, false, activationEpochNotReached(params.BeaconConfig().SlotsPerEpoch+1))
 }
 
-func TestServer_getExecutionPayload(t *testing.T) {
+func TestProposer_getExecutionPayload(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
@@ -144,14 +144,14 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			cfg.TerminalBlockHashActivationEpoch = tt.activationEpoch
 			params.OverrideBeaconConfig(cfg)
 
-			vs := &Server{
+			s := &Service{
 				ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: tt.payloadID, ErrForkchoiceUpdated: tt.forkchoiceErr, ExecutionPayload: &pb.ExecutionPayload{}, BuilderOverride: tt.override},
 				HeadFetcher:            &chainMock.ChainService{State: tt.st},
 				FinalizationFetcher:    &chainMock.ChainService{},
 				BeaconDB:               beaconDB,
 				ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 			}
-			vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100}, [32]byte{'a'})
+			s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(tt.st.Slot(), 100, [8]byte{100}, [32]byte{'a'})
 			blk := util.NewBeaconBlockBellatrix()
 			blk.Block.Slot = tt.st.Slot()
 			blk.Block.ProposerIndex = tt.validatorIndx
@@ -159,7 +159,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 			b, err := blocks.NewSignedBeaconBlock(blk)
 			require.NoError(t, err)
 			var gotOverride bool
-			_, _, gotOverride, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), tt.st)
+			_, _, gotOverride, err = s.getLocalPayloadAndBlobs(context.Background(), b.Block(), tt.st)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 			} else {
@@ -170,7 +170,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}
 }
 
-func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
+func TestProposer_getExecutionPayloadContextTimeout(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
 	b1pb := util.NewBeaconBlock()
@@ -188,13 +188,13 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 	cfg.TerminalBlockHashActivationEpoch = 1
 	params.OverrideBeaconConfig(cfg)
 
-	vs := &Server{
+	s := &Service{
 		ExecutionEngineCaller:  &powtesting.EngineClient{PayloadIDBytes: &pb.PayloadIDBytes{}, ErrGetPayload: context.DeadlineExceeded, ExecutionPayload: &pb.ExecutionPayload{}},
 		HeadFetcher:            &chainMock.ChainService{State: nonTransitionSt},
 		BeaconDB:               beaconDB,
 		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
-	vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nonTransitionSt.Slot(), 100, [8]byte{100}, [32]byte{'a'})
+	s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nonTransitionSt.Slot(), 100, [8]byte{100}, [32]byte{'a'})
 
 	blk := util.NewBeaconBlockBellatrix()
 	blk.Block.Slot = nonTransitionSt.Slot()
@@ -202,11 +202,11 @@ func TestServer_getExecutionPayloadContextTimeout(t *testing.T) {
 	blk.Block.ParentRoot = bytesutil.PadTo([]byte{'a'}, 32)
 	b, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	_, _, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), nonTransitionSt)
+	_, _, _, err = s.getLocalPayloadAndBlobs(context.Background(), b.Block(), nonTransitionSt)
 	require.NoError(t, err)
 }
 
-func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
+func TestProposer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	hook := logTest.NewGlobal()
 	beaconDB := dbTest.SetupDB(t)
 	nonTransitionSt, _ := util.DeterministicGenesisStateBellatrix(t, 1)
@@ -238,7 +238,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	payloadID := &pb.PayloadIDBytes{0x1}
 	payload := emptyPayload()
 	payload.FeeRecipient = feeRecipient[:]
-	vs := &Server{
+	s := &Service{
 		ExecutionEngineCaller: &powtesting.EngineClient{
 			PayloadIDBytes:   payloadID,
 			ExecutionPayload: payload,
@@ -254,7 +254,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	blk.Block.ParentRoot = bytesutil.PadTo([]byte{}, 32)
 	b, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
-	gotPayload, _, _, err := vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
+	gotPayload, _, _, err := s.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -264,9 +264,9 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 
 	evilRecipientAddress := common.BytesToAddress([]byte("evil"))
 	payload.FeeRecipient = evilRecipientAddress[:]
-	vs.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+	s.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
 
-	gotPayload, _, _, err = vs.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
+	gotPayload, _, _, err = s.getLocalPayloadAndBlobs(context.Background(), b.Block(), transitionSt)
 	require.NoError(t, err)
 	require.NotNil(t, gotPayload)
 
@@ -274,7 +274,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 	require.LogsContain(t, hook, "Fee recipient address from execution client is not what was expected")
 }
 
-func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
+func TestProposer_getTerminalBlockHashIfExists(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	tests := []struct {
 		name                  string
@@ -353,14 +353,14 @@ func TestServer_getTerminalBlockHashIfExists(t *testing.T) {
 			}
 			c := powtesting.New()
 			c.HashesByHeight[0] = tt.wantTerminalBlockHash
-			vs := &Server{
+			s := &Service{
 				Eth1BlockFetcher: c,
 				ExecutionEngineCaller: &powtesting.EngineClient{
 					ExecutionBlock: tt.currentPowBlock,
 					BlockByHashMap: m,
 				},
 			}
-			b, e, err := vs.getTerminalBlockHashIfExists(context.Background(), 1)
+			b, e, err := s.getTerminalBlockHashIfExists(context.Background(), 1)
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, err)
 				require.DeepEqual(t, tt.wantExists, e)

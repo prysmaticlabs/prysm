@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -19,21 +19,21 @@ import (
 
 type proposerAtts []*ethpb.Attestation
 
-func (vs *Server) packAttestations(ctx context.Context, latestState state.BeaconState) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.packAttestations")
+func (s *Service) packAttestations(ctx context.Context, latestState state.BeaconState) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "proposer.packAttestations")
 	defer span.End()
 
-	atts := vs.AttPool.AggregatedAttestations()
-	atts, err := vs.validateAndDeleteAttsInPool(ctx, latestState, atts)
+	atts := s.AttPool.AggregatedAttestations()
+	atts, err := s.validateAndDeleteAttsInPool(ctx, latestState, atts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
 
-	uAtts, err := vs.AttPool.UnaggregatedAttestations()
+	uAtts, err := s.AttPool.UnaggregatedAttestations()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get unaggregated attestations")
 	}
-	uAtts, err = vs.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
+	uAtts, err = s.validateAndDeleteAttsInPool(ctx, latestState, uAtts)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not filter attestations")
 	}
@@ -224,12 +224,12 @@ func (a proposerAtts) dedup() (proposerAtts, error) {
 }
 
 // This filters the input attestations to return a list of valid attestations to be packaged inside a beacon block.
-func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.validateAndDeleteAttsInPool")
+func (s *Service) validateAndDeleteAttsInPool(ctx context.Context, st state.BeaconState, atts []*ethpb.Attestation) ([]*ethpb.Attestation, error) {
+	ctx, span := trace.StartSpan(ctx, "proposer.validateAndDeleteAttsInPool")
 	defer span.End()
 
 	validAtts, invalidAtts := proposerAtts(atts).filter(ctx, st)
-	if err := vs.deleteAttsInPool(ctx, invalidAtts); err != nil {
+	if err := s.deleteAttsInPool(ctx, invalidAtts); err != nil {
 		return nil, err
 	}
 	return validAtts, nil
@@ -237,8 +237,8 @@ func (vs *Server) validateAndDeleteAttsInPool(ctx context.Context, st state.Beac
 
 // The input attestations are processed and seen by the node, this deletes them from pool
 // so proposers don't include them in a block for the future.
-func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.deleteAttsInPool")
+func (s *Service) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestation) error {
+	ctx, span := trace.StartSpan(ctx, "proposer.deleteAttsInPool")
 	defer span.End()
 
 	for _, att := range atts {
@@ -246,11 +246,11 @@ func (vs *Server) deleteAttsInPool(ctx context.Context, atts []*ethpb.Attestatio
 			return ctx.Err()
 		}
 		if helpers.IsAggregated(att) {
-			if err := vs.AttPool.DeleteAggregatedAttestation(att); err != nil {
+			if err := s.AttPool.DeleteAggregatedAttestation(att); err != nil {
 				return err
 			}
 		} else {
-			if err := vs.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
+			if err := s.AttPool.DeleteUnaggregatedAttestation(att); err != nil {
 				return err
 			}
 		}

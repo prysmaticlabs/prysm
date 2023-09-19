@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -8,7 +8,7 @@ import (
 )
 
 // Sets the bls to exec data for a block.
-func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState state.BeaconState) {
+func (s *Service) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState state.BeaconState) {
 	if blk.Version() < version.Capella {
 		return
 	}
@@ -16,7 +16,7 @@ func (vs *Server) setBlsToExecData(blk interfaces.SignedBeaconBlock, headState s
 		log.WithError(err).Error("Could not set bls to execution data in block")
 		return
 	}
-	changes, err := vs.BLSChangesPool.BLSToExecChangesForInclusion(headState)
+	changes, err := s.BLSChangesPool.BLSToExecChangesForInclusion(headState)
 	if err != nil {
 		log.WithError(err).Error("Could not get bls to execution changes")
 		return

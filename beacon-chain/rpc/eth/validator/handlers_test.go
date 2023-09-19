@@ -406,7 +406,7 @@ func TestSubmitContributionAndProofs(t *testing.T) {
 
 func TestSubmitAggregateAndProofs(t *testing.T) {
 	c := &core.Service{
-		GenesisTimeFetcher: &mockChain.ChainService{},
+		TimeFetcher: &mockChain.ChainService{},
 	}
 
 	s := &Server{
@@ -864,9 +864,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
+				AttestationCache: cache.NewAttestationCache(),
+				HeadFetcher:      chain,
+				TimeFetcher:      chain,
 			},
 		}
 
@@ -945,9 +945,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				GenesisTimeFetcher: chain,
-				HeadFetcher:        chain,
+				AttestationCache: cache.NewAttestationCache(),
+				TimeFetcher:      chain,
+				HeadFetcher:      chain,
 			},
 		}
 
@@ -992,9 +992,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
+				AttestationCache: cache.NewAttestationCache(),
+				HeadFetcher:      chain,
+				TimeFetcher:      chain,
 			},
 		}
 
@@ -1073,7 +1073,7 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				GenesisTimeFetcher: chain,
+				TimeFetcher: chain,
 			},
 		}
 
@@ -1150,10 +1150,10 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				StateGen:           stategen.New(db, doublylinkedtree.New()),
+				AttestationCache: cache.NewAttestationCache(),
+				HeadFetcher:      chain,
+				TimeFetcher:      chain,
+				StateGen:         stategen.New(db, doublylinkedtree.New()),
 			},
 		}
 
@@ -1232,9 +1232,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
+				AttestationCache: cache.NewAttestationCache(),
+				HeadFetcher:      chain,
+				TimeFetcher:      chain,
 			},
 		}
 
@@ -1328,9 +1328,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
+				AttestationCache: cache.NewAttestationCache(),
+				HeadFetcher:      chain,
+				TimeFetcher:      chain,
 			},
 		}
 

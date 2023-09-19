@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"bytes"
@@ -43,7 +43,7 @@ const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
 func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData) error {
-	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
+	_, span := trace.StartSpan(ctx, "proposer.setExecutionData")
 	defer span.End()
 
 	slot := blk.Block().Slot()
@@ -124,15 +124,19 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
-	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
+func (s *Service) getPayloadHeaderFromBuilder(
+	ctx context.Context,
+	slot primitives.Slot,
+	idx primitives.ValidatorIndex,
+) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
+	ctx, span := trace.StartSpan(ctx, "proposer.getPayloadHeaderFromBuilder")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
 		return nil, nil, errors.New("can't get payload header from builder before bellatrix epoch")
 	}
 
-	b, err := vs.HeadFetcher.HeadBlock(ctx)
+	b, err := s.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -141,7 +145,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get execution header")
 	}
-	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
+	pk, err := s.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,7 +153,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
 	defer cancel()
 
-	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
+	signedBid, err := s.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -197,7 +201,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
-	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
+	t, err := slots.ToTime(uint64(s.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
 		return nil, nil, err
 	}

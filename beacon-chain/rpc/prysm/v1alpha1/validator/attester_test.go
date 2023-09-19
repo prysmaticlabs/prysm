@@ -126,7 +126,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: beaconState, Root: blockRoot[:],
 			},
-			GenesisTimeFetcher: &mock.ChainService{
+			TimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
 		},
@@ -176,8 +176,8 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
-			HeadFetcher:        &mock.ChainService{},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+			HeadFetcher: &mock.ChainService{},
 		},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -193,9 +193,9 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
-			HeadFetcher:        &mock.ChainService{Optimistic: false, State: beaconState},
-			AttestationCache:   cache.NewAttestationCache(),
+			TimeFetcher:      &mock.ChainService{Genesis: time.Now()},
+			HeadFetcher:      &mock.ChainService{Optimistic: false, State: beaconState},
+			AttestationCache: cache.NewAttestationCache(),
 		},
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -214,9 +214,9 @@ func TestAttestationDataSlot_handlesInProgressRequest(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache:   cache.NewAttestationCache(),
-			HeadFetcher:        &mock.ChainService{State: state},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			AttestationCache: cache.NewAttestationCache(),
+			HeadFetcher:      &mock.ChainService{State: state},
+			TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
 	}
 
@@ -265,7 +265,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			TimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
 	}
 
@@ -333,10 +333,10 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache:   cache.NewAttestationCache(),
-			HeadFetcher:        &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			StateGen:           stategen.New(db, doublylinkedtree.New()),
+			AttestationCache: cache.NewAttestationCache(),
+			HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
+			TimeFetcher:      &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			StateGen:         stategen.New(db, doublylinkedtree.New()),
 		},
 	}
 	require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
@@ -406,7 +406,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 			HeadFetcher: &mock.ChainService{
 				State: beaconState, Root: blockRoot[:],
 			},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
+			TimeFetcher: &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
 		},
 	}
 

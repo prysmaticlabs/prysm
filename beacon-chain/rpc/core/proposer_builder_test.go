@@ -1,4 +1,4 @@
-package validator
+package core
 
 import (
 	"context"
@@ -22,9 +22,9 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestServer_circuitBreakBuilder(t *testing.T) {
+func TestProposer_circuitBreakBuilder(t *testing.T) {
 	hook := logTest.NewGlobal()
-	s := &Server{}
+	s := &Service{}
 	_, err := s.circuitBreakBuilder(0)
 	require.ErrorContains(t, "no fork choicer configured", err)
 
@@ -71,22 +71,22 @@ func TestServer_circuitBreakBuilder(t *testing.T) {
 	require.Equal(t, false, b)
 }
 
-func TestServer_validatorRegistered(t *testing.T) {
+func TestProposer_validatorRegistered(t *testing.T) {
 	b, err := builder.NewService(context.Background())
 	require.NoError(t, err)
-	proposerServer := &Server{
+	s := &Service{
 		BlockBuilder: b,
 	}
 	ctx := context.Background()
 
-	reg, err := proposerServer.validatorRegistered(ctx, 0)
+	reg, err := s.validatorRegistered(ctx, 0)
 	require.ErrorContains(t, "nil beacon db", err)
 	require.Equal(t, false, reg)
 	db := dbTest.SetupDB(t)
 	realBuilder, err := builder.NewService(context.Background(), builder.WithDatabase(db))
 	require.NoError(t, err)
-	proposerServer.BlockBuilder = realBuilder
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	s.BlockBuilder = realBuilder
+	reg, err = s.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
@@ -95,40 +95,40 @@ func TestServer_validatorRegistered(t *testing.T) {
 	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0, 1},
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}, {FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
-	reg, err = proposerServer.validatorRegistered(ctx, 0)
+	reg, err = s.validatorRegistered(ctx, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
-	reg, err = proposerServer.validatorRegistered(ctx, 1)
+	reg, err = s.validatorRegistered(ctx, 1)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
 
 }
 
-func TestServer_canUseBuilder(t *testing.T) {
-	proposerServer := &Server{
+func TestProposer_canUseBuilder(t *testing.T) {
+	s := &Service{
 		BlockBuilder: &testing2.MockBuilderService{
 			HasConfigured: false,
 		},
 	}
-	reg, err := proposerServer.canUseBuilder(context.Background(), 0, 0)
+	reg, err := s.canUseBuilder(context.Background(), 0, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
 	ctx := context.Background()
 
-	proposerServer.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	proposerServer.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
-	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
+	s.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
+	s.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
+	reg, err = s.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 	db := dbTest.SetupDB(t)
 
-	proposerServer.BlockBuilder = &testing2.MockBuilderService{
+	s.BlockBuilder = &testing2.MockBuilderService{
 		HasConfigured: true,
 		Cfg:           &testing2.Config{BeaconDB: db},
 	}
 
-	reg, err = proposerServer.canUseBuilder(ctx, 1, 0)
+	reg, err = s.canUseBuilder(ctx, 1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 
@@ -137,7 +137,7 @@ func TestServer_canUseBuilder(t *testing.T) {
 	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
 		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
 
-	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
+	reg, err = s.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)
 	require.Equal(t, true, reg)
 }
