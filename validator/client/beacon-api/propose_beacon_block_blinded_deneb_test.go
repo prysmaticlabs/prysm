@@ -42,7 +42,7 @@ func TestProposeBeaconBlock_BlindedDeneb(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)
 
-	expectedBlockRoot, err := genericSignedBlock.GetBlindedDeneb().Block.HashTreeRoot()
+	expectedBlockRoot, err := genericSignedBlock.GetBlindedDeneb().SignedBlindedBlock.HashTreeRoot()
 	require.NoError(t, err)
 
 	// Make sure that the block root is set

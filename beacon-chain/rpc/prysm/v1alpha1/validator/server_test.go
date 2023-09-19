@@ -10,10 +10,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -308,4 +310,57 @@ func TestWaitForChainStart_NotStartedThenLogFired(t *testing.T) {
 
 	exitRoutine <- true
 	require.LogsContain(t, hook, "Sending genesis time")
+}
+
+func TestServer_DomainData_Exits(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.ForkVersionSchedule = map[[4]byte]primitives.Epoch{
+		[4]byte(cfg.GenesisForkVersion):   primitives.Epoch(0),
+		[4]byte(cfg.AltairForkVersion):    primitives.Epoch(5),
+		[4]byte(cfg.BellatrixForkVersion): primitives.Epoch(10),
+		[4]byte(cfg.CapellaForkVersion):   primitives.Epoch(15),
+		[4]byte(cfg.DenebForkVersion):     primitives.Epoch(20),
+	}
+	params.OverrideBeaconConfig(cfg)
+	beaconState := &ethpb.BeaconStateBellatrix{
+		Slot: 4000,
+	}
+	block := util.NewBeaconBlock()
+	genesisRoot, err := block.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	s, err := state_native.InitializeFromProtoUnsafeBellatrix(beaconState)
+	require.NoError(t, err)
+	vs := &Server{
+		Ctx:               context.Background(),
+		ChainStartFetcher: &mockExecution.Chain{},
+		HeadFetcher:       &mockChain.ChainService{State: s, Root: genesisRoot[:]},
+	}
+
+	reqDomain, err := vs.DomainData(context.Background(), &ethpb.DomainRequest{
+		Epoch:  100,
+		Domain: params.BeaconConfig().DomainDeposit[:],
+	})
+	assert.NoError(t, err)
+	wantedDomain, err := signing.ComputeDomain(params.BeaconConfig().DomainDeposit, params.BeaconConfig().DenebForkVersion, make([]byte, 32))
+	assert.NoError(t, err)
+	assert.DeepEqual(t, reqDomain.SignatureDomain, wantedDomain)
+
+	beaconStateNew := &ethpb.BeaconStateDeneb{
+		Slot: 4000,
+	}
+	s, err = state_native.InitializeFromProtoUnsafeDeneb(beaconStateNew)
+	require.NoError(t, err)
+	vs.HeadFetcher = &mockChain.ChainService{State: s, Root: genesisRoot[:]}
+
+	reqDomain, err = vs.DomainData(context.Background(), &ethpb.DomainRequest{
+		Epoch:  100,
+		Domain: params.BeaconConfig().DomainVoluntaryExit[:],
+	})
+	require.NoError(t, err)
+
+	wantedDomain, err = signing.ComputeDomain(params.BeaconConfig().DomainVoluntaryExit, params.BeaconConfig().CapellaForkVersion, make([]byte, 32))
+	require.NoError(t, err)
+
+	assert.DeepEqual(t, reqDomain.SignatureDomain, wantedDomain)
 }
