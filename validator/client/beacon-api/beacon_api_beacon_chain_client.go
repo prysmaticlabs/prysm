@@ -13,6 +13,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -48,7 +49,7 @@ func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*a
 func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
-	finalityCheckpoints := apimiddleware.StateFinalityCheckpointResponseJson{}
+	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
 		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
 	}
