@@ -484,7 +484,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningSlot: 0,
 		}
 	case "BLINDED_BLOB_SIDECAR":
-		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.RootLength)
+		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
 		if err != nil {
 			log.Error(err)
 			return nil
