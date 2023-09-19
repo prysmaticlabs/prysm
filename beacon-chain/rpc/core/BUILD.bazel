@@ -112,6 +112,8 @@ go_test(
         "unblinder_test.go",
     ],
     embed = [":go_default_library"],
+    eth_network = "minimal",
+    tags = ["minimal"],
     deps = [
         "//api/client/builder:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
