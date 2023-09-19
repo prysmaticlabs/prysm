@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -19,7 +20,7 @@ import (
 func TestGetGenesis(t *testing.T) {
 	testCases := []struct {
 		name                    string
-		genesisResponse         *apimiddleware.GenesisResponse_GenesisJson
+		genesisResponse         *beacon.Genesis
 		genesisError            error
 		depositContractResponse apimiddleware.DepositContractResponseJson
 		depositContractError    error
@@ -34,7 +35,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to decode genesis validator root",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: "foo",
 			},
@@ -42,7 +43,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to parse genesis time",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "foo",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{1}),
 			},
@@ -50,7 +51,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to query contract information",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -60,7 +61,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to read nil deposit contract data",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -72,7 +73,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "fails to decode deposit contract address",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "1",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
@@ -86,7 +87,7 @@ func TestGetGenesis(t *testing.T) {
 		},
 		{
 			name: "successfully retrieves genesis info",
-			genesisResponse: &apimiddleware.GenesisResponse_GenesisJson{
+			genesisResponse: &beacon.Genesis{
 				GenesisTime:           "654812",
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
