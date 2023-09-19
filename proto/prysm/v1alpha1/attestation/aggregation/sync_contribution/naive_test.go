@@ -61,17 +61,17 @@ func TestAggregateAttestations_aggregate_OverlapFails(t *testing.T) {
 func TestAggregateAttestations_Aggregate(t *testing.T) {
 	tests := []struct {
 		name   string
-		inputs []bitfield.Bitvector128
+		inputs [][]byte
 		want   []bitfield.Bitvector128
 	}{
 		{
 			name:   "empty list",
-			inputs: []bitfield.Bitvector128{},
+			inputs: [][]byte{},
 			want:   []bitfield.Bitvector128{},
 		},
 		{
 			name: "single attestation",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000010},
 			},
 			want: []bitfield.Bitvector128{
@@ -80,7 +80,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "two attestations with no overlap",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000001},
 				{0b00000010},
 			},
@@ -90,7 +90,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "two attestations with overlap",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000101},
 				{0b00000110},
 			},
@@ -101,7 +101,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "some attestations overlap",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00001001},
 				{0b00010110},
 				{0b00001010},
@@ -114,7 +114,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "some attestations produce duplicates which are removed",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000101},
 				{0b00000110},
 				{0b00001010},
@@ -126,7 +126,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "two attestations where one is fully contained within the other",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000001},
 				{0b00000011},
 			},
@@ -136,7 +136,7 @@ func TestAggregateAttestations_Aggregate(t *testing.T) {
 		},
 		{
 			name: "two attestations where one is fully contained within the other reversed",
-			inputs: []bitfield.Bitvector128{
+			inputs: [][]byte{
 				{0b00000011},
 				{0b00000001},
 			},
