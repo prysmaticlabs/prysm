@@ -44,7 +44,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Errorf(core.ErrorReasonToGRPC(err.Reason), "Could not propose beacon block: %v", err.Err)
 	}
 	return &ethpb.ProposeResponse{
-		BlockRoot: root[:],
+		BlockRoot: root,
 	}, nil
 }
 
