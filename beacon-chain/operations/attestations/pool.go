@@ -32,7 +32,6 @@ type Pool interface {
 	UnaggregatedAttestationCount() int
 	// For attestations that were included in the block.
 	SaveBlockAttestation(att *ethpb.Attestation) error
-	SaveBlockAttestations(atts []*ethpb.Attestation) error
 	BlockAttestations() []*ethpb.Attestation
 	DeleteBlockAttestation(att *ethpb.Attestation) error
 	// For attestations to be passed to fork choice.

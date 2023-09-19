@@ -655,8 +655,8 @@ message BlindedBeaconBlockBodyCapella {
 }
 
 message SignedBlindedBeaconBlockAndBlobsDeneb {
-    SignedBlindedBeaconBlockDeneb block = 1;
-    repeated SignedBlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
+    SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
+    repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BlindedBeaconBlockAndBlobsDeneb {
@@ -666,7 +666,7 @@ message BlindedBeaconBlockAndBlobsDeneb {
 
 message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.
-    BlindedBeaconBlockDeneb block = 1;
+    BlindedBeaconBlockDeneb message = 1;
 
     // 96 byte BLS signature from the validator that produced this blinded block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];

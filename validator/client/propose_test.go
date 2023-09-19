@@ -622,6 +622,43 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				},
 			},
 		},
+		{
+			name:    "deneb blind block and blobs",
+			version: version.Deneb,
+			block: &ethpb.GenericBeaconBlock{
+				Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
+					BlindedDeneb: func() *ethpb.BlindedBeaconBlockAndBlobsDeneb {
+						blk := util.NewBlindedBeaconBlockDeneb()
+						blk.Message.Body.Graffiti = graffiti
+						return &ethpb.BlindedBeaconBlockAndBlobsDeneb{
+							Block: blk.Message,
+							Blobs: []*ethpb.BlindedBlobSidecar{
+								{
+									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
+									Index:           1,
+									Slot:            2,
+									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot"), 32),
+									ProposerIndex:   3,
+									BlobRoot:        bytesutil.PadTo([]byte("blobRoot"), 32),
+									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment"), 48),
+									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof"), 48),
+								},
+								{
+									BlockRoot:       bytesutil.PadTo([]byte("blockRoot1"), 32),
+									Index:           4,
+									Slot:            5,
+									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot1"), 32),
+									ProposerIndex:   6,
+									BlobRoot:        bytesutil.PadTo([]byte("blobRoot1"), 32),
+									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment1"), 48),
+									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof1"), 48),
+								},
+							},
+						}
+					}(),
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -674,7 +711,12 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
 				if tt.version == version.Deneb {
-					require.Equal(t, 2, len(block.GetDeneb().Blobs))
+					switch {
+					case tt.name == "deneb block and blobs":
+						require.Equal(t, 2, len(block.GetDeneb().Blobs))
+					case tt.name == "deneb blind block and blobs":
+						require.Equal(t, 2, len(block.GetBlindedDeneb().SignedBlindedBlobSidecars))
+					}
 				}
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})

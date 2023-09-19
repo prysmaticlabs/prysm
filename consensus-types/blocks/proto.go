@@ -113,7 +113,7 @@ func (b *SignedBeaconBlock) Proto() (proto.Message, error) {
 				}
 			}
 			return &eth.SignedBlindedBeaconBlockDeneb{
-				Block:     block,
+				Message:   block,
 				Signature: b.signature[:],
 			}, nil
 		}
@@ -576,7 +576,7 @@ func initBlindedSignedBlockFromProtoDeneb(pb *eth.SignedBlindedBeaconBlockDeneb)
 		return nil, errNilBlock
 	}
 
-	block, err := initBlindedBlockFromProtoDeneb(pb.Block)
+	block, err := initBlindedBlockFromProtoDeneb(pb.Message)
 	if err != nil {
 		return nil, err
 	}
