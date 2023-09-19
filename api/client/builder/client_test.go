@@ -14,6 +14,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -23,6 +24,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	log "github.com/sirupsen/logrus"
 )
 
 type roundtrip func(*http.Request) (*http.Response, error)
@@ -397,10 +399,18 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.Equal(t, uint64(1), withdrawals[0].Amount)
 	})
 	t.Run("deneb", func(t *testing.T) {
+
+		test := testSignedBlindedBeaconBlockAndBlobsDeneb(t)
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "deneb", r.Header.Get("Eth-Consensus-Version"))
+				var req shared.SignedBlindedBeaconBlockContentsDeneb
+				err := json.NewDecoder(r.Body).Decode(&req)
+				require.NoError(t, err)
+				block, err := req.SignedBlindedBlock.ToConsensus()
+				require.NoError(t, err)
+				require.DeepEqual(t, block, test.SignedBlindedBlock)
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadDeneb)),
@@ -412,11 +422,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			hc:      hc,
 			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 		}
-		test := testSignedBlindedBeaconBlockAndBlobsDeneb(t)
-		sbb, err := blocks.NewSignedBeaconBlock(test.Block)
+
+		sbb, err := blocks.NewSignedBeaconBlock(test.SignedBlindedBlock)
 		require.NoError(t, err)
 
-		ep, blobBundle, err := c.SubmitBlindedBlock(ctx, sbb, test.Blobs)
+		ep, blobBundle, err := c.SubmitBlindedBlock(ctx, sbb, test.SignedBlindedBlobSidecars)
 		require.NoError(t, err)
 		withdrawals, err := ep.Withdrawals()
 		require.NoError(t, err)
@@ -744,9 +754,13 @@ func testSignedBlindedBeaconBlockCapella(t *testing.T) *eth.SignedBlindedBeaconB
 }
 
 func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedBeaconBlockAndBlobsDeneb {
+	basebytes, err := shared.Uint256ToSSZBytes("14074904626401341155369551180448584754667373453244490859944217516317499064576")
+	if err != nil {
+		log.Error(err)
+	}
 	return &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-		Block: &eth.SignedBlindedBeaconBlockDeneb{
-			Block: &eth.BlindedBeaconBlockDeneb{
+		SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{
+			Message: &eth.BlindedBeaconBlockDeneb{
 				Slot:          1,
 				ProposerIndex: 1,
 				ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -758,7 +772,7 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 						DepositCount: 1,
 						BlockHash:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					},
-					Graffiti: ezDecode(t, "0xdeadbeefc0ffee"),
+					Graffiti: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 					ProposerSlashings: []*eth.ProposerSlashing{
 						{
 							Header_1: &eth.SignedBeaconBlockHeader{
@@ -861,8 +875,8 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 						},
 					},
 					SyncAggregate: &eth.SyncAggregate{
-						SyncCommitteeSignature: make([]byte, 48),
-						SyncCommitteeBits:      bitfield.Bitvector512{0x01},
+						SyncCommitteeSignature: make([]byte, 96),
+						SyncCommitteeBits:      bitfield.Bitvector512(ezDecode(t, "0x6451e9f951ebf05edc01de67e593484b672877054f055903ff0df1a1a945cf30ca26bb4d4b154f94a1bc776bcf5d0efb3603e1f9b8ee2499ccdcfe2a18cef458")),
 					},
 					ExecutionPayloadHeader: &v1.ExecutionPayloadHeaderDeneb{
 						ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -876,7 +890,7 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 						GasUsed:          1,
 						Timestamp:        1,
 						ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						BaseFeePerGas:    []byte(strconv.FormatUint(1, 10)),
+						BaseFeePerGas:    basebytes,
 						BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 						TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 						WithdrawalsRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -887,7 +901,7 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 			},
 			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 		},
-		Blobs: []*eth.SignedBlindedBlobSidecar{
+		SignedBlindedBlobSidecars: []*eth.SignedBlindedBlobSidecar{
 			{
 				Message: &eth.BlindedBlobSidecar{
 					BlockRoot:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),

@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -558,7 +559,8 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 
 	// Read first from db in case we have the blobs
 	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-	if err == nil {
+	switch {
+	case err == nil:
 		if len(sidecars) >= expected {
 			s.blobNotifiers.delete(root)
 			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
@@ -567,6 +569,11 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			logBlobSidecar(sidecars, t)
 			return nil
 		}
+	case errors.Is(err, db.ErrNotFound):
+		// If the blob sidecars haven't arrived yet, the subsequent code will wait for them.
+		// Note: The system will not exit with an error in this scenario.
+	default:
+		log.WithError(err).Error("could not get blob sidecars from DB")
 	}
 
 	found := map[uint64]struct{}{}

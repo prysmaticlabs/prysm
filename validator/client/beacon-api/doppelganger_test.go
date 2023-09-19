@@ -50,7 +50,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
 		getSyncingOutput            *apimiddleware.SyncingResponseJson
 		getForkOutput               *beacon.GetStateForkResponse
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
 			output *apimiddleware.StateValidatorsResponseJson
@@ -155,11 +155,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "99",
 							},
 						},
@@ -201,11 +201,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "3201",
 							},
 						},
@@ -334,7 +334,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -426,11 +426,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetHeadersOutput := &apimiddleware.BlockHeadersResponseJson{
-		Data: []*apimiddleware.BlockHeaderContainerJson{
+	standardGetHeadersOutput := &beacon.GetBlockHeadersResponse{
+		Data: []*shared.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-					Message: &apimiddleware.BeaconBlockHeaderJson{
+				Header: &shared.SignedBeaconBlockHeader{
+					Message: &shared.BeaconBlockHeader{
 						Slot: "1000",
 					},
 				},
@@ -464,7 +464,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		getSyncingError             error
 		getForkOutput               *beacon.GetStateForkResponse
 		getForkError                error
-		getHeadersOutput            *apimiddleware.BlockHeadersResponseJson
+		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
@@ -523,7 +523,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput:       &apimiddleware.BlockHeadersResponseJson{},
+			getHeadersOutput:       &beacon.GetBlockHeadersResponse{},
 			getHeadersError:        errors.New("custom error"),
 		},
 		{
@@ -532,11 +532,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput: &apimiddleware.BlockHeadersResponseJson{
-				Data: []*apimiddleware.BlockHeaderContainerJson{
+			getHeadersOutput: &beacon.GetBlockHeadersResponse{
+				Data: []*shared.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "not a slot",
 							},
 						},
@@ -792,7 +792,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := apimiddleware.BlockHeadersResponseJson{}
+				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,

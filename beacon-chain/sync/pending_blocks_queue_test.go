@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 //	/- b1 - b2
@@ -845,4 +846,41 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	assert.NoError(t, err)
 	// remove with a different block from the same slot.
 	require.NoError(t, r.deleteBlockFromPendingQueue(b.Block.Slot, bB, b1Root))
+}
+
+func TestAlreadySyncingBlock(t *testing.T) {
+	ctx := context.Background()
+	db := dbtest.SetupDB(t)
+	hook := logTest.NewGlobal()
+
+	mockChain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+
+	p1 := p2ptest.NewTestP2P(t)
+	r := &Service{
+		cfg: &config{
+			p2p:      p1,
+			beaconDB: db,
+			chain:    mockChain,
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	r.initCaches()
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 2
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(b.Block.Slot, wsb, bRoot))
+	mockChain.SyncingRoot = bRoot
+	require.NoError(t, r.processPendingBlocks(ctx))
+	require.LogsContain(t, hook, "Skipping pending block already being processed")
 }

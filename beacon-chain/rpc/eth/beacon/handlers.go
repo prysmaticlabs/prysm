@@ -14,7 +14,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -26,6 +28,7 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -642,8 +645,102 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, response)
 }
 
+// GetCommittees retrieves the committees for the given state at the given epoch.
+// If the requested slot and index are defined, only those committees are returned.
+func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetCommittees")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
+	if !ok {
+		return
+	}
+	ok, rawIndex, i := shared.UintFromQuery(w, r, "index")
+	if !ok {
+		return
+	}
+	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot")
+	if !ok {
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		helpers.HandleStateFetchError(w, err)
+		return
+	}
+
+	epoch := slots.ToEpoch(st.Slot())
+	if rawEpoch != "" {
+		epoch = primitives.Epoch(e)
+	}
+	activeCount, err := corehelpers.ActiveValidatorCount(ctx, st, epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get active validator count: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	startSlot, err := slots.EpochStart(epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get epoch start slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	endSlot, err := slots.EpochEnd(epoch)
+	if err != nil {
+		http2.HandleError(w, "Could not get epoch end slot: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	committeesPerSlot := corehelpers.SlotCommitteeCount(activeCount)
+	committees := make([]*shared.Committee, 0)
+	for slot := startSlot; slot <= endSlot; slot++ {
+		if rawSlot != "" && slot != primitives.Slot(sl) {
+			continue
+		}
+		for index := primitives.CommitteeIndex(0); index < primitives.CommitteeIndex(committeesPerSlot); index++ {
+			if rawIndex != "" && index != primitives.CommitteeIndex(i) {
+				continue
+			}
+			committee, err := corehelpers.BeaconCommitteeFromState(ctx, st, slot, index)
+			if err != nil {
+				http2.HandleError(w, "Could not get committee: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			var validators []string
+			for _, v := range committee {
+				validators = append(validators, strconv.FormatUint(uint64(v), 10))
+			}
+			committeeContainer := &shared.Committee{
+				Index:      strconv.FormatUint(uint64(index), 10),
+				Slot:       strconv.FormatUint(uint64(slot), 10),
+				Validators: validators,
+			}
+			committees = append(committees, committeeContainer)
+		}
+	}
+
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	http2.WriteJson(w, &GetCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
+}
+
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
+func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")
 	defer span.End()
 
@@ -656,4 +753,174 @@ func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	})
+}
+
+// GetBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
+func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
+	defer span.End()
+
+	rawSlot := r.URL.Query().Get("slot")
+	rawParentRoot := r.URL.Query().Get("parent_root")
+
+	var err error
+	var blks []interfaces.ReadOnlySignedBeaconBlock
+	var blkRoots [][32]byte
+
+	if rawParentRoot != "" {
+		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, 32)
+		if !valid {
+			return
+		}
+		blks, blkRoots, err = s.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(parentRoot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for parent root %s", parentRoot).Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		slot := uint64(s.ChainInfoFetcher.HeadSlot())
+		if rawSlot != "" {
+			var valid bool
+			slot, valid = shared.ValidateUint(w, "Slot", rawSlot)
+			if !valid {
+				return
+			}
+		}
+		blks, err = s.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+		_, blkRoots, err = s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	isOptimistic := false
+	isFinalized := true
+	blkHdrs := make([]*shared.SignedBeaconBlockHeaderContainer, len(blks))
+	for i, bl := range blks {
+		v1alpha1Header, err := bl.Header()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not get block header from block").Error(), http.StatusInternalServerError)
+			return
+		}
+		headerRoot, err := v1alpha1Header.Header.HashTreeRoot()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not hash block header").Error(), http.StatusInternalServerError)
+			return
+		}
+		canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not determine if block root is canonical").Error(), http.StatusInternalServerError)
+			return
+		}
+		if !isOptimistic {
+			isOptimistic, err = s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			if err != nil {
+				http2.HandleError(w, errors.Wrapf(err, "Could not check if block is optimistic").Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		if isFinalized {
+			isFinalized = s.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
+		}
+		blkHdrs[i] = &shared.SignedBeaconBlockHeaderContainer{
+			Header: &shared.SignedBeaconBlockHeader{
+				Message:   shared.BeaconBlockHeaderFromConsensus(v1alpha1Header.Header),
+				Signature: hexutil.Encode(v1alpha1Header.Signature),
+			},
+			Root:      hexutil.Encode(headerRoot[:]),
+			Canonical: canonical,
+		}
+	}
+
+	response := &GetBlockHeadersResponse{
+		Data:                blkHdrs,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, response)
+}
+
+// GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
+// not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
+func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		helpers.HandleStateFetchError(w, err)
+		return
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	pj := st.PreviousJustifiedCheckpoint()
+	cj := st.CurrentJustifiedCheckpoint()
+	f := st.FinalizedCheckpoint()
+	resp := &GetFinalityCheckpointsResponse{
+		Data: &FinalityCheckpoints{
+			PreviousJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(pj.Epoch), 10),
+				Root:  hexutil.Encode(pj.Root),
+			},
+			CurrentJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(cj.Epoch), 10),
+				Root:  hexutil.Encode(cj.Root),
+			},
+			Finalized: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(f.Epoch), 10),
+				Root:  hexutil.Encode(f.Root),
+			},
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, resp)
+}
+
+// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
+func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.GetGenesis")
+	defer span.End()
+
+	genesisTime := s.GenesisTimeFetcher.GenesisTime()
+	if genesisTime.IsZero() {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	validatorsRoot := s.ChainInfoFetcher.GenesisValidatorsRoot()
+	if bytes.Equal(validatorsRoot[:], params.BeaconConfig().ZeroHash[:]) {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	forkVersion := params.BeaconConfig().GenesisForkVersion
+
+	resp := &GetGenesisResponse{
+		Data: &Genesis{
+			GenesisTime:           strconv.FormatUint(uint64(genesisTime.Unix()), 10),
+			GenesisValidatorsRoot: hexutil.Encode(validatorsRoot[:]),
+			GenesisForkVersion:    hexutil.Encode(forkVersion),
+		},
+	}
+	http2.WriteJson(w, resp)
 }

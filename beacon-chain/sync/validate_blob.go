@@ -133,9 +133,13 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 	fields := blobFields(blob)
-	fields["sinceSlotStartTime"] = receivedTime.Sub(startTime)
+	sinceSlotStartTime := receivedTime.Sub(startTime)
+	fields["sinceSlotStartTime"] = sinceSlotStartTime
 	fields["validationTime"] = prysmTime.Now().Sub(receivedTime)
 	log.WithFields(fields).Debug("Received blob sidecar gossip")
+
+	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+
 	msg.ValidatorData = sBlob
 
 	return pubsub.ValidationAccept, nil

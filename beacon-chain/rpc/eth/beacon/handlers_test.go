@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -27,7 +29,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -35,6 +39,7 @@ import (
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -392,7 +397,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Block.Block)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.SignedBlindedBlock.Message)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
@@ -924,5 +929,603 @@ func TestGetStateFork(t *testing.T) {
 		err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
 		require.NoError(t, err)
 		assert.DeepEqual(t, true, stateForkReponse.Finalized)
+	})
+}
+
+func TestGetCommittees(t *testing.T) {
+	db := dbTest.SetupDB(t)
+	ctx := context.Background()
+	url := "http://example.com/eth/v1/beacon/states/{state_id}/committees"
+
+	var st state.BeaconState
+	st, _ = util.DeterministicGenesisState(t, 8192)
+	epoch := slots.ToEpoch(st.Slot())
+
+	chainService := &chainMock.ChainService{}
+	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: st,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+		BeaconDB:              db,
+	}
+
+	t.Run("Head all committees", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
+		for _, datum := range resp.Data {
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, index == 0 || index == 1)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+		}
+	})
+	t.Run("Head all committees of epoch 10", func(t *testing.T) {
+		query := url + "?epoch=10"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, true, slot >= 320 && slot <= 351)
+		}
+	})
+	t.Run("Head all committees of slot 4", func(t *testing.T) {
+		query := url + "?slot=4"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 2, len(resp.Data))
+
+		exSlot := uint64(4)
+		exIndex := uint64(0)
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exIndex++
+		}
+	})
+	t.Run("Head all committees of index 1", func(t *testing.T) {
+		query := url + "?index=1"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
+
+		exSlot := uint64(0)
+		exIndex := uint64(1)
+		for _, datum := range resp.Data {
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+			exSlot++
+		}
+	})
+	t.Run("Head all committees of slot 2, index 1", func(t *testing.T) {
+		query := url + "?slot=2&index=1"
+		request := httptest.NewRequest(http.MethodGet, query, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, 1, len(resp.Data))
+
+		exIndex := uint64(1)
+		exSlot := uint64(2)
+		for _, datum := range resp.Data {
+			index, err := strconv.ParseUint(datum.Index, 10, 32)
+			require.NoError(t, err)
+			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
+			require.NoError(t, err)
+			assert.Equal(t, epoch, slots.ToEpoch(primitives.Slot(slot)))
+			assert.Equal(t, exSlot, slot)
+			assert.Equal(t, exIndex, index)
+		}
+	})
+	t.Run("Execution optimistic", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		chainService = &chainMock.ChainService{Optimistic: true}
+		s = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("Finalized", func(t *testing.T) {
+		parentRoot := [32]byte{'a'}
+		blk := util.NewBeaconBlock()
+		blk.Block.ParentRoot = parentRoot[:]
+		root, err := blk.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, ctx, db, blk)
+		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
+
+		headerRoot, err := st.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService = &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s = &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+			BeaconDB:              db,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, url, nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+		s.GetCommittees(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetCommitteesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NoError(t, err)
+		assert.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetBlockHeaders(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	ctx := context.Background()
+
+	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
+	headBlock := blkContainers[len(blkContainers)-1]
+
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 30
+	b1.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b1)
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 30
+	b2.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b2)
+	b3 := util.NewBeaconBlock()
+	b3.Block.Slot = 31
+	b3.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b3)
+	b4 := util.NewBeaconBlock()
+	b4.Block.Slot = 28
+	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
+	util.SaveBlock(t, ctx, beaconDB, b4)
+
+	url := "http://example.com/eth/v1/beacon/headers"
+
+	t.Run("list headers", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		tests := []struct {
+			name       string
+			slot       primitives.Slot
+			parentRoot string
+			want       []*eth.SignedBeaconBlock
+			wantErr    bool
+		}{
+			{
+				name:       "slot",
+				slot:       primitives.Slot(30),
+				parentRoot: "",
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[30].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b2,
+				},
+			},
+			{
+				name:       "parent root",
+				parentRoot: hexutil.Encode(b1.Block.ParentRoot),
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[1].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b3,
+					b4,
+				},
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				urlWithParams := fmt.Sprintf("%s?slot=%d&parent_root=%s", url, tt.slot, tt.parentRoot)
+				request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+				writer := httptest.NewRecorder()
+
+				writer.Body = &bytes.Buffer{}
+
+				bs.GetBlockHeaders(writer, request)
+				resp := &GetBlockHeadersResponse{}
+				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+
+				require.Equal(t, len(tt.want), len(resp.Data))
+				for i, blk := range tt.want {
+					expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
+					require.NoError(t, err)
+					expectedHeader := &eth.BeaconBlockHeader{
+						Slot:          blk.Block.Slot,
+						ProposerIndex: blk.Block.ProposerIndex,
+						ParentRoot:    blk.Block.ParentRoot,
+						StateRoot:     make([]byte, 32),
+						BodyRoot:      expectedBodyRoot[:],
+					}
+					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
+					require.NoError(t, err)
+					assert.DeepEqual(t, hexutil.Encode(expectedHeaderRoot[:]), resp.Data[i].Root)
+					assert.DeepEqual(t, shared.BeaconBlockHeaderFromConsensus(expectedHeader), resp.Data[i].Header.Message)
+				}
+			})
+		}
+	})
+
+	t.Run("execution optimistic", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			Optimistic:          true,
+			FinalizedRoots:      map[[32]byte]bool{},
+			OptimisticRoots: map[[32]byte]bool{
+				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
+			},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+		slot := primitives.Slot(30)
+		urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+		request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+		writer := httptest.NewRecorder()
+
+		writer.Body = &bytes.Buffer{}
+
+		bs.GetBlockHeaders(writer, request)
+		resp := &GetBlockHeadersResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+
+	t.Run("finalized", func(t *testing.T) {
+		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
+		require.NoError(t, err)
+		child1 := util.NewBeaconBlock()
+		child1.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child1.Block.Slot = 999
+		util.SaveBlock(t, ctx, beaconDB, child1)
+		child2 := util.NewBeaconBlock()
+		child2.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
+		child2.Block.Slot = 1000
+		util.SaveBlock(t, ctx, beaconDB, child2)
+		child1Root, err := child1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		child2Root, err := child2.Block.HashTreeRoot()
+		require.NoError(t, err)
+		mockChainFetcher := &chainMock.ChainService{
+			DB:                  beaconDB,
+			Block:               wsb,
+			Root:                headBlock.BlockRoot,
+			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
+			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
+		}
+		bs := &Server{
+			BeaconDB:              beaconDB,
+			ChainInfoFetcher:      mockChainFetcher,
+			OptimisticModeFetcher: mockChainFetcher,
+			FinalizationFetcher:   mockChainFetcher,
+		}
+
+		t.Run("true", func(t *testing.T) {
+			slot := primitives.Slot(999)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, true, resp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			slot := primitives.Slot(1000)
+			urlWithParams := fmt.Sprintf("%s?slot=%d", url, slot)
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+		t.Run("false when at least one not finalized", func(t *testing.T) {
+			urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(child1.Block.ParentRoot))
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			resp := &GetBlockHeadersResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+	})
+}
+
+func TestGetFinalityCheckpoints(t *testing.T) {
+	fillCheckpoints := func(state *eth.BeaconState) error {
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("previous"), 32),
+			Epoch: 113,
+		}
+		state.CurrentJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("current"), 32),
+			Epoch: 123,
+		}
+		state.FinalizedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("finalized"), 32),
+			Epoch: 103,
+		}
+		return nil
+	}
+	fakeState, err := util.NewBeaconState(fillCheckpoints)
+	require.NoError(t, err)
+
+	chainService := &chainMock.ChainService{}
+	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: fakeState,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.FinalizedCheckpoint().Epoch), 10), resp.Data.Finalized.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.FinalizedCheckpoint().Root), resp.Data.Finalized.Root)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.CurrentJustifiedCheckpoint().Epoch), 10), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.CurrentJustifiedCheckpoint().Root), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.PreviousJustifiedCheckpoint().Epoch), 10), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.PreviousJustifiedCheckpoint().Root), resp.Data.PreviousJustified.Root)
+	})
+	t.Run("no state_id", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "state_id is required in URL params", e.Message)
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		chainService := &chainMock.ChainService{Optimistic: true}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetGenesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.GenesisForkVersion = []byte("genesis")
+	params.OverrideBeaconConfig(config)
+	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	validatorsRoot := [32]byte{1, 2, 3, 4, 5, 6}
+
+	t.Run("ok", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetGenesisResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+
+		assert.Equal(t, strconv.FormatInt(genesis.Unix(), 10), resp.Data.GenesisTime)
+		assert.DeepEqual(t, hexutil.Encode(validatorsRoot[:]), resp.Data.GenesisValidatorsRoot)
+		assert.DeepEqual(t, hexutil.Encode([]byte("genesis")), resp.Data.GenesisForkVersion)
+	})
+	t.Run("no genesis time", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        time.Time{},
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
+	})
+	t.Run("no genesis validators root", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: [32]byte{},
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
 }

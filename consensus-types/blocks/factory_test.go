@@ -142,7 +142,7 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 	})
 	t.Run("SignedBlindedBeaconBlockDeneb", func(t *testing.T) {
 		pb := &eth.SignedBlindedBeaconBlockDeneb{
-			Block: &eth.BlindedBeaconBlockDeneb{
+			Message: &eth.BlindedBeaconBlockDeneb{
 				Body: &eth.BlindedBeaconBlockBodyDeneb{}}}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
@@ -152,8 +152,8 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 	t.Run("GenericSignedBeaconBlock_BlindedDeneb", func(t *testing.T) {
 		pb := &eth.GenericSignedBeaconBlock_BlindedDeneb{
 			BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-				Block: &eth.SignedBlindedBeaconBlockDeneb{
-					Block: &eth.BlindedBeaconBlockDeneb{
+				SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{
+					Message: &eth.BlindedBeaconBlockDeneb{
 						Body: &eth.BlindedBeaconBlockBodyDeneb{},
 					}}}}
 		b, err := NewSignedBeaconBlock(pb)
@@ -520,9 +520,9 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 		header, err := PayloadToHeaderDeneb(wrapped)
 		require.NoError(t, err)
 		blindedBlock := &eth.SignedBlindedBeaconBlockDeneb{
-			Block: &eth.BlindedBeaconBlockDeneb{
+			Message: &eth.BlindedBeaconBlockDeneb{
 				Body: &eth.BlindedBeaconBlockBodyDeneb{}}}
-		blindedBlock.Block.Body.ExecutionPayloadHeader = header
+		blindedBlock.Message.Body.ExecutionPayloadHeader = header
 
 		blk, err := NewSignedBeaconBlock(blindedBlock)
 		require.NoError(t, err)
