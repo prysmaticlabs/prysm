@@ -55,9 +55,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		// Use builder payload if local payload is nil.
 		if builderPayload != nil {
 			blk.SetBlinded(true)
-			if err := blk.SetExecution(builderPayload); err != nil {
-				return err
-			}
+			return blk.SetExecution(builderPayload)
 		}
 		return errors.New("local and builder payloads are nil")
 	}

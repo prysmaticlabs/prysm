@@ -183,13 +183,18 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(blobBundle, sBlk.Block())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
-	}
-	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobBundle, sBlk.Block())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
+	var blindBlobs []*ethpb.BlindedBlobSidecar
+	var fullBlobs []*ethpb.BlobSidecar
+	if sBlk.IsBlinded() {
+		blindBlobs, err = blindBlobsBundleToSidecars(blindBlobBundle, sBlk.Block())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
+		}
+	} else {
+		fullBlobs, err = blobsBundleToSidecars(blobBundle, sBlk.Block())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
+		}
 	}
 
 	log.WithFields(logrus.Fields{
