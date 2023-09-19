@@ -162,7 +162,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
 		var overrideBuilder bool
 		var localPayload interfaces.ExecutionData
-		localPayload, blobBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+		localPayload, blobBundle, overrideBuilder, err = vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 		if err != nil {
 			log.WithError(err).Warn("failed to retrieve local payload; attempting builder payload if available")
 			if errors.Is(err, errLastMinFCU) && headChanged {

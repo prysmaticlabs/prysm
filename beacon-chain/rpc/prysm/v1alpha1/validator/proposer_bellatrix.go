@@ -59,7 +59,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				return err
 			}
 		}
-		return errors.New("local payload is nil")
+		return errors.New("local and builder payloads are nil")
 	}
 
 	// Use local payload if builder payload is nil.
