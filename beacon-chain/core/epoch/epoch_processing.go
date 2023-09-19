@@ -147,8 +147,8 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		limit = churnLimit
 	}
 	// Cap churn limit to max per epoch churn limit. New in EIP7514.
-	if limit > params.BeaconConfig().MaxPerEpochChurnLimit {
-		limit = params.BeaconConfig().MaxPerEpochChurnLimit
+	if limit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
+		limit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
 	}
 
 	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
