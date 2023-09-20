@@ -411,8 +411,7 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 }
 
 func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
-	var versionedHash common.Hash
-	versionedHash = sha256.Sum256(commitment)
+	versionedHash := sha256.Sum256(commitment)
 	versionedHash[0] = blobCommitmentVersionKZG
 	return versionedHash
 }
