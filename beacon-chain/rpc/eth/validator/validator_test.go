@@ -29,11 +29,11 @@ func TestProduceBlockV2(t *testing.T) {
 
 	t.Run("Phase 0", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: &ethpbalpha.BeaconBlock{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		resp, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -46,11 +46,11 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: &ethpbalpha.BeaconBlockAltair{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		resp, err := server.ProduceBlockV2(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -63,10 +63,10 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -81,10 +81,10 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Bellatrix blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -94,10 +94,10 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -111,10 +111,10 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("Capella blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -129,10 +129,10 @@ func TestProduceBlockV2(t *testing.T) {
 					Block: &ethpbalpha.BeaconBlockDeneb{Slot: 123},
 					Blobs: []*ethpbalpha.BlobSidecar{{Slot: 123}},
 				}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -154,10 +154,10 @@ func TestProduceBlockV2(t *testing.T) {
 					Block: &ethpbalpha.BlindedBeaconBlockDeneb{Slot: 123},
 					Blobs: []*ethpbalpha.BlindedBlobSidecar{{Slot: 123}},
 				}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -167,10 +167,10 @@ func TestProduceBlockV2(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true},
@@ -200,11 +200,11 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		resp, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -217,11 +217,11 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		resp, err := server.ProduceBlockV2SSZ(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -234,10 +234,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockBellatrix(&ethpbalpha.BeaconBlockBellatrix{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -250,10 +250,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("Bellatrix blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -265,10 +265,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockCapella(&ethpbalpha.BeaconBlockCapella{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -281,10 +281,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("Capella blinded", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -312,10 +312,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 				Blobs: blobs,
 			},
 		}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blkContents, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -350,10 +350,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 				},
 			},
 		}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(genericBlock, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
 		}
@@ -363,10 +363,10 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true},
@@ -394,12 +394,12 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 	t.Run("Phase 0", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: &ethpbalpha.BeaconBlock{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			BlockBuilder:   &builderTest.MockBuilderService{HasConfigured: true},
+			Proposer:     proposer,
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		resp, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -412,12 +412,12 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: &ethpbalpha.BeaconBlockAltair{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			BlockBuilder:   &builderTest.MockBuilderService{HasConfigured: true},
+			Proposer:     proposer,
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		resp, err := server.ProduceBlindedBlock(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -430,10 +430,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -449,10 +449,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Bellatrix full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -463,10 +463,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: &ethpbalpha.BlindedBeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -482,10 +482,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("Capella full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -514,10 +514,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 			},
 		}
 
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(genericBlock, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -549,10 +549,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 				Blobs: blobs,
 			},
 		}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blkContents, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -563,10 +563,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true},
@@ -604,12 +604,12 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBeaconBlock(&ethpbalpha.BeaconBlock{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Phase0{Phase0: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			BlockBuilder:   &builderTest.MockBuilderService{HasConfigured: true},
+			Proposer:     proposer,
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		resp, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -622,12 +622,12 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBeaconBlockAltair(&ethpbalpha.BeaconBlockAltair{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Altair{Altair: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
-			BlockBuilder:   &builderTest.MockBuilderService{HasConfigured: true},
+			Proposer:     proposer,
+			SyncChecker:  &mockSync.Sync{IsSyncing: false},
+			BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true},
 		}
 
 		resp, err := server.ProduceBlindedBlockSSZ(ctx, &ethpbv1.ProduceBlockRequest{})
@@ -640,10 +640,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBlindedBeaconBlockBellatrix(&ethpbalpha.BlindedBeaconBlockBellatrix{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -657,10 +657,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("Bellatrix full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Bellatrix{Bellatrix: &ethpbalpha.BeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -673,10 +673,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		b := util.HydrateBlindedBeaconBlockCapella(&ethpbalpha.BlindedBeaconBlockCapella{})
 		b.Slot = 123
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedCapella{BlindedCapella: b}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -690,10 +690,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("Capella full", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_Capella{Capella: &ethpbalpha.BeaconBlockCapella{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -724,10 +724,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 			},
 		}
 
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(genericBlock, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(genericBlock, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -760,10 +760,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 				Blobs: blobs,
 			},
 		}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blkContents, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blkContents, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: false},
@@ -774,10 +774,10 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 	})
 	t.Run("optimistic", func(t *testing.T) {
 		blk := &ethpbalpha.GenericBeaconBlock{Block: &ethpbalpha.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: &ethpbalpha.BlindedBeaconBlockBellatrix{Slot: 123}}}
-		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
+		proposer := mock.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(blk, nil)
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			BlockBuilder:          &builderTest.MockBuilderService{HasConfigured: true},
 			OptimisticModeFetcher: &mockChain.ChainService{Optimistic: true},

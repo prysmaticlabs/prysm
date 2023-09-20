@@ -10,6 +10,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	core "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -34,6 +35,21 @@ func NewMockProposer(ctrl *gomock.Controller) *MockProposer {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockProposer) EXPECT() *MockProposerMockRecorder {
 	return m.recorder
+}
+
+// GetBeaconBlock mocks base method.
+func (m *MockProposer) GetBeaconBlock(arg0 context.Context, arg1 primitives.Slot, arg2, arg3 []byte) (*eth.GenericBeaconBlock, *core.RpcError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBeaconBlock", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*eth.GenericBeaconBlock)
+	ret1, _ := ret[1].(*core.RpcError)
+	return ret0, ret1
+}
+
+// GetBeaconBlock indicates an expected call of GetBeaconBlock.
+func (mr *MockProposerMockRecorder) GetBeaconBlock(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconBlock", reflect.TypeOf((*MockProposer)(nil).GetBeaconBlock), arg0, arg1, arg2, arg3)
 }
 
 // ProposeBeaconBlock mocks base method.

@@ -32,4 +32,5 @@ type Server struct {
 	BlockBuilder           builder.BlockBuilder
 	OperationNotifier      operation.Notifier
 	CoreService            *core.Service
+	Proposer               core.Proposer
 }

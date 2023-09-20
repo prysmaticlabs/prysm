@@ -36,7 +36,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		return nil, err
 	}
 
-	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	b, rpcerr := vs.Proposer.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
 	if rpcerr != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
@@ -149,7 +149,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		return nil, err
 	}
 
-	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	b, rpcerr := vs.Proposer.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
 	if rpcerr != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
@@ -272,7 +272,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		return nil, err
 	}
 
-	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	b, rpcerr := vs.Proposer.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
 	if rpcerr != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
@@ -386,7 +386,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		return nil, err
 	}
 
-	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	b, rpcerr := vs.Proposer.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
 	if rpcerr != nil {
 		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}

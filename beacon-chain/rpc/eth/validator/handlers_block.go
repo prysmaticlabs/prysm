@@ -82,21 +82,21 @@ func (s *Server) produceBlockV3(
 		log.WithError(err).Error("Checking for SSZ failed, defaulting to JSON")
 		isSSZ = false
 	}
-	v1alpha1resp, rpcerr := s.CoreService.GetBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	b, rpcerr := s.Proposer.GetBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	if err != nil {
 		http2.HandleError(w, "Could not get beacon block: "+rpcerr.Err.Error(), core.ErrorReasonToHTTP(rpcerr.Reason))
 		return
 	}
-	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
-	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", v1alpha1resp.PayloadValue))
-	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
+	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", b.IsBlinded))
+	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", b.PayloadValue))
+	phase0Block, ok := b.Block.(*eth.GenericBeaconBlock_Phase0)
 	if ok {
-		handleProducePhase0V3(ctx, w, isSSZ, phase0Block, v1alpha1resp.PayloadValue)
+		handleProducePhase0V3(ctx, w, isSSZ, phase0Block, b.PayloadValue)
 		return
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Altair)
+	altairBlock, ok := b.Block.(*eth.GenericBeaconBlock_Altair)
 	if ok {
-		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, v1alpha1resp.PayloadValue)
+		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, b.PayloadValue)
 		return
 	}
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -108,34 +108,34 @@ func (s *Server) produceBlockV3(
 		http2.HandleError(w, "The node is currently optimistic and cannot serve validators", http.StatusServiceUnavailable)
 		return
 	}
-	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
+	blindedBellatrixBlock, ok := b.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
-		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue)
+		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, b.PayloadValue)
 		return
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Bellatrix)
+	bellatrixBlock, ok := b.Block.(*eth.GenericBeaconBlock_Bellatrix)
 	if ok {
-		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue)
+		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, b.PayloadValue)
 		return
 	}
-	blindedCapellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedCapella)
+	blindedCapellaBlock, ok := b.Block.(*eth.GenericBeaconBlock_BlindedCapella)
 	if ok {
-		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue)
+		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, b.PayloadValue)
 		return
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Capella)
+	capellaBlock, ok := b.Block.(*eth.GenericBeaconBlock_Capella)
 	if ok {
-		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue)
+		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, b.PayloadValue)
 		return
 	}
-	blindedDenebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
+	blindedDenebBlockContents, ok := b.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 	if ok {
-		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue)
+		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, b.PayloadValue)
 		return
 	}
-	denebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Deneb)
+	denebBlockContents, ok := b.Block.(*eth.GenericBeaconBlock_Deneb)
 	if ok {
-		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue)
+		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, b.PayloadValue)
 		return
 	}
 }

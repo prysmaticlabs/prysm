@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -30,14 +31,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -58,14 +60,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -86,14 +89,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -116,14 +120,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -146,14 +151,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -176,17 +182,17 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
 				g.PayloadValue = 2000 //some fake value
-				return g, err
+				return g, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -209,14 +215,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.ToUnsigned())
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.ToUnsigned().ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -239,14 +246,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.ToUnsigned())
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.ToUnsigned().ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -264,10 +272,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
 	})
 	t.Run("invalid query parameter slot empty", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		proposer := mock2.NewMockProposer(ctrl)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v3/validator/blocks/", nil)
 		writer := httptest.NewRecorder()
@@ -277,10 +285,10 @@ func TestProduceBlockV3(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "slot is required"))
 	})
 	t.Run("invalid query parameter slot invalid", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		proposer := mock2.NewMockProposer(ctrl)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v3/validator/blocks/asdfsad", nil)
 		writer := httptest.NewRecorder()
@@ -290,10 +298,10 @@ func TestProduceBlockV3(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(writer.Body.String(), "slot is invalid"))
 	})
 	t.Run("invalid query parameter randao_reveal invalid", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		proposer := mock2.NewMockProposer(ctrl)
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v3/validator/blocks/1?randao_reveal=0x213123", nil)
 		writer := httptest.NewRecorder()
@@ -325,14 +333,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -356,14 +365,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -387,14 +397,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -420,14 +431,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -453,14 +465,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.Message.ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -486,17 +499,17 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
 				g.PayloadValue = 2000 //some fake value
-				return g, err
+				return g, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -522,14 +535,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.ToUnsigned().ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}
@@ -555,14 +569,15 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
 		require.NoError(t, err)
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
-			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+			func() (*eth.GenericBeaconBlock, *core.RpcError) {
+				b, err := block.ToUnsigned().ToGeneric()
+				return b, &core.RpcError{Err: err}
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
-			V1Alpha1Server:        v1alpha1Server,
+			Proposer:              proposer,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
 		}

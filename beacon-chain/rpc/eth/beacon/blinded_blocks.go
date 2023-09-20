@@ -259,7 +259,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
 				BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
 					Block: b,
@@ -287,7 +287,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
 				BlindedCapella: b,
 			},
@@ -311,7 +311,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
 				BlindedBellatrix: b,
 			},
@@ -332,7 +332,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Altair{
 				Altair: b,
 			},
@@ -353,7 +353,7 @@ func (bs *Server) SubmitBlindedBlockSSZ(ctx context.Context, req *ethpbv2.SSZCon
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Phase0{
 				Phase0: b,
 			},
@@ -858,7 +858,7 @@ func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellat
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not convert block: %v", err)
 	}
-	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
 			BlindedBellatrix: b,
 		},
@@ -880,7 +880,7 @@ func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaB
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not convert block: %v", err)
 	}
-	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
 			BlindedCapella: b,
 		},
@@ -903,7 +903,7 @@ func (bs *Server) submitBlindedDenebContents(ctx context.Context, blindedDenebCo
 		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
 	}
 	blobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blindedDenebContents.SignedBlindedBlobSidecars)
-	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.Proposer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
 			BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
 				Block: blk,
