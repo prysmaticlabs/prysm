@@ -1343,6 +1343,131 @@ func TestGetBlockHeaders(t *testing.T) {
 	})
 }
 
+func TestServer_GetBlockHeader(t *testing.T) {
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 123
+	b.Block.ProposerIndex = 123
+	b.Block.StateRoot = bytesutil.PadTo([]byte("stateroot"), 32)
+	b.Block.ParentRoot = bytesutil.PadTo([]byte("parentroot"), 32)
+	b.Block.Body.Graffiti = bytesutil.PadTo([]byte("graffiti"), 32)
+	sb, err := blocks.NewSignedBeaconBlock(b)
+	sb.SetSignature(bytesutil.PadTo([]byte("sig"), 96))
+	require.NoError(t, err)
+
+	mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
+	mockChainService := &chainMock.ChainService{
+		FinalizedRoots: map[[32]byte]bool{},
+	}
+	s := &Server{
+		ChainInfoFetcher:      mockChainService,
+		OptimisticModeFetcher: mockChainService,
+		FinalizationFetcher:   mockChainService,
+		Blocker:               mockBlockFetcher,
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockHeader(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetBlockHeaderResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.Data.Canonical)
+		assert.Equal(t, "0x725b389a0e5a7623fa7600b9e5cb6248d5c293fc2f5877e42a665b44f40c85f6", resp.Data.Root)
+		assert.Equal(t, "0x736967000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", resp.Data.Header.Signature)
+		assert.Equal(t, "123", resp.Data.Header.Message.Slot)
+		assert.Equal(t, "0x706172656e74726f6f7400000000000000000000000000000000000000000000", resp.Data.Header.Message.ParentRoot)
+		assert.Equal(t, "123", resp.Data.Header.Message.ProposerIndex)
+		assert.Equal(t, "0xdd32cbaa01c6c0ef399b293f86884ce6a15b532d34682edb16a48fa70ea5bc79", resp.Data.Header.Message.BodyRoot)
+		assert.Equal(t, "0x7374617465726f6f740000000000000000000000000000000000000000000000", resp.Data.Header.Message.StateRoot)
+	})
+	t.Run("missing block_id", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockHeader(writer, request)
+		require.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "block_id is required in URL params", e.Message)
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		r, err := sb.Block().HashTreeRoot()
+		require.NoError(t, err)
+		mockChainService := &chainMock.ChainService{
+			OptimisticRoots: map[[32]byte]bool{r: true},
+			FinalizedRoots:  map[[32]byte]bool{},
+		}
+		s := &Server{
+			ChainInfoFetcher:      mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			Blocker:               mockBlockFetcher,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
+		request = mux.SetURLVars(request, map[string]string{"block_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetBlockHeader(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetBlockHeaderResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		r, err := sb.Block().HashTreeRoot()
+		require.NoError(t, err)
+
+		t.Run("true", func(t *testing.T) {
+			mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
+			s := &Server{
+				ChainInfoFetcher:      mockChainService,
+				OptimisticModeFetcher: mockChainService,
+				FinalizationFetcher:   mockChainService,
+				Blocker:               mockBlockFetcher,
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockHeader(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			resp := &GetBlockHeaderResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, true, resp.Finalized)
+		})
+		t.Run("false", func(t *testing.T) {
+			mockChainService := &chainMock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
+			s := &Server{
+				ChainInfoFetcher:      mockChainService,
+				OptimisticModeFetcher: mockChainService,
+				FinalizationFetcher:   mockChainService,
+				Blocker:               mockBlockFetcher,
+			}
+
+			request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/beacon/headers/{block_id}", nil)
+			request = mux.SetURLVars(request, map[string]string{"block_id": hexutil.Encode(r[:])})
+			writer := httptest.NewRecorder()
+			writer.Body = &bytes.Buffer{}
+
+			s.GetBlockHeader(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
+			resp := &GetBlockHeaderResponse{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+			assert.Equal(t, false, resp.Finalized)
+		})
+	})
+}
+
 func TestGetFinalityCheckpoints(t *testing.T) {
 	fillCheckpoints := func(state *eth.BeaconState) error {
 		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{

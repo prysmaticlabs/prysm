@@ -74,3 +74,9 @@ type GetBlockHeadersResponse struct {
 	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
 	Finalized           bool                                       `json:"finalized"`
 }
+
+type GetBlockHeaderResponse struct {
+	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
+	Finalized           bool                                     `json:"finalized"`
+	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
+}

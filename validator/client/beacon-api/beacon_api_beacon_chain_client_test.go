@@ -143,19 +143,19 @@ func TestListValidators(t *testing.T) {
 		testCases := []struct {
 			name                string
 			expectedError       string
-			blockHeaderResponse apimiddleware.BlockHeaderResponseJson
+			blockHeaderResponse beacon.GetBlockHeaderResponse
 		}{
 			{
 				name: "nil data",
-				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
+				blockHeaderResponse: beacon.GetBlockHeaderResponse{
 					Data: nil,
 				},
 				expectedError: "block header data is nil",
 			},
 			{
 				name: "nil data header",
-				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
-					Data: &apimiddleware.BlockHeaderContainerJson{
+				blockHeaderResponse: beacon.GetBlockHeaderResponse{
+					Data: &shared.SignedBeaconBlockHeaderContainer{
 						Header: nil,
 					},
 				},
@@ -163,9 +163,9 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "nil message",
-				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
-					Data: &apimiddleware.BlockHeaderContainerJson{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
+				blockHeaderResponse: beacon.GetBlockHeaderResponse{
+					Data: &shared.SignedBeaconBlockHeaderContainer{
+						Header: &shared.SignedBeaconBlockHeader{
 							Message: nil,
 						},
 					},
@@ -174,10 +174,10 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid header slot",
-				blockHeaderResponse: apimiddleware.BlockHeaderResponseJson{
-					Data: &apimiddleware.BlockHeaderContainerJson{
-						Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-							Message: &apimiddleware.BeaconBlockHeaderJson{
+				blockHeaderResponse: beacon.GetBlockHeaderResponse{
+					Data: &shared.SignedBeaconBlockHeaderContainer{
+						Header: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot: "foo",
 							},
 						},
@@ -768,12 +768,12 @@ func TestGetChainHead(t *testing.T) {
 		}
 	})
 
-	generateValidBlockHeadersResponse := func() apimiddleware.BlockHeaderResponseJson {
-		return apimiddleware.BlockHeaderResponseJson{
-			Data: &apimiddleware.BlockHeaderContainerJson{
+	generateValidBlockHeadersResponse := func() beacon.GetBlockHeaderResponse {
+		return beacon.GetBlockHeaderResponse{
+			Data: &shared.SignedBeaconBlockHeaderContainer{
 				Root: hexutil.Encode([]byte{7}),
-				Header: &apimiddleware.BeaconBlockHeaderContainerJson{
-					Message: &apimiddleware.BeaconBlockHeaderJson{
+				Header: &shared.SignedBeaconBlockHeader{
+					Message: &shared.BeaconBlockHeader{
 						Slot: "8",
 					},
 				},
@@ -784,7 +784,7 @@ func TestGetChainHead(t *testing.T) {
 	t.Run("fails to get head block headers", func(t *testing.T) {
 		testCases := []struct {
 			name                             string
-			generateHeadBlockHeadersResponse func() apimiddleware.BlockHeaderResponseJson
+			generateHeadBlockHeadersResponse func() beacon.GetBlockHeaderResponse
 			headBlockHeadersError            error
 			expectedError                    string
 		}{
@@ -792,14 +792,14 @@ func TestGetChainHead(t *testing.T) {
 				name:                  "query failed",
 				headBlockHeadersError: errors.New("foo error"),
 				expectedError:         "failed to get head block header",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
-					return apimiddleware.BlockHeaderResponseJson{}
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+					return beacon.GetBlockHeaderResponse{}
 				},
 			},
 			{
 				name:          "nil block header data",
 				expectedError: "block header data is nil",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data = nil
 					return validResponse
@@ -808,7 +808,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil block header data header",
 				expectedError: "block header data is nil",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header = nil
 					return validResponse
@@ -817,7 +817,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil block header message",
 				expectedError: "block header message is nil",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header.Message = nil
 					return validResponse
@@ -826,7 +826,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid message slot",
 				expectedError: "failed to parse head block slot `foo`",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header.Message.Slot = "foo"
 					return validResponse
@@ -836,7 +836,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid root",
 				expectedError: "failed to decode head block root `bar`",
-				generateHeadBlockHeadersResponse: func() apimiddleware.BlockHeaderResponseJson {
+				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Root = "bar"
 					return validResponse
@@ -861,7 +861,7 @@ func TestGetChainHead(t *testing.T) {
 					generateValidFinalityCheckpointsResponse(),
 				)
 
-				headBlockHeadersResponse := apimiddleware.BlockHeaderResponseJson{}
+				headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
 				jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 					nil,
 					testCase.headBlockHeadersError,
@@ -893,7 +893,7 @@ func TestGetChainHead(t *testing.T) {
 			generateValidFinalityCheckpointsResponse(),
 		)
 
-		headBlockHeadersResponse := apimiddleware.BlockHeaderResponseJson{}
+		headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
 		jsonRestHandler.EXPECT().GetRestJsonResponse(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 			nil,
 			nil,
