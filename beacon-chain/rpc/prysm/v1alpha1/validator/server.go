@@ -31,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -138,12 +139,26 @@ func (vs *Server) ValidatorIndex(ctx context.Context, req *ethpb.ValidatorIndexR
 }
 
 // DomainData fetches the current domain version information from the beacon state.
-func (vs *Server) DomainData(_ context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
+func (vs *Server) DomainData(ctx context.Context, request *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	fork, err := forks.Fork(request.Epoch)
 	if err != nil {
 		return nil, err
 	}
 	headGenesisValidatorsRoot := vs.HeadFetcher.HeadGenesisValidatorsRoot()
+	isExitDomain := [4]byte(request.Domain) == params.BeaconConfig().DomainVoluntaryExit
+	if isExitDomain {
+		hs, err := vs.HeadFetcher.HeadStateReadOnly(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if hs.Version() >= version.Deneb {
+			fork = &ethpb.Fork{
+				PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+				CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+				Epoch:           params.BeaconConfig().CapellaForkEpoch,
+			}
+		}
+	}
 	dv, err := signing.Domain(fork, request.Epoch, bytesutil.ToBytes4(request.Domain), headGenesisValidatorsRoot[:])
 	if err != nil {
 		return nil, err

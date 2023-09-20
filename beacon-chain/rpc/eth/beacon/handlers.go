@@ -740,7 +740,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
+func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")
 	defer span.End()
 
@@ -843,4 +843,84 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 		Finalized:           isFinalized,
 	}
 	http2.WriteJson(w, response)
+}
+
+// GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
+// not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
+func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		helpers.HandleStateFetchError(w, err)
+		return
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	pj := st.PreviousJustifiedCheckpoint()
+	cj := st.CurrentJustifiedCheckpoint()
+	f := st.FinalizedCheckpoint()
+	resp := &GetFinalityCheckpointsResponse{
+		Data: &FinalityCheckpoints{
+			PreviousJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(pj.Epoch), 10),
+				Root:  hexutil.Encode(pj.Root),
+			},
+			CurrentJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(cj.Epoch), 10),
+				Root:  hexutil.Encode(cj.Root),
+			},
+			Finalized: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(f.Epoch), 10),
+				Root:  hexutil.Encode(f.Root),
+			},
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, resp)
+}
+
+// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
+func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.GetGenesis")
+	defer span.End()
+
+	genesisTime := s.GenesisTimeFetcher.GenesisTime()
+	if genesisTime.IsZero() {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	validatorsRoot := s.ChainInfoFetcher.GenesisValidatorsRoot()
+	if bytes.Equal(validatorsRoot[:], params.BeaconConfig().ZeroHash[:]) {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	forkVersion := params.BeaconConfig().GenesisForkVersion
+
+	resp := &GetGenesisResponse{
+		Data: &Genesis{
+			GenesisTime:           strconv.FormatUint(uint64(genesisTime.Unix()), 10),
+			GenesisValidatorsRoot: hexutil.Encode(validatorsRoot[:]),
+			GenesisForkVersion:    hexutil.Encode(forkVersion),
+		},
+	}
+	http2.WriteJson(w, resp)
 }

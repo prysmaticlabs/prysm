@@ -108,7 +108,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
 		blinded = true
 		consensusVersion = "deneb"
-		beaconBlockRoot, err = blockType.BlindedDeneb.Block.HashTreeRoot()
+		beaconBlockRoot, err = blockType.BlindedDeneb.SignedBlindedBlock.HashTreeRoot()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to compute block root for blinded deneb beacon block")
 		}

@@ -609,7 +609,7 @@ func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int) (*
 	if err != nil {
 		return &engine.ExecutionPayloadEnvelope{}, err
 	}
-	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/, nil /*commitments*/, nil /*proofs*/), nil
+	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/), nil
 }
 
 // This modifies the provided payload to imprint the builder's extra data
