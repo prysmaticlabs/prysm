@@ -5,19 +5,14 @@ import (
 	"fmt"
 
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var errParticipation = status.Error(codes.Internal, "Could not obtain epoch participation")
 
 // ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block, which can then be signed by a proposer and submitted.
 // By definition `/eth/v2/validator/blocks/{slot}`, does not produce block using mev-boost and relayer network.
@@ -511,74 +506,4 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		}, nil
 	}
 	return nil, status.Error(codes.InvalidArgument, "Unsupported block type")
-}
-
-// GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
-// The beacon node might detect liveness by observing messages from the validator on the network,
-// in the beacon chain, from its API or from any other source.
-// A beacon node SHOULD support the current and previous epoch, however it MAY support earlier epoch.
-// It is important to note that the values returned by the beacon node are not canonical;
-// they are best-effort and based upon a subjective view of the network.
-// A beacon node that was recently started or suffered a network partition may indicate that a validator is not live when it actually is.
-func (vs *Server) GetLiveness(ctx context.Context, req *ethpbv2.GetLivenessRequest) (*ethpbv2.GetLivenessResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.GetLiveness")
-	defer span.End()
-
-	var participation []byte
-
-	// First we check if the requested epoch is the current epoch.
-	// If it is, then we won't be able to fetch the state at the end of the epoch.
-	// In that case we get participation info from the head state.
-	// We can also use the head state to get participation info for the previous epoch.
-	headSt, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "Could not get head state")
-	}
-	currEpoch := slots.ToEpoch(headSt.Slot())
-	if req.Epoch > currEpoch {
-		return nil, status.Error(codes.InvalidArgument, "Requested epoch cannot be in the future")
-	}
-
-	var st state.BeaconState
-	if req.Epoch == currEpoch {
-		st = headSt
-		participation, err = st.CurrentEpochParticipation()
-		if err != nil {
-			return nil, errParticipation
-		}
-	} else if req.Epoch == currEpoch-1 {
-		st = headSt
-		participation, err = st.PreviousEpochParticipation()
-		if err != nil {
-			return nil, errParticipation
-		}
-	} else {
-		epochEnd, err := slots.EpochEnd(req.Epoch)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get requested epoch's end slot")
-		}
-		st, err = vs.Stater.StateBySlot(ctx, epochEnd)
-		if err != nil {
-			return nil, status.Error(codes.Internal, "Could not get slot for requested epoch")
-		}
-		participation, err = st.CurrentEpochParticipation()
-		if err != nil {
-			return nil, errParticipation
-		}
-	}
-
-	resp := &ethpbv2.GetLivenessResponse{
-		Data: make([]*ethpbv2.GetLivenessResponse_Liveness, len(req.Index)),
-	}
-	for i, vi := range req.Index {
-		if vi >= primitives.ValidatorIndex(len(participation)) {
-			return nil, status.Errorf(codes.InvalidArgument, "Validator index %d is invalid", vi)
-		}
-		resp.Data[i] = &ethpbv2.GetLivenessResponse_Liveness{
-			Index:  vi,
-			IsLive: participation[vi] != 0,
-		}
-	}
-
-	return resp, nil
 }
