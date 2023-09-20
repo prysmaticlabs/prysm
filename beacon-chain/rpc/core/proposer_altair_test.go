@@ -14,7 +14,7 @@ import (
 func TestProposer_SetSyncAggregate_EmptyCase(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
 	require.NoError(t, err)
-	s := &Service{} // Sever is not initialized with sync committee pool.
+	s := &Service{} // Service is not initialized with sync committee pool.
 	s.setSyncAggregate(context.Background(), b)
 	agg, err := b.Block().Body().SyncAggregate()
 	require.NoError(t, err)
