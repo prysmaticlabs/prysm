@@ -44,13 +44,6 @@ option php_namespace = "Ethereum\\Eth\\Service";
 service BeaconChain {
   // Beacon state API related endpoints.
 
-  // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getGenesis
-  rpc GetGenesis(google.protobuf.Empty) returns (v1.GenesisResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/beacon/genesis"};
-  }
-
   // GetWeakSubjectivity is a new proposed endpoint to retrieve the details necessary to download
   // the ssz data needed to start a beacon node - checkpoint(epoch + block_root) and state_root
   // DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
@@ -65,16 +58,6 @@ service BeaconChain {
   rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
     option (google.api.http) = {
       get: "/internal/eth/v1/beacon/states/{state_id}/root"
-    };
-  }
-
-  // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
-  // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateFinalityCheckpoints
-  rpc GetFinalityCheckpoints(v1.StateRequest) returns (v1.StateFinalityCheckpointResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/finality_checkpoints"
     };
   }
 

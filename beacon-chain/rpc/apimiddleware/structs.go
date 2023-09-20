@@ -12,16 +12,6 @@ import (
 // Requests and responses.
 //----------------
 
-type GenesisResponseJson struct {
-	Data *GenesisResponse_GenesisJson `json:"data"`
-}
-
-type GenesisResponse_GenesisJson struct {
-	GenesisTime           string `json:"genesis_time" time:"true"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root" hex:"true"`
-	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
-}
-
 // WeakSubjectivityResponse is used to marshal/unmarshal the response for the
 // /eth/v1/beacon/weak_subjectivity endpoint.
 type WeakSubjectivityResponse struct {
@@ -39,18 +29,6 @@ type StateRootResponseJson struct {
 
 type StateRootResponse_StateRootJson struct {
 	StateRoot string `json:"root" hex:"true"`
-}
-
-type StateFinalityCheckpointResponseJson struct {
-	Data                *StateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
-	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
-	Finalized           bool                                                         `json:"finalized"`
-}
-
-type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
-	PreviousJustified *CheckpointJson `json:"previous_justified"`
-	CurrentJustified  *CheckpointJson `json:"current_justified"`
-	Finalized         *CheckpointJson `json:"finalized"`
 }
 
 type StateValidatorsResponseJson struct {

@@ -49,7 +49,7 @@ func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*b
 func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
-	finalityCheckpoints := apimiddleware.StateFinalityCheckpointResponseJson{}
+	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
 		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
 	}
