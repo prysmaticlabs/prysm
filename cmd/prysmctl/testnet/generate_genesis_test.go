@@ -3,6 +3,7 @@ package testnet
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -47,4 +48,13 @@ func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 		}
 	}
 	return jsonData
+}
+
+func Test_theOrderOfVersionNamesOutPutIsFixed(t *testing.T) {
+	versionsOld, versionMapOld := version.CreateVersions()
+	for i := 0; i < 50; i++ {
+		versionsNew, versionMapNew := version.CreateVersions()
+		assert.DeepEqual(t, versionsNew, versionsOld)
+		assert.DeepEqual(t, versionMapNew, versionMapOld)
+	}
 }

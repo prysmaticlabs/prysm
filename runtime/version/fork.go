@@ -52,8 +52,9 @@ func All() []int {
 	return allVersions
 }
 
-func init() {
-	allVersions = make([]int, len(versionToString))
+func CreateVersions() ([]int, map[string]int) {
+	versions := make([]int, len(versionToString))
+	versionMap := map[string]int{}
 
 	// range map is random, so we need to sort the keys
 	var keys []int
@@ -65,8 +66,14 @@ func init() {
 
 	i := 0
 	for _, k := range keys {
-		allVersions[i] = k
-		stringToVersion[versionToString[k]] = k
+		versions[i] = k
+		versionMap[versionToString[k]] = k
 		i++
 	}
+
+	return versions, versionMap
+}
+
+func init() {
+	allVersions, stringToVersion = CreateVersions()
 }
