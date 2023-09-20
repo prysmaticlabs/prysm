@@ -122,31 +122,6 @@ message BlockRequest {
     bytes block_id = 1;
 }
 
-message BlockHeaderResponse {
-    BlockHeaderContainer data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
-message BlockHeaderContainer {
-    // 32 byte merkle tree root of the ssz encoded block.
-    bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-
-    // Boolean indicating whether the block is canonical.
-    bool canonical = 2;
-
-    // Container for a signed beacon block header.
-    BeaconBlockHeaderContainer header = 3;
-}
-
-message BeaconBlockHeaderContainer {
-    // The unsigned beacon block header.
-    BeaconBlockHeader message = 1;
-
-    // 96 byte BLS signature from the validator that produced this block header.
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
 message BlockResponse {
     BeaconBlockContainer data = 1;
 }

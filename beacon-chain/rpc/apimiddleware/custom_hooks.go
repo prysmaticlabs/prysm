@@ -40,28 +40,6 @@ func wrapBLSChangesArray(
 	return true, nil
 }
 
-// Some endpoints e.g. https://ethereum.github.io/beacon-apis/#/Validator/getAttesterDuties expect posting a top-level array of validator indices.
-// We make it more proto-friendly by wrapping it in a struct with an 'Index' field.
-func wrapValidatorIndicesArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*ValidatorIndicesJson); ok {
-		indices := make([]string, 0)
-		if err := json.NewDecoder(req.Body).Decode(&indices); err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-		}
-		j := &ValidatorIndicesJson{Index: indices}
-		b, err := json.Marshal(j)
-		if err != nil {
-			return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-		}
-		req.Body = io.NopCloser(bytes.NewReader(b))
-	}
-	return true, nil
-}
-
 type v1alpha1SignedPhase0Block struct {
 	Block     *BeaconBlockJson `json:"block"` // tech debt on phase 0 called this block instead of "message"
 	Signature string           `json:"signature" hex:"true"`

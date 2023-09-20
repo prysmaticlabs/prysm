@@ -109,15 +109,6 @@ service BeaconChain {
     };
   }
 
-  // GetBlockHeader retrieves block header for given block id.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockHeader
-  rpc GetBlockHeader(v1.BlockRequest) returns (v1.BlockHeaderResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/headers/{block_id}"
-    };
-  }
-
   // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
   // included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
   // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
