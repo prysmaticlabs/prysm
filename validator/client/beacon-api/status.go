@@ -75,7 +75,6 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		return nil, nil, nil, errors.Wrap(err, "failed to get state validators")
 	}
 
-	// Get all validator count.
 	validatorsCountResponse, err := c.validatorCountProvider.GetValidatorCount(ctx, "head", nil)
 	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 		return nil, nil, nil, errors.Wrap(err, "failed to get total validator count")
