@@ -441,6 +441,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/sync_committees", beaconChainServerV1.SubmitSyncCommitteeSignatures).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers", beaconChainServerV1.GetBlockHeaders).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", beaconChainServerV1.GetDepositContract).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/genesis", beaconChainServerV1.GetGenesis).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/finality_checkpoints", beaconChainServerV1.GetFinalityCheckpoints).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
