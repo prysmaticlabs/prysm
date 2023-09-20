@@ -33,19 +33,6 @@ option php_namespace = "Ethereum\\Eth\\v1";
 
 // Beacon State API related messages.
 
-message GenesisResponse {
-    Genesis data = 1;
-
-    message Genesis {
-        // UTC time specified in the chain start event in the deposit contract.
-        google.protobuf.Timestamp genesis_time = 1;
-        // 32 byte hash tree root of the genesis validator set.
-        bytes genesis_validators_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
-        // 4 byte genesis fork version.
-        bytes genesis_fork_version = 3 [(ethereum.eth.ext.ssz_size) = "4"];
-    }
-}
-
 message StateRequest {
     // The state id which can be any of: "head" (canonical head in node's view),
     // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
@@ -60,18 +47,6 @@ message StateRootResponse {
     message StateRoot {
         // SSZ encoded state root for the requested state.
         bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    }
-}
-
-message StateFinalityCheckpointResponse {
-    StateFinalityCheckpoint data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-
-    message StateFinalityCheckpoint {
-        ethereum.eth.v1.Checkpoint previous_justified = 1;
-        ethereum.eth.v1.Checkpoint current_justified = 2;
-        ethereum.eth.v1.Checkpoint finalized = 3;
     }
 }
 

@@ -47,6 +47,28 @@ type GetStateForkResponse struct {
 	Finalized           bool         `json:"finalized"`
 }
 
+type GetFinalityCheckpointsResponse struct {
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
+	Finalized           bool                 `json:"finalized"`
+	Data                *FinalityCheckpoints `json:"data"`
+}
+
+type FinalityCheckpoints struct {
+	PreviousJustified *shared.Checkpoint `json:"previous_justified"`
+	CurrentJustified  *shared.Checkpoint `json:"current_justified"`
+	Finalized         *shared.Checkpoint `json:"finalized"`
+}
+
+type GetGenesisResponse struct {
+	Data *Genesis `json:"data"`
+}
+
+type Genesis struct {
+	GenesisTime           string `json:"genesis_time"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root"`
+	GenesisForkVersion    string `json:"genesis_fork_version"`
+}
+
 type GetBlockHeadersResponse struct {
 	Data                []*shared.SignedBeaconBlockHeaderContainer `json:"data"`
 	ExecutionOptimistic bool                                       `json:"execution_optimistic"`

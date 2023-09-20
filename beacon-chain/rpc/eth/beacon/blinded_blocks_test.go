@@ -120,7 +120,7 @@ func TestServer_GetBlindedBlock(t *testing.T) {
 			OptimisticModeFetcher: mockChainService,
 		}
 
-		expected, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(b.Block)
+		expected, err := migration.V1Alpha1BeaconBlockBlindedDenebToV2Blinded(b.Message)
 		require.NoError(t, err)
 		resp, err := bs.GetBlindedBlock(ctx, &ethpbv1.BlockRequest{})
 		require.NoError(t, err)

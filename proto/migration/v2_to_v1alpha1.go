@@ -172,5 +172,5 @@ func BlindedDenebBlockContentsToV1Alpha1(blockcontents *ethpbv2.SignedBlindedBea
 		return nil, errors.Wrap(err, "could not convert block")
 	}
 	blobs := SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blockcontents.SignedBlindedBlobSidecars)
-	return &ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb{Block: block, Blobs: blobs}, nil
+	return &ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: block, SignedBlindedBlobSidecars: blobs}, nil
 }

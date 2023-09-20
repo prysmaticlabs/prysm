@@ -237,7 +237,7 @@ func (s *Service) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	var blindSidecars []*ethpb.SignedBlindedBlobSidecar
 	if blk.Version() >= version.Deneb && blk.IsBlinded() {
-		blindSidecars = req.GetBlindedDeneb().Blobs
+		blindSidecars = req.GetBlindedDeneb().SignedBlindedBlobSidecars
 	}
 
 	unblinder, err := newUnblinder(blk, blindSidecars, s.BlockBuilder)
