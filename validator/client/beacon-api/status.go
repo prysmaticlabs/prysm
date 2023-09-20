@@ -89,7 +89,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		}
 	}
 
-	// Calculate last activated validator's index, it will be -1 if total and pending are equal to 0.
+	// Calculate last activated validator's index, it will be -1 whenever all validators are pending.
 	lastActivatedValidatorIndex := int(total - pending - 1)
 
 	for i, validatorContainer := range stateValidatorsResponse.Data {
@@ -134,7 +134,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 		// Set PositionInActivationQueue
 		switch status {
 		case ethpb.ValidatorStatus_PENDING, ethpb.ValidatorStatus_PARTIALLY_DEPOSITED, ethpb.ValidatorStatus_DEPOSITED:
-			if lastActivatedValidatorIndex > 0 {
+			if lastActivatedValidatorIndex >= 0 {
 				validatorStatus.PositionInActivationQueue = validatorIndex - uint64(lastActivatedValidatorIndex)
 			}
 		}

@@ -395,7 +395,7 @@ func (c beaconApiBeaconChainClient) GetValidatorCount(ctx context.Context, state
 	}
 
 	if len(statuses) != 0 && len(statuses) != len(validatorCountResponse.Data) {
-		return nil, errors.New("invalid validator count response")
+		return nil, errors.New("mismatch between validator count data and the number of statuses provided")
 	}
 
 	var resp []iface.ValidatorCount
