@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -18,8 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -44,10 +41,6 @@ type Server struct {
 	Ctx                    context.Context
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	HeadFetcher            blockchain.HeadFetcher
-	ForkFetcher            blockchain.ForkFetcher
-	ForkchoiceFetcher      blockchain.ForkchoiceFetcher
-	GenesisFetcher         blockchain.GenesisFetcher
-	FinalizationFetcher    blockchain.FinalizationFetcher
 	TimeFetcher            blockchain.TimeFetcher
 	BlockFetcher           execution.POWBlockFetcher
 	DepositFetcher         cache.DepositFetcher
@@ -59,20 +52,12 @@ type Server struct {
 	BlockNotifier          blockfeed.Notifier
 	P2P                    p2p.Broadcaster
 	AttPool                attestations.Pool
-	SlashingsPool          slashings.PoolManager
 	ExitPool               voluntaryexits.PoolManager
 	SyncCommitteePool      synccommittee.Pool
-	BlockReceiver          blockchain.BlockReceiver
-	MockEth1Votes          bool
-	Eth1BlockFetcher       execution.POWBlockFetcher
-	PendingDepositsFetcher depositcache.PendingDepositsFetcher
 	OperationNotifier      opfeed.Notifier
-	StateGen               stategen.StateManager
 	ReplayerBuilder        stategen.ReplayerBuilder
 	BeaconDB               db.HeadAccessDatabase
-	ExecutionEngineCaller  execution.EngineCaller
 	BlockBuilder           builder.BlockBuilder
-	BLSChangesPool         blstoexec.PoolManager
 	ClockWaiter            startup.ClockWaiter
 	CoreService            *core.Service
 }

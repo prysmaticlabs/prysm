@@ -14,11 +14,13 @@ go_library(
         "event_service_mock.go",
         "keymanager_mock.go",
         "node_service_mock.go",
+        "proposer_mock.go",
         "slasher_client_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/mock",
     visibility = ["//visibility:public"],
     deps = [
+        "//beacon-chain/rpc/core:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

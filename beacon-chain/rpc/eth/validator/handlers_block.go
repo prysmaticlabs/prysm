@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -65,23 +66,25 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 		graffiti = g
 	}
 
-	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
-		Slot:         primitives.Slot(slot),
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti,
-		SkipMevBoost: false,
-	})
+	s.produceBlockV3(ctx, w, r, primitives.Slot(slot), randaoReveal, graffiti)
 }
 
-func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest) {
+func (s *Server) produceBlockV3(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+	slot primitives.Slot,
+	randaoReveal []byte,
+	graffiti []byte,
+) {
 	isSSZ, err := http2.SszRequested(r)
 	if err != nil {
 		log.WithError(err).Error("Checking for SSZ failed, defaulting to JSON")
 		isSSZ = false
 	}
-	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
+	v1alpha1resp, rpcerr := s.CoreService.GetBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not get beacon block: "+rpcerr.Err.Error(), core.ErrorReasonToHTTP(rpcerr.Reason))
 		return
 	}
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))

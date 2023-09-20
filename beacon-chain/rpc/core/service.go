@@ -1,6 +1,8 @@
 package core
 
 import (
+	"context"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -17,7 +19,12 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
+
+type Proposer interface {
+	ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSignedBeaconBlock) ([]byte, *RpcError)
+}
 
 type Service struct {
 	HeadFetcher            blockchain.HeadFetcher

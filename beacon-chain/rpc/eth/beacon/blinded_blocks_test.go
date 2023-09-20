@@ -353,11 +353,11 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBeaconBlock()
@@ -373,11 +373,11 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBeaconBlockAltair()
@@ -394,11 +394,11 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBlindedBeaconBlockBellatrix()
@@ -433,11 +433,11 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		b := util.NewBlindedBeaconBlockCapella()
@@ -472,11 +472,11 @@ func TestServer_SubmitBlindedBlockSSZ(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
@@ -531,11 +531,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	t.Run("Phase 0", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
@@ -545,11 +545,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Altair", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
@@ -559,11 +559,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
@@ -573,11 +573,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Capella", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{
@@ -587,11 +587,11 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.NoError(t, err)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		proposer := mock2.NewMockProposer(ctrl)
+		proposer.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
 		server := &Server{
-			V1Alpha1ValidatorServer: v1alpha1Server,
-			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+			Proposer:    proposer,
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
 		blockReq := &ethpbv2.SignedBlindedBeaconBlockContentsContainer{

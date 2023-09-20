@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Server defines a server implementation of the gRPC Validator service,
@@ -27,7 +26,6 @@ type Server struct {
 	Stater                 lookup.Stater
 	OptimisticModeFetcher  blockchain.OptimisticModeFetcher
 	SyncCommitteePool      synccommittee.Pool
-	V1Alpha1Server         eth.BeaconNodeValidatorServer
 	ProposerSlotIndexCache *cache.ProposerPayloadIDsCache
 	ChainInfoFetcher       blockchain.ChainInfoFetcher
 	BeaconDB               db.HeadAccessDatabase

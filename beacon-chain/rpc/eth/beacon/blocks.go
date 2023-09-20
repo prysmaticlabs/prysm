@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
@@ -219,7 +220,7 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{
 				Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{
 					Block: b,
@@ -227,11 +228,11 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 				},
 			},
 		})
-		if err != nil {
-			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+		if rpcerr != nil {
+			if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 			}
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().CapellaForkVersion):
@@ -246,16 +247,16 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Capella{
 				Capella: b,
 			},
 		})
-		if err != nil {
-			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+		if rpcerr != nil {
+			if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 			}
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion):
@@ -270,16 +271,16 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Bellatrix{
 				Bellatrix: b,
 			},
 		})
-		if err != nil {
-			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+		if rpcerr != nil {
+			if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 			}
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion):
@@ -291,16 +292,16 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Altair{
 				Altair: b,
 			},
 		})
-		if err != nil {
-			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+		if rpcerr != nil {
+			if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 			}
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 		}
 		return &emptypb.Empty{}, nil
 	case bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion):
@@ -312,16 +313,16 @@ func (bs *Server) SubmitBlockSSZ(ctx context.Context, req *ethpbv2.SSZContainer)
 		if err != nil {
 			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not get proto block: %v", err)
 		}
-		_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+		_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Phase0{
 				Phase0: b,
 			},
 		})
-		if err != nil {
-			if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, err.Error())
+		if rpcerr != nil {
+			if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+				return &emptypb.Empty{}, status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 			}
-			return &emptypb.Empty{}, status.Errorf(codes.Internal, "Could not propose block: %v", err)
+			return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 		}
 		return &emptypb.Empty{}, nil
 	default:
@@ -1085,16 +1086,16 @@ func (bs *Server) submitPhase0Block(ctx context.Context, phase0Blk *ethpbv1.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block: %v", err)
 	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Phase0{
 			Phase0: v1alpha1Blk,
 		},
 	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
+	if rpcerr != nil {
+		if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 		}
-		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		return status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 	}
 	return nil
 }
@@ -1104,16 +1105,16 @@ func (bs *Server) submitAltairBlock(ctx context.Context, altairBlk *ethpbv2.Beac
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block %v", err)
 	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Altair{
 			Altair: v1alpha1Blk,
 		},
 	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
+	if rpcerr != nil {
+		if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 		}
-		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		return status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 	}
 	return nil
 }
@@ -1123,16 +1124,16 @@ func (bs *Server) submitBellatrixBlock(ctx context.Context, bellatrixBlk *ethpbv
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Bellatrix{
 			Bellatrix: v1alpha1Blk,
 		},
 	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
+	if rpcerr != nil {
+		if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 		}
-		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		return status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 	}
 	return nil
 }
@@ -1142,16 +1143,16 @@ func (bs *Server) submitCapellaBlock(ctx context.Context, capellaBlk *ethpbv2.Be
 	if err != nil {
 		return status.Errorf(codes.InvalidArgument, "Could not convert block to v1 block")
 	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Capella{
 			Capella: v1alpha1Blk,
 		},
 	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
+	if rpcerr != nil {
+		if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 		}
-		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		return status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 	}
 	return nil
 }
@@ -1165,7 +1166,7 @@ func (bs *Server) submitDenebContents(ctx context.Context, denebContents *ethpbv
 		return status.Errorf(codes.Internal, "Could not get block: %v", err)
 	}
 	blobs := migration.SignedBlobsToV1Alpha1SignedBlobs(denebContents.SignedBlobSidecars)
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
+	_, rpcerr := bs.CoreService.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
 		Block: &eth.GenericSignedBeaconBlock_Deneb{
 			Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{
 				Block: blk,
@@ -1173,11 +1174,11 @@ func (bs *Server) submitDenebContents(ctx context.Context, denebContents *ethpbv
 			},
 		},
 	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
+	if rpcerr != nil {
+		if strings.Contains(rpcerr.Err.Error(), validator.CouldNotDecodeBlock) {
+			return status.Error(codes.InvalidArgument, rpcerr.Err.Error())
 		}
-		return status.Errorf(codes.Internal, "Could not propose block: %v", err)
+		return status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not propose block: %v", rpcerr.Err)
 	}
 	return nil
 }

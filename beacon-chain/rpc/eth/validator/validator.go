@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -35,18 +36,11 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 		return nil, err
 	}
 
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-		SkipMevBoost: true, // Skip mev-boost and relayer network
+	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	if rpcerr != nil {
+		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
-	}
-	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	phase0Block, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
 	if ok {
 		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
 		if err != nil {
@@ -59,7 +53,7 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	altairBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 		if err != nil {
@@ -79,11 +73,11 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	bellatrixBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
 		if err != nil {
@@ -96,11 +90,11 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	capellaBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
 		if err != nil {
@@ -113,11 +107,11 @@ func (vs *Server) ProduceBlockV2(ctx context.Context, req *ethpbv1.ProduceBlockR
 			},
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Deneb beacon block contents are blinded")
 	}
-	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	denebBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
 	if ok {
 		blockAndBlobs, err := migration.V1Alpha1BeaconBlockDenebAndBlobsToV2(denebBlock.Deneb)
 		if err != nil {
@@ -155,18 +149,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		return nil, err
 	}
 
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-		SkipMevBoost: true, // Skip mev-boost and relayer network
+	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	if rpcerr != nil {
+		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
-	}
-	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	phase0Block, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
 	if ok {
 		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
 		if err != nil {
@@ -181,7 +168,7 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Data:    sszBlock,
 		}, nil
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	altairBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 		if err != nil {
@@ -203,11 +190,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is blinded")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	bellatrixBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBellatrixToV2(bellatrixBlock.Bellatrix)
 		if err != nil {
@@ -222,11 +209,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 			Data:    sszBlock,
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is blinded")
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	capellaBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockCapellaToV2(capellaBlock.Capella)
 		if err != nil {
@@ -242,11 +229,11 @@ func (vs *Server) ProduceBlockV2SSZ(ctx context.Context, req *ethpbv1.ProduceBlo
 		}, nil
 	}
 
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Deneb beacon blockcontent is blinded")
 	}
-	denebBlockcontent, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	denebBlockcontent, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
 	if ok {
 		blockContent, err := migration.V1Alpha1BeaconBlockDenebAndBlobsToV2(denebBlockcontent.Deneb)
 		if err != nil {
@@ -285,18 +272,12 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 		return nil, err
 	}
 
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
+	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	if rpcerr != nil {
+		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
 
-	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	phase0Block, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
 	if ok {
 		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
 		if err != nil {
@@ -309,7 +290,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	altairBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 		if err != nil {
@@ -329,11 +310,11 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	bellatrixBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		blk, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
 		if err != nil {
@@ -346,11 +327,11 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared beacon block is not blinded")
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	capellaBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		blk, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
 		if err != nil {
@@ -363,11 +344,11 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Deneb beacon block contents are not blinded")
 	}
-	denebBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	denebBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		blockAndBlobs, err := migration.V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(denebBlock.BlindedDeneb)
 		if err != nil {
@@ -384,7 +365,7 @@ func (vs *Server) ProduceBlindedBlock(ctx context.Context, req *ethpbv1.ProduceB
 			},
 		}, nil
 	}
-	return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("block was not a supported blinded block type, validator may not be registered if using a relay. received: %T", v1alpha1resp.Block))
+	return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("block was not a supported blinded block type, validator may not be registered if using a relay. received: %T", b.Block))
 }
 
 // ProduceBlindedBlockSSZ requests the beacon node to produce a valid unsigned blinded beacon block,
@@ -405,18 +386,12 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 		return nil, err
 	}
 
-	v1alpha1req := &ethpbalpha.BlockRequest{
-		Slot:         req.Slot,
-		RandaoReveal: req.RandaoReveal,
-		Graffiti:     req.Graffiti,
-	}
-	v1alpha1resp, err := vs.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
-	if err != nil {
-		// We simply return err because it's already of a gRPC error type.
-		return nil, err
+	b, rpcerr := vs.CoreService.GetBeaconBlock(ctx, req.Slot, req.RandaoReveal, req.Graffiti)
+	if rpcerr != nil {
+		return nil, status.Errorf(core.ErrorReasonToGRPC(rpcerr.Reason), "Could not get beacon block: %v", rpcerr.Err)
 	}
 
-	phase0Block, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
+	phase0Block, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Phase0)
 	if ok {
 		block, err := migration.V1Alpha1ToV1Block(phase0Block.Phase0)
 		if err != nil {
@@ -431,7 +406,7 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 			Data:    sszBlock,
 		}, nil
 	}
-	altairBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
+	altairBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_Altair)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockAltairToV2(altairBlock.Altair)
 		if err != nil {
@@ -453,11 +428,11 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 	if optimistic {
 		return nil, status.Errorf(codes.Unavailable, "The node is currently optimistic and cannot serve validators")
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Bellatrix)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Bellatrix beacon block is not blinded")
 	}
-	bellatrixBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
+	bellatrixBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(bellatrixBlock.BlindedBellatrix)
 		if err != nil {
@@ -472,11 +447,11 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 			Data:    sszBlock,
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Capella)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Capella beacon block is not blinded")
 	}
-	capellaBlock, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
+	capellaBlock, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		block, err := migration.V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(capellaBlock.BlindedCapella)
 		if err != nil {
@@ -491,11 +466,11 @@ func (vs *Server) ProduceBlindedBlockSSZ(ctx context.Context, req *ethpbv1.Produ
 			Data:    sszBlock,
 		}, nil
 	}
-	_, ok = v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
+	_, ok = b.Block.(*ethpbalpha.GenericBeaconBlock_Deneb)
 	if ok {
 		return nil, status.Error(codes.Internal, "Prepared Deneb beacon block content is not blinded")
 	}
-	denebBlockcontent, ok := v1alpha1resp.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
+	denebBlockcontent, ok := b.Block.(*ethpbalpha.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		blockContent, err := migration.V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(denebBlockcontent.BlindedDeneb)
 		if err != nil {

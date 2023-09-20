@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -40,7 +39,6 @@ type Server struct {
 	HeadFetcher                   blockchain.HeadFetcher
 	TimeFetcher                   blockchain.TimeFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
-	V1Alpha1ValidatorServer       eth.BeaconNodeValidatorServer
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
 	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
@@ -48,4 +46,5 @@ type Server struct {
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
 	CoreService                   *core.Service
+	Proposer                      core.Proposer
 }

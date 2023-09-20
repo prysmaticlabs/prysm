@@ -17,6 +17,7 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -425,9 +426,9 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 }
 
 func (bs *Server) proposeBlock(ctx context.Context, w http.ResponseWriter, blk *eth.GenericSignedBeaconBlock) {
-	_, err := bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, blk)
+	_, err := bs.Proposer.ProposeBeaconBlock(ctx, blk)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not propose block: "+err.Err.Error(), core.ErrorReasonToHTTP(err.Reason))
 		return
 	}
 }
