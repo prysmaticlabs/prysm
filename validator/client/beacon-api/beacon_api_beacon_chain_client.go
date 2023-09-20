@@ -402,7 +402,7 @@ func (c beaconApiBeaconChainClient) GetValidatorCount(ctx context.Context, state
 	for _, vc := range validatorCountResponse.Data {
 		count, err := strconv.ParseUint(vc.Count, 10, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse validator count: %s", vc.Count)
+			return nil, errors.Wrapf(err, "failed to parse validator count %s", vc.Count)
 		}
 
 		resp = append(resp, iface.ValidatorCount{
