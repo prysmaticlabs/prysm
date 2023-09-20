@@ -651,8 +651,8 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
-	var req GetAttesterDutiesRequest
-	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -661,12 +661,12 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(req.ValidatorIndices) == 0 {
+	if len(indices) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
-	for i, ix := range req.ValidatorIndices {
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
 		if !valid {
 			return
@@ -893,8 +893,8 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		http2.HandleError(w, "Sync committees are not supported for Phase0", http.StatusBadRequest)
 		return
 	}
-	var req GetSyncCommitteeDutiesRequest
-	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -903,12 +903,12 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(req.ValidatorIndices) == 0 {
+	if len(indices) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
-	for i, ix := range req.ValidatorIndices {
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
 		if !valid {
 			return
@@ -999,8 +999,8 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
-	var req GetLivenessRequest
-	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -1009,12 +1009,12 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(req.ValidatorIndices) == 0 {
+	if len(indices) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
-	for i, ix := range req.ValidatorIndices {
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
 		if !valid {
 			return
