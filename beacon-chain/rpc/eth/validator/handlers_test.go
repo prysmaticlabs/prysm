@@ -2567,6 +2567,185 @@ func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	}
 }
 
+func TestGetLiveness(t *testing.T) {
+	// Setup:
+	// Epoch 0 - both validators not live
+	// Epoch 1 - validator with index 1 is live
+	// Epoch 2 - validator with index 0 is live
+	oldSt, err := util.NewBeaconStateBellatrix()
+	require.NoError(t, err)
+	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
+	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
+	headSt, err := util.NewBeaconStateBellatrix()
+	require.NoError(t, err)
+	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
+	require.NoError(t, headSt.AppendPreviousParticipationBits(0))
+	require.NoError(t, headSt.AppendPreviousParticipationBits(1))
+	require.NoError(t, headSt.AppendCurrentParticipationBits(1))
+	require.NoError(t, headSt.AppendCurrentParticipationBits(0))
+
+	s := &Server{
+		HeadFetcher: &mockChain.ChainService{State: headSt},
+		Stater: &testutil.MockStater{
+			// We configure states for last slots of an epoch
+			StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
+			},
+		},
+	}
+
+	t.Run("old epoch", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetLivenessResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == "0" && !data0.IsLive) || (data0.Index == "1" && !data0.IsLive))
+		assert.Equal(t, true, (data1.Index == "0" && !data1.IsLive) || (data1.Index == "1" && !data1.IsLive))
+	})
+	t.Run("previous epoch", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetLivenessResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == "0" && !data0.IsLive) || (data0.Index == "1" && data0.IsLive))
+		assert.Equal(t, true, (data1.Index == "0" && !data1.IsLive) || (data1.Index == "1" && data1.IsLive))
+	})
+	t.Run("current epoch", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "2"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetLivenessResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+		data0 := resp.Data[0]
+		data1 := resp.Data[1]
+		assert.Equal(t, true, (data0.Index == "0" && data0.IsLive) || (data0.Index == "1" && !data0.IsLive))
+		assert.Equal(t, true, (data1.Index == "0" && data1.IsLive) || (data1.Index == "1" && !data1.IsLive))
+	})
+	t.Run("future epoch", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		require.StringContains(t, "Requested epoch cannot be in the future", e.Message)
+	})
+	t.Run("no epoch provided", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Epoch is required"))
+	})
+	t.Run("invalid epoch provided", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "foo"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, true, strings.Contains(e.Message, "Epoch is invalid"))
+	})
+	t.Run("no body", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", nil)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+	t.Run("empty", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "3"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+	t.Run("unknown validator index", func(t *testing.T) {
+		var body bytes.Buffer
+		_, err := body.WriteString("[\"0\",\"1\",\"2\"]")
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://example.com/eth/v1/validator/liveness/{epoch}", &body)
+		request = mux.SetURLVars(request, map[string]string{"epoch": "0"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetLiveness(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		require.StringContains(t, "Validator index 2 is invalid", e.Message)
+	})
+}
+
 var (
 	singleContribution = `[
   {

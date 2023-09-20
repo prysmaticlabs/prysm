@@ -29,8 +29,8 @@ type beaconApiBeaconChainClient struct {
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
-func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
-	blockHeader := apimiddleware.BlockHeaderResponseJson{}
+func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
+	blockHeader := beacon.GetBlockHeaderResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
 		return nil, errors.Wrap(err, "failed to get head block header")
 	}
