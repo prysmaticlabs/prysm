@@ -831,7 +831,6 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, slot := range proposalSlots {
-			s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			duties = append(duties, &ProposerDuty{
 				Pubkey:         hexutil.Encode(pubkey),
 				ValidatorIndex: strconv.FormatUint(uint64(index), 10),
@@ -839,8 +838,6 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-
-	s.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 
 	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
 	if err != nil {
