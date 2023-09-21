@@ -22,14 +22,13 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 		return err
 	}
 
+	s.cfg.chain.SendNewBlobEvent([32]byte(b.Message.BlockRoot), b.Message.Index)
+
 	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.BlobSidecarReceived,
 		Data: &opfeed.BlobSidecarReceivedData{
 			Blob: b,
 		},
 	})
-
-	s.cfg.chain.SendNewBlobEvent([32]byte(b.Message.BlockRoot), b.Message.Index)
-
 	return nil
 }
