@@ -430,6 +430,131 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 	require.DeepEqual(t, change, got.GetCapella().Body.BlsToExecutionChanges[0])
 }
 
+func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+	transition.SkipSlotCache.Disable()
+
+	params.SetupTestConfigCleanup(t)
+	cfg := params.BeaconConfig().Copy()
+	cfg.DenebForkEpoch = 4
+	cfg.CapellaForkEpoch = 3
+	cfg.BellatrixForkEpoch = 2
+	cfg.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(cfg)
+	beaconState, privKeys := util.DeterministicGenesisState(t, 64)
+
+	stateRoot, err := beaconState.HashTreeRoot(ctx)
+	require.NoError(t, err, "Could not hash genesis state")
+
+	genesis := b.NewGenesisBlock(stateRoot[:])
+	util.SaveBlock(t, ctx, db, genesis)
+
+	parentRoot, err := genesis.Block.HashTreeRoot()
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
+
+	denebSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+	require.NoError(t, err)
+
+	var scBits [fieldparams.SyncAggregateSyncCommitteeBytesLength]byte
+	blk := &ethpb.SignedBeaconBlockDeneb{
+		Block: &ethpb.BeaconBlockDeneb{
+			Slot:       denebSlot + 1,
+			ParentRoot: parentRoot[:],
+			StateRoot:  genesis.Block.StateRoot,
+			Body: &ethpb.BeaconBlockBodyDeneb{
+				RandaoReveal:  genesis.Block.Body.RandaoReveal,
+				Graffiti:      genesis.Block.Body.Graffiti,
+				Eth1Data:      genesis.Block.Body.Eth1Data,
+				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
+				ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
+					ParentHash:    make([]byte, fieldparams.RootLength),
+					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+					StateRoot:     make([]byte, fieldparams.RootLength),
+					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BaseFeePerGas: make([]byte, fieldparams.RootLength),
+					BlockHash:     make([]byte, fieldparams.RootLength),
+				},
+			},
+		},
+		Signature: genesis.Signature,
+	}
+
+	blkRoot, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, err, "Could not get signing root")
+	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
+	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
+
+	random, err := helpers.RandaoMix(beaconState, slots.ToEpoch(beaconState.Slot()))
+	require.NoError(t, err)
+	timeStamp, err := slots.ToTime(beaconState.GenesisTime(), denebSlot+1)
+	require.NoError(t, err)
+	payload := &enginev1.ExecutionPayloadDeneb{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    random,
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		ExtraData:     make([]byte, 0),
+		BlockNumber:   1,
+		GasLimit:      2,
+		GasUsed:       3,
+		Timestamp:     uint64(timeStamp.Unix()),
+		BlobGasUsed:   4,
+		ExcessBlobGas: 5,
+	}
+
+	kc := make([][]byte, 0)
+	kc = append(kc, bytesutil.PadTo([]byte("kc"), 48))
+	kc = append(kc, bytesutil.PadTo([]byte("kc1"), 48))
+	kc = append(kc, bytesutil.PadTo([]byte("kc2"), 48))
+	proofs := [][]byte{[]byte("proof"), []byte("proof1"), []byte("proof2")}
+	blobs := [][]byte{[]byte("blob"), []byte("blob1"), []byte("blob2")}
+	bundle := &enginev1.BlobsBundle{KzgCommitments: kc, Proofs: proofs, Blobs: blobs}
+	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
+		PayloadIDBytes:        &enginev1.PayloadIDBytes{1},
+		ExecutionPayloadDeneb: payload,
+		BlobsBundle:           bundle,
+	}
+
+	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
+	require.NoError(t, err)
+
+	graffiti := bytesutil.ToBytes32([]byte("eth2"))
+	require.NoError(t, err)
+	req := &ethpb.BlockRequest{
+		Slot:         denebSlot + 1,
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti[:],
+	}
+
+	copiedState := beaconState.Copy()
+	copiedState, err = transition.ProcessSlots(ctx, copiedState, denebSlot+1)
+	require.NoError(t, err)
+	change, err := util.GenerateBLSToExecutionChange(copiedState, privKeys[1], 0)
+	require.NoError(t, err)
+	proposerServer.BLSChangesPool.InsertBLSToExecChange(change)
+
+	got, err := proposerServer.GetBeaconBlock(ctx, req)
+	require.NoError(t, err)
+	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
+
+	require.Equal(t, 3, len(got.GetDeneb().Blobs))
+	blockRoot, err := got.GetDeneb().Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.DeepEqual(t, blockRoot[:], got.GetDeneb().Blobs[0].BlockRoot)
+}
+
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	cfg := params.BeaconConfig().Copy()
@@ -511,6 +636,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
 		name  string
 		block func([32]byte) *ethpb.GenericSignedBeaconBlock
+		err   string
 	}{
 		{
 			name: "phase0",
@@ -558,6 +684,100 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "bellatrix",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockBellatrix()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block no blob",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block has blobs",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlobSidecar{
+						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block has too many blobs",
+			err:  "too many blobs in block: 7",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockDeneb()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+					Block: blockToPropose,
+					Blobs: []*ethpb.SignedBlobSidecar{
+						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 5, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.BlobSidecar{Index: 6, Slot: 5, BlockParentRoot: parent[:]}},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "blind capella",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockDeneb()
+				blockToPropose.Message.Slot = 5
+				blockToPropose.Message.ParentRoot = parent[:]
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
+					SignedBlindedBlock: blockToPropose,
+					SignedBlindedBlobSidecars: []*ethpb.SignedBlindedBlobSidecar{
+						{
+							Message: &ethpb.BlindedBlobSidecar{
+								BlockRoot:       []byte{0x01},
+								Slot:            2,
+								BlockParentRoot: []byte{0x03},
+								ProposerIndex:   3,
+								BlobRoot:        []byte{0x04},
+								KzgCommitment:   []byte{0x05},
+								KzgProof:        []byte{0x06},
+							},
+							Signature: []byte{0x07},
+						},
+					},
+				}}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -570,17 +790,31 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			require.NoError(t, err)
 
 			c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
+			db := dbutil.SetupDB(t)
 			proposerServer := &Server{
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella()},
+				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(), BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{{0x01}}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
+				BeaconDB:      db,
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
-			assert.NoError(t, err, "Could not propose block correctly")
-			if res == nil || len(res.BlockRoot) == 0 {
-				t.Error("No block root was returned")
+			if tt.err != "" { // Expecting an error
+				require.ErrorContains(t, tt.err, err)
+			} else {
+				assert.NoError(t, err, "Could not propose block correctly")
+				if res == nil || len(res.BlockRoot) == 0 {
+					t.Error("No block root was returned")
+				}
+			}
+			if tt.name == "deneb block has blobs" {
+				scs, err := db.BlobSidecarsBySlot(ctx, blockToPropose.GetDeneb().Block.Block.Slot)
+				require.NoError(t, err)
+				assert.Equal(t, 4, len(scs))
+				for i, sc := range scs {
+					require.Equal(t, uint64(i), sc.Index)
+				}
 			}
 		})
 	}
@@ -1465,7 +1699,7 @@ func TestProposer_DepositTrie_RebuildTrie(t *testing.T) {
 	// Mutate it since its a pointer
 	d[0].Deposit.Data.WithdrawalCredentials = junkCreds[:]
 	// Insert junk to corrupt trie.
-	err = depositCache.InsertFinalizedDeposits(ctx, 2)
+	err = depositCache.InsertFinalizedDeposits(ctx, 2, [32]byte{}, 0)
 	require.NoError(t, err)
 
 	// Add original back
@@ -2619,4 +2853,20 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
+}
+
+func Test_extractBlobs(t *testing.T) {
+	blobs := []*ethpb.SignedBlobSidecar{
+		{Message: &ethpb.BlobSidecar{Index: 0}}, {Message: &ethpb.BlobSidecar{Index: 1}},
+		{Message: &ethpb.BlobSidecar{Index: 2}}, {Message: &ethpb.BlobSidecar{Index: 3}},
+		{Message: &ethpb.BlobSidecar{Index: 4}}, {Message: &ethpb.BlobSidecar{Index: 5}}}
+	req := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+		Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
+			Blobs: blobs,
+		},
+	},
+	}
+	bs, err := extraSidecars(req)
+	require.NoError(t, err)
+	require.DeepEqual(t, blobs, bs)
 }

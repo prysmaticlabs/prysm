@@ -1,16 +1,18 @@
 package depositsnapshot
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"gopkg.in/yaml.v3"
 )
@@ -176,6 +178,9 @@ func readTestCases() ([]testCase, error) {
 			if err != nil {
 				return []testCase{}, err
 			}
+			if len(testCases) == 0 {
+				return nil, errors.New("no test cases found")
+			}
 			return testCases, nil
 		}
 	}
@@ -183,11 +188,8 @@ func readTestCases() ([]testCase, error) {
 }
 
 func TestRead(t *testing.T) {
-	tcs, err := readTestCases()
+	_, err := readTestCases()
 	require.NoError(t, err)
-	for _, tc := range tcs {
-		t.Log(tc)
-	}
 }
 
 func hexStringToByteArray(s string) (b [32]byte, err error) {
@@ -222,9 +224,9 @@ func merkleRootFromBranch(leaf [32]byte, branch [][32]byte, index uint64) [32]by
 	for i, l := range branch {
 		ithBit := (index >> i) & 0x1
 		if ithBit == 1 {
-			root = sha256.Sum256(append(l[:], root[:]...))
+			root = hash.Hash(append(l[:], root[:]...))
 		} else {
-			root = sha256.Sum256(append(root[:], l[:]...))
+			root = hash.Hash(append(root[:], l[:]...))
 		}
 	}
 	return root
@@ -250,11 +252,11 @@ func cloneFromSnapshot(t *testing.T, snapshot DepositTreeSnapshot, testCases []t
 		err = cp.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
 	}
-	return &cp
+	return cp
 }
 
 func TestDepositCases(t *testing.T) {
-	tree := New()
+	tree := NewDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
@@ -263,8 +265,35 @@ func TestDepositCases(t *testing.T) {
 	}
 }
 
+type Test struct {
+	DepositDataRoot [32]byte
+}
+
+func TestRootEquivalence(t *testing.T) {
+	var err error
+	tree := NewDepositTree()
+	testCases, err := readTestCases()
+	require.NoError(t, err)
+
+	transformed := make([][]byte, len(testCases[:128]))
+	for i, c := range testCases[:128] {
+		err = tree.pushLeaf(c.DepositDataRoot)
+		require.NoError(t, err)
+		transformed[i] = bytesutil.SafeCopyBytes(c.DepositDataRoot[:])
+	}
+	originalRoot, err := tree.HashTreeRoot()
+	require.NoError(t, err)
+
+	generatedTrie, err := trie.GenerateTrieFromItems(transformed, 32)
+	require.NoError(t, err)
+
+	rootA, err := generatedTrie.HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, rootA, originalRoot)
+}
+
 func TestFinalization(t *testing.T) {
-	tree := New()
+	tree := NewDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases[:128] {
@@ -273,15 +302,11 @@ func TestFinalization(t *testing.T) {
 	}
 	originalRoot := tree.getRoot()
 	require.DeepEqual(t, testCases[127].Eth1Data.DepositRoot, originalRoot)
-	err = tree.finalize(&eth.Eth1Data{
-		DepositRoot:  testCases[100].Eth1Data.DepositRoot[:],
-		DepositCount: testCases[100].Eth1Data.DepositCount,
-		BlockHash:    testCases[100].Eth1Data.BlockHash[:],
-	}, testCases[100].BlockHeight)
+	err = tree.Finalize(int64(testCases[100].Eth1Data.DepositCount-1), testCases[100].Eth1Data.BlockHash, testCases[100].BlockHeight)
 	require.NoError(t, err)
 	// ensure finalization doesn't change root
 	require.Equal(t, tree.getRoot(), originalRoot)
-	snapshotData, err := tree.getSnapshot()
+	snapshotData, err := tree.GetSnapshot()
 	require.NoError(t, err)
 	require.DeepEqual(t, testCases[100].Snapshot.DepositTreeSnapshot, snapshotData)
 	// create a copy of the tree from a snapshot by replaying
@@ -290,20 +315,16 @@ func TestFinalization(t *testing.T) {
 	// ensure original and copy have the same root
 	require.Equal(t, tree.getRoot(), cp.getRoot())
 	//	finalize original again to check double finalization
-	err = tree.finalize(&eth.Eth1Data{
-		DepositRoot:  testCases[105].Eth1Data.DepositRoot[:],
-		DepositCount: testCases[105].Eth1Data.DepositCount,
-		BlockHash:    testCases[105].Eth1Data.BlockHash[:],
-	}, testCases[105].BlockHeight)
+	err = tree.Finalize(int64(testCases[105].Eth1Data.DepositCount-1), testCases[105].Eth1Data.BlockHash, testCases[105].BlockHeight)
 	require.NoError(t, err)
 	//	root should still be the same
 	require.Equal(t, originalRoot, tree.getRoot())
 	// create a copy of the tree by taking a snapshot again
-	snapshotData, err = tree.getSnapshot()
+	snapshotData, err = tree.GetSnapshot()
 	require.NoError(t, err)
 	cp = cloneFromSnapshot(t, snapshotData, testCases[106:128])
 	// create a copy of the tree by replaying ALL deposits from nothing
-	fullTreeCopy := New()
+	fullTreeCopy := NewDepositTree()
 	for _, c := range testCases[:128] {
 		err = fullTreeCopy.pushLeaf(c.DepositDataRoot)
 		require.NoError(t, err)
@@ -315,7 +336,7 @@ func TestFinalization(t *testing.T) {
 }
 
 func TestSnapshotCases(t *testing.T) {
-	tree := New()
+	tree := NewDepositTree()
 	testCases, err := readTestCases()
 	require.NoError(t, err)
 	for _, c := range testCases {
@@ -323,33 +344,29 @@ func TestSnapshotCases(t *testing.T) {
 		require.NoError(t, err)
 	}
 	for _, c := range testCases {
-		err = tree.finalize(&eth.Eth1Data{
-			DepositRoot:  c.Eth1Data.DepositRoot[:],
-			DepositCount: c.Eth1Data.DepositCount,
-			BlockHash:    c.Eth1Data.BlockHash[:],
-		}, c.BlockHeight)
+		err = tree.Finalize(int64(c.Eth1Data.DepositCount-1), c.Eth1Data.BlockHash, c.BlockHeight)
 		require.NoError(t, err)
-		s, err := tree.getSnapshot()
+		s, err := tree.GetSnapshot()
 		require.NoError(t, err)
 		require.DeepEqual(t, c.Snapshot.DepositTreeSnapshot, s)
 	}
 }
 
-func TestEmptyTreeSnapshot(t *testing.T) {
-	_, err := New().getSnapshot()
-	require.ErrorContains(t, "empty execution block", err)
-}
-
 func TestInvalidSnapshot(t *testing.T) {
 	invalidSnapshot := DepositTreeSnapshot{
 		finalized:    nil,
-		depositRoot:  Zerohashes[0],
+		depositRoot:  trie.ZeroHashes[0],
 		depositCount: 0,
 		executionBlock: executionBlock{
-			Hash:  Zerohashes[0],
+			Hash:  trie.ZeroHashes[0],
 			Depth: 0,
 		},
 	}
 	_, err := fromSnapshot(invalidSnapshot)
 	require.ErrorContains(t, "snapshot root is invalid", err)
+}
+
+func TestEmptyTree(t *testing.T) {
+	tree := NewDepositTree()
+	require.Equal(t, fmt.Sprintf("%x", tree.getRoot()), "d70a234731285c6804c2a4f56711ddb8c82c99740f207854891028af34e27e5e")
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -35,7 +36,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		committeeIndex               = primitives.CommitteeIndex(1)
 	)
 
-	attesterDuties := []*apimiddleware.AttesterDutyJson{
+	attesterDuties := []*validator.AttesterDuty{
 		{
 			Pubkey:          pubkeyStr,
 			ValidatorIndex:  validatorIndex,
@@ -46,7 +47,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 	}
 
 	attestationDataResponse := generateValidAttestation(uint64(slot), uint64(committeeIndex))
-	attestationDataProto, err := convertAttestationDataToProto(attestationDataResponse.Data)
+	attestationDataProto, err := attestationDataResponse.Data.ToConsensus()
 	require.NoError(t, err)
 	attestationDataRootBytes, err := attestationDataProto.HashTreeRoot()
 	require.NoError(t, err)
@@ -68,7 +69,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
-		duties                     []*apimiddleware.AttesterDutyJson
+		duties                     []*validator.AttesterDuty
 		validatorsCalled           int
 		attesterDutiesCalled       int
 		attestationDataCalled      int
@@ -128,7 +129,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name: "validator is not an aggregator",
-			duties: []*apimiddleware.AttesterDutyJson{
+			duties: []*validator.AttesterDuty{
 				{
 					Pubkey:          pubkeyStr,
 					ValidatorIndex:  validatorIndex,
@@ -143,7 +144,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name:                 "no attester duties",
-			duties:               []*apimiddleware.AttesterDutyJson{},
+			duties:               []*validator.AttesterDuty{},
 			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
@@ -203,10 +204,10 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				fmt.Sprintf("%s/%d", attesterDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&apimiddleware.AttesterDutiesResponseJson{},
+				&validator.GetAttesterDutiesResponse{},
 			).SetArg(
 				4,
-				apimiddleware.AttesterDutiesResponseJson{
+				validator.GetAttesterDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(
@@ -218,7 +219,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				fmt.Sprintf("%s?committee_index=%d&slot=%d", attestationDataEndpoint, committeeIndex, slot),
-				&apimiddleware.ProduceAttestationDataResponseJson{},
+				&validator.GetAttestationDataResponse{},
 			).SetArg(
 				2,
 				attestationDataResponse,

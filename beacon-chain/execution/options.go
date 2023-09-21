@@ -2,7 +2,7 @@ package execution
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -62,7 +62,7 @@ func WithDatabase(database db.HeadAccessDatabase) Option {
 }
 
 // WithDepositCache for caching deposits.
-func WithDepositCache(cache *depositcache.DepositCache) Option {
+func WithDepositCache(cache cache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.depositCache = cache
 		return nil

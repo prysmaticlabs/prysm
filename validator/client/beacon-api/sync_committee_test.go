@@ -12,6 +12,8 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -33,14 +35,14 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonSyncCommitteeMessage := &apimiddleware.SyncCommitteeMessageJson{
+	jsonSyncCommitteeMessage := &shared.SyncCommitteeMessage{
 		Slot:            "42",
 		BeaconBlockRoot: beaconBlockRoot,
 		ValidatorIndex:  "12345",
 		Signature:       signature,
 	}
 
-	marshalledJsonRegistrations, err := json.Marshal([]*apimiddleware.SyncCommitteeMessageJson{jsonSyncCommitteeMessage})
+	marshalledJsonRegistrations, err := json.Marshal([]*shared.SyncCommitteeMessage{jsonSyncCommitteeMessage})
 	require.NoError(t, err)
 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
@@ -268,7 +270,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 		Indices: []primitives.CommitteeIndex{123, 456},
 	}
 
-	syncDuties := []*apimiddleware.SyncCommitteeDuty{
+	syncDuties := []*validator.SyncCommitteeDuty{
 		{
 			Pubkey:         hexutil.Encode([]byte{1}),
 			ValidatorIndex: validatorIndex,
@@ -284,7 +286,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		duties           []*apimiddleware.SyncCommitteeDuty
+		duties           []*validator.SyncCommitteeDuty
 		validatorsErr    error
 		dutiesErr        error
 		expectedErrorMsg string
@@ -295,7 +297,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 		},
 		{
 			name:             "no sync duties",
-			duties:           []*apimiddleware.SyncCommitteeDuty{},
+			duties:           []*validator.SyncCommitteeDuty{},
 			expectedErrorMsg: fmt.Sprintf("no sync committee duty for the given slot %d", slot),
 		},
 		{
@@ -349,10 +351,10 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 				fmt.Sprintf("%s/%d", syncDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&apimiddleware.SyncCommitteeDutiesResponseJson{},
+				&validator.GetSyncCommitteeDutiesResponse{},
 			).SetArg(
 				4,
-				apimiddleware.SyncCommitteeDutiesResponseJson{
+				validator.GetSyncCommitteeDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(

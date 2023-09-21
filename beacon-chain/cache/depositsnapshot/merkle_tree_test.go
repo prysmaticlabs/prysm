@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -60,45 +62,54 @@ func Test_fromSnapshotParts(t *testing.T) {
 	tests := []struct {
 		name      string
 		finalized [][32]byte
-		deposits  uint64
-		level     uint64
-		want      MerkleTreeNode
 	}{
 		{
-			name:      "empty",
-			finalized: nil,
-			deposits:  0,
-			level:     0,
-			want:      &ZeroNode{},
-		},
-		{
-			name:      "single finalized node",
-			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-			deposits:  1,
-			level:     0,
-			want: &FinalizedNode{
-				depositCount: 1,
-				hash:         [32]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			},
-		},
-		{
-			name:      "multiple deposits and 1 Finalized",
-			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 0))},
-			deposits:  2,
-			level:     4,
-			want: &InnerNode{
-				left:  &InnerNode{&InnerNode{&FinalizedNode{depositCount: 2, hash: hexString(t, fmt.Sprintf("%064d", 0))}, &ZeroNode{1}}, &ZeroNode{2}},
-				right: &ZeroNode{3},
-			},
+			name:      "multiple deposits and multiple Finalized",
+			finalized: [][32]byte{hexString(t, fmt.Sprintf("%064d", 1)), hexString(t, fmt.Sprintf("%064d", 2))},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tree, err := fromSnapshotParts(tt.finalized, tt.deposits, tt.level)
-			require.NoError(t, err)
-			if got := tree; !reflect.DeepEqual(got, tt.want) {
-				require.DeepEqual(t, tt.want, got)
+			test := NewDepositTree()
+			for _, leaf := range tt.finalized {
+				err := test.pushLeaf(leaf)
+				require.NoError(t, err)
 			}
+			got, err := test.HashTreeRoot()
+			require.NoError(t, err)
+
+			transformed := make([][]byte, len(tt.finalized))
+			for i := 0; i < len(tt.finalized); i++ {
+				transformed[i] = bytesutil.SafeCopyBytes(tt.finalized[i][:])
+			}
+			generatedTrie, err := trie.GenerateTrieFromItems(transformed, 32)
+			require.NoError(t, err)
+
+			want, err := generatedTrie.HashTreeRoot()
+			require.NoError(t, err)
+
+			require.Equal(t, want, got)
+
+			// Test finalization
+			for i := 0; i < len(tt.finalized); i++ {
+				err = test.Finalize(int64(i), tt.finalized[i], 0)
+				require.NoError(t, err)
+			}
+
+			sShot, err := test.GetSnapshot()
+			require.NoError(t, err)
+			got, err = sShot.CalculateRoot()
+			require.NoError(t, err)
+
+			require.Equal(t, 1, len(sShot.finalized))
+			require.Equal(t, want, got)
+
+			// Build from the snapshot once more
+			recovered, err := fromSnapshot(sShot)
+			require.NoError(t, err)
+			got, err = recovered.HashTreeRoot()
+			require.NoError(t, err)
+			require.Equal(t, want, got)
 		})
 	}
 }
@@ -125,7 +136,7 @@ func Test_generateProof(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testCases, err := readTestCases()
 			require.NoError(t, err)
-			tree := New()
+			tree := NewDepositTree()
 			for _, c := range testCases[:tt.leaves] {
 				err = tree.pushLeaf(c.DepositDataRoot)
 				require.NoError(t, err)

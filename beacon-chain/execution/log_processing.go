@@ -13,13 +13,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreState "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	contracts "github.com/prysmaticlabs/prysm/v4/contracts/deposit"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -69,12 +72,12 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 	if err != nil {
 		return err
 	}
-	for _, filterLog := range logs {
+	for i, filterLog := range logs {
 		// ignore logs that are not of the required block number
 		if filterLog.BlockNumber != blkNum.Uint64() {
 			continue
 		}
-		if err := s.ProcessLog(ctx, filterLog); err != nil {
+		if err := s.ProcessLog(ctx, &logs[i]); err != nil {
 			return errors.Wrap(err, "could not process log")
 		}
 	}
@@ -88,7 +91,7 @@ func (s *Service) ProcessETH1Block(ctx context.Context, blkNum *big.Int) error {
 
 // ProcessLog is the main method which handles the processing of all
 // logs from the deposit contract on the eth1 chain.
-func (s *Service) ProcessLog(ctx context.Context, depositLog gethtypes.Log) error {
+func (s *Service) ProcessLog(ctx context.Context, depositLog *gethtypes.Log) error {
 	s.processingLock.RLock()
 	defer s.processingLock.RUnlock()
 	// Process logs according to their event signature.
@@ -108,7 +111,7 @@ func (s *Service) ProcessLog(ctx context.Context, depositLog gethtypes.Log) erro
 // ProcessDepositLog processes the log which had been received from
 // the eth1 chain by trying to ascertain which participant deposited
 // in the contract.
-func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Log) error {
+func (s *Service) ProcessDepositLog(ctx context.Context, depositLog *gethtypes.Log) error {
 	pubkey, withdrawalCredentials, amount, signature, merkleTreeIndex, err := contracts.UnpackDepositLogData(depositLog.Data)
 	if err != nil {
 		return errors.Wrap(err, "Could not unpack log")
@@ -141,7 +144,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	if err != nil {
 		return errors.Wrap(err, "unable to determine hashed value of deposit")
 	}
-
 	// Defensive check to validate incoming index.
 	if s.depositTrie.NumOfItems() != int(index) {
 		return errors.Errorf("invalid deposit index received: wanted %d but got %d", s.depositTrie.NumOfItems(), index)
@@ -149,7 +151,6 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 	if err = s.depositTrie.Insert(depositHash[:], int(index)); err != nil {
 		return err
 	}
-
 	deposit := &ethpb.Deposit{
 		Data: depositData,
 	}
@@ -221,6 +222,18 @@ func (s *Service) ProcessDepositLog(ctx context.Context, depositLog gethtypes.Lo
 			"merkleTreeIndex": index,
 		}).Info("Invalid deposit registered in deposit contract")
 	}
+	if features.Get().EnableEIP4881 {
+		// We finalize the trie here so that old deposits are not kept around, as they make
+		// deposit tree htr computation expensive.
+		dTrie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
+		if !ok {
+			return errors.Errorf("wrong trie type initialized: %T", dTrie)
+		}
+		if err := dTrie.Finalize(index, depositLog.BlockHash, depositLog.BlockNumber); err != nil {
+			log.WithError(err).Error("Could not finalize trie")
+		}
+	}
+
 	return nil
 }
 
@@ -337,7 +350,7 @@ func (s *Service) processPastLogs(ctx context.Context) error {
 		}
 	}
 	if fState != nil && !fState.IsNil() && fState.Eth1DepositIndex() > 0 {
-		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- Deposit index should not exceed int64 in your lifetime.
+		s.cfg.depositCache.PrunePendingDeposits(ctx, int64(fState.Eth1DepositIndex())) // lint:ignore uintcast -- deposit index should not exceed int64 in your lifetime.
 	}
 	return nil
 }
@@ -406,7 +419,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 	lastReqBlock := s.latestEth1Data.LastRequestedBlock
 	s.latestEth1DataLock.RUnlock()
 
-	for _, filterLog := range logs {
+	for i, filterLog := range logs {
 		if filterLog.BlockNumber > currentBlockNum {
 			if err := s.checkHeaderRange(ctx, currentBlockNum, filterLog.BlockNumber-1, headersMap, requestHeaders); err != nil {
 				return 0, 0, err
@@ -417,7 +430,7 @@ func (s *Service) processBlockInBatch(ctx context.Context, currentBlockNum uint6
 			s.latestEth1DataLock.Unlock()
 			currentBlockNum = filterLog.BlockNumber
 		}
-		if err := s.ProcessLog(ctx, filterLog); err != nil {
+		if err := s.ProcessLog(ctx, &logs[i]); err != nil {
 			// In the event the execution client gives us a garbled/bad log
 			// we reset the last requested block to the previous valid block range. This
 			// prevents the beacon from advancing processing of logs to another range
@@ -559,8 +572,27 @@ func (s *Service) savePowchainData(ctx context.Context) error {
 		CurrentEth1Data:   s.latestEth1Data,
 		ChainstartData:    s.chainStartData,
 		BeaconState:       pbState, // I promise not to mutate it!
-		Trie:              s.depositTrie.ToProto(),
 		DepositContainers: s.cfg.depositCache.AllDepositContainers(ctx),
+	}
+	if features.Get().EnableEIP4881 {
+		fd, err := s.cfg.depositCache.FinalizedDeposits(ctx)
+		if err != nil {
+			return errors.Errorf("could not get finalized deposit tree: %v", err)
+		}
+		tree, ok := fd.Deposits().(*depositsnapshot.DepositTree)
+		if !ok {
+			return errors.New("deposit tree was not EIP4881 DepositTree")
+		}
+		eth1Data.DepositSnapshot, err = tree.ToProto()
+		if err != nil {
+			return err
+		}
+	} else {
+		tree, ok := s.depositTrie.(*trie.SparseMerkleTrie)
+		if !ok {
+			return errors.New("deposit tree was not SparseMerkleTrie")
+		}
+		eth1Data.Trie = tree.ToProto()
 	}
 	return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
 }

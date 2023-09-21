@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -32,8 +33,16 @@ var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
 	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
-	ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error
+	ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock) error
 	HasBlock(ctx context.Context, root [32]byte) bool
+	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
+	BlockBeingSynced([32]byte) bool
+}
+
+// BlobReceiver interface defines the methods of chain service for receiving new
+// blobs
+type BlobReceiver interface {
+	SendNewBlobEvent([32]byte, uint64)
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
@@ -50,6 +59,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
+	s.blockBeingSynced.set(blockRoot)
+	defer s.blockBeingSynced.unset(blockRoot)
+
 	blockCopy, err := block.Copy()
 	if err != nil {
 		return err
@@ -88,13 +100,15 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+	if err := s.isDataAvailable(ctx, blockRoot, blockCopy); err != nil {
+		return errors.Wrap(err, "could not validate blob data availability")
+	}
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	if err := s.savePostStateInfo(ctx, blockRoot, blockCopy, postState); err != nil {
 		return errors.Wrap(err, "could not save post state info")
 	}
-
 	if err := s.postBlockProcess(ctx, blockCopy, blockRoot, postState, isValidPayload); err != nil {
 		err := errors.Wrap(err, "could not process block")
 		tracing.AnnotateError(span, err)
@@ -171,7 +185,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 // ReceiveBlockBatch processes the whole block batch at once, assuming the block batch is linear ,transitioning
 // the state, performing batch verification of all collected signatures and then performing the appropriate
 // actions for a block post-transition.
-func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blkRoots [][32]byte) error {
+func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlockBatch")
 	defer span.End()
 
@@ -179,28 +193,31 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 	defer s.cfg.ForkChoiceStore.Unlock()
 
 	// Apply state transition on the incoming newly received block batches, one by one.
-	if err := s.onBlockBatch(ctx, blocks, blkRoots); err != nil {
+	if err := s.onBlockBatch(ctx, blocks); err != nil {
 		err := errors.Wrap(err, "could not process block in batch")
 		tracing.AnnotateError(span, err)
 		return err
 	}
 
-	for i, b := range blocks {
+	lastBR := blocks[len(blocks)-1].Root()
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(lastBR)
+	if err != nil {
+		lastSlot := blocks[len(blocks)-1].Block().Slot()
+		log.WithError(err).Errorf("Could not check if block is optimistic, Root: %#x, Slot: %d", lastBR, lastSlot)
+		optimistic = true
+	}
+
+	for _, b := range blocks {
 		blockCopy, err := b.Copy()
 		if err != nil {
 			return err
-		}
-		optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blkRoots[i])
-		if err != nil {
-			log.WithError(err).Error("Could not check if block is optimistic")
-			optimistic = true
 		}
 		// Send notification of the processed block to the state feed.
 		s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 			Type: statefeed.BlockProcessed,
 			Data: &statefeed.BlockProcessedData{
 				Slot:        blockCopy.Block().Slot(),
-				BlockRoot:   blkRoots[i],
+				BlockRoot:   b.Root(),
 				SignedBlock: blockCopy,
 				Verified:    true,
 				Optimistic:  optimistic,
@@ -233,6 +250,11 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []interfaces.Rea
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
+}
+
+// RecentBlockSlot returns block slot form fork choice store
+func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
+	return s.cfg.ForkChoiceStore.Slot(root)
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice

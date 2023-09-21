@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // ForkVersionByteLength length of fork version byte array.
@@ -56,7 +57,18 @@ const (
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
+	fork := st.Fork()
+	// EIP-7044: Beginning in Deneb, fix the fork version to Capella for signed exits.
+	// This allows for signed validator exits to be valid forever.
+	if st.Version() >= version.Deneb && domain == params.BeaconConfig().DomainVoluntaryExit {
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		}
+	}
+
+	d, err := Domain(fork, epoch, domain, st.GenesisValidatorsRoot())
 	if err != nil {
 		return nil, err
 	}

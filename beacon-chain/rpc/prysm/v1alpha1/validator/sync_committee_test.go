@@ -65,10 +65,12 @@ func TestGetSyncMessageBlockRoot_Optimistic(t *testing.T) {
 func TestSubmitSyncMessage_OK(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State: st,
+		CoreService: &core.Service{
+			SyncCommitteePool: synccommittee.NewStore(),
+			P2P:               &mockp2p.MockBroadcaster{},
+			HeadFetcher: &mock.ChainService{
+				State: st,
+			},
 		},
 	}
 	msg := &ethpb.SyncCommitteeMessage{
@@ -77,7 +79,7 @@ func TestSubmitSyncMessage_OK(t *testing.T) {
 	}
 	_, err := server.SubmitSyncMessage(context.Background(), msg)
 	require.NoError(t, err)
-	savedMsgs, err := server.SyncCommitteePool.SyncCommitteeMessages(1)
+	savedMsgs, err := server.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 	require.NoError(t, err)
 	require.DeepEqual(t, []*ethpb.SyncCommitteeMessage{msg}, savedMsgs)
 }
@@ -102,14 +104,21 @@ func TestGetSyncSubcommitteeIndex_Ok(t *testing.T) {
 
 func TestGetSyncCommitteeContribution_FiltersDuplicates(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateAltair(t, 10)
+	syncCommitteePool := synccommittee.NewStore()
+	headFetcher := &mock.ChainService{
+		State:                st,
+		SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+	}
 	server := &Server{
-		SyncCommitteePool: synccommittee.NewStore(),
-		P2P:               &mockp2p.MockBroadcaster{},
-		HeadFetcher: &mock.ChainService{
-			State:                st,
-			SyncCommitteeIndices: []primitives.CommitteeIndex{10},
+		CoreService: &core.Service{
+			SyncCommitteePool: syncCommitteePool,
+			HeadFetcher:       headFetcher,
+			P2P:               &mockp2p.MockBroadcaster{},
 		},
-		TimeFetcher: &mock.ChainService{Genesis: time.Now()},
+		SyncCommitteePool: syncCommitteePool,
+		HeadFetcher:       headFetcher,
+		P2P:               &mockp2p.MockBroadcaster{},
+		TimeFetcher:       &mock.ChainService{Genesis: time.Now()},
 	}
 	secKey, err := bls.RandKey()
 	require.NoError(t, err)

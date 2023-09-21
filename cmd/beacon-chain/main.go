@@ -53,6 +53,8 @@ var appFlags = []cli.Flag{
 	flags.SetGCPercent,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
+	flags.BlobBatchLimit,
+	flags.BlobBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
@@ -288,7 +290,7 @@ func startNode(ctx *cli.Context) error {
 
 	beacon, err := node.New(ctx, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start beacon node: %w", err)
 	}
 	beacon.Start()
 	return nil
