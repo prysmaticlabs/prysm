@@ -45,12 +45,6 @@ type RandaoResponseJson struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type BlockHeaderResponseJson struct {
-	Data                *BlockHeaderContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
-}
-
 type BlockResponseJson struct {
 	Data *SignedBeaconBlockJson `json:"data"`
 }
@@ -155,10 +149,6 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type ValidatorIndicesJson struct {
-	Index []string `json:"index"`
-}
-
 type ProduceBlockResponseJson struct {
 	Data *BeaconBlockJson `json:"data"`
 }
@@ -223,13 +213,6 @@ type ForkChoiceResponseExtraDataJson struct {
 	ProposerBoostRoot             string          `json:"proposer_boost_root" hex:"true"`
 	PreviousProposerBoostRoot     string          `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string          `json:"head_root" hex:"true"`
-}
-
-type LivenessResponseJson struct {
-	Data []*struct {
-		Index  string `json:"index"`
-		IsLive bool   `json:"is_live"`
-	} `json:"data"`
 }
 
 //----------------
@@ -663,17 +646,6 @@ type ExecutionPayloadHeaderDenebJson struct {
 type SyncAggregateJson struct {
 	SyncCommitteeBits      string `json:"sync_committee_bits" hex:"true"`
 	SyncCommitteeSignature string `json:"sync_committee_signature" hex:"true"`
-}
-
-type BlockHeaderContainerJson struct {
-	Root      string                          `json:"root" hex:"true"`
-	Canonical bool                            `json:"canonical"`
-	Header    *BeaconBlockHeaderContainerJson `json:"header"`
-}
-
-type BeaconBlockHeaderContainerJson struct {
-	Message   *BeaconBlockHeaderJson `json:"message"`
-	Signature string                 `json:"signature" hex:"true"`
 }
 
 type SignedBeaconBlockHeaderJson struct {
@@ -1218,11 +1190,6 @@ type IndexedVerificationFailureErrorJson struct {
 type SingleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
-}
-
-type NodeSyncDetailsErrorJson struct {
-	apimiddleware.DefaultErrorJson
-	SyncDetails shared.SyncDetails `json:"sync_details"`
 }
 
 type EventErrorJson struct {

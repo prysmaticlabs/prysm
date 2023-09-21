@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -29,8 +28,8 @@ type beaconApiBeaconChainClient struct {
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
-func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
-	blockHeader := apimiddleware.BlockHeaderResponseJson{}
+func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
+	blockHeader := beacon.GetBlockHeaderResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
 		return nil, errors.Wrap(err, "failed to get head block header")
 	}

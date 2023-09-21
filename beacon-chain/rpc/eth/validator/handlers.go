@@ -651,8 +651,8 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
-	var req GetAttesterDutiesRequest
-	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -661,12 +661,12 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(req.ValidatorIndices) == 0 {
+	if len(indices) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
-	for i, ix := range req.ValidatorIndices {
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
 		if !valid {
 			return
@@ -893,8 +893,8 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		http2.HandleError(w, "Sync committees are not supported for Phase0", http.StatusBadRequest)
 		return
 	}
-	var req GetSyncCommitteeDutiesRequest
-	err := json.NewDecoder(r.Body).Decode(&req.ValidatorIndices)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
 	switch {
 	case err == io.EOF:
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -903,12 +903,12 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if len(req.ValidatorIndices) == 0 {
+	if len(indices) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	requestedValIndices := make([]primitives.ValidatorIndex, len(req.ValidatorIndices))
-	for i, ix := range req.ValidatorIndices {
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
 		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
 		if !valid {
 			return
@@ -979,6 +979,112 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		Data:                duties,
 		ExecutionOptimistic: isOptimistic,
 	}
+	http2.WriteJson(w, resp)
+}
+
+// GetLiveness requests the beacon node to indicate if a validator has been observed to be live in a given epoch.
+// The beacon node might detect liveness by observing messages from the validator on the network,
+// in the beacon chain, from its API or from any other source.
+// A beacon node SHOULD support the current and previous epoch, however it MAY support earlier epoch.
+// It is important to note that the values returned by the beacon node are not canonical;
+// they are best-effort and based upon a subjective view of the network.
+// A beacon node that was recently started or suffered a network partition may indicate that a validator is not live when it actually is.
+func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetLiveness")
+	defer span.End()
+
+	rawEpoch := mux.Vars(r)["epoch"]
+	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	if !valid {
+		return
+	}
+	requestedEpoch := primitives.Epoch(requestedEpochUint)
+	var indices []string
+	err := json.NewDecoder(r.Body).Decode(&indices)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(indices) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+	requestedValIndices := make([]primitives.ValidatorIndex, len(indices))
+	for i, ix := range indices {
+		valIx, valid := shared.ValidateUint(w, fmt.Sprintf("ValidatorIndices[%d]", i), ix)
+		if !valid {
+			return
+		}
+		requestedValIndices[i] = primitives.ValidatorIndex(valIx)
+	}
+
+	// First we check if the requested epoch is the current epoch.
+	// If it is, then we won't be able to fetch the state at the end of the epoch.
+	// In that case we get participation info from the head state.
+	// We can also use the head state to get participation info for the previous epoch.
+	headSt, err := s.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	currEpoch := slots.ToEpoch(headSt.Slot())
+	if requestedEpoch > currEpoch {
+		http2.HandleError(w, "Requested epoch cannot be in the future", http.StatusBadRequest)
+		return
+	}
+
+	var st state.BeaconState
+	var participation []byte
+	if requestedEpoch == currEpoch {
+		st = headSt
+		participation, err = st.CurrentEpochParticipation()
+		if err != nil {
+			http2.HandleError(w, "Could not get current epoch participation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if requestedEpoch == currEpoch-1 {
+		st = headSt
+		participation, err = st.PreviousEpochParticipation()
+		if err != nil {
+			http2.HandleError(w, "Could not get previous epoch participation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		epochEnd, err := slots.EpochEnd(requestedEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not get requested epoch's end slot: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		st, err = s.Stater.StateBySlot(ctx, epochEnd)
+		if err != nil {
+			http2.HandleError(w, "Could not get slot for requested epoch: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		participation, err = st.CurrentEpochParticipation()
+		if err != nil {
+			http2.HandleError(w, "Could not get current epoch participation: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	resp := &GetLivenessResponse{
+		Data: make([]*ValidatorLiveness, len(requestedValIndices)),
+	}
+	for i, vi := range requestedValIndices {
+		if vi >= primitives.ValidatorIndex(len(participation)) {
+			http2.HandleError(w, fmt.Sprintf("Validator index %d is invalid", vi), http.StatusBadRequest)
+			return
+		}
+		resp.Data[i] = &ValidatorLiveness{
+			Index:  strconv.FormatUint(uint64(vi), 10),
+			IsLive: participation[vi] != 0,
+		}
+	}
+
 	http2.WriteJson(w, resp)
 }
 

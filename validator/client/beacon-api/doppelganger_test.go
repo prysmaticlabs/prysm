@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -58,7 +59,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		getLivelinessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *apimiddleware.LivenessResponseJson
+			output             *validator.GetLivenessResponse
 		}
 	}{
 		{
@@ -238,7 +239,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			getLivelinessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 			}{
 				{
 					inputUrl: "/eth/v1/validator/liveness/99", // previous epoch
@@ -250,11 +251,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -274,11 +272,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -351,7 +346,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			if testCase.getLivelinessInterfaces != nil {
 				for _, iface := range testCase.getLivelinessInterfaces {
-					livenessResponseJson := apimiddleware.LivenessResponseJson{}
+					livenessResponseJson := validator.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
@@ -474,7 +469,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		getLivenessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *apimiddleware.LivenessResponseJson
+			output             *validator.GetLivenessResponse
 			err                error
 		}
 	}{
@@ -603,13 +598,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output:             &apimiddleware.LivenessResponseJson{},
+					output:             &validator.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -625,17 +620,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{nil},
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{nil},
 					},
 				},
 			},
@@ -651,23 +643,20 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output:             &apimiddleware.LivenessResponseJson{},
+					output:             &validator.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -683,27 +672,21 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{},
 					},
 				},
 			},
@@ -719,17 +702,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *apimiddleware.LivenessResponseJson
+				output             *validator.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{
 							{
 								Index: "42",
 							},
@@ -739,11 +719,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &apimiddleware.LivenessResponseJson{
-						Data: []*struct {
-							Index  string `json:"index"`
-							IsLive bool   `json:"is_live"`
-						}{},
+					output: &validator.GetLivenessResponse{
+						Data: []*validator.ValidatorLiveness{},
 					},
 				},
 			},
@@ -823,7 +800,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			if testCase.getLivenessInterfaces != nil {
 				for _, iface := range testCase.getLivenessInterfaces {
-					livenessResponseJson := apimiddleware.LivenessResponseJson{}
+					livenessResponseJson := validator.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
