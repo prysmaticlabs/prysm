@@ -50,64 +50,6 @@ message StateRootResponse {
     }
 }
 
-message StateValidatorsRequest {
-    // The state id which can be any of: "head" (canonical head in node's view),
-    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-    bytes state_id = 1;
-
-    // An array of either hex encoded public keys (with 0x prefix) or validator indexes.
-    repeated bytes id = 2;
-
-    // The status to query validators for, can be one of: pending_initialized, pending_queued, active_ongoing,
-    // active_exiting, active_slashed, exited_unslashed, exited_slashed, withdrawal_possible,
-    // withdrawal_done, active, pending, exited, withdrawal
-    repeated ValidatorStatus status = 3;
-}
-
-message ValidatorBalancesRequest {
-    // The state id which can be any of: "head" (canonical head in node's view),
-    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-    bytes state_id = 1;
-
-    // An array of either hex encoded public keys (with 0x prefix) or validator indexes.
-    repeated bytes id = 2;
-}
-
-message StateValidatorsResponse {
-    repeated ValidatorContainer data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
-message ValidatorBalancesResponse {
-    repeated ValidatorBalance data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
-message ValidatorBalance {
-    // The index of the validator the retrieved balance is for.
-    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-    // The balance of the requested validator.
-    uint64 balance = 2;
-}
-
-message StateValidatorRequest {
-    // The state id which can be any of: "head" (canonical head in node's view),
-    // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-    bytes state_id = 1;
-
-    // The public key or index for the validator to retrieve information for.
-    bytes validator_id = 2;
-}
-
-message StateValidatorResponse {
-    ValidatorContainer data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-}
-
 // Beacon Block API related messages.
 
 message BlockAttestationsResponse {

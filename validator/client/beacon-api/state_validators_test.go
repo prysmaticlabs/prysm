@@ -7,7 +7,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -27,36 +27,36 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 		"status=active_ongoing&status=active_exiting&status=exited_slashed&status=exited_unslashed",
 	}, "")
 
-	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
+	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-	wanted := []*rpcmiddleware.ValidatorContainerJson{
+	wanted := []*beacon.ValidatorContainer{
 		{
 			Index:  "12345",
 			Status: "active_ongoing",
-			Validator: &rpcmiddleware.ValidatorJson{
-				PublicKey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be19",
+			Validator: &beacon.Validator{
+				Pubkey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be19",
 			},
 		},
 		{
 			Index:  "55293",
 			Status: "active_ongoing",
-			Validator: &rpcmiddleware.ValidatorJson{
-				PublicKey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+			Validator: &beacon.Validator{
+				Pubkey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
 			},
 		},
 		{
 			Index:  "55294",
 			Status: "active_exiting",
-			Validator: &rpcmiddleware.ValidatorJson{
-				PublicKey: "0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526",
+			Validator: &beacon.Validator{
+				Pubkey: "0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526",
 			},
 		},
 		{
 			Index:  "55295",
 			Status: "exited_slashed",
-			Validator: &rpcmiddleware.ValidatorJson{
-				PublicKey: "0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
+			Validator: &beacon.Validator{
+				Pubkey: "0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
 			},
 		},
 	}
@@ -72,7 +72,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		rpcmiddleware.StateValidatorsResponseJson{
+		beacon.GetValidatorsResponse{
 			Data: wanted,
 		},
 	).Times(1)
@@ -101,7 +101,7 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 
 	url := "/eth/v1/beacon/states/head/validators?id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 
-	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
+	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	ctx := context.Background()
@@ -133,7 +133,7 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 	url := "/eth/v1/beacon/states/head/validators?id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 
 	ctx := context.Background()
-	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
+	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
@@ -145,7 +145,7 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		rpcmiddleware.StateValidatorsResponseJson{
+		beacon.GetValidatorsResponse{
 			Data: nil,
 		},
 	).Times(1)
