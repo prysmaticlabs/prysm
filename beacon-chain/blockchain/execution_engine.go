@@ -157,6 +157,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
+		logrus.Infof("Setting payload id for slot %d , index %d and headroot %#x", nextSlot, proposerId, arg.headRoot)
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil && !features.Get().PrepareAllPayloads {
 		log.WithFields(logrus.Fields{
@@ -323,6 +324,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		log.WithError(err).Error("Could not get timestamp to get payload attribute")
 		return false, emptyAttri, 0
 	}
+	log.Infof("payload attribute exists for index %d at slot %d with head root %#x", proposerID, slot, headRoot)
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {

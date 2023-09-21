@@ -184,11 +184,13 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			}
 			// Cache proposer assignment for the current epoch.
 			for _, slot := range proposerIndexToSlots[idx] {
+				log.Infof("Setting payload id for slot %d , index %d in the current epoch", slot, idx)
 				// Head root is empty because it can't be known until slot - 1. Same with payload id.
 				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			}
 			// Cache proposer assignment for the next epoch.
 			for _, slot := range nextProposerIndexToSlots[idx] {
+				log.Infof("Setting payload id for slot %d , index %d in the next epoch", slot, idx)
 				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			}
 			// Prune payload ID cache for any slots before request slot.
