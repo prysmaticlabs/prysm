@@ -3,11 +3,11 @@ package testnet
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )

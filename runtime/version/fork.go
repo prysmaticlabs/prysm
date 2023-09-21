@@ -1,8 +1,9 @@
 package version
 
 import (
-	"github.com/pkg/errors"
 	"sort"
+
+	"github.com/pkg/errors"
 )
 
 const (
