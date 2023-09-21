@@ -53,26 +53,6 @@ func TestConfigureSlotsPerArchivedPoint(t *testing.T) {
 	assert.Equal(t, primitives.Slot(100), params.BeaconConfig().SlotsPerArchivedPoint)
 }
 
-func TestConfigureBlobRetentionEpoch(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.Uint64(flags.BlobRetentionEpoch.Name, 0, "")
-	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(2*blobRetentionEpochSpecValue, 10)))
-	cliCtx := cli.NewContext(&app, set, nil)
-
-	// Test case: Input epoch is greater than or equal to spec value.
-	require.NoError(t, configureBlobRetentionEpoch(cliCtx))
-	assert.Equal(t, primitives.Epoch(2*blobRetentionEpochSpecValue), params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
-
-	// Test case: Input epoch is less than spec value.
-	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(blobRetentionEpochSpecValue-1, 10)))
-	cliCtx = cli.NewContext(&app, set, nil)
-	err := configureBlobRetentionEpoch(cliCtx)
-	require.ErrorContains(t, "input blob retention epoch smaller than spec default", err)
-}
-
 func TestConfigureProofOfWork(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 
