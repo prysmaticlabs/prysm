@@ -247,7 +247,7 @@ func activatesDepositedValidators(ec *e2etypes.EvaluationContext, conns ...*grpc
 		return fmt.Errorf("missing %d validators for post-genesis deposits", len(expected))
 	}
 
-	if deposits != int(params.BeaconConfig().MinPerEpochChurnLimit) {
+	if uint64(deposits) != params.BeaconConfig().MinPerEpochChurnLimit {
 		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", params.BeaconConfig().MinPerEpochChurnLimit, epoch, deposits)
 	}
 
