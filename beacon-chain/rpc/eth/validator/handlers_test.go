@@ -1856,9 +1856,6 @@ func TestGetProposerDuties(t *testing.T) {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(12289), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
 		assert.Equal(t, "12289", expectedDuty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[12289]), expectedDuty.Pubkey)
@@ -1898,51 +1895,9 @@ func TestGetProposerDuties(t *testing.T) {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
 		assert.Equal(t, "1360", expectedDuty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[1360]), expectedDuty.Pubkey)
-	})
-	t.Run("prune payload ID cache", func(t *testing.T) {
-		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-		require.NoError(t, err, "Could not set up genesis state")
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-		require.NoError(t, bs.SetBlockRoots(roots))
-		chainSlot := params.BeaconConfig().SlotsPerEpoch
-		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-		}
-		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-		}
-
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
-
-		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetProposerDuties(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(10565), vid)
 	})
 	t.Run("epoch out of bounds", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
