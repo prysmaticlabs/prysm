@@ -27,13 +27,6 @@ option java_outer_classname = "ValidatorProto";
 option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
-message ValidatorContainer {
-    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];;
-    uint64 balance = 2;
-    ValidatorStatus status = 3;
-    Validator validator = 4;
-}
-
 // An Ethereum validator.
 message Validator {
     // 48 byte BLS public key used for the validator's activities.
