@@ -38,6 +38,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api",
     visibility = ["//validator:__subpackages__"],
     deps = [
+        "//api:go_default_library",
         "//api/gateway/apimiddleware:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
