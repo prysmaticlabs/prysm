@@ -9,15 +9,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var maxEpochsToPersistBlobs primitives.Epoch
+var maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 
 // ConfigureBlobRetentionEpoch sets the for blob retention based on command-line context. It sets the local config `maxEpochsToPersistBlobs`.
 // If the flag is not set, the spec default `MinEpochsForBlobsSidecarsRequest` is used.
 // An error if the input epoch is smaller than the spec default value.
 func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {
-
-	maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-
 	// Check if the blob retention epoch flag is set.
 	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
 		// Retrieve and cast the epoch value.

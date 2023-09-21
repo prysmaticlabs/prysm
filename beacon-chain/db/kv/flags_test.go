@@ -13,8 +13,8 @@ import (
 )
 
 func TestConfigureBlobRetentionEpoch(t *testing.T) {
+	maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	params.SetupTestConfigCleanup(t)
-
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 
