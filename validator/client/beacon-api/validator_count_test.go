@@ -104,7 +104,7 @@ func TestGetValidatorCount(t *testing.T) {
 				},
 			},
 			validatorCountCalled: 1,
-			expectedError:        "invalid validator count response",
+			expectedError:        "mismatch between validator count data and the number of statuses provided",
 		},
 	}
 
@@ -144,7 +144,7 @@ func TestGetValidatorCount(t *testing.T) {
 			).Times(test.validatorCountCalled)
 
 			// Type assertion.
-			var client iface.ValidatorCountProvider = &beaconApiBeaconChainClient{
+			var client iface.PrysmBeaconChainClient = &prysmBeaconChainClient{
 				nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 				jsonRestHandler: jsonRestHandler,
 			}

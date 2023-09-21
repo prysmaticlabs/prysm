@@ -17,10 +17,17 @@ func NewBeaconChainClient(validatorConn validatorHelpers.NodeConnection) iface.B
 		return beaconApi.NewBeaconApiBeaconChainClientWithFallback(
 			validatorConn.GetBeaconApiUrl(),
 			validatorConn.GetBeaconApiTimeout(),
-			nodeClientFactory.NewNodeClient(validatorConn),
 			grpcClient,
 		)
 	} else {
 		return grpcClient
 	}
+}
+
+func NewPrysmBeaconClient(validatorConn validatorHelpers.NodeConnection) iface.PrysmBeaconChainClient {
+	return beaconApi.NewPrysmBeaconChainClient(
+		validatorConn.GetBeaconApiUrl(),
+		validatorConn.GetBeaconApiTimeout(),
+		nodeClientFactory.NewNodeClient(validatorConn),
+	)
 }

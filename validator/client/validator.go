@@ -104,6 +104,7 @@ type validator struct {
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
+	prysmBeaconClient                  iface.PrysmBeaconChainClient
 }
 
 type validatorStatus struct {
@@ -395,7 +396,7 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
-			if activeValCount > 0 && status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			if activeValCount >= 0 && status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
 				activationsPerEpoch :=
 					uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(uint64(activeValCount)/params.BeaconConfig().ChurnLimitQuotient)))
 				secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))

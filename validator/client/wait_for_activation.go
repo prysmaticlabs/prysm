@@ -141,17 +141,7 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 
 			// "-1" indicates that validator count endpoint is not supported by the beacon node.
 			var valCount int64 = -1
-			valCountClient, ok := v.beaconClient.(iface.ValidatorCountProvider)
-			if !ok {
-				valActivated := v.checkAndLogValidatorStatus(statuses, valCount)
-				if valActivated {
-					logActiveValidatorStatus(statuses)
-				} else {
-					continue
-				}
-			}
-
-			valCounts, err := valCountClient.GetValidatorCount(ctx, "head", []validator2.ValidatorStatus{validator2.Active})
+			valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.ValidatorStatus{validator2.Active})
 			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 				return errors.Wrap(err, "could not get active validator count")
 			}

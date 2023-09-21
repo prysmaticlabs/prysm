@@ -57,7 +57,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		validatorCountProvider: beaconApiBeaconChainClient{
+		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -185,7 +185,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		validatorCountProvider: beaconApiBeaconChainClient{
+		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -435,7 +435,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		validatorCountProvider: beaconApiBeaconChainClient{
+		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -506,7 +506,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
-		validatorCountProvider: beaconApiBeaconChainClient{
+		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
 				jsonRestHandler: jsonRestHandler,
 			},
@@ -736,7 +736,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 				validatorClient := beaconApiValidatorClient{
 					stateValidatorsProvider: stateValidatorsProvider,
-					validatorCountProvider: beaconApiBeaconChainClient{
+					prysmBeaconChainCLient: prysmBeaconChainClient{
 						nodeClient: &beaconApiNodeClient{
 							jsonRestHandler: jsonRestHandler,
 						},
