@@ -1376,7 +1376,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		resp := &GetBlockHeaderResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Data.Canonical)
-		assert.Equal(t, "0x725b389a0e5a7623fa7600b9e5cb6248d5c293fc2f5877e42a665b44f40c85f6", resp.Data.Root)
+		assert.Equal(t, "0xd7d92f6206707f2c9c4e7e82320617d5abac2b6461a65ea5bb1a154b5b5ea2fa", resp.Data.Root)
 		assert.Equal(t, "0x736967000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", resp.Data.Header.Signature)
 		assert.Equal(t, "123", resp.Data.Header.Message.Slot)
 		assert.Equal(t, "0x706172656e74726f6f7400000000000000000000000000000000000000000000", resp.Data.Header.Message.ParentRoot)

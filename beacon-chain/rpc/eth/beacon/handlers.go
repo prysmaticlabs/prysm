@@ -866,7 +866,7 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not get block header: %s"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	headerRoot, err := header.HashTreeRoot()
+	headerRoot, err := header.Header.HashTreeRoot()
 	if err != nil {
 		http2.HandleError(w, "Could not hash block header: %s"+err.Error(), http.StatusInternalServerError)
 		return
