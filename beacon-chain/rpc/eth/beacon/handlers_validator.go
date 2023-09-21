@@ -170,6 +170,10 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if len(ids) == 0 || len(readOnlyVals) == 0 {
+		http2.HandleError(w, "No validator returned for the given ID", http.StatusInternalServerError)
+		return
+	}
 	valSubStatus, err := helpers.ValidatorSubStatus(readOnlyVals[0], slots.ToEpoch(st.Slot()))
 	if err != nil {
 		http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
