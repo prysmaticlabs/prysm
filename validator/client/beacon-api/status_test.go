@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -35,13 +35,13 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "35000",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       stringValidatorPubKey,
+					Validator: &beacon.Validator{
+						Pubkey:          stringValidatorPubKey,
 						ActivationEpoch: "56",
 					},
 				},
@@ -82,7 +82,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{},
+		&beacon.GetValidatorsResponse{},
 		errors.New("a specific error"),
 	).Times(1)
 
@@ -124,21 +124,21 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "11111",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
 						ActivationEpoch: "12",
 					},
 				},
 				{
 					Index:  "22222",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
 						ActivationEpoch: "34",
 					},
 				},
@@ -190,7 +190,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{},
+		&beacon.GetValidatorsResponse{},
 		errors.New("a specific error"),
 	).Times(1)
 
@@ -242,45 +242,45 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		validatorsIndex,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "11111",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
 						ActivationEpoch: "12",
 					},
 				},
 				{
 					Index:  "22222",
 					Status: "active_exiting",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x800010c20716ef4264a6d93b3873a008ece58fb9312ac2cc3b0ccc40aedb050f2038281e6a92242a35476af9903c7919",
 						ActivationEpoch: "34",
 					},
 				},
 				{
 					Index:  "33333",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       extraStringValidatorKey,
+					Validator: &beacon.Validator{
+						Pubkey:          extraStringValidatorKey,
 						ActivationEpoch: "56",
 					},
 				},
 				{
 					Index:  "40000",
 					Status: "pending_queued",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
 				{
 					Index:  "50000",
 					Status: "pending_queued",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364c",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364c",
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
@@ -295,21 +295,21 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 		[]string{"active"},
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "35000",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364d",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364d",
 						ActivationEpoch: "56",
 					},
 				},
 				{
 					Index:  "39000",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364e",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364e",
 						ActivationEpoch: "56",
 					},
 				},
@@ -405,13 +405,13 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 		nil,
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "40000",
 					Status: "pending_queued",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey:       "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
+					Validator: &beacon.Validator{
+						Pubkey:          "0x8000a6c975761b488bdb0dfba4ed37c0d97d6e6b968562ef5c84aa9a5dfb92d8e309195004e97709077723739bf04463",
 						ActivationEpoch: fmt.Sprintf("%d", params.BeaconConfig().FarFutureEpoch),
 					},
 				},
@@ -426,8 +426,8 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 		[]string{"active"},
 	).Return(
-		&rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{},
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{},
 		},
 		nil,
 	).Times(1)
@@ -459,7 +459,7 @@ type getStateValidatorsInterface struct {
 	inputStatuses      []string
 
 	// Outputs
-	outputStateValidatorsResponseJson *rpcmiddleware.StateValidatorsResponseJson
+	outputStateValidatorsResponseJson *beacon.GetValidatorsResponse
 	outputErr                         error
 }
 
@@ -490,7 +490,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{},
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{},
 					outputErr:                         errors.New("a specific error"),
 				},
 			},
@@ -507,11 +507,11 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey: "NotAPublicKey",
+								Validator: &beacon.Validator{
+									Pubkey: "NotAPublicKey",
 								},
 							},
 						},
@@ -532,12 +532,12 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index: "NotAnIndex",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey: stringPubKey,
+								Validator: &beacon.Validator{
+									Pubkey: stringPubKey,
 								},
 							},
 						},
@@ -558,13 +558,13 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index:  "12345",
 								Status: "NotAStatus",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey: stringPubKey,
+								Validator: &beacon.Validator{
+									Pubkey: stringPubKey,
 								},
 							},
 						},
@@ -585,13 +585,13 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index:  "12345",
 								Status: "active_ongoing",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey:       stringPubKey,
+								Validator: &beacon.Validator{
+									Pubkey:          stringPubKey,
 									ActivationEpoch: "NotAnEpoch",
 								},
 							},
@@ -613,13 +613,13 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index:  "12345",
 								Status: "pending_queued",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey:       stringPubKey,
+								Validator: &beacon.Validator{
+									Pubkey:          stringPubKey,
 									ActivationEpoch: "10",
 								},
 							},
@@ -632,7 +632,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      []string{"active"},
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{},
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{},
 					outputErr:                         errors.New("a specific error"),
 				},
 			},
@@ -649,13 +649,13 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index:  "12345",
 								Status: "pending_queued",
-								Validator: &rpcmiddleware.ValidatorJson{
-									PublicKey:       stringPubKey,
+								Validator: &beacon.Validator{
+									Pubkey:          stringPubKey,
 									ActivationEpoch: "10",
 								},
 							},
@@ -668,8 +668,8 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					inputIndexes:       nil,
 					inputStatuses:      []string{"active"},
 
-					outputStateValidatorsResponseJson: &rpcmiddleware.StateValidatorsResponseJson{
-						Data: []*rpcmiddleware.ValidatorContainerJson{
+					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+						Data: []*beacon.ValidatorContainer{
 							{
 								Index: "NotAnIndex",
 							},

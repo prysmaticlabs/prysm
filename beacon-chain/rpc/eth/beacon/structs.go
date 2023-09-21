@@ -80,3 +80,44 @@ type GetBlockHeaderResponse struct {
 	Finalized           bool                                     `json:"finalized"`
 	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
 }
+
+type GetValidatorsResponse struct {
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+	Data                []*ValidatorContainer `json:"data"`
+}
+
+type GetValidatorResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                *ValidatorContainer `json:"data"`
+}
+
+type GetValidatorBalancesResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                []*ValidatorBalance `json:"data"`
+}
+
+type ValidatorContainer struct {
+	Index     string     `json:"index"`
+	Balance   string     `json:"balance"`
+	Status    string     `json:"status"`
+	Validator *Validator `json:"validator"`
+}
+
+type Validator struct {
+	Pubkey                     string `json:"pubkey"`
+	WithdrawalCredentials      string `json:"withdrawal_credentials"`
+	EffectiveBalance           string `json:"effective_balance"`
+	Slashed                    bool   `json:"slashed"`
+	ActivationEligibilityEpoch string `json:"activation_eligibility_epoch"`
+	ActivationEpoch            string `json:"activation_epoch"`
+	ExitEpoch                  string `json:"exit_epoch"`
+	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+type ValidatorBalance struct {
+	Index   string `json:"index"`
+	Balance string `json:"balance"`
+}
