@@ -13,8 +13,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const blobRetentionEpochSpecValue = 4096
-
 func configureTracing(cliCtx *cli.Context) error {
 	return tracing2.Setup(
 		"beacon-chain", // service name

@@ -15,6 +15,9 @@ var maxEpochsToPersistBlobs primitives.Epoch
 // If the flag is not set, the spec default `MinEpochsForBlobsSidecarsRequest` is used.
 // An error if the input epoch is smaller than the spec default value.
 func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {
+
+	maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+
 	// Check if the blob retention epoch flag is set.
 	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
 		// Retrieve and cast the epoch value.
@@ -23,13 +26,10 @@ func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {
 
 		// Validate the epoch value against the spec default.
 		if e < params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest {
-			return fmt.Errorf("input blob retention epoch smaller than spec default, %d < %d", e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+			return fmt.Errorf("%s smaller than spec default, %d < %d", flags.BlobRetentionEpoch.Name, e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
 		}
 
 		maxEpochsToPersistBlobs = e
-	} else {
-		// Set the blob retention epoch to the spec default.
-		maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	}
 
 	return nil
