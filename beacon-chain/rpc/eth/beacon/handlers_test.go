@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -30,6 +31,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -1135,7 +1137,7 @@ func TestGetCommittees(t *testing.T) {
 	})
 }
 
-func TestListBlockHeaders(t *testing.T) {
+func TestGetBlockHeaders(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	ctx := context.Background()
 
@@ -1338,5 +1340,192 @@ func TestListBlockHeaders(t *testing.T) {
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
+	})
+}
+
+func TestGetFinalityCheckpoints(t *testing.T) {
+	fillCheckpoints := func(state *eth.BeaconState) error {
+		state.PreviousJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("previous"), 32),
+			Epoch: 113,
+		}
+		state.CurrentJustifiedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("current"), 32),
+			Epoch: 123,
+		}
+		state.FinalizedCheckpoint = &eth.Checkpoint{
+			Root:  bytesutil.PadTo([]byte("finalized"), 32),
+			Epoch: 103,
+		}
+		return nil
+	}
+	fakeState, err := util.NewBeaconState(fillCheckpoints)
+	require.NoError(t, err)
+
+	chainService := &chainMock.ChainService{}
+	s := &Server{
+		Stater: &testutil.MockStater{
+			BeaconState: fakeState,
+		},
+		HeadFetcher:           chainService,
+		OptimisticModeFetcher: chainService,
+		FinalizationFetcher:   chainService,
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.FinalizedCheckpoint().Epoch), 10), resp.Data.Finalized.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.FinalizedCheckpoint().Root), resp.Data.Finalized.Root)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.CurrentJustifiedCheckpoint().Epoch), 10), resp.Data.CurrentJustified.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.CurrentJustifiedCheckpoint().Root), resp.Data.CurrentJustified.Root)
+		assert.Equal(t, strconv.FormatUint(uint64(fakeState.PreviousJustifiedCheckpoint().Epoch), 10), resp.Data.PreviousJustified.Epoch)
+		assert.DeepEqual(t, hexutil.Encode(fakeState.PreviousJustifiedCheckpoint().Root), resp.Data.PreviousJustified.Root)
+	})
+	t.Run("no state_id", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "state_id is required in URL params", e.Message)
+	})
+	t.Run("execution optimistic", func(t *testing.T) {
+		chainService := &chainMock.ChainService{Optimistic: true}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+	})
+	t.Run("finalized", func(t *testing.T) {
+		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
+		require.NoError(t, err)
+		chainService := &chainMock.ChainService{
+			FinalizedRoots: map[[32]byte]bool{
+				headerRoot: true,
+			},
+		}
+		s := &Server{
+			Stater: &testutil.MockStater{
+				BeaconState: fakeState,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetFinalityCheckpointsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, true, resp.Finalized)
+	})
+}
+
+func TestGetGenesis(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.GenesisForkVersion = []byte("genesis")
+	params.OverrideBeaconConfig(config)
+	genesis := time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC)
+	validatorsRoot := [32]byte{1, 2, 3, 4, 5, 6}
+
+	t.Run("ok", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetGenesisResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
+
+		assert.Equal(t, strconv.FormatInt(genesis.Unix(), 10), resp.Data.GenesisTime)
+		assert.DeepEqual(t, hexutil.Encode(validatorsRoot[:]), resp.Data.GenesisValidatorsRoot)
+		assert.DeepEqual(t, hexutil.Encode([]byte("genesis")), resp.Data.GenesisForkVersion)
+	})
+	t.Run("no genesis time", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        time.Time{},
+			ValidatorsRoot: validatorsRoot,
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
+	})
+	t.Run("no genesis validators root", func(t *testing.T) {
+		chainService := &chainMock.ChainService{
+			Genesis:        genesis,
+			ValidatorsRoot: [32]byte{},
+		}
+		s := Server{
+			GenesisTimeFetcher: chainService,
+			ChainInfoFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/genesis", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetGenesis(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
 }
