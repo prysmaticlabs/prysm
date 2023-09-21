@@ -13,6 +13,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const blobRetentionEpochSpecValue = 2048
+
 func configureTracing(cliCtx *cli.Context) error {
 	return tracing2.Setup(
 		"beacon-chain", // service name
@@ -73,6 +75,19 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 		if err := params.SetActive(c); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func configureBlobRetentionEpoch(cliCtx *cli.Context) error {
+	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
+		e := primitives.Epoch(cliCtx.Uint64(flags.BlobRetentionEpoch.Name))
+		if e < blobRetentionEpochSpecValue {
+			return fmt.Errorf("input blob retention epoch smaller than spec default, %d < %d", e, blobRetentionEpochSpecValue)
+		}
+		c := params.BeaconNetworkConfig().Copy()
+		c.MinEpochsForBlobsSidecarsRequest = primitives.Epoch(cliCtx.Uint64(flags.BlobRetentionEpoch.Name))
+		params.OverrideBeaconNetworkConfig(c)
 	}
 	return nil
 }
