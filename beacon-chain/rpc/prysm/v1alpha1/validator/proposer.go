@@ -194,42 +194,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	pb, err := sBlk.Block().Proto()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert block to proto: %v", err)
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().DenebForkEpoch {
-		if sBlk.IsBlinded() {
-			blockAndBlobs := &ethpb.BlindedBeaconBlockAndBlobsDeneb{
-				Block: pb.(*ethpb.BlindedBeaconBlockDeneb),
-				Blobs: blindBlobs,
-			}
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockAndBlobs}}, nil
-		}
-
-		blockAndBlobs := &ethpb.BeaconBlockAndBlobsDeneb{
-			Block: pb.(*ethpb.BeaconBlockDeneb),
-			Blobs: fullBlobs,
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blockAndBlobs}}, nil
-	}
-
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().CapellaForkEpoch {
-		if sBlk.IsBlinded() {
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedCapella{BlindedCapella: pb.(*ethpb.BlindedBeaconBlockCapella)}, IsBlinded: true, PayloadValue: sBlk.ValueInGwei()}, nil
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Capella{Capella: pb.(*ethpb.BeaconBlockCapella)}, IsBlinded: false, PayloadValue: sBlk.ValueInGwei()}, nil
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
-		if sBlk.IsBlinded() {
-			return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: pb.(*ethpb.BlindedBeaconBlockBellatrix)}, IsBlinded: true, PayloadValue: sBlk.ValueInGwei()}, nil
-		}
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Bellatrix{Bellatrix: pb.(*ethpb.BeaconBlockBellatrix)}, IsBlinded: false, PayloadValue: sBlk.ValueInGwei()}, nil
-	}
-	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().AltairForkEpoch {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Altair{Altair: pb.(*ethpb.BeaconBlockAltair)}, IsBlinded: false, PayloadValue: 0}, nil
-	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Phase0{Phase0: pb.(*ethpb.BeaconBlock)}, IsBlinded: false, PayloadValue: 0}, nil
+	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
