@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const blobRetentionEpochSpecValue = 2048
+const blobRetentionEpochSpecValue = 4096
 
 func configureTracing(cliCtx *cli.Context) error {
 	return tracing2.Setup(
@@ -79,16 +79,27 @@ func configureBuilderCircuitBreaker(cliCtx *cli.Context) error {
 	return nil
 }
 
+// configureBlobRetentionEpoch sets the for blob retention based on command-line context. It overrides the existing network configuration
+// for blob retention if the input epoch is greater than or equal to the spec default value.
+// An error if the input epoch is smaller than the spec default value.
 func configureBlobRetentionEpoch(cliCtx *cli.Context) error {
+	// Check if the blob retention epoch flag is set.
 	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
-		e := primitives.Epoch(cliCtx.Uint64(flags.BlobRetentionEpoch.Name))
+		// Retrieve and cast the epoch value.
+		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
+		e := primitives.Epoch(epochValue)
+
+		// Validate the epoch value against the spec default.
 		if e < blobRetentionEpochSpecValue {
 			return fmt.Errorf("input blob retention epoch smaller than spec default, %d < %d", e, blobRetentionEpochSpecValue)
 		}
+
+		// Copy the existing beacon network configuration.
 		c := params.BeaconNetworkConfig().Copy()
-		c.MinEpochsForBlobsSidecarsRequest = primitives.Epoch(cliCtx.Uint64(flags.BlobRetentionEpoch.Name))
+		c.MinEpochsForBlobsSidecarsRequest = e
 		params.OverrideBeaconNetworkConfig(c)
 	}
+
 	return nil
 }
 

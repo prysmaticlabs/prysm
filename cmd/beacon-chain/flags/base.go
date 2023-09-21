@@ -265,6 +265,7 @@ var (
 	}
 	BlobRetentionEpoch = &cli.Uint64Flag{
 		Name:  "extend-blob-retention-epoch",
-		Usage: "Extend blob retention epoch period to beyond default 2048 epochs ~18 days. The node will error at start if input value is less than 2048 epochs",
+		Usage: "Extend blob retention epoch period to beyond default 4096 epochs ~18 days. The node will error at start if input value is less than 2048 epochs",
+		Value: uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
 	}
 )
