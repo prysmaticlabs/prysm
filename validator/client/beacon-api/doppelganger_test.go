@@ -54,7 +54,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *beacon.GetValidatorsResponse
 		}
 		getLivelinessInterfaces []struct {
 			inputUrl           string
@@ -215,7 +215,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			},
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 			}{
 				input: []string{
 					// no stringPubKey1 since recent
@@ -225,14 +225,14 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					stringPubKey5, // non existing validator
 					stringPubKey6, // not recent - not duplicate
 				},
-				output: &apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				output: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						// No "11111" since corresponding validator is recent
-						{Index: "22222", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey2}}, // not recent - duplicate on previous epoch
-						{Index: "33333", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey3}}, // not recent - duplicate on current epoch
-						{Index: "44444", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
+						{Index: "22222", Validator: &beacon.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
+						{Index: "33333", Validator: &beacon.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
+						{Index: "44444", Validator: &beacon.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
 						// No "55555" sicee corresponding validator does not exist
-						{Index: "66666", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey6}}, // not recent - not duplicate
+						{Index: "66666", Validator: &beacon.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
 					},
 				},
 			},
@@ -435,16 +435,16 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 	standardGetStateValidatorsInterface := &struct {
 		input  []string
-		output *apimiddleware.StateValidatorsResponseJson
+		output *beacon.GetValidatorsResponse
 		err    error
 	}{
 		input: []string{stringPubKey},
-		output: &apimiddleware.StateValidatorsResponseJson{
-			Data: []*apimiddleware.ValidatorContainerJson{
+		output: &beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index: "42",
-					Validator: &apimiddleware.ValidatorJson{
-						PublicKey: stringPubKey,
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKey,
 					},
 				},
 			},
@@ -463,7 +463,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *beacon.GetValidatorsResponse
 			err    error
 		}
 		getLivenessInterfaces []struct {
@@ -548,7 +548,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input: []string{stringPubKey},
@@ -564,11 +564,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{nil}},
+				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{nil}},
 			},
 		},
 		{
@@ -580,11 +580,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{{Validator: nil}}},
+				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{{Validator: nil}}},
 			},
 		},
 		{

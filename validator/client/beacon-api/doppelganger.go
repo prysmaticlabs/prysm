@@ -147,7 +147,7 @@ func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *et
 			return nil, errors.New("validator is nil")
 		}
 
-		stringPubKeyToIndex[v.Validator.PublicKey] = index
+		stringPubKeyToIndex[v.Validator.Pubkey] = index
 		indexes[i] = index
 	}
 

@@ -672,7 +672,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 
@@ -916,7 +916,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
