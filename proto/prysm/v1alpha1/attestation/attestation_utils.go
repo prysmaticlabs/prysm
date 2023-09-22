@@ -73,7 +73,8 @@ func AttestingIndices(bf bitfield.Bitfield, committee []primitives.ValidatorInde
 		return nil, fmt.Errorf("bitfield length %d is not equal to committee length %d", bf.Len(), len(committee))
 	}
 	indices := make([]uint64, 0, bf.Count())
-	for _, idx := range bf.BitIndices() {
+	p := bf.BitIndices()
+	for _, idx := range p {
 		if idx < len(committee) {
 			indices = append(indices, uint64(committee[idx]))
 		}
@@ -104,6 +105,7 @@ func VerifyIndexedAttestationSig(ctx context.Context, indexedAtt *ethpb.IndexedA
 	ctx, span := trace.StartSpan(ctx, "attestationutil.VerifyIndexedAttestationSig")
 	defer span.End()
 	indices := indexedAtt.AttestingIndices
+
 	messageHash, err := signing.ComputeSigningRoot(indexedAtt.Data, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not get signing root of object")

@@ -86,5 +86,6 @@ type ProduceBlockV3Response struct {
 	Version                 string          `json:"version"`
 	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
+	ConsensusPayloadValue   string          `json:"consensus_payload_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
 }

@@ -167,7 +167,7 @@ func TestBlockRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
 	}
 
 	t.Run("ok", func(t *testing.T) {
@@ -560,7 +560,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {
