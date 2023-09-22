@@ -319,6 +319,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/proposer/{epoch}", validatorServerV1.GetProposerDuties).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/duties/sync/{epoch}", validatorServerV1.GetSyncCommitteeDuties).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/liveness/{epoch}", validatorServerV1.GetLiveness).Methods(http.MethodPost)
 
 	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServerV1.ProduceBlockV3).Methods(http.MethodGet)
 
@@ -441,9 +442,13 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.SubmitVoluntaryExit).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/sync_committees", beaconChainServerV1.SubmitSyncCommitteeSignatures).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers", beaconChainServerV1.GetBlockHeaders).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers/{block_id}", beaconChainServerV1.GetBlockHeader).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", beaconChainServerV1.GetDepositContract).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/genesis", beaconChainServerV1.GetGenesis).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/finality_checkpoints", beaconChainServerV1.GetFinalityCheckpoints).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators", beaconChainServerV1.GetValidators).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators/{validator_id}", beaconChainServerV1.GetValidator).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)

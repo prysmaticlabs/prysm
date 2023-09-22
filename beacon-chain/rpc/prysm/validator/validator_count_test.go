@@ -71,7 +71,7 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 			name:                 "invalid state ID",
 			stater:               &testutil.MockStater{StateProviderFunc: stateIdCheckerStateFunc},
 			stateID:              "helloworld",
-			expectedErrorMessage: "invalid state ID",
+			expectedErrorMessage: "Invalid state ID",
 			statusCode:           http.StatusBadRequest,
 		},
 	}
