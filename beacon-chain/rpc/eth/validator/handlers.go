@@ -806,8 +806,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var st state.BeaconState
-	// if the requested epoch is new, use the head state and the next slot
-	// cache
+	// if the requested epoch is new, use the head state and the next slot cache
 	if requestedEpoch < currentEpoch {
 		st, err = s.Stater.StateBySlot(ctx, epochStartSlot)
 		if err != nil {
@@ -817,14 +816,14 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 	} else {
 		st, err = s.HeadFetcher.HeadState(ctx)
 		if err != nil {
-			http2.HandleError(w, fmt.Sprintf("Could not head state: %v ", err), http.StatusInternalServerError)
+			http2.HandleError(w, fmt.Sprintf("Could not get head state: %v ", err), http.StatusInternalServerError)
 			return
 		}
 		// Advance state with empty transitions up to the requested epoch start slot.
 		if st.Slot() < epochStartSlot {
 			headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 			if err != nil {
-				http2.HandleError(w, fmt.Sprintf("Could not head root: %v ", err), http.StatusInternalServerError)
+				http2.HandleError(w, fmt.Sprintf("Could not get head root: %v ", err), http.StatusInternalServerError)
 				return
 			}
 			st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot, epochStartSlot)
