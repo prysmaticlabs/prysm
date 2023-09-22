@@ -22,7 +22,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // sortableIndices implements the Sort interface to sort newly activated validator indices
@@ -143,7 +142,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
-	if slots.ToEpoch(state.Slot()) >= params.BeaconConfig().DenebForkEpoch {
+	if state.Version() >= version.Deneb {
 		// Cap churn limit to max per epoch churn limit. New in EIP7514.
 		if churnLimit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
 			churnLimit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
