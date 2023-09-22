@@ -143,16 +143,16 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
+	if slots.ToEpoch(state.Slot()) >= params.BeaconConfig().DenebForkEpoch {
+		// Cap churn limit to max per epoch churn limit. New in EIP7514.
+		if churnLimit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
+			churnLimit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
+		}
+	}
+
 	// Prevent churn limit cause index out of bound.
 	if churnLimit < limit {
 		limit = churnLimit
-	}
-
-	if slots.ToEpoch(state.Slot()) >= params.BeaconConfig().DenebForkEpoch {
-		// Cap churn limit to max per epoch churn limit. New in EIP7514.
-		if limit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
-			limit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
-		}
 	}
 
 	activationExitEpoch := helpers.ActivationExitEpoch(currentEpoch)
