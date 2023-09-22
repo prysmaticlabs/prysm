@@ -672,7 +672,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 
@@ -845,6 +845,63 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, response)
 }
 
+// GetBlockHeader retrieves block header for given block id.
+func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
+	defer span.End()
+
+	blockID := mux.Vars(r)["block_id"]
+	if blockID == "" {
+		http2.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	blk, err := s.Blocker.Block(ctx, []byte(blockID))
+	ok := shared.WriteBlockFetchError(w, blk, err)
+	if !ok {
+		return
+	}
+	blockHeader, err := blk.Header()
+	if err != nil {
+		http2.HandleError(w, "Could not get block header: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	headerRoot, err := blockHeader.Header.HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not hash block header: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not hash block: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not determine if block root is canonical: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not check if block is optimistic: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := &GetBlockHeaderResponse{
+		Data: &shared.SignedBeaconBlockHeaderContainer{
+			Root:      hexutil.Encode(headerRoot[:]),
+			Canonical: canonical,
+			Header: &shared.SignedBeaconBlockHeader{
+				Message:   shared.BeaconBlockHeaderFromConsensus(blockHeader.Header),
+				Signature: hexutil.Encode(blockHeader.Signature),
+			},
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, blkRoot),
+	}
+	http2.WriteJson(w, resp)
+}
+
 // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
 // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
 func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) {
@@ -859,7 +916,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
