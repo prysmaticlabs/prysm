@@ -92,6 +92,52 @@ func TestPublicKey_Aggregate(t *testing.T) {
 	require.DeepEqual(t, resKey.Marshal(), aggKey.Marshal(), "Pubkey does not match up")
 }
 
+func TestPublicKey_Aggregation_NoCorruption(t *testing.T) {
+	pubkeys := []common.PublicKey{}
+	for i := 0; i < 100; i++ {
+		priv, err := blst.RandKey()
+		require.NoError(t, err)
+		pubkey := priv.PublicKey()
+		pubkeys = append(pubkeys, pubkey)
+	}
+
+	compressedKeys := [][]byte{}
+	// Fill up the cache
+	for _, pkey := range pubkeys {
+		_, err := blst.PublicKeyFromBytes(pkey.Marshal())
+		require.NoError(t, err)
+		compressedKeys = append(compressedKeys, pkey.Marshal())
+	}
+
+	// Aggregate different sets of keys.
+	_, err := blst.AggregatePublicKeys(compressedKeys)
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[:10])
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[:40])
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[20:60])
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[80:])
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[60:90])
+	require.NoError(t, err)
+
+	_, err = blst.AggregatePublicKeys(compressedKeys[40:99])
+	require.NoError(t, err)
+
+	for _, pkey := range pubkeys {
+		cachedPubkey, err := blst.PublicKeyFromBytes(pkey.Marshal())
+		require.NoError(t, err)
+		assert.Equal(t, true, cachedPubkey.Equals(pkey))
+	}
+}
+
 func TestPublicKeysEmpty(t *testing.T) {
 	var pubs [][]byte
 	_, err := blst.AggregatePublicKeys(pubs)
