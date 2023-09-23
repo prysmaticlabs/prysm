@@ -5,6 +5,7 @@ package blst_test
 import (
 	"bytes"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
@@ -109,27 +110,59 @@ func TestPublicKey_Aggregation_NoCorruption(t *testing.T) {
 		compressedKeys = append(compressedKeys, pkey.Marshal())
 	}
 
+	wg := new(sync.WaitGroup)
+
 	// Aggregate different sets of keys.
-	_, err := blst.AggregatePublicKeys(compressedKeys)
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys)
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[:10])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[:10])
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[:40])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[:40])
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[20:60])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[20:60])
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[80:])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[80:])
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[60:90])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[60:90])
+		require.NoError(t, err)
+		wg.Done()
+	}()
 
-	_, err = blst.AggregatePublicKeys(compressedKeys[40:99])
-	require.NoError(t, err)
+	wg.Add(1)
+	go func() {
+		_, err := blst.AggregatePublicKeys(compressedKeys[40:99])
+		require.NoError(t, err)
+		wg.Done()
+	}()
+
+	wg.Wait()
 
 	for _, pkey := range pubkeys {
 		cachedPubkey, err := blst.PublicKeyFromBytes(pkey.Marshal())
