@@ -9,7 +9,6 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
-	gcache "github.com/patrickmn/go-cache"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -27,7 +26,6 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestValidateBlob_FromSelf(t *testing.T) {
@@ -136,49 +134,12 @@ func TestValidateBlob_OlderThanFinalizedEpoch(t *testing.T) {
 	require.Equal(t, result, pubsub.ValidationIgnore)
 }
 
-func TestValidateBlob_UnknownParentBlock(t *testing.T) {
-	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	p := p2ptest.NewTestP2P(t)
-	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}}
-	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
-		cfg: &config{
-			p2p:         p,
-			initialSync: &mockSync.Sync{},
-			chain:       chainService,
-			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
-
-	b := util.NewBlobsidecar()
-	b.Message.Slot = chainService.CurrentSlot() + 1
-	buf := new(bytes.Buffer)
-	_, err := p.Encoding().EncodeGossip(buf, b)
-	require.NoError(t, err)
-
-	topic := p2p.GossipTypeMapping[reflect.TypeOf(b)]
-	digest, err := s.currentForkDigest()
-	require.NoError(t, err)
-	topic = s.addDigestAndIndexToTopic(topic, digest, 0)
-	result, err := s.validateBlob(ctx, "", &pubsub.Message{
-		Message: &pb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		}})
-	require.NoError(t, err)
-	require.Equal(t, result, pubsub.ValidationIgnore)
-	require.LogsContain(t, hook, "Ignored blob: parent block not found")
-
-	pendingBlobs := s.pendingBlobsInCache(b.Message.Slot)
-	require.Equal(t, 1, len(pendingBlobs))
-}
-
 func TestValidateBlob_HigherThanParentSlot(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},
@@ -222,7 +183,6 @@ func TestValidateBlob_InvalidProposerSignature(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},
@@ -269,8 +229,7 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
-		seenBlobCache:      lruwrpr.New(10),
+		seenBlobCache: lruwrpr.New(10),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},
@@ -320,8 +279,7 @@ func TestValidateBlob_IncorrectProposerIndex(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
-		seenBlobCache:      lruwrpr.New(10),
+		seenBlobCache: lruwrpr.New(10),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},
@@ -370,8 +328,7 @@ func TestValidateBlob_EverythingPasses(t *testing.T) {
 	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
-		slotToPendingBlobs: gcache.New(time.Second, 2*time.Second),
-		seenBlobCache:      lruwrpr.New(10),
+		seenBlobCache: lruwrpr.New(10),
 		cfg: &config{
 			p2p:         p,
 			initialSync: &mockSync.Sync{},

@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -231,17 +232,14 @@ func TestGetLiveness_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	livenessResponseJson := apimiddleware.LivenessResponseJson{}
+	livenessResponseJson := validator.GetLivenessResponse{}
 
 	indexes := []string{"1", "2"}
 	marshalledIndexes, err := json.Marshal(indexes)
 	require.NoError(t, err)
 
-	expected := apimiddleware.LivenessResponseJson{
-		Data: []*struct {
-			Index  string `json:"index"`
-			IsLive bool   `json:"is_live"`
-		}{
+	expected := validator.GetLivenessResponse{
+		Data: []*validator.ValidatorLiveness{
 			{
 				Index:  "1",
 				IsLive: true,

@@ -158,6 +158,10 @@ func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeacon
 	if err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return errors.Wrap(err, "could not get bls to execution changes")
 	}
+	kzgCommitments, err := src.Block().Body().BlobKzgCommitments()
+	if err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
+		return errors.Wrap(err, "could not get blob kzg commitments")
+	}
 
 	dst.SetSlot(src.Block().Slot())
 	dst.SetProposerIndex(src.Block().ProposerIndex())
@@ -176,6 +180,9 @@ func copyBlockData(src interfaces.SignedBeaconBlock, dst interfaces.SignedBeacon
 	}
 	dst.SetSignature(sig[:])
 	if err = dst.SetBLSToExecutionChanges(blsToExecChanges); err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
+		return errors.Wrap(err, "could not set bls to execution changes")
+	}
+	if err = dst.SetBlobKzgCommitments(kzgCommitments); err != nil && !errors.Is(err, consensus_types.ErrUnsupportedField) {
 		return errors.Wrap(err, "could not set bls to execution changes")
 	}
 
