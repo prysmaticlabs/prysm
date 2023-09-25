@@ -145,7 +145,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			err = s.ReceiveBlock(ctx, wsb, root)
 			if tt.wantedErr != "" {
-				require.ErrorContains(t, tt.wantedErr, err)
+				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
 				require.NoError(t, err)
 				tt.check(t, s)
