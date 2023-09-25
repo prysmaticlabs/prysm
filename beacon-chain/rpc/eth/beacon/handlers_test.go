@@ -1654,3 +1654,23 @@ func TestGetGenesis(t *testing.T) {
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
 }
+
+func TestGetDepositContract(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.DepositChainID = uint64(10)
+	config.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	params.OverrideBeaconConfig(config)
+
+	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s := &Server{}
+	s.GetDepositContract(writer, request)
+	assert.Equal(t, http.StatusOK, writer.Code)
+	response := DepositContractResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
+	assert.Equal(t, "10", response.Data.ChainId)
+	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
+}
