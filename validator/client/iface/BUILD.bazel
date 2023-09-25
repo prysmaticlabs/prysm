@@ -11,7 +11,7 @@ go_library(
         "validator_client.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/iface",
-    visibility = ["//validator:__subpackages__"],
+    visibility = ["//validator:public"],
     deps = [
         "//config/fieldparams:go_default_library",
         "//config/validator/service:go_default_library",
