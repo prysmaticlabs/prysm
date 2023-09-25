@@ -23,9 +23,10 @@ func TestService_ReceiveBlock(t *testing.T) {
 	ctx := context.Background()
 
 	genesis, keys := util.DeterministicGenesisState(t, 64)
+	copiedGen := genesis.Copy()
 	genFullBlock := func(t *testing.T, conf *util.BlockGenConfig, slot primitives.Slot) *ethpb.SignedBeaconBlock {
-		blk, err := util.GenerateFullBlock(genesis, keys, conf, slot)
-		assert.NoError(t, err)
+		blk, err := util.GenerateFullBlock(copiedGen.Copy(), keys, conf, slot)
+		require.NoError(t, err)
 		return blk
 	}
 	//params.SetupTestConfigCleanupWithLock(t)
@@ -108,6 +109,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
+				// Hacky sleep, should use a better way to be able to resolve the race
+				// between event being sent out and processed.
+				time.Sleep(100 * time.Millisecond)
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
@@ -119,6 +123,10 @@ func TestService_ReceiveBlock(t *testing.T) {
 	for _, tt := range tests {
 		wg.Add(1)
 		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				wg.Done()
+			}()
+			genesis = genesis.Copy()
 			s, tr := minimalTestService(t,
 				WithFinalizedStateAtStartUp(genesis),
 				WithExitPool(voluntaryexits.NewPool()),
@@ -139,10 +147,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 				tt.check(t, s)
 			}
-			wg.Done()
 		})
 	}
 	wg.Wait()
