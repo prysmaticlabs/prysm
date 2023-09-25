@@ -287,7 +287,7 @@ func (vs *Server) getParentBlockHash(ctx context.Context, st state.BeaconState, 
 func getParentBlockHashPostCapella(st state.BeaconState) ([]byte, error) {
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get post capella payload header")
 	}
 	return header.BlockHash(), nil
 }
@@ -296,7 +296,7 @@ func getParentBlockHashPostCapella(st state.BeaconState) ([]byte, error) {
 func getParentBlockHashPostMerge(st state.BeaconState) ([]byte, error) {
 	header, err := st.LatestExecutionPayloadHeader()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get post merge payload header")
 	}
 	return header.ParentHash(), nil
 }
