@@ -20,7 +20,7 @@ type GetCommitteesResponse struct {
 
 type DepositContractResponse struct {
 	Data *struct {
-		ChainId uint64 `json:"chain_id"`
+		ChainId string `json:"chain_id"`
 		Address string `json:"address"`
 	} `json:"data"`
 }
