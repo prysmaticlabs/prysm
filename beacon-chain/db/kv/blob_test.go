@@ -332,7 +332,6 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	kzgProof := make([]byte, 48)
 	_, err = rand.Read(kzgProof)
 	require.NoError(t, err)
-
 	return &ethpb.BlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
 		Index:           index,
