@@ -74,12 +74,12 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		}
 
 		for _, data := range stateValidators.Data {
-			pubkey, err := hexutil.Decode(data.Validator.PublicKey)
+			pubkey, err := hexutil.Decode(data.Validator.Pubkey)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse validator public key")
 			}
 
-			stringRetrievedPubKeys[data.Validator.PublicKey] = struct{}{}
+			stringRetrievedPubKeys[data.Validator.Pubkey] = struct{}{}
 
 			index, err := strconv.ParseUint(data.Index, 10, 64)
 			if err != nil {

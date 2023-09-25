@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -1157,101 +1156,101 @@ func TestGetDuties_Valid(t *testing.T) {
 				gomock.Any(),
 				gomock.Any(),
 			).Return(
-				&apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				&beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[0]), 10),
 							Status: "pending_initialized",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[0]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[0]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[1]), 10),
 							Status: "pending_queued",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[1]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[1]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[2]), 10),
 							Status: "active_ongoing",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[2]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[2]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[3]), 10),
 							Status: "active_exiting",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[3]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[3]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[4]), 10),
 							Status: "active_slashed",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[4]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[4]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[5]), 10),
 							Status: "exited_unslashed",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[5]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[5]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[6]), 10),
 							Status: "exited_slashed",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[6]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[6]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[7]), 10),
 							Status: "withdrawal_possible",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[7]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[7]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[8]), 10),
 							Status: "withdrawal_done",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[8]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[8]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[9]), 10),
 							Status: "pending_initialized",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[9]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[9]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[10]), 10),
 							Status: "pending_queued",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[10]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[10]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
 						{
 							Index:  strconv.FormatUint(uint64(validatorIndices[11]), 10),
 							Status: "active_ongoing",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey:       hexutil.Encode(pubkeys[11]),
+							Validator: &beacon.Validator{
+								Pubkey:          hexutil.Encode(pubkeys[11]),
 								ActivationEpoch: strconv.FormatUint(uint64(testCase.epoch), 10),
 							},
 						},
@@ -1341,8 +1340,8 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		&apimiddleware.StateValidatorsResponseJson{
-			Data: []*apimiddleware.ValidatorContainerJson{},
+		&beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{},
 		},
 		nil,
 	).Times(1)
