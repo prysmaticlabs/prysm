@@ -1655,7 +1655,7 @@ func TestGetGenesis(t *testing.T) {
 	})
 }
 
-func TestServer_GetDepositContract(t *testing.T) {
+func TestGetDepositContract(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	config := params.BeaconConfig().Copy()
 	config.DepositChainID = uint64(10)
