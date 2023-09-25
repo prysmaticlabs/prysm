@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -87,20 +88,10 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 		return
 	}
 
-	wrapper, err := convertGenericBlockToReadOnlySignedBeaconBlock(v1alpha1resp.Block)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+	consensusPayload, httpError := getConsensusPayload(ctx, s.BlockRewardFetcher, v1alpha1resp.Block)
+	if httpError != nil {
+		http2.WriteError(w, httpError)
 		return
-	}
-	consensusPayload := ""
-	if wrapper != nil {
-		//get consensus payload value which is the same as the total from the block rewards api
-		blockRewards, httpError := s.BlockRewardFetcher.GetBlockRewardsData(ctx, wrapper)
-		if httpError != nil {
-			http2.WriteError(w, httpError)
-			return
-		}
-		consensusPayload = blockRewards.Total
 	}
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
@@ -159,32 +150,50 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 }
 
-// convertGenericBlockToReadOnlySignedBeaconBlock will create a fake wrapper object to call the reward functions as some require a signed block even if not using a signature.
-// TODO: we should remove this and update the associated functions in another PR
-func convertGenericBlockToReadOnlySignedBeaconBlock(i interface{}) (interfaces.ReadOnlySignedBeaconBlock, error) {
+func getConsensusPayload(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *http2.DefaultErrorJson) {
+	var wrapper interfaces.ReadOnlySignedBeaconBlock
+	var err error
+
+	// TODO: we should not require this fake signed wrapper and fix associated functions in the future.
 	switch b := i.(type) {
 	case *eth.GenericBeaconBlock_Phase0:
 		//ignore for phase0
-		return nil, nil
+		return "", nil
 	case *eth.GenericBeaconBlock_Altair:
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
 	case *eth.GenericBeaconBlock_Bellatrix:
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
 	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
 	case *eth.GenericBeaconBlock_Capella:
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
 	case *eth.GenericBeaconBlock_BlindedCapella:
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
 	case *eth.GenericBeaconBlock_Deneb:
 		// no need for sidecar
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
 	case *eth.GenericBeaconBlock_BlindedDeneb:
 		// no need for sidecar
-		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
 	default:
-		return nil, fmt.Errorf("type %T is not supported", b)
+		return "", &http2.DefaultErrorJson{
+			Message: fmt.Errorf("type %T is not supported", b).Error(),
+			Code:    http.StatusInternalServerError,
+		}
 	}
+	if err != nil {
+		return "", &http2.DefaultErrorJson{
+			Message: err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	//get consensus payload value which is the same as the total from the block rewards api
+	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, wrapper)
+	if httpError != nil {
+		return "", httpError
+	}
+	return blockRewards.Total, nil
 }
 
 func handleProducePhase0V3(
