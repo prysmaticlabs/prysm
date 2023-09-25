@@ -183,7 +183,7 @@ func convertGenericBlockToReadOnlySignedBeaconBlock(i interface{}) (interfaces.R
 		// no need for sidecar
 		return blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
 	default:
-		return nil, fmt.Errorf("type %v is not supported", b)
+		return nil, fmt.Errorf("type %T is not supported", b)
 	}
 }
 
