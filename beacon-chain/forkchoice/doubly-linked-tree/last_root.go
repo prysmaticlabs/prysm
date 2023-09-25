@@ -19,7 +19,8 @@ func (f *ForkChoice) LastRoot(epoch primitives.Epoch) [32]byte {
 	if headEpoch == epoch {
 		return head.root
 	}
-	for ; head != nil && head.slot > epochEnd; head = head.parent {
+	for head != nil && head.slot > epochEnd {
+		head = head.parent
 	}
 	if head == nil {
 		return [32]byte{}
