@@ -746,10 +746,10 @@ func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 
 	http2.WriteJson(w, &DepositContractResponse{
 		Data: &struct {
-			ChainId uint64 `json:"chain_id"`
+			ChainId string `json:"chain_id"`
 			Address string `json:"address"`
 		}{
-			ChainId: params.BeaconConfig().DepositChainID,
+			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	})
