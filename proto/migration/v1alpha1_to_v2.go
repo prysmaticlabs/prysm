@@ -154,21 +154,29 @@ func V1Alpha1SignedBlindedBlobSidecarsToV2(sidecars []*ethpbalpha.SignedBlindedB
 func V1Alpha1SignedBlobsToV2(sidecars []*ethpbalpha.SignedBlobSidecar) []*ethpbv2.SignedBlobSidecar {
 	result := make([]*ethpbv2.SignedBlobSidecar, len(sidecars))
 	for i, sc := range sidecars {
-		result[i] = &ethpbv2.SignedBlobSidecar{
-			Message: &ethpbv2.BlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				Blob:            bytesutil.SafeCopyBytes(sc.Message.Blob),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
+		result[i] = V1Alpha1SignedBlobToV2(sc)
 	}
 	return result
+}
+
+// V1Alpha1SignedBlobToV2 converts a v1alpha1 object to its v2 SignedBlobSidecar equivalent.
+func V1Alpha1SignedBlobToV2(sidecar *ethpbalpha.SignedBlobSidecar) *ethpbv2.SignedBlobSidecar {
+	if sidecar == nil || sidecar.Message == nil {
+		return &ethpbv2.SignedBlobSidecar{}
+	}
+	return &ethpbv2.SignedBlobSidecar{
+		Message: &ethpbv2.BlobSidecar{
+			BlockRoot:       bytesutil.SafeCopyBytes(sidecar.Message.BlockRoot),
+			Index:           sidecar.Message.Index,
+			Slot:            sidecar.Message.Slot,
+			BlockParentRoot: bytesutil.SafeCopyBytes(sidecar.Message.BlockParentRoot),
+			ProposerIndex:   sidecar.Message.ProposerIndex,
+			Blob:            bytesutil.SafeCopyBytes(sidecar.Message.Blob),
+			KzgCommitment:   bytesutil.SafeCopyBytes(sidecar.Message.KzgCommitment),
+			KzgProof:        bytesutil.SafeCopyBytes(sidecar.Message.KzgProof),
+		},
+		Signature: bytesutil.SafeCopyBytes(sidecar.Signature),
+	}
 }
 
 // V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
