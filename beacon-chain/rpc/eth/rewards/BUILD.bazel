@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "handlers.go",
         "server.go",
+        "service.go",
         "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards",

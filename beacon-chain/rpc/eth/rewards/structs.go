@@ -1,24 +1,5 @@
 package rewards
 
-import (
-	"context"
-
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-)
-
-// BlockRewardsFetcher retrieves the Consensus Payload ( aka block rewards) of the passed in block
-type BlockRewardsFetcher interface {
-	GetBlockRewardsData(context.Context, interfaces.ReadOnlySignedBeaconBlock) (*BlockRewards, *http2.DefaultErrorJson)
-	GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, *http2.DefaultErrorJson)
-}
-
-type BlockRewardService struct {
-	Replayer stategen.ReplayerBuilder
-}
-
 type BlockRewardsResponse struct {
 	Data                *BlockRewards `json:"data"`
 	ExecutionOptimistic bool          `json:"execution_optimistic"`
