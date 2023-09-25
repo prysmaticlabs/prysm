@@ -85,14 +85,14 @@ var capellaFields = append(
 )
 
 const (
-	phase0SharedFieldRefCount     = 5
-	altairSharedFieldRefCount     = 5
-	bellatrixSharedFieldRefCount  = 6
-	capellaSharedFieldRefCount    = 8
-	phase0MultiValueFieldCount    = 5
-	altairMultiValueFieldCount    = 6
-	bellatrixMultiValueFieldCount = 6
-	capellaMultiValueFieldCount   = 6
+	phase0SharedFieldRefCount                     = 10
+	altairSharedFieldRefCount                     = 11
+	bellatrixSharedFieldRefCount                  = 12
+	capellaSharedFieldRefCount                    = 14
+	experimentalStatePhase0SharedFieldRefCount    = 5
+	experimentalStateAltairSharedFieldRefCount    = 5
+	experimentalStateBellatrixSharedFieldRefCount = 6
+	experimentalStateCapellaSharedFieldRefCount   = 8
 )
 
 // InitializeFromProtoPhase0 the beacon state from a protobuf representation.
@@ -162,7 +162,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.randaoMixesMultiValue = NewMultiValueRandaoMixes(st.RandaoMixes)
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStatePhase0SharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
@@ -185,7 +185,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.balances = st.Balances
 		b.validators = st.Validators
 
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount+phase0MultiValueFieldCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
 	}
 
 	for _, f := range phase0Fields {
@@ -269,7 +269,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateAltairSharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
@@ -293,7 +293,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.validators = st.Validators
 		b.inactivityScores = st.InactivityScores
 
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount+altairMultiValueFieldCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
 	}
 
 	for _, f := range altairFields {
@@ -379,7 +379,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateBellatrixSharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
@@ -403,7 +403,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.validators = st.Validators
 		b.inactivityScores = st.InactivityScores
 
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount+bellatrixMultiValueFieldCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
 	}
 
 	for _, f := range bellatrixFields {
@@ -493,7 +493,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.balancesMultiValue = NewMultiValueBalances(st.Balances)
 		b.validatorsMultiValue = NewMultiValueValidators(st.Validators)
 		b.inactivityScoresMultiValue = NewMultiValueInactivityScores(st.InactivityScores)
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateCapellaSharedFieldRefCount)
 	} else {
 		bRoots := make([][32]byte, fieldparams.BlockRootsLength)
 		for i, r := range st.BlockRoots {
@@ -517,7 +517,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.validators = st.Validators
 		b.inactivityScores = st.InactivityScores
 
-		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount+capellaMultiValueFieldCount)
+		b.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
 	}
 
 	for _, f := range capellaFields {
@@ -644,6 +644,17 @@ func (b *BeaconState) Copy() state.BeaconState {
 	if features.Get().EnableExperimentalState {
 		switch b.version {
 		case version.Phase0:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStatePhase0SharedFieldRefCount)
+		case version.Altair:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateAltairSharedFieldRefCount)
+		case version.Bellatrix:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateBellatrixSharedFieldRefCount)
+		case version.Capella:
+			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, experimentalStateCapellaSharedFieldRefCount)
+		}
+	} else {
+		switch b.version {
+		case version.Phase0:
 			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount)
 		case version.Altair:
 			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount)
@@ -651,17 +662,6 @@ func (b *BeaconState) Copy() state.BeaconState {
 			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount)
 		case version.Capella:
 			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount)
-		}
-	} else {
-		switch b.version {
-		case version.Phase0:
-			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, phase0SharedFieldRefCount+phase0MultiValueFieldCount)
-		case version.Altair:
-			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, altairSharedFieldRefCount+altairMultiValueFieldCount)
-		case version.Bellatrix:
-			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, bellatrixSharedFieldRefCount+bellatrixMultiValueFieldCount)
-		case version.Capella:
-			dst.sharedFieldReferences = make(map[types.FieldIndex]*stateutil.Reference, capellaSharedFieldRefCount+capellaMultiValueFieldCount)
 		}
 	}
 
@@ -1099,9 +1099,9 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(11, b.validatorsMultiValue.Value(b))
+		return b.recomputeFieldTrie(field, b.validatorsMultiValue.Value(b))
 	} else {
-		return b.recomputeFieldTrie(11, b.validators)
+		return b.recomputeFieldTrie(field, b.validators)
 	}
 }
 
@@ -1122,9 +1122,9 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(12, b.balancesMultiValue.Value(b))
+		return b.recomputeFieldTrie(field, b.balancesMultiValue.Value(b))
 	} else {
-		return b.recomputeFieldTrie(12, b.balances)
+		return b.recomputeFieldTrie(field, b.balances)
 	}
 }
 

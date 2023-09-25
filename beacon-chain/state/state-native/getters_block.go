@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -54,13 +53,6 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	if roots == nil {
 		return nil
 	}
-	if features.Get().EnableExperimentalState {
-		rootsSlice := make([][]byte, len(roots))
-		for i, r := range roots {
-			rootsSlice[i] = r[:]
-		}
-		return rootsSlice
-	}
 	rootsCopy := make([][]byte, len(roots))
 	for i, r := range roots {
 		rootsCopy[i] = make([]byte, 32)
@@ -93,7 +85,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytesutil.SafeCopyBytes(r[:]), nil
+		return r[:], nil
 	}
 
 	if b.blockRoots == nil {
@@ -102,5 +94,5 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if uint64(len(b.blockRoots)) <= idx {
 		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 	}
-	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
+	return b.blockRoots[idx][:], nil
 }

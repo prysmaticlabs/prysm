@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
@@ -15,13 +14,6 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	mixes := b.randaoMixesVal()
 	if mixes == nil {
 		return nil
-	}
-	if features.Get().EnableExperimentalState {
-		mixesSlice := make([][]byte, len(mixes))
-		for i, m := range mixes {
-			mixesSlice[i] = m[:]
-		}
-		return mixesSlice
 	}
 	mixesCopy := make([][]byte, len(mixes))
 	for i, m := range mixes {
@@ -55,7 +47,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytesutil.SafeCopyBytes(r[:]), nil
+		return r[:], nil
 	}
 
 	if b.randaoMixes == nil {
@@ -64,7 +56,7 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 	if uint64(len(b.randaoMixes)) <= idx {
 		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "randao mix index %d does not exist", idx)
 	}
-	return bytesutil.SafeCopyBytes(b.randaoMixes[idx][:]), nil
+	return b.randaoMixes[idx][:], nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
