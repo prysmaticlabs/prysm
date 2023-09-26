@@ -96,7 +96,7 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
 	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", v1alpha1resp.PayloadValue))
-	w.Header().Set(api.ConsensusPayloadValueHeader, consensusPayload)
+	w.Header().Set(api.ConsensusBlockValueHeader, consensusPayload)
 
 	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
 	if ok {
@@ -228,7 +228,7 @@ func handleProducePhase0V3(
 		Version:                 version.String(version.Phase0),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
-		ConsensusPayloadValue:   "",                              // rewards not applicable before altair
+		ConsensusBlockValue:     "",                              // rewards not applicable before altair
 		Data:                    jsonBytes,
 	})
 }
@@ -267,7 +267,7 @@ func handleProduceAltairV3(
 		Version:                 version.String(version.Altair),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -305,7 +305,7 @@ func handleProduceBellatrixV3(
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -343,7 +343,7 @@ func handleProduceBlindedBellatrixV3(
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -381,7 +381,7 @@ func handleProduceBlindedCapellaV3(
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -419,7 +419,7 @@ func handleProduceCapellaV3(
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -457,7 +457,7 @@ func handleProduceBlindedDenebV3(
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -495,7 +495,7 @@ func handleProduceDenebV3(
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
-		ConsensusPayloadValue:   consensusPayloadValue,
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
