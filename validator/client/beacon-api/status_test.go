@@ -574,6 +574,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
 					Data: []*beacon.ValidatorContainer{
 						{
+							Index: "0",
 							Validator: &beacon.Validator{
 								Pubkey: "NotAPublicKey",
 							},

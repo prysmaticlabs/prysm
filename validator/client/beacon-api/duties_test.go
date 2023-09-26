@@ -1370,9 +1370,20 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
+	prysmBeaconChainClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	prysmBeaconChainClient.EXPECT().GetValidatorCount(
+		ctx,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		nil,
+		iface.ErrNotSupported,
+	).MinTimes(1)
+
 	validatorClient := &beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		dutiesProvider:          dutiesProvider,
+		prysmBeaconChainCLient:  prysmBeaconChainClient,
 	}
 
 	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{

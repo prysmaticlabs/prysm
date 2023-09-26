@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 
 	"github.com/golang/mock/gomock"
@@ -63,9 +63,10 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -77,7 +78,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validator2.ValidatorStatus{validator2.Active},
+		[]validatorType.ValidatorStatus{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -93,9 +94,10 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
 	validatorClient.EXPECT().WaitForActivation(
@@ -107,7 +109,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validator2.ValidatorStatus{validator2.Active},
+		[]validatorType.ValidatorStatus{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	// A stream fails the first time, but succeeds the second time.
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
@@ -128,10 +130,11 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		genesisTime:     1,
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		genesisTime:       1,
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -145,7 +148,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validator2.ValidatorStatus{validator2.Active},
+		[]validatorType.ValidatorStatus{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
@@ -180,7 +183,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validator2.ValidatorStatus{validator2.Active},
+		[]validatorType.ValidatorStatus{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
@@ -225,7 +228,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validator2.ValidatorStatus{validator2.Active},
+		[]validatorType.ValidatorStatus{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	clientStream.EXPECT().Recv().Return(
 		resp,
@@ -266,7 +269,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		prysmBeaconClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validator2.ValidatorStatus{validator2.Active},
+			[]validatorType.ValidatorStatus{validatorType.Active},
 		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
@@ -354,7 +357,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		prysmBeaconClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validator2.ValidatorStatus{validator2.Active},
+			[]validatorType.ValidatorStatus{validatorType.Active},
 		).Return([]iface.ValidatorCount{}, nil).AnyTimes()
 		inactiveClientStream.EXPECT().Recv().Return(
 			inactiveResp,
