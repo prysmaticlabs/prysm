@@ -1376,7 +1376,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 		resp := &GetBlockHeaderResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Data.Canonical)
-		assert.Equal(t, "0x725b389a0e5a7623fa7600b9e5cb6248d5c293fc2f5877e42a665b44f40c85f6", resp.Data.Root)
+		assert.Equal(t, "0xd7d92f6206707f2c9c4e7e82320617d5abac2b6461a65ea5bb1a154b5b5ea2fa", resp.Data.Root)
 		assert.Equal(t, "0x736967000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", resp.Data.Header.Signature)
 		assert.Equal(t, "123", resp.Data.Header.Message.Slot)
 		assert.Equal(t, "0x706172656e74726f6f7400000000000000000000000000000000000000000000", resp.Data.Header.Message.ParentRoot)
@@ -1653,4 +1653,24 @@ func TestGetGenesis(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
+}
+
+func TestGetDepositContract(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.DepositChainID = uint64(10)
+	config.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	params.OverrideBeaconConfig(config)
+
+	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s := &Server{}
+	s.GetDepositContract(writer, request)
+	assert.Equal(t, http.StatusOK, writer.Code)
+	response := DepositContractResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
+	assert.Equal(t, "10", response.Data.ChainId)
+	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
 }

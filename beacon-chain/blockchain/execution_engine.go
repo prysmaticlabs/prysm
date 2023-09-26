@@ -405,8 +405,13 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
-		versionedHashes[i] = sha256.Sum256(commitment)
-		versionedHashes[i][0] = blobCommitmentVersionKZG
+		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
 	}
 	return versionedHashes, nil
+}
+
+func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
+	versionedHash := sha256.Sum256(commitment)
+	versionedHash[0] = blobCommitmentVersionKZG
+	return versionedHash
 }

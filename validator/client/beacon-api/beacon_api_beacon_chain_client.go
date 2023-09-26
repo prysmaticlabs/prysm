@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -185,7 +184,7 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 		pubkeys[idx] = hexutil.Encode(pubkey)
 	}
 
-	var stateValidators *apimiddleware.StateValidatorsResponseJson
+	var stateValidators *beacon.GetValidatorsResponse
 	var epoch primitives.Epoch
 
 	switch queryFilter := in.QueryFilter.(type) {
@@ -245,9 +244,9 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 			return nil, errors.Errorf("state validator at index `%d` is nil", idx)
 		}
 
-		pubkey, err := hexutil.Decode(stateValidator.Validator.PublicKey)
+		pubkey, err := hexutil.Decode(stateValidator.Validator.Pubkey)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.PublicKey)
+			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.Pubkey)
 		}
 
 		withdrawalCredentials, err := hexutil.Decode(stateValidator.Validator.WithdrawalCredentials)

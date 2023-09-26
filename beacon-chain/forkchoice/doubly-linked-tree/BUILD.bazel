@@ -6,6 +6,7 @@ go_library(
         "doc.go",
         "errors.go",
         "forkchoice.go",
+        "last_root.go",
         "metrics.go",
         "node.go",
         "on_tick.go",
@@ -49,6 +50,7 @@ go_test(
     srcs = [
         "ffg_update_test.go",
         "forkchoice_test.go",
+        "last_root_test.go",
         "no_vote_test.go",
         "node_test.go",
         "on_tick_test.go",

@@ -672,7 +672,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 
@@ -746,10 +746,10 @@ func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 
 	http2.WriteJson(w, &DepositContractResponse{
 		Data: &struct {
-			ChainId uint64 `json:"chain_id"`
+			ChainId string `json:"chain_id"`
 			Address string `json:"address"`
 		}{
-			ChainId: params.BeaconConfig().DepositChainID,
+			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	})
@@ -861,12 +861,12 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	header, err := blk.Header()
+	blockHeader, err := blk.Header()
 	if err != nil {
 		http2.HandleError(w, "Could not get block header: %s"+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	headerRoot, err := header.HashTreeRoot()
+	headerRoot, err := blockHeader.Header.HashTreeRoot()
 	if err != nil {
 		http2.HandleError(w, "Could not hash block header: %s"+err.Error(), http.StatusInternalServerError)
 		return
@@ -892,8 +892,8 @@ func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
 			Root:      hexutil.Encode(headerRoot[:]),
 			Canonical: canonical,
 			Header: &shared.SignedBeaconBlockHeader{
-				Message:   shared.BeaconBlockHeaderFromConsensus(header.Header),
-				Signature: hexutil.Encode(header.Signature),
+				Message:   shared.BeaconBlockHeaderFromConsensus(blockHeader.Header),
+				Signature: hexutil.Encode(blockHeader.Signature),
 			},
 		},
 		ExecutionOptimistic: isOptimistic,
@@ -916,7 +916,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)

@@ -31,30 +31,6 @@ type StateRootResponse_StateRootJson struct {
 	StateRoot string `json:"root" hex:"true"`
 }
 
-type StateValidatorsResponseJson struct {
-	Data                []*ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
-}
-
-type StateValidatorResponseJson struct {
-	Data                *ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
-type ValidatorBalancesResponseJson struct {
-	Data                []*ValidatorBalanceJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
-type StateCommitteesResponseJson struct {
-	Data                []*CommitteeJson `json:"data"`
-	ExecutionOptimistic bool             `json:"execution_optimistic"`
-	Finalized           bool             `json:"finalized"`
-}
-
 type SyncCommitteesResponseJson struct {
 	Data                *SyncCommitteeValidatorsJson `json:"data"`
 	ExecutionOptimistic bool                         `json:"execution_optimistic"`
@@ -945,13 +921,6 @@ type ForkJson struct {
 	Epoch           string `json:"epoch"`
 }
 
-type ValidatorContainerJson struct {
-	Index     string         `json:"index"`
-	Balance   string         `json:"balance"`
-	Status    string         `json:"status" enum:"true"`
-	Validator *ValidatorJson `json:"validator"`
-}
-
 type ValidatorJson struct {
 	PublicKey                  string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials" hex:"true"`
@@ -961,17 +930,6 @@ type ValidatorJson struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
-}
-
-type ValidatorBalanceJson struct {
-	Index   string `json:"index"`
-	Balance string `json:"balance"`
-}
-
-type CommitteeJson struct {
-	Index      string   `json:"index"`
-	Slot       string   `json:"slot"`
-	Validators []string `json:"validators"`
 }
 
 type SyncCommitteeJson struct {

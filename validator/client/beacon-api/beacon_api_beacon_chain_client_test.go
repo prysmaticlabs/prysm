@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	gatewaymiddleware "github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
@@ -221,13 +220,13 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("fails to get validators for genesis filter", func(t *testing.T) {
-		generateValidStateValidatorsResponse := func() *apimiddleware.StateValidatorsResponseJson {
-			return &apimiddleware.StateValidatorsResponseJson{
-				Data: []*apimiddleware.ValidatorContainerJson{
+		generateValidStateValidatorsResponse := func() *beacon.GetValidatorsResponse {
+			return &beacon.GetValidatorsResponse{
+				Data: []*beacon.ValidatorContainer{
 					{
 						Index: "1",
-						Validator: &apimiddleware.ValidatorJson{
-							PublicKey:                  hexutil.Encode([]byte{3}),
+						Validator: &beacon.Validator{
+							Pubkey:                     hexutil.Encode([]byte{3}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{4}),
 							EffectiveBalance:           "5",
 							Slashed:                    true,
@@ -243,12 +242,12 @@ func TestListValidators(t *testing.T) {
 
 		testCases := []struct {
 			name                            string
-			generateStateValidatorsResponse func() *apimiddleware.StateValidatorsResponseJson
+			generateStateValidatorsResponse func() *beacon.GetValidatorsResponse
 			expectedError                   string
 		}{
 			{
 				name: "nil validator",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator = nil
 					return validatorsResponse
@@ -257,16 +256,16 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid pubkey",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
-					validatorsResponse.Data[0].Validator.PublicKey = "foo"
+					validatorsResponse.Data[0].Validator.Pubkey = "foo"
 					return validatorsResponse
 				},
 				expectedError: "failed to decode validator pubkey `foo`",
 			},
 			{
 				name: "invalid withdrawal credentials",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.WithdrawalCredentials = "bar"
 					return validatorsResponse
@@ -275,7 +274,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid effective balance",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.EffectiveBalance = "foo"
 					return validatorsResponse
@@ -284,7 +283,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid validator index",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Index = "bar"
 					return validatorsResponse
@@ -293,7 +292,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid activation eligibility epoch",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ActivationEligibilityEpoch = "foo"
 					return validatorsResponse
@@ -302,7 +301,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid activation epoch",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ActivationEpoch = "bar"
 					return validatorsResponse
@@ -311,7 +310,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid exit epoch",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ExitEpoch = "foo"
 					return validatorsResponse
@@ -320,7 +319,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid withdrawable epoch",
-				generateStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.WithdrawableEpoch = "bar"
 					return validatorsResponse
@@ -351,13 +350,13 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("correctly returns the expected validators", func(t *testing.T) {
-		generateValidStateValidatorsResponse := func() *apimiddleware.StateValidatorsResponseJson {
-			return &apimiddleware.StateValidatorsResponseJson{
-				Data: []*apimiddleware.ValidatorContainerJson{
+		generateValidStateValidatorsResponse := func() *beacon.GetValidatorsResponse {
+			return &beacon.GetValidatorsResponse{
+				Data: []*beacon.ValidatorContainer{
 					{
 						Index: "1",
-						Validator: &apimiddleware.ValidatorJson{
-							PublicKey:                  hexutil.Encode([]byte{2}),
+						Validator: &beacon.Validator{
+							Pubkey:                     hexutil.Encode([]byte{2}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{3}),
 							EffectiveBalance:           "4",
 							Slashed:                    true,
@@ -369,8 +368,8 @@ func TestListValidators(t *testing.T) {
 					},
 					{
 						Index: "9",
-						Validator: &apimiddleware.ValidatorJson{
-							PublicKey:                  hexutil.Encode([]byte{10}),
+						Validator: &beacon.Validator{
+							Pubkey:                     hexutil.Encode([]byte{10}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{11}),
 							EffectiveBalance:           "12",
 							Slashed:                    false,
@@ -386,7 +385,7 @@ func TestListValidators(t *testing.T) {
 
 		testCases := []struct {
 			name                                string
-			generateJsonStateValidatorsResponse func() *apimiddleware.StateValidatorsResponseJson
+			generateJsonStateValidatorsResponse func() *beacon.GetValidatorsResponse
 			generateProtoValidatorsResponse     func() *ethpb.Validators
 			pubkeys                             [][]byte
 			pubkeyStrings                       []string
@@ -397,16 +396,16 @@ func TestListValidators(t *testing.T) {
 		}{
 			{
 				name: "page size 0",
-				generateJsonStateValidatorsResponse: func() *apimiddleware.StateValidatorsResponseJson {
+				generateJsonStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
 					validValidatorsResponse := generateValidStateValidatorsResponse()
 
 					// Generate more than 250 validators, but expect only 250 to be returned
-					validators := make([]*apimiddleware.ValidatorContainerJson, 267)
+					validators := make([]*beacon.ValidatorContainer, 267)
 					for idx := 0; idx < len(validators); idx++ {
 						validators[idx] = validValidatorsResponse.Data[0]
 					}
 
-					validatorsResponse := &apimiddleware.StateValidatorsResponseJson{
+					validatorsResponse := &beacon.GetValidatorsResponse{
 						Data: validators,
 					}
 

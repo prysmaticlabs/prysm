@@ -61,33 +61,6 @@ service BeaconChain {
     };
   }
 
-  // ListValidators returns a filterable list of validators with their balance, status and index.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidators
-  rpc ListValidators(v1.StateValidatorsRequest) returns (v1.StateValidatorsResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validators"
-    };
-  }
-
-  // GetValidator returns a validator specified by state and id or public key along with status and balance.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidator
-  rpc GetValidator(v1.StateValidatorRequest) returns (v1.StateValidatorResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validators/{validator_id}"
-    };
-  }
-
-  // ListValidators returns a filterable list of validator balances.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidatorBalances
-  rpc ListValidatorBalances(v1.ValidatorBalancesRequest) returns (v1.ValidatorBalancesResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validator_balances"
-    };
-  }
-
   // ListSyncCommittees retrieves the sync committees for the given state at the given epoch.
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getEpochSyncCommittees
