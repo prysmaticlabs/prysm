@@ -44,19 +44,12 @@ option php_namespace = "Ethereum\\Eth\\Service";
 service BeaconChain {
   // Beacon state API related endpoints.
 
-  // GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getGenesis
-  rpc GetGenesis(google.protobuf.Empty) returns (v1.GenesisResponse) {
-    option (google.api.http) = { get: "/internal/eth/v1/beacon/genesis" };
-  }
-
   // GetWeakSubjectivity is a new proposed endpoint to retrieve the details necessary to download
   // the ssz data needed to start a beacon node - checkpoint(epoch + block_root) and state_root
   // DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
   rpc GetWeakSubjectivity(google.protobuf.Empty) returns (v1.WeakSubjectivityResponse) {
     option deprecated = true;
-    option (google.api.http) = { get: "/internal/eth/v1/beacon/weak_subjectivity" };
+    option (google.api.http) = {get: "/internal/eth/v1/beacon/weak_subjectivity"};
   }
 
   // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
@@ -65,61 +58,6 @@ service BeaconChain {
   rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
     option (google.api.http) = {
       get: "/internal/eth/v1/beacon/states/{state_id}/root"
-    };
-  }
-
-  // GetStateFork returns Fork object for state with given 'stateId'.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateFork
-  rpc GetStateFork(v1.StateRequest) returns (v1.StateForkResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/fork"
-    };
-  }
-
-  // GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
-  // not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateFinalityCheckpoints
-  rpc GetFinalityCheckpoints(v1.StateRequest) returns (v1.StateFinalityCheckpointResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/finality_checkpoints"
-    };
-  }
-
-  // ListValidators returns a filterable list of validators with their balance, status and index.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidators
-  rpc ListValidators(v1.StateValidatorsRequest) returns (v1.StateValidatorsResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validators"
-    };
-  }
-
-  // GetValidator returns a validator specified by state and id or public key along with status and balance.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidator
-  rpc GetValidator(v1.StateValidatorRequest) returns (v1.StateValidatorResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validators/{validator_id}"
-    };
-  }
-
-  // ListValidators returns a filterable list of validator balances.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateValidatorBalances
-  rpc ListValidatorBalances(v1.ValidatorBalancesRequest) returns (v1.ValidatorBalancesResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/validator_balances"
-    };
-  }
-
-  // ListCommittees retrieves the committees for the given state at the given epoch.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getEpochCommittees
-  rpc ListCommittees(v1.StateCommitteesRequest) returns (v1.StateCommitteesResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/committees"
     };
   }
 
@@ -144,26 +82,6 @@ service BeaconChain {
     };
   }
 
-  // Beacon blocks API related endpoints.
-
-  // ListBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockHeaders
-  rpc ListBlockHeaders(v1.BlockHeadersRequest) returns (v1.BlockHeadersResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/headers"
-    };
-  }
-
-  // GetBlockHeader retrieves block header for given block id.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getBlockHeader
-  rpc GetBlockHeader(v1.BlockRequest) returns (v1.BlockHeaderResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/headers/{block_id}"
-    };
-  }
-
   // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
   // included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
   // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
@@ -171,7 +89,7 @@ service BeaconChain {
   // still broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlock(v2.SignedBeaconBlockContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlock(v2.SignedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blocks"
       body: "*"
@@ -204,7 +122,7 @@ service BeaconChain {
   // broadcast but a different status code is returned (202).
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlindedBlock
-  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContainer) returns (google.protobuf.Empty) {
+  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/blinded_blocks"
       body: "*"
@@ -350,16 +268,6 @@ service BeaconChain {
     };
   }
 
-  // Submits sync committee signature objects to the node.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolSyncCommitteeSignatures
-  rpc SubmitPoolSyncCommitteeSignatures(v2.SubmitPoolSyncCommitteeSignatures) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/sync_committees"
-      body: "*"
-    };
-  }
-
   // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
   //
   // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getPoolBLSToExecutionChanges
@@ -387,12 +295,4 @@ service BeaconChain {
   rpc GetSpec(google.protobuf.Empty) returns (v1.SpecResponse) {
     option (google.api.http) = {get: "/internal/eth/v1/config/spec"};
   }
-
-  // GetDepositContract retrieves deposit contract address and genesis fork version.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Config/getDepositContract
-  rpc GetDepositContract(google.protobuf.Empty) returns (v1.DepositContractResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/config/deposit_contract"};
-  }
 }
-

@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -173,62 +170,4 @@ func extractSyncSubcommittees(st state.BeaconState, committee *ethpbalpha.SyncCo
 		subcommittees[i] = subcommittee
 	}
 	return subcommittees, nil
-}
-
-// SubmitPoolSyncCommitteeSignatures submits sync committee signature objects to the node.
-func (bs *Server) SubmitPoolSyncCommitteeSignatures(ctx context.Context, req *ethpbv2.SubmitPoolSyncCommitteeSignatures) (*empty.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.SubmitPoolSyncCommitteeSignatures")
-	defer span.End()
-
-	var validMessages []*ethpbalpha.SyncCommitteeMessage
-	var msgFailures []*helpers.SingleIndexedVerificationFailure
-	for i, msg := range req.Data {
-		if err := validateSyncCommitteeMessage(msg); err != nil {
-			msgFailures = append(msgFailures, &helpers.SingleIndexedVerificationFailure{
-				Index:   i,
-				Message: err.Error(),
-			})
-			continue
-		}
-
-		v1alpha1Msg := &ethpbalpha.SyncCommitteeMessage{
-			Slot:           msg.Slot,
-			BlockRoot:      msg.BeaconBlockRoot,
-			ValidatorIndex: msg.ValidatorIndex,
-			Signature:      msg.Signature,
-		}
-		validMessages = append(validMessages, v1alpha1Msg)
-	}
-
-	for _, msg := range validMessages {
-		_, err := bs.V1Alpha1ValidatorServer.SubmitSyncMessage(ctx, msg)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not submit message: %v", err)
-		}
-	}
-
-	if len(msgFailures) > 0 {
-		failuresContainer := &helpers.IndexedVerificationFailure{Failures: msgFailures}
-		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
-		if err != nil {
-			return nil, status.Errorf(
-				codes.InvalidArgument,
-				"One or more messages failed validation. Could not prepare detailed failure information: %v",
-				err,
-			)
-		}
-		return nil, status.Errorf(codes.InvalidArgument, "One or more messages failed validation")
-	}
-
-	return &empty.Empty{}, nil
-}
-
-func validateSyncCommitteeMessage(msg *ethpbv2.SyncCommitteeMessage) error {
-	if len(msg.BeaconBlockRoot) != 32 {
-		return errors.New("invalid block root length")
-	}
-	if len(msg.Signature) != 96 {
-		return errors.New("invalid signature length")
-	}
-	return nil
 }

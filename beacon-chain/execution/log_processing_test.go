@@ -79,7 +79,7 @@ func TestProcessDepositLog_OK(t *testing.T) {
 		t.Fatal("no logs")
 	}
 
-	err = web3Service.ProcessLog(context.Background(), logs[0])
+	err = web3Service.ProcessLog(context.Background(), &logs[0])
 	require.NoError(t, err)
 
 	require.LogsDoNotContain(t, hook, "Could not unpack log")
@@ -149,9 +149,9 @@ func TestProcessDepositLog_InsertsPendingDeposit(t *testing.T) {
 
 	web3Service.chainStartData.Chainstarted = true
 
-	err = web3Service.ProcessDepositLog(context.Background(), logs[0])
+	err = web3Service.ProcessDepositLog(context.Background(), &logs[0])
 	require.NoError(t, err)
-	err = web3Service.ProcessDepositLog(context.Background(), logs[1])
+	err = web3Service.ProcessDepositLog(context.Background(), &logs[1])
 	require.NoError(t, err)
 
 	pendingDeposits := web3Service.cfg.depositCache.PendingDeposits(context.Background(), nil /*blockNum*/)
@@ -272,8 +272,8 @@ func TestProcessETH2GenesisLog_8DuplicatePubkeys(t *testing.T) {
 	logs, err := testAcc.Backend.FilterLogs(web3Service.ctx, query)
 	require.NoError(t, err, "Unable to retrieve logs")
 
-	for _, log := range logs {
-		err = web3Service.ProcessLog(context.Background(), log)
+	for i := range logs {
+		err = web3Service.ProcessLog(context.Background(), &logs[i])
 		require.NoError(t, err)
 	}
 	assert.Equal(t, false, web3Service.chainStartData.Chainstarted, "Genesis has been triggered despite being 8 duplicate keys")
@@ -351,8 +351,8 @@ func TestProcessETH2GenesisLog(t *testing.T) {
 	stateSub := web3Service.cfg.stateNotifier.StateFeed().Subscribe(stateChannel)
 	defer stateSub.Unsubscribe()
 
-	for _, log := range logs {
-		err = web3Service.ProcessLog(context.Background(), log)
+	for i := range logs {
+		err = web3Service.ProcessLog(context.Background(), &logs[i])
 		require.NoError(t, err)
 	}
 

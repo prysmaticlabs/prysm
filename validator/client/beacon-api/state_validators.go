@@ -7,14 +7,14 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 type stateValidatorsProvider interface {
-	GetStateValidators(context.Context, []string, []int64, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
-	GetStateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
-	GetStateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*rpcmiddleware.StateValidatorsResponseJson, error)
+	GetStateValidators(context.Context, []string, []int64, []string) (*beacon.GetValidatorsResponse, error)
+	GetStateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*beacon.GetValidatorsResponse, error)
+	GetStateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*beacon.GetValidatorsResponse, error)
 }
 
 type beaconApiStateValidatorsProvider struct {
@@ -26,7 +26,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidators(
 	stringPubkeys []string,
 	indexes []int64,
 	statuses []string,
-) (*rpcmiddleware.StateValidatorsResponseJson, error) {
+) (*beacon.GetValidatorsResponse, error) {
 	params := neturl.Values{}
 	indexesSet := make(map[int64]struct{}, len(indexes))
 	for _, index := range indexes {
@@ -45,7 +45,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForSlot(
 	stringPubkeys []string,
 	indices []primitives.ValidatorIndex,
 	statuses []string,
-) (*rpcmiddleware.StateValidatorsResponseJson, error) {
+) (*beacon.GetValidatorsResponse, error) {
 	params := convertValidatorIndicesToParams(indices)
 	url := fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot)
 	return c.getStateValidatorsHelper(ctx, url, params, stringPubkeys, statuses)
@@ -56,7 +56,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForHead(
 	stringPubkeys []string,
 	indices []primitives.ValidatorIndex,
 	statuses []string,
-) (*rpcmiddleware.StateValidatorsResponseJson, error) {
+) (*beacon.GetValidatorsResponse, error) {
 	params := convertValidatorIndicesToParams(indices)
 	return c.getStateValidatorsHelper(ctx, "/eth/v1/beacon/states/head/validators", params, stringPubkeys, statuses)
 }
@@ -79,7 +79,7 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	params neturl.Values,
 	stringPubkeys []string,
 	statuses []string,
-) (*rpcmiddleware.StateValidatorsResponseJson, error) {
+) (*beacon.GetValidatorsResponse, error) {
 	stringPubKeysSet := make(map[string]struct{}, len(stringPubkeys))
 
 	for _, stringPubkey := range stringPubkeys {
@@ -94,14 +94,14 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	}
 
 	url := buildURL(endpoint, params)
-	stateValidatorsJson := &rpcmiddleware.StateValidatorsResponseJson{}
+	stateValidatorsJson := &beacon.GetValidatorsResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, stateValidatorsJson); err != nil {
-		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.Wrap(err, "failed to get json response")
+		return &beacon.GetValidatorsResponse{}, errors.Wrap(err, "failed to get json response")
 	}
 
 	if stateValidatorsJson.Data == nil {
-		return &rpcmiddleware.StateValidatorsResponseJson{}, errors.New("stateValidatorsJson.Data is nil")
+		return &beacon.GetValidatorsResponse{}, errors.New("stateValidatorsJson.Data is nil")
 	}
 
 	return stateValidatorsJson, nil

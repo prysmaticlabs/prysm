@@ -77,7 +77,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 	var lastActivatedValidatorIndex uint64 = 0
 
 	for i, validatorContainer := range stateValidatorsResponse.Data {
-		stringPubKey := validatorContainer.Validator.PublicKey
+		stringPubKey := validatorContainer.Validator.Pubkey
 
 		stringRetrievedPubKeys[stringPubKey] = struct{}{}
 

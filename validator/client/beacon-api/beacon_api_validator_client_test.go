@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -119,7 +119,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 
 	genesisProvider := mock.NewMockgenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
-		&rpcmiddleware.GenesisResponse_GenesisJson{GenesisValidatorsRoot: genesisValidatorRoot},
+		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 		nil,
 	).Times(2)

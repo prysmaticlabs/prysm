@@ -10,6 +10,7 @@ go_library(
         "mock_chain.go",
         "p2p.go",
         "peers.go",
+        "request_blobs.go",
         "request_blocks.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/cmd/prysmctl/p2p",

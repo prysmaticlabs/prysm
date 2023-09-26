@@ -10,9 +10,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
-	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -66,292 +66,6 @@ func fillDBTestBlocks(ctx context.Context, t *testing.T, beaconDB db.Database) (
 	return genBlk, blkContainers
 }
 
-func TestServer_GetBlockHeader(t *testing.T) {
-	ctx := context.Background()
-	b := util.NewBeaconBlock()
-	b.Block.Slot = 123
-	b.Block.ProposerIndex = 123
-	b.Block.StateRoot = bytesutil.PadTo([]byte("stateroot"), 32)
-	sb, err := blocks.NewSignedBeaconBlock(b)
-	require.NoError(t, err)
-	mockBlockFetcher := &testutil.MockBlocker{BlockToReturn: sb}
-
-	t.Run("get header", func(t *testing.T) {
-		mockChainService := &mock.ChainService{
-			FinalizedRoots: map[[32]byte]bool{},
-		}
-		bs := &Server{
-			ChainInfoFetcher:      mockChainService,
-			OptimisticModeFetcher: mockChainService,
-			FinalizationFetcher:   mockChainService,
-			Blocker:               mockBlockFetcher,
-		}
-
-		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{})
-		require.NoError(t, err)
-
-		expectedBodyRoot, err := sb.Block().Body().HashTreeRoot()
-		require.NoError(t, err)
-		expectedParentRoot := sb.Block().ParentRoot()
-		expectedHeader := &ethpbv1.BeaconBlockHeader{
-			Slot:          sb.Block().Slot(),
-			ProposerIndex: sb.Block().ProposerIndex(),
-			ParentRoot:    expectedParentRoot[:],
-			StateRoot:     bytesutil.PadTo([]byte("stateroot"), 32),
-			BodyRoot:      expectedBodyRoot[:],
-		}
-		expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
-		require.NoError(t, err)
-		headerRoot, err := header.Data.Header.Message.HashTreeRoot()
-		require.NoError(t, err)
-		assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
-		assert.Equal(t, sb.Block().Slot(), header.Data.Header.Message.Slot)
-		expectedStateRoot := sb.Block().StateRoot()
-		assert.DeepEqual(t, expectedStateRoot[:], header.Data.Header.Message.StateRoot)
-		assert.DeepEqual(t, expectedParentRoot[:], header.Data.Header.Message.ParentRoot)
-		assert.DeepEqual(t, expectedBodyRoot[:], header.Data.Header.Message.BodyRoot)
-		assert.Equal(t, sb.Block().ProposerIndex(), header.Data.Header.Message.ProposerIndex)
-	})
-
-	t.Run("execution optimistic", func(t *testing.T) {
-		r, err := sb.Block().HashTreeRoot()
-		require.NoError(t, err)
-		mockChainService := &mock.ChainService{
-			OptimisticRoots: map[[32]byte]bool{r: true},
-			FinalizedRoots:  map[[32]byte]bool{},
-		}
-		bs := &Server{
-			ChainInfoFetcher:      mockChainService,
-			OptimisticModeFetcher: mockChainService,
-			FinalizationFetcher:   mockChainService,
-			Blocker:               mockBlockFetcher,
-		}
-		header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: []byte("head")})
-		require.NoError(t, err)
-		assert.Equal(t, true, header.ExecutionOptimistic)
-	})
-
-	t.Run("finalized", func(t *testing.T) {
-		r, err := sb.Block().HashTreeRoot()
-		require.NoError(t, err)
-
-		t.Run("true", func(t *testing.T) {
-			mockChainService := &mock.ChainService{FinalizedRoots: map[[32]byte]bool{r: true}}
-			bs := &Server{
-				ChainInfoFetcher:      mockChainService,
-				OptimisticModeFetcher: mockChainService,
-				FinalizationFetcher:   mockChainService,
-				Blocker:               mockBlockFetcher,
-			}
-
-			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
-			require.NoError(t, err)
-			assert.Equal(t, true, header.Finalized)
-		})
-		t.Run("false", func(t *testing.T) {
-			mockChainService := &mock.ChainService{FinalizedRoots: map[[32]byte]bool{r: false}}
-			bs := &Server{
-				ChainInfoFetcher:      mockChainService,
-				OptimisticModeFetcher: mockChainService,
-				FinalizationFetcher:   mockChainService,
-				Blocker:               mockBlockFetcher,
-			}
-
-			header, err := bs.GetBlockHeader(ctx, &ethpbv1.BlockRequest{BlockId: r[:]})
-			require.NoError(t, err)
-			assert.Equal(t, false, header.Finalized)
-		})
-	})
-}
-
-func TestServer_ListBlockHeaders(t *testing.T) {
-	beaconDB := dbTest.SetupDB(t)
-	ctx := context.Background()
-
-	_, blkContainers := fillDBTestBlocks(ctx, t, beaconDB)
-	headBlock := blkContainers[len(blkContainers)-1]
-
-	b1 := util.NewBeaconBlock()
-	b1.Block.Slot = 30
-	b1.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b1)
-	b2 := util.NewBeaconBlock()
-	b2.Block.Slot = 30
-	b2.Block.ParentRoot = bytesutil.PadTo([]byte{4}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b2)
-	b3 := util.NewBeaconBlock()
-	b3.Block.Slot = 31
-	b3.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b3)
-	b4 := util.NewBeaconBlock()
-	b4.Block.Slot = 28
-	b4.Block.ParentRoot = bytesutil.PadTo([]byte{1}, 32)
-	util.SaveBlock(t, ctx, beaconDB, b4)
-
-	t.Run("list headers", func(t *testing.T) {
-		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-		require.NoError(t, err)
-		mockChainFetcher := &mock.ChainService{
-			DB:                  beaconDB,
-			Block:               wsb,
-			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-			FinalizedRoots:      map[[32]byte]bool{},
-		}
-		bs := &Server{
-			BeaconDB:              beaconDB,
-			ChainInfoFetcher:      mockChainFetcher,
-			OptimisticModeFetcher: mockChainFetcher,
-			FinalizationFetcher:   mockChainFetcher,
-		}
-
-		tests := []struct {
-			name       string
-			slot       primitives.Slot
-			parentRoot []byte
-			want       []*ethpbalpha.SignedBeaconBlock
-			wantErr    bool
-		}{
-			{
-				name: "slot",
-				slot: primitives.Slot(30),
-				want: []*ethpbalpha.SignedBeaconBlock{
-					blkContainers[30].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-					b1,
-					b2,
-				},
-			},
-			{
-				name:       "parent root",
-				parentRoot: b1.Block.ParentRoot,
-				want: []*ethpbalpha.SignedBeaconBlock{
-					blkContainers[1].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
-					b1,
-					b3,
-					b4,
-				},
-			},
-		}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-					Slot:       &tt.slot,
-					ParentRoot: tt.parentRoot,
-				})
-				require.NoError(t, err)
-
-				require.Equal(t, len(tt.want), len(headers.Data))
-				for i, blk := range tt.want {
-					expectedBodyRoot, err := blk.Block.Body.HashTreeRoot()
-					require.NoError(t, err)
-					expectedHeader := &ethpbv1.BeaconBlockHeader{
-						Slot:          blk.Block.Slot,
-						ProposerIndex: blk.Block.ProposerIndex,
-						ParentRoot:    blk.Block.ParentRoot,
-						StateRoot:     make([]byte, 32),
-						BodyRoot:      expectedBodyRoot[:],
-					}
-					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
-					require.NoError(t, err)
-					headerRoot, err := headers.Data[i].Header.Message.HashTreeRoot()
-					require.NoError(t, err)
-					assert.DeepEqual(t, expectedHeaderRoot, headerRoot)
-
-					assert.Equal(t, blk.Block.Slot, headers.Data[i].Header.Message.Slot)
-					assert.DeepEqual(t, blk.Block.StateRoot, headers.Data[i].Header.Message.StateRoot)
-					assert.DeepEqual(t, blk.Block.ParentRoot, headers.Data[i].Header.Message.ParentRoot)
-					expectedRoot, err := blk.Block.Body.HashTreeRoot()
-					require.NoError(t, err)
-					assert.DeepEqual(t, expectedRoot[:], headers.Data[i].Header.Message.BodyRoot)
-					assert.Equal(t, blk.Block.ProposerIndex, headers.Data[i].Header.Message.ProposerIndex)
-				}
-			})
-		}
-	})
-
-	t.Run("execution optimistic", func(t *testing.T) {
-		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-		require.NoError(t, err)
-		mockChainFetcher := &mock.ChainService{
-			DB:                  beaconDB,
-			Block:               wsb,
-			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-			Optimistic:          true,
-			FinalizedRoots:      map[[32]byte]bool{},
-			OptimisticRoots: map[[32]byte]bool{
-				bytesutil.ToBytes32(blkContainers[30].BlockRoot): true,
-			},
-		}
-		bs := &Server{
-			BeaconDB:              beaconDB,
-			ChainInfoFetcher:      mockChainFetcher,
-			OptimisticModeFetcher: mockChainFetcher,
-			FinalizationFetcher:   mockChainFetcher,
-		}
-		slot := primitives.Slot(30)
-		headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-			Slot: &slot,
-		})
-		require.NoError(t, err)
-		assert.Equal(t, true, headers.ExecutionOptimistic)
-	})
-
-	t.Run("finalized", func(t *testing.T) {
-		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block)
-		require.NoError(t, err)
-		child1 := util.NewBeaconBlock()
-		child1.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		child1.Block.Slot = 999
-		util.SaveBlock(t, ctx, beaconDB, child1)
-		child2 := util.NewBeaconBlock()
-		child2.Block.ParentRoot = bytesutil.PadTo([]byte("parent"), 32)
-		child2.Block.Slot = 1000
-		util.SaveBlock(t, ctx, beaconDB, child2)
-		child1Root, err := child1.Block.HashTreeRoot()
-		require.NoError(t, err)
-		child2Root, err := child2.Block.HashTreeRoot()
-		require.NoError(t, err)
-		mockChainFetcher := &mock.ChainService{
-			DB:                  beaconDB,
-			Block:               wsb,
-			Root:                headBlock.BlockRoot,
-			FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blkContainers[64].BlockRoot},
-			FinalizedRoots:      map[[32]byte]bool{child1Root: true, child2Root: false},
-		}
-		bs := &Server{
-			BeaconDB:              beaconDB,
-			ChainInfoFetcher:      mockChainFetcher,
-			OptimisticModeFetcher: mockChainFetcher,
-			FinalizationFetcher:   mockChainFetcher,
-		}
-
-		t.Run("true", func(t *testing.T) {
-			slot := primitives.Slot(999)
-			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-				Slot: &slot,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, true, headers.Finalized)
-		})
-		t.Run("false", func(t *testing.T) {
-			slot := primitives.Slot(1000)
-			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-				Slot: &slot,
-			})
-			require.NoError(t, err)
-			assert.Equal(t, false, headers.Finalized)
-		})
-		t.Run("false when at least one not finalized", func(t *testing.T) {
-			headers, err := bs.ListBlockHeaders(ctx, &ethpbv1.BlockHeadersRequest{
-				ParentRoot: []byte("parent"),
-			})
-			require.NoError(t, err)
-			assert.Equal(t, false, headers.Finalized)
-		})
-	})
-}
-
 func TestServer_SubmitBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -363,9 +77,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_Phase0Block{Phase0Block: &ethpbv1.BeaconBlock{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_Phase0Block{Phase0Block: &ethpbv1.SignedBeaconBlock{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -378,9 +91,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_AltairBlock{AltairBlock: &ethpbv2.BeaconBlockAltair{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_AltairBlock{AltairBlock: &ethpbv2.SignedBeaconBlockAltair{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -393,9 +105,8 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.BeaconBlockBellatrix{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_BellatrixBlock{BellatrixBlock: &ethpbv2.SignedBeaconBlockBellatrix{}},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -408,9 +119,27 @@ func TestServer_SubmitBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		blockReq := &ethpbv2.SignedBeaconBlockContainer{
-			Message:   &ethpbv2.SignedBeaconBlockContainer_CapellaBlock{CapellaBlock: &ethpbv2.BeaconBlockCapella{}},
-			Signature: []byte("sig"),
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_CapellaBlock{CapellaBlock: &ethpbv2.SignedBeaconBlockCapella{}},
+		}
+		_, err := server.SubmitBlock(context.Background(), blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		blockReq := &ethpbv2.SignedBeaconBlockContentsContainer{
+			Message: &ethpbv2.SignedBeaconBlockContentsContainer_DenebContents{
+				DenebContents: &ethpbv2.SignedBeaconBlockContentsDeneb{
+					SignedBlock:        &ethpbv2.SignedBeaconBlockDeneb{},
+					SignedBlobSidecars: []*ethpbv2.SignedBlobSidecar{},
+				},
+			},
 		}
 		_, err := server.SubmitBlock(context.Background(), blockReq)
 		assert.NoError(t, err)
@@ -547,6 +276,49 @@ func TestServer_SubmitBlockSSZ(t *testing.T) {
 		}
 		md := metadata.MD{}
 		md.Set(api.VersionHeader, "capella")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NotNil(t, err)
+	})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), gomock.Any())
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		b, err := util.NewBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		// TODO: update to deneb fork epoch
+		b.SignedBlock.Message.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(api.VersionHeader, "deneb")
+		sszCtx := metadata.NewIncomingContext(ctx, md)
+		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
+		assert.NoError(t, err)
+	})
+	t.Run("Deneb blinded", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		b, err := util.NewBlindedBeaconBlockContentsDeneb(fieldparams.MaxBlobsPerBlock)
+		require.NoError(t, err)
+		// TODO: update to deneb fork epoch
+		b.SignedBlindedBlock.Message.Slot = params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().CapellaForkEpoch))
+		ssz, err := b.MarshalSSZ()
+		require.NoError(t, err)
+		blockReq := &ethpbv2.SSZContainer{
+			Data: ssz,
+		}
+		md := metadata.MD{}
+		md.Set(api.VersionHeader, "deneb")
 		sszCtx := metadata.NewIncomingContext(ctx, md)
 		_, err = server.SubmitBlockSSZ(sszCtx, blockReq)
 		assert.NotNil(t, err)

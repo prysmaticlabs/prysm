@@ -143,6 +143,11 @@ func (_ *FakeP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *
 	return nil
 }
 
+// BroadcastBlob -- fake.
+func (_ *FakeP2P) BroadcastBlob(_ context.Context, _ uint64, _ *ethpb.SignedBlobSidecar) error {
+	return nil
+}
+
 // InterceptPeerDial -- fake.
 func (_ *FakeP2P) InterceptPeerDial(peer.ID) (allow bool) {
 	return true
