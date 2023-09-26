@@ -3,6 +3,7 @@ package execution
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -106,28 +107,26 @@ func (s *Service) retryExecutionClientConnection(ctx context.Context, err error)
 
 // Initializes an RPC connection with authentication headers.
 func (s *Service) newRPCClientWithAuth(ctx context.Context, endpoint network.Endpoint) (*gethRPC.Client, error) {
-	client, err := network.NewExecutionRPCClient(ctx, endpoint)
-	if err != nil {
-		return nil, err
-	}
+	headers := http.Header{}
 	if endpoint.Auth.Method != authorization.None {
 		header, err := endpoint.Auth.ToHeaderValue()
 		if err != nil {
 			return nil, err
 		}
-		client.SetHeader("Authorization", header)
+		headers.Set("Authorization", header)
 	}
 	for _, h := range s.cfg.headers {
-		if h != "" {
-			keyValue := strings.Split(h, "=")
-			if len(keyValue) < 2 {
-				log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
-				continue
-			}
-			client.SetHeader(keyValue[0], strings.Join(keyValue[1:], "="))
+		if h == "" {
+			continue
 		}
+		keyValue := strings.Split(h, "=")
+		if len(keyValue) < 2 {
+			log.Warnf("Incorrect HTTP header flag format. Skipping %v", keyValue[0])
+			continue
+		}
+		headers.Set(keyValue[0], strings.Join(keyValue[1:], "="))
 	}
-	return client, nil
+	return network.NewExecutionRPCClient(ctx, endpoint, headers)
 }
 
 // Checks the chain ID of the execution client to ensure
