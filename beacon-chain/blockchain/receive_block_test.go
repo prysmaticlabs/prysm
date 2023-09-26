@@ -180,6 +180,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 		wg.Done()
 	}()
 	wg.Wait()
+	time.Sleep(100 * time.Millisecond)
 	if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 		t.Errorf("Received %d state notifications, expected at least 1", recvd)
 	}
@@ -222,6 +223,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 				block: genFullBlock(t, util.DefaultBlockGenConfig(), 1 /*slot*/),
 			},
 			check: func(t *testing.T, s *Service) {
+				time.Sleep(100 * time.Millisecond)
 				if recvd := len(s.cfg.StateNotifier.(*blockchainTesting.MockStateNotifier).ReceivedEvents()); recvd < 1 {
 					t.Errorf("Received %d state notifications, expected at least 1", recvd)
 				}
