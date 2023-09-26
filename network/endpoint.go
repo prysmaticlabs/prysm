@@ -41,7 +41,7 @@ func (e Endpoint) HttpClient() *http.Client {
 }
 
 // Equals compares two authorization data objects for equality.
-func (d AuthorizationData) Equals(other AuthorizationData) bool {
+func (d *AuthorizationData) Equals(other AuthorizationData) bool {
 	return d.Method == other.Method && d.Value == other.Value
 }
 
@@ -123,7 +123,7 @@ func NewHttpClientWithSecret(secret string) *http.Client {
 	}
 }
 
-func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint) (*gethRPC.Client, error) {
+func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint, headers http.Header) (*gethRPC.Client, error) {
 	// Need to handle ipc and http
 	var client *gethRPC.Client
 	u, err := url.Parse(endpoint.Url)
@@ -132,7 +132,7 @@ func NewExecutionRPCClient(ctx context.Context, endpoint Endpoint) (*gethRPC.Cli
 	}
 	switch u.Scheme {
 	case "http", "https":
-		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()))
+		client, err = gethRPC.DialOptions(ctx, endpoint.Url, gethRPC.WithHTTPClient(endpoint.HttpClient()), gethRPC.WithHeaders(headers))
 		if err != nil {
 			return nil, err
 		}
