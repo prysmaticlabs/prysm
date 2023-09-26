@@ -179,15 +179,16 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk.SetStateRoot(sr)
 
 	fullBlobs, err := blobsBundleToSidecars(fullBlobsBundle, sBlk.Block())
+	fullBlobsBundle = nil // Reset full blobs bundle after use.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 	}
-	fullBlobsBundle = nil // Reset full blobs bundle.
+
 	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
+	blindBlobsBundle = nil // Reset blind blobs bundle after use.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
 	}
-	blindBlobsBundle = nil // Reset blind blobs bundle.
 
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
