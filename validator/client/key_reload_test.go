@@ -66,12 +66,14 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 		client := validatormock.NewMockValidatorClient(ctrl)
 		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 		kp := randKeypair(t)
 		v := validator{
-			validatorClient: client,
-			keyManager:      newMockKeymanager(t, kp),
-			genesisTime:     1,
-			beaconClient:    beaconClient,
+			validatorClient:   client,
+			keyManager:        newMockKeymanager(t, kp),
+			genesisTime:       1,
+			beaconClient:      beaconClient,
+			prysmBeaconClient: prysmBeaconClient,
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
@@ -82,6 +84,11 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(resp, nil)
+		prysmBeaconClient.EXPECT().GetValidatorCount(
+			gomock.Any(),
+			"head",
+			[]validator2.ValidatorStatus{validator2.Active},
+		).Return([]iface.ValidatorCount{}, nil)
 
 		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{kp.pub})
 		require.NoError(t, err)
