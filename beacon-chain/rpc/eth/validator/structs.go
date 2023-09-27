@@ -34,10 +34,6 @@ type ProduceSyncCommitteeContributionResponse struct {
 	Data *shared.SyncCommitteeContribution `json:"data"`
 }
 
-type GetAttesterDutiesRequest struct {
-	ValidatorIndices []string `json:"validator_indices"`
-}
-
 type GetAttesterDutiesResponse struct {
 	DependentRoot       string          `json:"dependent_root"`
 	ExecutionOptimistic bool            `json:"execution_optimistic"`
@@ -66,10 +62,6 @@ type ProposerDuty struct {
 	Slot           string `json:"slot"`
 }
 
-type GetSyncCommitteeDutiesRequest struct {
-	ValidatorIndices []string `json:"validator_indices"`
-}
-
 type GetSyncCommitteeDutiesResponse struct {
 	ExecutionOptimistic bool                 `json:"execution_optimistic"`
 	Data                []*SyncCommitteeDuty `json:"data"`
@@ -87,4 +79,13 @@ type ProduceBlockV3Response struct {
 	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
+}
+
+type GetLivenessResponse struct {
+	Data []*ValidatorLiveness `json:"data"`
+}
+
+type ValidatorLiveness struct {
+	Index  string `json:"index"`
+	IsLive bool   `json:"is_live"`
 }

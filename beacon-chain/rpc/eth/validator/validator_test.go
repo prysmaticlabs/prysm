@@ -7,11 +7,8 @@ import (
 	"github.com/golang/mock/gomock"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
@@ -804,84 +801,5 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		}
 		_, err := v1Server.ProduceBlindedBlockSSZ(context.Background(), nil)
 		require.ErrorContains(t, "Syncing to latest head", err)
-	})
-}
-
-func TestGetLiveness(t *testing.T) {
-	ctx := context.Background()
-
-	// Setup:
-	// Epoch 0 - both validators not live
-	// Epoch 1 - validator with index 1 is live
-	// Epoch 2 - validator with index 0 is live
-	oldSt, err := util.NewBeaconStateBellatrix()
-	require.NoError(t, err)
-	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
-	require.NoError(t, oldSt.AppendCurrentParticipationBits(0))
-	headSt, err := util.NewBeaconStateBellatrix()
-	require.NoError(t, err)
-	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch*2))
-	require.NoError(t, headSt.AppendPreviousParticipationBits(0))
-	require.NoError(t, headSt.AppendPreviousParticipationBits(1))
-	require.NoError(t, headSt.AppendCurrentParticipationBits(1))
-	require.NoError(t, headSt.AppendCurrentParticipationBits(0))
-
-	server := &Server{
-		HeadFetcher: &mockChain.ChainService{State: headSt},
-		Stater: &testutil.MockStater{
-			// We configure states for last slots of an epoch
-			StatesBySlot: map[primitives.Slot]state.BeaconState{
-				params.BeaconConfig().SlotsPerEpoch - 1:   oldSt,
-				params.BeaconConfig().SlotsPerEpoch*3 - 1: headSt,
-			},
-		},
-	}
-
-	t.Run("old epoch", func(t *testing.T) {
-		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{0, 1},
-		})
-		require.NoError(t, err)
-		data0 := resp.Data[0]
-		data1 := resp.Data[1]
-		assert.Equal(t, true, (data0.Index == 0 && !data0.IsLive) || (data0.Index == 1 && !data0.IsLive))
-		assert.Equal(t, true, (data1.Index == 0 && !data1.IsLive) || (data1.Index == 1 && !data1.IsLive))
-	})
-	t.Run("previous epoch", func(t *testing.T) {
-		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch: 1,
-			Index: []primitives.ValidatorIndex{0, 1},
-		})
-		require.NoError(t, err)
-		data0 := resp.Data[0]
-		data1 := resp.Data[1]
-		assert.Equal(t, true, (data0.Index == 0 && !data0.IsLive) || (data0.Index == 1 && data0.IsLive))
-		assert.Equal(t, true, (data1.Index == 0 && !data1.IsLive) || (data1.Index == 1 && data1.IsLive))
-	})
-	t.Run("current epoch", func(t *testing.T) {
-		resp, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch: 2,
-			Index: []primitives.ValidatorIndex{0, 1},
-		})
-		require.NoError(t, err)
-		data0 := resp.Data[0]
-		data1 := resp.Data[1]
-		assert.Equal(t, true, (data0.Index == 0 && data0.IsLive) || (data0.Index == 1 && !data0.IsLive))
-		assert.Equal(t, true, (data1.Index == 0 && data1.IsLive) || (data1.Index == 1 && !data1.IsLive))
-	})
-	t.Run("future epoch", func(t *testing.T) {
-		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch: 3,
-			Index: []primitives.ValidatorIndex{0, 1},
-		})
-		require.ErrorContains(t, "Requested epoch cannot be in the future", err)
-	})
-	t.Run("unknown validator index", func(t *testing.T) {
-		_, err := server.GetLiveness(ctx, &ethpbv2.GetLivenessRequest{
-			Epoch: 0,
-			Index: []primitives.ValidatorIndex{0, 1, 2},
-		})
-		require.ErrorContains(t, "Validator index 2 is invalid", err)
 	})
 }

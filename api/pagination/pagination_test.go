@@ -85,3 +85,19 @@ func TestStartAndEndPage_ExceedsMaxPage(t *testing.T) {
 	_, _, _, err := pagination.StartAndEndPage("", 0, 0)
 	assert.ErrorContains(t, wanted, err)
 }
+
+func TestStartAndEndPage_InvalidPageValues(t *testing.T) {
+	_, _, _, err := pagination.StartAndEndPage("10", -1, 10)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+
+	_, _, _, err = pagination.StartAndEndPage("12", 10, -10)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+
+	_, _, _, err = pagination.StartAndEndPage("12", -50, -60)
+	assert.ErrorContains(t, "invalid page and total sizes provided", err)
+}
+
+func TestStartAndEndPage_InvalidTokenValue(t *testing.T) {
+	_, _, _, err := pagination.StartAndEndPage("-12", 50, 60)
+	assert.ErrorContains(t, "invalid token value provided", err)
+}

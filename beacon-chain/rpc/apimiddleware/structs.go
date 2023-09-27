@@ -12,16 +12,6 @@ import (
 // Requests and responses.
 //----------------
 
-type GenesisResponseJson struct {
-	Data *GenesisResponse_GenesisJson `json:"data"`
-}
-
-type GenesisResponse_GenesisJson struct {
-	GenesisTime           string `json:"genesis_time" time:"true"`
-	GenesisValidatorsRoot string `json:"genesis_validators_root" hex:"true"`
-	GenesisForkVersion    string `json:"genesis_fork_version" hex:"true"`
-}
-
 // WeakSubjectivityResponse is used to marshal/unmarshal the response for the
 // /eth/v1/beacon/weak_subjectivity endpoint.
 type WeakSubjectivityResponse struct {
@@ -41,42 +31,6 @@ type StateRootResponse_StateRootJson struct {
 	StateRoot string `json:"root" hex:"true"`
 }
 
-type StateFinalityCheckpointResponseJson struct {
-	Data                *StateFinalityCheckpointResponse_StateFinalityCheckpointJson `json:"data"`
-	ExecutionOptimistic bool                                                         `json:"execution_optimistic"`
-	Finalized           bool                                                         `json:"finalized"`
-}
-
-type StateFinalityCheckpointResponse_StateFinalityCheckpointJson struct {
-	PreviousJustified *CheckpointJson `json:"previous_justified"`
-	CurrentJustified  *CheckpointJson `json:"current_justified"`
-	Finalized         *CheckpointJson `json:"finalized"`
-}
-
-type StateValidatorsResponseJson struct {
-	Data                []*ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
-}
-
-type StateValidatorResponseJson struct {
-	Data                *ValidatorContainerJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
-type ValidatorBalancesResponseJson struct {
-	Data                []*ValidatorBalanceJson `json:"data"`
-	ExecutionOptimistic bool                    `json:"execution_optimistic"`
-	Finalized           bool                    `json:"finalized"`
-}
-
-type StateCommitteesResponseJson struct {
-	Data                []*CommitteeJson `json:"data"`
-	ExecutionOptimistic bool             `json:"execution_optimistic"`
-	Finalized           bool             `json:"finalized"`
-}
-
 type SyncCommitteesResponseJson struct {
 	Data                *SyncCommitteeValidatorsJson `json:"data"`
 	ExecutionOptimistic bool                         `json:"execution_optimistic"`
@@ -89,12 +43,6 @@ type RandaoResponseJson struct {
 	} `json:"data"`
 	ExecutionOptimistic bool `json:"execution_optimistic"`
 	Finalized           bool `json:"finalized"`
-}
-
-type BlockHeaderResponseJson struct {
-	Data                *BlockHeaderContainerJson `json:"data"`
-	ExecutionOptimistic bool                      `json:"execution_optimistic"`
-	Finalized           bool                      `json:"finalized"`
 }
 
 type BlockResponseJson struct {
@@ -201,10 +149,6 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type ValidatorIndicesJson struct {
-	Index []string `json:"index"`
-}
-
 type ProduceBlockResponseJson struct {
 	Data *BeaconBlockJson `json:"data"`
 }
@@ -269,13 +213,6 @@ type ForkChoiceResponseExtraDataJson struct {
 	ProposerBoostRoot             string          `json:"proposer_boost_root" hex:"true"`
 	PreviousProposerBoostRoot     string          `json:"previous_proposer_boost_root" hex:"true"`
 	HeadRoot                      string          `json:"head_root" hex:"true"`
-}
-
-type LivenessResponseJson struct {
-	Data []*struct {
-		Index  string `json:"index"`
-		IsLive bool   `json:"is_live"`
-	} `json:"data"`
 }
 
 //----------------
@@ -711,17 +648,6 @@ type SyncAggregateJson struct {
 	SyncCommitteeSignature string `json:"sync_committee_signature" hex:"true"`
 }
 
-type BlockHeaderContainerJson struct {
-	Root      string                          `json:"root" hex:"true"`
-	Canonical bool                            `json:"canonical"`
-	Header    *BeaconBlockHeaderContainerJson `json:"header"`
-}
-
-type BeaconBlockHeaderContainerJson struct {
-	Message   *BeaconBlockHeaderJson `json:"message"`
-	Signature string                 `json:"signature" hex:"true"`
-}
-
 type SignedBeaconBlockHeaderJson struct {
 	Header    *BeaconBlockHeaderJson `json:"message"`
 	Signature string                 `json:"signature" hex:"true"`
@@ -995,13 +921,6 @@ type ForkJson struct {
 	Epoch           string `json:"epoch"`
 }
 
-type ValidatorContainerJson struct {
-	Index     string         `json:"index"`
-	Balance   string         `json:"balance"`
-	Status    string         `json:"status" enum:"true"`
-	Validator *ValidatorJson `json:"validator"`
-}
-
 type ValidatorJson struct {
 	PublicKey                  string `json:"pubkey" hex:"true"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials" hex:"true"`
@@ -1011,17 +930,6 @@ type ValidatorJson struct {
 	ActivationEpoch            string `json:"activation_epoch"`
 	ExitEpoch                  string `json:"exit_epoch"`
 	WithdrawableEpoch          string `json:"withdrawable_epoch"`
-}
-
-type ValidatorBalanceJson struct {
-	Index   string `json:"index"`
-	Balance string `json:"balance"`
-}
-
-type CommitteeJson struct {
-	Index      string   `json:"index"`
-	Slot       string   `json:"slot"`
-	Validators []string `json:"validators"`
 }
 
 type SyncCommitteeJson struct {
@@ -1282,11 +1190,6 @@ type IndexedVerificationFailureErrorJson struct {
 type SingleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
-}
-
-type NodeSyncDetailsErrorJson struct {
-	apimiddleware.DefaultErrorJson
-	SyncDetails shared.SyncDetails `json:"sync_details"`
 }
 
 type EventErrorJson struct {
