@@ -128,6 +128,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EngineEndpointTimeoutSeconds,
 			flags.SlasherDirFlag,
 			flags.LocalBlockValueBoost,
+			flags.BlobRetentionEpoch,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,

@@ -153,6 +153,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
+	if err := kv.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
+		return nil, err
+	}
 	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
