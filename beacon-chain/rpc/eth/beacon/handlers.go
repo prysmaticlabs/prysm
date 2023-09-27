@@ -54,9 +54,9 @@ func (s *Server) PublishBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	}
 	isSSZ, err := http2.SszRequested(r)
 	if isSSZ && err == nil {
-		publishBlindedBlockSSZ(ctx, s, w, r, false)
+		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
-		publishBlindedBlock(ctx, s, w, r, false)
+		s.publishBlindedBlock(ctx, w, r)
 	}
 }
 
@@ -79,13 +79,13 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 	isSSZ, err := http2.SszRequested(r)
 	if isSSZ && err == nil {
-		publishBlindedBlockSSZ(ctx, s, w, r, true)
+		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
-		publishBlindedBlock(ctx, s, w, r, true)
+		s.publishBlindedBlock(ctx, w, r)
 	}
 }
 
-func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *http.Request, v2 bool) {
+func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
@@ -98,11 +98,9 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 				BlindedDeneb: denebBlockContents,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -114,11 +112,9 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 				BlindedCapella: capellaBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -130,11 +126,9 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 				BlindedBellatrix: bellatrixBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -148,11 +142,9 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 				Altair: altairBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -164,11 +156,9 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 				Phase0: phase0Block,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -176,7 +166,7 @@ func publishBlindedBlockSSZ(ctx context.Context, s *Server, w http.ResponseWrite
 	http2.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http.Request, v2 bool) {
+func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -188,11 +178,9 @@ func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, 
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
 		consensusBlock, err := denebBlockContents.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -206,11 +194,9 @@ func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, 
 	if err = unmarshalStrict(body, &capellaBlock); err == nil {
 		consensusBlock, err := capellaBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -224,11 +210,9 @@ func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, 
 	if err = unmarshalStrict(body, &bellatrixBlock); err == nil {
 		consensusBlock, err := bellatrixBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -241,11 +225,9 @@ func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, 
 	if err = unmarshalStrict(body, &altairBlock); err == nil {
 		consensusBlock, err := altairBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -258,11 +240,9 @@ func publishBlindedBlock(ctx context.Context, s *Server, w http.ResponseWriter, 
 	if err = unmarshalStrict(body, &phase0Block); err == nil {
 		consensusBlock, err := phase0Block.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -293,9 +273,9 @@ func (s *Server) PublishBlock(w http.ResponseWriter, r *http.Request) {
 	}
 	isSSZ, err := http2.SszRequested(r)
 	if isSSZ && err == nil {
-		publishBlockSSZ(ctx, s, w, r, false)
+		s.publishBlockSSZ(ctx, w, r)
 	} else {
-		publishBlock(ctx, s, w, r, false)
+		s.publishBlock(ctx, w, r)
 	}
 }
 
@@ -316,13 +296,13 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 	isSSZ, err := http2.SszRequested(r)
 	if isSSZ && err == nil {
-		publishBlockSSZ(ctx, s, w, r, true)
+		s.publishBlockSSZ(ctx, w, r)
 	} else {
-		publishBlock(ctx, s, w, r, true)
+		s.publishBlock(ctx, w, r)
 	}
 }
 
-func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *http.Request, v2 bool) {
+func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -335,11 +315,9 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 				Deneb: denebBlockContents,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -351,11 +329,9 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 				Capella: capellaBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -367,11 +343,9 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 				Bellatrix: bellatrixBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -383,11 +357,9 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 				Altair: altairBlock,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -399,11 +371,9 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 				Phase0: phase0Block,
 			},
 		}
-		if v2 {
-			if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
-				http2.HandleError(w, err.Error(), http.StatusBadRequest)
-				return
-			}
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
+			http2.HandleError(w, err.Error(), http.StatusBadRequest)
+			return
 		}
 		s.proposeBlock(ctx, w, genericBlock)
 		return
@@ -411,7 +381,7 @@ func publishBlockSSZ(ctx context.Context, s *Server, w http.ResponseWriter, r *h
 	http2.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http.Request, v2 bool) {
+func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -423,11 +393,9 @@ func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
 		consensusBlock, err := denebBlockContents.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -440,11 +408,9 @@ func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http
 	if err = unmarshalStrict(body, &capellaBlock); err == nil {
 		consensusBlock, err := capellaBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -457,11 +423,9 @@ func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http
 	if err = unmarshalStrict(body, &bellatrixBlock); err == nil {
 		consensusBlock, err := bellatrixBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -474,11 +438,9 @@ func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http
 	if err = unmarshalStrict(body, &altairBlock); err == nil {
 		consensusBlock, err := altairBlock.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
@@ -491,11 +453,9 @@ func publishBlock(ctx context.Context, s *Server, w http.ResponseWriter, r *http
 	if err = unmarshalStrict(body, &phase0Block); err == nil {
 		consensusBlock, err := phase0Block.ToGeneric()
 		if err == nil {
-			if v2 {
-				if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
-					http2.HandleError(w, err.Error(), http.StatusBadRequest)
-					return
-				}
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
+				http2.HandleError(w, err.Error(), http.StatusBadRequest)
+				return
 			}
 			s.proposeBlock(ctx, w, consensusBlock)
 			return
