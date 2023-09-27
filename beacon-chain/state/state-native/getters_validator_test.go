@@ -44,6 +44,14 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Capella(t *testing
 	})
 }
 
+func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
+		return statenative.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+			Validators: nil,
+		})
+	})
+}
+
 func TestValidatorIndexes(t *testing.T) {
 	dState, _ := util.DeterministicGenesisState(t, 10)
 	byteValue := dState.PubkeyAtIndex(1)

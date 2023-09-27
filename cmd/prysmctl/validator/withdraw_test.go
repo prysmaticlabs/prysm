@@ -13,6 +13,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -37,8 +39,8 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 				})
 				require.NoError(t, err)
 			} else if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
-				err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
-					Data: &apimiddleware.ForkJson{
+				err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
+					Data: &shared.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						Epoch:           "1350",
@@ -228,8 +230,8 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 			if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 				w.WriteHeader(200)
 				w.Header().Set("Content-Type", "application/json")
-				err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
-					Data: &apimiddleware.ForkJson{
+				err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
+					Data: &shared.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
@@ -286,8 +288,8 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 
-			err := json.NewEncoder(w).Encode(&apimiddleware.StateForkResponseJson{
-				Data: &apimiddleware.ForkJson{
+			err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
+				Data: &shared.Fork{
 					PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
 					CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
 					Epoch:           "1000",

@@ -75,13 +75,19 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 	}, nil
 }
 
-func (c *beaconApiNodeClient) GetVersion(ctx context.Context, in *empty.Empty) (*ethpb.Version, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetVersion(ctx, in)
+func (c *beaconApiNodeClient) GetVersion(ctx context.Context, _ *empty.Empty) (*ethpb.Version, error) {
+	var versionResponse apimiddleware.VersionResponseJson
+	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/node/version", &versionResponse); err != nil {
+		return nil, errors.Wrapf(err, "failed to query node version")
 	}
 
-	// TODO: Implement me
-	panic("beaconApiNodeClient.GetVersion is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiNodeClientWithFallback.")
+	if versionResponse.Data == nil || versionResponse.Data.Version == "" {
+		return nil, errors.New("empty version response")
+	}
+
+	return &ethpb.Version{
+		Version: versionResponse.Data.Version,
+	}, nil
 }
 
 func (c *beaconApiNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error) {

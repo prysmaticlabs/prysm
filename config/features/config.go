@@ -67,6 +67,7 @@ type Flags struct {
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
 	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
+	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
@@ -134,6 +135,13 @@ func configureTestnet(ctx *cli.Context) error {
 		}
 		applySepoliaFeatureFlags(ctx)
 		params.UseSepoliaNetworkConfig()
+	} else if ctx.Bool(HoleskyTestnet.Name) {
+		log.Warn("Running on the Holesky Beacon Chain Testnet")
+		if err := params.SetActive(params.HoleskyConfig().Copy()); err != nil {
+			return err
+		}
+		applyHoleskyFeatureFlags(ctx)
+		params.UseHoleskyNetworkConfig()
 	} else {
 		if ctx.IsSet(cmd.ChainConfigFileFlag.Name) {
 			log.Warn("Running on custom Ethereum network specified in a chain configuration yaml file")
@@ -153,6 +161,10 @@ func applyPraterFeatureFlags(ctx *cli.Context) {
 
 // Insert feature flags within the function to be enabled for Sepolia testnet.
 func applySepoliaFeatureFlags(ctx *cli.Context) {
+}
+
+// Insert feature flags within the function to be enabled for Holesky testnet.
+func applyHoleskyFeatureFlags(ctx *cli.Context) {
 }
 
 // ConfigureBeaconChain sets the global config based
@@ -244,6 +256,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
+	}
+	if ctx.IsSet(enableEIP4881.Name) {
+		logEnabled(enableEIP4881)
+		cfg.EnableEIP4881 = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)

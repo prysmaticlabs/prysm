@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -20,11 +21,48 @@ import (
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "DENEB_FORK_EPOCH", "DENEB_FORK_VERSION",
-	"ATTESTATION_SUBNET_EXTRA_BITS", "RESP_TIMEOUT", "MAX_REQUEST_BLOCKS", "EPOCHS_PER_SUBNET_SUBSCRIPTION",
-	"EIP6110_FORK_EPOCH", "MESSAGE_DOMAIN_INVALID_SNAPPY", "MIN_EPOCHS_FOR_BLOCK_REQUESTS", "MAXIMUM_GOSSIP_CLOCK_DISPARITY",
-	"MESSAGE_DOMAIN_VALID_SNAPPY", "GOSSIP_MAX_SIZE", "SUBNETS_PER_NODE", "ATTESTATION_SUBNET_COUNT",
-	"MAX_CHUNK_SIZE", "ATTESTATION_PROPAGATION_SLOT_RANGE", "ATTESTATION_SUBNET_PREFIX_BITS", "EIP6110_FORK_VERSION", "TTFB_TIMEOUT"}
+// IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
+var placeholderFields = []string{
+	"ATTESTATION_PROPAGATION_SLOT_RANGE",
+	"ATTESTATION_SUBNET_COUNT",
+	"ATTESTATION_SUBNET_EXTRA_BITS",
+	"ATTESTATION_SUBNET_PREFIX_BITS",
+	"EIP6110_FORK_EPOCH",
+	"EIP6110_FORK_VERSION",
+	"EIP7002_FORK_EPOCH",
+	"EIP7002_FORK_VERSION",
+	"EPOCHS_PER_SUBNET_SUBSCRIPTION",
+	"GOSSIP_MAX_SIZE",
+	"MAXIMUM_GOSSIP_CLOCK_DISPARITY",
+	"MAX_BLOBS_PER_BLOCK",
+	"MAX_CHUNK_SIZE",
+	"MAX_REQUEST_BLOB_SIDECARS",
+	"MAX_REQUEST_BLOCKS",
+	"MAX_REQUEST_BLOCKS_DENEB",
+	"MESSAGE_DOMAIN_INVALID_SNAPPY",
+	"MESSAGE_DOMAIN_VALID_SNAPPY",
+	"MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS",
+	"MIN_EPOCHS_FOR_BLOCK_REQUESTS",
+	"RESP_TIMEOUT",
+	"SUBNETS_PER_NODE",
+	"TTFB_TIMEOUT",
+	"UPDATE_TIMEOUT",
+	"WHISK_FORK_EPOCH",
+	"WHISK_FORK_VERSION",
+}
+
+func TestPlaceholderFieldsDistinctSorted(t *testing.T) {
+	m := make(map[string]struct{})
+	for i := 0; i < len(placeholderFields)-1; i++ {
+		if _, ok := m[placeholderFields[i]]; ok {
+			t.Fatalf("duplicate placeholder field %s", placeholderFields[i])
+		}
+		m[placeholderFields[i]] = struct{}{}
+	}
+	if !sort.StringsAreSorted(placeholderFields) {
+		t.Fatal("placeholderFields must be sorted")
+	}
+}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
@@ -115,11 +153,13 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.AltairForkEpoch, actual.AltairForkEpoch, "%s: AltairForkEpoch", name)
 	assert.Equal(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch, "%s: BellatrixForkEpoch", name)
 	assert.Equal(t, expected.CapellaForkEpoch, actual.CapellaForkEpoch, "%s: CapellaForkEpoch", name)
+	assert.Equal(t, expected.DenebForkEpoch, actual.DenebForkEpoch, "%s: DenebForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: BellatrixForkVersion", name)
 	assert.DeepEqual(t, expected.CapellaForkVersion, actual.CapellaForkVersion, "%s: CapellaForkVersion", name)
+	assert.DeepEqual(t, expected.DenebForkVersion, actual.DenebForkVersion, "%s: DenebForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
@@ -128,8 +168,10 @@ func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	c.TerminalTotalDifficulty = "0"
-	c.AltairForkEpoch = 0
-	c.BellatrixForkEpoch = 0
+	c.AltairForkEpoch = 112
+	c.BellatrixForkEpoch = 123
+	c.CapellaForkEpoch = 235
+	c.DenebForkEpoch = 358
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)

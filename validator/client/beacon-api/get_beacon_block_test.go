@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -376,6 +378,50 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 			Capella: capellaProtoBeaconBlock,
 		},
 	}
+
+	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
+}
+
+func TestGetBeaconBlock_DenebValid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	var blockContents shared.SignedBeaconBlockContentsDeneb
+	err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents)
+	require.NoError(t, err)
+
+	denebBeaconBlockBytes, err := json.Marshal(blockContents.ToUnsigned())
+	require.NoError(t, err)
+	ctx := context.Background()
+	const slot = primitives.Slot(1)
+	randaoReveal, err := hexutil.Decode("0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505")
+	require.NoError(t, err)
+	graffiti, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v2/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&abstractProduceBlockResponseJson{},
+	).SetArg(
+		2,
+		abstractProduceBlockResponseJson{
+			Version: "deneb",
+			Data:    denebBeaconBlockBytes,
+		},
+	).Return(
+		nil,
+		nil,
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	require.NoError(t, err)
+
+	expectedBeaconBlock, err := blockContents.ToUnsigned().ToGeneric()
+	require.NoError(t, err)
 
 	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
 }

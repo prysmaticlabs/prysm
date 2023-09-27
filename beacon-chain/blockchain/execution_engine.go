@@ -2,8 +2,10 @@ package blockchain
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -25,6 +27,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
+
+const blobCommitmentVersionKZG uint8 = 0x01
 
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
@@ -210,7 +214,19 @@ func (s *Service) notifyNewPayload(ctx context.Context, preStateVersion int,
 	if err != nil {
 		return false, errors.Wrap(invalidBlock{error: err}, "could not get execution payload")
 	}
-	lastValidHash, err := s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload)
+
+	var lastValidHash []byte
+	if blk.Version() >= version.Deneb {
+		var versionedHashes []common.Hash
+		versionedHashes, err = kzgCommitmentsToVersionedHashes(blk.Block().Body())
+		if err != nil {
+			return false, errors.Wrap(err, "could not get versioned hashes to feed the engine")
+		}
+		pr := common.Hash(blk.Block().ParentRoot())
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, versionedHashes, &pr)
+	} else {
+		lastValidHash, err = s.cfg.ExecutionEngineCaller.NewPayload(ctx, payload, []common.Hash{}, &common.Hash{} /*empty version hashes and root before Deneb*/)
+	}
 	switch err {
 	case nil:
 		newPayloadValidNodeCount.Inc()
@@ -310,6 +326,23 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 
 	var attr payloadattribute.Attributer
 	switch st.Version() {
+	case version.Deneb:
+		withdrawals, err := st.ExpectedWithdrawals()
+		if err != nil {
+			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
+			return false, emptyAttri, 0
+		}
+		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
+			Timestamp:             uint64(t.Unix()),
+			PrevRandao:            prevRando,
+			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			Withdrawals:           withdrawals,
+			ParentBeaconBlockRoot: headRoot,
+		})
+		if err != nil {
+			log.WithError(err).Error("Could not get payload attribute")
+			return false, emptyAttri, 0
+		}
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
@@ -344,19 +377,41 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	return true, attr, proposerID
 }
 
-// removeInvalidBlockAndState removes the invalid block and its corresponding state from the cache and DB.
+// removeInvalidBlockAndState removes the invalid block, blob and its corresponding state from the cache and DB.
 func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32]byte) error {
 	for _, root := range blkRoots {
 		if err := s.cfg.StateGen.DeleteStateFromCaches(ctx, root); err != nil {
 			return err
 		}
-
 		// Delete block also deletes the state as well.
 		if err := s.cfg.BeaconDB.DeleteBlock(ctx, root); err != nil {
 			// TODO(10487): If a caller requests to delete a root that's justified and finalized. We should gracefully shutdown.
 			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
 			return err
 		}
+		// No op if the sidecar does not exist.
+		if err := s.cfg.BeaconDB.DeleteBlobSidecar(ctx, root); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([]common.Hash, error) {
+	commitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return nil, errors.Wrap(invalidBlock{error: err}, "could not get blob kzg commitments")
+	}
+
+	versionedHashes := make([]common.Hash, len(commitments))
+	for i, commitment := range commitments {
+		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
+	}
+	return versionedHashes, nil
+}
+
+func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
+	versionedHash := sha256.Sum256(commitment)
+	versionedHash[0] = blobCommitmentVersionKZG
+	return versionedHash
 }

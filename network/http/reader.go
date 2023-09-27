@@ -5,23 +5,25 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/prysmaticlabs/prysm/v4/api"
 )
 
 // match a number with optional decimals
 var priorityRegex = regexp.MustCompile(`q=(\d+(?:\.\d+)?)`)
 
 // SszRequested takes a http request and checks to see if it should be requesting a ssz response.
-func SszRequested(req *http.Request) (bool, error) {
+func SszRequested(req *http.Request) bool {
 	accept := req.Header.Values("Accept")
 	if len(accept) == 0 {
-		return false, nil
+		return false
 	}
 	types := strings.Split(accept[0], ",")
 	currentType, currentPriority := "", 0.0
 	for _, t := range types {
 		values := strings.Split(t, ";")
 		name := values[0]
-		if name != jsonMediaType && name != octetStreamMediaType {
+		if name != api.JsonMediaType && name != api.OctetStreamMediaType {
 			continue
 		}
 		// no params specified
@@ -40,12 +42,12 @@ func SszRequested(req *http.Request) (bool, error) {
 		}
 		priority, err := strconv.ParseFloat(match[0][1], 32)
 		if err != nil {
-			return false, err
+			return false
 		}
 		if priority > currentPriority {
 			currentType, currentPriority = name, priority
 		}
 	}
 
-	return currentType == octetStreamMediaType, nil
+	return currentType == api.OctetStreamMediaType
 }

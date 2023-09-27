@@ -16,7 +16,7 @@ func TestNewBeaconState(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconState{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got)
 }
 
 func TestNewBeaconStateAltair(t *testing.T) {
@@ -26,7 +26,7 @@ func TestNewBeaconStateAltair(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateAltair{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got)
 }
 
 func TestNewBeaconStateBellatrix(t *testing.T) {
@@ -36,7 +36,7 @@ func TestNewBeaconStateBellatrix(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateBellatrix{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got)
 }
 
 func TestNewBeaconStateCapella(t *testing.T) {
@@ -46,7 +46,17 @@ func TestNewBeaconStateCapella(t *testing.T) {
 	require.NoError(t, err)
 	got := &ethpb.BeaconStateCapella{}
 	require.NoError(t, got.UnmarshalSSZ(b))
-	assert.DeepEqual(t, st.ToProtoUnsafe(), got, "State did not match after round trip marshal")
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got)
+}
+
+func TestNewBeaconStateDeneb(t *testing.T) {
+	st, err := NewBeaconStateDeneb()
+	require.NoError(t, err)
+	b, err := st.MarshalSSZ()
+	require.NoError(t, err)
+	got := &ethpb.BeaconStateDeneb{}
+	require.NoError(t, got.UnmarshalSSZ(b))
+	assert.DeepEqual(t, st.ToProtoUnsafe(), got)
 }
 
 func TestNewBeaconState_HashTreeRoot(t *testing.T) {

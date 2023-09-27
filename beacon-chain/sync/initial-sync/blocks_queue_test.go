@@ -11,6 +11,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -37,6 +38,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 	fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 		chain: mc,
 		p2p:   p2p,
+		clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 	})
 
 	t.Run("stop without start", func(t *testing.T) {
@@ -126,6 +128,7 @@ func TestBlocksQueue_InitStartStop(t *testing.T) {
 			blocksFetcher:       fetcher,
 			chain:               mc,
 			highestExpectedSlot: primitives.Slot(blockBatchLimit),
+			clock:               startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		})
 		assert.NoError(t, queue.start())
 		cancel()
@@ -252,6 +255,7 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			fetcher := newBlocksFetcher(ctx, &blocksFetcherConfig{
 				chain: mc,
 				p2p:   p2p,
+				clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 			})
 			queue := newBlocksQueue(ctx, &blocksQueueConfig{
 				blocksFetcher:       fetcher,
@@ -259,7 +263,8 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				highestExpectedSlot: tt.highestExpectedSlot,
 			})
 			assert.NoError(t, queue.start())
-			processBlock := func(block interfaces.ReadOnlySignedBeaconBlock) error {
+			processBlock := func(b blocks.BlockWithVerifiedBlobs) error {
+				block := b.Block
 				if !beaconDB.HasBlock(ctx, block.Block().ParentRoot()) {
 					return fmt.Errorf("%w: %#x", errParentDoesNotExist, block.Block().ParentRoot())
 				}
@@ -270,13 +275,13 @@ func TestBlocksQueue_Loop(t *testing.T) {
 				return mc.ReceiveBlock(ctx, block, root)
 			}
 
-			var blocks []interfaces.ReadOnlySignedBeaconBlock
+			var blocks []blocks.BlockWithVerifiedBlobs
 			for data := range queue.fetchedData {
-				for _, block := range data.blocks {
-					if err := processBlock(block); err != nil {
+				for _, b := range data.bwb {
+					if err := processBlock(b); err != nil {
 						continue
 					}
-					blocks = append(blocks, block)
+					blocks = append(blocks, b)
 				}
 			}
 
@@ -288,8 +293,8 @@ func TestBlocksQueue_Loop(t *testing.T) {
 			}
 			assert.Equal(t, len(tt.expectedBlockSlots), len(blocks), "Processes wrong number of blocks")
 			var receivedBlockSlots []primitives.Slot
-			for _, blk := range blocks {
-				receivedBlockSlots = append(receivedBlockSlots, blk.Block().Slot())
+			for _, b := range blocks {
+				receivedBlockSlots = append(receivedBlockSlots, b.Block.Block().Slot())
 			}
 			missing := slice.NotSlot(slice.IntersectionSlot(tt.expectedBlockSlots, receivedBlockSlots), tt.expectedBlockSlots)
 			if len(missing) > 0 {
@@ -533,21 +538,21 @@ func TestBlocksQueue_onDataReceivedEvent(t *testing.T) {
 		require.NoError(t, err)
 		response := &fetchRequestResponse{
 			pid: "abc",
-			blocks: []interfaces.ReadOnlySignedBeaconBlock{
-				wsb,
-				wsbCopy,
+			bwb: []blocks.BlockWithVerifiedBlobs{
+				{Block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsb}},
+				{Block: blocks.ROBlock{ReadOnlySignedBeaconBlock: wsbCopy}},
 			},
 		}
 		fsm := &stateMachine{
 			state: stateScheduled,
 		}
 		assert.Equal(t, peer.ID(""), fsm.pid)
-		assert.DeepSSZEqual(t, []interfaces.ReadOnlySignedBeaconBlock(nil), fsm.blocks)
+		assert.Equal(t, 0, len(fsm.bwb))
 		updatedState, err := handlerFn(fsm, response)
 		assert.NoError(t, err)
 		assert.Equal(t, stateDataParsed, updatedState)
 		assert.Equal(t, response.pid, fsm.pid)
-		assert.DeepSSZEqual(t, response.blocks, fsm.blocks)
+		assert.DeepSSZEqual(t, response.bwb, fsm.bwb)
 	})
 }
 
@@ -631,8 +636,10 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[256].state = stateDataParsed
 		queue.smm.machines[256].pid = pidDataParsed
-		queue.smm.machines[256].blocks = []interfaces.ReadOnlySignedBeaconBlock{
-			wsb,
+		rwsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		queue.smm.machines[256].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -663,8 +670,10 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.ReadOnlySignedBeaconBlock{
-			wsb,
+		rwsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		queue.smm.machines[320].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -692,8 +701,10 @@ func TestBlocksQueue_onReadyToSendEvent(t *testing.T) {
 		queue.smm.addStateMachine(320)
 		queue.smm.machines[320].state = stateDataParsed
 		queue.smm.machines[320].pid = pidDataParsed
-		queue.smm.machines[320].blocks = []interfaces.ReadOnlySignedBeaconBlock{
-			wsb,
+		rwsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		queue.smm.machines[320].bwb = []blocks.BlockWithVerifiedBlobs{
+			{Block: rwsb},
 		}
 
 		handlerFn := queue.onReadyToSendEvent(ctx)
@@ -1078,6 +1089,7 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 			chain: mc,
 			p2p:   p2p,
 			db:    beaconDB,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
@@ -1212,27 +1224,28 @@ func TestBlocksQueue_stuckInUnfavourableFork(t *testing.T) {
 		// required forked data, including data on and after slot 201.
 		forkedEpochStartSlot, err := slots.EpochStart(slots.ToEpoch(forkedSlot))
 		require.NoError(t, err)
-		firstFSM, ok := queue.smm.findStateMachine(forkedEpochStartSlot + 1)
+		firstFSM, ok := queue.smm.findStateMachine(forkedSlot)
 		require.Equal(t, true, ok)
 		require.Equal(t, stateDataParsed, firstFSM.state)
 		require.Equal(t, forkedPeer, firstFSM.pid)
-		require.Equal(t, 64, len(firstFSM.blocks))
-		require.Equal(t, forkedEpochStartSlot+1, firstFSM.blocks[0].Block().Slot())
+		reqEnd := testForkStartSlot(t, 251) + primitives.Slot(findForkReqRangeSize())
+		require.Equal(t, int(reqEnd-forkedSlot), len(firstFSM.bwb))
+		require.Equal(t, forkedSlot, firstFSM.bwb[0].Block.Block().Slot())
 
 		// Assert that forked data from chain2 is available (within 64 fetched blocks).
-		for i, blk := range chain2[forkedEpochStartSlot+1:] {
-			if i >= len(firstFSM.blocks) {
+		for i, blk := range chain2[forkedSlot:] {
+			if i >= len(firstFSM.bwb) {
 				break
 			}
-			rootFromFSM, err := firstFSM.blocks[i].Block().HashTreeRoot()
-			require.NoError(t, err)
+			rootFromFSM := firstFSM.bwb[i].Block.Root()
 			blkRoot, err := blk.Block.HashTreeRoot()
 			require.NoError(t, err)
 			assert.Equal(t, blkRoot, rootFromFSM)
 		}
 
 		// Assert that machines are in the expected state.
-		startSlot = forkedEpochStartSlot.Add(1 + uint64(len(firstFSM.blocks)))
+		startSlot = forkedEpochStartSlot.Add(1 + blocksPerRequest)
+		require.Equal(t, int(blocksPerRequest)-int(forkedSlot-(forkedEpochStartSlot+1)), len(firstFSM.bwb))
 		for i := startSlot; i < startSlot.Add(blocksPerRequest*(lookaheadSteps-1)); i += primitives.Slot(blocksPerRequest) {
 			fsm, ok := queue.smm.findStateMachine(i)
 			require.Equal(t, true, ok)
@@ -1298,6 +1311,7 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 			chain: mc,
 			p2p:   p2p,
 			db:    beaconDB,
+			clock: startup.NewClock(mc.Genesis, mc.ValidatorsRoot),
 		},
 	)
 	fetcher.rateLimiter = leakybucket.NewCollector(6400, 6400, 1*time.Second, false)
@@ -1333,7 +1347,8 @@ func TestBlocksQueue_stuckWhenHeadIsSetToOrphanedBlock(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("test takes too long to complete")
 	case data := <-queue.fetchedData:
-		for _, blk := range data.blocks {
+		for _, b := range data.bwb {
+			blk := b.Block
 			blkRoot, err := blk.Block().HashTreeRoot()
 			require.NoError(t, err)
 			if isProcessedBlock(ctx, blk, blkRoot) {
