@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
@@ -111,6 +112,55 @@ type Fork struct {
 	PreviousVersion string `json:"previous_version"`
 	CurrentVersion  string `json:"current_version"`
 	Epoch           string `json:"epoch"`
+}
+
+type SignedBLSToExecutionChange struct {
+	Message   *BLSToExecutionChange `json:"message"`
+	Signature string                `json:"signature" hex:"true"`
+}
+
+type BLSToExecutionChange struct {
+	ValidatorIndex     string `json:"validator_index"`
+	FromBLSPubkey      string `json:"from_bls_pubkey"`
+	ToExecutionAddress string `json:"to_execution_address"`
+}
+
+func BlsToExecutionChangeFromConsensus(blsToExecutionChange *eth.BLSToExecutionChange) (*BLSToExecutionChange, error) {
+	if blsToExecutionChange == nil {
+		return nil, errors.New("BLSToExecutionChange is empty")
+	}
+
+	return &BLSToExecutionChange{
+		ValidatorIndex:     strconv.FormatUint(uint64(blsToExecutionChange.ValidatorIndex), 10),
+		FromBLSPubkey:      hexutil.Encode(blsToExecutionChange.FromBlsPubkey),
+		ToExecutionAddress: hexutil.Encode(blsToExecutionChange.ToExecutionAddress),
+	}, nil
+}
+
+func SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange *eth.SignedBLSToExecutionChange) (*SignedBLSToExecutionChange, error) {
+	if signedBlsToExecutionChange == nil {
+		return nil, errors.New("SignedBLSToExecutionChange is empty")
+	}
+	bls, err := BlsToExecutionChangeFromConsensus(signedBlsToExecutionChange.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBLSToExecutionChange{
+		Message:   bls,
+		Signature: hexutil.Encode(signedBlsToExecutionChange.Signature),
+	}, nil
+}
+
+func SignedBlsToExecutionChangesFromConsensus(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) ([]*SignedBLSToExecutionChange, error) {
+	jsonBlsToExecutionChanges := make([]*SignedBLSToExecutionChange, len(blsToExecutionChanges))
+	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
+		sbls, err := SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("blsExecutionChange message failed to encode at index %d", index))
+		}
+		jsonBlsToExecutionChanges[index] = sbls
+	}
+	return jsonBlsToExecutionChanges, nil
 }
 
 func (s *Fork) ToConsensus() (*eth.Fork, error) {
