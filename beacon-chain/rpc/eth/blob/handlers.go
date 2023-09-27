@@ -98,12 +98,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ssz, err := http2.SszRequested(r)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
+	ssz := http2.SszRequested(r)
 	if ssz {
 		v2sidecars, err := migration.V1Alpha1BlobSidecarsToV2(sidecars)
 		if err != nil {

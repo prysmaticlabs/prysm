@@ -266,6 +266,32 @@ func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, err
 	}, nil
 }
 
+func ValidatorRegistrationFromConsensus(vr *eth.ValidatorRegistrationV1) (*ValidatorRegistration, error) {
+	if vr == nil {
+		return nil, errors.New("ValidatorRegistrationV1 is empty")
+	}
+	return &ValidatorRegistration{
+		FeeRecipient: hexutil.Encode(vr.FeeRecipient),
+		GasLimit:     strconv.FormatUint(vr.GasLimit, 10),
+		Timestamp:    strconv.FormatUint(vr.Timestamp, 10),
+		Pubkey:       hexutil.Encode(vr.Pubkey),
+	}, nil
+}
+
+func SignedValidatorRegistrationFromConsensus(vr *eth.SignedValidatorRegistrationV1) (*SignedValidatorRegistration, error) {
+	if vr == nil {
+		return nil, errors.New("SignedValidatorRegistrationV1 is empty")
+	}
+	v, err := ValidatorRegistrationFromConsensus(vr.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedValidatorRegistration{
+		Message:   v,
+		Signature: hexutil.Encode(vr.Signature),
+	}, nil
+}
+
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {

@@ -2162,6 +2162,17 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 	}, nil
 }
 
+func SignedBlindedBeaconBlockBellatrixFromConsensus(b *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBlindedBeaconBlockBellatrix, error) {
+	blindedBlock, err := BlindedBeaconBlockBellatrixFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockBellatrix{
+		Message:   blindedBlock,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBlockBellatrix, error) {
 	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
@@ -2304,6 +2315,17 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 			},
 			BlsToExecutionChanges: blsChanges, // new in capella
 		},
+	}, nil
+}
+
+func SignedBlindedBeaconBlockCapellaFromConsensus(b *eth.SignedBlindedBeaconBlockCapella) (*SignedBlindedBeaconBlockCapella, error) {
+	blindedBlock, err := BlindedBeaconBlockCapellaFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockCapella{
+		Message:   blindedBlock,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
