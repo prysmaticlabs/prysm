@@ -3,10 +3,13 @@ package kv
 import (
 	"context"
 	"crypto/rand"
+	"flag"
 	"fmt"
+	"strconv"
 	"testing"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -15,6 +18,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/urfave/cli/v2"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -515,9 +519,12 @@ func Test_checkEpochsForBlobSidecarsRequestBucket(t *testing.T) {
 	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First write
 	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First check
 
-	nConfig := params.BeaconNetworkConfig()
-	nConfig.MinEpochsForBlobsSidecarsRequest = 42069
-	params.OverrideBeaconNetworkConfig(nConfig)
+	params.SetupTestConfigCleanup(t)
+	set := flag.NewFlagSet("test", 0)
+	set.Uint64(flags.BlobRetentionEpoch.Name, 0, "")
+	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(42069, 10)))
+	cliCtx := cli.NewContext(&cli.App{}, set, nil)
+	require.NoError(t, ConfigureBlobRetentionEpoch(cliCtx))
 	require.ErrorContains(t, "epochs for blobs request value in DB 4096 does not match config value 42069", checkEpochsForBlobSidecarsRequestBucket(dbStore.db))
 }
 
