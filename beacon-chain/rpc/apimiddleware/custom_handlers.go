@@ -98,11 +98,7 @@ func handleGetSSZ(
 	req *http.Request,
 	config sszConfig,
 ) (handled bool) {
-	ssz, err := http2.SszRequested(req)
-	if err != nil {
-		apimiddleware.WriteError(w, apimiddleware.InternalServerError(err), nil)
-		return true
-	}
+	ssz := http2.SszRequested(req)
 	if !ssz {
 		return false
 	}

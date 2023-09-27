@@ -52,8 +52,8 @@ func (s *Server) PublishBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
 		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlindedBlock(ctx, w, r)
@@ -77,8 +77,8 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
 		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlindedBlock(ctx, w, r)
@@ -271,8 +271,8 @@ func (s *Server) PublishBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
 		s.publishBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlock(ctx, w, r)
@@ -294,8 +294,8 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
 		s.publishBlockSSZ(ctx, w, r)
 	} else {
 		s.publishBlock(ctx, w, r)
