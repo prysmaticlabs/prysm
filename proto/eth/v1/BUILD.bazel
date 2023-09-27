@@ -9,7 +9,6 @@ proto_library(
     name = "proto",
     srcs = [
         "attestation.proto",
-        "beacon_chain.proto",
         "events.proto",
         "node.proto",
         "validator.proto",
