@@ -289,7 +289,6 @@ func blobSidecarKey(blob *ethpb.BlobSidecar) blobRotatingKey {
 
 func slotKey(slot types.Slot) []byte {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	maxEpochsToPersistBlobs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
 	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(maxSlotsToPersistBlobs))
 }
@@ -299,14 +298,14 @@ func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
 		b := tx.Bucket(chainMetadataBucket)
 		v := b.Get(blobRetentionEpochsKey)
 		if v == nil {
-			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest))); err != nil {
+			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(maxEpochsToPersistBlobs))); err != nil {
 				return err
 			}
 			return nil
 		}
 		e := bytesutil.BytesToUint64BigEndian(v)
-		if e != uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest) {
-			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+		if e != uint64(maxEpochsToPersistBlobs) {
+			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, maxEpochsToPersistBlobs)
 		}
 		return nil
 	}); err != nil {
