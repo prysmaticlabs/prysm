@@ -308,7 +308,7 @@ func New4844Tx(nonce uint64, to *common.Address, gasLimit uint64, chainID, tip, 
 }
 
 func encodeBlobs(data []byte) []kzg4844.Blob {
-	blobs := []kzg4844.Blob{{}}
+	blobs := []kzg4844.Blob{make([]byte, fieldparams.BlobLength)}
 	blobIndex := 0
 	fieldIndex := -1
 	for i := 0; i < len(data); i += 31 {
@@ -317,7 +317,7 @@ func encodeBlobs(data []byte) []kzg4844.Blob {
 			if blobIndex >= 1 {
 				break
 			}
-			blobs = append(blobs, kzg4844.Blob{})
+			blobs = append(blobs, make([]byte, fieldparams.BlobLength))
 			blobIndex++
 			fieldIndex = 0
 		}
