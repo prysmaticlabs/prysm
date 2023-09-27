@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -85,7 +86,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return r[:], nil
+		return bytesutil.SafeCopyBytes(r[:]), nil
 	}
 
 	if b.blockRoots == nil {
@@ -94,5 +95,6 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 	if uint64(len(b.blockRoots)) <= idx {
 		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 	}
-	return b.blockRoots[idx][:], nil
+	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
+
 }
