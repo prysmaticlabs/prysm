@@ -9,13 +9,14 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -238,8 +239,8 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-			http2.HandleError(w, "Could not get exiting validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+		if errors.Is(err, consensus_types.ErrOutOfBounds) {
+			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
