@@ -13,6 +13,7 @@ go_library(
         "//api/client:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
