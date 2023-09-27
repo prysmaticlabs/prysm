@@ -5,7 +5,6 @@ import %workspace%/build/bazelrc/cross.bazelrc
 import %workspace%/build/bazelrc/debug.bazelrc
 import %workspace%/build/bazelrc/hermetic-cc.bazelrc
 import %workspace%/build/bazelrc/performance.bazelrc
-import %workspace%/build/bazelrc/zig-cc.bazelrc
 
 # E2E run with debug gotag
 test:e2e --define gotags=debug
