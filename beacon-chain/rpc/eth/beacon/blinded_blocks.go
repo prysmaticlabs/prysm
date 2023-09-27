@@ -2,17 +2,14 @@ package beacon
 
 import (
 	"context"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc"
@@ -629,74 +626,4 @@ func (bs *Server) getBlindedSSZBlockDeneb(ctx context.Context, blk interfaces.Re
 		return nil, errors.Wrapf(err, "could not marshal block into SSZ")
 	}
 	return &ethpbv2.SSZContainer{Version: ethpbv2.Version_DENEB, ExecutionOptimistic: isOptimistic, Data: sszData}, nil
-}
-
-func (bs *Server) submitBlindedBellatrixBlock(ctx context.Context, blindedBellatrixBlk *ethpbv2.BlindedBeaconBlockBellatrix, sig []byte) error {
-	b, err := migration.BlindedBellatrixToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockBellatrix{
-		Message:   blindedBellatrixBlk,
-		Signature: sig,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not convert block: %v", err)
-	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{
-			BlindedBellatrix: b,
-		},
-	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
-		}
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
-	}
-	return nil
-}
-
-func (bs *Server) submitBlindedCapellaBlock(ctx context.Context, blindedCapellaBlk *ethpbv2.BlindedBeaconBlockCapella, sig []byte) error {
-	b, err := migration.BlindedCapellaToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockCapella{
-		Message:   blindedCapellaBlk,
-		Signature: sig,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not convert block: %v", err)
-	}
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedCapella{
-			BlindedCapella: b,
-		},
-	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
-		}
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
-	}
-	return nil
-}
-
-func (bs *Server) submitBlindedDenebContents(ctx context.Context, blindedDenebContents *ethpbv2.SignedBlindedBeaconBlockContentsDeneb) error {
-	blk, err := migration.BlindedDenebToV1Alpha1SignedBlock(&ethpbv2.SignedBlindedBeaconBlockDeneb{
-		Message:   blindedDenebContents.SignedBlindedBlock.Message,
-		Signature: blindedDenebContents.SignedBlindedBlock.Signature,
-	})
-	if err != nil {
-		return status.Errorf(codes.Internal, "Could not get blinded block: %v", err)
-	}
-	blobs := migration.SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(blindedDenebContents.SignedBlindedBlobSidecars)
-	_, err = bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, &eth.GenericSignedBeaconBlock{
-		Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
-			BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-				SignedBlindedBlock:        blk,
-				SignedBlindedBlobSidecars: blobs,
-			},
-		},
-	})
-	if err != nil {
-		if strings.Contains(err.Error(), validator.CouldNotDecodeBlock) {
-			return status.Error(codes.InvalidArgument, err.Error())
-		}
-		return status.Errorf(codes.Internal, "Could not propose blinded block: %v", err)
-	}
-	return nil
 }
