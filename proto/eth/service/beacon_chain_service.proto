@@ -259,24 +259,6 @@ service BeaconChain {
     };
   }
 
-  // SubmitSignedBLSToExecutionChanges submits said object to node's pool
-  // and if passes validation node MUST broadcast it to network.
-  rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
-      body: "*"
-    };
-  }
-
-  // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getPoolBLSToExecutionChanges
-  rpc ListBLSToExecutionChanges(google.protobuf.Empty) returns (v2.BLSToExecutionChangesPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
-    };
-  }
-
   // Beacon config API related endpoints.
 
   // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.

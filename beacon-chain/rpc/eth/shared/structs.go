@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -119,10 +120,45 @@ type SignedBLSToExecutionChange struct {
 	Signature string                `json:"signature" hex:"true"`
 }
 
+func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
+	change, err := s.Message.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	return &eth.SignedBLSToExecutionChange{
+		Message:   change,
+		Signature: sig,
+	}, nil
+}
+
 type BLSToExecutionChange struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey"`
 	ToExecutionAddress string `json:"to_execution_address"`
+}
+
+func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) {
+	index, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "FromBlsPubkey")
+	}
+	executionAddress, err := DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "ToExecutionAddress")
+	}
+	return &eth.BLSToExecutionChange{
+		ValidatorIndex:     primitives.ValidatorIndex(index),
+		FromBlsPubkey:      pubkey,
+		ToExecutionAddress: executionAddress,
+	}, nil
 }
 
 func BlsToExecutionChangeFromConsensus(blsToExecutionChange *eth.BLSToExecutionChange) (*BLSToExecutionChange, error) {
@@ -195,12 +231,9 @@ func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistr
 	if err != nil {
 		return nil, NewDecodeError(err, "Message")
 	}
-	sig, err := hexutil.Decode(s.Signature)
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
-	}
-	if len(sig) != fieldparams.BLSSignatureLength {
-		return nil, fmt.Errorf("Signature length was %d when expecting length %d", len(sig), fieldparams.BLSSignatureLength)
 	}
 	return &eth.SignedValidatorRegistrationV1{
 		Message:   msg,
@@ -209,19 +242,13 @@ func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistr
 }
 
 func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
-	feeRecipient, err := hexutil.Decode(s.FeeRecipient)
+	feeRecipient, err := DecodeHexWithLength(s.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "FeeRecipient")
 	}
-	if len(feeRecipient) != fieldparams.FeeRecipientLength {
-		return nil, fmt.Errorf("feeRecipient length was %d when expecting length %d", len(feeRecipient), fieldparams.FeeRecipientLength)
-	}
-	pubKey, err := hexutil.Decode(s.Pubkey)
+	pubKey, err := DecodeHexWithLength(s.Pubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "FeeRecipient")
-	}
-	if len(pubKey) != fieldparams.BLSPubkeyLength {
-		return nil, fmt.Errorf("FeeRecipient length was %d when expecting length %d", len(pubKey), fieldparams.BLSPubkeyLength)
+		return nil, NewDecodeError(err, "Pubkey")
 	}
 	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
 	if err != nil {

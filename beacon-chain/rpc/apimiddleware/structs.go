@@ -708,10 +708,6 @@ type BLSToExecutionChangeJson struct {
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
 }
 
-type SubmitBLSToExecutionChangesRequest struct {
-	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
-}
-
 type DepositJson struct {
 	Proof []string          `json:"proof" hex:"true"`
 	Data  *Deposit_DataJson `json:"data"`
