@@ -96,5 +96,4 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 	}
 	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
-
 }
