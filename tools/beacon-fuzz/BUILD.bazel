@@ -5,11 +5,11 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/tools/beacon-fuzz",
+    visibility = ["//visibility:private"],
     deps = [
         "//io/file:go_default_library",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/tools/beacon-fuzz",
-    visibility = ["//visibility:private"],
 )
 
 go_binary(
