@@ -606,10 +606,12 @@ func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return [32]byte{}
 }
 
-// SendNewBlobEvent mocks the same method in the chain service
-func (*ChainService) SendNewBlobEvent(_ [32]byte, _ uint64) {}
-
 // BlockBeingSynced mocks the same method in the chain service
 func (c *ChainService) BlockBeingSynced(root [32]byte) bool {
 	return root == c.SyncingRoot
+}
+
+// ReceiveBlob implements the same method in the chain service
+func (*ChainService) ReceiveBlob(_ context.Context, _ *ethpb.BlobSidecar) error {
+	return nil
 }
