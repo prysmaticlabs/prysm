@@ -99,4 +99,5 @@ prysm_image_upload(
         # Backwards compatiability for images that depended on the old filepath.
         "/app/cmd/prysmctl/prysmctl": "/prysmctl",
     },
+    tags = ["manual"],
 )
