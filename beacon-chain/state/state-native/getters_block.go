@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -86,14 +85,25 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytesutil.SafeCopyBytes(r[:]), nil
+		return r[:], nil
 	}
 
 	if b.blockRoots == nil {
 		return []byte{}, nil
 	}
-	if uint64(len(b.blockRoots)) <= idx {
-		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
+	r, err := b.blockRootAtIndex(idx)
+	if err != nil {
+		return nil, err
 	}
-	return bytesutil.SafeCopyBytes(b.blockRoots[idx][:]), nil
+	return r[:], nil
+}
+
+// blockRootAtIndex retrieves a specific block root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
+	if uint64(len(b.blockRoots)) <= idx {
+		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
+	}
+	return b.blockRoots[idx], nil
 }

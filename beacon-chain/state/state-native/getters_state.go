@@ -5,7 +5,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -378,16 +377,27 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytesutil.SafeCopyBytes(r[:]), nil
+		return r[:], nil
 	}
 
 	if b.stateRoots == nil {
 		return nil, nil
 	}
-	if uint64(len(b.stateRoots)) <= idx {
-		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "state root index %d does not exist", idx)
+	r, err := b.stateRootAtIndex(idx)
+	if err != nil {
+		return nil, err
 	}
-	return bytesutil.SafeCopyBytes(b.stateRoots[idx][:]), nil
+	return r[:], nil
+}
+
+// stateRootAtIndex retrieves a specific state root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
+	if uint64(len(b.stateRoots)) <= idx {
+		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "state root index %d does not exist", idx)
+	}
+	return b.stateRoots[idx], nil
 }
 
 // ProtobufBeaconStatePhase0 transforms an input into beacon state in the form of protobuf.

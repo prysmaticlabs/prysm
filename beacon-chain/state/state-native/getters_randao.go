@@ -4,7 +4,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
 // RandaoMixes of block proposers on the beacon chain.
@@ -48,16 +47,28 @@ func (b *BeaconState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return bytesutil.SafeCopyBytes(r[:]), nil
+		return r[:], nil
 	}
 
 	if b.randaoMixes == nil {
 		return nil, nil
 	}
-	if uint64(len(b.randaoMixes)) <= idx {
-		return []byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "randao mix index %d does not exist", idx)
+	m, err := b.randaoMixAtIndex(idx)
+	if err != nil {
+		return nil, err
 	}
-	return bytesutil.SafeCopyBytes(b.randaoMixes[idx][:]), nil
+	return m[:], nil
+}
+
+// randaoMixAtIndex retrieves a specific block root based on an
+// input index value.
+// This assumes that a lock is already held on BeaconState.
+func (b *BeaconState) randaoMixAtIndex(idx uint64) ([32]byte, error) {
+	if uint64(len(b.randaoMixes)) <= idx {
+		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "randao mix index %d does not exist", idx)
+	}
+
+	return b.randaoMixes[idx], nil
 }
 
 // RandaoMixesLength returns the length of the randao mixes slice.
