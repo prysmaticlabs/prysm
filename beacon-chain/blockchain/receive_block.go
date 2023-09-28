@@ -43,7 +43,6 @@ type BlockReceiver interface {
 // blobs
 type BlobReceiver interface {
 	ReceiveBlob(context.Context, *ethpb.BlobSidecar) error
-	SendNewBlobEvent([32]byte, uint64)
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.

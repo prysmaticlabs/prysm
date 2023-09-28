@@ -8,7 +8,7 @@ import (
 
 // SendNewBlobEvent sends a message to the BlobNotifier channel that the blob
 // for the blocroot `root` is ready in the database
-func (s *Service) SendNewBlobEvent(root [32]byte, index uint64) {
+func (s *Service) sendNewBlobEvent(root [32]byte, index uint64) {
 	s.blobNotifiers.forRoot(root) <- index
 }
 
@@ -18,6 +18,6 @@ func (s *Service) ReceiveBlob(ctx context.Context, b *ethpb.BlobSidecar) error {
 		return err
 	}
 
-	s.SendNewBlobEvent([32]byte(b.BlockRoot), b.Index)
+	s.sendNewBlobEvent([32]byte(b.BlockRoot), b.Index)
 	return nil
 }
