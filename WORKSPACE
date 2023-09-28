@@ -247,7 +247,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0-beta.2"
+consensus_spec_version = "v1.4.0-beta.2-hotfix"
 
 bls_test_version = "v0.1.1"
 
@@ -295,7 +295,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "d7ae9609a28d01b9c961c4f944e652593b18ebe24702219410cd66087c9570bc",
+    sha256 = "bc1cac1a991cdc7426efea14385dcf215df85ed3f0572b824ad6a1d7ca0c89ad",
     url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
