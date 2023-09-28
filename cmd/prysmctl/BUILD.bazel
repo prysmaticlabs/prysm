@@ -4,6 +4,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+load("//tools:prysm_image.bzl", "prysm_image_upload")
 
 go_library(
     name = "go_default_library",
@@ -87,4 +88,15 @@ go_binary(
     embed = [":go_default_library"],
     gotags = ["noMainnetGenesis"],
     visibility = ["//visibility:public"],
+)
+
+prysm_image_upload(
+    name = "push_oci_image",
+    binary = ":prysmctl",
+    entrypoint = ["/prysmctl"],
+    repository = "gcr.io/prylabs-dev/prysm/prysmctl",
+    symlinks = {
+        # Backwards compatiability for images that depended on the old filepath.
+        "/app/cmd/prysmctl/prysmctl": "/prysmctl",
+    },
 )

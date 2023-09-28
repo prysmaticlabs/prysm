@@ -4,6 +4,7 @@ load("@io_bazel_rules_docker//go:image.bzl", "go_image")
 load("@io_bazel_rules_docker//container:container.bzl", "container_bundle", "container_image")
 load("//tools:go_image.bzl", "go_image_debug")
 load("@io_bazel_rules_docker//contrib:push-all.bzl", "docker_push")
+load("//tools:prysm_image.bzl", "prysm_image_upload")
 
 go_library(
     name = "go_default_library",
@@ -120,4 +121,15 @@ go_test(
         "//config/features:go_default_library",
         "@com_github_urfave_cli_v2//:go_default_library",
     ],
+)
+
+prysm_image_upload(
+    name = "push_oci_image",
+    binary = ":validator",
+    entrypoint = ["/validator"],
+    repository = "gcr.io/prylabs-dev/prysm/validator",
+    symlinks = {
+        # Backwards compatiability for images that depended on the old filepath.
+        "/app/cmd/validator/validator": "/validator",
+    },
 )
