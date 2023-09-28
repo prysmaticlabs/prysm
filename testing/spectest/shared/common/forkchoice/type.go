@@ -3,6 +3,8 @@ package forkchoice
 type Step struct {
 	Tick             *int            `json:"tick"`
 	Block            *string         `json:"block"`
+	Blobs            *string         `json:"blobs"`
+	Proofs           []*string       `json:"proofs"`
 	Valid            *bool           `json:"valid"`
 	Attestation      *string         `json:"attestation"`
 	AttesterSlashing *string         `json:"attester_slashing"`
