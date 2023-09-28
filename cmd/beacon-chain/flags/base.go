@@ -138,13 +138,11 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// SafeSlotsToImportOptimistically specifies the number of slots that a
-	// node should wait before being able to optimistically sync blocks
-	// across the merge boundary
+	// SafeSlotsToImportOptimistically is deprecated. It should be removed in the next major release.
 	SafeSlotsToImportOptimistically = &cli.IntFlag{
-		Name:  "safe-slots-to-import-optimistically",
-		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
-		Value: 128,
+		Name:   "safe-slots-to-import-optimistically",
+		Usage:  "DEPRECATED. DO NOT USE",
+		Hidden: true,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
