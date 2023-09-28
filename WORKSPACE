@@ -248,6 +248,7 @@ filegroup(
 )
 
 consensus_spec_test_version = "v1.4.0-beta.2-hotfix"
+
 consensus_spec_version = "v1.4.0-beta.2"
 
 bls_test_version = "v0.1.1"
