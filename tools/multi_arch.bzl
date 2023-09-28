@@ -12,9 +12,12 @@ multiarch_transition = transition(
     outputs = ["//command_line_option:platforms"],
 )
 
+# multiarch_transition impl returns a DefaultInfo provider with the image deps as declared outputs to
+# build.
 def _impl(ctx):
     return DefaultInfo(files = depset(ctx.files.image))
 
+# The multi_arch rule builds the image for multiple platforms defined in the platforms attribute.
 multi_arch = rule(
     implementation = _impl,
     attrs = {

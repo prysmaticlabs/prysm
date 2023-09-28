@@ -101,7 +101,8 @@ container_image(
     visibility = ["//visibility:public"],
 )
 
-# bash tar layer for docker images.
+# Create a bash tar layer for docker images. This allows docker images to have access to the "bash"
+# command and improves debugging abilities on the image.
 genrule(
     name = "bash_tar",
     srcs = select({
@@ -113,6 +114,7 @@ genrule(
     visibility = ["//visibility:public"],
 )
 
+# libtinfo6 is required for terminal activity and contains terminfo library.
 genrule(
     name = "libtinfo6_tar",
     srcs = select({
