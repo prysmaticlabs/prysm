@@ -137,4 +137,5 @@ prysm_image_upload(
         # Backwards compatiability for images that depended on the old filepath.
         "/app/cmd/beacon-chain/beacon-chain": "/beacon-chain",
     },
+    tags = ["manual"],
 )
