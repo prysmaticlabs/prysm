@@ -154,6 +154,36 @@ func TestGetValidators(t *testing.T) {
 		assert.Equal(t, "20", resp.Data[0].Index)
 		assert.Equal(t, "60", resp.Data[1].Index)
 	})
+	t.Run("multiple comma-separated", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		pubkey := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		hexPubkey := hexutil.Encode(pubkey[:])
+		request := httptest.NewRequest(
+			http.MethodGet,
+			fmt.Sprintf("http://example.com/eth/v1/beacon/states/{state_id}/validators?id=%s,60", hexPubkey),
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "20", resp.Data[0].Index)
+		assert.Equal(t, "60", resp.Data[1].Index)
+	})
 	t.Run("state ID required", func(t *testing.T) {
 		s := Server{
 			Stater: &testutil.MockStater{
