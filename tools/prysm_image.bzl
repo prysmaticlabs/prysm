@@ -3,16 +3,17 @@ load("@rules_pkg//:pkg.bzl", "pkg_tar")
 load("//tools:multi_arch.bzl", "multi_arch")
 
 def prysm_image_upload(
-    name,
-    binary,
-    entrypoint,
-    symlinks,
-    repository):
-
+        name,
+        binary,
+        entrypoint,
+        symlinks,
+        repository,
+        tags):
     pkg_tar(
         name = "binary_tar",
         srcs = [binary],
-        symlinks=symlinks,
+        symlinks = symlinks,
+        tags = tags,
     )
 
     oci_image(
@@ -25,6 +26,7 @@ def prysm_image_upload(
             "//tools:bash_tar",
             ":binary_tar",
         ],
+        tags = tags,
     )
 
     multi_arch(
@@ -34,6 +36,7 @@ def prysm_image_upload(
             "@io_bazel_rules_go//go/toolchain:linux_amd64_cgo",
             "@io_bazel_rules_go//go/toolchain:linux_arm64_cgo",
         ],
+        tags = tags,
     )
 
     oci_image_index(
@@ -41,10 +44,12 @@ def prysm_image_upload(
         images = [
             ":oci_multiarch",
         ],
+        tags = tags,
     )
 
     oci_push(
         name = name,
         image = ":oci_image_index",
         repository = repository,
+        tags = tags,
     )
