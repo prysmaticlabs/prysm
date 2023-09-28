@@ -3,6 +3,7 @@ package forkchoice
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"testing"
 
@@ -113,49 +114,7 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							t.Fatalf("unknown fork version: %v", fork)
 						}
 					}
-					if step.Blobs != nil && *step.Blobs != "null" {
-						require.NotNil(t, beaconBlock)
-						require.Equal(t, true, fork >= version.Deneb)
-
-						block := beaconBlock.Block()
-						root, err := block.HashTreeRoot()
-						require.NoError(t, err)
-						parentRoot := block.ParentRoot()
-						kzgs, err := block.Body().BlobKzgCommitments()
-						require.NoError(t, err)
-
-						blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Blobs, ".ssz_snappy"))
-						require.NoError(t, err)
-						blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
-						require.NoError(t, err)
-						for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
-							var proof []byte
-							if index < uint64(len(step.Proofs)) {
-								proofPTR := step.Proofs[index]
-								require.NotNil(t, proofPTR)
-								proof, err = hexutil.Decode(*proofPTR)
-								require.NoError(t, err)
-							}
-
-							var kzg []byte
-							if uint64(len(kzgs)) < index {
-								kzg = kzgs[index]
-							}
-							blob := [fieldparams.BlobLength]byte{}
-							copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-							sidecar := &ethpb.BlobSidecar{
-								BlockRoot:       root[:],
-								Index:           index,
-								Slot:            block.Slot(),
-								BlockParentRoot: parentRoot[:],
-								ProposerIndex:   block.ProposerIndex(),
-								Blob:            blob[:],
-								KzgCommitment:   kzg,
-								KzgProof:        proof,
-							}
-							require.NoError(t, builder.service.ReceiveBlob(context.Background(), sidecar))
-						}
-					}
+					runBlobStep(t, step.Blobs, beaconBlock, fork, folder, testsFolderPath, step.Proofs, builder)
 					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
@@ -318,4 +277,58 @@ func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeacon
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
+}
+
+func runBlobStep(t *testing.T,
+	blobs *string,
+	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
+	fork int,
+	folder os.DirEntry,
+	testsFolderPath string,
+	proofs []*string,
+	builder *Builder,
+) {
+	if blobs != nil && *blobs != "null" {
+		require.NotNil(t, beaconBlock)
+		require.Equal(t, true, fork >= version.Deneb)
+
+		block := beaconBlock.Block()
+		root, err := block.HashTreeRoot()
+		require.NoError(t, err)
+		parentRoot := block.ParentRoot()
+		kzgs, err := block.Body().BlobKzgCommitments()
+		require.NoError(t, err)
+
+		blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*blobs, ".ssz_snappy"))
+		require.NoError(t, err)
+		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
+		require.NoError(t, err)
+		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
+			var proof []byte
+			if index < uint64(len(proofs)) {
+				proofPTR := proofs[index]
+				require.NotNil(t, proofPTR)
+				proof, err = hexutil.Decode(*proofPTR)
+				require.NoError(t, err)
+			}
+
+			var kzg []byte
+			if uint64(len(kzgs)) < index {
+				kzg = kzgs[index]
+			}
+			blob := [fieldparams.BlobLength]byte{}
+			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
+			sidecar := &ethpb.BlobSidecar{
+				BlockRoot:       root[:],
+				Index:           index,
+				Slot:            block.Slot(),
+				BlockParentRoot: parentRoot[:],
+				ProposerIndex:   block.ProposerIndex(),
+				Blob:            blob[:],
+				KzgCommitment:   kzg,
+				KzgProof:        proof,
+			}
+			require.NoError(t, builder.service.ReceiveBlob(context.Background(), sidecar))
+		}
+	}
 }
