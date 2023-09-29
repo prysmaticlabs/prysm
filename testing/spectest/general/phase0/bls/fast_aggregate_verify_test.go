@@ -20,9 +20,9 @@ func TestFastAggregateVerify(t *testing.T) {
 }
 
 func testFastAggregateVerify(t *testing.T) {
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/fast_aggregate_verify/bls")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/fast_aggregate_verify/small")
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/fast_aggregate_verify/bls")
 	}
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {
