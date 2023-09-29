@@ -114,7 +114,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	sBlk.SetProposerIndex(idx)
 
 	if features.Get().BuildBlockParallel {
-		if err = vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
+		if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost); err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
 	} else {
@@ -157,6 +157,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 		// There's no reason to try to get a builder bid if local override is true.
 		var builderPayload interfaces.ExecutionData
+
+		overrideBuilder = req.SkipMevBoost || overrideBuilder // Skip using mev-boost if requested by the caller.
 		if !overrideBuilder {
 			builderPayload, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 			if err != nil {
@@ -199,7 +201,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -247,6 +249,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	// There's no reason to try to get a builder bid if local override is true.
 	var builderPayload interfaces.ExecutionData
+	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
 	if !overrideBuilder {
 		builderPayload, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 		if err != nil {
