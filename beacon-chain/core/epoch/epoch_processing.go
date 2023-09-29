@@ -142,6 +142,13 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get churn limit")
 	}
 
+	if state.Version() >= version.Deneb {
+		// Cap churn limit to max per epoch churn limit. New in EIP7514.
+		if churnLimit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
+			churnLimit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
+		}
+	}
+
 	// Prevent churn limit cause index out of bound.
 	if churnLimit < limit {
 		limit = churnLimit

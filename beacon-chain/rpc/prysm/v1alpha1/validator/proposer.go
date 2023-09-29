@@ -110,7 +110,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	var blobBundle *enginev1.BlobsBundle
 	var blindBlobBundle *enginev1.BlindedBlobsBundle
 	if features.Get().BuildBlockParallel {
-		blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head)
+		blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not build block in parallel")
 		}
@@ -154,6 +154,8 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 		// There's no reason to try to get a builder bid if local override is true.
 		var builderPayload interfaces.ExecutionData
+
+		overrideBuilder = req.SkipMevBoost || overrideBuilder // Skip using mev-boost if requested by the caller.
 		if !overrideBuilder {
 			builderPayload, blindBlobBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 			if err != nil {
@@ -197,7 +199,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -246,6 +248,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	// There's no reason to try to get a builder bid if local override is true.
 	var builderPayload interfaces.ExecutionData
 	var blindBlobsBundle *enginev1.BlindedBlobsBundle
+	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
 	if !overrideBuilder {
 		builderPayload, blindBlobsBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 		if err != nil {
