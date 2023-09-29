@@ -45,11 +45,16 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
 
+	query := r.URL.Query()
+	rpchelpers.NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
 	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
 	if !valid {
 		return
 	}
+
 	rawSlot := r.URL.Query().Get("slot")
 	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
 	if !valid {
@@ -418,6 +423,10 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
 	defer span.End()
 
+	query := r.URL.Query()
+	rpchelpers.NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+
 	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
@@ -469,6 +478,10 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
+
+	query := r.URL.Query()
+	rpchelpers.NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
 
 	subIndex := r.URL.Query().Get("subcommittee_index")
 	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
