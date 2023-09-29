@@ -3,8 +3,6 @@ package genesis
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"

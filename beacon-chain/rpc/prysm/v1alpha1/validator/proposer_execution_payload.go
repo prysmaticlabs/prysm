@@ -91,42 +91,16 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 		}
 	}
 
-	var parentHash []byte
-	var hasTerminalBlock bool
-	mergeComplete, err := blocks.IsMergeTransitionComplete(st)
-	if err != nil {
-		return nil, nil, false, err
-	}
-
-	t, err := slots.ToTime(st.GenesisTime(), slot)
-	if err != nil {
-		return nil, nil, false, err
-	}
-	if mergeComplete {
-		header, err := st.LatestExecutionPayloadHeader()
+	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
+	switch {
+	case errors.Is(err, errActivationNotReached) || errors.Is(err, errNoTerminalBlockHash):
+		p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
 		if err != nil {
 			return nil, nil, false, err
 		}
-		parentHash = header.BlockHash()
-	} else {
-		if activationEpochNotReached(slot) {
-			p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
-			if err != nil {
-				return nil, nil, false, err
-			}
-			return p, nil, false, nil
-		}
-		parentHash, hasTerminalBlock, err = vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
-		if err != nil {
-			return nil, nil, false, err
-		}
-		if !hasTerminalBlock {
-			p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
-			if err != nil {
-				return nil, nil, false, err
-			}
-			return p, nil, false, nil
-		}
+		return p, nil, false, nil
+	case err != nil:
+		return nil, nil, false, err
 	}
 	payloadIDCacheMiss.Inc()
 
@@ -147,6 +121,11 @@ func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.Re
 		HeadBlockHash:      parentHash,
 		SafeBlockHash:      justifiedBlockHash[:],
 		FinalizedBlockHash: finalizedBlockHash[:],
+	}
+
+	t, err := slots.ToTime(st.GenesisTime(), slot)
+	if err != nil {
+		return nil, nil, false, err
 	}
 	var attr payloadattribute.Attributer
 	switch st.Version() {
@@ -269,6 +248,74 @@ func (vs *Server) getBuilderPayloadAndBlobs(ctx context.Context,
 	}
 
 	return vs.getPayloadHeaderFromBuilder(ctx, slot, vIdx)
+}
+
+var errActivationNotReached = errors.New("activation epoch not reached")
+var errNoTerminalBlockHash = errors.New("no terminal block hash")
+
+// getParentBlockHash retrieves the parent block hash of the block at the given slot.
+// The function's behavior varies depending on the state version and whether the merge has been completed.
+//
+// For states of version Capella or later, the block hash is directly retrieved from the state's latest execution payload header.
+//
+// If the merge transition has been completed, the parent block hash is also retrieved from the state's latest execution payload header.
+//
+// If the activation epoch has not been reached, an errActivationNotReached error is returned.
+//
+// Otherwise, the terminal block hash is fetched based on the slot's time, and an error is returned if it doesn't exist.
+func (vs *Server) getParentBlockHash(ctx context.Context, st state.BeaconState, slot primitives.Slot) ([]byte, error) {
+	if st.Version() >= version.Capella {
+		return getParentBlockHashPostCapella(st)
+	}
+
+	mergeComplete, err := blocks.IsMergeTransitionComplete(st)
+	if err != nil {
+		return nil, err
+	}
+	if mergeComplete {
+		return getParentBlockHashPostMerge(st)
+	}
+
+	if activationEpochNotReached(slot) {
+		return nil, errActivationNotReached
+	}
+
+	return getParentBlockHashPreMerge(ctx, vs, st, slot)
+}
+
+// getParentBlockHashPostCapella retrieves the parent block hash for states of version Capella or later.
+func getParentBlockHashPostCapella(st state.BeaconState) ([]byte, error) {
+	header, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get post capella payload header")
+	}
+	return header.BlockHash(), nil
+}
+
+// getParentBlockHashPostMerge retrieves the parent block hash after the merge has completed.
+func getParentBlockHashPostMerge(st state.BeaconState) ([]byte, error) {
+	header, err := st.LatestExecutionPayloadHeader()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get post merge payload header")
+	}
+	return header.ParentHash(), nil
+}
+
+// getParentBlockHashPreMerge retrieves the parent block hash before the merge has completed.
+func getParentBlockHashPreMerge(ctx context.Context, vs *Server, st state.BeaconState, slot primitives.Slot) ([]byte, error) {
+	t, err := slots.ToTime(st.GenesisTime(), slot)
+	if err != nil {
+		return nil, err
+	}
+
+	parentHash, hasTerminalBlock, err := vs.getTerminalBlockHashIfExists(ctx, uint64(t.Unix()))
+	if err != nil {
+		return nil, err
+	}
+	if !hasTerminalBlock {
+		return nil, errNoTerminalBlockHash
+	}
+	return parentHash, nil
 }
 
 // activationEpochNotReached returns true if activation epoch has not been reach.

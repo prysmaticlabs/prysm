@@ -58,7 +58,7 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 	0x63, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74,
 	0x6f, 0x1a, 0x1e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x32, 0x2f,
 	0x77, 0x69, 0x74, 0x68, 0x64, 0x72, 0x61, 0x77, 0x61, 0x6c, 0x73, 0x2e, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x32, 0xa9, 0x1e, 0x0a, 0x0b, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x43, 0x68, 0x61, 0x69,
+	0x6f, 0x32, 0xf9, 0x15, 0x0a, 0x0b, 0x42, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x43, 0x68, 0x61, 0x69,
 	0x6e, 0x12, 0x8e, 0x01, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x57, 0x65, 0x61, 0x6b, 0x53, 0x75, 0x62,
 	0x6a, 0x65, 0x63, 0x74, 0x69, 0x76, 0x69, 0x74, 0x79, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
 	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74,
@@ -76,94 +76,27 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x36, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x30, 0x12, 0x2e,
 	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
 	0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b,
-	0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x72, 0x6f, 0x6f, 0x74, 0x12, 0xa1,
-	0x01, 0x0a, 0x0e, 0x4c, 0x69, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
-	0x73, 0x12, 0x27, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x76, 0x31, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
-	0x6f, 0x72, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x28, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x74, 0x61,
-	0x74, 0x65, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x73, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x3c, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x36, 0x12, 0x34, 0x2f, 0x69,
-	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74,
-	0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x73, 0x12, 0xac, 0x01, 0x0a, 0x0c, 0x47, 0x65, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61,
-	0x74, 0x6f, 0x72, 0x12, 0x26, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65,
-	0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x56, 0x61, 0x6c, 0x69, 0x64,
-	0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x74,
-	0x61, 0x74, 0x65, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x4b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x45, 0x12, 0x43, 0x2f, 0x69,
-	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74,
-	0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f,
-	0x72, 0x73, 0x2f, 0x7b, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x5f, 0x69, 0x64,
-	0x7d, 0x12, 0xb4, 0x01, 0x0a, 0x15, 0x4c, 0x69, 0x73, 0x74, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61,
-	0x74, 0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x12, 0x29, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x56, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2a, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74,
-	0x6f, 0x72, 0x42, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x22, 0x44, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x3e, 0x12, 0x3c, 0x2f, 0x69, 0x6e, 0x74,
+	0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x72, 0x6f, 0x6f, 0x74, 0x12, 0xb2,
+	0x01, 0x0a, 0x12, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69,
+	0x74, 0x74, 0x65, 0x65, 0x73, 0x12, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
+	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x53, 0x79, 0x6e,
+	0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
+	0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f,
+	0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x22, 0x41, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x3b, 0x12, 0x39, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72,
+	0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f,
+	0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f,
+	0x69, 0x64, 0x7d, 0x2f, 0x73, 0x79, 0x6e, 0x63, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74,
+	0x65, 0x65, 0x73, 0x12, 0x86, 0x01, 0x0a, 0x09, 0x47, 0x65, 0x74, 0x52, 0x61, 0x6e, 0x64, 0x61,
+	0x6f, 0x12, 0x1e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x76, 0x32, 0x2e, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x1f, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x76, 0x32, 0x2e, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x22, 0x38, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x32, 0x12, 0x30, 0x2f, 0x69, 0x6e, 0x74,
 	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61,
 	0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74, 0x61, 0x74,
-	0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x5f,
-	0x62, 0x61, 0x6c, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x12, 0xb2, 0x01, 0x0a, 0x12, 0x4c, 0x69, 0x73,
-	0x74, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x73, 0x12,
-	0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76,
-	0x32, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x65, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69,
-	0x74, 0x74, 0x65, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53,
-	0x74, 0x61, 0x74, 0x65, 0x53, 0x79, 0x6e, 0x63, 0x43, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65,
-	0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x41, 0x82, 0xd3, 0xe4, 0x93,
-	0x02, 0x3b, 0x12, 0x39, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
-	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74, 0x61, 0x74,
-	0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x73, 0x79,
-	0x6e, 0x63, 0x5f, 0x63, 0x6f, 0x6d, 0x6d, 0x69, 0x74, 0x74, 0x65, 0x65, 0x73, 0x12, 0x86, 0x01,
-	0x0a, 0x09, 0x47, 0x65, 0x74, 0x52, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x12, 0x1e, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x52, 0x61,
-	0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1f, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x52, 0x61,
-	0x6e, 0x64, 0x61, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x38, 0x82, 0xd3,
-	0xe4, 0x93, 0x02, 0x32, 0x12, 0x30, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f,
-	0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x73, 0x74,
-	0x61, 0x74, 0x65, 0x73, 0x2f, 0x7b, 0x73, 0x74, 0x61, 0x74, 0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f,
-	0x72, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x12, 0x85, 0x01, 0x0a, 0x0b, 0x53, 0x75, 0x62, 0x6d, 0x69,
-	0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x33, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e, 0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e,
-	0x74, 0x73, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67, 0x6f,
-	0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d,
-	0x70, 0x74, 0x79, 0x22, 0x29, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x23, 0x3a, 0x01, 0x2a, 0x22, 0x1e,
-	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
-	0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x12, 0x76,
-	0x0a, 0x0e, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a,
-	0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x76, 0x32, 0x2e, 0x53, 0x53, 0x5a, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a,
-	0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
-	0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x2d, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x27, 0x3a,
-	0x01, 0x2a, 0x22, 0x22, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
-	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x6f, 0x63,
-	0x6b, 0x73, 0x2f, 0x73, 0x73, 0x7a, 0x12, 0x9b, 0x01, 0x0a, 0x12, 0x53, 0x75, 0x62, 0x6d, 0x69,
-	0x74, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x3a, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32, 0x2e,
-	0x53, 0x69, 0x67, 0x6e, 0x65, 0x64, 0x42, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x65, 0x61,
-	0x63, 0x6f, 0x6e, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x73,
-	0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
-	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74,
-	0x79, 0x22, 0x31, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2b, 0x3a, 0x01, 0x2a, 0x22, 0x26, 0x2f, 0x69,
-	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x62,
-	0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x5f, 0x62, 0x6c,
-	0x6f, 0x63, 0x6b, 0x73, 0x12, 0x85, 0x01, 0x0a, 0x15, 0x53, 0x75, 0x62, 0x6d, 0x69, 0x74, 0x42,
-	0x6c, 0x69, 0x6e, 0x64, 0x65, 0x64, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x53, 0x53, 0x5a, 0x12, 0x1d,
-	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x32,
-	0x2e, 0x53, 0x53, 0x5a, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x1a, 0x16, 0x2e,
-	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
-	0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x35, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2f, 0x3a, 0x01, 0x2a,
-	0x22, 0x2a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f,
-	0x76, 0x31, 0x2f, 0x62, 0x65, 0x61, 0x63, 0x6f, 0x6e, 0x2f, 0x62, 0x6c, 0x69, 0x6e, 0x64, 0x65,
-	0x64, 0x5f, 0x62, 0x6c, 0x6f, 0x63, 0x6b, 0x73, 0x2f, 0x73, 0x73, 0x7a, 0x12, 0x7f, 0x0a, 0x08,
+	0x65, 0x5f, 0x69, 0x64, 0x7d, 0x2f, 0x72, 0x61, 0x6e, 0x64, 0x61, 0x6f, 0x12, 0x7f, 0x0a, 0x08,
 	0x47, 0x65, 0x74, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x12, 0x1d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
 	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x76, 0x31, 0x2e, 0x42, 0x6c, 0x6f, 0x63, 0x6b,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65,
@@ -314,94 +247,72 @@ var file_proto_eth_service_beacon_chain_service_proto_rawDesc = []byte{
 }
 
 var file_proto_eth_service_beacon_chain_service_proto_goTypes = []interface{}{
-	(*empty.Empty)(nil),                                  // 0: google.protobuf.Empty
-	(*v1.StateRequest)(nil),                              // 1: ethereum.eth.v1.StateRequest
-	(*v1.StateValidatorsRequest)(nil),                    // 2: ethereum.eth.v1.StateValidatorsRequest
-	(*v1.StateValidatorRequest)(nil),                     // 3: ethereum.eth.v1.StateValidatorRequest
-	(*v1.ValidatorBalancesRequest)(nil),                  // 4: ethereum.eth.v1.ValidatorBalancesRequest
-	(*v2.StateSyncCommitteesRequest)(nil),                // 5: ethereum.eth.v2.StateSyncCommitteesRequest
-	(*v2.RandaoRequest)(nil),                             // 6: ethereum.eth.v2.RandaoRequest
-	(*v2.SignedBeaconBlockContentsContainer)(nil),        // 7: ethereum.eth.v2.SignedBeaconBlockContentsContainer
-	(*v2.SSZContainer)(nil),                              // 8: ethereum.eth.v2.SSZContainer
-	(*v2.SignedBlindedBeaconBlockContentsContainer)(nil), // 9: ethereum.eth.v2.SignedBlindedBeaconBlockContentsContainer
-	(*v1.BlockRequest)(nil),                              // 10: ethereum.eth.v1.BlockRequest
-	(*v2.BlockRequestV2)(nil),                            // 11: ethereum.eth.v2.BlockRequestV2
-	(*v1.AttesterSlashing)(nil),                          // 12: ethereum.eth.v1.AttesterSlashing
-	(*v1.ProposerSlashing)(nil),                          // 13: ethereum.eth.v1.ProposerSlashing
-	(*v2.SubmitBLSToExecutionChangesRequest)(nil),        // 14: ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
-	(*v1.WeakSubjectivityResponse)(nil),                  // 15: ethereum.eth.v1.WeakSubjectivityResponse
-	(*v1.StateRootResponse)(nil),                         // 16: ethereum.eth.v1.StateRootResponse
-	(*v1.StateValidatorsResponse)(nil),                   // 17: ethereum.eth.v1.StateValidatorsResponse
-	(*v1.StateValidatorResponse)(nil),                    // 18: ethereum.eth.v1.StateValidatorResponse
-	(*v1.ValidatorBalancesResponse)(nil),                 // 19: ethereum.eth.v1.ValidatorBalancesResponse
-	(*v2.StateSyncCommitteesResponse)(nil),               // 20: ethereum.eth.v2.StateSyncCommitteesResponse
-	(*v2.RandaoResponse)(nil),                            // 21: ethereum.eth.v2.RandaoResponse
-	(*v1.BlockResponse)(nil),                             // 22: ethereum.eth.v1.BlockResponse
-	(*v1.BlockSSZResponse)(nil),                          // 23: ethereum.eth.v1.BlockSSZResponse
-	(*v2.BlockResponseV2)(nil),                           // 24: ethereum.eth.v2.BlockResponseV2
-	(*v2.BlindedBlockResponse)(nil),                      // 25: ethereum.eth.v2.BlindedBlockResponse
-	(*v1.BlockAttestationsResponse)(nil),                 // 26: ethereum.eth.v1.BlockAttestationsResponse
-	(*v1.AttesterSlashingsPoolResponse)(nil),             // 27: ethereum.eth.v1.AttesterSlashingsPoolResponse
-	(*v1.ProposerSlashingPoolResponse)(nil),              // 28: ethereum.eth.v1.ProposerSlashingPoolResponse
-	(*v2.BLSToExecutionChangesPoolResponse)(nil),         // 29: ethereum.eth.v2.BLSToExecutionChangesPoolResponse
-	(*v1.ForkScheduleResponse)(nil),                      // 30: ethereum.eth.v1.ForkScheduleResponse
-	(*v1.SpecResponse)(nil),                              // 31: ethereum.eth.v1.SpecResponse
+	(*empty.Empty)(nil),                           // 0: google.protobuf.Empty
+	(*v1.StateRequest)(nil),                       // 1: ethereum.eth.v1.StateRequest
+	(*v2.StateSyncCommitteesRequest)(nil),         // 2: ethereum.eth.v2.StateSyncCommitteesRequest
+	(*v2.RandaoRequest)(nil),                      // 3: ethereum.eth.v2.RandaoRequest
+	(*v1.BlockRequest)(nil),                       // 4: ethereum.eth.v1.BlockRequest
+	(*v2.BlockRequestV2)(nil),                     // 5: ethereum.eth.v2.BlockRequestV2
+	(*v1.AttesterSlashing)(nil),                   // 6: ethereum.eth.v1.AttesterSlashing
+	(*v1.ProposerSlashing)(nil),                   // 7: ethereum.eth.v1.ProposerSlashing
+	(*v2.SubmitBLSToExecutionChangesRequest)(nil), // 8: ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
+	(*v1.WeakSubjectivityResponse)(nil),           // 9: ethereum.eth.v1.WeakSubjectivityResponse
+	(*v1.StateRootResponse)(nil),                  // 10: ethereum.eth.v1.StateRootResponse
+	(*v2.StateSyncCommitteesResponse)(nil),        // 11: ethereum.eth.v2.StateSyncCommitteesResponse
+	(*v2.RandaoResponse)(nil),                     // 12: ethereum.eth.v2.RandaoResponse
+	(*v1.BlockResponse)(nil),                      // 13: ethereum.eth.v1.BlockResponse
+	(*v1.BlockSSZResponse)(nil),                   // 14: ethereum.eth.v1.BlockSSZResponse
+	(*v2.BlockResponseV2)(nil),                    // 15: ethereum.eth.v2.BlockResponseV2
+	(*v2.BlindedBlockResponse)(nil),               // 16: ethereum.eth.v2.BlindedBlockResponse
+	(*v2.SSZContainer)(nil),                       // 17: ethereum.eth.v2.SSZContainer
+	(*v1.BlockAttestationsResponse)(nil),          // 18: ethereum.eth.v1.BlockAttestationsResponse
+	(*v1.AttesterSlashingsPoolResponse)(nil),      // 19: ethereum.eth.v1.AttesterSlashingsPoolResponse
+	(*v1.ProposerSlashingPoolResponse)(nil),       // 20: ethereum.eth.v1.ProposerSlashingPoolResponse
+	(*v2.BLSToExecutionChangesPoolResponse)(nil),  // 21: ethereum.eth.v2.BLSToExecutionChangesPoolResponse
+	(*v1.ForkScheduleResponse)(nil),               // 22: ethereum.eth.v1.ForkScheduleResponse
+	(*v1.SpecResponse)(nil),                       // 23: ethereum.eth.v1.SpecResponse
 }
 var file_proto_eth_service_beacon_chain_service_proto_depIdxs = []int32{
 	0,  // 0: ethereum.eth.service.BeaconChain.GetWeakSubjectivity:input_type -> google.protobuf.Empty
 	1,  // 1: ethereum.eth.service.BeaconChain.GetStateRoot:input_type -> ethereum.eth.v1.StateRequest
-	2,  // 2: ethereum.eth.service.BeaconChain.ListValidators:input_type -> ethereum.eth.v1.StateValidatorsRequest
-	3,  // 3: ethereum.eth.service.BeaconChain.GetValidator:input_type -> ethereum.eth.v1.StateValidatorRequest
-	4,  // 4: ethereum.eth.service.BeaconChain.ListValidatorBalances:input_type -> ethereum.eth.v1.ValidatorBalancesRequest
-	5,  // 5: ethereum.eth.service.BeaconChain.ListSyncCommittees:input_type -> ethereum.eth.v2.StateSyncCommitteesRequest
-	6,  // 6: ethereum.eth.service.BeaconChain.GetRandao:input_type -> ethereum.eth.v2.RandaoRequest
-	7,  // 7: ethereum.eth.service.BeaconChain.SubmitBlock:input_type -> ethereum.eth.v2.SignedBeaconBlockContentsContainer
-	8,  // 8: ethereum.eth.service.BeaconChain.SubmitBlockSSZ:input_type -> ethereum.eth.v2.SSZContainer
-	9,  // 9: ethereum.eth.service.BeaconChain.SubmitBlindedBlock:input_type -> ethereum.eth.v2.SignedBlindedBeaconBlockContentsContainer
-	8,  // 10: ethereum.eth.service.BeaconChain.SubmitBlindedBlockSSZ:input_type -> ethereum.eth.v2.SSZContainer
-	10, // 11: ethereum.eth.service.BeaconChain.GetBlock:input_type -> ethereum.eth.v1.BlockRequest
-	10, // 12: ethereum.eth.service.BeaconChain.GetBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
-	11, // 13: ethereum.eth.service.BeaconChain.GetBlockV2:input_type -> ethereum.eth.v2.BlockRequestV2
-	10, // 14: ethereum.eth.service.BeaconChain.GetBlindedBlock:input_type -> ethereum.eth.v1.BlockRequest
-	10, // 15: ethereum.eth.service.BeaconChain.GetBlindedBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
-	11, // 16: ethereum.eth.service.BeaconChain.GetBlockSSZV2:input_type -> ethereum.eth.v2.BlockRequestV2
-	10, // 17: ethereum.eth.service.BeaconChain.ListBlockAttestations:input_type -> ethereum.eth.v1.BlockRequest
-	0,  // 18: ethereum.eth.service.BeaconChain.ListPoolAttesterSlashings:input_type -> google.protobuf.Empty
-	12, // 19: ethereum.eth.service.BeaconChain.SubmitAttesterSlashing:input_type -> ethereum.eth.v1.AttesterSlashing
-	0,  // 20: ethereum.eth.service.BeaconChain.ListPoolProposerSlashings:input_type -> google.protobuf.Empty
-	13, // 21: ethereum.eth.service.BeaconChain.SubmitProposerSlashing:input_type -> ethereum.eth.v1.ProposerSlashing
-	14, // 22: ethereum.eth.service.BeaconChain.SubmitSignedBLSToExecutionChanges:input_type -> ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
-	0,  // 23: ethereum.eth.service.BeaconChain.ListBLSToExecutionChanges:input_type -> google.protobuf.Empty
-	0,  // 24: ethereum.eth.service.BeaconChain.GetForkSchedule:input_type -> google.protobuf.Empty
-	0,  // 25: ethereum.eth.service.BeaconChain.GetSpec:input_type -> google.protobuf.Empty
-	15, // 26: ethereum.eth.service.BeaconChain.GetWeakSubjectivity:output_type -> ethereum.eth.v1.WeakSubjectivityResponse
-	16, // 27: ethereum.eth.service.BeaconChain.GetStateRoot:output_type -> ethereum.eth.v1.StateRootResponse
-	17, // 28: ethereum.eth.service.BeaconChain.ListValidators:output_type -> ethereum.eth.v1.StateValidatorsResponse
-	18, // 29: ethereum.eth.service.BeaconChain.GetValidator:output_type -> ethereum.eth.v1.StateValidatorResponse
-	19, // 30: ethereum.eth.service.BeaconChain.ListValidatorBalances:output_type -> ethereum.eth.v1.ValidatorBalancesResponse
-	20, // 31: ethereum.eth.service.BeaconChain.ListSyncCommittees:output_type -> ethereum.eth.v2.StateSyncCommitteesResponse
-	21, // 32: ethereum.eth.service.BeaconChain.GetRandao:output_type -> ethereum.eth.v2.RandaoResponse
-	0,  // 33: ethereum.eth.service.BeaconChain.SubmitBlock:output_type -> google.protobuf.Empty
-	0,  // 34: ethereum.eth.service.BeaconChain.SubmitBlockSSZ:output_type -> google.protobuf.Empty
-	0,  // 35: ethereum.eth.service.BeaconChain.SubmitBlindedBlock:output_type -> google.protobuf.Empty
-	0,  // 36: ethereum.eth.service.BeaconChain.SubmitBlindedBlockSSZ:output_type -> google.protobuf.Empty
-	22, // 37: ethereum.eth.service.BeaconChain.GetBlock:output_type -> ethereum.eth.v1.BlockResponse
-	23, // 38: ethereum.eth.service.BeaconChain.GetBlockSSZ:output_type -> ethereum.eth.v1.BlockSSZResponse
-	24, // 39: ethereum.eth.service.BeaconChain.GetBlockV2:output_type -> ethereum.eth.v2.BlockResponseV2
-	25, // 40: ethereum.eth.service.BeaconChain.GetBlindedBlock:output_type -> ethereum.eth.v2.BlindedBlockResponse
-	8,  // 41: ethereum.eth.service.BeaconChain.GetBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
-	8,  // 42: ethereum.eth.service.BeaconChain.GetBlockSSZV2:output_type -> ethereum.eth.v2.SSZContainer
-	26, // 43: ethereum.eth.service.BeaconChain.ListBlockAttestations:output_type -> ethereum.eth.v1.BlockAttestationsResponse
-	27, // 44: ethereum.eth.service.BeaconChain.ListPoolAttesterSlashings:output_type -> ethereum.eth.v1.AttesterSlashingsPoolResponse
-	0,  // 45: ethereum.eth.service.BeaconChain.SubmitAttesterSlashing:output_type -> google.protobuf.Empty
-	28, // 46: ethereum.eth.service.BeaconChain.ListPoolProposerSlashings:output_type -> ethereum.eth.v1.ProposerSlashingPoolResponse
-	0,  // 47: ethereum.eth.service.BeaconChain.SubmitProposerSlashing:output_type -> google.protobuf.Empty
-	0,  // 48: ethereum.eth.service.BeaconChain.SubmitSignedBLSToExecutionChanges:output_type -> google.protobuf.Empty
-	29, // 49: ethereum.eth.service.BeaconChain.ListBLSToExecutionChanges:output_type -> ethereum.eth.v2.BLSToExecutionChangesPoolResponse
-	30, // 50: ethereum.eth.service.BeaconChain.GetForkSchedule:output_type -> ethereum.eth.v1.ForkScheduleResponse
-	31, // 51: ethereum.eth.service.BeaconChain.GetSpec:output_type -> ethereum.eth.v1.SpecResponse
-	26, // [26:52] is the sub-list for method output_type
-	0,  // [0:26] is the sub-list for method input_type
+	2,  // 2: ethereum.eth.service.BeaconChain.ListSyncCommittees:input_type -> ethereum.eth.v2.StateSyncCommitteesRequest
+	3,  // 3: ethereum.eth.service.BeaconChain.GetRandao:input_type -> ethereum.eth.v2.RandaoRequest
+	4,  // 4: ethereum.eth.service.BeaconChain.GetBlock:input_type -> ethereum.eth.v1.BlockRequest
+	4,  // 5: ethereum.eth.service.BeaconChain.GetBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
+	5,  // 6: ethereum.eth.service.BeaconChain.GetBlockV2:input_type -> ethereum.eth.v2.BlockRequestV2
+	4,  // 7: ethereum.eth.service.BeaconChain.GetBlindedBlock:input_type -> ethereum.eth.v1.BlockRequest
+	4,  // 8: ethereum.eth.service.BeaconChain.GetBlindedBlockSSZ:input_type -> ethereum.eth.v1.BlockRequest
+	5,  // 9: ethereum.eth.service.BeaconChain.GetBlockSSZV2:input_type -> ethereum.eth.v2.BlockRequestV2
+	4,  // 10: ethereum.eth.service.BeaconChain.ListBlockAttestations:input_type -> ethereum.eth.v1.BlockRequest
+	0,  // 11: ethereum.eth.service.BeaconChain.ListPoolAttesterSlashings:input_type -> google.protobuf.Empty
+	6,  // 12: ethereum.eth.service.BeaconChain.SubmitAttesterSlashing:input_type -> ethereum.eth.v1.AttesterSlashing
+	0,  // 13: ethereum.eth.service.BeaconChain.ListPoolProposerSlashings:input_type -> google.protobuf.Empty
+	7,  // 14: ethereum.eth.service.BeaconChain.SubmitProposerSlashing:input_type -> ethereum.eth.v1.ProposerSlashing
+	8,  // 15: ethereum.eth.service.BeaconChain.SubmitSignedBLSToExecutionChanges:input_type -> ethereum.eth.v2.SubmitBLSToExecutionChangesRequest
+	0,  // 16: ethereum.eth.service.BeaconChain.ListBLSToExecutionChanges:input_type -> google.protobuf.Empty
+	0,  // 17: ethereum.eth.service.BeaconChain.GetForkSchedule:input_type -> google.protobuf.Empty
+	0,  // 18: ethereum.eth.service.BeaconChain.GetSpec:input_type -> google.protobuf.Empty
+	9,  // 19: ethereum.eth.service.BeaconChain.GetWeakSubjectivity:output_type -> ethereum.eth.v1.WeakSubjectivityResponse
+	10, // 20: ethereum.eth.service.BeaconChain.GetStateRoot:output_type -> ethereum.eth.v1.StateRootResponse
+	11, // 21: ethereum.eth.service.BeaconChain.ListSyncCommittees:output_type -> ethereum.eth.v2.StateSyncCommitteesResponse
+	12, // 22: ethereum.eth.service.BeaconChain.GetRandao:output_type -> ethereum.eth.v2.RandaoResponse
+	13, // 23: ethereum.eth.service.BeaconChain.GetBlock:output_type -> ethereum.eth.v1.BlockResponse
+	14, // 24: ethereum.eth.service.BeaconChain.GetBlockSSZ:output_type -> ethereum.eth.v1.BlockSSZResponse
+	15, // 25: ethereum.eth.service.BeaconChain.GetBlockV2:output_type -> ethereum.eth.v2.BlockResponseV2
+	16, // 26: ethereum.eth.service.BeaconChain.GetBlindedBlock:output_type -> ethereum.eth.v2.BlindedBlockResponse
+	17, // 27: ethereum.eth.service.BeaconChain.GetBlindedBlockSSZ:output_type -> ethereum.eth.v2.SSZContainer
+	17, // 28: ethereum.eth.service.BeaconChain.GetBlockSSZV2:output_type -> ethereum.eth.v2.SSZContainer
+	18, // 29: ethereum.eth.service.BeaconChain.ListBlockAttestations:output_type -> ethereum.eth.v1.BlockAttestationsResponse
+	19, // 30: ethereum.eth.service.BeaconChain.ListPoolAttesterSlashings:output_type -> ethereum.eth.v1.AttesterSlashingsPoolResponse
+	0,  // 31: ethereum.eth.service.BeaconChain.SubmitAttesterSlashing:output_type -> google.protobuf.Empty
+	20, // 32: ethereum.eth.service.BeaconChain.ListPoolProposerSlashings:output_type -> ethereum.eth.v1.ProposerSlashingPoolResponse
+	0,  // 33: ethereum.eth.service.BeaconChain.SubmitProposerSlashing:output_type -> google.protobuf.Empty
+	0,  // 34: ethereum.eth.service.BeaconChain.SubmitSignedBLSToExecutionChanges:output_type -> google.protobuf.Empty
+	21, // 35: ethereum.eth.service.BeaconChain.ListBLSToExecutionChanges:output_type -> ethereum.eth.v2.BLSToExecutionChangesPoolResponse
+	22, // 36: ethereum.eth.service.BeaconChain.GetForkSchedule:output_type -> ethereum.eth.v1.ForkScheduleResponse
+	23, // 37: ethereum.eth.service.BeaconChain.GetSpec:output_type -> ethereum.eth.v1.SpecResponse
+	19, // [19:38] is the sub-list for method output_type
+	0,  // [0:19] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
@@ -446,15 +357,8 @@ type BeaconChainClient interface {
 	// Deprecated: Do not use.
 	GetWeakSubjectivity(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*v1.WeakSubjectivityResponse, error)
 	GetStateRoot(ctx context.Context, in *v1.StateRequest, opts ...grpc.CallOption) (*v1.StateRootResponse, error)
-	ListValidators(ctx context.Context, in *v1.StateValidatorsRequest, opts ...grpc.CallOption) (*v1.StateValidatorsResponse, error)
-	GetValidator(ctx context.Context, in *v1.StateValidatorRequest, opts ...grpc.CallOption) (*v1.StateValidatorResponse, error)
-	ListValidatorBalances(ctx context.Context, in *v1.ValidatorBalancesRequest, opts ...grpc.CallOption) (*v1.ValidatorBalancesResponse, error)
 	ListSyncCommittees(ctx context.Context, in *v2.StateSyncCommitteesRequest, opts ...grpc.CallOption) (*v2.StateSyncCommitteesResponse, error)
 	GetRandao(ctx context.Context, in *v2.RandaoRequest, opts ...grpc.CallOption) (*v2.RandaoResponse, error)
-	SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error)
-	SubmitBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
-	SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error)
-	SubmitBlindedBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Deprecated: Do not use.
 	GetBlock(ctx context.Context, in *v1.BlockRequest, opts ...grpc.CallOption) (*v1.BlockResponse, error)
 	// Deprecated: Do not use.
@@ -501,33 +405,6 @@ func (c *beaconChainClient) GetStateRoot(ctx context.Context, in *v1.StateReques
 	return out, nil
 }
 
-func (c *beaconChainClient) ListValidators(ctx context.Context, in *v1.StateValidatorsRequest, opts ...grpc.CallOption) (*v1.StateValidatorsResponse, error) {
-	out := new(v1.StateValidatorsResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/ListValidators", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) GetValidator(ctx context.Context, in *v1.StateValidatorRequest, opts ...grpc.CallOption) (*v1.StateValidatorResponse, error) {
-	out := new(v1.StateValidatorResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetValidator", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) ListValidatorBalances(ctx context.Context, in *v1.ValidatorBalancesRequest, opts ...grpc.CallOption) (*v1.ValidatorBalancesResponse, error) {
-	out := new(v1.ValidatorBalancesResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/ListValidatorBalances", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *beaconChainClient) ListSyncCommittees(ctx context.Context, in *v2.StateSyncCommitteesRequest, opts ...grpc.CallOption) (*v2.StateSyncCommitteesResponse, error) {
 	out := new(v2.StateSyncCommitteesResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/ListSyncCommittees", in, out, opts...)
@@ -540,42 +417,6 @@ func (c *beaconChainClient) ListSyncCommittees(ctx context.Context, in *v2.State
 func (c *beaconChainClient) GetRandao(ctx context.Context, in *v2.RandaoRequest, opts ...grpc.CallOption) (*v2.RandaoResponse, error) {
 	out := new(v2.RandaoResponse)
 	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/GetRandao", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) SubmitBlock(ctx context.Context, in *v2.SignedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlock", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) SubmitBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlockSSZ", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) SubmitBlindedBlock(ctx context.Context, in *v2.SignedBlindedBeaconBlockContentsContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlindedBlock", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *beaconChainClient) SubmitBlindedBlockSSZ(ctx context.Context, in *v2.SSZContainer, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.BeaconChain/SubmitBlindedBlockSSZ", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -724,15 +565,8 @@ type BeaconChainServer interface {
 	// Deprecated: Do not use.
 	GetWeakSubjectivity(context.Context, *empty.Empty) (*v1.WeakSubjectivityResponse, error)
 	GetStateRoot(context.Context, *v1.StateRequest) (*v1.StateRootResponse, error)
-	ListValidators(context.Context, *v1.StateValidatorsRequest) (*v1.StateValidatorsResponse, error)
-	GetValidator(context.Context, *v1.StateValidatorRequest) (*v1.StateValidatorResponse, error)
-	ListValidatorBalances(context.Context, *v1.ValidatorBalancesRequest) (*v1.ValidatorBalancesResponse, error)
 	ListSyncCommittees(context.Context, *v2.StateSyncCommitteesRequest) (*v2.StateSyncCommitteesResponse, error)
 	GetRandao(context.Context, *v2.RandaoRequest) (*v2.RandaoResponse, error)
-	SubmitBlock(context.Context, *v2.SignedBeaconBlockContentsContainer) (*empty.Empty, error)
-	SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
-	SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContentsContainer) (*empty.Empty, error)
-	SubmitBlindedBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error)
 	// Deprecated: Do not use.
 	GetBlock(context.Context, *v1.BlockRequest) (*v1.BlockResponse, error)
 	// Deprecated: Do not use.
@@ -762,32 +596,11 @@ func (*UnimplementedBeaconChainServer) GetWeakSubjectivity(context.Context, *emp
 func (*UnimplementedBeaconChainServer) GetStateRoot(context.Context, *v1.StateRequest) (*v1.StateRootResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStateRoot not implemented")
 }
-func (*UnimplementedBeaconChainServer) ListValidators(context.Context, *v1.StateValidatorsRequest) (*v1.StateValidatorsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListValidators not implemented")
-}
-func (*UnimplementedBeaconChainServer) GetValidator(context.Context, *v1.StateValidatorRequest) (*v1.StateValidatorResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetValidator not implemented")
-}
-func (*UnimplementedBeaconChainServer) ListValidatorBalances(context.Context, *v1.ValidatorBalancesRequest) (*v1.ValidatorBalancesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListValidatorBalances not implemented")
-}
 func (*UnimplementedBeaconChainServer) ListSyncCommittees(context.Context, *v2.StateSyncCommitteesRequest) (*v2.StateSyncCommitteesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSyncCommittees not implemented")
 }
 func (*UnimplementedBeaconChainServer) GetRandao(context.Context, *v2.RandaoRequest) (*v2.RandaoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRandao not implemented")
-}
-func (*UnimplementedBeaconChainServer) SubmitBlock(context.Context, *v2.SignedBeaconBlockContentsContainer) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlock not implemented")
-}
-func (*UnimplementedBeaconChainServer) SubmitBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlockSSZ not implemented")
-}
-func (*UnimplementedBeaconChainServer) SubmitBlindedBlock(context.Context, *v2.SignedBlindedBeaconBlockContentsContainer) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlindedBlock not implemented")
-}
-func (*UnimplementedBeaconChainServer) SubmitBlindedBlockSSZ(context.Context, *v2.SSZContainer) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitBlindedBlockSSZ not implemented")
 }
 func (*UnimplementedBeaconChainServer) GetBlock(context.Context, *v1.BlockRequest) (*v1.BlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
@@ -875,60 +688,6 @@ func _BeaconChain_GetStateRoot_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BeaconChain_ListValidators_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.StateValidatorsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).ListValidators(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/ListValidators",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ListValidators(ctx, req.(*v1.StateValidatorsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_GetValidator_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.StateValidatorRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).GetValidator(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/GetValidator",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).GetValidator(ctx, req.(*v1.StateValidatorRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_ListValidatorBalances_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v1.ValidatorBalancesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).ListValidatorBalances(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/ListValidatorBalances",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).ListValidatorBalances(ctx, req.(*v1.ValidatorBalancesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _BeaconChain_ListSyncCommittees_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(v2.StateSyncCommitteesRequest)
 	if err := dec(in); err != nil {
@@ -961,78 +720,6 @@ func _BeaconChain_GetRandao_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BeaconChainServer).GetRandao(ctx, req.(*v2.RandaoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_SubmitBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SignedBeaconBlockContentsContainer)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).SubmitBlock(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlock",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlock(ctx, req.(*v2.SignedBeaconBlockContentsContainer))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_SubmitBlockSSZ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SSZContainer)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).SubmitBlockSSZ(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlockSSZ",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlockSSZ(ctx, req.(*v2.SSZContainer))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_SubmitBlindedBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SignedBlindedBeaconBlockContentsContainer)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).SubmitBlindedBlock(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlindedBlock",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlindedBlock(ctx, req.(*v2.SignedBlindedBeaconBlockContentsContainer))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _BeaconChain_SubmitBlindedBlockSSZ_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(v2.SSZContainer)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BeaconChainServer).SubmitBlindedBlockSSZ(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.BeaconChain/SubmitBlindedBlockSSZ",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BeaconChainServer).SubmitBlindedBlockSSZ(ctx, req.(*v2.SSZContainer))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1320,40 +1007,12 @@ var _BeaconChain_serviceDesc = grpc.ServiceDesc{
 			Handler:    _BeaconChain_GetStateRoot_Handler,
 		},
 		{
-			MethodName: "ListValidators",
-			Handler:    _BeaconChain_ListValidators_Handler,
-		},
-		{
-			MethodName: "GetValidator",
-			Handler:    _BeaconChain_GetValidator_Handler,
-		},
-		{
-			MethodName: "ListValidatorBalances",
-			Handler:    _BeaconChain_ListValidatorBalances_Handler,
-		},
-		{
 			MethodName: "ListSyncCommittees",
 			Handler:    _BeaconChain_ListSyncCommittees_Handler,
 		},
 		{
 			MethodName: "GetRandao",
 			Handler:    _BeaconChain_GetRandao_Handler,
-		},
-		{
-			MethodName: "SubmitBlock",
-			Handler:    _BeaconChain_SubmitBlock_Handler,
-		},
-		{
-			MethodName: "SubmitBlockSSZ",
-			Handler:    _BeaconChain_SubmitBlockSSZ_Handler,
-		},
-		{
-			MethodName: "SubmitBlindedBlock",
-			Handler:    _BeaconChain_SubmitBlindedBlock_Handler,
-		},
-		{
-			MethodName: "SubmitBlindedBlockSSZ",
-			Handler:    _BeaconChain_SubmitBlindedBlockSSZ_Handler,
 		},
 		{
 			MethodName: "GetBlock",
