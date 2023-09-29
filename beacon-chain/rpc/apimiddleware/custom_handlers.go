@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/r3labs/sse/v2"
+
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/r3labs/sse/v2"
 )
 
 func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
@@ -109,6 +110,10 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				}
 			case events.BlobSidecarTopic:
 				data = &EventBlobSidecarJson{}
+			case events.LightClientFinalityUpdateTopic:
+				data = &LightClientFinalityUpdateResponseJson{}
+			case events.LightClientOptimisticUpdateTopic:
+				data = &LightClientOptimisticUpdateResponseJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:

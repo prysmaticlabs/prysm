@@ -20,6 +20,7 @@ go_library(
         "//proto/engine/v1:go_default_library",
         "//proto/eth/service:go_default_library",
         "//proto/eth/v1:go_default_library",
+        "//proto/eth/v2:go_default_library",
         "//proto/migration:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",

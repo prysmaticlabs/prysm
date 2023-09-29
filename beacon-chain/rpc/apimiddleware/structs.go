@@ -4,9 +4,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
-//----------------
+// ----------------
 // Requests and responses.
-//----------------
+// ----------------
 
 // WeakSubjectivityResponse is used to marshal/unmarshal the response for the
 // /eth/v1/beacon/weak_subjectivity endpoint.
@@ -15,6 +15,30 @@ type WeakSubjectivityResponse struct {
 		Checkpoint *CheckpointJson `json:"ws_checkpoint"`
 		StateRoot  string          `json:"state_root" hex:"true"`
 	} `json:"data"`
+}
+
+type LightClientFinalityUpdateResponseJson struct {
+	Version string                         `json:"version" enum:"true"`
+	Data    *LightClientFinalityUpdateJson `json:"data"`
+}
+
+type LightClientFinalityUpdateJson struct {
+	AttestedHeader  *BeaconBlockHeaderJson `json:"attested_header"`
+	FinalizedHeader *BeaconBlockHeaderJson `json:"finalized_header"`
+	FinalityBranch  []string               `json:"finality_branch"  hex:"true"`
+	SyncAggregate   *SyncAggregateJson     `json:"sync_aggregate"`
+	SignatureSlot   string                 `json:"signature_slot"`
+}
+
+type LightClientOptimisticUpdateResponseJson struct {
+	Version string                           `json:"version" enum:"true"`
+	Data    *LightClientOptimisticUpdateJson `json:"data"`
+}
+
+type LightClientOptimisticUpdateJson struct {
+	AttestedHeader *BeaconBlockHeaderJson `json:"attested_header"`
+	SyncAggregate  *SyncAggregateJson     `json:"sync_aggregate"`
+	SignatureSlot  string                 `json:"signature_slot"`
 }
 
 type BlockRootResponseJson struct {
@@ -79,9 +103,9 @@ type ForkChoiceResponseExtraDataJson struct {
 	HeadRoot                      string          `json:"head_root" hex:"true"`
 }
 
-//----------------
+// ----------------
 // Reusable types.
-//----------------
+// ----------------
 
 type CheckpointJson struct {
 	Epoch string `json:"epoch"`
@@ -644,7 +668,7 @@ type HistoricalSummaryJson struct {
 	StateSummaryRoot string `json:"state_summary_root" hex:"true"`
 }
 
-//----------------
+// ----------------
 // SSZ
 // ---------------
 
