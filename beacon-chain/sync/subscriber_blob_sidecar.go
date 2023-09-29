@@ -18,11 +18,9 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 
 	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
 
-	if err := s.cfg.beaconDB.SaveBlobSidecar(ctx, []*eth.BlobSidecar{b.Message}); err != nil {
+	if err := s.cfg.chain.ReceiveBlob(ctx, b.Message); err != nil {
 		return err
 	}
-
-	s.cfg.chain.SendNewBlobEvent([32]byte(b.Message.BlockRoot), b.Message.Index)
 
 	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
 		Type: opfeed.BlobSidecarReceived,
