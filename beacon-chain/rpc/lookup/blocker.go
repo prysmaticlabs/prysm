@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -47,6 +48,7 @@ type BeaconDbBlocker struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded block root with '0x' prefix>
+//   - <block root>
 func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 	var err error
 	var blk interfaces.ReadOnlySignedBeaconBlock
@@ -69,7 +71,18 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 			return nil, errors.Wrap(err, "could not retrieve genesis block")
 		}
 	default:
-		if len(id) == 32 {
+		// "0x..." hex string
+		if len(id) == 66 {
+			decoded, err := hexutil.Decode(string(id))
+			if err != nil {
+				e := NewBlockIdParseError(err)
+				return nil, &e
+			}
+			blk, err = p.BeaconDB.Block(ctx, bytesutil.ToBytes32(decoded))
+			if err != nil {
+				return nil, errors.Wrap(err, "could not retrieve block")
+			}
+		} else if len(id) == 32 {
 			blk, err = p.BeaconDB.Block(ctx, bytesutil.ToBytes32(id))
 			if err != nil {
 				return nil, errors.Wrap(err, "could not retrieve block")
