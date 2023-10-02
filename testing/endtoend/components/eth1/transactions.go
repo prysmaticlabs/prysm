@@ -311,9 +311,10 @@ func encodeBlobs(data []byte) []kzg4844.Blob {
 	blobs := []kzg4844.Blob{make([]byte, fieldparams.BlobLength)}
 	blobIndex := 0
 	fieldIndex := -1
+	numOfElems := fieldparams.BlobLength / 32
 	for i := 0; i < len(data); i += 31 {
 		fieldIndex++
-		if fieldIndex == fieldparams.MaxBlobCommitmentsPerBlock {
+		if fieldIndex == numOfElems {
 			if blobIndex >= 1 {
 				break
 			}
@@ -346,6 +347,9 @@ func EncodeBlobs(data []byte) ([]kzg4844.Blob, []kzg4844.Commitment, []kzg4844.P
 
 		proof, err := kzg4844.ComputeBlobProof(blob, commit)
 		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if err := kzg4844.VerifyBlobProof(blob, commit, proof); err != nil {
 			return nil, nil, nil, nil, err
 		}
 		proofs = append(proofs, proof)
