@@ -5,7 +5,6 @@ go_library(
     srcs = ["multi_value_slice.go"],
     importpath = "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice",
     visibility = ["//visibility:public"],
-    deps = ["//container/multi-value-slice/interfaces:go_default_library"],
 )
 
 go_test(

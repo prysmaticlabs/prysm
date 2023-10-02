@@ -92,12 +92,19 @@ package mvslice
 import (
 	"fmt"
 	"sync"
-
-	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 )
 
+// Id is an object identifier.
+type Id = uint64
+
+// Identifiable represents an object that can be uniquely identified by its Id.
+type Identifiable interface {
+	Id() Id
+	SetId(id uint64)
+}
+
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
-type MultiValueSlice[O interfaces.Identifiable] interface {
+type MultiValueSlice[O Identifiable] interface {
 	Len(obj O) int
 }
 
@@ -118,7 +125,7 @@ type MultiValueItem[V any] struct {
 //   - O interfaces.Identifiable - the type of objects sharing the slice. The constraint is required
 //     because we need a way to compare objects against each other in order to know which objects
 //     values should be accessed.
-type Slice[V comparable, O interfaces.Identifiable] struct {
+type Slice[V comparable, O Identifiable] struct {
 	sharedItems     []V
 	individualItems map[uint64]*MultiValueItem[V]
 	appendedItems   []*MultiValueItem[V]
