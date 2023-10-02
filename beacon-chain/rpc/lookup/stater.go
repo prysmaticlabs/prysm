@@ -145,9 +145,9 @@ func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.Beaco
 	default:
 		// "0x..." hex string
 		if len(stateId) == 66 {
-			decoded, err := hexutil.Decode(string(stateId))
-			if err != nil {
-				e := NewStateIdParseError(err)
+			decoded, parseErr := hexutil.Decode(string(stateId))
+			if parseErr != nil {
+				e := NewStateIdParseError(parseErr)
 				return nil, &e
 			}
 			s, err = p.stateByRoot(ctx, decoded)
