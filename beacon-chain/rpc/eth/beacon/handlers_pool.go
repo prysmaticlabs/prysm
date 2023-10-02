@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -293,8 +294,8 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	for _, msg := range validMessages {
-		if err = s.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
-			http2.HandleError(w, "Could not submit message: "+err.Error(), http.StatusInternalServerError)
+		if rpcerr := s.CoreService.SubmitSyncMessage(ctx, msg); rpcerr != nil {
+			http2.HandleError(w, "Could not submit message: "+rpcerr.Err.Error(), core.ErrorReasonToHTTP(rpcerr.Reason))
 			return
 		}
 	}
