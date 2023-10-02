@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
@@ -127,11 +126,6 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	for _, item := range req.Data {
 		consensusItem, err := item.ToConsensus()
@@ -163,11 +157,6 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -223,11 +212,6 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -338,11 +322,6 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -570,13 +549,8 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validate := validator.New()
 	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
 	for i, registration := range jsonRegistrations {
-		if err := validate.Struct(registration); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		reg, err := registration.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
