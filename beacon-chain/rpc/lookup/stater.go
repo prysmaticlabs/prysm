@@ -143,8 +143,8 @@ func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.Beaco
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
 	default:
-		// "0x..." hex string
-		if len(stateId) == 66 {
+		stringId := strings.ToLower(string(stateId))
+		if len(stringId) >= 2 && stringId[:2] == "0x" {
 			decoded, parseErr := hexutil.Decode(string(stateId))
 			if parseErr != nil {
 				e := NewStateIdParseError(parseErr)

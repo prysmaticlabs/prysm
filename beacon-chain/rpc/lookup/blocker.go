@@ -3,6 +3,7 @@ package lookup
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -71,8 +72,8 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 			return nil, errors.Wrap(err, "could not retrieve genesis block")
 		}
 	default:
-		// "0x..." hex string
-		if len(id) == 66 {
+		stringId := strings.ToLower(string(id))
+		if len(stringId) >= 2 && stringId[:2] == "0x" {
 			decoded, err := hexutil.Decode(string(id))
 			if err != nil {
 				e := NewBlockIdParseError(err)
