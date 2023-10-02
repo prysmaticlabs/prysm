@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -61,7 +62,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	return rootsCopy
 }
 
-func (b *BeaconState) blockRootsVal() [][32]byte {
+func (b *BeaconState) blockRootsVal() customtypes.BlockRoots {
 	if features.Get().EnableExperimentalState {
 		if b.blockRootsMultiValue == nil {
 			return nil

@@ -17,9 +17,9 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
-	br := customtypes.BlockRoots(b.blockRootsVal()).Slice()
-	sr := customtypes.StateRoots(b.stateRootsVal()).Slice()
-	rm := customtypes.RandaoMixes(b.randaoMixesVal()).Slice()
+	br := b.blockRootsVal().Slice()
+	sr := b.stateRootsVal().Slice()
+	rm := b.randaoMixesVal().Slice()
 	var vals []*ethpb.Validator
 	var bals []uint64
 	if features.Get().EnableExperimentalState {
@@ -187,9 +187,9 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvrCopy := b.genesisValidatorsRoot
-	br := customtypes.BlockRoots(b.blockRootsVal()).Slice()
-	sr := customtypes.StateRoots(b.stateRootsVal()).Slice()
-	rm := customtypes.RandaoMixes(b.randaoMixesVal()).Slice()
+	br := b.blockRootsVal().Slice()
+	sr := b.stateRootsVal().Slice()
+	rm := b.randaoMixesVal().Slice()
 
 	var inactivityScores []uint64
 	if b.version > version.Phase0 {
@@ -360,7 +360,7 @@ func (b *BeaconState) StateRoots() [][]byte {
 	return rootsCopy
 }
 
-func (b *BeaconState) stateRootsVal() [][32]byte {
+func (b *BeaconState) stateRootsVal() customtypes.StateRoots {
 	if features.Get().EnableExperimentalState {
 		if b.stateRootsMultiValue == nil {
 			return nil

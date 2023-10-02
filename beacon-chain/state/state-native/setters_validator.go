@@ -42,9 +42,14 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 	if features.Get().EnableExperimentalState {
 		b.lock.Lock()
 
-		v := b.validatorsMultiValue.Value(b)
-		for i, val := range v {
-			changed, newVal, err := f(i, val)
+		l := b.validatorsMultiValue.Len(b)
+		for i := 0; i < l; i++ {
+			v, err := b.validatorsMultiValue.At(b, uint64(i))
+			if err != nil {
+				b.lock.Unlock()
+				return err
+			}
+			changed, newVal, err := f(i, v)
 			if err != nil {
 				return err
 			}

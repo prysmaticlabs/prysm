@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 
 	"github.com/pkg/errors"
-	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -66,16 +65,14 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.LatestBlockHeader.RealPosition()] = headerHashTreeRoot[:]
 
 	// BlockRoots array root.
-	bRoots := customtypes.BlockRoots(state.blockRootsVal())
-	blockRootsRoot, err := stateutil.ArraysRoot(bRoots.Slice(), fieldparams.BlockRootsLength)
+	blockRootsRoot, err := stateutil.ArraysRoot(state.blockRootsVal().Slice(), fieldparams.BlockRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute block roots merkleization")
 	}
 	fieldRoots[types.BlockRoots.RealPosition()] = blockRootsRoot[:]
 
 	// StateRoots array root.
-	sRoots := customtypes.StateRoots(state.stateRootsVal())
-	stateRootsRoot, err := stateutil.ArraysRoot(sRoots.Slice(), fieldparams.StateRootsLength)
+	stateRootsRoot, err := stateutil.ArraysRoot(state.stateRootsVal().Slice(), fieldparams.StateRootsLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute state roots merkleization")
 	}
@@ -127,8 +124,7 @@ func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]b
 	fieldRoots[types.Balances.RealPosition()] = balancesRoot[:]
 
 	// RandaoMixes array root.
-	mixes := customtypes.RandaoMixes(state.randaoMixesVal())
-	randaoRootsRoot, err := stateutil.ArraysRoot(mixes.Slice(), fieldparams.RandaoMixesLength)
+	randaoRootsRoot, err := stateutil.ArraysRoot(state.randaoMixesVal().Slice(), fieldparams.RandaoMixesLength)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute randao roots merkleization")
 	}

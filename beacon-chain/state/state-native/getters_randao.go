@@ -2,6 +2,7 @@ package state_native
 
 import (
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
@@ -23,7 +24,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	return mixesCopy
 }
 
-func (b *BeaconState) randaoMixesVal() [][32]byte {
+func (b *BeaconState) randaoMixesVal() customtypes.RandaoMixes {
 	if features.Get().EnableExperimentalState {
 		if b.randaoMixesMultiValue == nil {
 			return nil
