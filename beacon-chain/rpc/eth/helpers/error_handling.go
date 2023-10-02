@@ -5,6 +5,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -33,4 +35,17 @@ type IndexedVerificationFailure struct {
 type SingleIndexedVerificationFailure struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
+}
+
+func HandleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) error {
+	if invalidBlockIdErr, ok := err.(*lookup.BlockIdParseError); ok {
+		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
+	}
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
+	}
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
+	}
+	return nil
 }
