@@ -58,7 +58,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	if b.sharedFieldReferences[types.CurrentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, 0, len(b.currentEpochParticipation)+1)
-		participation = append(participation, b.currentEpochParticipation...)
+		copy(participation, b.currentEpochParticipation)
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	}
@@ -82,7 +82,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 	bits := b.previousEpochParticipation
 	if b.sharedFieldReferences[types.PreviousEpochParticipationBits].Refs() > 1 {
 		bits = make([]byte, 0, len(b.previousEpochParticipation)+1)
-		bits = append(bits, b.previousEpochParticipation...)
+		copy(bits, b.previousEpochParticipation)
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	}
@@ -108,7 +108,7 @@ func (b *BeaconState) ModifyPreviousParticipationBits(mutator func(val []byte) (
 	if b.sharedFieldReferences[types.PreviousEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, 0, len(b.previousEpochParticipation)+1)
-		participation = append(participation, b.previousEpochParticipation...)
+		copy(participation, b.previousEpochParticipation)
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)
 	}
@@ -143,7 +143,7 @@ func (b *BeaconState) ModifyCurrentParticipationBits(mutator func(val []byte) ([
 	if b.sharedFieldReferences[types.CurrentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
 		participation = make([]byte, 0, len(b.currentEpochParticipation)+1)
-		participation = append(participation, b.currentEpochParticipation...)
+		copy(participation, b.currentEpochParticipation)
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
 	}

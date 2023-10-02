@@ -119,7 +119,7 @@ func (b *BeaconState) AppendHistoricalRoots(root [32]byte) error {
 	roots := b.historicalRoots
 	if b.sharedFieldReferences[types.HistoricalRoots].Refs() > 1 {
 		roots = make([][32]byte, 0, len(b.historicalRoots)+1)
-		roots = append(roots, b.historicalRoots...)
+		copy(roots, b.historicalRoots)
 		b.sharedFieldReferences[types.HistoricalRoots].MinusRef()
 		b.sharedFieldReferences[types.HistoricalRoots] = stateutil.NewRef(1)
 	}
@@ -142,7 +142,7 @@ func (b *BeaconState) AppendHistoricalSummaries(summary *ethpb.HistoricalSummary
 	summaries := b.historicalSummaries
 	if b.sharedFieldReferences[types.HistoricalSummaries].Refs() > 1 {
 		summaries = make([]*ethpb.HistoricalSummary, 0, len(b.historicalSummaries)+1)
-		summaries = append(summaries, b.historicalSummaries...)
+		copy(summaries, b.historicalSummaries)
 		b.sharedFieldReferences[types.HistoricalSummaries].MinusRef()
 		b.sharedFieldReferences[types.HistoricalSummaries] = stateutil.NewRef(1)
 	}
