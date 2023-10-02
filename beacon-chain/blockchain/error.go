@@ -70,11 +70,8 @@ func IsInvalidBlock(e error) bool {
 	if e == nil {
 		return false
 	}
-	_, ok := e.(invalidBlockError)
-	if !ok {
-		return IsInvalidBlock(errors.Unwrap(e))
-	}
-	return true
+	var d invalidBlockError
+	return errors.As(e, &d)
 }
 
 // InvalidBlockLVH returns the invalid block last valid hash root. If the error
@@ -83,7 +80,8 @@ func InvalidBlockLVH(e error) [32]byte {
 	if e == nil {
 		return [32]byte{}
 	}
-	d, ok := e.(invalidBlockError)
+	var d invalidBlockError
+	ok := errors.As(e, &d)
 	if !ok {
 		return [32]byte{}
 	}
@@ -96,7 +94,8 @@ func InvalidBlockRoot(e error) [32]byte {
 	if e == nil {
 		return [32]byte{}
 	}
-	d, ok := e.(invalidBlockError)
+	var d invalidBlockError
+	ok := errors.As(e, &d)
 	if !ok {
 		return [32]byte{}
 	}
@@ -108,7 +107,8 @@ func InvalidAncestorRoots(e error) [][32]byte {
 	if e == nil {
 		return [][32]byte{}
 	}
-	d, ok := e.(invalidBlockError)
+	var d invalidBlockError
+	ok := errors.As(e, &d)
 	if !ok {
 		return [][32]byte{}
 	}
