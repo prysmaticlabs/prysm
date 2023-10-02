@@ -41,11 +41,6 @@ const (
 	indicesLimit = 8000
 )
 
-// SetId set the identifier of the beacon state.
-func (b *BeaconState) SetId(id uint64) {
-	b.id = id
-}
-
 // SetGenesisTime for the beacon state.
 func (b *BeaconState) SetGenesisTime(val uint64) error {
 	b.lock.Lock()
