@@ -69,6 +69,7 @@ func (_ RandaoMixes) SizeSSZ() int {
 }
 
 // Slice converts a customtypes.RandaoMixes object into a 2D byte slice.
+// Each item in the slice is a copy of the original item.
 func (r RandaoMixes) Slice() [][]byte {
 	if r == nil {
 		return nil

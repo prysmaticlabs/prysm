@@ -54,12 +54,7 @@ func (b *BeaconState) BlockRoots() [][]byte {
 	if roots == nil {
 		return nil
 	}
-	rootsCopy := make([][]byte, len(roots))
-	for i, r := range roots {
-		rootsCopy[i] = make([]byte, 32)
-		copy(rootsCopy[i], r[:])
-	}
-	return rootsCopy
+	return roots.Slice()
 }
 
 func (b *BeaconState) blockRootsVal() customtypes.BlockRoots {

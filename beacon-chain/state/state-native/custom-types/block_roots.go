@@ -69,6 +69,7 @@ func (_ BlockRoots) SizeSSZ() int {
 }
 
 // Slice converts a customtypes.BlockRoots object into a 2D byte slice.
+// Each item in the slice is a copy of the original item.
 func (r BlockRoots) Slice() [][]byte {
 	if r == nil {
 		return nil

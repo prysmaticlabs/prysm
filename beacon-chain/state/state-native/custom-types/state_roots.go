@@ -69,6 +69,7 @@ func (_ StateRoots) SizeSSZ() int {
 }
 
 // Slice converts a customtypes.StateRoots object into a 2D byte slice.
+// Each item in the slice is a copy of the original item.
 func (r StateRoots) Slice() [][]byte {
 	if r == nil {
 		return nil

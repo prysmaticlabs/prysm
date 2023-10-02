@@ -16,12 +16,7 @@ func (b *BeaconState) RandaoMixes() [][]byte {
 	if mixes == nil {
 		return nil
 	}
-	mixesCopy := make([][]byte, len(mixes))
-	for i, m := range mixes {
-		mixesCopy[i] = make([]byte, 32)
-		copy(mixesCopy[i], m[:])
-	}
-	return mixesCopy
+	return mixes.Slice()
 }
 
 func (b *BeaconState) randaoMixesVal() customtypes.RandaoMixes {
