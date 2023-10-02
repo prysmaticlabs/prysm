@@ -19,47 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func TestWrapValidatorIndicesArray(t *testing.T) {
-	t.Run("ok", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &ValidatorIndicesJson{},
-		}
-		unwrappedIndices := []string{"1", "2"}
-		unwrappedIndicesJson, err := json.Marshal(unwrappedIndices)
-		require.NoError(t, err)
-
-		var body bytes.Buffer
-		_, err = body.Write(unwrappedIndicesJson)
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapValidatorIndicesArray(endpoint, nil, request)
-		require.Equal(t, true, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(true), runDefault)
-		wrappedIndices := &ValidatorIndicesJson{}
-		require.NoError(t, json.NewDecoder(request.Body).Decode(wrappedIndices))
-		require.Equal(t, 2, len(wrappedIndices.Index), "wrong number of wrapped items")
-		assert.Equal(t, "1", wrappedIndices.Index[0])
-		assert.Equal(t, "2", wrappedIndices.Index[1])
-	})
-
-	t.Run("invalid_body", func(t *testing.T) {
-		endpoint := &apimiddleware.Endpoint{
-			PostRequest: &ValidatorIndicesJson{},
-		}
-		var body bytes.Buffer
-		_, err := body.Write([]byte("invalid"))
-		require.NoError(t, err)
-		request := httptest.NewRequest("POST", "http://foo.example", &body)
-
-		runDefault, errJson := wrapValidatorIndicesArray(endpoint, nil, request)
-		require.Equal(t, false, errJson == nil)
-		assert.Equal(t, apimiddleware.RunDefault(false), runDefault)
-		assert.Equal(t, true, strings.Contains(errJson.Msg(), "could not decode body"))
-		assert.Equal(t, http.StatusInternalServerError, errJson.StatusCode())
-	})
-}
-
 func TestWrapBLSChangesArray(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {
 		endpoint := &apimiddleware.Endpoint{

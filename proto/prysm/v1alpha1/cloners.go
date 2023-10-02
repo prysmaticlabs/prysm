@@ -518,7 +518,7 @@ func CopySignedBlindedBeaconBlockDeneb(sigBlock *SignedBlindedBeaconBlockDeneb) 
 		return nil
 	}
 	return &SignedBlindedBeaconBlockDeneb{
-		Block:     CopyBlindedBeaconBlockDeneb(sigBlock.Block),
+		Message:   CopyBlindedBeaconBlockDeneb(sigBlock.Message),
 		Signature: bytesutil.SafeCopyBytes(sigBlock.Signature),
 	}
 }

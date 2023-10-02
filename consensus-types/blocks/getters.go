@@ -121,7 +121,7 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 		if b.IsBlinded() {
 			return &eth.GenericSignedBeaconBlock{
 				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-					Block: pb.(*eth.SignedBlindedBeaconBlockDeneb),
+					SignedBlindedBlock: pb.(*eth.SignedBlindedBeaconBlockDeneb),
 				}},
 			}, nil
 		}
@@ -310,7 +310,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 		}
 		return initBlindedSignedBlockFromProtoDeneb(
 			&eth.SignedBlindedBeaconBlockDeneb{
-				Block: &eth.BlindedBeaconBlockDeneb{
+				Message: &eth.BlindedBeaconBlockDeneb{
 					Slot:          b.block.slot,
 					ProposerIndex: b.block.proposerIndex,
 					ParentRoot:    b.block.parentRoot[:],

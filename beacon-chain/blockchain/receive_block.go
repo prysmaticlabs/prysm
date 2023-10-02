@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -21,7 +22,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
@@ -36,12 +36,13 @@ type BlockReceiver interface {
 	ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock) error
 	HasBlock(ctx context.Context, root [32]byte) bool
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
+	BlockBeingSynced([32]byte) bool
 }
 
 // BlobReceiver interface defines the methods of chain service for receiving new
 // blobs
 type BlobReceiver interface {
-	SendNewBlobEvent([32]byte, uint64)
+	ReceiveBlob(context.Context, *ethpb.BlobSidecar) error
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
@@ -58,6 +59,9 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
 	receivedTime := time.Now()
+	s.blockBeingSynced.set(blockRoot)
+	defer s.blockBeingSynced.unset(blockRoot)
+
 	blockCopy, err := block.Copy()
 	if err != nil {
 		return err

@@ -47,8 +47,10 @@ var placeholderFields = []string{
 	"SUBNETS_PER_NODE",
 	"TTFB_TIMEOUT",
 	"UPDATE_TIMEOUT",
+	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
 	"WHISK_FORK_EPOCH",
 	"WHISK_FORK_VERSION",
+	"WHISK_PROPOSER_SELECTION_GAP",
 }
 
 func TestPlaceholderFieldsDistinctSorted(t *testing.T) {

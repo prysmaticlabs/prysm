@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -37,6 +38,28 @@ const (
 	broadcastValidationConsensusAndEquivocation = "consensus_and_equivocation"
 )
 
+// PublishBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
+// and publish a SignedBeaconBlock by swapping out the transactions_root for the corresponding full list of `transactions`.
+// The beacon node should broadcast a newly constructed SignedBeaconBlock to the beacon network, to be included in the
+// beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful response (20X)
+// only indicates that the broadcast has been successful. The beacon node is expected to integrate the new block into
+// its state, and therefore validate the block internally, however blocks which fail the validation are still broadcast
+// but a different status code is returned (202). Pre-Bellatrix, this endpoint will accept a SignedBeaconBlock. After
+// Deneb, this additionally instructs the beacon node to broadcast all given signed blobs.
+func (s *Server) PublishBlindedBlock(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlindedBlock")
+	defer span.End()
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
+		s.publishBlindedBlockSSZ(ctx, w, r)
+	} else {
+		s.publishBlindedBlock(ctx, w, r)
+	}
+}
+
 // PublishBlindedBlockV2 instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct and publish a
 // `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
 // The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
@@ -45,23 +68,24 @@ const (
 // successful. The beacon node is expected to integrate the new block into its state, and
 // therefore validate the block internally, however blocks which fail the validation are still
 // broadcast but a different status code is returned (202). Pre-Bellatrix, this endpoint will accept
-// a `SignedBeaconBlock`. The broadcast behaviour may be adjusted via the `broadcast_validation`
+// a `SignedBeaconBlock`. After Deneb, this additionally instructs the beacon node to broadcast all given signed blobs.
+// The broadcast behaviour may be adjusted via the `broadcast_validation`
 // query parameter.
-func (bs *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlindedBlockV2")
 	defer span.End()
-	if shared.IsSyncing(r.Context(), w, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher) {
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
-		publishBlindedBlockV2SSZ(ctx, bs, w, r)
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
+		s.publishBlindedBlockSSZ(ctx, w, r)
 	} else {
-		publishBlindedBlockV2(ctx, bs, w, r)
+		s.publishBlindedBlock(ctx, w, r)
 	}
 }
 
-func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r *http.Request) {
+func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
@@ -74,11 +98,11 @@ func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWr
 				BlindedDeneb: denebBlockContents,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	capellaBlock := &eth.SignedBlindedBeaconBlockCapella{}
@@ -88,11 +112,11 @@ func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWr
 				BlindedCapella: capellaBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	bellatrixBlock := &eth.SignedBlindedBeaconBlockBellatrix{}
@@ -102,11 +126,11 @@ func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWr
 				BlindedBellatrix: bellatrixBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 
@@ -118,11 +142,11 @@ func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWr
 				Altair: altairBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	phase0Block := &eth.SignedBeaconBlock{}
@@ -132,17 +156,17 @@ func publishBlindedBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWr
 				Phase0: phase0Block,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	http2.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *http.Request) {
+func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -154,11 +178,11 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
 		consensusBlock, err := denebBlockContents.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Deneb) {
@@ -170,11 +194,11 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	if err = unmarshalStrict(body, &capellaBlock); err == nil {
 		consensusBlock, err := capellaBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Capella) {
@@ -186,11 +210,11 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	if err = unmarshalStrict(body, &bellatrixBlock); err == nil {
 		consensusBlock, err := bellatrixBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Bellatrix) {
@@ -201,11 +225,11 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	if err = unmarshalStrict(body, &altairBlock); err == nil {
 		consensusBlock, err := altairBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Altair) {
@@ -216,11 +240,11 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	if err = unmarshalStrict(body, &phase0Block); err == nil {
 		consensusBlock, err := phase0Block.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Phase0) {
@@ -233,29 +257,52 @@ func publishBlindedBlockV2(ctx context.Context, bs *Server, w http.ResponseWrite
 	http2.HandleError(w, "Body does not represent a valid block type: "+blockVersionError, http.StatusBadRequest)
 }
 
+// PublishBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network,
+// to be included in the beacon chain. A success response (20x) indicates that the block
+// passed gossip validation and was successfully broadcast onto the network.
+// The beacon node is also expected to integrate the block into state, but may broadcast it
+// before doing so, so as to aid timely delivery of the block. Should the block fail full
+// validation, a separate success response code (202) is used to indicate that the block was
+// successfully broadcast but failed integration. After Deneb, this additionally instructs the
+// beacon node to broadcast all given signed blobs.
+func (s *Server) PublishBlock(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlock")
+	defer span.End()
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
+		s.publishBlockSSZ(ctx, w, r)
+	} else {
+		s.publishBlock(ctx, w, r)
+	}
+}
+
 // PublishBlockV2 instructs the beacon node to broadcast a newly signed beacon block to the beacon network,
 // to be included in the beacon chain. A success response (20x) indicates that the block
 // passed gossip validation and was successfully broadcast onto the network.
 // The beacon node is also expected to integrate the block into the state, but may broadcast it
 // before doing so, so as to aid timely delivery of the block. Should the block fail full
 // validation, a separate success response code (202) is used to indicate that the block was
-// successfully broadcast but failed integration. The broadcast behaviour may be adjusted via the
+// successfully broadcast but failed integration. After Deneb, this additionally instructs the beacon node to
+// broadcast all given signed blobs. The broadcast behaviour may be adjusted via the
 // `broadcast_validation` query parameter.
-func (bs *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
+func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.PublishBlockV2")
 	defer span.End()
-	if shared.IsSyncing(r.Context(), w, bs.SyncChecker, bs.HeadFetcher, bs.TimeFetcher, bs.OptimisticModeFetcher) {
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ, err := http2.SszRequested(r)
-	if isSSZ && err == nil {
-		publishBlockV2SSZ(ctx, bs, w, r)
+	isSSZ := http2.SszRequested(r)
+	if isSSZ {
+		s.publishBlockSSZ(ctx, w, r)
 	} else {
-		publishBlockV2(ctx, bs, w, r)
+		s.publishBlock(ctx, w, r)
 	}
 }
 
-func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r *http.Request) {
+func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -268,11 +315,11 @@ func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r
 				Deneb: denebBlockContents,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	capellaBlock := &eth.SignedBeaconBlockCapella{}
@@ -282,11 +329,11 @@ func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r
 				Capella: capellaBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	bellatrixBlock := &eth.SignedBeaconBlockBellatrix{}
@@ -296,11 +343,11 @@ func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r
 				Bellatrix: bellatrixBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	altairBlock := &eth.SignedBeaconBlockAltair{}
@@ -310,11 +357,11 @@ func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r
 				Altair: altairBlock,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	phase0Block := &eth.SignedBeaconBlock{}
@@ -324,17 +371,17 @@ func publishBlockV2SSZ(ctx context.Context, bs *Server, w http.ResponseWriter, r
 				Phase0: phase0Block,
 			},
 		}
-		if err = bs.validateBroadcast(ctx, r, genericBlock); err != nil {
+		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		bs.proposeBlock(ctx, w, genericBlock)
+		s.proposeBlock(ctx, w, genericBlock)
 		return
 	}
 	http2.HandleError(w, "Body does not represent a valid block type", http.StatusBadRequest)
 }
 
-func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *http.Request) {
+func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
@@ -346,11 +393,11 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
 		consensusBlock, err := denebBlockContents.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Deneb) {
@@ -361,11 +408,11 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 	if err = unmarshalStrict(body, &capellaBlock); err == nil {
 		consensusBlock, err := capellaBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Capella) {
@@ -376,11 +423,11 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 	if err = unmarshalStrict(body, &bellatrixBlock); err == nil {
 		consensusBlock, err := bellatrixBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Bellatrix) {
@@ -391,11 +438,11 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 	if err = unmarshalStrict(body, &altairBlock); err == nil {
 		consensusBlock, err := altairBlock.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Altair) {
@@ -406,11 +453,11 @@ func publishBlockV2(ctx context.Context, bs *Server, w http.ResponseWriter, r *h
 	if err = unmarshalStrict(body, &phase0Block); err == nil {
 		consensusBlock, err := phase0Block.ToGeneric()
 		if err == nil {
-			if err = bs.validateBroadcast(ctx, r, consensusBlock); err != nil {
+			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				http2.HandleError(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			bs.proposeBlock(ctx, w, consensusBlock)
+			s.proposeBlock(ctx, w, consensusBlock)
 			return
 		}
 		if versionHeader == version.String(version.Phase0) {
@@ -671,7 +718,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		helpers.HandleStateFetchError(w, err)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 
@@ -739,17 +786,248 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetDepositContract retrieves deposit contract address and genesis fork version.
-func (_ *Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
+func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")
 	defer span.End()
 
 	http2.WriteJson(w, &DepositContractResponse{
 		Data: &struct {
-			ChainId uint64 `json:"chain_id"`
+			ChainId string `json:"chain_id"`
 			Address string `json:"address"`
 		}{
-			ChainId: params.BeaconConfig().DepositChainID,
+			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
 			Address: params.BeaconConfig().DepositContractAddress,
 		},
 	})
+}
+
+// GetBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
+func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
+	defer span.End()
+
+	query := r.URL.Query()
+	helpers.NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+
+	rawSlot := r.URL.Query().Get("slot")
+	rawParentRoot := r.URL.Query().Get("parent_root")
+
+	var err error
+	var blks []interfaces.ReadOnlySignedBeaconBlock
+	var blkRoots [][32]byte
+
+	if rawParentRoot != "" {
+		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, 32)
+		if !valid {
+			return
+		}
+		blks, blkRoots, err = s.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(parentRoot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for parent root %s", parentRoot).Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		slot := uint64(s.ChainInfoFetcher.HeadSlot())
+		if rawSlot != "" {
+			var valid bool
+			slot, valid = shared.ValidateUint(w, "Slot", rawSlot)
+			if !valid {
+				return
+			}
+		}
+		blks, err = s.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+		_, blkRoots, err = s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	isOptimistic := false
+	isFinalized := true
+	blkHdrs := make([]*shared.SignedBeaconBlockHeaderContainer, len(blks))
+	for i, bl := range blks {
+		v1alpha1Header, err := bl.Header()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not get block header from block").Error(), http.StatusInternalServerError)
+			return
+		}
+		headerRoot, err := v1alpha1Header.Header.HashTreeRoot()
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not hash block header").Error(), http.StatusInternalServerError)
+			return
+		}
+		canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blkRoots[i])
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "Could not determine if block root is canonical").Error(), http.StatusInternalServerError)
+			return
+		}
+		if !isOptimistic {
+			isOptimistic, err = s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoots[i])
+			if err != nil {
+				http2.HandleError(w, errors.Wrapf(err, "Could not check if block is optimistic").Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+		if isFinalized {
+			isFinalized = s.FinalizationFetcher.IsFinalized(ctx, blkRoots[i])
+		}
+		blkHdrs[i] = &shared.SignedBeaconBlockHeaderContainer{
+			Header: &shared.SignedBeaconBlockHeader{
+				Message:   shared.BeaconBlockHeaderFromConsensus(v1alpha1Header.Header),
+				Signature: hexutil.Encode(v1alpha1Header.Signature),
+			},
+			Root:      hexutil.Encode(headerRoot[:]),
+			Canonical: canonical,
+		}
+	}
+
+	response := &GetBlockHeadersResponse{
+		Data:                blkHdrs,
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, response)
+}
+
+// GetBlockHeader retrieves block header for given block id.
+func (s *Server) GetBlockHeader(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeader")
+	defer span.End()
+
+	blockID := mux.Vars(r)["block_id"]
+	if blockID == "" {
+		http2.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	blk, err := s.Blocker.Block(ctx, []byte(blockID))
+	ok := shared.WriteBlockFetchError(w, blk, err)
+	if !ok {
+		return
+	}
+	blockHeader, err := blk.Header()
+	if err != nil {
+		http2.HandleError(w, "Could not get block header: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	headerRoot, err := blockHeader.Header.HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not hash block header: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blkRoot, err := blk.Block().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not hash block: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not determine if block root is canonical: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, blkRoot)
+	if err != nil {
+		http2.HandleError(w, "Could not check if block is optimistic: %s"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	resp := &GetBlockHeaderResponse{
+		Data: &shared.SignedBeaconBlockHeaderContainer{
+			Root:      hexutil.Encode(headerRoot[:]),
+			Canonical: canonical,
+			Header: &shared.SignedBeaconBlockHeader{
+				Message:   shared.BeaconBlockHeaderFromConsensus(blockHeader.Header),
+				Signature: hexutil.Encode(blockHeader.Signature),
+			},
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, blkRoot),
+	}
+	http2.WriteJson(w, resp)
+}
+
+// GetFinalityCheckpoints returns finality checkpoints for state with given 'stateId'. In case finality is
+// not yet achieved, checkpoint should return epoch 0 and ZERO_HASH as root.
+func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetFinalityCheckpoints")
+	defer span.End()
+
+	stateId := mux.Vars(r)["state_id"]
+	if stateId == "" {
+		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	st, err := s.Stater.State(ctx, []byte(stateId))
+	if err != nil {
+		shared.WriteStateFetchError(w, err)
+		return
+	}
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
+	if err != nil {
+		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+
+	pj := st.PreviousJustifiedCheckpoint()
+	cj := st.CurrentJustifiedCheckpoint()
+	f := st.FinalizedCheckpoint()
+	resp := &GetFinalityCheckpointsResponse{
+		Data: &FinalityCheckpoints{
+			PreviousJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(pj.Epoch), 10),
+				Root:  hexutil.Encode(pj.Root),
+			},
+			CurrentJustified: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(cj.Epoch), 10),
+				Root:  hexutil.Encode(cj.Root),
+			},
+			Finalized: &shared.Checkpoint{
+				Epoch: strconv.FormatUint(uint64(f.Epoch), 10),
+				Root:  hexutil.Encode(f.Root),
+			},
+		},
+		ExecutionOptimistic: isOptimistic,
+		Finalized:           isFinalized,
+	}
+	http2.WriteJson(w, resp)
+}
+
+// GetGenesis retrieves details of the chain's genesis which can be used to identify chain.
+func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.GetGenesis")
+	defer span.End()
+
+	genesisTime := s.GenesisTimeFetcher.GenesisTime()
+	if genesisTime.IsZero() {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	validatorsRoot := s.ChainInfoFetcher.GenesisValidatorsRoot()
+	if bytes.Equal(validatorsRoot[:], params.BeaconConfig().ZeroHash[:]) {
+		http2.HandleError(w, "Chain genesis info is not yet known", http.StatusNotFound)
+		return
+	}
+	forkVersion := params.BeaconConfig().GenesisForkVersion
+
+	resp := &GetGenesisResponse{
+		Data: &Genesis{
+			GenesisTime:           strconv.FormatUint(uint64(genesisTime.Unix()), 10),
+			GenesisValidatorsRoot: hexutil.Encode(validatorsRoot[:]),
+			GenesisForkVersion:    hexutil.Encode(forkVersion),
+		},
+	}
+	http2.WriteJson(w, resp)
 }
