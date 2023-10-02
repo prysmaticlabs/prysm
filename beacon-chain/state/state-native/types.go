@@ -13,23 +13,23 @@ var _ state.BeaconState = (*BeaconState)(nil)
 
 // initialization for tests
 func init() {
-	FieldMap = make(map[types.FieldIndex]types.DataType)
+	fieldMap = make(map[types.FieldIndex]types.DataType)
 	// Initialize the fixed sized arrays.
-	FieldMap[types.BlockRoots] = types.BasicArray
-	FieldMap[types.StateRoots] = types.BasicArray
-	FieldMap[types.RandaoMixes] = types.BasicArray
+	fieldMap[types.BlockRoots] = types.BasicArray
+	fieldMap[types.StateRoots] = types.BasicArray
+	fieldMap[types.RandaoMixes] = types.BasicArray
 
 	// Initialize the composite arrays.
-	FieldMap[types.Eth1DataVotes] = types.CompositeArray
-	FieldMap[types.Validators] = types.CompositeArray
-	FieldMap[types.PreviousEpochAttestations] = types.CompositeArray
-	FieldMap[types.CurrentEpochAttestations] = types.CompositeArray
-	FieldMap[types.Balances] = types.CompressedArray
+	fieldMap[types.Eth1DataVotes] = types.CompositeArray
+	fieldMap[types.Validators] = types.CompositeArray
+	fieldMap[types.PreviousEpochAttestations] = types.CompositeArray
+	fieldMap[types.CurrentEpochAttestations] = types.CompositeArray
+	fieldMap[types.Balances] = types.CompressedArray
 }
 
-// FieldMap keeps track of each field
+// fieldMap keeps track of each field
 // to its corresponding data type.
-var FieldMap map[types.FieldIndex]types.DataType
+var fieldMap map[types.FieldIndex]types.DataType
 
 func errNotSupported(funcName string, ver int) error {
 	return fmt.Errorf("%s is not supported for %s", funcName, version.String(ver))

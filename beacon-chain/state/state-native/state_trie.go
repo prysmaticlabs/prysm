@@ -1117,7 +1117,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 }
 
 func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := fieldtrie.NewFieldTrie(index, FieldMap[index], elements, length)
+	fTrie, err := fieldtrie.NewFieldTrie(index, fieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}
