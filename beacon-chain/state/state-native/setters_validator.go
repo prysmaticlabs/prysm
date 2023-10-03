@@ -190,7 +190,8 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 	bals := b.balances
 	if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-		bals = b.balancesVal()
+		bals = make([]uint64, 0, len(b.balances)+1)
+		bals = append(bals, b.balances...)
 		b.sharedFieldReferences[types.Balances].MinusRef()
 		b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
 	}
@@ -213,7 +214,8 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 
 	scores := b.inactivityScores
 	if b.sharedFieldReferences[types.InactivityScores].Refs() > 1 {
-		scores = b.inactivityScoresVal()
+		scores = make([]uint64, 0, len(b.inactivityScores)+1)
+		scores = append(scores, b.inactivityScores...)
 		b.sharedFieldReferences[types.InactivityScores].MinusRef()
 		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	}
