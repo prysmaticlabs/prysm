@@ -140,7 +140,26 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("hex_root", func(t *testing.T) {
+	t.Run("hex", func(t *testing.T) {
+		hex := "0x" + strings.Repeat("0", 63) + "1"
+		root, err := hexutil.Decode(hex)
+		require.NoError(t, err)
+		stateGen := mockstategen.NewMockService()
+		stateGen.StatesByRoot[bytesutil.ToBytes32(root)] = newBeaconState
+
+		p := BeaconDbStater{
+			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
+			StateGenService:  stateGen,
+		}
+
+		s, err := p.State(ctx, []byte(hex))
+		require.NoError(t, err)
+		sRoot, err := s.HashTreeRoot(ctx)
+		require.NoError(t, err)
+		assert.DeepEqual(t, stateRoot, sRoot)
+	})
+
+	t.Run("root", func(t *testing.T) {
 		stateId, err := hexutil.Decode("0x" + strings.Repeat("0", 63) + "1")
 		require.NoError(t, err)
 		stateGen := mockstategen.NewMockService()
@@ -158,7 +177,7 @@ func TestGetState(t *testing.T) {
 		assert.DeepEqual(t, stateRoot, sRoot)
 	})
 
-	t.Run("hex_root_not_found", func(t *testing.T) {
+	t.Run("root not found", func(t *testing.T) {
 		p := BeaconDbStater{
 			ChainInfoFetcher: &chainMock.ChainService{State: newBeaconState},
 		}
