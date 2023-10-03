@@ -188,7 +188,7 @@ var beaconPathsAndObjects = map[string]metadata{
 			"json": &beacon.GetBlockHeaderResponse{},
 		},
 	},
-	// we want to test comma-seperated query params
+	// we want to test comma-separated query params
 	"/beacon/states/{param1}/validators?id=0,1": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, e primitives.Epoch) []string {
