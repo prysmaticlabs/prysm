@@ -35,5 +35,5 @@ func TestLastRoot(t *testing.T) {
 	require.Equal(t, [32]byte{'6'}, f.store.headNode.root)
 	require.Equal(t, [32]byte{'2'}, f.LastRoot(0))
 	require.Equal(t, [32]byte{'6'}, f.LastRoot(1))
-	require.Equal(t, [32]byte{}, f.LastRoot(2))
+	require.Equal(t, [32]byte{'6'}, f.LastRoot(2))
 }
