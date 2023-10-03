@@ -51,11 +51,13 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 			}
 			changed, newVal, err := f(i, v)
 			if err != nil {
+				b.lock.Unlock()
 				return err
 			}
 			if changed {
 				changedVals = append(changedVals, uint64(i))
 				if err = b.validatorsMultiValue.UpdateAt(b, uint64(i), newVal); err != nil {
+					b.lock.Unlock()
 					return errors.Wrapf(err, "could not update validator at index %d", i)
 				}
 			}
