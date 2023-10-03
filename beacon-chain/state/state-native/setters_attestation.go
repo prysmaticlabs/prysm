@@ -61,7 +61,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 
 	if b.sharedFieldReferences[types.CurrentEpochAttestations].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		atts = make([]*ethpb.PendingAttestation, len(b.currentEpochAttestations), len(b.currentEpochAttestations)+1)
+		atts = make([]*ethpb.PendingAttestation, len(b.currentEpochAttestations))
 		copy(atts, b.currentEpochAttestations)
 		b.sharedFieldReferences[types.CurrentEpochAttestations].MinusRef()
 		b.sharedFieldReferences[types.CurrentEpochAttestations] = stateutil.NewRef(1)
@@ -90,8 +90,8 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	}
 
 	if b.sharedFieldReferences[types.PreviousEpochAttestations].Refs() > 1 {
-		atts = make([]*ethpb.PendingAttestation, len(b.previousEpochAttestations), len(b.previousEpochAttestations)+1)
-		copy(atts, b.previousEpochAttestations)
+		atts = make([]*ethpb.PendingAttestation, 0, len(b.previousEpochAttestations)+1)
+		atts = append(atts, b.previousEpochAttestations...)
 		b.sharedFieldReferences[types.PreviousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	}
