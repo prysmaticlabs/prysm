@@ -191,8 +191,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 			for _, slot := range nextProposerIndexToSlots[idx] {
 				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			}
-			// Prune payload ID cache for any slots before request slot.
-			vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			// We don't need the lastActiveValidatorFn because we don't use the response in this.
@@ -237,6 +235,8 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		core.AssignValidatorToSubnetProto(pubKey, assignment.Status)
 		core.AssignValidatorToSubnetProto(pubKey, nextAssignment.Status)
 	}
+	// Prune payload ID cache for any slots before request slot.
+	vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 
 	return &ethpb.DutiesResponse{
 		Duties:             validatorAssignments,
