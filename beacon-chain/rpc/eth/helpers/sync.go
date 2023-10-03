@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -95,7 +96,13 @@ func IsOptimistic(
 		}
 		return optimisticModeFetcher.IsOptimisticForRoot(ctx, bytesutil.ToBytes32(jcp.Root))
 	default:
-		if len(stateId) == 32 {
+		if len(stateIdString) >= 2 && stateIdString[:2] == "0x" {
+			id, err := hexutil.Decode(stateIdString)
+			if err != nil {
+				return false, err
+			}
+			return isStateRootOptimistic(ctx, id, optimisticModeFetcher, stateFetcher, chainInfo, database)
+		} else if len(stateId) == 32 {
 			return isStateRootOptimistic(ctx, stateId, optimisticModeFetcher, stateFetcher, chainInfo, database)
 		} else {
 			optimistic, err := optimisticModeFetcher.IsOptimistic(ctx)

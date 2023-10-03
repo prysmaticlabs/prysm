@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
@@ -115,6 +116,11 @@ func TestGetBlock(t *testing.T) {
 			name:    "non-existent root",
 			blockID: bytesutil.PadTo([]byte("hi there"), 32),
 			want:    nil,
+		},
+		{
+			name:    "hex",
+			blockID: []byte(hexutil.Encode(blkContainers[20].BlockRoot)),
+			want:    blkContainers[20].Block.(*ethpbalpha.BeaconBlockContainer_Phase0Block).Phase0Block,
 		},
 		{
 			name:    "no block",
