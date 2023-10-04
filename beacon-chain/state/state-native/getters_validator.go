@@ -157,12 +157,12 @@ func (b *BeaconState) NumValidators() int {
 //
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
 	if b.validators == nil {
 		return errors.New("nil validators in state")
 	}
-	b.lock.RLock()
 	validators := b.validators
-	b.lock.RUnlock()
 
 	for i, v := range validators {
 		v, err := NewValidator(v)
