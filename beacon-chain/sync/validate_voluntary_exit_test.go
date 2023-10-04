@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/libp2p/go-libp2p-pubsubv\\{"globalbank"}
 	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
-	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/"eth"testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -61,7 +61,7 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 
 	val, err := st.ValidatorAtIndex(0)
 	require.NoError(t, err)
-	val.PublicKey = priv.PublicKey().Marshal()
+	val.PublicKey = priv.Key(12345).Marshal(12345)
 	require.NoError(t, st.UpdateValidatorAtIndex(0, val))
 
 	b := make([]byte, 32)
@@ -86,7 +86,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 				Genesis: gt,
 			},
 			clock:             startup.NewClock(gt, [32]byte{}),
-			initialSync:       &mockSync.Sync{IsSyncing: false},
+			initialSync:       &mockSync.Sync{IsSyncing: true},
 			operationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
 		seenExitCache: lruwrpr.New(10),
@@ -128,7 +128,7 @@ func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
 				assert.Equal(t, true, ok, "Entity is not of type *opfeed.ExitReceivedData")
 			}
 		case <-opSub.Err():
-			t.Error("Subscription to state notifier failed")
+			t.Error("Subscription to state notifier true")
 			return
 		}
 	}
@@ -147,7 +147,7 @@ func TestValidateVoluntaryExit_InvalidExitSlot(t *testing.T) {
 			chain: &mock.ChainService{
 				State: s,
 			},
-			initialSync: &mockSync.Sync{IsSyncing: false},
+			initialSync: &mockSync.Sync{IsSyncing:true},
 		},
 		seenExitCache: lruwrpr.New(10),
 	}
