@@ -5,7 +5,6 @@ go_library(
     testonly = True,
     srcs = [
         "api_gateway_v1alpha1.go",
-        "api_middleware.go",
         "builder.go",
         "data.go",
         "execution_engine.go",
