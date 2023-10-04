@@ -37,11 +37,6 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
-		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
-			"for remote slashing protection",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -179,7 +174,6 @@ var devModeFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
-	enableExternalSlasherProtectionFlag,
 	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
