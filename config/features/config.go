@@ -229,9 +229,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(enableOptionalEngineMethods.Name) {
-		logEnabled(enableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = true
+	cfg.EnableOptionalEngineMethods = true
+	if ctx.IsSet(disableOptionalEngineMethods.Name) {
+		logEnabled(disableOptionalEngineMethods)
+		cfg.EnableOptionalEngineMethods = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)

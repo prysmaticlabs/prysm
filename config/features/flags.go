@@ -137,9 +137,9 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	enableOptionalEngineMethods = &cli.BoolFlag{
-		Name:  "enable-optional-engine-methods",
-		Usage: "Enables the optional engine methods",
+	disableOptionalEngineMethods = &cli.BoolFlag{
+		Name:  "disable-optional-engine-methods",
+		Usage: "Disables the optional engine methods",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
@@ -173,7 +173,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
 	enableEIP4881,
 }
 
@@ -216,7 +215,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
+	disableOptionalEngineMethods,
 	prepareAllPayloads,
 	disableBuildBlockParallel,
 	aggregateFirstInterval,
