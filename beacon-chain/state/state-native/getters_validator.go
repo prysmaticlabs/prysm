@@ -192,20 +192,18 @@ func (b *BeaconState) NumValidators() int {
 //
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
 	if features.Get().EnableExperimentalState {
 		return b.readFromEveryValidatorMVSlice(f)
 	}
 
-	b.lock.RLock()
-
 	if b.validators == nil {
-		b.lock.RUnlock()
 		return state.ErrNilValidatorsInState
 	}
 
 	validators := b.validators
-
-	b.lock.RUnlock()
 
 	for i, v := range validators {
 		v, err := NewValidator(v)
@@ -221,9 +219,6 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 
 // WARNING: This function works only for the multi-value slice feature.
 func (b *BeaconState) readFromEveryValidatorMVSlice(f func(idx int, val state.ReadOnlyValidator) error) error {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
 	if b.validatorsMultiValue == nil {
 		return state.ErrNilValidatorsInState
 	}
