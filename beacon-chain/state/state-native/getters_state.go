@@ -395,6 +395,8 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 // stateRootAtIndex retrieves a specific state root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
+//
+// WARNING: This function does not work with the multi-value slice feature.
 func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.stateRoots)) <= idx {
 		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "state root index %d does not exist", idx)

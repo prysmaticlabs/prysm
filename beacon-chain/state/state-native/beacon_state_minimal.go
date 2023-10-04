@@ -78,8 +78,8 @@ type beaconStateMarshalable struct {
 	Slot                                primitives.Slot                         `json:"slot" yaml:"slot"`
 	Fork                                *ethpb.Fork                             `json:"fork" yaml:"fork"`
 	LatestBlockHeader                   *ethpb.BeaconBlockHeader                `json:"latest_block_header" yaml:"latest_block_header"`
-	BlockRoots                          *customtypes.BlockRoots                 `json:"block_roots" yaml:"block_roots"`
-	StateRoots                          *customtypes.StateRoots                 `json:"state_roots" yaml:"state_roots"`
+	BlockRoots                          customtypes.BlockRoots                  `json:"block_roots" yaml:"block_roots"`
+	StateRoots                          customtypes.StateRoots                  `json:"state_roots" yaml:"state_roots"`
 	HistoricalRoots                     customtypes.HistoricalRoots             `json:"historical_roots" yaml:"historical_roots"`
 	HistoricalSummaries                 []*ethpb.HistoricalSummary              `json:"historical_summaries" yaml:"historical_summaries"`
 	Eth1Data                            *ethpb.Eth1Data                         `json:"eth_1_data" yaml:"eth_1_data"`
@@ -87,7 +87,7 @@ type beaconStateMarshalable struct {
 	Eth1DepositIndex                    uint64                                  `json:"eth_1_deposit_index" yaml:"eth_1_deposit_index"`
 	Validators                          []*ethpb.Validator                      `json:"validators" yaml:"validators"`
 	Balances                            []uint64                                `json:"balances" yaml:"balances"`
-	RandaoMixes                         *customtypes.RandaoMixes                `json:"randao_mixes" yaml:"randao_mixes"`
+	RandaoMixes                         customtypes.RandaoMixes                 `json:"randao_mixes" yaml:"randao_mixes"`
 	Slashings                           []uint64                                `json:"slashings" yaml:"slashings"`
 	PreviousEpochAttestations           []*ethpb.PendingAttestation             `json:"previous_epoch_attestations" yaml:"previous_epoch_attestations"`
 	CurrentEpochAttestations            []*ethpb.PendingAttestation             `json:"current_epoch_attestations" yaml:"current_epoch_attestations"`
@@ -137,8 +137,8 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		Slot:                                b.slot,
 		Fork:                                b.fork,
 		LatestBlockHeader:                   b.latestBlockHeader,
-		BlockRoots:                          &bRoots,
-		StateRoots:                          &sRoots,
+		BlockRoots:                          bRoots,
+		StateRoots:                          sRoots,
 		HistoricalRoots:                     b.historicalRoots,
 		HistoricalSummaries:                 b.historicalSummaries,
 		Eth1Data:                            b.eth1Data,
@@ -146,7 +146,7 @@ func (b *BeaconState) MarshalJSON() ([]byte, error) {
 		Eth1DepositIndex:                    b.eth1DepositIndex,
 		Validators:                          vals,
 		Balances:                            balances,
-		RandaoMixes:                         &mixes,
+		RandaoMixes:                         mixes,
 		Slashings:                           b.slashings,
 		PreviousEpochAttestations:           b.previousEpochAttestations,
 		CurrentEpochAttestations:            b.currentEpochAttestations,

@@ -192,40 +192,18 @@ func (b *BeaconState) NumValidators() int {
 //
 // WARNING: This method is potentially unsafe, as it exposes the actual validator registry.
 func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyValidator) error) error {
-	var validators []*ethpb.Validator
-	b.lock.RLock()
 	if features.Get().EnableExperimentalState {
-		if b.validatorsMultiValue == nil {
-			b.lock.RUnlock()
-			return state.ErrNilValidatorsInState
-		}
-		l := b.validatorsMultiValue.Len(b)
-		for i := 0; i < l; i++ {
-			v, err := b.validatorsMultiValue.At(b, uint64(i))
-			if err != nil {
-				b.lock.RUnlock()
-				return err
-			}
-			rov, err := NewValidator(v)
-			if err != nil {
-				b.lock.RUnlock()
-				return err
-			}
-			if err = f(i, rov); err != nil {
-				b.lock.RUnlock()
-				return err
-			}
-		}
-		b.lock.RUnlock()
-		return nil
+		return b.readFromEveryValidatorMVSlice(f)
 	}
+
+	b.lock.RLock()
 
 	if b.validators == nil {
 		b.lock.RUnlock()
 		return state.ErrNilValidatorsInState
 	}
 
-	validators = b.validators
+	validators := b.validators
 
 	b.lock.RUnlock()
 
@@ -235,6 +213,31 @@ func (b *BeaconState) ReadFromEveryValidator(f func(idx int, val state.ReadOnlyV
 			return err
 		}
 		if err = f(i, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WARNING: This function works only for the multi-value slice feature.
+func (b *BeaconState) readFromEveryValidatorMVSlice(f func(idx int, val state.ReadOnlyValidator) error) error {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+
+	if b.validatorsMultiValue == nil {
+		return state.ErrNilValidatorsInState
+	}
+	l := b.validatorsMultiValue.Len(b)
+	for i := 0; i < l; i++ {
+		v, err := b.validatorsMultiValue.At(b, uint64(i))
+		if err != nil {
+			return err
+		}
+		rov, err := NewValidator(v)
+		if err != nil {
+			return err
+		}
+		if err = f(i, rov); err != nil {
 			return err
 		}
 	}

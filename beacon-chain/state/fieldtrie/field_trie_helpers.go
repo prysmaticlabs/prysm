@@ -64,11 +64,11 @@ func validateElements(field types.FieldIndex, fieldInfo types.DataType, elements
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
 	case types.BlockRoots:
-		return convertBlockRoots(indices, elements, convertAll)
+		return convert32ByteArrays[customtypes.BlockRoots](indices, elements, convertAll)
 	case types.StateRoots:
-		return convertStateRoots(indices, elements, convertAll)
+		return convert32ByteArrays[customtypes.StateRoots](indices, elements, convertAll)
 	case types.RandaoMixes:
-		return convertRandaoMixes(indices, elements, convertAll)
+		return convert32ByteArrays[customtypes.RandaoMixes](indices, elements, convertAll)
 	case types.Eth1DataVotes:
 		return convertEth1DataVotes(indices, elements, convertAll)
 	case types.Validators:
@@ -82,26 +82,11 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 	}
 }
 
-func convertBlockRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.(customtypes.BlockRoots)
+func convert32ByteArrays[T ~[][32]byte](indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+	val, ok := elements.(T)
 	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.BlockRoots{}, elements)
-	}
-	return handle32ByteArrays(val, indices, convertAll)
-}
-
-func convertStateRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.(customtypes.StateRoots)
-	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.StateRoots{}, elements)
-	}
-	return handle32ByteArrays(val, indices, convertAll)
-}
-
-func convertRandaoMixes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.(customtypes.RandaoMixes)
-	if !ok {
-		return nil, errors.Errorf("Wanted type of %T but got %T", customtypes.RandaoMixes{}, elements)
+		var t T
+		return nil, errors.Errorf("Wanted type of %T but got %T", t, elements)
 	}
 	return handle32ByteArrays(val, indices, convertAll)
 }
