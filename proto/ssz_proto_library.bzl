@@ -20,10 +20,13 @@ mainnet = {
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
     "sync_committee_aggregate_bytes.size": "16",
     "sync_committee_aggregate_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector128",
+    "ptc_bytes.size": "64",
+    "ptc_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
     "withdrawal.size": "16",
     "blob.size": "131072",
     "logs_bloom.size": "256",
     "extra_data.size": "32",
+    "inclusion_list.size": "16",
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size":"4096",
 }
@@ -47,6 +50,9 @@ minimal = {
     "extra_data.size": "32",
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size":"16",
+    "inclusion_list.size": "16",
+    "ptc_bytes.size": "64",
+    "ptc_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
 }
 
 ###### Rules definitions #######

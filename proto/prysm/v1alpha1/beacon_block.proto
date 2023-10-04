@@ -777,3 +777,10 @@ message SignedBuilderBidDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message ExecutionLayerWithdrawalRequest {
+    bytes source_address = 1 [(ethereum.eth.ext.ssz_size) = "20"];
+    bytes validator_pubkey = 2 [(ethereum.eth.ext.ssz_size) = "48"];
+    uint64 balance = 3;
+}
+
+

@@ -1,0 +1,95 @@
+// Copyright 2023 Prysmatic Labs.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+package ethereum.eth.v1alpha1;
+
+import "proto/eth/ext/options.proto";
+import "proto/engine/v1/execution_engine.proto";
+import "proto/prysm/v1alpha1/inclusion_list.proto";
+
+option csharp_namespace = "Ethereum.Eth.V1";
+option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1;eth";
+option java_multiple_files = true;
+option java_outer_classname = "ExecutionProto";
+option java_package = "org.ethereum.eth.v1alpha1";
+option php_namespace = "Ethereum\\Eth\\v1alpha1";
+
+message ExecutionPayloadEpbs {
+    bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes fee_recipient     = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+    bytes state_root        = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes receipts_root     = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes logs_bloom        = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
+    bytes prev_randao       = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 block_number     = 7;
+    uint64 gas_limit        = 8;
+    uint64 gas_used         = 9;
+    uint64 timestamp        = 10;
+    bytes extra_data        = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
+    bytes base_fee_per_gas  = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+    repeated bytes transactions = 14 [(ethereum.eth.ext.ssz_size) = "?,?", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+    repeated ethereum.engine.v1.Withdrawal withdrawals = 15 [(ethereum.eth.ext.ssz_max) = "withdrawal.size"];
+    uint64 blob_gas_used  = 16;
+    uint64 excess_blob_gas  = 17;
+    SignedInclusionListSummary inclusion_list_summary = 18;
+    repeated uint64 inclusion_list_exclusions = 19 [(ethereum.eth.ext.ssz_max) = "inclusion_list.size"];
+}
+
+message ExecutionPayloadEnvelope {
+    ExecutionPayloadEpbs payload = 1;
+    uint64 builder_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    bytes beacon_block_root = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    repeated bytes blob_kzg_commitments = 4 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
+    bytes state_root = 5 [(ethereum.eth.ext.ssz_size) = "32"];
+}
+
+message SignedExecutionPayloadEnvelope {
+    ExecutionPayloadEnvelope message = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message ExecutionPayloadHeaderEnvelope {
+    ExecutionPayloadHeaderEpbs header = 1;
+    uint64 builder_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
+    uint64 value = 3;
+}
+
+message SignedExecutionPayloadHeaderEnvelope {
+    ExecutionPayloadHeaderEnvelope message = 1;
+    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
+}
+
+message ExecutionPayloadHeaderEpbs {
+    bytes parent_hash       = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes fee_recipient     = 2 [(ethereum.eth.ext.ssz_size) = "20"];
+    bytes state_root        = 3 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes receipts_root     = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes logs_bloom        = 5 [(ethereum.eth.ext.ssz_size) = "logs_bloom.size"];
+    bytes prev_randao       = 6 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 block_number     = 7;
+    uint64 gas_limit        = 8;
+    uint64 gas_used         = 9;
+    uint64 timestamp        = 10;
+    bytes extra_data        = 11 [(ethereum.eth.ext.ssz_max) = "extra_data.size"];
+    bytes base_fee_per_gas  = 12 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes block_hash        = 13 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes transactions_root = 14 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes withdrawals_root  = 15 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 blob_gas_used  = 16;
+    uint64 excess_blob_gas  = 17;
+    bytes inclusion_list_summary_root = 18 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes inclusion_list_exclusions_root = 19 [(ethereum.eth.ext.ssz_size) = "32"];
+}

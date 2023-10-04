@@ -231,6 +231,9 @@ ssz_proto_files(
         "blobs.proto",
         "sync_committee.proto",
         "withdrawals.proto",
+        "inclusion_list.proto",
+        "payload_attestation.proto",
+        "execution.proto",
     ],
     config = select({
         "//conditions:default": "mainnet",
