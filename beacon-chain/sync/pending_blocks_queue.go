@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"sync"
 	"time"
@@ -19,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"github.com/trailofbits/go-mutexasserts"
@@ -100,6 +100,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				span.End()
 				return err
 			}
+			// No need to process the same block if we are already processing it
+			if s.cfg.chain.BlockBeingSynced(blkRoot) {
+				rootString := fmt.Sprintf("%#x", blkRoot)
+				log.WithField("BlockRoot", rootString).Info("Skipping pending block already being processed")
+				continue
+			}
 
 			inDB := s.cfg.beaconDB.HasBlock(ctx, blkRoot)
 			// No need to process the same block twice.
@@ -126,12 +132,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			parentInDb := s.cfg.beaconDB.HasBlock(ctx, b.Block().ParentRoot())
+			parentRoot := b.Block().ParentRoot()
+			parentInDb := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
 			hasPeer := len(pids) != 0
 
 			// Only request for missing parent block if it's not in beaconDB, not in pending cache
 			// and has peer in the peer list.
-			parentRoot := b.Block().ParentRoot()
 			if !inPendingQueue && !parentInDb && hasPeer {
 				log.WithFields(logrus.Fields{
 					"currentSlot": b.Block().Slot(),
@@ -153,7 +159,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
 				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
-				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
 				span.End()
 				continue
@@ -433,21 +438,6 @@ func (s *Service) pendingBlocksInCache(slot primitives.Slot) []interfaces.ReadOn
 	return blks
 }
 
-// This returns signed blob sidecar given input key from slotToPendingBlobs.
-func (s *Service) pendingBlobsInCache(slot primitives.Slot) []*eth.SignedBlobSidecar {
-	k := slotToCacheKey(slot)
-	value, ok := s.slotToPendingBlobs.Get(k)
-	if !ok {
-		return []*eth.SignedBlobSidecar{}
-	}
-	bs, ok := value.([]*eth.SignedBlobSidecar)
-	if !ok {
-		log.Debug("pendingBlobsInCache: value is not of type []*eth.SignedBlobSidecar")
-		return []*eth.SignedBlobSidecar{}
-	}
-	return bs
-}
-
 // This adds input signed beacon block to slotToPendingBlocks cache.
 func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock) error {
 	if err := blocks.BeaconBlockIsNil(b); err != nil {
@@ -463,23 +453,6 @@ func (s *Service) addPendingBlockToCache(b interfaces.ReadOnlySignedBeaconBlock)
 	blks = append(blks, b)
 	k := slotToCacheKey(b.Block().Slot())
 	s.slotToPendingBlocks.Set(k, blks, pendingBlockExpTime)
-	return nil
-}
-
-// This adds blob to slotToPendingBlobs cache.
-func (s *Service) addPendingBlobToCache(b *eth.SignedBlobSidecar) error {
-	blobs := s.pendingBlobsInCache(b.Message.Slot)
-
-	// If we already have seen the index. Ignore it.
-	for _, blob := range blobs {
-		if blob.Message.Index == b.Message.Index {
-			return nil
-		}
-	}
-
-	blobs = append(blobs, b)
-	k := slotToCacheKey(b.Message.Slot)
-	s.slotToPendingBlobs.Set(k, blobs, pendingBlockExpTime)
 	return nil
 }
 

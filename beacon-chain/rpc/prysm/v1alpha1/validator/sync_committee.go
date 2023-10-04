@@ -35,7 +35,10 @@ func (vs *Server) GetSyncMessageBlockRoot(
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
 func (vs *Server) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) (*emptypb.Empty, error) {
-	return &emptypb.Empty{}, vs.CoreService.SubmitSyncMessage(ctx, msg)
+	if err := vs.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
+		return &emptypb.Empty{}, status.Errorf(core.ErrorReasonToGRPC(err.Reason), err.Err.Error())
+	}
+	return &emptypb.Empty{}, nil
 }
 
 // GetSyncSubcommitteeIndex is called by a sync committee participant to get

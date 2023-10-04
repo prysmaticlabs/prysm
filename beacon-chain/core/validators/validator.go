@@ -82,10 +82,7 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "could not get active validator count")
 	}
-	currentChurn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, 0, errors.Wrap(err, "could not get churn limit")
-	}
+	currentChurn := helpers.ValidatorExitChurnLimit(activeValidatorCount)
 
 	if churn >= currentChurn {
 		exitQueueEpoch, err = exitQueueEpoch.SafeAdd(1)
@@ -235,10 +232,7 @@ func ExitedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validato
 			exitQueueChurn++
 		}
 	}
-	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
-	}
+	churn := helpers.ValidatorExitChurnLimit(activeValidatorCount)
 	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}
@@ -276,10 +270,7 @@ func EjectedValidatorIndices(epoch primitives.Epoch, validators []*ethpb.Validat
 			exitQueueChurn++
 		}
 	}
-	churn, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
-	}
+	churn := helpers.ValidatorExitChurnLimit(activeValidatorCount)
 	if churn < exitQueueChurn {
 		exitQueueEpoch++
 	}

@@ -75,14 +75,14 @@ jobs:
       - name: Build
         # Use blst tag to allow go and bazel builds for blst.
         run: go build -v ./...
-        env: 
-           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+        env:
+           CGO_CFLAGS: "-O2 -D__BLST_PORTABLE__"
         # fuzz leverage go tag based stubs at compile time.
         # Building and testing with these tags should be checked and enforced at pre-submit.
       - name: Test for fuzzing
         run: go test  -tags=fuzz,develop ./...  -test.run=^Fuzz
-        env: 
-           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+        env:
+           CGO_CFLAGS: "-O2 -D__BLST_PORTABLE__"
 
 # Tests run via Bazel for now...
 #      - name: Test

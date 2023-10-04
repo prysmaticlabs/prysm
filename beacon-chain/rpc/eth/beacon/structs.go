@@ -20,7 +20,7 @@ type GetCommitteesResponse struct {
 
 type DepositContractResponse struct {
 	Data *struct {
-		ChainId uint64 `json:"chain_id"`
+		ChainId string `json:"chain_id"`
 		Address string `json:"address"`
 	} `json:"data"`
 }
@@ -47,8 +47,77 @@ type GetStateForkResponse struct {
 	Finalized           bool         `json:"finalized"`
 }
 
+type GetFinalityCheckpointsResponse struct {
+	ExecutionOptimistic bool                 `json:"execution_optimistic"`
+	Finalized           bool                 `json:"finalized"`
+	Data                *FinalityCheckpoints `json:"data"`
+}
+
+type FinalityCheckpoints struct {
+	PreviousJustified *shared.Checkpoint `json:"previous_justified"`
+	CurrentJustified  *shared.Checkpoint `json:"current_justified"`
+	Finalized         *shared.Checkpoint `json:"finalized"`
+}
+
+type GetGenesisResponse struct {
+	Data *Genesis `json:"data"`
+}
+
+type Genesis struct {
+	GenesisTime           string `json:"genesis_time"`
+	GenesisValidatorsRoot string `json:"genesis_validators_root"`
+	GenesisForkVersion    string `json:"genesis_fork_version"`
+}
+
 type GetBlockHeadersResponse struct {
 	Data                []*shared.SignedBeaconBlockHeaderContainer `json:"data"`
 	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
 	Finalized           bool                                       `json:"finalized"`
+}
+
+type GetBlockHeaderResponse struct {
+	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
+	Finalized           bool                                     `json:"finalized"`
+	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
+}
+
+type GetValidatorsResponse struct {
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+	Data                []*ValidatorContainer `json:"data"`
+}
+
+type GetValidatorResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                *ValidatorContainer `json:"data"`
+}
+
+type GetValidatorBalancesResponse struct {
+	ExecutionOptimistic bool                `json:"execution_optimistic"`
+	Finalized           bool                `json:"finalized"`
+	Data                []*ValidatorBalance `json:"data"`
+}
+
+type ValidatorContainer struct {
+	Index     string     `json:"index"`
+	Balance   string     `json:"balance"`
+	Status    string     `json:"status"`
+	Validator *Validator `json:"validator"`
+}
+
+type Validator struct {
+	Pubkey                     string `json:"pubkey"`
+	WithdrawalCredentials      string `json:"withdrawal_credentials"`
+	EffectiveBalance           string `json:"effective_balance"`
+	Slashed                    bool   `json:"slashed"`
+	ActivationEligibilityEpoch string `json:"activation_eligibility_epoch"`
+	ActivationEpoch            string `json:"activation_epoch"`
+	ExitEpoch                  string `json:"exit_epoch"`
+	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+type ValidatorBalance struct {
+	Index   string `json:"index"`
+	Balance string `json:"balance"`
 }

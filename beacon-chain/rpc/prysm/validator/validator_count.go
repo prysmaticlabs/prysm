@@ -7,10 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
@@ -64,6 +63,10 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
 	defer span.End()
 
+	query := r.URL.Query()
+	helpers.NormalizeQueryValues(query)
+	r.URL.RawQuery = query.Encode()
+
 	stateID := mux.Vars(r)["state_id"]
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateID), vs.OptimisticModeFetcher, vs.Stater, vs.ChainInfoFetcher, vs.BeaconDB)
@@ -78,19 +81,7 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 
 	st, err := vs.Stater.State(ctx, []byte(stateID))
 	if err != nil {
-		var errJson *http2.DefaultErrorJson
-		if _, ok := err.(*lookup.StateIdParseError); ok {
-			errJson = &http2.DefaultErrorJson{
-				Message: "invalid state ID",
-				Code:    http.StatusBadRequest,
-			}
-		} else {
-			errJson = &http2.DefaultErrorJson{
-				Message: helpers.PrepareStateFetchError(err).Error(),
-				Code:    http.StatusInternalServerError,
-			}
-		}
-		http2.WriteError(w, errJson)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 

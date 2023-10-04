@@ -96,6 +96,9 @@ func E2EMainnetTestConfig() *BeaconChainConfig {
 	e2eConfig.CapellaForkVersion = []byte{3, 0, 0, 254}
 	e2eConfig.DenebForkVersion = []byte{4, 0, 0, 254}
 
+	// Deneb changes.
+	e2eConfig.MinPerEpochChurnLimit = 2
+
 	e2eConfig.InitializeForkSchedule()
 	return e2eConfig
 }

@@ -77,10 +77,6 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [IGNORE] The sidecar's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 	if !s.cfg.chain.HasBlock(ctx, parentRoot) {
-		if err := s.addPendingBlobToCache(sBlob); err != nil {
-			log.WithError(err).WithFields(blobFields(blob)).Error("Failed to add blob to cache")
-			return pubsub.ValidationIgnore, err
-		}
 		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
 		return pubsub.ValidationIgnore, nil
 	}

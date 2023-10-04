@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -319,16 +320,16 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
-				&apimiddleware.StateValidatorsResponseJson{},
+				&beacon.GetValidatorsResponse{},
 			).SetArg(
 				2,
-				apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						{
 							Index:  validatorIndex,
 							Status: "active_ongoing",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey: stringPubKey,
+							Validator: &beacon.Validator{
+								Pubkey: stringPubKey,
 							},
 						},
 					},
