@@ -21,30 +21,6 @@ type WeakSubjectivityResponse struct {
 	} `json:"data"`
 }
 
-type StateRootResponseJson struct {
-	Data                *StateRootResponse_StateRootJson `json:"data"`
-	ExecutionOptimistic bool                             `json:"execution_optimistic"`
-	Finalized           bool                             `json:"finalized"`
-}
-
-type StateRootResponse_StateRootJson struct {
-	StateRoot string `json:"root" hex:"true"`
-}
-
-type SyncCommitteesResponseJson struct {
-	Data                *SyncCommitteeValidatorsJson `json:"data"`
-	ExecutionOptimistic bool                         `json:"execution_optimistic"`
-	Finalized           bool                         `json:"finalized"`
-}
-
-type RandaoResponseJson struct {
-	Data *struct {
-		Randao string `json:"randao" hex:"true"`
-	} `json:"data"`
-	ExecutionOptimistic bool `json:"execution_optimistic"`
-	Finalized           bool `json:"finalized"`
-}
-
 type BlockResponseJson struct {
 	Data *SignedBeaconBlockJson `json:"data"`
 }
@@ -935,11 +911,6 @@ type ValidatorJson struct {
 type SyncCommitteeJson struct {
 	Pubkeys         []string `json:"pubkeys" hex:"true"`
 	AggregatePubkey string   `json:"aggregate_pubkey" hex:"true"`
-}
-
-type SyncCommitteeValidatorsJson struct {
-	Validators          []string   `json:"validators"`
-	ValidatorAggregates [][]string `json:"validator_aggregates"`
 }
 
 type PendingAttestationJson struct {
