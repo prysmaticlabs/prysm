@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -122,9 +121,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 
 // parseIndices filters out invalid and duplicate blob indices
 func parseIndices(url *url.URL) []uint64 {
-	query := url.Query()
-	helpers.NormalizeQueryValues(query)
-	rawIndices := query["indices"]
+	rawIndices := url.Query()["indices"]
 	indices := make([]uint64, 0, field_params.MaxBlobsPerBlock)
 loop:
 	for _, raw := range rawIndices {

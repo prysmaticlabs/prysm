@@ -26,10 +26,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
 
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
 		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
@@ -214,10 +210,6 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
-
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
