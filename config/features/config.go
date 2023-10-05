@@ -38,7 +38,6 @@ const disabledFeatureFlag = "Disabled feature flag"
 type Flags struct {
 	// Feature related flags.
 	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
-	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
@@ -235,9 +234,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(enableOptionalEngineMethods.Name) {
-		logEnabled(enableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = true
+	cfg.EnableOptionalEngineMethods = true
+	if ctx.IsSet(disableOptionalEngineMethods.Name) {
+		logEnabled(disableOptionalEngineMethods)
+		cfg.EnableOptionalEngineMethods = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
@@ -273,12 +273,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 	cfg := &Flags{}
 	if err := configureTestnet(ctx); err != nil {
 		return err
-	}
-	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Fatal(
-			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
-				"We appreciate your understanding in our desire to keep Prysm validators safe.",
-		)
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

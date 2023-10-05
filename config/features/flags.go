@@ -41,11 +41,6 @@ var (
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
 	}
-	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
-		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
-			"for remote slashing protection",
-	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
 		Usage: "Disables displaying logs for newly connected grpc clients",
@@ -141,9 +136,9 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	enableOptionalEngineMethods = &cli.BoolFlag{
-		Name:  "enable-optional-engine-methods",
-		Usage: "Enables the optional engine methods",
+	disableOptionalEngineMethods = &cli.BoolFlag{
+		Name:  "disable-optional-engine-methods",
+		Usage: "Disables the optional engine methods",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
@@ -177,7 +172,6 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
 	enableEIP4881,
 	enableExperimentalState,
 }
@@ -185,7 +179,6 @@ var devModeFlags = []cli.Flag{
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
-	enableExternalSlasherProtectionFlag,
 	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
@@ -222,7 +215,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
+	disableOptionalEngineMethods,
 	prepareAllPayloads,
 	disableBuildBlockParallel,
 	aggregateFirstInterval,

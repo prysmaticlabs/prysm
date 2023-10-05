@@ -159,7 +159,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
 				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
-				s.setBadBlock(ctx, blkRoot)
 				tracing.AnnotateError(span, err)
 				span.End()
 				continue

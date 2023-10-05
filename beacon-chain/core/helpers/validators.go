@@ -206,10 +206,7 @@ func ActivationExitEpoch(epoch primitives.Epoch) primitives.Epoch {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
-// ValidatorChurnLimit returns the number of validators that are allowed to
-// enter and exit validator pool for an epoch.
-//
-// Spec pseudocode definition:
+// calculateChurnLimit based on the formula in the spec.
 //
 //	def get_validator_churn_limit(state: BeaconState) -> uint64:
 //	 """
@@ -217,12 +214,32 @@ func ActivationExitEpoch(epoch primitives.Epoch) primitives.Epoch {
 //	 """
 //	 active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
 //	 return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
-func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
+func calculateChurnLimit(activeValidatorCount uint64) uint64 {
 	churnLimit := activeValidatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
-		churnLimit = params.BeaconConfig().MinPerEpochChurnLimit
+		return params.BeaconConfig().MinPerEpochChurnLimit
 	}
-	return churnLimit, nil
+	return churnLimit
+}
+
+// ValidatorActivationChurnLimit returns the maximum number of validators that can be activated in a slot.
+func ValidatorActivationChurnLimit(activeValidatorCount uint64) uint64 {
+	return calculateChurnLimit(activeValidatorCount)
+}
+
+// ValidatorExitChurnLimit returns the maximum number of validators that can be exited in a slot.
+func ValidatorExitChurnLimit(activeValidatorCount uint64) uint64 {
+	return calculateChurnLimit(activeValidatorCount)
+}
+
+// ValidatorActivationChurnLimitDeneb returns the maximum number of validators that can be activated in a slot post Deneb.
+func ValidatorActivationChurnLimitDeneb(activeValidatorCount uint64) uint64 {
+	limit := calculateChurnLimit(activeValidatorCount)
+	// New in Deneb.
+	if limit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
+		return params.BeaconConfig().MaxPerEpochActivationChurnLimit
+	}
+	return limit
 }
 
 // BeaconProposerIndex returns proposer index of a current slot.
