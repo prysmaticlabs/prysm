@@ -13,12 +13,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // processPendingBlobs listens for state changes and handles pending blobs.
 func (s *Service) processPendingBlobs() {
 	eventFeed := make(chan *feed.Event, 1)
-	sub := s.stateNotifier.StateFeed().Subscribe(eventFeed)
+	sub := s.cfg.stateNotifier.StateFeed().Subscribe(eventFeed)
 	defer sub.Unsubscribe()
 
 	// Initialize the cleanup ticker
@@ -33,6 +34,7 @@ func (s *Service) processPendingBlobs() {
 		case e := <-eventFeed:
 			s.handleEvent(s.ctx, e)
 		case <-cleanupTicker.C():
+			log.Info("Cleaning up pending blobs")
 			if s.pendingBlobSidecars == nil {
 				return
 			}
@@ -54,6 +56,7 @@ func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 	if !ok {
 		return
 	}
+	log.Infof("Processing blobs for parent root %x", data.SignedBlock.Block().ParentRoot())
 	s.processBlobsFromSidecars(ctx, data.SignedBlock.Block().ParentRoot())
 }
 
@@ -61,6 +64,7 @@ func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 func (s *Service) processBlobsFromSidecars(ctx context.Context, parentRoot [32]byte) {
 	blobs := s.pendingBlobSidecars.pop(parentRoot)
 	for _, blob := range blobs {
+		log.Infof("Processing blob for slot %d", blob.Message.Slot)
 		if err := s.validateAndReceiveBlob(ctx, blob); err != nil {
 			log.WithError(err).Error("Failed to validate blob in pending queue")
 		}
@@ -76,6 +80,7 @@ func (s *Service) validateAndReceiveBlob(ctx context.Context, blob *eth.SignedBl
 	if result != pubsub.ValidationAccept {
 		return fmt.Errorf("unexpected pubsub result: %d", result)
 	}
+	log.Infof("Received blob for slot %d", blob.Message.Slot)
 	return s.cfg.chain.ReceiveBlob(ctx, blob.Message)
 }
 
@@ -136,6 +141,12 @@ func (p *pendingBlobSidecars) cleanup() {
 	now := time.Now()
 	for root, blobInfo := range p.blobSidecars {
 		if blobInfo.expiresAt.Before(now) {
+			log.WithFields(logrus.Fields{
+				"parentRoot": root,
+				"expiresAt":  blobInfo.expiresAt,
+				"now":        now,
+				"slot":       blobInfo.blob[0].Message.Slot,
+			}).Info("Removing expired blob from pending queue")
 			delete(p.blobSidecars, root)
 		}
 	}

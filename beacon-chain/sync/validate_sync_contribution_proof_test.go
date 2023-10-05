@@ -850,8 +850,7 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 			cw := startup.NewClockSynchronizer()
-			svc := NewService(ctx, append([]Option{WithClockWaiter(cw)}, tt.svcopts...)...)
-			svc.stateNotifier = chainService.StateNotifier()
+			svc := NewService(ctx, append([]Option{WithClockWaiter(cw), WithStateNotifier(chainService.StateNotifier())}, tt.svcopts...)...)
 			var clock *startup.Clock
 			svc, clock = tt.setupSvc(svc, tt.args.msg)
 			require.NoError(t, cw.SetClock(clock))
