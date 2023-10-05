@@ -93,7 +93,6 @@ type validator struct {
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
 	node                               iface.NodeClient
-	slashingProtectionClient           iface.SlasherClient
 	db                                 vdb.Database
 	beaconClient                       iface.BeaconChainClient
 	keyManager                         keymanager.IKeymanager
