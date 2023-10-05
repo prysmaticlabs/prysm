@@ -308,15 +308,15 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
-			p2p:      p1,
-			chain:    chain,
-			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			beaconDB: db,
+			p2p:           p1,
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			beaconDB:      db,
+			stateNotifier: chain.StateNotifier(),
 		},
-		rateLimiter:   newRateLimiter(p1),
-		clockWaiter:   cw,
-		chainStarted:  abool.New(),
-		stateNotifier: chain.StateNotifier(),
+		rateLimiter:  newRateLimiter(p1),
+		clockWaiter:  cw,
+		chainStarted: abool.New(),
 	}
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -327,12 +327,12 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	r2 := &Service{
 		ctx: ctx,
 		cfg: &config{
-			chain: chain2,
-			clock: startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-			p2p:   p2,
+			chain:         chain2,
+			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			p2p:           p2,
+			stateNotifier: chain.StateNotifier(),
 		},
-		rateLimiter:   newRateLimiter(p2),
-		stateNotifier: chain.StateNotifier(),
+		rateLimiter: newRateLimiter(p2),
 	}
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -538,13 +538,13 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 	r := &Service{
 		cfg: &config{
-			p2p:   p1,
-			chain: chain,
-			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			p2p:           p1,
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			stateNotifier: chain.StateNotifier(),
 		},
-		ctx:           context.Background(),
-		rateLimiter:   newRateLimiter(p1),
-		stateNotifier: chain.StateNotifier(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 	chain2 := &mock.ChainService{
 		State:               genesisState,
@@ -562,14 +562,14 @@ func TestStatusRPCRequest_FinalizedBlockExists(t *testing.T) {
 	}
 	r2 := &Service{
 		cfg: &config{
-			p2p:      p1,
-			chain:    chain2,
-			clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-			beaconDB: db,
+			p2p:           p1,
+			chain:         chain2,
+			clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+			beaconDB:      db,
+			stateNotifier: chain.StateNotifier(),
 		},
-		ctx:           context.Background(),
-		rateLimiter:   newRateLimiter(p1),
-		stateNotifier: chain.StateNotifier(),
+		ctx:         context.Background(),
+		rateLimiter: newRateLimiter(p1),
 	}
 
 	// Setup streams
@@ -726,13 +726,13 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		r := &Service{
 			cfg: &config{
-				p2p:   p1,
-				chain: chain,
-				clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				p2p:           p1,
+				chain:         chain,
+				clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				stateNotifier: chain.StateNotifier(),
 			},
-			ctx:           context.Background(),
-			rateLimiter:   newRateLimiter(p1),
-			stateNotifier: chain.StateNotifier(),
+			ctx:         context.Background(),
+			rateLimiter: newRateLimiter(p1),
 		}
 		chain2 := &mock.ChainService{
 			State:               nState,
@@ -751,15 +751,15 @@ func TestStatusRPCRequest_FinalizedBlockSkippedSlots(t *testing.T) {
 		}
 		r2 := &Service{
 			cfg: &config{
-				p2p:      p2,
-				chain:    chain2,
-				clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
-				beaconDB: db,
+				p2p:           p2,
+				chain:         chain2,
+				clock:         startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
+				beaconDB:      db,
+				stateNotifier: chain.StateNotifier(),
 			},
 
-			ctx:           context.Background(),
-			rateLimiter:   newRateLimiter(p1),
-			stateNotifier: chain.StateNotifier(),
+			ctx:         context.Background(),
+			rateLimiter: newRateLimiter(p1),
 		}
 
 		// Setup streams
@@ -827,15 +827,15 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 
 	r := &Service{
 		cfg: &config{
-			p2p:   p1,
-			chain: chain,
+			p2p:           p1,
+			chain:         chain,
+			stateNotifier: chain.StateNotifier(),
 		},
 
-		ctx:           ctx,
-		rateLimiter:   newRateLimiter(p1),
-		clockWaiter:   cw,
-		chainStarted:  abool.New(),
-		stateNotifier: chain.StateNotifier(),
+		ctx:          ctx,
+		rateLimiter:  newRateLimiter(p1),
+		clockWaiter:  cw,
+		chainStarted: abool.New(),
 	}
 
 	go r.Start()
@@ -913,11 +913,11 @@ func TestStatusRPC_ValidGenesisMessage(t *testing.T) {
 	}
 	r := &Service{
 		cfg: &config{
-			chain: chain,
-			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			stateNotifier: chain.StateNotifier(),
 		},
-		ctx:           context.Background(),
-		stateNotifier: chain.StateNotifier(),
+		ctx: context.Background(),
 	}
 	digest, err := r.currentForkDigest()
 	require.NoError(t, err)
@@ -991,12 +991,12 @@ func TestShouldResync(t *testing.T) {
 		}
 		r := &Service{
 			cfg: &config{
-				chain:       chain,
-				clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-				initialSync: &mockSync.Sync{IsSyncing: tt.args.syncing},
+				chain:         chain,
+				clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+				initialSync:   &mockSync.Sync{IsSyncing: tt.args.syncing},
+				stateNotifier: chain.StateNotifier(),
 			},
-			ctx:           context.Background(),
-			stateNotifier: chain.StateNotifier(),
+			ctx: context.Background(),
 		}
 		t.Run(tt.name, func(t *testing.T) {
 			if got := r.shouldReSync(); got != tt.want {

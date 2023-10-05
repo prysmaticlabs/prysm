@@ -406,11 +406,10 @@ func TestService_ValidateSyncCommitteeMessage(t *testing.T) {
 			defer cancel()
 
 			cw := startup.NewClockSynchronizer()
-			opts := []Option{WithClockWaiter(cw)}
+			opts := []Option{WithClockWaiter(cw), WithStateNotifier(chainService.StateNotifier())}
 			svc := NewService(ctx, append(opts, tt.svcopts...)...)
 			var clock *startup.Clock
 			svc, tt.args.topic, clock = tt.setupSvc(svc, tt.args.msg, tt.args.topic)
-			svc.stateNotifier = chainService.StateNotifier()
 			go svc.Start()
 			require.NoError(t, cw.SetClock(clock))
 

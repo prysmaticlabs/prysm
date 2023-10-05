@@ -89,6 +89,7 @@ type config struct {
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
+	stateNotifier                 statefeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -148,7 +149,6 @@ type Service struct {
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
 	pendingBlobSidecars              *pendingBlobSidecars
-	stateNotifier                    statefeed.Notifier
 }
 
 // NewService initializes new regular sync service.
