@@ -667,3 +667,38 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	assert.NoError(t, s.syncToFinalizedEpoch(context.Background(), genesis))
 	assert.LogsContain(t, hook, "Already synced to finalized epoch")
 }
+
+func TestService_ValidUnprocessed(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	genesisBlk := util.NewBeaconBlock()
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlk)
+
+	var batch []blocks.BlockWithVerifiedBlobs
+	currBlockRoot := genesisBlkRoot
+	for i := primitives.Slot(1); i < 10; i++ {
+		parentRoot := currBlockRoot
+		blk1 := util.NewBeaconBlock()
+		blk1.Block.Slot = i
+		blk1.Block.ParentRoot = parentRoot[:]
+		blk1Root, err := blk1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, context.Background(), beaconDB, blk1)
+		wsb, err := blocks.NewSignedBeaconBlock(blk1)
+		require.NoError(t, err)
+		rowsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		batch = append(batch, blocks.BlockWithVerifiedBlobs{Block: rowsb})
+		currBlockRoot = blk1Root
+	}
+
+	retBlocks, err := validUnprocessed(context.Background(), batch, 2, func(ctx context.Context, block blocks.ROBlock) bool {
+		// Ignore first 2 blocks in the batch.
+		return block.Block().Slot() <= 2
+	})
+	require.NoError(t, err)
+
+	// Ensure that the unprocessed batch is returned correctly.
+	assert.Equal(t, len(retBlocks), len(batch)-2)
+}
