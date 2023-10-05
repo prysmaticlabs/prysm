@@ -140,10 +140,6 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	disableBuildBlockParallel = &cli.BoolFlag{
-		Name:  "disable-build-block-parallel",
-		Usage: "Disables building a beacon block in parallel for consensus and execution",
-	}
 	enableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP4881",
@@ -211,7 +207,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableVerboseSigVerification,
 	disableOptionalEngineMethods,
 	prepareAllPayloads,
-	disableBuildBlockParallel,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
