@@ -33,6 +33,9 @@ func (s *Service) processPendingBlobs() {
 		case e := <-eventFeed:
 			s.handleEvent(s.ctx, e)
 		case <-cleanupTicker.C():
+			if s.pendingBlobSidecars == nil {
+				return
+			}
 			s.pendingBlobSidecars.cleanup()
 		}
 	}
