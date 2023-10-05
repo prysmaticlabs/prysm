@@ -18,6 +18,8 @@ import (
 
 // processPendingBlobs listens for state changes and handles pending blobs.
 func (s *Service) processPendingBlobs() {
+	s.waitForChainStart()
+
 	eventFeed := make(chan *feed.Event, 1)
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(eventFeed)
 	defer sub.Unsubscribe()
