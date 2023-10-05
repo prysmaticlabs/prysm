@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -21,7 +21,8 @@ func (s *Service) processPendingBlobs() {
 	sub := s.stateNotifier.StateFeed().Subscribe(eventFeed)
 	defer sub.Unsubscribe()
 
-	slotTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot)
+	// Initialize the cleanup ticker
+	cleanupTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot/2)
 
 	for {
 		select {
@@ -31,12 +32,8 @@ func (s *Service) processPendingBlobs() {
 			return
 		case e := <-eventFeed:
 			s.handleEvent(s.ctx, e)
-		case slot := <-slotTicker.C():
-			// Prune sidecars older than previous slot.
-			if slot > 0 {
-				slot--
-			}
-			s.pruneOldSidecars(slot)
+		case <-cleanupTicker.C():
+			s.pendingBlobSidecars.cleanup()
 		}
 	}
 }
@@ -48,7 +45,7 @@ func (s *Service) handleEvent(ctx context.Context, e *feed.Event) {
 	}
 }
 
-// handleNewBlockEvent handles blobs when a parent block is processed.
+// handleNewBlockEvent processes blobs when a parent block is processed.
 func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 	data, ok := e.Data.(*statefeed.BlockProcessedData)
 	if !ok {
@@ -67,7 +64,7 @@ func (s *Service) processBlobsFromSidecars(ctx context.Context, parentRoot [32]b
 	}
 }
 
-// validateAndReceiveBlob validates and receives a blob if it's valid.
+// validateAndReceiveBlob validates and processes a blob.
 func (s *Service) validateAndReceiveBlob(ctx context.Context, blob *eth.SignedBlobSidecar) error {
 	result, err := s.validateBlobPostSeenParent(ctx, blob)
 	if err != nil {
@@ -79,61 +76,64 @@ func (s *Service) validateAndReceiveBlob(ctx context.Context, blob *eth.SignedBl
 	return s.cfg.chain.ReceiveBlob(ctx, blob.Message)
 }
 
-// pruneOldSidecars removes sidecars older than a given slot.
-func (s *Service) pruneOldSidecars(slot primitives.Slot) {
-	s.pendingBlobSidecars.pruneOlderThanSlot(slot)
+// blobWithExpiration holds blobs with an expiration time.
+type blobWithExpiration struct {
+	blob      []*eth.SignedBlobSidecar
+	expiresAt time.Time
 }
 
-// pendingBlobSidecars holds pending blob sidecars.
+// pendingBlobSidecars holds pending blobs with expiration.
 type pendingBlobSidecars struct {
 	sync.RWMutex
-	blobSidecars map[[32]byte][]*eth.SignedBlobSidecar
+	blobSidecars map[[32]byte]*blobWithExpiration
 }
 
-// newPendingBlobSidecars initializes a new pendingBlobSidecars instance.
+// newPendingBlobSidecars initializes a new cache of pending blobs.
 func newPendingBlobSidecars() *pendingBlobSidecars {
-	return &pendingBlobSidecars{blobSidecars: make(map[[32]byte][]*eth.SignedBlobSidecar)}
+	return &pendingBlobSidecars{
+		blobSidecars: make(map[[32]byte]*blobWithExpiration),
+	}
 }
 
-// add adds a new blob sidecar to the pending queue.
+// add adds a new blob to the cache.
 func (p *pendingBlobSidecars) add(blob *eth.SignedBlobSidecar) {
 	p.Lock()
 	defer p.Unlock()
-
 	parentRoot := bytesutil.ToBytes32(blob.Message.BlockParentRoot)
-	p.blobSidecars[parentRoot] = append(p.blobSidecars[parentRoot], blob)
+	expirationTime := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+
+	if existing, exists := p.blobSidecars[parentRoot]; exists {
+		existing.blob = append(existing.blob, blob)
+	} else {
+		p.blobSidecars[parentRoot] = &blobWithExpiration{
+			blob:      []*eth.SignedBlobSidecar{blob},
+			expiresAt: expirationTime,
+		}
+	}
 }
 
-// pop removes and returns all blob sidecars for a given parent root.
+// pop removes and returns blobs for a given parent root.
 func (p *pendingBlobSidecars) pop(parentRoot [32]byte) []*eth.SignedBlobSidecar {
 	p.Lock()
 	defer p.Unlock()
-
 	blobs, exists := p.blobSidecars[parentRoot]
 	if exists {
 		delete(p.blobSidecars, parentRoot)
 	}
-	return blobs
+	if blobs != nil {
+		return blobs.blob
+	}
+	return nil // Return nil if blobs does not exist
 }
 
-// pruneOlderThanSlot removes all blob sidecars older than a given slot.
-func (p *pendingBlobSidecars) pruneOlderThanSlot(slot primitives.Slot) {
+// cleanup removes expired blobs from the cache.
+func (p *pendingBlobSidecars) cleanup() {
 	p.Lock()
 	defer p.Unlock()
-
-	for root, sidecars := range p.blobSidecars {
-		if allOlderThanSlot(sidecars, slot) {
+	now := time.Now()
+	for root, blobInfo := range p.blobSidecars {
+		if blobInfo.expiresAt.Before(now) {
 			delete(p.blobSidecars, root)
 		}
 	}
-}
-
-// allOlderThanSlot checks if all blob sidecars are older than a given slot.
-func allOlderThanSlot(sidecars []*eth.SignedBlobSidecar, slot primitives.Slot) bool {
-	for _, sidecar := range sidecars {
-		if sidecar.Message.Slot > slot {
-			return false
-		}
-	}
-	return true
 }
