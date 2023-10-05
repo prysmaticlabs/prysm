@@ -1284,8 +1284,8 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(13, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)))
+		return b.recomputeFieldTrie(field, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)))
 	} else {
-		return b.recomputeFieldTrie(13, b.randaoMixes)
+		return b.recomputeFieldTrie(field, b.randaoMixes)
 	}
 }
