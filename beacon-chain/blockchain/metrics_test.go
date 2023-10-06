@@ -16,7 +16,7 @@ func TestReportEpochMetrics_BadHeadState(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, h.SetValidators(nil))
 	err = reportEpochMetrics(context.Background(), s, h)
-	require.ErrorContains(t, "failed to initialize precompute: nil validators in state", err)
+	require.ErrorContains(t, "failed to initialize precompute: state has nil validator slice", err)
 }
 
 func TestReportEpochMetrics_BadAttestation(t *testing.T) {

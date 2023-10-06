@@ -52,11 +52,6 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Deneb(t *testing.T
 	})
 }
 
-func TestValidatorIndexOutOfRangeError(t *testing.T) {
-	err := statenative.NewValidatorIndexOutOfRangeError(1)
-	require.Equal(t, err.Error(), "index 1 out of range")
-}
-
 func TestValidatorIndexes(t *testing.T) {
 	dState, _ := util.DeterministicGenesisState(t, 10)
 	byteValue := dState.PubkeyAtIndex(1)
