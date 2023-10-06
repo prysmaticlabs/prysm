@@ -318,7 +318,8 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 
 	ok, rawSyncingStatus, syncingStatus := shared.UintFromQuery(w, r, "syncing_status")
 	// lint:ignore uintcast -- custom syncing status being outside of range is harmless
-	if !ok || (rawSyncingStatus != "" && http.StatusText(int(syncingStatus)) == "") {
+	intSyncingStatus := int(syncingStatus)
+	if !ok || (rawSyncingStatus != "" && http.StatusText(intSyncingStatus) == "") {
 		http2.HandleError(w, "syncing_status is not a valid HTTP status code", http.StatusBadRequest)
 		return
 	}
@@ -327,7 +328,11 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.SyncChecker.Syncing() || s.SyncChecker.Initialized() {
-		w.WriteHeader(http.StatusPartialContent)
+		if rawSyncingStatus != "" {
+			w.WriteHeader(intSyncingStatus)
+		} else {
+			w.WriteHeader(http.StatusPartialContent)
+		}
 		return
 	}
 	w.WriteHeader(http.StatusServiceUnavailable)
