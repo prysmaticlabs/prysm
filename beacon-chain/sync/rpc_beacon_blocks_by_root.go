@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -45,7 +44,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		if err != nil {
 			return err
 		}
-		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot[:], id); err != nil {
+		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot, id); err != nil {
 			return err
 		}
 	}
@@ -117,7 +116,7 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 }
 
 // requestPendingBlobs handles the request for pending blobs based on the given beacon block.
-func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlyBeaconBlock, blockRoot []byte, peerID peer.ID) error {
+func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte, peerID peer.ID) error {
 	if block.Version() < version.Deneb {
 		return nil // Block before deneb has no blob.
 	}
@@ -136,7 +135,7 @@ func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.Read
 		return err
 	}
 
-	request, err := s.constructPendingBlobsRequest(ctx, bytesutil.ToBytes32(blockRoot), len(commitments))
+	request, err := s.constructPendingBlobsRequest(ctx, blockRoot, len(commitments))
 	if err != nil {
 		return err
 	}
