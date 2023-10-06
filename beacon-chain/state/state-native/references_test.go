@@ -38,7 +38,7 @@ func TestStateReferenceSharing_Finalizer_Phase0(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[types.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
 	if b.sharedFieldReferences[types.RandaoMixes].Refs() != 1 || a.sharedFieldReferences[types.RandaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -67,7 +67,7 @@ func TestStateReferenceSharing_Finalizer_Altair(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[types.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
 	if b.sharedFieldReferences[types.RandaoMixes].Refs() != 1 || a.sharedFieldReferences[types.RandaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -96,7 +96,7 @@ func TestStateReferenceSharing_Finalizer_Bellatrix(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[types.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
 	if b.sharedFieldReferences[types.RandaoMixes].Refs() != 1 || a.sharedFieldReferences[types.RandaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -125,7 +125,7 @@ func TestStateReferenceSharing_Finalizer_Capella(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[types.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
 	if b.sharedFieldReferences[types.RandaoMixes].Refs() != 1 || a.sharedFieldReferences[types.RandaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -154,7 +154,7 @@ func TestStateReferenceSharing_Finalizer_Deneb(t *testing.T) {
 	b, ok := copied.(*BeaconState)
 	require.Equal(t, true, ok)
 	assert.Equal(t, uint(2), b.sharedFieldReferences[types.RandaoMixes].Refs(), "Expected 2 shared references to RANDAO mixes")
-	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, []byte("bar")))
+	require.NoError(t, b.UpdateRandaoMixesAtIndex(0, bytesutil.ToBytes32([]byte("bar"))))
 	if b.sharedFieldReferences[types.RandaoMixes].Refs() != 1 || a.sharedFieldReferences[types.RandaoMixes].Refs() != 1 {
 		t.Error("Expected 1 shared reference to RANDAO mix for both a and b")
 	}
@@ -482,7 +482,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Phase0(t *testing.T) {
 	assertValFound(t, mixesB, val1[:])
 
 	// Mutator should only affect calling state: a.
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2[:]))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	assertValFound(t, a.RandaoMixes(), val2[:])
@@ -526,7 +526,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Altair(t *testing.T) {
 	assertValFound(t, mixesB, val1[:])
 
 	// Mutator should only affect calling state: a.
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2[:]))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	assertValFound(t, a.RandaoMixes(), val2[:])
@@ -570,7 +570,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Bellatrix(t *testing.T) {
 	assertValFound(t, mixesB, val1[:])
 
 	// Mutator should only affect calling state: a.
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2[:]))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	assertValFound(t, a.RandaoMixes(), val2[:])
@@ -614,7 +614,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Capella(t *testing.T) {
 	assertValFound(t, mixesB, val1[:])
 
 	// Mutator should only affect calling state: a.
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2[:]))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	assertValFound(t, a.RandaoMixes(), val2[:])
@@ -658,7 +658,7 @@ func TestStateReferenceCopy_NoUnexpectedRandaoMutation_Deneb(t *testing.T) {
 	assertValFound(t, mixesB, val1[:])
 
 	// Mutator should only affect calling state: a.
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2[:]))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(0, val2))
 
 	// Assert no shared state mutation occurred only on state a (copy on write).
 	assertValFound(t, a.RandaoMixes(), val2[:])

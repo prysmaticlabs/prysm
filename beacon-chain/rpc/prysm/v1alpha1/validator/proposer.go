@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -109,70 +108,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	var blobBundle *enginev1.BlobsBundle
 	var blindBlobBundle *enginev1.BlindedBlobsBundle
-	if features.Get().BuildBlockParallel {
-		blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not build block in parallel")
-		}
-	} else {
-		// Set eth1 data.
-		eth1Data, err := vs.eth1DataMajorityVote(ctx, head)
-		if err != nil {
-			eth1Data = &ethpb.Eth1Data{DepositRoot: params.BeaconConfig().ZeroHash[:], BlockHash: params.BeaconConfig().ZeroHash[:]}
-			log.WithError(err).Error("Could not get eth1data")
-		}
-		sBlk.SetEth1Data(eth1Data)
-
-		// Set deposit and attestation.
-		deposits, atts, err := vs.packDepositsAndAttestations(ctx, head, eth1Data) // TODO: split attestations and deposits
-		if err != nil {
-			sBlk.SetDeposits([]*ethpb.Deposit{})
-			sBlk.SetAttestations([]*ethpb.Attestation{})
-			log.WithError(err).Error("Could not pack deposits and attestations")
-		} else {
-			sBlk.SetDeposits(deposits)
-			sBlk.SetAttestations(atts)
-		}
-
-		// Set slashings.
-		validProposerSlashings, validAttSlashings := vs.getSlashings(ctx, head)
-		sBlk.SetProposerSlashings(validProposerSlashings)
-		sBlk.SetAttesterSlashings(validAttSlashings)
-
-		// Set exits.
-		sBlk.SetVoluntaryExits(vs.getExits(head, req.Slot))
-
-		// Set sync aggregate. New in Altair.
-		vs.setSyncAggregate(ctx, sBlk)
-
-		// Get local and builder (if enabled) payloads. Set execution data. New in Bellatrix.
-		var overrideBuilder bool
-		var localPayload interfaces.ExecutionData
-		localPayload, blobBundle, overrideBuilder, err = vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
-		}
-		// There's no reason to try to get a builder bid if local override is true.
-		var builderPayload interfaces.ExecutionData
-
-		overrideBuilder = req.SkipMevBoost || overrideBuilder // Skip using mev-boost if requested by the caller.
-		if !overrideBuilder {
-			builderPayload, blindBlobBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
-			if err != nil {
-				builderGetPayloadMissCount.Inc()
-				log.WithError(err).Error("Could not get builder payload")
-			}
-		}
-		if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
-		}
-
-		// Set bls to execution change. New in Capella.
-		vs.setBlsToExecData(sBlk, head)
-
-		if err := setKzgCommitments(sBlk, blobBundle, blindBlobBundle); err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not set kzg commitment: %v", err)
-		}
+	blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
