@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -108,9 +109,9 @@ func (s *Server) GetPeer(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "node.GetPeer")
 	defer span.End()
 
-	rawId := r.URL.Query().Get("peer_id")
+	rawId := mux.Vars(r)["peer_id"]
 	if rawId == "" {
-		http2.HandleError(w, "peer_id query parameter is required", http.StatusBadRequest)
+		http2.HandleError(w, "peer_id is required in URL params", http.StatusBadRequest)
 		return
 	}
 
@@ -315,8 +316,9 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "node.GetHealth")
 	defer span.End()
 
-	ok, _, syncingStatus := shared.UintFromQuery(w, r, "syncing_status")
-	if !ok || http.StatusText(int(syncingStatus)) == "" {
+	ok, rawSyncingStatus, syncingStatus := shared.UintFromQuery(w, r, "syncing_status")
+	// lint:ignore uintcast -- custom syncing status being outside of range is harmless
+	if !ok || (rawSyncingStatus != "" && http.StatusText(int(syncingStatus)) == "") {
 		http2.HandleError(w, "syncing_status is not a valid HTTP status code", http.StatusBadRequest)
 		return
 	}
