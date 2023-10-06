@@ -9,6 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -235,7 +236,7 @@ func TestGetVersion(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		restEndpointResponse apimiddleware.VersionResponseJson
+		restEndpointResponse node.GetVersionResponse
 		restEndpointError    error
 		expectedResponse     *ethpb.Version
 		expectedError        string
@@ -247,13 +248,13 @@ func TestGetVersion(t *testing.T) {
 		},
 		{
 			name:                 "returns nil version data",
-			restEndpointResponse: apimiddleware.VersionResponseJson{Data: nil},
+			restEndpointResponse: node.GetVersionResponse{Data: nil},
 			expectedError:        "empty version response",
 		},
 		{
 			name: "returns proper version response",
-			restEndpointResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{
+			restEndpointResponse: node.GetVersionResponse{
+				Data: &node.Version{
 					Version: "prysm/local",
 				},
 			},
@@ -269,7 +270,7 @@ func TestGetVersion(t *testing.T) {
 			defer ctrl.Finish()
 			ctx := context.Background()
 
-			var versionResponse apimiddleware.VersionResponseJson
+			var versionResponse node.GetVersionResponse
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
