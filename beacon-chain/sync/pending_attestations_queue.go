@@ -75,14 +75,16 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			delete(s.blkRootToPendingAtts, bRoot)
 			s.pendingAttsLock.Unlock()
 		} else {
-			// Pending attestation's missing block has not arrived yet.
-			log.WithFields(logrus.Fields{
-				"currentSlot": s.cfg.clock.CurrentSlot(),
-				"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
-				"attCount":    len(attestations),
-				"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
-			}).Debug("Requesting block for pending attestation")
-			pendingRoots = append(pendingRoots, bRoot)
+			if !s.seenPendingBlocks[bRoot] {
+				// Pending attestation's missing block has not arrived yet.
+				log.WithFields(logrus.Fields{
+					"currentSlot": s.cfg.clock.CurrentSlot(),
+					"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
+					"attCount":    len(attestations),
+					"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
+				}).Debug("Requesting block for pending attestation")
+				pendingRoots = append(pendingRoots, bRoot)
+			}
 		}
 	}
 	return s.sendBatchRootRequest(ctx, pendingRoots, randGen)
