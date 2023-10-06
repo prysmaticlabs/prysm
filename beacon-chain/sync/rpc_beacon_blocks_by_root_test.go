@@ -29,6 +29,7 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -332,4 +333,63 @@ func TestRequestPendingBlobs(t *testing.T) {
 		require.NoError(t, err)
 		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, []byte{}, p2.PeerID()))
 	})
+}
+
+func TestConstructPendingBlobsRequest(t *testing.T) {
+	d := db.SetupDB(t)
+	s := &Service{cfg: &config{beaconDB: d}}
+	ctx := context.Background()
+	root := [32]byte{1}
+	blobSidecars := []*ethpb.BlobSidecar{
+		{Index: 0, BlockRoot: root[:]},
+		{Index: 2, BlockRoot: root[:]},
+	}
+	require.NoError(t, d.SaveBlobSidecar(ctx, blobSidecars))
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 1, BlockRoot: root[:]},
+	}
+	count := 3
+	actual, err := s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
+	require.Equal(t, expected[0].Index, actual[0].Index)
+	require.DeepEqual(t, expected[0].BlockRoot, actual[0].BlockRoot)
+}
+
+func TestIndexSetFromBlobs(t *testing.T) {
+	blobs := []*ethpb.BlobSidecar{
+		{Index: 0},
+		{Index: 1},
+		{Index: 2},
+	}
+
+	expected := map[uint64]struct{}{
+		0: {},
+		1: {},
+		2: {},
+	}
+
+	actual := indexSetFromBlobs(blobs)
+	require.DeepEqual(t, expected, actual)
+}
+
+func TestFilterUnknownIndices(t *testing.T) {
+	knownIndices := map[uint64]struct{}{
+		0: {},
+		1: {},
+		2: {},
+	}
+
+	blockRoot := [32]byte{}
+	count := 5
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 3, BlockRoot: blockRoot[:]},
+		{Index: 4, BlockRoot: blockRoot[:]},
+	}
+
+	actual := filterUnknownIndices(knownIndices, count, blockRoot)
+	require.Equal(t, len(expected), len(actual))
+	require.DeepEqual(t, actual[0].BlockRoot, expected[0].BlockRoot)
+	require.DeepEqual(t, actual[1].BlockRoot, expected[1].BlockRoot)
 }
