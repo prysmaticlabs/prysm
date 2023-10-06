@@ -38,11 +38,11 @@ type GetPeersResponse struct {
 }
 
 type Peer struct {
-	PeerId    string `json:"peer_id"`
-	Enr       string `json:"enr"`
-	Address   string `json:"last_seen_p2p_address"`
-	State     string `json:"state"`
-	Direction string `json:"direction"`
+	PeerId             string `json:"peer_id"`
+	Enr                string `json:"enr"`
+	LastSeenP2PAddress string `json:"last_seen_p2p_address"`
+	State              string `json:"state"`
+	Direction          string `json:"direction"`
 }
 
 type GetPeerCountResponse struct {

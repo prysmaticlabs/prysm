@@ -264,7 +264,7 @@ func TestGetPeer(t *testing.T) {
 		resp := &GetPeerResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, rawId, resp.Data.PeerId)
-		assert.Equal(t, p2pAddr, resp.Data.Address)
+		assert.Equal(t, p2pAddr, resp.Data.LastSeenP2PAddress)
 		assert.Equal(t, "enr:yoABgmlwhAcHBwc", resp.Data.Enr)
 		assert.Equal(t, "disconnected", resp.Data.State)
 		assert.Equal(t, "inbound", resp.Data.Direction)
@@ -367,7 +367,7 @@ func TestGetPeers(t *testing.T) {
 		assert.Equal(t, "enr:"+serializedEnr, returnedPeer.Enr)
 		expectedP2PAddr, err := peerStatus.Address(expectedId)
 		require.NoError(t, err)
-		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.Address)
+		assert.Equal(t, expectedP2PAddr.String(), returnedPeer.LastSeenP2PAddress)
 		assert.Equal(t, "connecting", returnedPeer.State)
 		assert.Equal(t, "inbound", returnedPeer.Direction)
 	})

@@ -164,11 +164,11 @@ func (s *Server) GetPeer(w http.ResponseWriter, r *http.Request) {
 
 	resp := &GetPeerResponse{
 		Data: &Peer{
-			PeerId:    rawId,
-			Enr:       "enr:" + serializedEnr,
-			Address:   p2pAddress.String(),
-			State:     strings.ToLower(v1ConnState.String()),
-			Direction: strings.ToLower(v1PeerDirection.String()),
+			PeerId:             rawId,
+			Enr:                "enr:" + serializedEnr,
+			LastSeenP2PAddress: p2pAddress.String(),
+			State:              strings.ToLower(v1ConnState.String()),
+			Direction:          strings.ToLower(v1PeerDirection.String()),
 		},
 	}
 	http2.WriteJson(w, resp)
@@ -403,18 +403,13 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
 	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {
 		return nil, nil
 	}
-	v1ConnState := migration.V1Alpha1ConnectionStateToV1(eth.ConnectionState(connectionState))
-	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(eth.PeerDirection(direction))
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not handle peer direction")
-	}
 	p := &Peer{
 		PeerId:    id.Pretty(),
-		State:     strings.ToLower(v1ConnState.String()),
-		Direction: strings.ToLower(v1PeerDirection.String()),
+		State:     strings.ToLower(eth.ConnectionState(connectionState).String()),
+		Direction: strings.ToLower(eth.PeerDirection(direction).String()),
 	}
 	if address != nil {
-		p.Address = address.String()
+		p.LastSeenP2PAddress = address.String()
 	}
 	if serializedEnr != "" {
 		p.Enr = "enr:" + serializedEnr
