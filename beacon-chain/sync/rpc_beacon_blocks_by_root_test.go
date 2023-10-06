@@ -322,9 +322,10 @@ func TestRequestPendingBlobs(t *testing.T) {
 		p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{FinalizedEpoch: 1})
 		s := &Service{
 			cfg: &config{
-				p2p:   p1,
-				chain: chain,
-				clock: startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				p2p:      p1,
+				chain:    chain,
+				clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				beaconDB: db.SetupDB(t),
 			},
 		}
 		b := util.NewBeaconBlockDeneb()
@@ -344,6 +345,7 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	root := [32]byte{1}
 	count := 3
 	actual, err := s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
 	require.Equal(t, 3, len(actual))
 	for i, id := range actual {
 		require.Equal(t, uint64(i), id.Index)
