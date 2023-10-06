@@ -336,7 +336,6 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusServiceUnavailable)
-	return
 }
 
 func handleEmptyFilters(states []string, directions []string) (emptyState, emptyDirection bool) {
