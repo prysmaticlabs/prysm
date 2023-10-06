@@ -10,7 +10,6 @@ proto_library(
         "beacon_chain_service.proto",
         "beacon_debug_service.proto",
         "events_service.proto",
-        "node_service.proto",
         "validator_service.proto",
         "key_management.proto",
     ],

@@ -87,33 +87,6 @@ type BLSToExecutionChangesPoolResponseJson struct {
 	Data []*SignedBLSToExecutionChangeJson `json:"data"`
 }
 
-type IdentityResponseJson struct {
-	Data *IdentityJson `json:"data"`
-}
-
-type PeersResponseJson struct {
-	Data []*PeerJson `json:"data"`
-}
-
-type PeerResponseJson struct {
-	Data *PeerJson `json:"data"`
-}
-
-type PeerCountResponseJson struct {
-	Data PeerCountResponse_PeerCountJson `json:"data"`
-}
-
-type PeerCountResponse_PeerCountJson struct {
-	Disconnected  string `json:"disconnected"`
-	Connecting    string `json:"connecting"`
-	Connected     string `json:"connected"`
-	Disconnecting string `json:"disconnecting"`
-}
-
-type VersionResponseJson struct {
-	Data *VersionJson `json:"data"`
-}
-
 type SyncingResponseJson struct {
 	Data *shared.SyncDetails `json:"data"`
 }
@@ -732,31 +705,6 @@ type SignedVoluntaryExitJson struct {
 type VoluntaryExitJson struct {
 	Epoch          string `json:"epoch"`
 	ValidatorIndex string `json:"validator_index"`
-}
-
-type IdentityJson struct {
-	PeerId             string        `json:"peer_id"`
-	Enr                string        `json:"enr"`
-	P2PAddresses       []string      `json:"p2p_addresses"`
-	DiscoveryAddresses []string      `json:"discovery_addresses"`
-	Metadata           *MetadataJson `json:"metadata"`
-}
-
-type MetadataJson struct {
-	SeqNumber string `json:"seq_number"`
-	Attnets   string `json:"attnets" hex:"true"`
-}
-
-type PeerJson struct {
-	PeerId    string `json:"peer_id"`
-	Enr       string `json:"enr"`
-	Address   string `json:"last_seen_p2p_address"`
-	State     string `json:"state" enum:"true"`
-	Direction string `json:"direction" enum:"true"`
-}
-
-type VersionJson struct {
-	Version string `json:"version" enum:"true"`
 }
 
 type WithdrawalJson struct {

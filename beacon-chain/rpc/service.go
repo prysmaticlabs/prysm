@@ -350,6 +350,12 @@ func (s *Service) Start() {
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/node/syncing", nodeServerEth.GetSyncStatus).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/identity", nodeServerEth.GetIdentity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers/{peer_id}", nodeServerEth.GetPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers", nodeServerEth.GetPeers).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peer_count", nodeServerEth.GetPeerCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/version", nodeServerEth.GetVersion).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/health", nodeServerEth.GetHealth).Methods(http.MethodGet)
 
 	nodeServerPrysm := &nodeprysm.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
@@ -452,7 +458,6 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
