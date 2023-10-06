@@ -75,7 +75,10 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			delete(s.blkRootToPendingAtts, bRoot)
 			s.pendingAttsLock.Unlock()
 		} else {
-			if !s.seenPendingBlocks[bRoot] {
+			s.pendingQueueLock.RLock()
+			seen := s.seenPendingBlocks[bRoot]
+			s.pendingQueueLock.RUnlock()
+			if !seen {
 				// Pending attestation's missing block has not arrived yet.
 				log.WithFields(logrus.Fields{
 					"currentSlot": s.cfg.clock.CurrentSlot(),
