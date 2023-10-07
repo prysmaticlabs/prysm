@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -165,6 +166,16 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			default:
 			}
 
+			bestPeers := s.getBestPeers()
+			if len(bestPeers) > 0 {
+				if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot[:], bestPeers[randGen.Int()%len(bestPeers)]); err != nil {
+					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not request pending blobs")
+					tracing.AnnotateError(span, err)
+					span.End()
+					continue
+				}
+			}
+
 			if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 				if blockchain.IsInvalidBlock(err) {
 					r := blockchain.InvalidBlockRoot(err)
@@ -213,6 +224,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	return s.sendBatchRootRequest(ctx, parentRoots, randGen)
 }
 
+// getBestPeers returns the list of best peers based on finalized checkpoint epoch.
+func (s *Service) getBestPeers() []core.PeerID {
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	return bestPeers
+}
+
 func (s *Service) checkIfBlockIsBad(
 	ctx context.Context,
 	span *trace.Span,
@@ -259,8 +276,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-	cp := s.cfg.chain.FinalizedCheckpt()
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
+	bestPeers := s.getBestPeers()
 	if len(bestPeers) == 0 {
 		return nil
 	}
