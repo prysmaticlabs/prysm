@@ -229,6 +229,7 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	defer span.End()
 
 	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
 

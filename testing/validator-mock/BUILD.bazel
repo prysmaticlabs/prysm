@@ -7,7 +7,6 @@ go_library(
     srcs = [
         "beacon_chain_client_mock.go",
         "node_client_mock.go",
-        "slasher_client_mock.go",
         "validator_client_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/validator-mock",

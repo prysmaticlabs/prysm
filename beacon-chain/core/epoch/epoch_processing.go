@@ -137,16 +137,10 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
 
-	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
-	}
+	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
 
 	if state.Version() >= version.Deneb {
-		// Cap churn limit to max per epoch churn limit. New in EIP7514.
-		if churnLimit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
-			churnLimit = params.BeaconConfig().MaxPerEpochActivationChurnLimit
-		}
+		churnLimit = helpers.ValidatorActivationChurnLimitDeneb(activeValidatorCount)
 	}
 
 	// Prevent churn limit cause index out of bound.
@@ -355,7 +349,7 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), [32]byte(mix)); err != nil {
 		return nil, err
 	}
 

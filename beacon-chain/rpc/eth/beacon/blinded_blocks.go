@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -24,7 +25,7 @@ func (bs *Server) GetBlindedBlock(ctx context.Context, req *ethpbv1.BlockRequest
 	defer span.End()
 
 	blk, err := bs.Blocker.Block(ctx, req.BlockId)
-	err = handleGetBlockError(blk, err)
+	err = rpchelpers.HandleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (bs *Server) GetBlindedBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequ
 	defer span.End()
 
 	blk, err := bs.Blocker.Block(ctx, req.BlockId)
-	err = handleGetBlockError(blk, err)
+	err = rpchelpers.HandleGetBlockError(blk, err)
 	if err != nil {
 		return nil, err
 	}

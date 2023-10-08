@@ -237,7 +237,7 @@ type WriteOnlyBalances interface {
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
 	SetRandaoMixes(val [][]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.

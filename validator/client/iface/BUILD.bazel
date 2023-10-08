@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "beacon_chain_client.go",
         "node_client.go",
-        "slasher_client.go",
         "validator.go",
         "validator_client.go",
     ],
