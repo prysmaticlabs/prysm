@@ -823,13 +823,12 @@ func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, 
 	if err != nil {
 		return nil, err
 	}
-	// Exit early if no genesis state is saved.
-	if genState == nil || genState.IsNil() {
-		return nil, nil
-	}
 	eth1Data, err := s.cfg.beaconDB.ExecutionChainData(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+	}
+	if genState == nil || genState.IsNil() {
+		return eth1Data, nil
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
 		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
