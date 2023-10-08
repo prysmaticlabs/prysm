@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v4/network"
 	"github.com/prysmaticlabs/prysm/v4/network/authorization"
@@ -269,9 +270,13 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	vs := make([]*SignedValidatorRegistration, len(svr))
+	vs := make([]*shared.SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
-		vs[i] = &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr[i]}
+		svrJson, err := shared.SignedValidatorRegistrationFromConsensus(svr[i])
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to encode to SignedValidatorRegistration at index %d", i))
+		}
+		vs[i] = svrJson
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {
@@ -296,12 +301,14 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b := &SignedBlindedBeaconBlockBellatrix{SignedBlindedBeaconBlockBellatrix: psb}
+		b, err := shared.SignedBlindedBeaconBlockBellatrixFromConsensus(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockBellatrix to json marshalable type")
+		}
 		body, err := json.Marshal(b)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 		}
-
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Bellatrix))
 		}
@@ -331,12 +338,14 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b := &SignedBlindedBeaconBlockCapella{SignedBlindedBeaconBlockCapella: psb}
+		b, err := shared.SignedBlindedBeaconBlockCapellaFromConsensus(&ethpb.SignedBlindedBeaconBlockCapella{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockCapella to json marshalable type")
+		}
 		body, err := json.Marshal(b)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
 		}
-
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Capella))
 		}

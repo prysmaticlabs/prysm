@@ -13,20 +13,20 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -49,6 +49,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	if !valid {
 		return
 	}
+
 	rawSlot := r.URL.Query().Get("slot")
 	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
 	if !valid {
@@ -121,11 +122,6 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	for _, item := range req.Data {
 		consensusItem, err := item.ToConsensus()
@@ -157,11 +153,6 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -217,11 +208,6 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -334,11 +320,6 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
@@ -358,8 +339,8 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		subscriptions[i] = consensusItem
 		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
 		if err != nil {
-			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+			if errors.Is(err, consensus_types.ErrOutOfBounds) {
+				http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
@@ -556,13 +537,8 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validate := validator.New()
 	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
 	for i, registration := range jsonRegistrations {
-		if err := validate.Struct(registration); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		reg, err := registration.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
@@ -804,10 +780,33 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, fmt.Sprintf("Could not get start slot of epoch %d: %v", requestedEpoch, err), http.StatusInternalServerError)
 		return
 	}
-	st, err := s.Stater.StateBySlot(ctx, epochStartSlot)
-	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("Could not get state for slot %d: %v ", epochStartSlot, err), http.StatusInternalServerError)
-		return
+	var st state.BeaconState
+	// if the requested epoch is new, use the head state and the next slot cache
+	if requestedEpoch < currentEpoch {
+		st, err = s.Stater.StateBySlot(ctx, epochStartSlot)
+		if err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not get state for slot %d: %v ", epochStartSlot, err), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		st, err = s.HeadFetcher.HeadState(ctx)
+		if err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not get head state: %v ", err), http.StatusInternalServerError)
+			return
+		}
+		// Advance state with empty transitions up to the requested epoch start slot.
+		if st.Slot() < epochStartSlot {
+			headRoot, err := s.HeadFetcher.HeadRoot(ctx)
+			if err != nil {
+				http2.HandleError(w, fmt.Sprintf("Could not get head root: %v ", err), http.StatusInternalServerError)
+				return
+			}
+			st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot, epochStartSlot)
+			if err != nil {
+				http2.HandleError(w, fmt.Sprintf("Could not process slots up to %d: %v ", epochStartSlot, err), http.StatusInternalServerError)
+				return
+			}
+		}
 	}
 
 	var proposals map[primitives.ValidatorIndex][]primitives.Slot
@@ -831,6 +830,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, slot := range proposalSlots {
+			s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			duties = append(duties, &ProposerDuty{
 				Pubkey:         hexutil.Encode(pubkey),
 				ValidatorIndex: strconv.FormatUint(uint64(index), 10),
@@ -838,6 +838,8 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
+
+	s.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 
 	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
 	if err != nil {

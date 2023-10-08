@@ -22,6 +22,9 @@ const (
 
 	// BLSToExecutionChangeReceived is sent after a BLS to execution change object has been received from gossip or rpc.
 	BLSToExecutionChangeReceived
+
+	// BlobSidecarReceived is sent after a blob sidecar is received from gossip or rpc.
+	BlobSidecarReceived = 6
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -51,4 +54,9 @@ type SyncCommitteeContributionReceivedData struct {
 // BLSToExecutionChangeReceivedData is the data sent with BLSToExecutionChangeReceived events.
 type BLSToExecutionChangeReceivedData struct {
 	Change *ethpb.SignedBLSToExecutionChange
+}
+
+// BlobSidecarReceivedData is the data sent with BlobSidecarReceived events.
+type BlobSidecarReceivedData struct {
+	Blob *ethpb.SignedBlobSidecar
 }

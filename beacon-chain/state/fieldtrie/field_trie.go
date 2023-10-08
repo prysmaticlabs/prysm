@@ -31,11 +31,11 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
-			dataType:   dataType,
+			dataType:   fieldInfo,
 			reference:  stateutil.NewRef(1),
 			RWMutex:    new(sync.RWMutex),
 			length:     length,
@@ -48,10 +48,10 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		return nil, err
 	}
 
-	if err := validateElements(field, dataType, elements, length); err != nil {
+	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	switch dataType {
+	switch fieldInfo {
 	case types.BasicArray:
 		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
 		if err != nil {
@@ -60,7 +60,7 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		return &FieldTrie{
 			fieldLayers: fl,
 			field:       field,
-			dataType:    dataType,
+			dataType:    fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
@@ -70,14 +70,14 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			dataType:    dataType,
+			dataType:    fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
 			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
 		}, nil
 	default:
-		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
+		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(fieldInfo).Name())
 	}
 }
 

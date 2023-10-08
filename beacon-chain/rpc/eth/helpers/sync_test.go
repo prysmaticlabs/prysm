@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	chainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
@@ -200,6 +201,78 @@ func TestIsOptimistic(t *testing.T) {
 			cs := &chainmock.ChainService{Optimistic: false, State: chainSt, CanonicalRoots: map[[32]byte]bool{}}
 			mf := &testutil.MockStater{BeaconState: fetcherSt}
 			o, err := IsOptimistic(ctx, bytesutil.PadTo([]byte("root"), 32), nil, mf, cs, db)
+			require.NoError(t, err)
+			assert.Equal(t, true, o)
+		})
+	})
+	t.Run("hex", func(t *testing.T) {
+		t.Run("is head and head is optimistic", func(t *testing.T) {
+			st, err := util.NewBeaconState()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{Optimistic: true}
+			mf := &testutil.MockStater{BeaconState: st}
+			o, err := IsOptimistic(ctx, []byte(hexutil.Encode(bytesutil.PadTo([]byte("root"), 32))), cs, mf, cs, nil)
+			require.NoError(t, err)
+			assert.Equal(t, true, o)
+		})
+		t.Run("is head and head is not optimistic", func(t *testing.T) {
+			st, err := util.NewBeaconState()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{Optimistic: false}
+			mf := &testutil.MockStater{BeaconState: st}
+			o, err := IsOptimistic(ctx, []byte(hexutil.Encode(bytesutil.PadTo([]byte("root"), 32))), cs, mf, cs, nil)
+			require.NoError(t, err)
+			assert.Equal(t, false, o)
+		})
+		t.Run("root is optimistic", func(t *testing.T) {
+			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+			require.NoError(t, err)
+			b.SetStateRoot(bytesutil.PadTo([]byte("root"), 32))
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveBlock(ctx, b))
+			fetcherSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			chainSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
+			bRoot, err := b.Block().HashTreeRoot()
+			require.NoError(t, err)
+			cs := &chainmock.ChainService{State: chainSt, OptimisticRoots: map[[32]byte]bool{bRoot: true}}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
+			o, err := IsOptimistic(ctx, []byte(hexutil.Encode(bytesutil.PadTo([]byte("root"), 32))), cs, mf, cs, db)
+			require.NoError(t, err)
+			assert.Equal(t, true, o)
+		})
+		t.Run("root is not optimistic", func(t *testing.T) {
+			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+			require.NoError(t, err)
+			b.SetStateRoot(bytesutil.PadTo([]byte("root"), 32))
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveBlock(ctx, b))
+			fetcherSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			chainSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
+			cs := &chainmock.ChainService{State: chainSt}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
+			o, err := IsOptimistic(ctx, []byte(hexutil.Encode(bytesutil.PadTo([]byte("root"), 32))), cs, mf, cs, db)
+			require.NoError(t, err)
+			assert.Equal(t, false, o)
+		})
+		t.Run("no canonical blocks", func(t *testing.T) {
+			b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+			require.NoError(t, err)
+			db := dbtest.SetupDB(t)
+			require.NoError(t, db.SaveBlock(ctx, b))
+			fetcherSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			chainSt, err := util.NewBeaconState()
+			require.NoError(t, err)
+			require.NoError(t, chainSt.SetSlot(fieldparams.SlotsPerEpoch))
+			cs := &chainmock.ChainService{Optimistic: false, State: chainSt, CanonicalRoots: map[[32]byte]bool{}}
+			mf := &testutil.MockStater{BeaconState: fetcherSt}
+			o, err := IsOptimistic(ctx, []byte(hexutil.Encode(bytesutil.PadTo([]byte("root"), 32))), nil, mf, cs, db)
 			require.NoError(t, err)
 			assert.Equal(t, true, o)
 		})

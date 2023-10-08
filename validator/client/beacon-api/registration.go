@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"strconv"
+	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -18,18 +17,11 @@ func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Cont
 	jsonRegistration := make([]*shared.SignedValidatorRegistration, len(registrations))
 
 	for index, registration := range registrations {
-		inMessage := registration.Message
-		outMessage := &shared.ValidatorRegistration{
-			FeeRecipient: hexutil.Encode(inMessage.FeeRecipient),
-			GasLimit:     strconv.FormatUint(inMessage.GasLimit, 10),
-			Timestamp:    strconv.FormatUint(inMessage.Timestamp, 10),
-			Pubkey:       hexutil.Encode(inMessage.Pubkey),
+		outMessage, err := shared.SignedValidatorRegistrationFromConsensus(registration)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("failed to encode to SignedValidatorRegistration at index %d", index))
 		}
-
-		jsonRegistration[index] = &shared.SignedValidatorRegistration{
-			Message:   outMessage,
-			Signature: hexutil.Encode(registration.Signature),
-		}
+		jsonRegistration[index] = outMessage
 	}
 
 	marshalledJsonRegistration, err := json.Marshal(jsonRegistration)

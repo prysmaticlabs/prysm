@@ -14,7 +14,6 @@ go_library(
         "event_service_mock.go",
         "keymanager_mock.go",
         "node_service_mock.go",
-        "slasher_client_mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/mock",
     visibility = ["//visibility:public"],

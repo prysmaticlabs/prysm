@@ -24,6 +24,7 @@ import (
 	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -124,7 +125,7 @@ func New(opts ...Option) (*Builder, error) {
 	endpoint := network.HttpEndpoint(p.cfg.destinationUrl.String())
 	endpoint.Auth.Method = authorization.Bearer
 	endpoint.Auth.Value = p.cfg.secret
-	execClient, err := network.NewExecutionRPCClient(context.Background(), endpoint)
+	execClient, err := network.NewExecutionRPCClient(context.Background(), endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -243,13 +244,17 @@ func (p *Builder) isBuilderCall(req *http.Request) bool {
 }
 
 func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
-	registrations := []builderAPI.SignedValidatorRegistration{}
+	registrations := []shared.SignedValidatorRegistration{}
 	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 	for _, r := range registrations {
-		msg := r.Message
+		msg, err := r.Message.ToConsensus()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		p.validatorMap[string(r.Message.Pubkey)] = msg
 	}
 	// TODO: Verify Signatures from validators

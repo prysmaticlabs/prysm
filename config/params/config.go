@@ -213,7 +213,7 @@ type BeaconChainConfig struct {
 
 	// Mev-boost circuit breaker
 	MaxBuilderConsecutiveMissedSlots primitives.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
-	MaxBuilderEpochMissedSlots       primitives.Slot // MaxBuilderEpochMissedSlots is defines the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
+	MaxBuilderEpochMissedSlots       primitives.Slot // MaxBuilderEpochMissedSlots is defining the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
 	LocalBlockValueBoost             uint64          // LocalBlockValueBoost is the value boost for local block construction. This is used to prioritize local block construction over relay/builder block construction.
 
 	// Execution engine timeout value
@@ -221,6 +221,9 @@ type BeaconChainConfig struct {
 
 	// Subnet value
 	BlobsidecarSubnetCount uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT"` // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
+
+	// Values introduced in Deneb hard fork
+	MaxPerEpochActivationChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" spec:"true"` // MaxPerEpochActivationChurnLimit is the maximum amount of churn allotted for validator activation.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

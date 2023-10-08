@@ -1,8 +1,10 @@
 package state_native
 
 import (
-	"fmt"
-
+	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -45,26 +47,46 @@ func (b *BeaconState) latestBlockHeaderVal() *ethpb.BeaconBlockHeader {
 
 // BlockRoots kept track of in the beacon state.
 func (b *BeaconState) BlockRoots() [][]byte {
-	if b.blockRoots == nil {
-		return nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.blockRoots.Slice()
+	roots := b.blockRootsVal()
+	if roots == nil {
+		return nil
+	}
+	return roots.Slice()
+}
+
+func (b *BeaconState) blockRootsVal() customtypes.BlockRoots {
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue == nil {
+			return nil
+		}
+		return b.blockRootsMultiValue.Value(b)
+	}
+	return b.blockRoots
 }
 
 // BlockRootAtIndex retrieves a specific block root based on an
 // input index value.
 func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
-	if b.blockRoots == nil {
-		return []byte{}, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if features.Get().EnableExperimentalState {
+		if b.blockRootsMultiValue == nil {
+			return []byte{}, nil
+		}
+		r, err := b.blockRootsMultiValue.At(b, idx)
+		if err != nil {
+			return nil, err
+		}
+		return r[:], nil
+	}
+
+	if b.blockRoots == nil {
+		return []byte{}, nil
+	}
 	r, err := b.blockRootAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -77,7 +99,7 @@ func (b *BeaconState) BlockRootAtIndex(idx uint64) ([]byte, error) {
 // This assumes that a lock is already held on BeaconState.
 func (b *BeaconState) blockRootAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.blockRoots)) <= idx {
-		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
+		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "block root index %d does not exist", idx)
 	}
 	return b.blockRoots[idx], nil
 }
