@@ -7,18 +7,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
@@ -304,17 +300,17 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// SubmitSignedBLSToExecutionChanges submits said object to the node's pool
+// SubmitBLSToExecutionChanges submits said object to the node's pool
 // if it passes validation the node must broadcast it to the network.
-func (s *Server) SubmitSignedBLSToExecutionChanges(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitSignedBLSToExecutionChanges")
+func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitBLSToExecutionChanges")
 	defer span.End()
 	st, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
 		http2.HandleError(w, fmt.Sprintf("Could not get head state: %v", err), http.StatusInternalServerError)
 		return
 	}
-	var failures []*helpers.SingleIndexedVerificationFailure
+	var failures []*shared.IndexedVerificationFailure
 	var toBroadcast []*eth.SignedBLSToExecutionChange
 
 	var req []*shared.SignedBLSToExecutionChange
@@ -335,7 +331,7 @@ func (s *Server) SubmitSignedBLSToExecutionChanges(w http.ResponseWriter, r *htt
 	for i, change := range req {
 		sbls, err := change.ToConsensus()
 		if err != nil {
-			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+			failures = append(failures, &shared.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Unable to decode SignedBLSToExecutionChange: " + err.Error(),
 			})
@@ -343,14 +339,14 @@ func (s *Server) SubmitSignedBLSToExecutionChanges(w http.ResponseWriter, r *htt
 		}
 		_, err = blocks.ValidateBLSToExecutionChange(st, sbls)
 		if err != nil {
-			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+			failures = append(failures, &shared.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
 			})
 			continue
 		}
 		if err := blocks.VerifyBLSChangeSignature(st, sbls); err != nil {
-			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
+			failures = append(failures, &shared.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not validate signature: " + err.Error(),
 			})
@@ -369,16 +365,12 @@ func (s *Server) SubmitSignedBLSToExecutionChanges(w http.ResponseWriter, r *htt
 	}
 	go s.broadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
-		failuresContainer := &helpers.IndexedVerificationFailure{Failures: failures}
-		err := grpc.AppendCustomErrorHeader(ctx, failuresContainer)
-		if err != nil {
-			http2.HandleError(w, fmt.Sprintf("One or more BLSToExecutionChange failed validation. Could not prepare BLSToExecutionChange failure information: %v",
-				err), http.StatusBadRequest)
-			return
+		failuresErr := &shared.IndexedVerificationFailureError{
+			Code:     http.StatusBadRequest,
+			Message:  "One or more BLSToExecutionChange failed validation",
+			Failures: failures,
 		}
-		http2.HandleError(w, fmt.Sprintf("One or more BLSToExecutionChange failed validation: %v",
-			err), http.StatusBadRequest)
-		return
+		http2.WriteError(w, failuresErr)
 	}
 }
 

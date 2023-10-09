@@ -753,7 +753,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "http://foo.example/eth/v1/beacon/pool/bls_to_execution_changes", bytes.NewReader(jsonBytes))
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
-	s.SubmitSignedBLSToExecutionChanges(writer, request)
+	s.SubmitBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
 	assert.Equal(t, true, broadcaster.BroadcastCalled)
@@ -870,7 +870,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.SubmitSignedBLSToExecutionChanges(writer, request)
+	s.SubmitBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 	// Check that we didn't broadcast the messages but did in fact fill in
 	// the pool
@@ -975,7 +975,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
-	s.SubmitSignedBLSToExecutionChanges(writer, request)
+	s.SubmitBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusBadRequest, writer.Code)
 	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
 	require.StringContains(t, "One or more BLSToExecutionChange failed validation", writer.Body.String())
