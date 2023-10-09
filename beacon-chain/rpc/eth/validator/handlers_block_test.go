@@ -53,7 +53,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "", true)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockAltair
@@ -86,7 +86,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -119,7 +119,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -152,7 +152,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -185,7 +185,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -221,7 +221,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "2000", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -254,7 +254,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockContentsDeneb
@@ -287,7 +287,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("invalid query parameter slot empty", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -378,7 +378,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "", true)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockAltair
@@ -412,7 +412,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -447,7 +447,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -482,7 +482,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -517,7 +517,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -555,7 +555,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "2000", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -590,7 +590,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockContentsDeneb
@@ -625,6 +625,6 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
-		require.Equal(t, writer.Header().Get(api.ConsensusPayloadValueHeader) == "10", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 }
