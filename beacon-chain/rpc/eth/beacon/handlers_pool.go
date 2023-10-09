@@ -346,7 +346,7 @@ func (s *Server) SubmitSignedBLSToExecutionChanges(w http.ResponseWriter, r *htt
 		if err != nil {
 			failures = append(failures, &helpers.SingleIndexedVerificationFailure{
 				Index:   i,
-				Message: "unable to decode SignedBLSToExecutionChange: " + err.Error(),
+				Message: "Unable to decode SignedBLSToExecutionChange: " + err.Error(),
 			})
 			continue
 		}
