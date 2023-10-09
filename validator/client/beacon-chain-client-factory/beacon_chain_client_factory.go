@@ -25,9 +25,16 @@ func NewBeaconChainClient(validatorConn validatorHelpers.NodeConnection) iface.B
 }
 
 func NewPrysmBeaconClient(validatorConn validatorHelpers.NodeConnection) iface.PrysmBeaconChainClient {
-	return beaconApi.NewPrysmBeaconChainClient(
-		validatorConn.GetBeaconApiUrl(),
-		validatorConn.GetBeaconApiTimeout(),
-		nodeClientFactory.NewNodeClient(validatorConn),
-	)
+	grpcClient := grpcApi.NewGrpcPrysmBeaconChainClient(validatorConn.GetGrpcClientConn())
+	featureFlags := features.Get()
+
+	if featureFlags.EnableBeaconRESTApi {
+		return beaconApi.NewPrysmBeaconChainClient(
+			validatorConn.GetBeaconApiUrl(),
+			validatorConn.GetBeaconApiTimeout(),
+			nodeClientFactory.NewNodeClient(validatorConn),
+		)
+	} else {
+		return grpcClient
+	}
 }
