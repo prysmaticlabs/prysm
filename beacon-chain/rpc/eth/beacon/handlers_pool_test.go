@@ -237,7 +237,7 @@ func TestSubmitAttestations(t *testing.T) {
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-		assert.Equal(t, 1, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, 1, broadcaster.NumAttestations())
 		assert.Equal(t, "0x03", hexutil.Encode(broadcaster.BroadcastAttestations[0].AggregationBits))
 		assert.Equal(t, "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15", hexutil.Encode(broadcaster.BroadcastAttestations[0].Signature))
 		assert.Equal(t, primitives.Slot(0), broadcaster.BroadcastAttestations[0].Data.Slot)
@@ -264,7 +264,7 @@ func TestSubmitAttestations(t *testing.T) {
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
-		assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, 2, broadcaster.NumAttestations())
 		assert.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
 	})
 	t.Run("no body", func(t *testing.T) {

@@ -54,3 +54,10 @@ func (m *MockBroadcaster) NumMessages() int {
 	defer m.msgLock.Unlock()
 	return len(m.BroadcastMessages)
 }
+
+// NumAttestations returns the number of attestations broadcasted.
+func (m *MockBroadcaster) NumAttestations() int {
+	m.attLock.Lock()
+	defer m.attLock.Unlock()
+	return len(m.BroadcastAttestations)
+}
