@@ -47,3 +47,10 @@ func (m *MockBroadcaster) BroadcastBlob(context.Context, uint64, *ethpb.SignedBl
 	m.BroadcastCalled.Store(true)
 	return nil
 }
+
+// NumMessages returns the number of messages broadcasted.
+func (m *MockBroadcaster) NumMessages() int {
+	m.msgLock.Lock()
+	defer m.msgLock.Unlock()
+	return len(m.BroadcastMessages)
+}
