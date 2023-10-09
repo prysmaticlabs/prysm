@@ -123,7 +123,7 @@ type SignedBLSToExecutionChange struct {
 func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
 	change, err := s.Message.ToConsensus()
 	if err != nil {
-		return nil, err
+		return nil, NewDecodeError(err, "Message")
 	}
 	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
