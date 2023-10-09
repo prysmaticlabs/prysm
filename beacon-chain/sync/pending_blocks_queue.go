@@ -168,7 +168,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			bestPeers := s.getBestPeers()
 			if len(bestPeers) > 0 {
-				if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot[:], bestPeers[randGen.Int()%len(bestPeers)]); err != nil {
+				if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, bestPeers[randGen.Int()%len(bestPeers)]); err != nil {
 					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not request pending blobs")
 					tracing.AnnotateError(span, err)
 					span.End()
