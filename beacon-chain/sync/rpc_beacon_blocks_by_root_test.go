@@ -402,6 +402,8 @@ func TestFilterUnknownIndices(t *testing.T) {
 
 	actual := filterUnknownIndices(knownIndices, count, blockRoot)
 	require.Equal(t, len(expected), len(actual))
+	require.Equal(t, expected[0].Index, actual[0].Index)
 	require.DeepEqual(t, actual[0].BlockRoot, expected[0].BlockRoot)
+	require.Equal(t, expected[1].Index, actual[1].Index)
 	require.DeepEqual(t, actual[1].BlockRoot, expected[1].BlockRoot)
 }
