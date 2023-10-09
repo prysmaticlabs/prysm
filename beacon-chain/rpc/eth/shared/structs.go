@@ -148,7 +148,7 @@ func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) 
 	}
 	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "FromBlsPubkey")
+		return nil, NewDecodeError(err, "FromBLSPubkey")
 	}
 	executionAddress, err := DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
 	if err != nil {
