@@ -37,7 +37,7 @@ const disabledFeatureFlag = "Disabled feature flag"
 // Flags is a struct to represent which features the client will perform on runtime.
 type Flags struct {
 	// Feature related flags.
-	RemoteSlasherProtection             bool // RemoteSlasherProtection utilizes a beacon node with --slasher mode for validator slashing protection.
+	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
 	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
@@ -70,8 +70,7 @@ type Flags struct {
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
 
-	BuildBlockParallel bool // BuildBlockParallel builds beacon block for proposer in parallel.
-	AggregateParallel  bool // AggregateParallel aggregates attestations in parallel.
+	AggregateParallel bool // AggregateParallel aggregates attestations in parallel.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -178,6 +177,11 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool(enableExperimentalState.Name) {
+		logEnabled(enableExperimentalState)
+		cfg.EnableExperimentalState = true
+	}
+
 	if ctx.Bool(writeSSZStateTransitionsFlag.Name) {
 		logEnabled(writeSSZStateTransitionsFlag)
 		cfg.WriteSSZStateTransitions = true
@@ -229,18 +233,14 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	if ctx.IsSet(enableOptionalEngineMethods.Name) {
-		logEnabled(enableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = true
+	cfg.EnableOptionalEngineMethods = true
+	if ctx.IsSet(disableOptionalEngineMethods.Name) {
+		logEnabled(disableOptionalEngineMethods)
+		cfg.EnableOptionalEngineMethods = false
 	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
-	}
-	cfg.BuildBlockParallel = true
-	if ctx.IsSet(disableBuildBlockParallel.Name) {
-		logEnabled(disableBuildBlockParallel)
-		cfg.BuildBlockParallel = false
 	}
 	cfg.AggregateParallel = true
 	if ctx.IsSet(disableAggregateParallel.Name) {
@@ -267,12 +267,6 @@ func ConfigureValidator(ctx *cli.Context) error {
 	cfg := &Flags{}
 	if err := configureTestnet(ctx); err != nil {
 		return err
-	}
-	if ctx.Bool(enableExternalSlasherProtectionFlag.Name) {
-		log.Fatal(
-			"Remote slashing protection has currently been disabled in Prysm due to safety concerns. " +
-				"We appreciate your understanding in our desire to keep Prysm validators safe.",
-		)
 	}
 	if ctx.Bool(writeWalletPasswordOnWebOnboarding.Name) {
 		logEnabled(writeWalletPasswordOnWebOnboarding)

@@ -11,19 +11,19 @@ type AggregateAttestationResponse struct {
 }
 
 type SubmitContributionAndProofsRequest struct {
-	Data []*shared.SignedContributionAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedContributionAndProof `json:"data"`
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedAggregateAttestationAndProof `json:"data"`
 }
 
 type SubmitSyncCommitteeSubscriptionsRequest struct {
-	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.SyncCommitteeSubscription `json:"data"`
 }
 
 type SubmitBeaconCommitteeSubscriptionsRequest struct {
-	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.BeaconCommitteeSubscription `json:"data"`
 }
 
 type GetAttestationDataResponse struct {

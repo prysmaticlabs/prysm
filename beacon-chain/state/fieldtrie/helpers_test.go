@@ -104,21 +104,11 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		expectedLength int
 	}{
 		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
 			name: "BlockRoots customtypes.BlockRoots",
 			args: &args{
 				field:      types.FieldIndex(5),
 				indices:    []uint64{},
-				elements:   &customtypes.BlockRoots{},
+				elements:   customtypes.BlockRoots{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -133,34 +123,14 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for block roots",
-		},
-		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
-			name: "StateRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			errMsg:  "Wanted type of customtypes.BlockRoots",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots",
 			args: &args{
 				field:      types.FieldIndex(6),
 				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
+				elements:   customtypes.StateRoots{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -175,45 +145,25 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for state roots",
-		},
-		{
-			name: "StateRoots [][]bytes convert all false",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: false,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			errMsg:  "Wanted type of customtypes.StateRoots",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots convert all false",
 			args: &args{
 				field:      types.FieldIndex(6),
 				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
+				elements:   customtypes.StateRoots{},
 				convertAll: false,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
 			expectedLength: 8192,
 		},
 		{
-			name: "RandaoMixes [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(13),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
 			name: "RandaoMixes customtypes.RandaoMixes",
 			args: &args{
 				field:      types.FieldIndex(13),
 				indices:    []uint64{},
-				elements:   &customtypes.RandaoMixes{},
+				elements:   customtypes.RandaoMixes{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -228,7 +178,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for randao mixes",
+			errMsg:  "Wanted type of customtypes.RandaoMixes",
 		},
 		{
 			name: "Eth1DataVotes type not found",

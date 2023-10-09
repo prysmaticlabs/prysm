@@ -92,20 +92,25 @@ package mvslice
 import (
 	"fmt"
 	"sync"
-
-	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v4/container/multi-value-slice/interfaces"
 )
 
+// Id is an object identifier.
+type Id = uint64
+
+// Identifiable represents an object that can be uniquely identified by its Id.
+type Identifiable interface {
+	Id() Id
+}
+
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
-type MultiValueSlice[O interfaces.Identifiable] interface {
-	Len(obj O) uuid.UUID
+type MultiValueSlice[O Identifiable] interface {
+	Len(obj O) int
 }
 
 // Value defines a single value along with one or more IDs that share this value.
 type Value[V any] struct {
 	val V
-	ids []uuid.UUID
+	ids []uint64
 }
 
 // MultiValueItem defines a collection of Value items.
@@ -119,11 +124,11 @@ type MultiValueItem[V any] struct {
 //   - O interfaces.Identifiable - the type of objects sharing the slice. The constraint is required
 //     because we need a way to compare objects against each other in order to know which objects
 //     values should be accessed.
-type Slice[V comparable, O interfaces.Identifiable] struct {
+type Slice[V comparable, O Identifiable] struct {
 	sharedItems     []V
 	individualItems map[uint64]*MultiValueItem[V]
 	appendedItems   []*MultiValueItem[V]
-	cachedLengths   map[uuid.UUID]int
+	cachedLengths   map[uint64]int
 	lock            sync.RWMutex
 }
 
@@ -132,7 +137,7 @@ func (s *Slice[V, O]) Init(items []V) {
 	s.sharedItems = items
 	s.individualItems = map[uint64]*MultiValueItem[V]{}
 	s.appendedItems = []*MultiValueItem[V]{}
-	s.cachedLengths = map[uuid.UUID]int{}
+	s.cachedLengths = map[uint64]int{}
 }
 
 // Len returns the number of items for the input object.
@@ -283,7 +288,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 	defer s.lock.Unlock()
 
 	if len(s.appendedItems) == 0 {
-		s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+		s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
 		s.cachedLengths[obj.Id()] = len(s.sharedItems) + 1
 		return
 	}
@@ -306,7 +311,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 				}
 			}
 			if newValue {
-				item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+				item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 			}
 
 			l, ok := s.cachedLengths[obj.Id()]
@@ -320,7 +325,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 		}
 	}
 
-	s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}})
+	s.appendedItems = append(s.appendedItems, &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}})
 
 	s.cachedLengths[obj.Id()] = s.cachedLengths[obj.Id()] + 1
 }
@@ -419,7 +424,7 @@ func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
 	}
 
 	if !ok {
-		s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uuid.UUID{obj.Id()}}}}
+		s.individualItems[index] = &MultiValueItem[V]{Values: []*Value[V]{{val: val, ids: []uint64{obj.Id()}}}}
 	} else {
 		newValue := true
 		for _, v := range ind.Values {
@@ -430,7 +435,7 @@ func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
 			}
 		}
 		if newValue {
-			ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+			ind.Values = append(ind.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 		}
 	}
 }
@@ -464,13 +469,13 @@ func (s *Slice[V, O]) updateAppendedItem(obj O, index uint64, val V) error {
 		}
 	}
 	if newValue {
-		item.Values = append(item.Values, &Value[V]{val: val, ids: []uuid.UUID{obj.Id()}})
+		item.Values = append(item.Values, &Value[V]{val: val, ids: []uint64{obj.Id()}})
 	}
 
 	return nil
 }
 
-func containsId(ids []uuid.UUID, wanted uuid.UUID) (int, bool) {
+func containsId(ids []uint64, wanted uint64) (int, bool) {
 	for i, id := range ids {
 		if id == wanted {
 			return i, true

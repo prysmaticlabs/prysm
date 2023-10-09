@@ -33,6 +33,7 @@ import (
 func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlockV3")
 	defer span.End()
+
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
@@ -77,10 +78,9 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest) {
-	isSSZ, err := http2.SszRequested(r)
-	if err != nil {
-		log.WithError(err).Error("Checking for SSZ failed, defaulting to JSON")
-		isSSZ = false
+	isSSZ := http2.SszRequested(r)
+	if !isSSZ {
+		log.Error("Checking for SSZ failed, defaulting to JSON")
 	}
 	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
