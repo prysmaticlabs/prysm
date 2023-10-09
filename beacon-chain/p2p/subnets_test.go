@@ -46,12 +46,6 @@ func TestStartDiscV5_DiscoverPeersWithSubnets(t *testing.T) {
 	defer bootListener.Close()
 
 	bootNode := bootListener.Self()
-	// Use shorter period for testing.
-	currentPeriod := pollingPeriod
-	pollingPeriod = 1 * time.Second
-	defer func() {
-		pollingPeriod = currentPeriod
-	}()
 
 	var listeners []*discover.UDPv5
 	for i := 1; i <= 3; i++ {

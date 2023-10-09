@@ -200,13 +200,6 @@ func TestListenForNewNodes(t *testing.T) {
 	require.NoError(t, err)
 	defer bootListener.Close()
 
-	// Use shorter period for testing.
-	currentPeriod := pollingPeriod
-	pollingPeriod = 1 * time.Second
-	defer func() {
-		pollingPeriod = currentPeriod
-	}()
-
 	bootNode := bootListener.Self()
 
 	var listeners []*discover.UDPv5
