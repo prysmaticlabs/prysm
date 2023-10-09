@@ -117,7 +117,7 @@ type Fork struct {
 
 type SignedBLSToExecutionChange struct {
 	Message   *BLSToExecutionChange `json:"message"`
-	Signature string                `json:"signature" hex:"true"`
+	Signature string                `json:"signature"`
 }
 
 func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
