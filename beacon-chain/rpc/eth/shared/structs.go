@@ -144,7 +144,7 @@ type BLSToExecutionChange struct {
 func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) {
 	index, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, NewDecodeError(err, "ValidatorIndex")
 	}
 	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
