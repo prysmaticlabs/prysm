@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -53,7 +54,7 @@ var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
-	started               bool
+	started               atomic.Bool
 	isPreGenesis          bool
 	pingMethod            func(ctx context.Context, id peer.ID) error
 	cancel                context.CancelFunc
@@ -162,7 +163,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start the p2p service.
 func (s *Service) Start() {
-	if s.started {
+	if s.Started() {
 		log.Error("Attempted to start p2p service when it was already started")
 		return
 	}
@@ -201,7 +202,7 @@ func (s *Service) Start() {
 		go s.listenForNewNodes()
 	}
 
-	s.started = true
+	s.started.Store(true)
 
 	if len(s.cfg.StaticPeers) > 0 {
 		addrs, err := PeersFromStringAddrs(s.cfg.StaticPeers)
@@ -257,7 +258,7 @@ func (s *Service) Start() {
 // Stop the p2p service and terminate all peer connections.
 func (s *Service) Stop() error {
 	defer s.cancel()
-	s.started = false
+	s.started.Store(false)
 	if s.dv5Listener != nil {
 		s.dv5Listener.Close()
 	}
@@ -270,7 +271,7 @@ func (s *Service) Status() error {
 	if s.isPreGenesis {
 		return nil
 	}
-	if !s.started {
+	if !s.started.Load() {
 		return errors.New("not running")
 	}
 	if s.startupErr != nil {
@@ -284,7 +285,7 @@ func (s *Service) Status() error {
 
 // Started returns true if the p2p service has successfully started.
 func (s *Service) Started() bool {
-	return s.started
+	return s.started.Load()
 }
 
 // Encoding returns the configured networking encoding.

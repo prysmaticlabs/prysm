@@ -83,10 +83,10 @@ func TestService_Stop_SetsStartedToFalse(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	s, err := NewService(context.Background(), &Config{StateNotifier: &mock.MockStateNotifier{}})
 	require.NoError(t, err)
-	s.started = true
+	s.started.Store(true)
 	s.dv5Listener = &mockListener{}
 	assert.NoError(t, s.Stop())
-	assert.Equal(t, false, s.started)
+	assert.Equal(t, false, s.Started())
 }
 
 func TestService_Stop_DontPanicIfDv5ListenerIsNotInited(t *testing.T) {
@@ -117,7 +117,7 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 	var vr [32]byte
 	require.NoError(t, cs.SetClock(startup.NewClock(time.Now(), vr)))
 	time.Sleep(time.Second * 2)
-	assert.Equal(t, true, s.started, "Expected service to be started")
+	assert.Equal(t, true, s.Started(), "Expected service to be started")
 	s.Start()
 	require.LogsContain(t, hook, "Attempted to start p2p service when it was already started")
 	require.NoError(t, s.Stop())
@@ -126,14 +126,15 @@ func TestService_Start_OnlyStartsOnce(t *testing.T) {
 
 func TestService_Status_NotRunning(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	s := &Service{started: false}
+	s := &Service{}
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "not running", s.Status(), "Status returned wrong error")
 }
 
 func TestService_Status_NoGenesisTimeSet(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	s := &Service{started: true}
+	s := &Service{}
+	s.started.Store(true)
 	s.dv5Listener = &mockListener{}
 	assert.ErrorContains(t, "no genesis time set", s.Status(), "Status returned wrong error")
 
