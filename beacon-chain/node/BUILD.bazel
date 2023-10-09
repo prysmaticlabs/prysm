@@ -8,6 +8,7 @@ go_library(
         "node.go",
         "options.go",
         "prometheus.go",
+        "router.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/node",
     visibility = [
@@ -40,6 +41,7 @@ go_library(
         "//beacon-chain/p2p:go_default_library",
         "//beacon-chain/rpc:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/eth/helpers:go_default_library",
         "//beacon-chain/slasher:go_default_library",
         "//beacon-chain/startup:go_default_library",
         "//beacon-chain/state:go_default_library",

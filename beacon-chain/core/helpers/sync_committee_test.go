@@ -99,7 +99,7 @@ func TestIsCurrentEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	ok, err := IsCurrentPeriodSyncCommittee(state, 12390192)
-	require.ErrorContains(t, "index 12390192 out of range", err)
+	require.ErrorContains(t, "validator index 12390192 does not exist", err)
 	require.Equal(t, false, ok)
 }
 
@@ -182,7 +182,7 @@ func TestIsNextEpochSyncCommittee_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	ok, err := IsNextPeriodSyncCommittee(state, 120391029)
-	require.ErrorContains(t, "index 120391029 out of range", err)
+	require.ErrorContains(t, "validator index 120391029 does not exist", err)
 	require.Equal(t, false, ok)
 }
 
@@ -282,7 +282,7 @@ func TestCurrentEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	index, err := CurrentPeriodSyncSubcommitteeIndices(state, 129301923)
-	require.ErrorContains(t, "index 129301923 out of range", err)
+	require.ErrorContains(t, "validator index 129301923 does not exist", err)
 	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 
@@ -367,7 +367,7 @@ func TestNextEpochSyncSubcommitteeIndices_DoesNotExist(t *testing.T) {
 	require.NoError(t, state.SetNextSyncCommittee(syncCommittee))
 
 	index, err := NextPeriodSyncSubcommitteeIndices(state, 21093019)
-	require.ErrorContains(t, "index 21093019 out of range", err)
+	require.ErrorContains(t, "validator index 21093019 does not exist", err)
 	require.DeepEqual(t, []primitives.CommitteeIndex(nil), index)
 }
 

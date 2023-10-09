@@ -806,10 +806,6 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
 	defer span.End()
 
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	rawSlot := r.URL.Query().Get("slot")
 	rawParentRoot := r.URL.Query().Get("parent_root")
 
