@@ -3,6 +3,7 @@ package beacon
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,8 +19,9 @@ import (
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -94,11 +96,6 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	var validAttestations []*eth.Attestation
 	var attFailures []*shared.IndexedVerificationFailure
@@ -146,7 +143,6 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
@@ -214,11 +210,6 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	exit, err := req.ToConsensus()
 	if err != nil {
@@ -243,8 +234,8 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-			http2.HandleError(w, "Could not get exiting validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+		if errors.Is(err, consensus_types.ErrOutOfBounds) {
+			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
@@ -297,8 +288,8 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	for _, msg := range validMessages {
-		if err = s.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
-			http2.HandleError(w, "Could not submit message: "+err.Error(), http.StatusInternalServerError)
+		if rpcerr := s.CoreService.SubmitSyncMessage(ctx, msg); rpcerr != nil {
+			http2.HandleError(w, "Could not submit message: "+rpcerr.Err.Error(), core.ErrorReasonToHTTP(rpcerr.Reason))
 			return
 		}
 	}

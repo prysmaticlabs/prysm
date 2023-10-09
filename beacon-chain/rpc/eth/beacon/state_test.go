@@ -108,8 +108,8 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetRandao(t *testing.T) {
-	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
-	mixOld := bytesutil.PadTo([]byte("old"), 32)
+	mixCurrent := bytesutil.ToBytes32([]byte("current"))
+	mixOld := bytesutil.ToBytes32([]byte("old"))
 	epochCurrent := primitives.Epoch(100000)
 	epochOld := 100000 - params.BeaconConfig().EpochsPerHistoricalVector + 1
 
@@ -125,7 +125,7 @@ func TestGetRandao(t *testing.T) {
 	headSt, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	headRandao := bytesutil.PadTo([]byte("head"), 32)
+	headRandao := bytesutil.ToBytes32([]byte("head"))
 	require.NoError(t, headSt.UpdateRandaoMixesAtIndex(uint64(headEpoch), headRandao))
 
 	db := dbTest.SetupDB(t)
@@ -143,17 +143,17 @@ func TestGetRandao(t *testing.T) {
 	t.Run("no epoch requested", func(t *testing.T) {
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
 		require.NoError(t, err)
-		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
+		assert.DeepEqual(t, mixCurrent[:], resp.Data.Randao)
 	})
 	t.Run("current epoch requested", func(t *testing.T) {
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochCurrent})
 		require.NoError(t, err)
-		assert.DeepEqual(t, mixCurrent, resp.Data.Randao)
+		assert.DeepEqual(t, mixCurrent[:], resp.Data.Randao)
 	})
 	t.Run("old epoch requested", func(t *testing.T) {
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head"), Epoch: &epochOld})
 		require.NoError(t, err)
-		assert.DeepEqual(t, mixOld, resp.Data.Randao)
+		assert.DeepEqual(t, mixOld[:], resp.Data.Randao)
 	})
 	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
 		server.Stater = &testutil.MockStater{
@@ -161,7 +161,7 @@ func TestGetRandao(t *testing.T) {
 		}
 		resp, err := server.GetRandao(ctx, &eth2.RandaoRequest{StateId: []byte("head")})
 		require.NoError(t, err)
-		assert.DeepEqual(t, headRandao, resp.Data.Randao)
+		assert.DeepEqual(t, headRandao[:], resp.Data.Randao)
 	})
 	t.Run("epoch too old", func(t *testing.T) {
 		epochTooOld := primitives.Epoch(100000 - st.RandaoMixesLength())

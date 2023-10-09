@@ -30,6 +30,7 @@ import (
 func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlockV3")
 	defer span.End()
+
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}

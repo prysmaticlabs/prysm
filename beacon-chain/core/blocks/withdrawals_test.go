@@ -151,7 +151,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		}
 
 		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
-		require.ErrorContains(t, "out of range", err)
+		require.ErrorContains(t, "out of bounds", err)
 	})
 
 	t.Run("signature does not verify", func(t *testing.T) {
