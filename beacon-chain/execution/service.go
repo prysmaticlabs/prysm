@@ -208,13 +208,9 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		}
 	}
 
-	if err := s.ensureValidPowchainData(ctx); err != nil {
-		return nil, errors.Wrap(err, "unable to validate powchain data")
-	}
-
-	eth1Data, err := s.cfg.beaconDB.ExecutionChainData(ctx)
+	eth1Data, err := s.validPowchainData(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+		return nil, errors.Wrap(err, "unable to validate powchain data")
 	}
 	if err := s.initializeEth1Data(ctx, eth1Data); err != nil {
 		return nil, err
@@ -822,23 +818,22 @@ func validateDepositContainers(ctrs []*ethpb.DepositContainer) bool {
 
 // Validates the current powchain data is saved and makes sure that any
 // embedded genesis state is correctly accounted for.
-func (s *Service) ensureValidPowchainData(ctx context.Context) error {
+func (s *Service) validPowchainData(ctx context.Context) (*ethpb.ETH1ChainData, error) {
 	genState, err := s.cfg.beaconDB.GenesisState(ctx)
 	if err != nil {
-		return err
-	}
-	// Exit early if no genesis state is saved.
-	if genState == nil || genState.IsNil() {
-		return nil
+		return nil, err
 	}
 	eth1Data, err := s.cfg.beaconDB.ExecutionChainData(ctx)
 	if err != nil {
-		return errors.Wrap(err, "unable to retrieve eth1 data")
+		return nil, errors.Wrap(err, "unable to retrieve eth1 data")
+	}
+	if genState == nil || genState.IsNil() {
+		return eth1Data, nil
 	}
 	if eth1Data == nil || !eth1Data.ChainstartData.Chainstarted || !validateDepositContainers(eth1Data.DepositContainers) {
 		pbState, err := native.ProtobufBeaconStatePhase0(s.preGenesisState.ToProtoUnsafe())
 		if err != nil {
-			return err
+			return nil, err
 		}
 		s.chainStartData = &ethpb.ChainStartData{
 			Chainstarted:       true,
@@ -856,22 +851,24 @@ func (s *Service) ensureValidPowchainData(ctx context.Context) error {
 		if features.Get().EnableEIP4881 {
 			trie, ok := s.depositTrie.(*depositsnapshot.DepositTree)
 			if !ok {
-				return errors.New("deposit trie was not EIP4881 DepositTree")
+				return nil, errors.New("deposit trie was not EIP4881 DepositTree")
 			}
 			eth1Data.DepositSnapshot, err = trie.ToProto()
 			if err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			trie, ok := s.depositTrie.(*trie.SparseMerkleTrie)
 			if !ok {
-				return errors.New("deposit trie was not SparseMerkleTrie")
+				return nil, errors.New("deposit trie was not SparseMerkleTrie")
 			}
 			eth1Data.Trie = trie.ToProto()
 		}
-		return s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data)
+		if err := s.cfg.beaconDB.SaveExecutionChainData(ctx, eth1Data); err != nil {
+			return nil, err
+		}
 	}
-	return nil
+	return eth1Data, nil
 }
 
 func dedupEndpoints(endpoints []string) []string {
