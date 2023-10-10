@@ -211,15 +211,15 @@ func (s *Service) Start() {
 		BeaconDB:         s.cfg.BeaconDB,
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 	}
-
+	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 	rewardsServer := &rewards.Server{
 		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		ReplayerBuilder:       ch,
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		Stater:                stater,
 		HeadFetcher:           s.cfg.HeadFetcher,
+		BlockRewardFetcher:    rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
@@ -304,6 +304,7 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 		OperationNotifier:      s.cfg.OperationNotifier,
 		CoreService:            coreService,
+		BlockRewardFetcher:     rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods(http.MethodGet)
