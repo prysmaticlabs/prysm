@@ -70,7 +70,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	// Iterate through sorted slots.
 	for _, slot := range sortedSlots {
 		// Skip processing if current slot is ahead.
-		if shouldSkipProcessing(slot, s.cfg.clock.CurrentSlot()) {
+		if slot > s.cfg.clock.CurrentSlot() {
 			continue
 		}
 
@@ -85,7 +85,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 		// Process each block in the queue.
 		for _, b := range blocksInCache {
-			if shouldSkipBlock(b) {
+			if err := blocks.BeaconBlockIsNil(b); err != nil {
 				continue
 			}
 			blkRoot, err := b.Block().HashTreeRoot()
@@ -107,6 +107,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
+			inPendingQueue := s.isBlockInQueue(b.Block().ParentRoot())
+
 			// Check if block is bad.
 			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
 			if err != nil {
@@ -118,13 +120,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Request parent block if not in the pending queue and not in the database.
 			parentRoot := b.Block().ParentRoot()
-			inPendingQueue := s.isBlockInQueue(b.Block().ParentRoot())
-			if s.shouldRequestParentBlock(ctx, inPendingQueue, parentRoot) {
+			parentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
+			if s.shouldRequestParentBlock(inPendingQueue, parentBlockInDB) {
 				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, parentRoot)
 				continue
 			}
-			if !s.cfg.beaconDB.HasBlock(ctx, parentRoot) {
+			if !parentBlockInDB {
 				continue
 			}
 
@@ -152,11 +154,6 @@ func startInnerSpan(ctx context.Context, slot primitives.Slot) (context.Context,
 	return ctx, span
 }
 
-// shouldSkipProcessing checks if a slot should be skipped based on the current slot.
-func shouldSkipProcessing(slot, currentSlot primitives.Slot) bool {
-	return slot > currentSlot
-}
-
 // getBlocksInQueue retrieves the blocks in the pending queue for a given slot.
 func (s *Service) getBlocksInQueue(slot primitives.Slot) []interfaces.ReadOnlySignedBeaconBlock {
 	s.pendingQueueLock.RLock()
@@ -182,14 +179,9 @@ func (s *Service) isBlockInQueue(parentRoot [32]byte) bool {
 	return s.seenPendingBlocks[parentRoot]
 }
 
-// shouldSkipBlock checks if a block should be skipped.
-func shouldSkipBlock(b interfaces.ReadOnlySignedBeaconBlock) bool {
-	return b == nil || b.IsNil() || b.Block().IsNil()
-}
-
 // shouldRequestParentBlock determines if a parent block should be requested.
-func (s *Service) shouldRequestParentBlock(ctx context.Context, inPendingQueue bool, parentRoot [32]byte) bool {
-	return !inPendingQueue && !s.cfg.beaconDB.HasBlock(ctx, parentRoot) && len(s.cfg.p2p.Peers().Connected()) > 0
+func (s *Service) shouldRequestParentBlock(inPendingQueue, parentBlockInDB bool) bool {
+	return !inPendingQueue && !parentBlockInDB && len(s.cfg.p2p.Peers().Connected()) > 0
 }
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
