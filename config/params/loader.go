@@ -73,7 +73,7 @@ func UnmarshalNetConfig(yamlFile []byte, conf *NetworkConfig) (*NetworkConfig, e
 	lines := strings.Split(string(yamlFile), "\n")
 	if conf == nil {
 		if isMinimal(lines) {
-			conf = BeaconNetworkConfig().Copy()
+			conf = MinimalNetSpecConfig().Copy()
 		} else {
 			// Default to using mainnet.
 			conf = BeaconNetworkConfig().Copy()

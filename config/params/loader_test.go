@@ -167,7 +167,7 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
 
-func assertEqualNetworkConfigs(t *testing.T, name string, fields []string, expected, actual *params.NetworkConfig) {
+func assertEqualNetworkConfigs(t *testing.T, name string, expected, actual *params.NetworkConfig) {
 	// Networking params
 	assert.Equal(t, expected.GossipMaxSizeBellatrix, actual.GossipMaxSize, "%s: GossipMaxSize", name)
 	// NO GOSSIP_MAX_SIZE_BELLATRIX in spec docs
@@ -224,8 +224,7 @@ func TestLoadConfigFile(t *testing.T) {
 		mainnet_network := params.BeaconNetworkConfig().Copy()
 		network_spec, err := params.UnmarshalNetConfigFile(mainnetConfigFile, nil)
 		require.NoError(t, err)
-		fields = fieldsFromYamls(t, []string{mainnetConfigFile})
-		assertEqualNetworkConfigs(t, "mainnet", fields, mainnet_network, network_spec)
+		assertEqualNetworkConfigs(t, "mainnet", mainnet_network, network_spec)
 
 	})
 
@@ -249,8 +248,7 @@ func TestLoadConfigFile(t *testing.T) {
 		minimal_network := params.MinimalNetSpecConfig().Copy()
 		min_network_spec, err := params.UnmarshalNetConfigFile(minimalConfigFile, nil)
 		require.NoError(t, err)
-		fields = fieldsFromYamls(t, []string{minimalConfigFile})
-		assertEqualNetworkConfigs(t, "minimal", fields, minimal_network, min_network_spec)
+		assertEqualNetworkConfigs(t, "minimal", minimal_network, min_network_spec)
 
 	})
 
