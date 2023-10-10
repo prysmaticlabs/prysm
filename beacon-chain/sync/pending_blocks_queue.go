@@ -162,7 +162,7 @@ func (s *Service) getBlocksInQueue(slot primitives.Slot) []interfaces.ReadOnlySi
 }
 
 // removeBlockFromQueue removes a block from the pending queue.
-func (s *Service) removeBlockFromQueue(b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error { // Replace BlockType with the actual type
+func (s *Service) removeBlockFromQueue(b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
 	s.pendingQueueLock.Lock()
 	defer s.pendingQueueLock.Unlock()
 	if err := s.deleteBlockFromPendingQueue(b.Block().Slot(), b, blkRoot); err != nil {
@@ -185,7 +185,7 @@ func (s *Service) shouldRequestParentBlock(inPendingQueue, parentBlockInDB bool)
 }
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
-func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error { // Replace BlockType with the actual type
+func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
 	if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
 		if !errors.Is(ErrOptimisticParent, err) {
 			log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
