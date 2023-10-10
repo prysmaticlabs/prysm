@@ -107,7 +107,8 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
-			inPendingQueue := s.isBlockInQueue(b.Block().ParentRoot())
+			parentRoot := b.Block().ParentRoot()
+			inPendingQueue := s.isBlockInQueue(parentRoot)
 
 			// Check if block is bad.
 			keepProcessing, err := s.checkIfBlockIsBad(ctx, span, slot, b, blkRoot)
@@ -119,7 +120,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			}
 
 			// Request parent block if not in the pending queue and not in the database.
-			parentRoot := b.Block().ParentRoot()
 			isParentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
 			if !inPendingQueue && !isParentBlockInDB && s.hasPeer() {
 				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
