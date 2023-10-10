@@ -8,9 +8,7 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	coreblocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/epoch/precompute"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -20,10 +18,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/wealdtech/go-bytesutil"
+	"go.opencensus.io/trace"
 )
 
 // BlockRewards is an HTTP handler for Beacon API getBlockRewards.
 func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.BlockRewards")
+	defer span.End()
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
 
@@ -33,63 +34,6 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 	}
 	if blk.Version() == version.Phase0 {
 		http2.HandleError(w, "Block rewards are not supported for Phase 0 blocks", http.StatusBadRequest)
-		return
-	}
-
-	// We want to run several block processing functions that update the proposer's balance.
-	// This will allow us to calculate proposer rewards for each operation (atts, slashings etc).
-	// To do this, we replay the state up to the block's slot, but before processing the block.
-	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
-	if err != nil {
-		http2.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	proposerIndex := blk.Block().ProposerIndex()
-	initBalance, err := st.BalanceAtIndex(proposerIndex)
-	if err != nil {
-		http2.HandleError(w, "Could not get proposer's balance: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	st, err = altair.ProcessAttestationsNoVerifySignature(r.Context(), st, blk)
-	if err != nil {
-		http2.HandleError(w, "Could not get attestation rewards"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	attBalance, err := st.BalanceAtIndex(proposerIndex)
-	if err != nil {
-		http2.HandleError(w, "Could not get proposer's balance: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	st, err = coreblocks.ProcessAttesterSlashings(r.Context(), st, blk.Block().Body().AttesterSlashings(), validators.SlashValidator)
-	if err != nil {
-		http2.HandleError(w, "Could not get attester slashing rewards: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	attSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
-	if err != nil {
-		http2.HandleError(w, "Could not get proposer's balance: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	st, err = coreblocks.ProcessProposerSlashings(r.Context(), st, blk.Block().Body().ProposerSlashings(), validators.SlashValidator)
-	if err != nil {
-		http2.HandleError(w, "Could not get proposer slashing rewards"+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	proposerSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
-	if err != nil {
-		http2.HandleError(w, "Could not get proposer's balance: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	sa, err := blk.Block().Body().SyncAggregate()
-	if err != nil {
-		http2.HandleError(w, "Could not get sync aggregate: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	var syncCommitteeReward uint64
-	_, syncCommitteeReward, err = altair.ProcessSyncAggregate(r.Context(), st, sa)
-	if err != nil {
-		http2.HandleError(w, "Could not get sync aggregate rewards: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -103,18 +47,15 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
+	blockRewards, httpError := s.BlockRewardFetcher.GetBlockRewardsData(ctx, blk)
+	if httpError != nil {
+		http2.WriteError(w, httpError)
+		return
+	}
 	response := &BlockRewardsResponse{
-		Data: BlockRewards{
-			ProposerIndex:     strconv.FormatUint(uint64(proposerIndex), 10),
-			Total:             strconv.FormatUint(proposerSlashingsBalance-initBalance+syncCommitteeReward, 10),
-			Attestations:      strconv.FormatUint(attBalance-initBalance, 10),
-			SyncAggregate:     strconv.FormatUint(syncCommitteeReward, 10),
-			ProposerSlashings: strconv.FormatUint(proposerSlashingsBalance-attSlashingsBalance, 10),
-			AttesterSlashings: strconv.FormatUint(attSlashingsBalance-attBalance, 10),
-		},
+		Data:                blockRewards,
 		ExecutionOptimistic: optimistic,
-		Finalized:           s.FinalizationFetcher.IsFinalized(r.Context(), blkRoot),
+		Finalized:           s.FinalizationFetcher.IsFinalized(ctx, blkRoot),
 	}
 	http2.WriteJson(w, response)
 }
@@ -165,6 +106,8 @@ func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 // SyncCommitteeRewards retrieves rewards info for sync committee members specified by array of public keys or validator index.
 // If no array is provided, return reward info for every committee member.
 func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SyncCommitteeRewards")
+	defer span.End()
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
 
@@ -176,9 +119,10 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Sync committee rewards are not supported for Phase 0", http.StatusBadRequest)
 		return
 	}
-	st, err := s.ReplayerBuilder.ReplayerForSlot(blk.Block().Slot()-1).ReplayToSlot(r.Context(), blk.Block().Slot())
-	if err != nil {
-		http2.HandleError(w, "Could not get state: "+err.Error(), http.StatusInternalServerError)
+
+	st, httpErr := s.BlockRewardFetcher.GetStateForRewards(ctx, blk)
+	if httpErr != nil {
+		http2.WriteError(w, httpErr)
 		return
 	}
 	sa, err := blk.Block().Body().SyncAggregate()
