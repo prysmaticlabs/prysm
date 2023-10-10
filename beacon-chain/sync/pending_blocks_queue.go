@@ -186,13 +186,11 @@ func (s *Service) shouldRequestParentBlock(inPendingQueue, parentBlockInDB bool)
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
 func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error { // Replace BlockType with the actual type
-	err := s.validateBeaconBlock(ctx, b, blkRoot)
-	switch {
-	case errors.Is(ErrOptimisticParent, err):
-	case err != nil:
-		log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
-		return err
-	default:
+	if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
+		if !errors.Is(ErrOptimisticParent, err) {
+			log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
+			return err
+		}
 	}
 
 	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
