@@ -213,14 +213,9 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 }
 
 // handleBlockProcessingError handles errors during block processing.
-func (s *Service) handleBlockProcessingError(ctx context.Context, err error, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) { // Replace BlockType with the actual type
+func (s *Service) handleBlockProcessingError(ctx context.Context, err error, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) {
 	if blockchain.IsInvalidBlock(err) {
-		r := blockchain.InvalidBlockRoot(err)
-		if r != [32]byte{} {
-			s.setBadBlock(ctx, r)
-		} else {
-			s.setBadBlock(ctx, blkRoot)
-		}
+		s.setBadBlock(ctx, blkRoot)
 	}
 	log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
 }
