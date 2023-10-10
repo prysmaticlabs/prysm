@@ -225,7 +225,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 }
 
 // BlobSidecarsBySlot retrieves BlobSidecars for the given slot.
-// If the `indices` argument is omitted, all blobs for the root will be returned.
+// If the `indices` argument is omitted, all blobs for the slot will be returned.
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
 // The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
