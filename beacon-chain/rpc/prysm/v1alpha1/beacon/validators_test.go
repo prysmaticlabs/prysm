@@ -2239,28 +2239,6 @@ func TestGetValidatorPerformanceCapella_OK(t *testing.T) {
 	}
 }
 
-func BenchmarkListValidatorBalances(b *testing.B) {
-	b.StopTimer()
-	beaconDB := dbTest.SetupDB(b)
-	ctx := context.Background()
-
-	count := 1000
-	_, _, headState := setupValidators(b, beaconDB, count)
-	bs := &Server{
-		HeadFetcher: &mock.ChainService{
-			State: headState,
-		},
-	}
-	addDefaultReplayerBuilder(bs, beaconDB)
-
-	req := &ethpb.ListValidatorBalancesRequest{PageSize: 100}
-	b.StartTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := bs.ListValidatorBalances(ctx, req)
-		require.NoError(b, err)
-	}
-}
-
 func setupValidators(t testing.TB, _ db.Database, count int) ([]*ethpb.Validator, []uint64, state.BeaconState) {
 	balances := make([]uint64, count)
 	validators := make([]*ethpb.Validator, 0, count)
