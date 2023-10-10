@@ -1,0 +1,38 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: beacon-chain
+    main: ./cmd/beacon-chain
+    binary: beacon-chain
+    ldflags:
+      - -s -w -X runtime/version.gitTag={{.Version}} -X runtime/version.gitCommit={{.Commit}} -X runtime/version={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    gobinary: "go1.20"
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .Binary }}_
+      {{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
