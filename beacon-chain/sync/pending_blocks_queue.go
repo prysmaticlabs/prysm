@@ -69,7 +69,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 	// Iterate through sorted slots.
 	for _, slot := range sortedSlots {
-		// Skip processing if current slot is ahead.
+		// Skip processing if slot is in the future.
 		if slot > s.cfg.clock.CurrentSlot() {
 			continue
 		}
@@ -120,13 +120,13 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			// Request parent block if not in the pending queue and not in the database.
 			parentRoot := b.Block().ParentRoot()
-			parentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
-			if s.shouldRequestParentBlock(inPendingQueue, parentBlockInDB) {
+			isParentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
+			if s.shouldRequestParentBlock(inPendingQueue, isParentBlockInDB) {
 				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, parentRoot)
 				continue
 			}
-			if !parentBlockInDB {
+			if !isParentBlockInDB {
 				continue
 			}
 
