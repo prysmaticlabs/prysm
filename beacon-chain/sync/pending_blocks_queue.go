@@ -121,7 +121,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			// Request parent block if not in the pending queue and not in the database.
 			parentRoot := b.Block().ParentRoot()
 			isParentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
-			if s.shouldRequestParentBlock(inPendingQueue, isParentBlockInDB) {
+			if !inPendingQueue && !isParentBlockInDB && s.hasPeer() {
 				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, parentRoot)
 				continue
@@ -179,9 +179,8 @@ func (s *Service) isBlockInQueue(parentRoot [32]byte) bool {
 	return s.seenPendingBlocks[parentRoot]
 }
 
-// shouldRequestParentBlock determines if a parent block should be requested.
-func (s *Service) shouldRequestParentBlock(inPendingQueue, parentBlockInDB bool) bool {
-	return !inPendingQueue && !parentBlockInDB && len(s.cfg.p2p.Peers().Connected()) > 0
+func (s *Service) hasPeer() bool {
+	return len(s.cfg.p2p.Peers().Connected()) > 0
 }
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
