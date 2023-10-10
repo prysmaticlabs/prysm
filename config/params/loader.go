@@ -68,12 +68,53 @@ func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConf
 	return conf, nil
 }
 
+func UnmarshalNetConfig(yamlFile []byte, conf *NetworkConfig) (*NetworkConfig, error) {
+	// Convert 0x hex inputs to fixed bytes arrays
+	lines := strings.Split(string(yamlFile), "\n")
+	if conf == nil {
+		if isMinimal(lines) {
+			conf = BeaconNetworkConfig().Copy()
+		} else {
+			// Default to using mainnet.
+			conf = BeaconNetworkConfig().Copy()
+		}
+	}
+	for i, line := range lines {
+		// No need to convert the deposit contract address to byte array (as config expects a string).
+		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
+			continue
+		}
+		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
+			parts := ReplaceHexStringWithYAMLFormat(line)
+			lines[i] = strings.Join(parts, "\n")
+		}
+	}
+	yamlFile = []byte(strings.Join(lines, "\n"))
+	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
+		if _, ok := err.(*yaml.TypeError); !ok {
+			return nil, errors.Wrap(err, "Failed to parse chain config yaml file.")
+		} else {
+			log.WithError(err).Error("There were some issues parsing the config from a yaml file")
+		}
+	}
+	log.Debugf("Config file values: %+v", conf)
+	return conf, nil
+}
+
 func UnmarshalConfigFile(path string, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
 	yamlFile, err := os.ReadFile(path) // #nosec G304
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to read chain config file.")
 	}
 	return UnmarshalConfig(yamlFile, conf)
+}
+
+func UnmarshalNetConfigFile(path string, conf *NetworkConfig) (*NetworkConfig, error) {
+	yamlFile, err := os.ReadFile(path) // #nosec G304
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to read network config file.")
+	}
+	return UnmarshalNetConfig(yamlFile, conf)
 }
 
 // LoadChainConfigFile load, convert hex values into valid param yaml format,
