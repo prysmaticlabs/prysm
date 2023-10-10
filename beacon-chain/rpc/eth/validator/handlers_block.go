@@ -18,7 +18,6 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -79,9 +78,6 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest) {
 	isSSZ := http2.SszRequested(r)
-	if !isSSZ {
-		log.Error("Checking for SSZ failed, defaulting to JSON")
-	}
 	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
@@ -100,12 +96,14 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 
 	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Phase0))
 		// rewards aren't used in phase 0
 		handleProducePhase0V3(ctx, w, isSSZ, phase0Block, v1alpha1resp.PayloadValue)
 		return
 	}
 	altairBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Altair)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Altair))
 		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
@@ -120,31 +118,37 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
 		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Bellatrix)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
 		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedCapellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedCapella)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Capella))
 		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Capella)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Capella))
 		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedDenebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
 		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	denebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Deneb)
 	if ok {
+		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
 		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
