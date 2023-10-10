@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "grpc_beacon_chain_client.go",
         "grpc_node_client.go",
+        "grpc_prysm_beacon_chain_client.go",
         "grpc_validator_client.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/grpc-api",
@@ -22,7 +23,10 @@ go_library(
 go_test(
     name = "go_default_test",
     size = "small",
-    srcs = ["grpc_validator_client_test.go"],
+    srcs = [
+        "grpc_prysm_beacon_chain_client_test.go",
+        "grpc_validator_client_test.go"
+    ],
     embed = [":go_default_library"],
     deps = [
         "//testing/assert:go_default_library",
