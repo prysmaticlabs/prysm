@@ -12,6 +12,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
+	rewardtesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -46,26 +48,31 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "", true)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
+
 		require.NoError(t, err)
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
+
 				return block.Message.ToGeneric()
 			}())
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:     v1alpha1Server,
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			BlockRewardFetcher: &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -74,11 +81,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -92,10 +100,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -104,11 +114,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -122,10 +133,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -134,11 +147,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -152,10 +166,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -164,11 +180,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -185,10 +202,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return g, err
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -197,11 +216,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "2000", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -215,10 +235,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return block.ToUnsigned().ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -227,11 +249,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockContentsDeneb
@@ -245,10 +268,12 @@ func TestProduceBlockV3(t *testing.T) {
 				return block.ToUnsigned().ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
+		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -257,11 +282,12 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"0","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("invalid query parameter slot empty", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -321,6 +347,7 @@ func TestProduceBlockV3(t *testing.T) {
 
 func TestProduceBlockV3SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	mockRewards := &rewards.BlockRewards{Total: "10"}
 	t.Run("Phase 0", func(t *testing.T) {
 		var block *shared.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
@@ -351,6 +378,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "", true)
 	})
 	t.Run("Altair", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockAltair
@@ -361,9 +389,11 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
+
 		server := &Server{
-			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			V1Alpha1Server:     v1alpha1Server,
+			SyncChecker:        &mockSync.Sync{IsSyncing: false},
+			BlockRewardFetcher: &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -382,6 +412,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -397,6 +428,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -415,6 +447,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -430,6 +463,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -448,6 +482,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -463,6 +498,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -481,6 +517,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -499,6 +536,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -517,6 +555,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "2000", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -532,6 +571,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -550,6 +590,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "false", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockContentsDeneb
@@ -565,6 +606,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			V1Alpha1Server:        v1alpha1Server,
 			SyncChecker:           &mockSync.Sync{IsSyncing: false},
 			OptimisticModeFetcher: mockChainService,
+			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
 		}
 		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
 			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
@@ -583,5 +625,6 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadBlindedHeader) == "true", true)
 		require.Equal(t, writer.Header().Get(api.ExecutionPayloadValueHeader) == "0", true)
+		require.Equal(t, writer.Header().Get(api.ConsensusBlockValueHeader) == "10", true)
 	})
 }

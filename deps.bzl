@@ -1747,6 +1747,12 @@ def prysm_deps():
         replace = "github.com/prysmaticlabs/grpc-gateway/v2",
         sum = "h1:4wctORg/1TkgLgXejv9yOSAm3cDBJxoTzl/RNuZmX28=",
         version = "v2.3.1-0.20230315201114-09284ba20446",
+        repo_mapping = {"@go_googleapis": "@googleapis"},
+        patch_args = ["-p1"],
+        patches = [
+            "//third_party:com_github_grpc_ecosystem_grpc_gateway_v2.patch",
+            "//third_party:com_github_grpc_ecosystem_grpc_gateway_v2_fix_emptypb.patch",
+        ],
     )
     go_repository(
         name = "com_github_guptarohit_asciigraph",
