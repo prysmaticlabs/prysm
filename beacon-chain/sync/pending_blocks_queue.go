@@ -97,8 +97,7 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 
 			blkRoot, err := b.Block().HashTreeRoot()
 			if err != nil {
-				tracing.AnnotateError(span, err)
-				span.End()
+				logErrorAndEndSpan(span, b.Block().Slot(), err, "Could not get block root")
 				return err
 			}
 			// No need to process the same block if we are already processing it
@@ -159,19 +158,15 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			switch {
 			case errors.Is(ErrOptimisticParent, err): // Ok to continue process block with parent that is an optimistic candidate.
 			case err != nil:
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
-				tracing.AnnotateError(span, err)
-				span.End()
+				logErrorAndEndSpan(span, b.Block().Slot(), err, "Could not validate block")
 				continue
 			default:
 			}
 
 			bestPeers := s.getBestPeers()
 			if len(bestPeers) > 0 {
-				if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, bestPeers[randGen.Int()%len(bestPeers)]); err != nil {
+				if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, bestPeers[randGen.Int()%len(s.getBestPeers())]); err != nil {
 					log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not request pending blobs")
-					tracing.AnnotateError(span, err)
-					span.End()
 					continue
 				}
 			}
@@ -185,11 +180,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 						s.setBadBlock(ctx, blkRoot)
 					}
 				}
-				log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
-
 				// In the next iteration of the queue, this block will be removed from
 				// the pending queue as it has been marked as a 'bad' block.
-				span.End()
+				logErrorAndEndSpan(span, b.Block().Slot(), err, "Could not process block")
 				continue
 			}
 
@@ -228,6 +221,12 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 func (s *Service) getBestPeers() []core.PeerID {
 	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
 	return bestPeers
+}
+
+func logErrorAndEndSpan(span *trace.Span, slot primitives.Slot, err error, str string) {
+	tracing.AnnotateError(span, err)
+	span.End()
+	log.WithError(err).WithField("slot", slot).Debug(str)
 }
 
 func (s *Service) checkIfBlockIsBad(
