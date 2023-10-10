@@ -9,8 +9,11 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -80,18 +83,28 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	consensusBlockValue, httpError := getConsensusBlockValue(ctx, s.BlockRewardFetcher, v1alpha1resp.Block)
+	if httpError != nil {
+		http2.WriteError(w, httpError)
+		return
+	}
+
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
 	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", v1alpha1resp.PayloadValue))
+	w.Header().Set(api.ConsensusBlockValueHeader, consensusBlockValue)
+
 	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Phase0))
+		// rewards aren't used in phase 0
 		handleProducePhase0V3(ctx, w, isSSZ, phase0Block, v1alpha1resp.PayloadValue)
 		return
 	}
 	altairBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Altair)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Altair))
-		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, v1alpha1resp.PayloadValue)
+		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -106,39 +119,85 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
-		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue)
+		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Bellatrix)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
-		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue)
+		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedCapellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Capella))
-		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue)
+		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Capella)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Capella))
-		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue)
+		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedDenebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue)
+		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	denebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Deneb)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue)
+		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
+}
+
+func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *http2.DefaultErrorJson) {
+	var wrapper interfaces.ReadOnlySignedBeaconBlock
+	var err error
+
+	// TODO: we should not require this fake signed wrapper and fix associated functions in the future.
+	switch b := i.(type) {
+	case *eth.GenericBeaconBlock_Phase0:
+		//ignore for phase0
+		return "", nil
+	case *eth.GenericBeaconBlock_Altair:
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
+	case *eth.GenericBeaconBlock_Bellatrix:
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
+	case *eth.GenericBeaconBlock_BlindedBellatrix:
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
+	case *eth.GenericBeaconBlock_Capella:
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
+	case *eth.GenericBeaconBlock_BlindedCapella:
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
+	case *eth.GenericBeaconBlock_Deneb:
+		// no need for sidecar
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
+	case *eth.GenericBeaconBlock_BlindedDeneb:
+		// no need for sidecar
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
+	default:
+		return "", &http2.DefaultErrorJson{
+			Message: fmt.Errorf("type %T is not supported", b).Error(),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	if err != nil {
+		return "", &http2.DefaultErrorJson{
+			Message: err.Error(),
+			Code:    http.StatusInternalServerError,
+		}
+	}
+
+	//get consensus payload value which is the same as the total from the block rewards api
+	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, wrapper)
+	if httpError != nil {
+		return "", httpError
+	}
+	return blockRewards.Total, nil
 }
 
 func handleProducePhase0V3(
@@ -173,6 +232,7 @@ func handleProducePhase0V3(
 		Version:                 version.String(version.Phase0),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
+		ConsensusBlockValue:     "",                              // rewards not applicable before altair
 		Data:                    jsonBytes,
 	})
 }
@@ -182,10 +242,12 @@ func handleProduceAltairV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Altair,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceAltairV3")
 	defer span.End()
+
 	if isSSZ {
 		sszResp, err := blk.Altair.MarshalSSZ()
 		if err != nil {
@@ -208,7 +270,8 @@ func handleProduceAltairV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Altair),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -218,7 +281,8 @@ func handleProduceBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Bellatrix,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBellatrixV3")
 	defer span.End()
@@ -244,7 +308,8 @@ func handleProduceBellatrixV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -254,7 +319,8 @@ func handleProduceBlindedBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedBellatrix,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedBellatrixV3")
 	defer span.End()
@@ -280,7 +346,8 @@ func handleProduceBlindedBellatrixV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue),
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -290,7 +357,8 @@ func handleProduceBlindedCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedCapella,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedCapellaV3")
 	defer span.End()
@@ -316,7 +384,8 @@ func handleProduceBlindedCapellaV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue),
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -326,7 +395,8 @@ func handleProduceCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Capella,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceCapellaV3")
 	defer span.End()
@@ -352,7 +422,8 @@ func handleProduceCapellaV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -362,7 +433,8 @@ func handleProduceBlindedDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedDeneb,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusPayloadValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedDenebV3")
 	defer span.End()
@@ -388,7 +460,8 @@ func handleProduceBlindedDenebV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue),
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
 }
@@ -398,7 +471,8 @@ func handleProduceDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Deneb,
-	payloadValue uint64,
+	executionPayloadValue uint64,
+	consensusBlockValue string,
 ) {
 	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceDenebV3")
 	defer span.End()
@@ -424,7 +498,8 @@ func handleProduceDenebV3(
 	http2.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
+		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ConsensusBlockValue:     consensusBlockValue,
 		Data:                    jsonBytes,
 	})
 }
