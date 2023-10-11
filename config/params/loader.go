@@ -129,6 +129,8 @@ func LoadChainConfigFile(path string, conf *BeaconChainConfig) error {
 // ReplaceHexStringWithYAMLFormat will replace hex strings that the yaml parser will understand.
 func ReplaceHexStringWithYAMLFormat(line string) []string {
 	parts := strings.Split(line, "0x")
+	var fixedByte []byte
+	var err error
 	decoded, err := hex.DecodeString(parts[1])
 	if err != nil {
 		log.WithError(err).Error("Failed to decode hex string.")
@@ -137,77 +139,50 @@ func ReplaceHexStringWithYAMLFormat(line string) []string {
 	case l == 1:
 		var b byte
 		b = decoded[0]
-		fixedByte, err := yaml.Marshal(b)
+		fixedByte, err = yaml.Marshal(b)
 		if err != nil {
 			log.WithError(err).Error("Failed to marshal config file.")
 		}
 		parts[0] += string(fixedByte)
 		parts = parts[:1]
+		return parts
 	case l > 1 && l <= 4:
 		var arr [4]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 4 && l <= 8:
 		var arr [8]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 8 && l <= 16:
 		var arr [16]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 16 && l <= 20:
 		var arr [20]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 20 && l <= 32:
 		var arr [32]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 32 && l <= 48:
 		var arr [48]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 48 && l <= 64:
 		var arr [64]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	case l > 64 && l <= 96:
 		var arr [96]byte
 		copy(arr[:], decoded)
-		fixedByte, err := yaml.Marshal(arr)
-		if err != nil {
-			log.WithError(err).Error("Failed to marshal config file.")
-		}
-		parts[1] = string(fixedByte)
+		fixedByte, err = yaml.Marshal(arr)
 	}
+	if err != nil {
+		log.WithError(err).Error("Failed to marshal config file.")
+	}
+	parts[1] = string(fixedByte)
 	return parts
 }
 
