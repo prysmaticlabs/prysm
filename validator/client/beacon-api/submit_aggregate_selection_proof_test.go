@@ -12,7 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -161,11 +161,11 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				syncingEndpoint,
-				&apimiddleware.SyncingResponseJson{},
+				&node.SyncStatusResponse{},
 			).SetArg(
 				2,
-				apimiddleware.SyncingResponseJson{
-					Data: &shared.SyncDetails{
+				node.SyncStatusResponse{
+					Data: &node.SyncStatusResponseData{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
