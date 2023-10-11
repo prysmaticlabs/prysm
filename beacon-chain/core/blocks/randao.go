@@ -82,7 +82,7 @@ func ProcessRandaoNoVerify(
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), latestMixSlice); err != nil {
+	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), [32]byte(latestMixSlice)); err != nil {
 		return nil, err
 	}
 	return beaconState, nil

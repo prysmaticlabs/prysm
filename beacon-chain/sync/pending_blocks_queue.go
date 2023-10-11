@@ -247,11 +247,15 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	defer span.End()
 
 	roots = dedupRoots(roots)
+	s.pendingQueueLock.RLock()
 	for i := len(roots) - 1; i >= 0; i-- {
-		if s.cfg.chain.BlockBeingSynced(roots[i]) {
+		r := roots[i]
+		if s.seenPendingBlocks[r] || s.cfg.chain.BlockBeingSynced(r) {
 			roots = append(roots[:i], roots[i+1:]...)
 		}
 	}
+	s.pendingQueueLock.RUnlock()
+
 	if len(roots) == 0 {
 		return nil
 	}

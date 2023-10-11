@@ -485,7 +485,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "Could not get exiting validator"))
+		assert.Equal(t, true, strings.Contains(e.Message, "Could not get validator"))
 	})
 }
 

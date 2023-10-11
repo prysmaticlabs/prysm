@@ -24,6 +24,9 @@ func TestInvalidBlockRoot(t *testing.T) {
 	err := invalidBlock{error: ErrInvalidPayload, root: [32]byte{'a'}}
 	require.Equal(t, [32]byte{'a'}, InvalidBlockRoot(err))
 	require.DeepEqual(t, [][32]byte(nil), InvalidAncestorRoots(err))
+
+	newErr := errors.Wrap(err, "wrap me")
+	require.Equal(t, [32]byte{'a'}, InvalidBlockRoot(newErr))
 }
 
 func TestInvalidRoots(t *testing.T) {
@@ -33,4 +36,9 @@ func TestInvalidRoots(t *testing.T) {
 	require.Equal(t, true, IsInvalidBlock(err))
 	require.Equal(t, [32]byte{'a'}, InvalidBlockRoot(err))
 	require.DeepEqual(t, roots, InvalidAncestorRoots(err))
+
+	newErr := errors.Wrap(err, "wrap me")
+	require.Equal(t, true, IsInvalidBlock(err))
+	require.Equal(t, [32]byte{'a'}, InvalidBlockRoot(newErr))
+	require.DeepEqual(t, roots, InvalidAncestorRoots(newErr))
 }

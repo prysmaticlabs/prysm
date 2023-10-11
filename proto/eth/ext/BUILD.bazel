@@ -29,7 +29,7 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_golang_protobuf//proto:go_default_library",
-        "@go_googleapis//google/api:annotations_go_proto",
+        "@googleapis//google/api:annotations_go_proto",
         "@io_bazel_rules_go//proto/wkt:descriptor_go_proto",
         "@org_golang_google_protobuf//reflect/protoreflect:go_default_library",
         "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",

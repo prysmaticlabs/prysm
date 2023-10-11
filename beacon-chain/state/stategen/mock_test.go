@@ -34,12 +34,20 @@ func TestMockHistoryStates(t *testing.T) {
 	genesisRoot := hist.slotMap[0]
 	st, err := hist.StateOrError(ctx, genesisRoot)
 	require.NoError(t, err)
-	require.DeepEqual(t, hist.states[genesisRoot], st)
+	expectedHTR, err := hist.states[genesisRoot].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err := st.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, expectedHTR, actualHTR)
 	require.Equal(t, primitives.Slot(0), st.Slot())
 
 	shouldExist, err := hist.StateOrError(ctx, hist.slotMap[middle])
 	require.NoError(t, err)
-	require.DeepEqual(t, hist.states[hist.slotMap[middle]], shouldExist)
+	expectedHTR, err = hist.states[hist.slotMap[middle]].HashTreeRoot(ctx)
+	require.NoError(t, err)
+	actualHTR, err = shouldExist.HashTreeRoot(ctx)
+	require.NoError(t, err)
+	require.DeepEqual(t, expectedHTR, actualHTR)
 	require.Equal(t, middle, shouldExist.Slot())
 
 	cantExist, err := hist.StateOrError(ctx, hist.slotMap[end])
