@@ -83,10 +83,6 @@ type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
 }
 
-type BLSToExecutionChangesPoolResponseJson struct {
-	Data []*SignedBLSToExecutionChangeJson `json:"data"`
-}
-
 type IdentityResponseJson struct {
 	Data *IdentityJson `json:"data"`
 }
@@ -706,10 +702,6 @@ type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
-}
-
-type SubmitBLSToExecutionChangesRequest struct {
-	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
 }
 
 type DepositJson struct {
