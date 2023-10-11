@@ -144,16 +144,13 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 		directionIds = peerStatus.All()
 	} else {
 		for _, directionFilter := range directions {
-			normalized := strings.ToUpper(directionFilter)
-			if normalized == directionInbound {
+			switch strings.ToUpper(directionFilter) {
+			case directionInbound:
 				ids := peerStatus.Inbound()
 				directionIds = append(directionIds, ids...)
-				continue
-			}
-			if normalized == directionOutbound {
+			case directionOutbound:
 				ids := peerStatus.Outbound()
 				directionIds = append(directionIds, ids...)
-				continue
 			}
 		}
 	}
