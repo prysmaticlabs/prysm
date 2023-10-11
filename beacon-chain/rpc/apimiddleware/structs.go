@@ -4,7 +4,6 @@ import (
 	"strings"
 
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
@@ -81,10 +80,6 @@ type AttesterSlashingsPoolResponseJson struct {
 
 type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
-}
-
-type SyncingResponseJson struct {
-	Data *shared.SyncDetails `json:"data"`
 }
 
 type BeaconStateResponseJson struct {
