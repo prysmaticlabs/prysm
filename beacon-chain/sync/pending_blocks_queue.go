@@ -185,10 +185,18 @@ func (s *Service) hasPeer() bool {
 }
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
+// part of the function is to request missing blobs from peers if the block contains kzg commitments.
 func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
 	if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
 		if !errors.Is(ErrOptimisticParent, err) {
 			log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
+			return err
+		}
+	}
+
+	bestPeers := s.getBestPeers()
+	if len(bestPeers) > 0 {
+		if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, bestPeers[rand.NewGenerator().Int()%len(s.getBestPeers())]); err != nil {
 			return err
 		}
 	}
@@ -224,12 +232,6 @@ func (s *Service) handleBlockProcessingError(ctx context.Context, err error, b i
 func (s *Service) getBestPeers() []core.PeerID {
 	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
 	return bestPeers
-}
-
-func logErrorAndEndSpan(span *trace.Span, slot primitives.Slot, err error, str string) {
-	tracing.AnnotateError(span, err)
-	span.End()
-	log.WithError(err).WithField("slot", slot).Debug(str)
 }
 
 func (s *Service) checkIfBlockIsBad(
