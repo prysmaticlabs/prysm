@@ -27,12 +27,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/weak_subjectivity",
-		"/eth/v1/node/identity",
-		"/eth/v1/node/peers",
-		"/eth/v1/node/peers/{peer_id}",
-		"/eth/v1/node/peer_count",
-		"/eth/v1/node/version",
-		"/eth/v1/node/health",
 		"/eth/v1/debug/beacon/states/{state_id}",
 		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
@@ -87,20 +81,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
-	case "/eth/v1/node/identity":
-		endpoint.GetResponse = &IdentityResponseJson{}
-	case "/eth/v1/node/peers":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}}
-		endpoint.GetResponse = &PeersResponseJson{}
-	case "/eth/v1/node/peers/{peer_id}":
-		endpoint.RequestURLLiterals = []string{"peer_id"}
-		endpoint.GetResponse = &PeerResponseJson{}
-	case "/eth/v1/node/peer_count":
-		endpoint.GetResponse = &PeerCountResponseJson{}
-	case "/eth/v1/node/version":
-		endpoint.GetResponse = &VersionResponseJson{}
-	case "/eth/v1/node/health":
-		// Use default endpoint
 	case "/eth/v1/debug/beacon/states/{state_id}":
 		endpoint.GetResponse = &BeaconStateResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZ}

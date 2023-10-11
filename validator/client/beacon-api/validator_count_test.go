@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,7 +21,7 @@ func TestGetValidatorCount(t *testing.T) {
 		name                        string
 		versionEndpointError        error
 		validatorCountEndpointError error
-		versionResponse             apimiddleware.VersionResponseJson
+		versionResponse             node.GetVersionResponse
 		validatorCountResponse      validator2.ValidatorCountResponse
 		validatorCountCalled        int
 		expectedResponse            []iface.ValidatorCount
@@ -29,8 +29,8 @@ func TestGetValidatorCount(t *testing.T) {
 	}{
 		{
 			name: "success",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
 			validatorCountResponse: validator2.ValidatorCountResponse{
 				ExecutionOptimistic: "false",
@@ -52,8 +52,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "not supported beacon node",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: "lighthouse/v0.0.1"},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: "lighthouse/v0.0.1"},
 			},
 			expectedError: "endpoint not supported",
 		},
@@ -64,8 +64,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "fails to get validator count",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
 			validatorCountEndpointError: errors.New("foo error"),
 			validatorCountCalled:        1,
@@ -73,8 +73,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "nil validator count data",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
 			validatorCountResponse: validator2.ValidatorCountResponse{
 				ExecutionOptimistic: "false",
@@ -86,8 +86,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "invalid validator count",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
 			validatorCountResponse: validator2.ValidatorCountResponse{
 				ExecutionOptimistic: "false",
@@ -117,7 +117,7 @@ func TestGetValidatorCount(t *testing.T) {
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 			// Expect node version endpoint call.
-			var nodeVersionResponse apimiddleware.VersionResponseJson
+			var nodeVersionResponse node.GetVersionResponse
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				"/eth/v1/node/version",
