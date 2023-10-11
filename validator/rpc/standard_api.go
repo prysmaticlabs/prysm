@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
@@ -25,7 +24,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // ListKeystores implements the standard validator key management API.
@@ -680,52 +678,4 @@ func validatePublicKey(pubkey []byte) error {
 			codes.InvalidArgument, "Provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
 	}
 	return nil
-}
-
-// SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
-func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVoluntaryExitRequest) (*ethpbservice.SetVoluntaryExitResponse, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
-	}
-	if err := validatePublicKey(req.Pubkey); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, err
-	}
-	if req.Epoch == 0 {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-		}
-		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
-		}
-		req.Epoch = epoch
-	}
-	sve, err := client.CreateSignedVoluntaryExit(
-		ctx,
-		s.beaconNodeValidatorClient,
-		km.Sign,
-		req.Pubkey,
-		req.Epoch,
-	)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-	}
-
-	return &ethpbservice.SetVoluntaryExitResponse{
-		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
-			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch:          uint64(sve.Exit.Epoch),
-				ValidatorIndex: uint64(sve.Exit.ValidatorIndex),
-			},
-			Signature: sve.Signature,
-		},
-	}, nil
 }

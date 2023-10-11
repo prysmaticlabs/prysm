@@ -814,7 +814,7 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	var blkRoots [][32]byte
 
 	if rawParentRoot != "" {
-		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, 32)
+		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, fieldparams.RootLength)
 		if !valid {
 			return
 		}

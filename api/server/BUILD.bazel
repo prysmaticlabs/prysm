@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["middleware.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/api/server",
+    visibility = ["//visibility:public"],
+    deps = ["//beacon-chain/rpc/eth/helpers:go_default_library"],
+)
