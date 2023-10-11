@@ -194,9 +194,10 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	bestPeers := s.getBestPeers()
-	if len(bestPeers) > 0 {
-		if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, bestPeers[rand.NewGenerator().Int()%len(s.getBestPeers())]); err != nil {
+	peers := s.getBestPeers()
+	peerCount := len(peers)
+	if peerCount > 0 {
+		if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, peers[rand.NewGenerator().Int()%peerCount]); err != nil {
 			return err
 		}
 	}
