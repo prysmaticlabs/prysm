@@ -19,11 +19,7 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/states/{state_id}/root",
 		"/eth/v1/beacon/states/{state_id}/sync_committees",
 		"/eth/v1/beacon/states/{state_id}/randao",
-		"/eth/v1/beacon/blinded_blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
-		"/eth/v2/beacon/blocks/{block_id}",
-		"/eth/v1/beacon/blocks/{block_id}/attestations",
-		"/eth/v1/beacon/blinded_blocks/{block_id}",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/pool/bls_to_execution_changes",
@@ -67,20 +63,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &BlockResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}
-	case "/eth/v2/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &BlockV2ResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeV2Block,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
-	case "/eth/v1/beacon/blocks/{block_id}/attestations":
-		endpoint.GetResponse = &BlockAttestationsResponseJson{}
-	case "/eth/v1/beacon/blinded_blocks/{block_id}":
-		endpoint.GetResponse = &BlindedBlockResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeBlindedBlock,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBlindedBeaconBlockSSZ}
 	case "/eth/v1/beacon/pool/attester_slashings":
 		endpoint.PostRequest = &AttesterSlashingJson{}
 		endpoint.GetResponse = &AttesterSlashingsPoolResponseJson{}

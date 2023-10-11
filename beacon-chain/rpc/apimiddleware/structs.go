@@ -49,30 +49,10 @@ type BlockResponseJson struct {
 	Data *SignedBeaconBlockJson `json:"data"`
 }
 
-type BlockV2ResponseJson struct {
-	Version             string                            `json:"version" enum:"true"`
-	Data                *SignedBeaconBlockContainerV2Json `json:"data"`
-	ExecutionOptimistic bool                              `json:"execution_optimistic"`
-	Finalized           bool                              `json:"finalized"`
-}
-
-type BlindedBlockResponseJson struct {
-	Version             string                                 `json:"version" enum:"true"`
-	Data                *SignedBlindedBeaconBlockContainerJson `json:"data"`
-	ExecutionOptimistic bool                                   `json:"execution_optimistic"`
-	Finalized           bool                                   `json:"finalized"`
-}
-
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 	Finalized           bool                    `json:"finalized"`
-}
-
-type BlockAttestationsResponseJson struct {
-	Data                []*AttestationJson `json:"data"`
-	ExecutionOptimistic bool               `json:"execution_optimistic"`
-	Finalized           bool               `json:"finalized"`
 }
 
 type AttesterSlashingsPoolResponseJson struct {

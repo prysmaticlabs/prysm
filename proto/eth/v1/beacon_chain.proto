@@ -52,12 +52,6 @@ message StateRootResponse {
 
 // Beacon Block API related messages.
 
-message BlockAttestationsResponse {
-    repeated ethereum.eth.v1.Attestation data = 1;
-    bool execution_optimistic = 2;
-    bool finalized  = 3;
-}
-
 message BlockRequest {
     // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
     // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
