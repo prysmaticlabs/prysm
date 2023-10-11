@@ -83,21 +83,6 @@ type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
 }
 
-type BLSToExecutionChangesPoolResponseJson struct {
-	Data []*SignedBLSToExecutionChangeJson `json:"data"`
-}
-
-type PeerCountResponseJson struct {
-	Data PeerCountResponse_PeerCountJson `json:"data"`
-}
-
-type PeerCountResponse_PeerCountJson struct {
-	Disconnected  string `json:"disconnected"`
-	Connecting    string `json:"connecting"`
-	Connected     string `json:"connected"`
-	Disconnecting string `json:"disconnecting"`
-}
-
 type SyncingResponseJson struct {
 	Data *shared.SyncDetails `json:"data"`
 }

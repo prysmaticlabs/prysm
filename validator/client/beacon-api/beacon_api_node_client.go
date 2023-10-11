@@ -23,7 +23,7 @@ type beaconApiNodeClient struct {
 }
 
 func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty) (*ethpb.SyncStatus, error) {
-	syncingResponse := apimiddleware.SyncingResponseJson{}
+	syncingResponse := node.SyncStatusResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/node/syncing", &syncingResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to get sync status")
 	}
