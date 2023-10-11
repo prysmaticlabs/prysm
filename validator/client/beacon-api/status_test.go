@@ -6,6 +6,10 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
@@ -50,7 +54,26 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+		prysmBeaconChainCLient: prysmBeaconChainClient{
+			nodeClient: &beaconApiNodeClient{
+				jsonRestHandler: jsonRestHandler,
+			},
+		},
+	}
+
+	// Expect node version endpoint call.
+	var nodeVersionResponse apimiddleware.VersionResponseJson
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		"/eth/v1/node/version",
+		&nodeVersionResponse,
+	).Return(
+		nil,
+		iface.ErrNotSupported,
+	).Times(1)
 
 	actualValidatorStatusResponse, err := validatorClient.ValidatorStatus(
 		ctx,
@@ -147,7 +170,27 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	// Expect node version endpoint call.
+	var nodeVersionResponse apimiddleware.VersionResponseJson
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		"/eth/v1/node/version",
+		&nodeVersionResponse,
+	).Return(
+		nil,
+		iface.ErrNotSupported,
+	).Times(1)
+
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+		prysmBeaconChainCLient: prysmBeaconChainClient{
+			nodeClient: &beaconApiNodeClient{
+				jsonRestHandler: jsonRestHandler,
+			},
+		},
+	}
 
 	expectedValidatorStatusResponse := ethpb.MultipleValidatorStatusResponse{
 		PublicKeys: validatorsPubKey,
@@ -289,33 +332,44 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).Times(1)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	// Expect node version endpoint call.
+	var nodeVersionResponse apimiddleware.VersionResponseJson
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
-		nil,
-		nil,
-		[]string{"active"},
+		"/eth/v1/node/version",
+		&nodeVersionResponse,
 	).Return(
-		&beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		nil,
+		nil,
+	).SetArg(
+		2,
+		apimiddleware.VersionResponseJson{Data: &apimiddleware.VersionJson{Version: "prysm/v0.0.1"}},
+	).Times(1)
+
+	var validatorCountResponse validator2.ValidatorCountResponse
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		"/eth/v1/beacon/states/head/validator_count?",
+		&validatorCountResponse,
+	).Return(
+		nil,
+		nil,
+	).SetArg(
+		2,
+		validator2.ValidatorCountResponse{
+			Data: []*validator2.ValidatorCount{
 				{
-					Index:  "35000",
-					Status: "active_ongoing",
-					Validator: &beacon.Validator{
-						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364d",
-						ActivationEpoch: "56",
-					},
+					Status: "active",
+					Count:  "50001",
 				},
 				{
-					Index:  "39000",
-					Status: "active_ongoing",
-					Validator: &beacon.Validator{
-						Pubkey:          "0x8000ab56b051f9d8f31c687528c6e91c9b98e4c3a241e752f9ccfbea7c5a7fbbd272bdf2c0a7e52ce7e0b57693df364e",
-						ActivationEpoch: "56",
-					},
+					Status: "pending",
+					Count:  "11000",
 				},
 			},
 		},
-		nil,
 	).Times(1)
 
 	wantedStringValidatorsPubkey := []string{
@@ -379,7 +433,15 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		},
 	}
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+		prysmBeaconChainCLient: prysmBeaconChainClient{
+			nodeClient: &beaconApiNodeClient{
+				jsonRestHandler: jsonRestHandler,
+			},
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, validatorsPubKey, validatorsIndex)
 
 	require.NoError(t, err)
@@ -420,29 +482,37 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 	).Times(1)
 
-	stateValidatorsProvider.EXPECT().GetStateValidators(
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+	// Expect node version endpoint call.
+	var nodeVersionResponse apimiddleware.VersionResponseJson
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
-		nil,
-		nil,
-		[]string{"active"},
+		"/eth/v1/node/version",
+		&nodeVersionResponse,
 	).Return(
-		&beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{},
-		},
 		nil,
+		iface.ErrNotSupported,
 	).Times(1)
 
 	wantedValidatorsPubKey := [][]byte{validatorPubKey}
 	wantedValidatorsIndex := []primitives.ValidatorIndex{40000}
 	wantedValidatorsStatusResponse := []*ethpb.ValidatorStatusResponse{
 		{
-			Status:                    ethpb.ValidatorStatus_PENDING,
-			ActivationEpoch:           params.BeaconConfig().FarFutureEpoch,
-			PositionInActivationQueue: 40000,
+			Status:          ethpb.ValidatorStatus_PENDING,
+			ActivationEpoch: params.BeaconConfig().FarFutureEpoch,
 		},
 	}
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	validatorClient := beaconApiValidatorClient{
+		stateValidatorsProvider: stateValidatorsProvider,
+		prysmBeaconChainCLient: prysmBeaconChainClient{
+			nodeClient: &beaconApiNodeClient{
+				jsonRestHandler: jsonRestHandler,
+			},
+			jsonRestHandler: jsonRestHandler,
+		},
+	}
 	actualValidatorsPubKey, actualValidatorsIndex, actualValidatorsStatusResponse, err := validatorClient.getValidatorsStatusResponse(ctx, wantedValidatorsPubKey, nil)
 
 	require.NoError(t, err)
@@ -472,27 +542,22 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 		name string
 
 		// Inputs
-		inputPubKeys                      [][]byte
-		inputIndexes                      []int64
-		inputGetStateValidatorsInterfaces []getStateValidatorsInterface
+		inputPubKeys                     [][]byte
+		inputIndexes                     []int64
+		inputGetStateValidatorsInterface getStateValidatorsInterface
+		validatorCountCalled             int
 
 		// Outputs
 		outputErrMessage string
 	}{
 		{
-			name: "failed getStateValidators",
-
+			name:         "failed getStateValidators",
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
-
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{},
-					outputErr:                         errors.New("a specific error"),
-				},
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys:                []string{stringPubKey},
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{},
+				outputErr:                         errors.New("a specific error"),
 			},
 			outputErrMessage: "failed to get state validators",
 		},
@@ -501,140 +566,117 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Validator: &beacon.Validator{
-									Pubkey: "NotAPublicKey",
-								},
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
+						{
+							Index: "0",
+							Validator: &beacon.Validator{
+								Pubkey: "NotAPublicKey",
 							},
 						},
 					},
-					outputErr: nil,
 				},
+				outputErr: nil,
 			},
-			outputErrMessage: "failed to parse validator public key",
+			validatorCountCalled: 1,
+			outputErrMessage:     "failed to parse validator public key",
 		},
 		{
 			name: "failed to parse validator index NotAnIndex",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index: "NotAnIndex",
-								Validator: &beacon.Validator{
-									Pubkey: stringPubKey,
-								},
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
+
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
+						{
+							Index: "NotAnIndex",
+							Validator: &beacon.Validator{
+								Pubkey: stringPubKey,
 							},
 						},
 					},
-					outputErr: nil,
 				},
+				outputErr: nil,
 			},
-			outputErrMessage: "failed to parse validator index",
+			validatorCountCalled: 1,
+			outputErrMessage:     "failed to parse validator index",
 		},
 		{
 			name: "invalid validator status",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index:  "12345",
-								Status: "NotAStatus",
-								Validator: &beacon.Validator{
-									Pubkey: stringPubKey,
-								},
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
+						{
+							Index:  "12345",
+							Status: "NotAStatus",
+							Validator: &beacon.Validator{
+								Pubkey: stringPubKey,
 							},
 						},
 					},
-					outputErr: nil,
 				},
+				outputErr: nil,
 			},
-			outputErrMessage: "invalid validator status NotAStatus",
+			validatorCountCalled: 1,
+			outputErrMessage:     "invalid validator status NotAStatus",
 		},
 		{
 			name: "failed to parse activation epoch",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index:  "12345",
-								Status: "active_ongoing",
-								Validator: &beacon.Validator{
-									Pubkey:          stringPubKey,
-									ActivationEpoch: "NotAnEpoch",
-								},
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
+						{
+							Index:  "12345",
+							Status: "active_ongoing",
+							Validator: &beacon.Validator{
+								Pubkey:          stringPubKey,
+								ActivationEpoch: "NotAnEpoch",
 							},
 						},
 					},
-					outputErr: nil,
 				},
+				outputErr: nil,
 			},
-			outputErrMessage: "failed to parse activation epoch NotAnEpoch",
+			validatorCountCalled: 1,
+			outputErrMessage:     "failed to parse activation epoch NotAnEpoch",
 		},
 		{
 			name: "failed to get state validators",
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index:  "12345",
-								Status: "pending_queued",
-								Validator: &beacon.Validator{
-									Pubkey:          stringPubKey,
-									ActivationEpoch: "10",
-								},
-							},
-						},
-					},
-					outputErr: nil,
-				},
-				{
-					inputStringPubKeys: nil,
-					inputIndexes:       nil,
-					inputStatuses:      []string{"active"},
-
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{},
-					outputErr:                         errors.New("a specific error"),
-				},
+				outputStateValidatorsResponseJson: nil,
+				outputErr:                         errors.New("a specific error"),
 			},
 			outputErrMessage: "failed to get state validators",
 		},
@@ -643,42 +685,22 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 			inputPubKeys: [][]byte{pubKey},
 			inputIndexes: nil,
-			inputGetStateValidatorsInterfaces: []getStateValidatorsInterface{
-				{
-					inputStringPubKeys: []string{stringPubKey},
-					inputIndexes:       nil,
-					inputStatuses:      nil,
+			inputGetStateValidatorsInterface: getStateValidatorsInterface{
+				inputStringPubKeys: []string{stringPubKey},
+				inputIndexes:       nil,
+				inputStatuses:      nil,
 
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index:  "12345",
-								Status: "pending_queued",
-								Validator: &beacon.Validator{
-									Pubkey:          stringPubKey,
-									ActivationEpoch: "10",
-								},
-							},
+				outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
+						{
+							Index: "NotAnIndex",
 						},
 					},
-					outputErr: nil,
 				},
-				{
-					inputStringPubKeys: nil,
-					inputIndexes:       nil,
-					inputStatuses:      []string{"active"},
-
-					outputStateValidatorsResponseJson: &beacon.GetValidatorsResponse{
-						Data: []*beacon.ValidatorContainer{
-							{
-								Index: "NotAnIndex",
-							},
-						},
-					},
-					outputErr: nil,
-				},
+				outputErr: nil,
 			},
-			outputErrMessage: "failed to parse last validator index NotAnIndex",
+			validatorCountCalled: 1,
+			outputErrMessage:     "failed to parse validator index NotAnIndex",
 		},
 	}
 
@@ -690,20 +712,38 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 				ctx := context.Background()
 				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+				stateValidatorsProvider.EXPECT().GetStateValidators(
+					ctx,
+					testCase.inputGetStateValidatorsInterface.inputStringPubKeys,
+					testCase.inputGetStateValidatorsInterface.inputIndexes,
+					testCase.inputGetStateValidatorsInterface.inputStatuses,
+				).Return(
+					testCase.inputGetStateValidatorsInterface.outputStateValidatorsResponseJson,
+					testCase.inputGetStateValidatorsInterface.outputErr,
+				).Times(1)
 
-				for _, aa := range testCase.inputGetStateValidatorsInterfaces {
-					stateValidatorsProvider.EXPECT().GetStateValidators(
-						ctx,
-						aa.inputStringPubKeys,
-						aa.inputIndexes,
-						aa.inputStatuses,
-					).Return(
-						aa.outputStateValidatorsResponseJson,
-						aa.outputErr,
-					).Times(1)
+				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+
+				// Expect node version endpoint call.
+				var nodeVersionResponse apimiddleware.VersionResponseJson
+				jsonRestHandler.EXPECT().GetRestJsonResponse(
+					ctx,
+					"/eth/v1/node/version",
+					&nodeVersionResponse,
+				).Return(
+					nil,
+					iface.ErrNotSupported,
+				).Times(testCase.validatorCountCalled)
+
+				validatorClient := beaconApiValidatorClient{
+					stateValidatorsProvider: stateValidatorsProvider,
+					prysmBeaconChainCLient: prysmBeaconChainClient{
+						nodeClient: &beaconApiNodeClient{
+							jsonRestHandler: jsonRestHandler,
+						},
+						jsonRestHandler: jsonRestHandler,
+					},
 				}
-
-				validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 				_, _, _, err := validatorClient.getValidatorsStatusResponse(
 					ctx,

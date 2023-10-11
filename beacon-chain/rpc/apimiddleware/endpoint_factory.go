@@ -26,8 +26,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/blinded_blocks/{block_id}",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
-		"/eth/v1/beacon/pool/bls_to_execution_changes",
-		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/node/identity",
 		"/eth/v1/node/peers",
@@ -87,13 +85,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	case "/eth/v1/beacon/pool/proposer_slashings":
 		endpoint.PostRequest = &ProposerSlashingJson{}
 		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
-	case "/eth/v1/beacon/pool/bls_to_execution_changes":
-		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
-		endpoint.GetResponse = &BLSToExecutionChangesPoolResponseJson{}
-		endpoint.Err = &IndexedVerificationFailureErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
-		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/node/identity":
