@@ -48,9 +48,9 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 
 	isSSZ := http2.SszRequested(r)
 	if isSSZ {
-		s.getBlockV2(ctx, w, r)
-	} else {
 		s.getBlockSSZV2(ctx, w, r)
+	} else {
+		s.getBlockV2(ctx, w, r)
 	}
 }
 
@@ -158,9 +158,9 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 
 	isSSZ := http2.SszRequested(r)
 	if isSSZ {
-		s.getBlindedBlock(ctx, w, r)
-	} else {
 		s.getBlindedBlockSSZ(ctx, w, r)
+	} else {
+		s.getBlindedBlock(ctx, w, r)
 	}
 }
 
