@@ -22,11 +22,9 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v2/beacon_block.proto";
-import "proto/eth/v2/beacon_chain.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/sync_committee.proto";
-import "proto/eth/v2/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
@@ -190,24 +188,6 @@ service BeaconChain {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/pool/proposer_slashings"
       body: "*"
-    };
-  }
-
-  // SubmitSignedBLSToExecutionChanges submits said object to node's pool
-  // and if passes validation node MUST broadcast it to network.
-  rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
-      body: "*"
-    };
-  }
-
-  // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getPoolBLSToExecutionChanges
-  rpc ListBLSToExecutionChanges(google.protobuf.Empty) returns (v2.BLSToExecutionChangesPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
     };
   }
 
