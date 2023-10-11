@@ -87,6 +87,33 @@ type BLSToExecutionChangesPoolResponseJson struct {
 	Data []*SignedBLSToExecutionChangeJson `json:"data"`
 }
 
+type IdentityResponseJson struct {
+	Data *IdentityJson `json:"data"`
+}
+
+type PeersResponseJson struct {
+	Data []*PeerJson `json:"data"`
+}
+
+type PeerResponseJson struct {
+	Data *PeerJson `json:"data"`
+}
+
+type PeerCountResponseJson struct {
+	Data PeerCountResponse_PeerCountJson `json:"data"`
+}
+
+type PeerCountResponse_PeerCountJson struct {
+	Disconnected  string `json:"disconnected"`
+	Connecting    string `json:"connecting"`
+	Connected     string `json:"connected"`
+	Disconnecting string `json:"disconnecting"`
+}
+
+type VersionResponseJson struct {
+	Data *VersionJson `json:"data"`
+}
+
 type SyncingResponseJson struct {
 	Data *shared.SyncDetails `json:"data"`
 }
@@ -679,10 +706,6 @@ type BLSToExecutionChangeJson struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey" hex:"true"`
 	ToExecutionAddress string `json:"to_execution_address" hex:"true"`
-}
-
-type SubmitBLSToExecutionChangesRequest struct {
-	Changes []*SignedBLSToExecutionChangeJson `json:"changes"`
 }
 
 type DepositJson struct {
