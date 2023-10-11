@@ -25,19 +25,8 @@ func isMinimal(lines []string) bool {
 	return false
 }
 
-func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
-	// To track if config name is defined inside config file.
+func ConvertHexStringWithYamlFile(lines []string) bool {
 	hasConfigName := false
-	// Convert 0x hex inputs to fixed bytes arrays
-	lines := strings.Split(string(yamlFile), "\n")
-	if conf == nil {
-		if isMinimal(lines) {
-			conf = MinimalSpecConfig().Copy()
-		} else {
-			// Default to using mainnet.
-			conf = MainnetConfig().Copy()
-		}
-	}
 	for i, line := range lines {
 		// No need to convert the deposit contract address to byte array (as config expects a string).
 		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
@@ -51,6 +40,24 @@ func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConf
 			lines[i] = strings.Join(parts, "\n")
 		}
 	}
+	return hasConfigName
+}
+
+func UnmarshalConfig(yamlFile []byte, conf *BeaconChainConfig) (*BeaconChainConfig, error) {
+	// To track if config name is defined inside config file.
+	hasConfigName := false
+	// Convert 0x hex inputs to fixed bytes arrays
+	lines := strings.Split(string(yamlFile), "\n")
+	if conf == nil {
+		if isMinimal(lines) {
+			conf = MinimalSpecConfig().Copy()
+		} else {
+			// Default to using mainnet.
+			conf = MainnetConfig().Copy()
+		}
+	}
+	hasConfigName = ConvertHexStringWithYamlFile(lines)
+
 	yamlFile = []byte(strings.Join(lines, "\n"))
 	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
@@ -79,16 +86,8 @@ func UnmarshalNetConfig(yamlFile []byte, conf *NetworkConfig) (*NetworkConfig, e
 			conf = BeaconNetworkConfig().Copy()
 		}
 	}
-	for i, line := range lines {
-		// No need to convert the deposit contract address to byte array (as config expects a string).
-		if strings.HasPrefix(line, "DEPOSIT_CONTRACT_ADDRESS") {
-			continue
-		}
-		if !strings.HasPrefix(line, "#") && strings.Contains(line, "0x") {
-			parts := ReplaceHexStringWithYAMLFormat(line)
-			lines[i] = strings.Join(parts, "\n")
-		}
-	}
+	_ = ConvertHexStringWithYamlFile(lines)
+
 	yamlFile = []byte(strings.Join(lines, "\n"))
 	if err := yaml.UnmarshalStrict(yamlFile, conf); err != nil {
 		if _, ok := err.(*yaml.TypeError); !ok {
