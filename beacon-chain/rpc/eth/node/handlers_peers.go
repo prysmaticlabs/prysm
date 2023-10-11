@@ -126,19 +126,15 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 			case stateConnecting:
 				ids := peerStatus.Connecting()
 				stateIds = append(stateIds, ids...)
-				continue
 			case stateConnected:
 				ids := peerStatus.Connected()
 				stateIds = append(stateIds, ids...)
-				continue
 			case stateDisconnecting:
 				ids := peerStatus.Disconnecting()
 				stateIds = append(stateIds, ids...)
-				continue
 			case stateDisconnected:
 				ids := peerStatus.Disconnected()
 				stateIds = append(stateIds, ids...)
-				continue
 			}
 		}
 	}
