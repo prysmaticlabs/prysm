@@ -112,7 +112,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	if err = vs.BuildBlockParallel(ctx, sBlk, head); err != nil {
+	if err = vs.BuildBlockParallel(ctx, sBlk, head, false); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
