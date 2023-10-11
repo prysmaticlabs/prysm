@@ -162,7 +162,7 @@ func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Va
 	var resp []*ValidatorCount
 	for status, count := range countByStatus {
 		resp = append(resp, &ValidatorCount{
-			Status: strings.ToLower(ethpb.ValidatorStatus_name[int32(status)]),
+			Status: status.String(),
 			Count:  strconv.FormatUint(count, 10),
 		})
 	}
