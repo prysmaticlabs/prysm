@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "handlers.go",
+        "handlers_peers.go",
         "server.go",
         "structs.go",
     ],
@@ -34,7 +35,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["handlers_test.go"],
+    srcs = [
+        "handlers_peers_test.go",
+        "handlers_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/blockchain/testing:go_default_library",
