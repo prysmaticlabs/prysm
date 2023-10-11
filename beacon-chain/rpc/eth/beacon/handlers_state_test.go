@@ -34,6 +34,13 @@ func TestGetStateRoot(t *testing.T) {
 	stateRoot, err := fakeState.HashTreeRoot(ctx)
 	require.NoError(t, err)
 	db := dbTest.SetupDB(t)
+	parentRoot := [32]byte{'a'}
+	blk := util.NewBeaconBlock()
+	blk.Block.ParentRoot = parentRoot[:]
+	root, err := blk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, ctx, db, blk)
+	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
 	chainService := &chainMock.ChainService{}
 	s := &Server{
@@ -59,14 +66,6 @@ func TestGetStateRoot(t *testing.T) {
 	assert.Equal(t, hexutil.Encode(stateRoot[:]), resp.Data.Root)
 
 	t.Run("execution optimistic", func(t *testing.T) {
-		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
-		blk.Block.ParentRoot = parentRoot[:]
-		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
-		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-
 		chainService := &chainMock.ChainService{Optimistic: true}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -92,14 +91,6 @@ func TestGetStateRoot(t *testing.T) {
 	})
 
 	t.Run("finalized", func(t *testing.T) {
-		parentRoot := [32]byte{'a'}
-		blk := util.NewBeaconBlock()
-		blk.Block.ParentRoot = parentRoot[:]
-		root, err := blk.Block.HashTreeRoot()
-		require.NoError(t, err)
-		util.SaveBlock(t, ctx, db, blk)
-		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-
 		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
 		chainService := &chainMock.ChainService{

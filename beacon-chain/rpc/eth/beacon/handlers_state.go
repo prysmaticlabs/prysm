@@ -191,23 +191,16 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var st state.BeaconState
+	syncCommitteeReq := &syncCommitteeStateRequest{
+		epoch:   nil,
+		stateId: []byte(stateId),
+	}
 	if rawEpoch != "" {
-		st, ok = s.stateForSyncCommittee(ctx, w, &syncCommitteeStateRequest{
-			epoch:   &epoch,
-			stateId: []byte(stateId),
-		})
-		if !ok {
-			return
-		}
-	} else {
-		st, ok = s.stateForSyncCommittee(ctx, w, &syncCommitteeStateRequest{
-			epoch:   nil,
-			stateId: []byte(stateId),
-		})
-		if !ok {
-			return
-		}
+		syncCommitteeReq.epoch = &epoch
+	}
+	st, ok := s.stateForSyncCommittee(ctx, w, syncCommitteeReq)
+	if !ok {
+		return
 	}
 
 	var committeeIndices []string
