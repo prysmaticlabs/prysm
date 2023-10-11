@@ -136,6 +136,9 @@ func ReplaceHexStringWithYAMLFormat(line string) []string {
 		log.WithError(err).Error("Failed to decode hex string.")
 	}
 	switch l := len(decoded); {
+	case l < 1:
+		// if l < 1 fall in this case, so the othercase don't need to point out the lower limit
+		log.WithError(err).Error("decode string output illegal")
 	case l == 1:
 		var b byte
 		b = decoded[0]
@@ -146,35 +149,35 @@ func ReplaceHexStringWithYAMLFormat(line string) []string {
 		parts[0] += string(fixedByte)
 		parts = parts[:1]
 		return parts
-	case l > 1 && l <= 4:
+	case l <= 4:
 		var arr [4]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 4 && l <= 8:
+	case l <= 8:
 		var arr [8]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 8 && l <= 16:
+	case l <= 16:
 		var arr [16]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 16 && l <= 20:
+	case l <= 20:
 		var arr [20]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 20 && l <= 32:
+	case l <= 32:
 		var arr [32]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 32 && l <= 48:
+	case l <= 48:
 		var arr [48]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 48 && l <= 64:
+	case l <= 64:
 		var arr [64]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
-	case l > 64 && l <= 96:
+	case l <= 96:
 		var arr [96]byte
 		copy(arr[:], decoded)
 		fixedByte, err = yaml.Marshal(arr)
