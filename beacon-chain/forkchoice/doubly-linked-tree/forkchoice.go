@@ -191,7 +191,7 @@ func (f *ForkChoice) IsCanonical(root [32]byte) bool {
 
 // IsOptimistic returns true if the given root has been optimistically synced.
 func (f *ForkChoice) IsOptimistic(root [32]byte) (bool, error) {
-	if f.store.allTipsAreInvalid {
+	if f.store.allTipsAreInvalid.Load() {
 		return true, nil
 	}
 

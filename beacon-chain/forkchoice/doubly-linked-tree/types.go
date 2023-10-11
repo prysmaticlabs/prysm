@@ -2,6 +2,7 @@ package doublylinkedtree
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -40,7 +41,7 @@ type Store struct {
 	genesisTime                   uint64
 	highestReceivedNode           *Node                                      // The highest slot node.
 	receivedBlocksLastEpoch       [fieldparams.SlotsPerEpoch]primitives.Slot // Using `highestReceivedSlot`. The slot of blocks received in the last epoch.
-	allTipsAreInvalid             bool                                       // tracks if all tips are not viable for head
+	allTipsAreInvalid             atomic.Bool                                // tracks if all tips are not viable for head
 }
 
 // Node defines the individual block which includes its block parent, ancestor and how much weight accounted for it.
