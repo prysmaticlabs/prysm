@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "handlers.go",
         "server.go",
+        "service.go",
         "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards",
@@ -21,11 +22,13 @@ go_library(
         "//beacon-chain/state/stategen:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//network/http:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_wealdtech_go_bytesutil//:go_default_library",
+        "@io_opencensus_go//trace:go_default_library",
     ],
 )
 
@@ -54,6 +57,7 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
     ],
 )
