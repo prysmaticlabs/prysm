@@ -188,6 +188,19 @@ var beaconPathsAndObjects = map[string]metadata{
 			"json": &beacon.GetBlockHeaderResponse{},
 		},
 	},
+	// we want to test comma-separated query params
+	"/beacon/states/{param1}/validators?id=0,1": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+	},
 	"/node/identity": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {

@@ -31,10 +31,10 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 			if r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
 				b, err := os.ReadFile(filepath.Clean(file))
 				require.NoError(t, err)
-				var to []*apimiddleware.SignedBLSToExecutionChangeJson
+				var to []*shared.SignedBLSToExecutionChange
 				err = json.Unmarshal(b, &to)
 				require.NoError(t, err)
-				err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
+				err = json.NewEncoder(w).Encode(&beacon.BLSToExecutionChangesPoolResponse{
 					Data: to,
 				})
 				require.NoError(t, err)
@@ -338,10 +338,10 @@ func TestVerifyWithdrawal_Mutiple(t *testing.T) {
 		if r.Method == http.MethodGet {
 			b, err := os.ReadFile(filepath.Clean(file))
 			require.NoError(t, err)
-			var to []*apimiddleware.SignedBLSToExecutionChangeJson
+			var to []*shared.SignedBLSToExecutionChange
 			err = json.Unmarshal(b, &to)
 			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&apimiddleware.BLSToExecutionChangesPoolResponseJson{
+			err = json.NewEncoder(w).Encode(&beacon.BLSToExecutionChangesPoolResponse{
 				Data: to,
 			})
 			require.NoError(t, err)

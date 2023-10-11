@@ -211,15 +211,15 @@ func (s *Service) Start() {
 		BeaconDB:         s.cfg.BeaconDB,
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 	}
-
+	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 	rewardsServer := &rewards.Server{
 		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		ReplayerBuilder:       ch,
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		Stater:                stater,
 		HeadFetcher:           s.cfg.HeadFetcher,
+		BlockRewardFetcher:    rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
@@ -304,6 +304,7 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 		OperationNotifier:      s.cfg.OperationNotifier,
 		CoreService:            coreService,
+		BlockRewardFetcher:     rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods(http.MethodGet)
@@ -442,6 +443,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.ListVoluntaryExits).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.SubmitVoluntaryExit).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/sync_committees", beaconChainServerV1.SubmitSyncCommitteeSignatures).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.ListBLSToExecutionChanges).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.SubmitBLSToExecutionChanges).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers", beaconChainServerV1.GetBlockHeaders).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers/{block_id}", beaconChainServerV1.GetBlockHeader).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", beaconChainServerV1.GetDepositContract).Methods(http.MethodGet)

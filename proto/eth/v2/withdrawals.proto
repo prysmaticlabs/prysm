@@ -44,8 +44,3 @@ message SignedBLSToExecutionChange {
   // The 96 byte BLS signature from the withdrawal address requesting the change
   bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
-
-// A list of SignedBLSToExecutionChange objects
-message SubmitBLSToExecutionChangesRequest {
-	repeated SignedBLSToExecutionChange changes = 1;
-}

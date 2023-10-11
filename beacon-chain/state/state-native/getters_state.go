@@ -1,9 +1,10 @@
 package state_native
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
+	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -16,6 +17,18 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 	}
 
 	gvrCopy := b.genesisValidatorsRoot
+	br := b.blockRootsVal().Slice()
+	sr := b.stateRootsVal().Slice()
+	rm := b.randaoMixesVal().Slice()
+	var vals []*ethpb.Validator
+	var bals []uint64
+	if features.Get().EnableExperimentalState {
+		vals = b.validatorsVal()
+		bals = b.balancesVal()
+	} else {
+		vals = b.validators
+		bals = b.balances
+	}
 
 	switch b.version {
 	case version.Phase0:
@@ -25,15 +38,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.fork,
 			LatestBlockHeader:           b.latestBlockHeader,
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br,
+			StateRoots:                  sr,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validators,
-			Balances:                    b.balances,
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			Validators:                  vals,
+			Balances:                    bals,
+			RandaoMixes:                 rm,
 			Slashings:                   b.slashings,
 			PreviousEpochAttestations:   b.previousEpochAttestations,
 			CurrentEpochAttestations:    b.currentEpochAttestations,
@@ -49,15 +62,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.fork,
 			LatestBlockHeader:           b.latestBlockHeader,
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br,
+			StateRoots:                  sr,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1Data,
 			Eth1DataVotes:               b.eth1DataVotes,
 			Eth1DepositIndex:            b.eth1DepositIndex,
-			Validators:                  b.validators,
-			Balances:                    b.balances,
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			Validators:                  vals,
+			Balances:                    bals,
+			RandaoMixes:                 rm,
 			Slashings:                   b.slashings,
 			PreviousEpochParticipation:  b.previousEpochParticipation,
 			CurrentEpochParticipation:   b.currentEpochParticipation,
@@ -65,7 +78,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:         b.finalizedCheckpoint,
-			InactivityScores:            b.inactivityScores,
+			InactivityScores:            b.inactivityScoresVal(),
 			CurrentSyncCommittee:        b.currentSyncCommittee,
 			NextSyncCommittee:           b.nextSyncCommittee,
 		}
@@ -76,15 +89,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.fork,
 			LatestBlockHeader:            b.latestBlockHeader,
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validators,
-			Balances:                     b.balances,
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			Validators:                   vals,
+			Balances:                     bals,
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
 			CurrentEpochParticipation:    b.currentEpochParticipation,
@@ -92,7 +105,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:          b.finalizedCheckpoint,
-			InactivityScores:             b.inactivityScores,
+			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeader,
@@ -104,15 +117,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.fork,
 			LatestBlockHeader:            b.latestBlockHeader,
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validators,
-			Balances:                     b.balances,
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			Validators:                   vals,
+			Balances:                     bals,
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
 			CurrentEpochParticipation:    b.currentEpochParticipation,
@@ -120,7 +133,7 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpoint,
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpoint,
 			FinalizedCheckpoint:          b.finalizedCheckpoint,
-			InactivityScores:             b.inactivityScores,
+			InactivityScores:             b.inactivityScoresVal(),
 			CurrentSyncCommittee:         b.currentSyncCommittee,
 			NextSyncCommittee:            b.nextSyncCommittee,
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapella,
@@ -135,15 +148,15 @@ func (b *BeaconState) ToProtoUnsafe() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.fork,
 			LatestBlockHeader:            b.latestBlockHeader,
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1Data,
 			Eth1DataVotes:                b.eth1DataVotes,
 			Eth1DepositIndex:             b.eth1DepositIndex,
-			Validators:                   b.validators,
-			Balances:                     b.balances,
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			Validators:                   vals,
+			Balances:                     bals,
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashings,
 			PreviousEpochParticipation:   b.previousEpochParticipation,
 			CurrentEpochParticipation:    b.currentEpochParticipation,
@@ -174,6 +187,14 @@ func (b *BeaconState) ToProto() interface{} {
 	defer b.lock.RUnlock()
 
 	gvrCopy := b.genesisValidatorsRoot
+	br := b.blockRootsVal().Slice()
+	sr := b.stateRootsVal().Slice()
+	rm := b.randaoMixesVal().Slice()
+
+	var inactivityScores []uint64
+	if b.version > version.Phase0 {
+		inactivityScores = b.inactivityScoresVal()
+	}
 
 	switch b.version {
 	case version.Phase0:
@@ -183,15 +204,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br,
+			StateRoots:                  sr,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
 			Balances:                    b.balancesVal(),
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochAttestations:   b.previousEpochAttestationsVal(),
 			CurrentEpochAttestations:    b.currentEpochAttestationsVal(),
@@ -207,15 +228,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                        b.slot,
 			Fork:                        b.forkVal(),
 			LatestBlockHeader:           b.latestBlockHeaderVal(),
-			BlockRoots:                  b.blockRoots.Slice(),
-			StateRoots:                  b.stateRoots.Slice(),
+			BlockRoots:                  br,
+			StateRoots:                  sr,
 			HistoricalRoots:             b.historicalRoots.Slice(),
 			Eth1Data:                    b.eth1DataVal(),
 			Eth1DataVotes:               b.eth1DataVotesVal(),
 			Eth1DepositIndex:            b.eth1DepositIndex,
 			Validators:                  b.validatorsVal(),
 			Balances:                    b.balancesVal(),
-			RandaoMixes:                 b.randaoMixes.Slice(),
+			RandaoMixes:                 rm,
 			Slashings:                   b.slashingsVal(),
 			PreviousEpochParticipation:  b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:   b.currentEpochParticipationVal(),
@@ -223,7 +244,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint: b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:  b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:         b.finalizedCheckpointVal(),
-			InactivityScores:            b.inactivityScoresVal(),
+			InactivityScores:            inactivityScores,
 			CurrentSyncCommittee:        b.currentSyncCommitteeVal(),
 			NextSyncCommittee:           b.nextSyncCommitteeVal(),
 		}
@@ -234,15 +255,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
 			Balances:                     b.balancesVal(),
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -250,7 +271,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
-			InactivityScores:             b.inactivityScoresVal(),
+			InactivityScores:             inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderVal(),
@@ -262,15 +283,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
 			Balances:                     b.balancesVal(),
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -278,7 +299,7 @@ func (b *BeaconState) ToProto() interface{} {
 			PreviousJustifiedCheckpoint:  b.previousJustifiedCheckpointVal(),
 			CurrentJustifiedCheckpoint:   b.currentJustifiedCheckpointVal(),
 			FinalizedCheckpoint:          b.finalizedCheckpointVal(),
-			InactivityScores:             b.inactivityScoresVal(),
+			InactivityScores:             inactivityScores,
 			CurrentSyncCommittee:         b.currentSyncCommitteeVal(),
 			NextSyncCommittee:            b.nextSyncCommitteeVal(),
 			LatestExecutionPayloadHeader: b.latestExecutionPayloadHeaderCapellaVal(),
@@ -293,15 +314,15 @@ func (b *BeaconState) ToProto() interface{} {
 			Slot:                         b.slot,
 			Fork:                         b.forkVal(),
 			LatestBlockHeader:            b.latestBlockHeaderVal(),
-			BlockRoots:                   b.blockRoots.Slice(),
-			StateRoots:                   b.stateRoots.Slice(),
+			BlockRoots:                   br,
+			StateRoots:                   sr,
 			HistoricalRoots:              b.historicalRoots.Slice(),
 			Eth1Data:                     b.eth1DataVal(),
 			Eth1DataVotes:                b.eth1DataVotesVal(),
 			Eth1DepositIndex:             b.eth1DepositIndex,
 			Validators:                   b.validatorsVal(),
 			Balances:                     b.balancesVal(),
-			RandaoMixes:                  b.randaoMixes.Slice(),
+			RandaoMixes:                  rm,
 			Slashings:                    b.slashingsVal(),
 			PreviousEpochParticipation:   b.previousEpochParticipationVal(),
 			CurrentEpochParticipation:    b.currentEpochParticipationVal(),
@@ -324,26 +345,46 @@ func (b *BeaconState) ToProto() interface{} {
 
 // StateRoots kept track of in the beacon state.
 func (b *BeaconState) StateRoots() [][]byte {
-	if b.stateRoots == nil {
-		return nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	return b.stateRoots.Slice()
+	roots := b.stateRootsVal()
+	if roots == nil {
+		return nil
+	}
+	return roots.Slice()
+}
+
+func (b *BeaconState) stateRootsVal() customtypes.StateRoots {
+	if features.Get().EnableExperimentalState {
+		if b.stateRootsMultiValue == nil {
+			return nil
+		}
+		return b.stateRootsMultiValue.Value(b)
+	}
+	return b.stateRoots
 }
 
 // StateRootAtIndex retrieves a specific state root based on an
 // input index value.
 func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
-	if b.stateRoots == nil {
-		return nil, nil
-	}
-
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	if features.Get().EnableExperimentalState {
+		if b.stateRootsMultiValue == nil {
+			return nil, nil
+		}
+		r, err := b.stateRootsMultiValue.At(b, idx)
+		if err != nil {
+			return nil, err
+		}
+		return r[:], nil
+	}
+
+	if b.stateRoots == nil {
+		return nil, nil
+	}
 	r, err := b.stateRootAtIndex(idx)
 	if err != nil {
 		return nil, err
@@ -354,9 +395,11 @@ func (b *BeaconState) StateRootAtIndex(idx uint64) ([]byte, error) {
 // stateRootAtIndex retrieves a specific state root based on an
 // input index value.
 // This assumes that a lock is already held on BeaconState.
+//
+// WARNING: This function does not work with the multi-value slice feature.
 func (b *BeaconState) stateRootAtIndex(idx uint64) ([32]byte, error) {
 	if uint64(len(b.stateRoots)) <= idx {
-		return [32]byte{}, fmt.Errorf("index %d out of range", idx)
+		return [32]byte{}, errors.Wrapf(consensus_types.ErrOutOfBounds, "state root index %d does not exist", idx)
 	}
 	return b.stateRoots[idx], nil
 }

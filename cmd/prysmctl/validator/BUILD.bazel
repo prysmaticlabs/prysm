@@ -15,6 +15,7 @@ go_library(
         "//api/client/beacon:go_default_library",
         "//api/client/validator:go_default_library",
         "//beacon-chain/rpc/apimiddleware:go_default_library",
+        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//cmd:go_default_library",
         "//cmd/validator/accounts:go_default_library",
         "//cmd/validator/flags:go_default_library",
