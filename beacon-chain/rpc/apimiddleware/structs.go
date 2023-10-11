@@ -87,18 +87,6 @@ type BLSToExecutionChangesPoolResponseJson struct {
 	Data []*SignedBLSToExecutionChangeJson `json:"data"`
 }
 
-type IdentityResponseJson struct {
-	Data *IdentityJson `json:"data"`
-}
-
-type PeersResponseJson struct {
-	Data []*PeerJson `json:"data"`
-}
-
-type PeerResponseJson struct {
-	Data *PeerJson `json:"data"`
-}
-
 type PeerCountResponseJson struct {
 	Data PeerCountResponse_PeerCountJson `json:"data"`
 }
@@ -108,10 +96,6 @@ type PeerCountResponse_PeerCountJson struct {
 	Connecting    string `json:"connecting"`
 	Connected     string `json:"connected"`
 	Disconnecting string `json:"disconnecting"`
-}
-
-type VersionResponseJson struct {
-	Data *VersionJson `json:"data"`
 }
 
 type SyncingResponseJson struct {
