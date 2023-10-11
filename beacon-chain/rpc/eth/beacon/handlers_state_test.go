@@ -123,8 +123,8 @@ func TestGetStateRoot(t *testing.T) {
 }
 
 func TestGetRandao(t *testing.T) {
-	mixCurrent := bytesutil.PadTo([]byte("current"), 32)
-	mixOld := bytesutil.PadTo([]byte("old"), 32)
+	mixCurrent := bytesutil.ToBytes32([]byte("current"))
+	mixOld := bytesutil.ToBytes32([]byte("old"))
 	epochCurrent := primitives.Epoch(100000)
 	epochOld := 100000 - params.BeaconConfig().EpochsPerHistoricalVector + 1
 
@@ -140,7 +140,7 @@ func TestGetRandao(t *testing.T) {
 	headSt, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, headSt.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-	headRandao := bytesutil.PadTo([]byte("head"), 32)
+	headRandao := bytesutil.ToBytes32([]byte("head"))
 	require.NoError(t, headSt.UpdateRandaoMixesAtIndex(uint64(headEpoch), headRandao))
 
 	db := dbTest.SetupDB(t)
@@ -165,7 +165,7 @@ func TestGetRandao(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		assert.Equal(t, hexutil.Encode(mixCurrent), resp.Data.Randao)
+		assert.Equal(t, hexutil.Encode(mixCurrent[:]), resp.Data.Randao)
 	})
 	t.Run("current epoch requested", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", epochCurrent), nil)
@@ -177,7 +177,7 @@ func TestGetRandao(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		assert.Equal(t, hexutil.Encode(mixCurrent), resp.Data.Randao)
+		assert.Equal(t, hexutil.Encode(mixCurrent[:]), resp.Data.Randao)
 	})
 	t.Run("old epoch requested", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://example.com//eth/v1/beacon/states/{state_id}/randao?epoch=%d", epochOld), nil)
@@ -189,7 +189,7 @@ func TestGetRandao(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		assert.Equal(t, hexutil.Encode(mixOld), resp.Data.Randao)
+		assert.Equal(t, hexutil.Encode(mixOld[:]), resp.Data.Randao)
 	})
 	t.Run("head state below `EpochsPerHistoricalVector`", func(t *testing.T) {
 		s.Stater = &testutil.MockStater{
@@ -205,7 +205,7 @@ func TestGetRandao(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetRandaoResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		assert.Equal(t, hexutil.Encode(headRandao), resp.Data.Randao)
+		assert.Equal(t, hexutil.Encode(headRandao[:]), resp.Data.Randao)
 	})
 	t.Run("epoch too old", func(t *testing.T) {
 		epochTooOld := primitives.Epoch(100000 - st.RandaoMixesLength())
