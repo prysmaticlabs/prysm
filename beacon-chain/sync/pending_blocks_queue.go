@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -184,10 +185,19 @@ func (s *Service) hasPeer() bool {
 }
 
 // processAndBroadcastBlock validates, processes, and broadcasts a block.
+// part of the function is to request missing blobs from peers if the block contains kzg commitments.
 func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) error {
 	if err := s.validateBeaconBlock(ctx, b, blkRoot); err != nil {
 		if !errors.Is(ErrOptimisticParent, err) {
 			log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not validate block")
+			return err
+		}
+	}
+
+	peers := s.getBestPeers()
+	peerCount := len(peers)
+	if peerCount > 0 {
+		if err := s.requestPendingBlobs(ctx, b.Block(), blkRoot, peers[rand.NewGenerator().Int()%peerCount]); err != nil {
 			return err
 		}
 	}
@@ -217,6 +227,12 @@ func (s *Service) handleBlockProcessingError(ctx context.Context, err error, b i
 		s.setBadBlock(ctx, blkRoot)
 	}
 	log.WithError(err).WithField("slot", b.Block().Slot()).Debug("Could not process block")
+}
+
+// getBestPeers returns the list of best peers based on finalized checkpoint epoch.
+func (s *Service) getBestPeers() []core.PeerID {
+	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, s.cfg.chain.FinalizedCheckpt().Epoch)
+	return bestPeers
 }
 
 func (s *Service) checkIfBlockIsBad(
@@ -265,8 +281,7 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	if len(roots) == 0 {
 		return nil
 	}
-	cp := s.cfg.chain.FinalizedCheckpt()
-	_, bestPeers := s.cfg.p2p.Peers().BestFinalized(maxPeerRequest, cp.Epoch)
+	bestPeers := s.getBestPeers()
 	if len(bestPeers) == 0 {
 		return nil
 	}
