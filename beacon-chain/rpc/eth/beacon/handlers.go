@@ -46,8 +46,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
 	defer span.End()
 
-	isSSZ := http2.SszRequested(r)
-	if isSSZ {
+	if http2.SszRequested(r) {
 		s.getBlockSSZV2(ctx, w, r)
 	} else {
 		s.getBlockV2(ctx, w, r)
@@ -156,8 +155,7 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlindedBlock")
 	defer span.End()
 
-	isSSZ := http2.SszRequested(r)
-	if isSSZ {
+	if http2.SszRequested(r) {
 		s.getBlindedBlockSSZ(ctx, w, r)
 	} else {
 		s.getBlindedBlock(ctx, w, r)
