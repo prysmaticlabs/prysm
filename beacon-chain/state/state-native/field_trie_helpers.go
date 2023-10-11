@@ -1,4 +1,4 @@
-package fieldtrie
+package state_native
 
 import (
 	"encoding/binary"
@@ -63,12 +63,8 @@ func validateElements(field types.FieldIndex, fieldInfo types.DataType, elements
 // fieldConverters converts the corresponding field and the provided elements to the appropriate roots.
 func fieldConverters(field types.FieldIndex, indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	switch field {
-	case types.BlockRoots:
-		return convert32ByteArrays[customtypes.BlockRoots](indices, elements, convertAll)
-	case types.StateRoots:
-		return convert32ByteArrays[customtypes.StateRoots](indices, elements, convertAll)
-	case types.RandaoMixes:
-		return convert32ByteArrays[customtypes.RandaoMixes](indices, elements, convertAll)
+	case types.BlockRoots, types.StateRoots, types.RandaoMixes:
+		return convertRoots(indices, elements, convertAll)
 	case types.Eth1DataVotes:
 		return convertEth1DataVotes(indices, elements, convertAll)
 	case types.Validators:
@@ -79,6 +75,21 @@ func fieldConverters(field types.FieldIndex, indices []uint64, elements interfac
 		return convertBalances(indices, elements, convertAll)
 	default:
 		return [][32]byte{}, errors.Errorf("got unsupported type of %v", reflect.TypeOf(elements).Name())
+	}
+}
+
+func convertRoots(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
+	switch castedType := elements.(type) {
+	case customtypes.BlockRoots:
+		return handle32ByteArrays(castedType, indices, convertAll)
+	case customtypes.StateRoots:
+		return handle32ByteArrays(castedType, indices, convertAll)
+	case customtypes.RandaoMixes:
+		return handle32ByteArrays(castedType, indices, convertAll)
+	case MultiValueSliceComposite[[32]byte, *BeaconState]:
+		return handle32ByteMVslice(castedType, indices, convertAll)
+	default:
+		return nil, errors.Errorf("non-existnet type provided %T", castedType)
 	}
 }
 
@@ -116,11 +127,14 @@ func convertAttestations(indices []uint64, elements interface{}, convertAll bool
 }
 
 func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.([]uint64)
-	if !ok {
+	switch casted := elements.(type) {
+	case []uint64:
+		return handleBalanceSlice(casted, indices, convertAll)
+	case MultiValueSliceComposite[uint64, *BeaconState]:
+		return handleBalanceMVSlice(casted, indices, convertAll)
+	default:
 		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
 	}
-	return handleBalanceSlice(val, indices, convertAll)
 }
 
 // handle32ByteArrays computes and returns 32 byte arrays in a slice of root format.
@@ -145,6 +159,39 @@ func handle32ByteArrays(val [][32]byte, indices []uint64, convertAll bool) ([][3
 				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, len(val))
 			}
 			rootCreator(val[idx])
+		}
+	}
+	return roots, nil
+}
+
+func handle32ByteMVslice(mv MultiValueSliceComposite[[32]byte, *BeaconState],
+	indices []uint64, convertAll bool) ([][32]byte, error) {
+	length := len(indices)
+	if convertAll {
+		length = mv.Len(mv.State())
+	}
+	roots := make([][32]byte, 0, length)
+	rootCreator := func(input [32]byte) {
+		roots = append(roots, input)
+	}
+	if convertAll {
+		val := mv.Value(mv.State())
+		for i := range val {
+			rootCreator(val[i])
+		}
+		return roots, nil
+	}
+	totalLen := mv.Len(mv.State())
+	if totalLen > 0 {
+		for _, idx := range indices {
+			if idx > uint64(totalLen)-1 {
+				return nil, fmt.Errorf("index %d greater than number of byte arrays %d", idx, totalLen)
+			}
+			val, err := mv.At(mv.State(), idx)
+			if err != nil {
+				return nil, err
+			}
+			rootCreator(val)
 		}
 	}
 	return roots, nil
@@ -285,6 +332,51 @@ func handleBalanceSlice(val, indices []uint64, convertAll bool) ([][32]byte, err
 				// have to add in as a root. These 3 indexes are then given a 'zero' value.
 				if j < uint64(len(val)) {
 					wantedVal = val[j]
+				}
+				binary.LittleEndian.PutUint64(chunk[i:i+sizeOfElem], wantedVal)
+			}
+			roots = append(roots, chunk)
+		}
+		return roots, nil
+	}
+	return [][32]byte{}, nil
+}
+
+func handleBalanceMVSlice(mv MultiValueSliceComposite[uint64, *BeaconState], indices []uint64, convertAll bool) ([][32]byte, error) {
+	if convertAll {
+		val := mv.Value(mv.State())
+		return stateutil.PackUint64IntoChunks(val)
+	}
+	totalLen := mv.Len(mv.State())
+	if totalLen > 0 {
+		numOfElems, err := types.Balances.ElemsInChunk()
+		if err != nil {
+			return nil, err
+		}
+		iNumOfElems, err := pmath.Int(numOfElems)
+		if err != nil {
+			return nil, err
+		}
+		var roots [][32]byte
+		for _, idx := range indices {
+			// We split the indexes into their relevant groups. Balances
+			// are compressed according to 4 values -> 1 chunk.
+			startIdx := idx / numOfElems
+			startGroup := startIdx * numOfElems
+			var chunk [32]byte
+			sizeOfElem := len(chunk) / iNumOfElems
+			for i, j := 0, startGroup; j < startGroup+numOfElems; i, j = i+sizeOfElem, j+1 {
+				wantedVal := uint64(0)
+				// We are adding chunks in sets of 4, if the set is at the edge of the array
+				// then you will need to zero out the rest of the chunk. Ex : 41 indexes,
+				// so 41 % 4 = 1 . There are 3 indexes, which do not exist yet but we
+				// have to add in as a root. These 3 indexes are then given a 'zero' value.
+				if j < uint64(totalLen) {
+					val, err := mv.At(mv.State(), j)
+					if err != nil {
+						return nil, err
+					}
+					wantedVal = val
 				}
 				binary.LittleEndian.PutUint64(chunk[i:i+sizeOfElem], wantedVal)
 			}

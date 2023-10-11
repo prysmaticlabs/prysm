@@ -103,8 +103,10 @@ type Identifiable interface {
 }
 
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
-type MultiValueSlice[O Identifiable] interface {
+type MultiValueSlice[V comparable, O Identifiable] interface {
 	Len(obj O) int
+	At(obj O, index uint64) (V, error)
+	Value(obj O) []V
 }
 
 // Value defines a single value along with one or more IDs that share this value.

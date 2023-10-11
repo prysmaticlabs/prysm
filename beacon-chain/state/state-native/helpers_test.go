@@ -1,4 +1,4 @@
-package fieldtrie
+package state_native
 
 import (
 	"encoding/binary"

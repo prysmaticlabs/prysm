@@ -36,6 +36,8 @@ go_library(
         "spec_parameters.go",
         "ssz.go",
         "state_trie.go",
+        "field_trie.go",
+        "field_trie_helpers.go",
         "types.go",
     ] + select({
         "//config:mainnet": ["beacon_state_mainnet.go"],
@@ -46,7 +48,6 @@ go_library(
     deps = [
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/state:go_default_library",
-        "//beacon-chain/state/fieldtrie:go_default_library",
         "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//beacon-chain/state/state-native/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
@@ -80,6 +81,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "field_trie_test.go",
         "getters_attestation_test.go",
         "getters_block_test.go",
         "getters_checkpoint_test.go",
@@ -88,6 +90,7 @@ go_test(
         "getters_validator_test.go",
         "getters_withdrawal_test.go",
         "hasher_test.go",
+        "helpers_test.go",
         "mvslice_fuzz_test.go",
         "proofs_test.go",
         "readonly_validator_test.go",
@@ -108,6 +111,7 @@ go_test(
     deps = [
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/state:go_default_library",
+        "//beacon-chain/state/state-native/custom-types:go_default_library",
         "//beacon-chain/state/state-native/types:go_default_library",
         "//beacon-chain/state/stateutil:go_default_library",
         "//beacon-chain/state/testing:go_default_library",
