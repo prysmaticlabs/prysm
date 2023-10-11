@@ -158,7 +158,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 	var filteredIds []peer.ID
 	for _, stateId := range stateIds {
 		for _, directionId := range directionIds {
-			if stateId.Pretty() == directionId.Pretty() {
+			if stateId.String() == directionId.String() {
 				filteredIds = append(filteredIds, stateId)
 				break
 			}
@@ -264,7 +264,7 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
 		return nil, nil
 	}
 	p := &Peer{
-		PeerId:    id.Pretty(),
+		PeerId:    id.String(),
 		State:     strings.ToLower(eth.ConnectionState(connectionState).String()),
 		Direction: strings.ToLower(eth.PeerDirection(direction).String()),
 	}
