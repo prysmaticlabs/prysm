@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 )
 
@@ -51,11 +52,21 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
+	type temp[O multi_value_slice.Identifiable] interface {
+		Len(obj O) int
+		State() *BeaconState
+	}
 	switch fieldInfo {
 	case types.BasicArray:
 		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
 		if err != nil {
 			return nil, err
+		}
+		numOfElems := 0
+		if val, ok := elements.(temp[*BeaconState]); ok {
+			numOfElems = val.Len(val.State())
+		} else {
+			numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return &FieldTrie{
 			fieldLayers: fl,
@@ -64,9 +75,15 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  numOfElems,
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
+		numOfElems := 0
+		if val, ok := elements.(temp[*BeaconState]); ok {
+			numOfElems = val.Len(val.State())
+		} else {
+			numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
@@ -74,7 +91,7 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  numOfElems,
 		}, nil
 	default:
 		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(fieldInfo).Name())
@@ -100,20 +117,32 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
+	type temp[O multi_value_slice.Identifiable] interface {
+		Len(obj O) int
+		State() *BeaconState
+	}
 	switch f.dataType {
 	case types.BasicArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		if val, ok := elements.(temp[*BeaconState]); ok {
+			f.numOfElems = val.Len(val.State())
+		} else {
+			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		if val, ok := elements.(temp[*BeaconState]); ok {
+			f.numOfElems = val.Len(val.State())
+		} else {
+			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
 		numOfElems, err := f.field.ElemsInChunk()
@@ -142,7 +171,11 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		if val, ok := elements.(temp[*BeaconState]); ok {
+			f.numOfElems = val.Len(val.State())
+		} else {
+			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+		}
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())
