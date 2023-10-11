@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/golang/protobuf/ptypes/empty"
+
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -31,7 +33,7 @@ func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ str
 		vals = append(vals, val.Validator)
 	}
 
-	head, err := g.beaconChainClient.GetChainHead(ctx, nil)
+	head, err := g.beaconChainClient.GetChainHead(ctx, &empty.Empty{})
 	if err != nil {
 		return nil, errors.Wrap(err, "get chain head")
 	}
