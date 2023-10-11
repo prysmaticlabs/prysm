@@ -295,7 +295,7 @@ func setLocalExecution(blk interfaces.SignedBeaconBlock, execution interfaces.Ex
 // It delegates to setExecution for the actual work.
 func setBuilderExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
 	var kzgCommitments [][]byte
-	if fullBlobsBundle != nil {
+	if blindBlobsBundle != nil {
 		kzgCommitments = blindBlobsBundle.KzgCommitments
 	}
 	return setExecution(blk, execution, true, kzgCommitments)
