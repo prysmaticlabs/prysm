@@ -44,11 +44,11 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 	}
 	currentEpoch := slots.EpochsSinceGenesis(time.Unix(int64(s.genesisTime), 0))
 	if !bestDescendant.viableForHead(s.justifiedCheckpoint.Epoch, currentEpoch) {
-		s.allTipsAreInvalid.Store(true)
+		s.allTipsAreInvalid = true
 		return [32]byte{}, fmt.Errorf("head at slot %d with weight %d is not eligible, finalizedEpoch, justified Epoch %d, %d != %d, %d",
 			bestDescendant.slot, bestDescendant.weight/10e9, bestDescendant.finalizedEpoch, bestDescendant.justifiedEpoch, s.finalizedCheckpoint.Epoch, s.justifiedCheckpoint.Epoch)
 	}
-	s.allTipsAreInvalid.Store(false)
+	s.allTipsAreInvalid = false
 
 	// Update metrics.
 	if bestDescendant != s.headNode {
