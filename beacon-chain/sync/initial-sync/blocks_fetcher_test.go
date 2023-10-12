@@ -1091,6 +1091,16 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
 	require.ErrorIs(t, err, errMissingBlobIndex)
 
+	bwb, blobs = testSequenceBlockWithBlob(t, 10)
+	blobs[lastBlobIdx].ProposerIndex = 100
+	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	require.ErrorIs(t, err, errMismatchedProposerIndex)
+
+	bwb, blobs = testSequenceBlockWithBlob(t, 10)
+	blobs[lastBlobIdx].BlockParentRoot = blobs[0].BlockParentRoot
+	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
+	require.ErrorIs(t, err, errMismatchedBlobBlockRoot)
+
 	var emptyKzg [48]byte
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].KzgCommitment = emptyKzg[:]
