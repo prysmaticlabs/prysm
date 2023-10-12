@@ -36,7 +36,6 @@ func (s *Service) processPendingBlobs() {
 		case e := <-eventFeed:
 			s.handleEvent(s.ctx, e)
 		case <-cleanupTicker.C():
-			log.Info("Cleaning up pending blobs")
 			if s.pendingBlobSidecars == nil {
 				return
 			}
@@ -58,7 +57,6 @@ func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 	if !ok {
 		return
 	}
-	log.Infof("Processing blobs for parent root %x", data.SignedBlock.Block().ParentRoot())
 	s.processBlobsFromSidecars(ctx, data.SignedBlock.Block().ParentRoot())
 }
 
@@ -66,7 +64,6 @@ func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 func (s *Service) processBlobsFromSidecars(ctx context.Context, parentRoot [32]byte) {
 	blobs := s.pendingBlobSidecars.pop(parentRoot)
 	for _, blob := range blobs {
-		log.Infof("Processing blob for slot %d", blob.Message.Slot)
 		if err := s.validateAndReceiveBlob(ctx, blob); err != nil {
 			log.WithError(err).Error("Failed to validate blob in pending queue")
 		}
@@ -82,7 +79,6 @@ func (s *Service) validateAndReceiveBlob(ctx context.Context, blob *eth.SignedBl
 	if result != pubsub.ValidationAccept {
 		return fmt.Errorf("unexpected pubsub result: %d", result)
 	}
-	log.Infof("Received blob for slot %d", blob.Message.Slot)
 	return s.cfg.chain.ReceiveBlob(ctx, blob.Message)
 }
 
