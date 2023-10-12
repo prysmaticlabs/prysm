@@ -443,7 +443,7 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 					"block parent root %#x != BlobSidecar.BlockParentRoot %#x at slot %d", block.ParentRoot(), bl.BlockParentRoot, block.Slot())
 			}
 			if bl.ProposerIndex != block.ProposerIndex() {
-				return nil, errors.Wrapf(errMissmatchedProposerIndex,
+				return nil, errors.Wrapf(errMismatchedProposerIndex,
 					"block proposer index %d != BlobSidecar.ProposerIndex %d at slot %d", block.ProposerIndex(), bl.ProposerIndex, block.Slot())
 			}
 			if ci != int(bl.Index) {
