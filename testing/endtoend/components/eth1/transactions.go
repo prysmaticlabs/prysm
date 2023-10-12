@@ -191,8 +191,6 @@ func SendBlobTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Fi
 			}
 			err = backend.SendTransaction(context.Background(), signedTx)
 			if err != nil {
-				logrus.WithError(err).Errorf("Could not send blob tx: %d , %d", len(signedTx.BlobTxSidecar().Blobs),
-					len(signedTx.BlobTxSidecar().Blobs[0]))
 				// We continue on if the constructed transaction is invalid
 				// and can't be submitted on chain.
 				//nolint:nilerr
