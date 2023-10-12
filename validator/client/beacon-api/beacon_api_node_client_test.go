@@ -9,7 +9,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -159,7 +159,7 @@ func TestGetSyncStatus(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		restEndpointResponse apimiddleware.SyncingResponseJson
+		restEndpointResponse node.SyncStatusResponse
 		restEndpointError    error
 		expectedResponse     *ethpb.SyncStatus
 		expectedError        string
@@ -171,13 +171,13 @@ func TestGetSyncStatus(t *testing.T) {
 		},
 		{
 			name:                 "returns nil syncing data",
-			restEndpointResponse: apimiddleware.SyncingResponseJson{Data: nil},
+			restEndpointResponse: node.SyncStatusResponse{Data: nil},
 			expectedError:        "syncing data is nil",
 		},
 		{
 			name: "returns false syncing status",
-			restEndpointResponse: apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			restEndpointResponse: node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -187,8 +187,8 @@ func TestGetSyncStatus(t *testing.T) {
 		},
 		{
 			name: "returns true syncing status",
-			restEndpointResponse: apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			restEndpointResponse: node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: true,
 				},
 			},
@@ -204,7 +204,7 @@ func TestGetSyncStatus(t *testing.T) {
 			defer ctrl.Finish()
 			ctx := context.Background()
 
-			syncingResponse := apimiddleware.SyncingResponseJson{}
+			syncingResponse := node.SyncStatusResponse{}
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
@@ -235,7 +235,7 @@ func TestGetVersion(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		restEndpointResponse apimiddleware.VersionResponseJson
+		restEndpointResponse node.GetVersionResponse
 		restEndpointError    error
 		expectedResponse     *ethpb.Version
 		expectedError        string
@@ -247,13 +247,13 @@ func TestGetVersion(t *testing.T) {
 		},
 		{
 			name:                 "returns nil version data",
-			restEndpointResponse: apimiddleware.VersionResponseJson{Data: nil},
+			restEndpointResponse: node.GetVersionResponse{Data: nil},
 			expectedError:        "empty version response",
 		},
 		{
 			name: "returns proper version response",
-			restEndpointResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{
+			restEndpointResponse: node.GetVersionResponse{
+				Data: &node.Version{
 					Version: "prysm/local",
 				},
 			},
@@ -269,7 +269,7 @@ func TestGetVersion(t *testing.T) {
 			defer ctrl.Finish()
 			ctx := context.Background()
 
-			var versionResponse apimiddleware.VersionResponseJson
+			var versionResponse node.GetVersionResponse
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
