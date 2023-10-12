@@ -63,7 +63,6 @@ func TestSyncHandlers_WaitToSync(t *testing.T) {
 
 	topic := "/eth2/%x/beacon_block"
 	go r.registerHandlers()
-	go r.waitForChainStart()
 	time.Sleep(100 * time.Millisecond)
 
 	var vr [32]byte
