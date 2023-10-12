@@ -11,19 +11,19 @@ type AggregateAttestationResponse struct {
 }
 
 type SubmitContributionAndProofsRequest struct {
-	Data []*shared.SignedContributionAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedContributionAndProof `json:"data"`
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedAggregateAttestationAndProof `json:"data"`
 }
 
 type SubmitSyncCommitteeSubscriptionsRequest struct {
-	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.SyncCommitteeSubscription `json:"data"`
 }
 
 type SubmitBeaconCommitteeSubscriptionsRequest struct {
-	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.BeaconCommitteeSubscription `json:"data"`
 }
 
 type GetAttestationDataResponse struct {
@@ -78,6 +78,7 @@ type ProduceBlockV3Response struct {
 	Version                 string          `json:"version"`
 	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
+	ConsensusBlockValue     string          `json:"consensus_block_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
 }
 

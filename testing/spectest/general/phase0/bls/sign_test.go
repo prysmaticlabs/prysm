@@ -20,9 +20,9 @@ func TestSign(t *testing.T) {
 }
 
 func testSign(t *testing.T) {
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/sign/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/sign/bls")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/sign/small")
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/sign/bls")
 	}
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

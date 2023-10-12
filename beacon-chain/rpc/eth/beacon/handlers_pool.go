@@ -1,25 +1,28 @@
 package beacon
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
+	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -89,13 +92,8 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	var validAttestations []*ethpbalpha.Attestation
+	var validAttestations []*eth.Attestation
 	var attFailures []*shared.IndexedVerificationFailure
 	for i, sourceAtt := range req.Data {
 		att, err := sourceAtt.ToConsensus()
@@ -141,7 +139,6 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 
 		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
-			failedBroadcasts = append(failedBroadcasts, strconv.Itoa(i))
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
@@ -209,11 +206,6 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	exit, err := req.ToConsensus()
 	if err != nil {
@@ -238,8 +230,8 @@ func (s *Server) SubmitVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	val, err := headState.ValidatorAtIndexReadOnly(exit.Exit.ValidatorIndex)
 	if err != nil {
-		if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-			http2.HandleError(w, "Could not get exiting validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+		if errors.Is(err, consensus_types.ErrOutOfBounds) {
+			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 		http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
@@ -277,7 +269,7 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var validMessages []*ethpbalpha.SyncCommitteeMessage
+	var validMessages []*eth.SyncCommitteeMessage
 	var msgFailures []*shared.IndexedVerificationFailure
 	for i, sourceMsg := range req.Data {
 		msg, err := sourceMsg.ToConsensus()
@@ -292,8 +284,8 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	for _, msg := range validMessages {
-		if err = s.CoreService.SubmitSyncMessage(ctx, msg); err != nil {
-			http2.HandleError(w, "Could not submit message: "+err.Error(), http.StatusInternalServerError)
+		if rpcerr := s.CoreService.SubmitSyncMessage(ctx, msg); rpcerr != nil {
+			http2.HandleError(w, "Could not submit message: "+rpcerr.Err.Error(), core.ErrorReasonToHTTP(rpcerr.Reason))
 			return
 		}
 	}
@@ -306,4 +298,148 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 		}
 		http2.WriteError(w, failuresErr)
 	}
+}
+
+// SubmitBLSToExecutionChanges submits said object to the node's pool
+// if it passes validation the node must broadcast it to the network.
+func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitBLSToExecutionChanges")
+	defer span.End()
+	st, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get head state: %v", err), http.StatusInternalServerError)
+		return
+	}
+	var failures []*shared.IndexedVerificationFailure
+	var toBroadcast []*eth.SignedBLSToExecutionChange
+
+	var req []*shared.SignedBLSToExecutionChange
+	err = json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req) == 0 {
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	}
+
+	for i, change := range req {
+		sbls, err := change.ToConsensus()
+		if err != nil {
+			failures = append(failures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Unable to decode SignedBLSToExecutionChange: " + err.Error(),
+			})
+			continue
+		}
+		_, err = blocks.ValidateBLSToExecutionChange(st, sbls)
+		if err != nil {
+			failures = append(failures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
+			})
+			continue
+		}
+		if err := blocks.VerifyBLSChangeSignature(st, sbls); err != nil {
+			failures = append(failures, &shared.IndexedVerificationFailure{
+				Index:   i,
+				Message: "Could not validate signature: " + err.Error(),
+			})
+			continue
+		}
+		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.BLSToExecutionChangeReceived,
+			Data: &operation.BLSToExecutionChangeReceivedData{
+				Change: sbls,
+			},
+		})
+		s.BLSChangesPool.InsertBLSToExecChange(sbls)
+		if st.Version() >= version.Capella {
+			toBroadcast = append(toBroadcast, sbls)
+		}
+	}
+	go s.broadcastBLSChanges(ctx, toBroadcast)
+	if len(failures) > 0 {
+		failuresErr := &shared.IndexedVerificationFailureError{
+			Code:     http.StatusBadRequest,
+			Message:  "One or more BLSToExecutionChange failed validation",
+			Failures: failures,
+		}
+		http2.WriteError(w, failuresErr)
+	}
+}
+
+// broadcastBLSBatch broadcasts the first `broadcastBLSChangesRateLimit` messages from the slice pointed to by ptr.
+// It validates the messages again because they could have been invalidated by being included in blocks since the last validation.
+// It removes the messages from the slice and modifies it in place.
+func (s *Server) broadcastBLSBatch(ctx context.Context, ptr *[]*eth.SignedBLSToExecutionChange) {
+	limit := broadcastBLSChangesRateLimit
+	if len(*ptr) < broadcastBLSChangesRateLimit {
+		limit = len(*ptr)
+	}
+	st, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		log.WithError(err).Error("could not get head state")
+		return
+	}
+	for _, ch := range (*ptr)[:limit] {
+		if ch != nil {
+			_, err := blocks.ValidateBLSToExecutionChange(st, ch)
+			if err != nil {
+				log.WithError(err).Error("could not validate BLS to execution change")
+				continue
+			}
+			if err := s.Broadcaster.Broadcast(ctx, ch); err != nil {
+				log.WithError(err).Error("could not broadcast BLS to execution changes.")
+			}
+		}
+	}
+	*ptr = (*ptr)[limit:]
+}
+
+func (s *Server) broadcastBLSChanges(ctx context.Context, changes []*eth.SignedBLSToExecutionChange) {
+	s.broadcastBLSBatch(ctx, &changes)
+	if len(changes) == 0 {
+		return
+	}
+
+	ticker := time.NewTicker(500 * time.Millisecond)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			s.broadcastBLSBatch(ctx, &changes)
+			if len(changes) == 0 {
+				return
+			}
+		}
+	}
+}
+
+// ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
+func (s *Server) ListBLSToExecutionChanges(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "beacon.ListBLSToExecutionChanges")
+	defer span.End()
+
+	sourceChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
+	if err != nil {
+		http2.HandleError(w, fmt.Sprintf("Could not get BLS to execution changes: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	changes, err := shared.SignedBlsToExecutionChangesFromConsensus(sourceChanges)
+	if err != nil {
+		http2.HandleError(w, "failed to decode SignedBlsToExecutionChanges: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http2.WriteJson(w, &BLSToExecutionChangesPoolResponse{
+		Data: changes,
+	})
 }

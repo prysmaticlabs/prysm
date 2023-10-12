@@ -26,71 +26,6 @@ option java_outer_classname = "BeaconNodeProto";
 option java_package = "org.ethereum.eth.v1";
 option php_namespace = "Ethereum\\Eth\\v1";
 
-message IdentityResponse {
-  Identity data = 1;
-}
-
-message Identity {
-  // The peer id of the node.
-  string peer_id = 1;
-  // The latest ENR of the node.
-  string enr = 2;
-  // All the p2p multiaddresses of the peer, specified as a full multiaddr.
-  repeated string p2p_addresses = 3;
-  // All the discv5 multiaddresses of the peer, specified as a full multiaddr.
-  repeated string discovery_addresses = 4;
-  // Additional metadata that the node would like to provide. Includes extra networking information.
-  Metadata metadata = 5;
-}
-
-message Metadata {
-  // Sequence number starts at 0 used to version the node's metadata. If any other field in the local MetaData changes,
-  // the node MUST increment seq_number by 1.
-  uint64 seq_number = 1;
-  // Attnets is a bitvector representing the node's persistent attestation subnet subscriptions.
-  bytes attnets = 2 [(ethereum.eth.ext.ssz_size) = "8", (ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/go-bitfield.Bitvector64"];
-}
-
-message PeerRequest {
-  // Peer id of the peer requested.
-  string peer_id = 1;
-}
-
-message PeersRequest {
-  // Requested peer states (available values: disconnected, connecting, connected, disconnecting).
-  repeated ConnectionState state = 1;
-  // Requested peer directions (available values: inbound, outbound).
-  repeated PeerDirection direction = 2;
-}
-
-message PeerResponse {
-  Peer data = 1;
-  Meta meta = 2;
-
-  message Meta {
-    uint64 count = 1;
-  }
-}
-
-message PeersResponse {
-  repeated Peer data = 1;
-}
-
-message PeerCountResponse {
-  PeerCount data = 1;
-
-  message PeerCount {
-    // The number of disconnected peers.
-    uint64 disconnected = 1;
-    // The number of connecting peers.
-    uint64 connecting = 2;
-    // The number of connected peers.
-    uint64 connected = 3;
-    // The number of disconnecting peers.
-    uint64 disconnecting = 4;
-  }
-}
-
 // Peer provides details of a peer on the network.
 message Peer {
   // The peer id of the peer.
@@ -118,14 +53,4 @@ enum ConnectionState {
   CONNECTING = 1;
   CONNECTED = 2;
   DISCONNECTING = 3;
-}
-
-message VersionResponse {
-  Version data = 1;
-}
-
-// Information about the node version.
-message Version {
-  // A string that uniquely identifies the node and its version.
-  string version = 1;
 }

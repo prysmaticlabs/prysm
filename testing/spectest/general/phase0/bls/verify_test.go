@@ -19,9 +19,9 @@ func TestVerify(t *testing.T) {
 }
 
 func testVerify(t *testing.T) {
-	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/verify/small")
+	testFolders, testFolderPath := utils.TestFolders(t, "general", "phase0", "bls/verify/bls")
 	if len(testFolders) == 0 {
-		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/verify/small")
+		t.Fatalf("No test folders found for %s/%s/%s", "general", "phase0", "bls/verify/bls")
 	}
 	for i, folder := range testFolders {
 		t.Run(folder.Name(), func(t *testing.T) {

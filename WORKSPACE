@@ -50,8 +50,6 @@ load("@prysm//tools/cross-toolchain:prysm_toolchains.bzl", "configure_prysm_tool
 
 configure_prysm_toolchains()
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
 http_archive(
     name = "bazel_skylib",
     sha256 = "1c531376ac7e5a180e0237938a2536de0c54d93f5c278634818e0efc952dd56c",
@@ -67,10 +65,10 @@ bazel_skylib_workspace()
 
 http_archive(
     name = "bazel_gazelle",
-    sha256 = "29d5dafc2a5582995488c6735115d1d366fcd6a0fc2e2a153f02988706349825",
+    sha256 = "d3fa66a39028e97d76f9e2db8f1b0c11c099e8e01bf363a923074784e451f809",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.31.0/bazel-gazelle-v0.31.0.tar.gz",
-        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.31.0/bazel-gazelle-v0.31.0.tar.gz",
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.33.0/bazel-gazelle-v0.33.0.tar.gz",
     ],
 )
 
@@ -88,16 +86,34 @@ http_archive(
 )
 
 http_archive(
+    name = "rules_oci",
+    sha256 = "c71c25ed333a4909d2dd77e0b16c39e9912525a98c7fa85144282be8d04ef54c",
+    strip_prefix = "rules_oci-1.3.4",
+    url = "https://github.com/bazel-contrib/rules_oci/releases/download/v1.3.4/rules_oci-v1.3.4.tar.gz",
+)
+
+load("@rules_oci//oci:dependencies.bzl", "rules_oci_dependencies")
+
+rules_oci_dependencies()
+
+load("@rules_oci//oci:repositories.bzl", "LATEST_CRANE_VERSION", "oci_register_toolchains")
+
+oci_register_toolchains(
+    name = "oci",
+    crane_version = LATEST_CRANE_VERSION,
+)
+
+http_archive(
     name = "io_bazel_rules_go",
     patch_args = ["-p1"],
     patches = [
         # Expose internals of go_test for custom build transitions.
         "//third_party:io_bazel_rules_go_test.patch",
     ],
-    sha256 = "bfc5ce70b9d1634ae54f4e7b495657a18a04e0d596785f672d35d5f505ab491a",
+    sha256 = "91585017debb61982f7054c9688857a2ad1fd823fc3f9cb05048b0025c47d023",
     urls = [
-        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.40.0/rules_go-v0.40.0.zip",
-        "https://github.com/bazelbuild/rules_go/releases/download/v0.40.0/rules_go-v0.40.0.zip",
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.42.0/rules_go-v0.42.0.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.42.0/rules_go-v0.42.0.zip",
     ],
 )
 
@@ -167,12 +183,30 @@ container_pull(
     repository = "pinglamb/alpine-glibc",
 )
 
+load("@rules_oci//oci:pull.bzl", "oci_pull")
+
+# A multi-arch base image
+oci_pull(
+    name = "linux_debian11_multiarch_base",  # Debian bullseye
+    digest = "sha256:9b8e0854865dcaf49470b4ec305df45957020fbcf17b71eeb50ffd3bc5bf885d",  # 2023-05-17
+    image = "gcr.io/distroless/cc-debian11",
+    platforms = [
+        "linux/amd64",
+        "linux/arm64",
+    ],
+    reproducible = True,
+)
+
+load("@prysm//tools:image_deps.bzl", "prysm_image_deps")
+
+prysm_image_deps()
+
 load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.20.7",
+    go_version = "1.20.9",
     nogo = "@//:nogo",
 )
 
@@ -213,7 +247,9 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_version = "v1.4.0-beta.1"
+consensus_spec_test_version = "v1.4.0-beta.2-hotfix"
+
+consensus_spec_version = "v1.4.0-beta.2"
 
 bls_test_version = "v0.1.1"
 
@@ -229,8 +265,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "24399b60ce3fbeb2311952d213dc3731b6dcb0f8881b016c283de5b518d2bbba",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
+    sha256 = "99770a001189f66204a4ef79161c8002bcbbcbd8236f1c6479bd5b83a3c68d42",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -245,8 +281,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "8e656ee48d2e2ebc9cf9baedb81f27925bc625b3e3fbb2883444a08758a5884a",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
+    sha256 = "56763f6492ee137108271007d62feef60d8e3f1698e53dee4bc4b07e55f7326b",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -261,8 +297,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "8bd137da6cc57a25383bfac5bc37e31265098145278bd8002b88e24c8b4718b9",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
+    sha256 = "bc1cac1a991cdc7426efea14385dcf215df85ed3f0572b824ad6a1d7ca0c89ad",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_test_version,
 )
 
 http_archive(
@@ -276,7 +312,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "2bc1edb6e4a4f86c00317c04618a90b0ca29ee1eba833d0a64dd67fdd83fdbe3",
+    sha256 = "c5898001aaab2a5bb38a39ff9d17a52f1f9befcc26e63752cbf556040f0c884e",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
@@ -337,10 +373,23 @@ http_archive(
     ],
 )
 
-# Group the sources of the library so that CMake rule have access to it
-all_content = """filegroup(name = "all", srcs = glob(["**"]), visibility = ["//visibility:public"])"""
-
 # External dependencies
+http_archive(
+    name = "googleapis",
+    sha256 = "9d1a930e767c93c825398b8f8692eca3fe353b9aaadedfbcf1fca2282c85df88",
+    strip_prefix = "googleapis-64926d52febbf298cb82a8f472ade4a3969ba922",
+    urls = [
+        "https://github.com/googleapis/googleapis/archive/64926d52febbf298cb82a8f472ade4a3969ba922.zip",
+    ],
+)
+
+load("@googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    go = True,
+)
+
 load("//:deps.bzl", "prysm_deps")
 
 # gazelle:repository_macro deps.bzl%prysm_deps

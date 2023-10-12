@@ -22,11 +22,9 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v2/beacon_block.proto";
-import "proto/eth/v2/beacon_chain.proto";
 import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
 import "proto/eth/v2/sync_committee.proto";
-import "proto/eth/v2/withdrawals.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
@@ -79,72 +77,6 @@ service BeaconChain {
   rpc GetRandao(v2.RandaoRequest) returns (v2.RandaoResponse) {
     option (google.api.http) = {
       get: "/internal/eth/v1/beacon/states/{state_id}/randao"
-    };
-  }
-
-  // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-  // included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
-  // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
-  // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
-  // still broadcast but a different status code is returned (202).
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlock(v2.SignedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/blocks"
-      body: "*"
-    };
-  }
-
-  // SubmitBlock instructs the beacon node to broadcast a newly signed beacon block to the beacon network, to be
-  // included in the beacon chain. The beacon node is not required to validate the signed BeaconBlock, and a successful
-  // response (20X) only indicates that the broadcast has been successful. The beacon node is expected to integrate the
-  // new block into its state, and therefore validate the block internally, however blocks which fail the validation are
-  // still broadcast but a different status code is returned (202).
-  //
-  // The provided block must be SSZ-serialized.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlock
-  rpc SubmitBlockSSZ(v2.SSZContainer) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/blocks/ssz"
-      body: "*"
-    };
-  }
-
-  // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-  // and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-  // The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-  // to be included in the beacon chain. The beacon node is not required to validate the signed
-  // `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-  // successful. The beacon node is expected to integrate the new block into its state, and
-  // therefore validate the block internally, however blocks which fail the validation are still
-  // broadcast but a different status code is returned (202).
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlindedBlock
-  rpc SubmitBlindedBlock(v2.SignedBlindedBeaconBlockContentsContainer) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/blinded_blocks"
-      body: "*"
-    };
-  }
-
-  // SubmitBlindedBlock instructs the beacon node to use the components of the `SignedBlindedBeaconBlock` to construct
-  // and publish a `SignedBeaconBlock` by swapping out the `transactions_root` for the corresponding full list of `transactions`.
-  // The beacon node should broadcast a newly constructed `SignedBeaconBlock` to the beacon network,
-  // to be included in the beacon chain. The beacon node is not required to validate the signed
-  // `BeaconBlock`, and a successful response (20X) only indicates that the broadcast has been
-  // successful. The beacon node is expected to integrate the new block into its state, and
-  // therefore validate the block internally, however blocks which fail the validation are still
-  // broadcast but a different status code is returned (202).
-  //
-  // The provided block must be SSZ-serialized.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/publishBlindedBlock
-  rpc SubmitBlindedBlockSSZ(v2.SSZContainer) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/blinded_blocks/ssz"
-      body: "*"
     };
   }
 
@@ -256,24 +188,6 @@ service BeaconChain {
     option (google.api.http) = {
       post: "/internal/eth/v1/beacon/pool/proposer_slashings"
       body: "*"
-    };
-  }
-
-  // SubmitSignedBLSToExecutionChanges submits said object to node's pool
-  // and if passes validation node MUST broadcast it to network.
-  rpc SubmitSignedBLSToExecutionChanges(v2.SubmitBLSToExecutionChangesRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
-      body: "*"
-    };
-  }
-
-  // ListBLSToExecutionChanges retrieves BLS to execution changes known by the node but not necessarily incorporated into any block
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getPoolBLSToExecutionChanges
-  rpc ListBLSToExecutionChanges(google.protobuf.Empty) returns (v2.BLSToExecutionChangesPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/bls_to_execution_changes"
     };
   }
 

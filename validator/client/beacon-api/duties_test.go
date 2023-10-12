@@ -9,6 +9,9 @@ import (
 	"strconv"
 	"testing"
 
+	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
@@ -1259,10 +1262,21 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).MinTimes(1)
 
+			prysmBeaconChainClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+			prysmBeaconChainClient.EXPECT().GetValidatorCount(
+				ctx,
+				gomock.Any(),
+				gomock.Any(),
+			).Return(
+				nil,
+				iface.ErrNotSupported,
+			).MinTimes(1)
+
 			// Make sure that our values are equal to what would be returned by calling getDutiesForEpoch individually
 			validatorClient := &beaconApiValidatorClient{
 				dutiesProvider:          dutiesProvider,
 				stateValidatorsProvider: stateValidatorsProvider,
+				prysmBeaconChainCLient:  prysmBeaconChainClient,
 			}
 
 			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
@@ -1356,9 +1370,20 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
+	prysmBeaconChainClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+	prysmBeaconChainClient.EXPECT().GetValidatorCount(
+		ctx,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		nil,
+		iface.ErrNotSupported,
+	).MinTimes(1)
+
 	validatorClient := &beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		dutiesProvider:          dutiesProvider,
+		prysmBeaconChainCLient:  prysmBeaconChainClient,
 	}
 
 	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
