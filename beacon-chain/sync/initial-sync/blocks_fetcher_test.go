@@ -17,6 +17,7 @@ import (
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	beaconsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/validate"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -1084,28 +1085,28 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].BlockRoot = blobs[0].BlockRoot
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMismatchedBlobBlockRoot)
+	require.ErrorIs(t, err, validate.ErrMismatchedBlobBlockRoot)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].Index = 100
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMissingBlobIndex)
+	require.ErrorIs(t, err, validate.ErrIncorrectBlobIndex)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].ProposerIndex = 100
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMismatchedProposerIndex)
+	require.ErrorIs(t, err, validate.ErrMismatchedProposerIndex)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].BlockParentRoot = blobs[0].BlockParentRoot
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMismatchedBlobBlockRoot)
+	require.ErrorIs(t, err, validate.ErrMismatchedBlobBlockRoot)
 
 	var emptyKzg [48]byte
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].KzgCommitment = emptyKzg[:]
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMismatchedBlobCommitments)
+	require.ErrorIs(t, err, validate.ErrMismatchedBlobCommitments)
 
 	// happy path
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
