@@ -100,7 +100,6 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		clockWaiter:         gs,
 	}
 
-	go r.registerHandlers()
 	var vr [32]byte
 	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
 	r.waitForChainStart()
