@@ -571,7 +571,8 @@ func TestService_EnsureConsistentPowchainData(t *testing.T) {
 	assert.NoError(t, genState.SetSlot(1000))
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)
@@ -601,7 +602,8 @@ func TestService_InitializeCorrectly(t *testing.T) {
 	assert.NoError(t, genState.SetSlot(1000))
 
 	require.NoError(t, s1.cfg.beaconDB.SaveGenesisData(context.Background(), genState))
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)
@@ -636,7 +638,8 @@ func TestService_EnsureValidPowchainData(t *testing.T) {
 		DepositContainers: []*ethpb.DepositContainer{{Index: 1}},
 	})
 	require.NoError(t, err)
-	require.NoError(t, s1.ensureValidPowchainData(context.Background()))
+	_, err = s1.validPowchainData(context.Background())
+	require.NoError(t, err)
 
 	eth1Data, err := s1.cfg.beaconDB.ExecutionChainData(context.Background())
 	assert.NoError(t, err)

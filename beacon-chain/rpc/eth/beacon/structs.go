@@ -121,3 +121,7 @@ type ValidatorBalance struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
 }
+
+type BLSToExecutionChangesPoolResponse struct {
+	Data []*shared.SignedBLSToExecutionChange `json:"data"`
+}

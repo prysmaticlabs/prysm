@@ -63,10 +63,6 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorCount")
 	defer span.End()
 
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	stateID := mux.Vars(r)["state_id"]
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateID), vs.OptimisticModeFetcher, vs.Stater, vs.ChainInfoFetcher, vs.BeaconDB)
@@ -166,7 +162,7 @@ func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Va
 	var resp []*ValidatorCount
 	for status, count := range countByStatus {
 		resp = append(resp, &ValidatorCount{
-			Status: strings.ToLower(ethpb.ValidatorStatus_name[int32(status)]),
+			Status: status.String(),
 			Count:  strconv.FormatUint(count, 10),
 		})
 	}
