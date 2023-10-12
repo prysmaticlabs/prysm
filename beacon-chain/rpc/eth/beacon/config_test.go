@@ -250,6 +250,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "37", v)
 		case "VALIDATOR_REGISTRY_LIMIT":
 			assert.Equal(t, "38", v)
+		case "MAX_PENDING_BALANCE_DEPOSITS":
+			assert.Equal(t, "1048576", v)
+		case "MAX_PENDING_PARTIAL_WITHDRAWALS":
+			assert.Equal(t, "1048576", v)
 		case "BASE_REWARD_FACTOR":
 			assert.Equal(t, "39", v)
 		case "WHISTLEBLOWER_REWARD_QUOTIENT":
@@ -374,6 +378,10 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "75", v)
 		case "MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP":
 			assert.Equal(t, "76", v)
+		case "MAX_PAYLOAD_ATTESTATIONS":
+			assert.Equal(t, "2", v)
+		case "MAX_EXECUTION_LAYER_WITHDRAW_REQUESTS":
+			assert.Equal(t, "16", v)
 		case "REORG_MAX_EPOCHS_SINCE_FINALIZATION":
 			assert.Equal(t, "2", v)
 		case "REORG_WEIGHT_THRESHOLD":

@@ -85,10 +85,12 @@ type BeaconChainConfig struct {
 	EpochsPerRandomSubnetSubscription uint64 `yaml:"EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION" spec:"true"` // EpochsPerRandomSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
 
 	// State list lengths
-	EpochsPerHistoricalVector primitives.Epoch `yaml:"EPOCHS_PER_HISTORICAL_VECTOR" spec:"true"` // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
-	EpochsPerSlashingsVector  primitives.Epoch `yaml:"EPOCHS_PER_SLASHINGS_VECTOR" spec:"true"`  // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
-	HistoricalRootsLimit      uint64           `yaml:"HISTORICAL_ROOTS_LIMIT" spec:"true"`       // HistoricalRootsLimit defines max historical roots that can be saved in state before roll over.
-	ValidatorRegistryLimit    uint64           `yaml:"VALIDATOR_REGISTRY_LIMIT" spec:"true"`     // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
+	EpochsPerHistoricalVector    primitives.Epoch `yaml:"EPOCHS_PER_HISTORICAL_VECTOR" spec:"true"`    // EpochsPerHistoricalVector defines max length in epoch to store old historical stats in beacon state.
+	EpochsPerSlashingsVector     primitives.Epoch `yaml:"EPOCHS_PER_SLASHINGS_VECTOR" spec:"true"`     // EpochsPerSlashingsVector defines max length in epoch to store old stats to recompute slashing witness.
+	HistoricalRootsLimit         uint64           `yaml:"HISTORICAL_ROOTS_LIMIT" spec:"true"`          // HistoricalRootsLimit defines max historical roots that can be saved in state before roll over.
+	ValidatorRegistryLimit       uint64           `yaml:"VALIDATOR_REGISTRY_LIMIT" spec:"true"`        // ValidatorRegistryLimit defines the upper bound of validators can participate in eth2.
+	MaxPendingBalanceDeposits    uint64           `yaml:"MAX_PENDING_BALANCE_DEPOSITS" spec:"true"`    // MaxPendingBalanceDeposits defines the upper bound of pending staking deposits.
+	MaxPendingPartialWithdrawals uint64           `yaml:"MAX_PENDING_PARTIAL_WITHDRAWALS" spec:"true"` // MaxPendingPartialWithdrawals defines the upper bound of pending withdrawals.
 
 	// Reward and penalty quotients constants.
 	BaseRewardFactor               uint64 `yaml:"BASE_REWARD_FACTOR" spec:"true"`               // BaseRewardFactor is used to calculate validator per-slot interest rate.
@@ -99,14 +101,16 @@ type BeaconChainConfig struct {
 	ProportionalSlashingMultiplier uint64 `yaml:"PROPORTIONAL_SLASHING_MULTIPLIER" spec:"true"` // ProportionalSlashingMultiplier is used as a multiplier on slashed penalties.
 
 	// Max operations per block constants.
-	MaxProposerSlashings             uint64 `yaml:"MAX_PROPOSER_SLASHINGS" spec:"true"`               // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
-	MaxAttesterSlashings             uint64 `yaml:"MAX_ATTESTER_SLASHINGS" spec:"true"`               // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
-	MaxAttestations                  uint64 `yaml:"MAX_ATTESTATIONS" spec:"true"`                     // MaxAttestations defines the maximum allowed attestations in a beacon block.
-	MaxDeposits                      uint64 `yaml:"MAX_DEPOSITS" spec:"true"`                         // MaxDeposits defines the maximum number of validator deposits in a block.
-	MaxVoluntaryExits                uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`                  // MaxVoluntaryExits defines the maximum number of validator exits in a block.
-	MaxWithdrawalsPerPayload         uint64 `yaml:"MAX_WITHDRAWALS_PER_PAYLOAD" spec:"true"`          // MaxWithdrawalsPerPayload defines the maximum number of withdrawals in a block.
-	MaxBlsToExecutionChanges         uint64 `yaml:"MAX_BLS_TO_EXECUTION_CHANGES" spec:"true"`         // MaxBlsToExecutionChanges defines the maximum number of BLS-to-execution-change objects in a block.
-	MaxValidatorsPerWithdrawalsSweep uint64 `yaml:"MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP" spec:"true"` // MaxValidatorsPerWithdrawalsSweep bounds the size of the sweep searching for withdrawals per slot.
+	MaxProposerSlashings              uint64 `yaml:"MAX_PROPOSER_SLASHINGS" spec:"true"`                // MaxProposerSlashings defines the maximum number of slashings of proposers possible in a block.
+	MaxAttesterSlashings              uint64 `yaml:"MAX_ATTESTER_SLASHINGS" spec:"true"`                // MaxAttesterSlashings defines the maximum number of casper FFG slashings possible in a block.
+	MaxAttestations                   uint64 `yaml:"MAX_ATTESTATIONS" spec:"true"`                      // MaxAttestations defines the maximum allowed attestations in a beacon block.
+	MaxDeposits                       uint64 `yaml:"MAX_DEPOSITS" spec:"true"`                          // MaxDeposits defines the maximum number of validator deposits in a block.
+	MaxVoluntaryExits                 uint64 `yaml:"MAX_VOLUNTARY_EXITS" spec:"true"`                   // MaxVoluntaryExits defines the maximum number of validator exits in a block.
+	MaxWithdrawalsPerPayload          uint64 `yaml:"MAX_WITHDRAWALS_PER_PAYLOAD" spec:"true"`           // MaxWithdrawalsPerPayload defines the maximum number of withdrawals in a block.
+	MaxBlsToExecutionChanges          uint64 `yaml:"MAX_BLS_TO_EXECUTION_CHANGES" spec:"true"`          // MaxBlsToExecutionChanges defines the maximum number of BLS-to-execution-change objects in a block.
+	MaxValidatorsPerWithdrawalsSweep  uint64 `yaml:"MAX_VALIDATORS_PER_WITHDRAWALS_SWEEP" spec:"true"`  // MaxValidatorsPerWithdrawalsSweep bounds the size of the sweep searching for withdrawals per slot.
+	MaxPayloadAttestations            uint64 `yaml:"MAX_PAYLOAD_ATTESTATIONS" spec:"true"`              // MaxPayloadAttestations defines the maximum allowed attestions in a payload.
+	MaxExecutionLayerWithdrawRequests uint64 `yaml:"MAX_EXECUTION_LAYER_WITHDRAW_REQUESTS" spec:"true"` // MaxExecutionLayerWithdrawRequests defined the maximum withdrawal requests in a block.
 
 	// BLS domain values.
 	DomainBeaconProposer              [4]byte `yaml:"DOMAIN_BEACON_PROPOSER" spec:"true"`                // DomainBeaconProposer defines the BLS signature domain for beacon proposal verification.

@@ -624,8 +624,8 @@ message Validator {
     // The validators current effective balance in gwei.
     uint64 effective_balance = 3;
 
-    // Whether or not the validator has been slashed.
-    bool slashed = 4;
+    // Keeps track of slashed categories.
+    uint8 slashed = 4;
 
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum proof of stake genesis. This
