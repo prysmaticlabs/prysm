@@ -50,10 +50,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.StateRootResponseJson{},
+			"json": &beacon.GetStateRootResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.StateRootResponseJson{},
+			"json": &beacon.GetStateRootResponse{},
 		},
 	},
 	"/beacon/states/{param1}/finality_checkpoints": {

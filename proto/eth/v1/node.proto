@@ -17,8 +17,6 @@ package ethereum.eth.v1;
 
 import "google/protobuf/descriptor.proto";
 
-import "proto/eth/ext/options.proto";
-
 option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/v1";
 option java_multiple_files = true;
