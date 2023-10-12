@@ -53,8 +53,8 @@ type IndexedVerificationFailure struct {
 // WriteStateFetchError writes an appropriate error based on the supplied argument.
 // The argument error should be a result of fetching state.
 func WriteStateFetchError(w http.ResponseWriter, err error) {
-	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
-		http2.HandleError(w, "Could not get state: "+stateNotFoundErr.Error(), http.StatusNotFound)
+	if _, ok := err.(*lookup.StateNotFoundError); ok {
+		http2.HandleError(w, "State not found", http.StatusNotFound)
 		return
 	}
 	if parseErr, ok := err.(*lookup.StateIdParseError); ok {

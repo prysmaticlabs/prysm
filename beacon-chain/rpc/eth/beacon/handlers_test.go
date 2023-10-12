@@ -2059,7 +2059,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
-		assert.StringContains(t, "Could not get state", e.Message)
+		assert.StringContains(t, "State not found", e.Message)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		chainService := &chainMock.ChainService{Optimistic: true}
