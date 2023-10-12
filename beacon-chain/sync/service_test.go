@@ -100,15 +100,11 @@ func TestSyncHandlers_WaitForChainStart(t *testing.T) {
 		clockWaiter:         gs,
 	}
 
-	syncCompleteCh := make(chan bool)
-	go func() {
-		r.registerHandlers()
-		syncCompleteCh <- true
-	}()
+	go r.registerHandlers()
 	var vr [32]byte
 	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
+	r.waitForChainStart()
 
-	<-syncCompleteCh
 	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 }
 
@@ -203,15 +199,11 @@ func TestSyncService_StopCleanly(t *testing.T) {
 		initialSyncComplete: make(chan struct{}),
 	}
 
-	syncCompleteCh := make(chan bool)
-	go func() {
-		r.registerHandlers()
-		syncCompleteCh <- true
-	}()
+	go r.registerHandlers()
 	var vr [32]byte
 	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
+	r.waitForChainStart()
 
-	<-syncCompleteCh
 	var err error
 	p2p.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
