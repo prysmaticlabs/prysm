@@ -2,24 +2,12 @@ package server
 
 import (
 	"net/http"
-
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 )
 
-func NormalizeQueryValues(next http.Handler) http.Handler {
+func NormalizeQueryValuesHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
-		helpers.NormalizeQueryValues(query)
-		r.URL.RawQuery = query.Encode()
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func Test(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		query := r.URL.Query()
-		helpers.NormalizeQueryValues(query)
+		NormalizeQueryValues(query)
 		r.URL.RawQuery = query.Encode()
 
 		next.ServeHTTP(w, r)

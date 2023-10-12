@@ -132,7 +132,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	// initialize router used for endpoints
 	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValues)
+	router.Use(server.NormalizeQueryValuesHandler)
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
