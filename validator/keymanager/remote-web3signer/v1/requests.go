@@ -436,8 +436,7 @@ func GetBlobSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot 
 		if blob == nil || blob.Blob == nil {
 			return nil, errors.New("invalid sign request: blob sidecar is nil")
 		}
-		maxlength := fieldparams.BlobLength + 31
-		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob, uint64(maxlength))
+		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob, fieldparams.BlobLength)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to get blob root from ssz roots")
 		}
