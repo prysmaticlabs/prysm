@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 
@@ -65,7 +65,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	}
 
 	// Expect node version endpoint call.
-	var nodeVersionResponse apimiddleware.VersionResponseJson
+	var nodeVersionResponse node.GetVersionResponse
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		"/eth/v1/node/version",
@@ -173,7 +173,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
-	var nodeVersionResponse apimiddleware.VersionResponseJson
+	var nodeVersionResponse node.GetVersionResponse
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		"/eth/v1/node/version",
@@ -335,7 +335,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
-	var nodeVersionResponse apimiddleware.VersionResponseJson
+	var nodeVersionResponse node.GetVersionResponse
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		"/eth/v1/node/version",
@@ -345,7 +345,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).SetArg(
 		2,
-		apimiddleware.VersionResponseJson{Data: &apimiddleware.VersionJson{Version: "prysm/v0.0.1"}},
+		node.GetVersionResponse{Data: &node.Version{Version: "prysm/v0.0.1"}},
 	).Times(1)
 
 	var validatorCountResponse validator2.ValidatorCountResponse
@@ -485,7 +485,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
-	var nodeVersionResponse apimiddleware.VersionResponseJson
+	var nodeVersionResponse node.GetVersionResponse
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		"/eth/v1/node/version",
@@ -725,7 +725,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 				// Expect node version endpoint call.
-				var nodeVersionResponse apimiddleware.VersionResponseJson
+				var nodeVersionResponse node.GetVersionResponse
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
 					"/eth/v1/node/version",

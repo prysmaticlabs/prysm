@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -1209,8 +1208,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 	require.Equal(t, true, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 }
 
 func TestBLSChangesSignatureBatchWrongFork(t *testing.T) {
@@ -1274,8 +1272,7 @@ func TestBLSChangesSignatureBatchWrongFork(t *testing.T) {
 	require.Equal(t, false, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.ErrorIs(t, signing.ErrSigFailedToVerify, blocks.VerifyBLSChangeSignature(st, change))
+	require.ErrorIs(t, signing.ErrSigFailedToVerify, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 }
 
 func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
@@ -1362,7 +1359,6 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 	require.Equal(t, true, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 	params.OverrideBeaconConfig(savedConfig)
 }

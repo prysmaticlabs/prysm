@@ -351,6 +351,12 @@ func (s *Service) Start() {
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/node/syncing", nodeServerEth.GetSyncStatus).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/identity", nodeServerEth.GetIdentity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers/{peer_id}", nodeServerEth.GetPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers", nodeServerEth.GetPeers).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peer_count", nodeServerEth.GetPeerCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/version", nodeServerEth.GetVersion).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/health", nodeServerEth.GetHealth).Methods(http.MethodGet)
 
 	nodeServerPrysm := &nodeprysm.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
@@ -446,6 +452,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.ListVoluntaryExits).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.SubmitVoluntaryExit).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/sync_committees", beaconChainServerV1.SubmitSyncCommitteeSignatures).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.ListBLSToExecutionChanges).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.SubmitBLSToExecutionChanges).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers", beaconChainServerV1.GetBlockHeaders).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers/{block_id}", beaconChainServerV1.GetBlockHeader).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", beaconChainServerV1.GetDepositContract).Methods(http.MethodGet)
@@ -456,7 +464,6 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)

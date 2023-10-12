@@ -152,3 +152,7 @@ type SyncCommitteeValidators struct {
 	Validators          []string   `json:"validators"`
 	ValidatorAggregates [][]string `json:"validator_aggregates"`
 }
+
+type BLSToExecutionChangesPoolResponse struct {
+	Data []*shared.SignedBLSToExecutionChange `json:"data"`
+}
