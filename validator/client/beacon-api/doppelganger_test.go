@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -49,7 +49,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		name                        string
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingOutput            *node.SyncStatusResponse
 		getForkOutput               *beacon.GetStateForkResponse
 		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
@@ -109,8 +109,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -144,8 +144,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -190,8 +190,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false}, // not recent - not duplicate
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -297,7 +297,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := node.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -409,8 +409,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetSyncingOutput := &apimiddleware.SyncingResponseJson{
-		Data: &shared.SyncDetails{
+	standardGetSyncingOutput := &node.SyncStatusResponse{
+		Data: &node.SyncStatusResponseData{
 			IsSyncing: false,
 		},
 	}
@@ -455,7 +455,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		name                        string
 		expectedErrorMessage        string
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingOutput            *node.SyncStatusResponse
 		getSyncingError             error
 		getForkOutput               *beacon.GetStateForkResponse
 		getForkError                error
@@ -489,8 +489,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "beacon node not synced",
 			expectedErrorMessage:   "beacon node not synced",
 			inputValidatorRequests: standardInputValidatorRequests,
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: true,
 				},
 			},
@@ -737,7 +737,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := node.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,

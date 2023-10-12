@@ -37,17 +37,6 @@ message StateRequest {
     bytes state_id = 1;
 }
 
-message StateRootResponse {
-    StateRoot data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-
-    message StateRoot {
-        // SSZ encoded state root for the requested state.
-        bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    }
-}
-
 // Beacon Block API related messages.
 
 message BlockAttestationsResponse {
