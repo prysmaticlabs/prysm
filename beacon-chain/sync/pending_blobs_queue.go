@@ -63,14 +63,14 @@ func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 func (s *Service) processBlobsFromSidecars(ctx context.Context, parentRoot [32]byte) {
 	blobs := s.pendingBlobSidecars.pop(parentRoot)
 	for _, blob := range blobs {
-		if err := s.validateAndReceiveBlob(ctx, blob); err != nil {
+		if err := s.receiveBlob(ctx, blob); err != nil {
 			log.WithError(err).Error("Failed to validate blob in pending queue")
 		}
 	}
 }
 
-// validateAndReceiveBlob validates and processes a blob.
-func (s *Service) validateAndReceiveBlob(ctx context.Context, blob *eth.SignedBlobSidecar) error {
+// receiveBlob validates and processes a blob.
+func (s *Service) receiveBlob(ctx context.Context, blob *eth.SignedBlobSidecar) error {
 	result, err := s.validateBlobPostSeenParent(ctx, blob)
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ type blobWithExpiration struct {
 // pendingBlobSidecars holds pending blobs with expiration.
 type pendingBlobSidecars struct {
 	sync.RWMutex
-	blobSidecars map[[32]byte]*blobWithExpiration
+	blobSidecars map[[32]byte]*blobWithExpiration // Key is the block root.
 }
 
 // newPendingBlobSidecars initializes a new cache of pending blobs.
