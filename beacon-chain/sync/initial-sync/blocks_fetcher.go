@@ -398,7 +398,7 @@ var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs
 var errMismatchedBlobBlockRoot = errors.Wrap(errBlobVerification, "BlockRoot in BlobSidecar does not match the expected root")
 var errMissingBlobIndex = errors.Wrap(errBlobVerification, "missing expected blob index")
 var errMismatchedBlobCommitments = errors.Wrap(errBlobVerification, "commitments at given slot, root and index do not match")
-var errMissmatchedProposerIndex = errors.Wrap(errBlobVerification, "proposer index does not match")
+var errMismatchedProposerIndex = errors.Wrap(errBlobVerification, "proposer index does not match")
 
 func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
 	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
