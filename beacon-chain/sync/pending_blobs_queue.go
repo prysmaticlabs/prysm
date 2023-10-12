@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"github.com/sirupsen/logrus"
 )
 
 // processPendingBlobs listens for state changes and handles pending blobs.
@@ -106,7 +105,7 @@ func (p *pendingBlobSidecars) add(blob *eth.SignedBlobSidecar) {
 	p.Lock()
 	defer p.Unlock()
 	parentRoot := bytesutil.ToBytes32(blob.Message.BlockParentRoot)
-	expirationTime := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	expirationTime := time.Now().Add(time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if existing, exists := p.blobSidecars[parentRoot]; exists {
 		existing.blob = append(existing.blob, blob)
@@ -139,12 +138,6 @@ func (p *pendingBlobSidecars) cleanup() {
 	now := time.Now()
 	for root, blobInfo := range p.blobSidecars {
 		if blobInfo.expiresAt.Before(now) {
-			log.WithFields(logrus.Fields{
-				"parentRoot": root,
-				"expiresAt":  blobInfo.expiresAt,
-				"now":        now,
-				"slot":       blobInfo.blob[0].Message.Slot,
-			}).Info("Removing expired blob from pending queue")
 			delete(p.blobSidecars, root)
 		}
 	}
