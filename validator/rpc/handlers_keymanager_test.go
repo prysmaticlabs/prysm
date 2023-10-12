@@ -139,7 +139,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
 				req2 := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%d", tt.epoch), nil)
-				req2 = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(pubKeys[0][:])})
+				req2 = mux.SetURLVars(req2, map[string]string{"pubkey": hexutil.Encode(pubKeys[0][:])})
 				w2 := httptest.NewRecorder()
 				w2.Body = &bytes.Buffer{}
 				s.SetVoluntaryExit(w2, req2)
