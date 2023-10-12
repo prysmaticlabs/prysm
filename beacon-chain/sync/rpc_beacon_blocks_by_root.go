@@ -139,6 +139,9 @@ func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.Read
 	if err != nil {
 		return err
 	}
+	if len(request) == 0 {
+		return nil // No operation if all blobs are known.
+	}
 
 	return s.sendAndSaveBlobSidecars(ctx, request, contextByte, peerID)
 }
