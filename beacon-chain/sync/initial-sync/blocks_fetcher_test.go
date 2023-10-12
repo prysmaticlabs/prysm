@@ -1094,7 +1094,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].ProposerIndex = 100
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMissmatchedProposerIndex)
+	require.ErrorIs(t, err, errMismatchedProposerIndex)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].BlockParentRoot = blobs[0].BlockParentRoot
