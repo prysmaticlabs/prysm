@@ -145,6 +145,10 @@ func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.Read
 
 // sendAndSaveBlobSidecars sends the blob request and saves received sidecars.
 func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, contextByte ContextByteVersions, peerID peer.ID) error {
+	if len(request) == 0 {
+		return nil
+	}
+
 	sidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peerID, contextByte, &request)
 	if err != nil {
 		return err
