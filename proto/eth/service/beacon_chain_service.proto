@@ -22,9 +22,7 @@ import "google/protobuf/empty.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
 import "proto/eth/v2/beacon_block.proto";
-import "proto/eth/v2/beacon_state.proto";
 import "proto/eth/v2/ssz.proto";
-import "proto/eth/v2/sync_committee.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
@@ -48,36 +46,6 @@ service BeaconChain {
   rpc GetWeakSubjectivity(google.protobuf.Empty) returns (v1.WeakSubjectivityResponse) {
     option deprecated = true;
     option (google.api.http) = {get: "/internal/eth/v1/beacon/weak_subjectivity"};
-  }
-
-  // GetStateRoot calculates HashTreeRoot for state with given 'stateId'. If stateId is root, same value will be returned.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getStateRoot
-  rpc GetStateRoot(v1.StateRequest) returns (v1.StateRootResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/root"
-    };
-  }
-
-  // ListSyncCommittees retrieves the sync committees for the given state at the given epoch.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getEpochSyncCommittees
-  rpc ListSyncCommittees(v2.StateSyncCommitteesRequest) returns (v2.StateSyncCommitteesResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/sync_committees"
-    };
-  }
-
-  // GetRandao fetches the RANDAO mix for the requested epoch from the state identified by state_id.
-  // If an epoch is not specified then the RANDAO mix for the state's current epoch will be returned.
-  // By adjusting the state_id parameter you can query for any historic value of the RANDAO mix.
-  // Ordinarily states from the same epoch will mutate the RANDAO mix for that epoch as blocks are applied.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/getStateRandao
-  rpc GetRandao(v2.RandaoRequest) returns (v2.RandaoResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/states/{state_id}/randao"
-    };
   }
 
   // GetBlock retrieves block details for given block id.

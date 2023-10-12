@@ -48,30 +48,3 @@ message SyncCommitteeMessage {
   // Signature by the validator over the block root of `slot`.
   bytes signature = 4 [(ethereum.eth.ext.ssz_size) = "96"];
 }
-
-message StateSyncCommitteesRequest {
-  // The state id which can be any of: "head" (canonical head in node's view),
-  // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-  bytes state_id = 1;
-
-  // The epoch to retrieve the committees of.
-  optional uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-}
-
-message StateSyncCommitteesResponse {
-  SyncCommitteeValidators data = 1;
-  bool execution_optimistic = 2;
-  bool finalized = 3;
-}
-
-message SyncCommitteeValidators {
-  // All of the validator indices in the current sync committee.
-  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-
-  repeated SyncSubcommitteeValidators validator_aggregates = 2;
-}
-
-message SyncSubcommitteeValidators {
-  // Subcommittee slices of the current sync committee.
-  repeated uint64 validators = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-}
