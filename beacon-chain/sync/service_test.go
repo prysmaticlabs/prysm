@@ -132,15 +132,20 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	}
 	r.initCaches()
 
+	var vr [32]byte
+	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
+	r.waitForChainStart()
+	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
+
+	var err error
+	p2p.Digest, err = r.currentForkDigest()
+	require.NoError(t, err)
+
 	syncCompleteCh := make(chan bool)
 	go func() {
 		r.registerHandlers()
 		syncCompleteCh <- true
 	}()
-	var vr [32]byte
-	require.NoError(t, gs.SetClock(startup.NewClock(time.Now(), vr)))
-	r.waitForChainStart()
-	require.Equal(t, true, r.chainStarted.IsSet(), "Did not receive chain start event.")
 
 	blockChan := make(chan *feed.Event, 1)
 	sub := r.cfg.blockNotifier.BlockFeed().Subscribe(blockChan)
@@ -153,8 +158,6 @@ func TestSyncHandlers_WaitTillSynced(t *testing.T) {
 	msg := util.NewBeaconBlock()
 	msg.Block.ParentRoot = util.Random32Bytes(t)
 	msg.Signature = sk.Sign([]byte("data")).Marshal()
-	p2p.Digest, err = r.currentForkDigest()
-	require.NoError(t, err)
 
 	// Save block into DB so that validateBeaconBlockPubSub() process gets short cut.
 	util.SaveBlock(t, ctx, r.cfg.beaconDB, msg)
