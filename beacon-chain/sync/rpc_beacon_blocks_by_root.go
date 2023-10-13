@@ -9,7 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/validate"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -165,7 +165,7 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 		return err
 	}
 	for _, sidecar := range sidecars {
-		if err := validate.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
+		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
 			return err
 		}
 		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")

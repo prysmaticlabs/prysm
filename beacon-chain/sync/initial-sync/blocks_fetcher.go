@@ -15,7 +15,7 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	prysmsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/validate"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
@@ -427,7 +427,7 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
 			}
 			bl := blobs[blobi]
-			if err := validate.BlobAlignsWithBlock(bl, bb.Block); err != nil {
+			if err := verify.BlobAlignsWithBlock(bl, bb.Block); err != nil {
 				return nil, err
 			}
 			bb.Blobs[ci] = bl
