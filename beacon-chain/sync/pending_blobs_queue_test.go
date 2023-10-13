@@ -77,6 +77,10 @@ func TestPendingBlobSidecars(t *testing.T) {
 	require.Equal(t, true, exists)
 	require.Equal(t, 1, len(cache.blobSidecars))
 
+	// Test Add duplicates
+	cache.add(blob)
+	require.Equal(t, 1, len(cache.blobSidecars))
+
 	// Test Pop
 	poppedBlob := cache.pop(parentRoot)
 	require.Equal(t, 0, len(cache.blobSidecars))
