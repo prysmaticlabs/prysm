@@ -943,9 +943,9 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	v1Alpha1Attestations := blk.Block().Body().Attestations()
-	atts := make([]*shared.Attestation, 0, len(v1Alpha1Attestations))
-	for i, att := range v1Alpha1Attestations {
+	consensusAtts := blk.Block().Body().Attestations()
+	atts := make([]*shared.Attestation, len(consensusAtts))
+	for i, att := range consensusAtts {
 		atts[i] = shared.AttestationFromConsensus(att)
 	}
 	root, err := blk.Block().HashTreeRoot()
