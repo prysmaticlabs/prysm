@@ -22,6 +22,19 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+func (s *Service) handleBlobParentStatus(ctx context.Context, root [32]byte) pubsub.ValidationResult {
+	if s.cfg.chain.HasBlock(ctx, root) {
+		// the parent will not be kept if it's invalid
+		return pubsub.ValidationAccept
+	}
+	if s.hasBadBlock(root) {
+		// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+		return pubsub.ValidationReject
+	}
+	// [IGNORE] The sidecar's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
+	return pubsub.ValidationIgnore
+}
+
 func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	receivedTime := prysmTime.Now()
 
@@ -74,19 +87,23 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 
-	// [IGNORE] The sidecar's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
+	// Handle the parent status (not seen or invalid cases)
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
-	if !s.cfg.chain.HasBlock(ctx, parentRoot) {
+	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
+	case pubsub.ValidationIgnore:
 		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
 		return pubsub.ValidationIgnore, nil
+	case pubsub.ValidationReject:
+		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
+		return pubsub.ValidationReject, nil
+	default:
 	}
 
-	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	if parentSlot >= blob.Slot {
 		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", parentSlot, blob.Slot)
 		log.WithFields(blobFields(blob)).Debug(err)
