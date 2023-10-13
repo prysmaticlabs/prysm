@@ -24,7 +24,7 @@ func (s *Service) processPendingBlobs() {
 	defer sub.Unsubscribe()
 
 	// Initialize the cleanup ticker at 11s mark. The node is less busy that time.
-	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.clock.GenesisTime(), []time.Duration{11})
+	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.clock.GenesisTime(), []time.Duration{11 * time.Second})
 
 	for {
 		select {
