@@ -145,3 +145,38 @@ type GetBlockAttestationsResponse struct {
 	Finalized           bool                  `json:"finalized"`
 	Data                []*shared.Attestation `json:"data"`
 }
+
+type GetStateRootResponse struct {
+	ExecutionOptimistic bool       `json:"execution_optimistic"`
+	Finalized           bool       `json:"finalized"`
+	Data                *StateRoot `json:"data"`
+}
+
+type StateRoot struct {
+	Root string `json:"root"`
+}
+
+type GetRandaoResponse struct {
+	ExecutionOptimistic bool    `json:"execution_optimistic"`
+	Finalized           bool    `json:"finalized"`
+	Data                *Randao `json:"data"`
+}
+
+type Randao struct {
+	Randao string `json:"randao"`
+}
+
+type GetSyncCommitteeResponse struct {
+	ExecutionOptimistic bool                     `json:"execution_optimistic"`
+	Finalized           bool                     `json:"finalized"`
+	Data                *SyncCommitteeValidators `json:"data"`
+}
+
+type SyncCommitteeValidators struct {
+	Validators          []string   `json:"validators"`
+	ValidatorAggregates [][]string `json:"validator_aggregates"`
+}
+
+type BLSToExecutionChangesPoolResponse struct {
+	Data []*shared.SignedBLSToExecutionChange `json:"data"`
+}

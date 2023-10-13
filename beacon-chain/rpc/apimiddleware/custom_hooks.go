@@ -19,26 +19,6 @@ import (
 
 // https://ethereum.github.io/beacon-APIs/?urls.primaryName=dev#/Beacon/submitPoolBLSToExecutionChange
 // expects posting a top-level array. We make it more proto-friendly by wrapping it in a struct.
-func wrapBLSChangesArray(
-	endpoint *apimiddleware.Endpoint,
-	_ http.ResponseWriter,
-	req *http.Request,
-) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	if _, ok := endpoint.PostRequest.(*SubmitBLSToExecutionChangesRequest); !ok {
-		return true, nil
-	}
-	changes := make([]*SignedBLSToExecutionChangeJson, 0)
-	if err := json.NewDecoder(req.Body).Decode(&changes); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not decode body")
-	}
-	j := &SubmitBLSToExecutionChangesRequest{Changes: changes}
-	b, err := json.Marshal(j)
-	if err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal wrapped body")
-	}
-	req.Body = io.NopCloser(bytes.NewReader(b))
-	return true, nil
-}
 
 type v1alpha1SignedPhase0Block struct {
 	Block     *BeaconBlockJson `json:"block"` // tech debt on phase 0 called this block instead of "message"
@@ -297,43 +277,6 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		return nil
 	}
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
-}
-
-type tempSyncCommitteesResponseJson struct {
-	Data *tempSyncCommitteeValidatorsJson `json:"data"`
-}
-
-type tempSyncCommitteeValidatorsJson struct {
-	Validators          []string                              `json:"validators"`
-	ValidatorAggregates []*tempSyncSubcommitteeValidatorsJson `json:"validator_aggregates"`
-}
-
-type tempSyncSubcommitteeValidatorsJson struct {
-	Validators []string `json:"validators"`
-}
-
-// https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.0.0#/Beacon/getEpochSyncCommittees returns validator_aggregates as a nested array.
-// grpc-gateway returns a struct with nested fields which we have to transform into a plain 2D array.
-func prepareValidatorAggregates(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	tempContainer := &tempSyncCommitteesResponseJson{}
-	if err := json.Unmarshal(body, tempContainer); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
-	}
-	container, ok := responseContainer.(*SyncCommitteesResponseJson)
-	if !ok {
-		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
-	}
-
-	container.Data = &SyncCommitteeValidatorsJson{}
-	container.Data.Validators = tempContainer.Data.Validators
-	container.Data.ValidatorAggregates = make([][]string, len(tempContainer.Data.ValidatorAggregates))
-	for i, srcValAgg := range tempContainer.Data.ValidatorAggregates {
-		dstValAgg := make([]string, len(srcValAgg.Validators))
-		copy(dstValAgg, tempContainer.Data.ValidatorAggregates[i].Validators)
-		container.Data.ValidatorAggregates[i] = dstValAgg
-	}
-
-	return false, nil
 }
 
 type phase0StateResponseJson struct {

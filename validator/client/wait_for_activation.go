@@ -5,6 +5,9 @@ import (
 	"io"
 	"time"
 
+	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -136,12 +139,18 @@ func (v *validator) handleAccountsChanged(ctx context.Context, accountsChangedCh
 				}
 			}
 
-			vals, err := v.beaconClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{Active: true, PageSize: 0})
-			if err != nil {
+			// "-1" indicates that validator count endpoint is not supported by the beacon node.
+			var valCount int64 = -1
+			valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.ValidatorStatus{validator2.Active})
+			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 				return errors.Wrap(err, "could not get active validator count")
 			}
 
-			valActivated := v.checkAndLogValidatorStatus(statuses, uint64(vals.TotalSize))
+			if len(valCounts) > 0 {
+				valCount = int64(valCounts[0].Count)
+			}
+
+			valActivated := v.checkAndLogValidatorStatus(statuses, valCount)
 			if valActivated {
 				logActiveValidatorStatus(statuses)
 			} else {
