@@ -99,14 +99,23 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		signature      []byte
 	}
 
+	type wantError struct {
+		expectedStatusCode int
+		expectedErrorMsg   string
+	}
+
 	tests := []struct {
-		name  string
-		epoch primitives.Epoch
-		w     want
+		name      string
+		epoch     int
+		pubkey    string
+		w         want
+		wError    *wantError
+		mockSetup func(s *Server) error
 	}{
 		{
-			name:  "Ok: with epoch",
-			epoch: 30000000,
+			name:   "Ok: with epoch",
+			epoch:  30000000,
+			pubkey: hexutil.Encode(pubKeys[0][:]),
 			w: want{
 				epoch:          30000000,
 				validatorIndex: 2,
@@ -114,23 +123,63 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			},
 		},
 		{
-			name: "Ok: epoch not set",
+			name:   "Ok: epoch not set",
+			pubkey: hexutil.Encode(pubKeys[0][:]),
 			w: want{
 				epoch:          0,
 				validatorIndex: 2,
 				signature:      []uint8{},
 			},
 		},
+		{
+			name:  "Error: Missing Public Key in URL Params",
+			epoch: 30000000,
+			wError: &wantError{
+				expectedStatusCode: http.StatusBadRequest,
+				expectedErrorMsg:   "pubkey is required in URL params",
+			},
+		},
+		{
+			name:   "Error: Invalid Public Key Length",
+			epoch:  30000000,
+			pubkey: "0x1asd1231",
+			wError: &wantError{
+				expectedStatusCode: http.StatusBadRequest,
+				expectedErrorMsg:   "pubkey is invalid: invalid hex string",
+			},
+		},
+		{
+			name:   "Error: No Wallet Found",
+			epoch:  30000000,
+			pubkey: hexutil.Encode(pubKeys[0][:]),
+			wError: &wantError{
+				expectedStatusCode: http.StatusPreconditionRequired,
+				expectedErrorMsg:   "No wallet found",
+			},
+			mockSetup: func(s *Server) error {
+				s.wallet = nil
+				return nil
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.mockSetup != nil {
+				require.NoError(t, tt.mockSetup(s))
+			}
 			req := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%d", tt.epoch), nil)
-			req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(pubKeys[0][:])})
+			req = mux.SetURLVars(req, map[string]string{"pubkey": tt.pubkey})
 			w := httptest.NewRecorder()
 			w.Body = &bytes.Buffer{}
 
 			s.SetVoluntaryExit(w, req)
-			assert.Equal(t, http.StatusOK, w.Code)
+			if tt.wError != nil {
+				assert.Equal(t, tt.wError.expectedStatusCode, w.Code)
+				require.StringContains(t, tt.wError.expectedErrorMsg, w.Body.String())
+				return
+			} else {
+				assert.Equal(t, http.StatusOK, w.Code)
+			}
 			resp := &SetVoluntaryExitResponse{}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 			if tt.w.epoch == 0 {
@@ -143,19 +192,27 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 				w2 := httptest.NewRecorder()
 				w2.Body = &bytes.Buffer{}
 				s.SetVoluntaryExit(w2, req2)
-				assert.Equal(t, http.StatusOK, w2.Code)
-				resp2 := &SetVoluntaryExitResponse{}
-				require.NoError(t, json.Unmarshal(w2.Body.Bytes(), resp2))
-				tt.w.signature, err = hexutil.Decode(resp2.Data.Signature)
-				require.NoError(t, err)
+				if tt.wError != nil {
+					assert.Equal(t, tt.wError.expectedStatusCode, w2.Code)
+					require.StringContains(t, tt.wError.expectedErrorMsg, w2.Body.String())
+				} else {
+					assert.Equal(t, http.StatusOK, w2.Code)
+					resp2 := &SetVoluntaryExitResponse{}
+					require.NoError(t, json.Unmarshal(w2.Body.Bytes(), resp2))
+					tt.w.signature, err = hexutil.Decode(resp2.Data.Signature)
+					require.NoError(t, err)
+				}
+
 			}
-			require.Equal(t, fmt.Sprintf("%d", tt.w.epoch), resp.Data.Message.Epoch)
-			require.Equal(t, fmt.Sprintf("%d", tt.w.validatorIndex), resp.Data.Message.ValidatorIndex)
-			require.NotEmpty(t, resp.Data.Signature)
-			bSig, err := hexutil.Decode(resp.Data.Signature)
-			require.NoError(t, err)
-			ok = bytes.Equal(tt.w.signature, bSig)
-			require.Equal(t, true, ok)
+			if tt.wError == nil {
+				require.Equal(t, fmt.Sprintf("%d", tt.w.epoch), resp.Data.Message.Epoch)
+				require.Equal(t, fmt.Sprintf("%d", tt.w.validatorIndex), resp.Data.Message.ValidatorIndex)
+				require.NotEmpty(t, resp.Data.Signature)
+				bSig, err := hexutil.Decode(resp.Data.Signature)
+				require.NoError(t, err)
+				ok = bytes.Equal(tt.w.signature, bSig)
+				require.Equal(t, true, ok)
+			}
 		})
 	}
 }
