@@ -23,8 +23,8 @@ func (s *Service) processPendingBlobs() {
 	sub := s.cfg.stateNotifier.StateFeed().Subscribe(eventFeed)
 	defer sub.Unsubscribe()
 
-	// Initialize the cleanup ticker
-	cleanupTicker := slots.NewSlotTicker(s.cfg.chain.GenesisTime(), params.BeaconConfig().SecondsPerSlot/2)
+	// Initialize the cleanup ticker at 5s and 10s mark. The node is less busy that time.
+	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.chain.GenesisTime(), []time.Duration{5, 10})
 
 	for {
 		select {
@@ -54,6 +54,9 @@ func (s *Service) handleEvent(ctx context.Context, e *feed.Event) {
 func (s *Service) handleNewBlockEvent(ctx context.Context, e *feed.Event) {
 	data, ok := e.Data.(*statefeed.BlockProcessedData)
 	if !ok {
+		return
+	}
+	if data == nil || data.SignedBlock.IsNil() {
 		return
 	}
 	s.processBlobsFromSidecars(ctx, data.SignedBlock.Block().ParentRoot())
