@@ -469,7 +469,7 @@ func GetBlobSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot 
 			KzgProof:        blindedBlob.BlindedBlob.KzgProof,
 		}
 	default:
-		return nil, errors.New("invalid sign request - invalid object type")
+		return nil, errors.New("invalid sign request: invalid object type")
 	}
 
 	return &BlobSidecarSignRequest{
