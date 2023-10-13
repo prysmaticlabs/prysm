@@ -24,7 +24,7 @@ func (s *Service) processPendingBlobs() {
 	defer sub.Unsubscribe()
 
 	// Initialize the cleanup ticker at 5s and 10s mark. The node is less busy that time.
-	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.chain.GenesisTime(), []time.Duration{5, 10})
+	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.clock.GenesisTime(), []time.Duration{5, 10})
 
 	for {
 		select {
@@ -111,6 +111,11 @@ func (p *pendingBlobSidecars) add(blob *eth.SignedBlobSidecar) {
 	expirationTime := time.Now().Add(time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if existing, exists := p.blobSidecars[parentRoot]; exists {
+		for _, sidecar := range existing.blob {
+			if sidecar.Message.Index == blob.Message.Index {
+				return // Ignore duplicate blob index
+			}
+		}
 		existing.blob = append(existing.blob, blob)
 	} else {
 		p.blobSidecars[parentRoot] = &blobWithExpiration{
