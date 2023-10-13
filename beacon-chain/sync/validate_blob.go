@@ -133,7 +133,7 @@ func (s *Service) validateBlobPostSeenParent(ctx context.Context, sBlob *eth.Sig
 	blob := sBlob.Message
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 
-	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
