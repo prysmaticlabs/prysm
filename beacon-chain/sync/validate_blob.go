@@ -93,9 +93,11 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
 	case pubsub.ValidationIgnore:
 		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
-		if err := s.sendBatchRootRequest(ctx, [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
-			return pubsub.ValidationIgnore, err
-		}
+		go func() {
+			if err := s.sendBatchRootRequest(ctx, [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
+				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
+			}
+		}()
 		s.pendingBlobSidecars.add(sBlob)
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
@@ -119,7 +121,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = prysmTime.Now().Sub(receivedTime)
+	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
 	log.WithFields(fields).Debug("Received blob sidecar gossip")
 
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
