@@ -130,6 +130,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			block, err := blocks.NewROBlockWithRoot(tt.block, [32]byte{2})
+			require.NoError(t, err)
 			err = BlobAlignsWithBlock(tt.blob, block)
 			if tt.expectedErr == "" {
 				require.NoError(t, err)
