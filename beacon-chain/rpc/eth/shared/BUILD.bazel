@@ -36,6 +36,8 @@ go_test(
     srcs = ["errors_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/rpc/lookup:go_default_library",
+        "//network/http:go_default_library",
         "//testing/assert:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
