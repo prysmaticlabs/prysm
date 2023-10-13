@@ -35,7 +35,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	var epoch primitives.Epoch
 	ok, _, e := shared.UintFromQuery(w, r, "epoch")
 	if !ok {
-		http2.HandleError(w, "syncing_status is not a valid HTTP status code", http.StatusBadRequest)
+		http2.HandleError(w, "Invalid epoch", http.StatusBadRequest)
 		return
 	}
 	epoch = primitives.Epoch(e)
