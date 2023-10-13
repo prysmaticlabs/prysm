@@ -23,6 +23,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
@@ -1999,10 +2000,18 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 	fakeState, err := util.NewBeaconState(fillCheckpoints)
 	require.NoError(t, err)
 
+	stateProvider := func(ctx context.Context, stateId []byte) (state.BeaconState, error) {
+		if bytes.Equal(stateId, []byte("foobar")) {
+			return nil, &lookup.StateNotFoundError{}
+		}
+		return fakeState, nil
+	}
+
 	chainService := &chainMock.ChainService{}
 	s := &Server{
 		Stater: &testutil.MockStater{
-			BeaconState: fakeState,
+			BeaconState:       fakeState,
+			StateProviderFunc: stateProvider,
 		},
 		HeadFetcher:           chainService,
 		OptimisticModeFetcher: chainService,
@@ -2038,6 +2047,19 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "state_id is required in URL params", e.Message)
+	})
+	t.Run("state not found", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "foobar"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetFinalityCheckpoints(writer, request)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "State not found", e.Message)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		chainService := &chainMock.ChainService{Optimistic: true}
