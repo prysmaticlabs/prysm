@@ -62,7 +62,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		}
 		currentEpoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "failed to get genesis time ").Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errors.Wrap(err, "Failed to get current epoch").Error(), http.StatusInternalServerError)
 			return
 		}
 		epoch = currentEpoch
