@@ -31,7 +31,7 @@ func TestWriteStateFetchError(t *testing.T) {
 	}{
 		{
 			err:             &lookup.StateNotFoundError{},
-			expectedMessage: "Could not get state",
+			expectedMessage: "State not found",
 			expectedCode:    http.StatusNotFound,
 		},
 		{
