@@ -1080,7 +1080,7 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 		}
 	}
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, errMissingBlobsForBlockCommitments)
+	require.ErrorContains(t, "BlockSlot in BlobSidecar does not match the expected slot", err)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].BlockRoot = blobs[0].BlockRoot
