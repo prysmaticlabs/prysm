@@ -56,7 +56,7 @@ var (
 	})
 	blindedBlockDenebSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "remote_web3signer_blinded_block_deneb_sign_requests_total",
-		Help: "Total number of block deneb sign requests",
+		Help: "Total number of blinded block deneb sign requests",
 	})
 	randaoRevealSignRequestsTotal = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "remote_web3signer_randao_reveal_sign_requests_total",
