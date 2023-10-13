@@ -41,6 +41,59 @@ const (
 
 type handled bool
 
+// GetBlock retrieves block details for given block ID.
+//
+// DEPRECATED: please use GetBlockV2 instead
+func (s *Server) GetBlock(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlock")
+	defer span.End()
+
+	if http2.SszRequested(r) {
+		s.getBlockSSZ(ctx, w, r)
+	} else {
+		s.getBlock(ctx, w, r)
+	}
+}
+
+// getBlock returns the JSON-serialized version of the beacon block for given block ID.
+func (s *Server) getBlock(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	blockId := mux.Vars(r)["block_id"]
+	if blockId == "" {
+		http2.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+	blk, err := s.Blocker.Block(ctx, []byte(blockId))
+	if !shared.WriteBlockFetchError(w, blk, err) {
+		return
+	}
+	v2Resp, err := getBlockPhase0(ctx, blk)
+	if err != nil {
+		http2.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	resp := &GetBlockResponse{Data: v2Resp.Data}
+	http2.WriteJson(w, resp)
+}
+
+// getBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
+func (s *Server) getBlockSSZ(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	blockId := mux.Vars(r)["block_id"]
+	if blockId == "" {
+		http2.HandleError(w, "block_id is required in URL params", http.StatusBadRequest)
+		return
+	}
+	blk, err := s.Blocker.Block(ctx, []byte(blockId))
+	if !shared.WriteBlockFetchError(w, blk, err) {
+		return
+	}
+	resp, err := getBlockPhase0SSZ(ctx, blk)
+	if err != nil {
+		http2.HandleError(w, "Could not get block: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http2.WriteSsz(w, resp, "beacon_block.ssz")
+}
+
 // GetBlockV2 retrieves block details for given block ID.
 func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockV2")
@@ -53,7 +106,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// getBlockSSZV2 returns the JSON-serialized version of the beacon block for given block ID.
+// getBlockV2 returns the JSON-serialized version of the beacon block for given block ID.
 func (s *Server) getBlockV2(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	blockId := mux.Vars(r)["block_id"]
 	if blockId == "" {
@@ -71,7 +124,7 @@ func (s *Server) getBlockV2(ctx context.Context, w http.ResponseWriter, r *http.
 	}
 	finalized := s.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 
-	getBlockHandler := func(get func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error)) handled {
+	getBlockHandler := func(get func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error)) handled {
 		result, err := get(ctx, blk)
 		if result != nil {
 			result.Finalized = finalized
@@ -180,7 +233,7 @@ func (s *Server) getBlindedBlock(ctx context.Context, w http.ResponseWriter, r *
 	}
 	finalized := s.FinalizationFetcher.IsFinalized(ctx, blkRoot)
 
-	getBlockHandler := func(get func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error)) handled {
+	getBlockHandler := func(get func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error)) handled {
 		result, err := get(ctx, blk)
 		if result != nil {
 			result.Finalized = finalized
@@ -259,7 +312,7 @@ func (s *Server) getBlindedBlockSSZ(ctx context.Context, w http.ResponseWriter, 
 	http2.HandleError(w, fmt.Sprintf("Unknown block type %T", blk), http.StatusInternalServerError)
 }
 
-func getBlockPhase0(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func getBlockPhase0(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	consensusBlk, err := blk.PbPhase0Block()
 	if err != nil {
 		return nil, err
@@ -275,7 +328,7 @@ func getBlockPhase0(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock)
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Phase0),
 		ExecutionOptimistic: false,
 		Data: &SignedBlock{
@@ -285,7 +338,7 @@ func getBlockPhase0(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock)
 	}, nil
 }
 
-func getBlockAltair(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func getBlockAltair(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	consensusBlk, err := blk.PbAltairBlock()
 	if err != nil {
 		return nil, err
@@ -301,7 +354,7 @@ func getBlockAltair(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock)
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Altair),
 		ExecutionOptimistic: false,
 		Data: &SignedBlock{
@@ -311,7 +364,7 @@ func getBlockAltair(_ context.Context, blk interfaces.ReadOnlySignedBeaconBlock)
 	}, nil
 }
 
-func (s *Server) getBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	consensusBlk, err := blk.PbBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedField means that we have another block type
@@ -355,7 +408,7 @@ func (s *Server) getBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlyS
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Bellatrix),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{
@@ -365,7 +418,7 @@ func (s *Server) getBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlyS
 	}, nil
 }
 
-func (s *Server) getBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	consensusBlk, err := blk.PbCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedField means that we have another block type
@@ -409,7 +462,7 @@ func (s *Server) getBlockCapella(ctx context.Context, blk interfaces.ReadOnlySig
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Capella),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{
@@ -419,7 +472,7 @@ func (s *Server) getBlockCapella(ctx context.Context, blk interfaces.ReadOnlySig
 	}, nil
 }
 
-func (s *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	consensusBlk, err := blk.PbDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -463,7 +516,7 @@ func (s *Server) getBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySigne
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Deneb),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{
@@ -608,7 +661,7 @@ func (s *Server) getBlockDenebSSZ(ctx context.Context, blk interfaces.ReadOnlySi
 	return sszData, nil
 }
 
-func (s *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	blindedConsensusBlk, err := blk.PbBlindedBellatrixBlock()
 	if err != nil {
 		// ErrUnsupportedField means that we have another block type
@@ -652,7 +705,7 @@ func (s *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.Re
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Bellatrix),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{
@@ -662,7 +715,7 @@ func (s *Server) getBlindedBlockBellatrix(ctx context.Context, blk interfaces.Re
 	}, nil
 }
 
-func (s *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	blindedConsensusBlk, err := blk.PbBlindedCapellaBlock()
 	if err != nil {
 		// ErrUnsupportedField means that we have another block type
@@ -706,7 +759,7 @@ func (s *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Read
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Capella),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{
@@ -716,7 +769,7 @@ func (s *Server) getBlindedBlockCapella(ctx context.Context, blk interfaces.Read
 	}, nil
 }
 
-func (s *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockResponse, error) {
+func (s *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*GetBlockV2Response, error) {
 	blindedConsensusBlk, err := blk.PbBlindedDenebBlock()
 	if err != nil {
 		// ErrUnsupportedGetter means that we have another block type
@@ -760,7 +813,7 @@ func (s *Server) getBlindedBlockDeneb(ctx context.Context, blk interfaces.ReadOn
 	if err != nil {
 		return nil, err
 	}
-	return &GetBlockResponse{
+	return &GetBlockV2Response{
 		Version:             version.String(version.Deneb),
 		ExecutionOptimistic: isOptimistic,
 		Data: &SignedBlock{

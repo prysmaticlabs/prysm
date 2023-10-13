@@ -29,7 +29,7 @@ var OptimisticSyncEnabled = types.Evaluator{
 func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for nodeIndex := range conns {
 		path := fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/head", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex)
-		resp := beacon.GetBlockResponse{}
+		resp := beacon.GetBlockV2Response{}
 		httpResp, err := http.Get(path)
 		if err != nil {
 			return err
@@ -93,7 +93,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		isOptimistic := false
 		for i := startSlot; i <= primitives.Slot(headSlot); i++ {
 			path = fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/%d", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex, i)
-			resp = beacon.GetBlockResponse{}
+			resp = beacon.GetBlockV2Response{}
 			httpResp, err = http.Get(path)
 			if err != nil {
 				return err

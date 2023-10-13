@@ -125,6 +125,10 @@ type ValidatorBalance struct {
 }
 
 type GetBlockResponse struct {
+	Data *SignedBlock `json:"data"`
+}
+
+type GetBlockV2Response struct {
 	Version             string       `json:"version"`
 	ExecutionOptimistic bool         `json:"execution_optimistic"`
 	Finalized           bool         `json:"finalized"`

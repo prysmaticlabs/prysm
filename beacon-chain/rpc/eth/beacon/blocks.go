@@ -10,9 +10,7 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -61,51 +59,4 @@ func (bs *Server) GetWeakSubjectivity(ctx context.Context, _ *empty.Empty) (*eth
 			StateRoot: stateRoot[:],
 		},
 	}, nil
-}
-
-// GetBlock retrieves block details for given block ID.
-// DEPRECATED: please use GetBlockV2 instead
-func (bs *Server) GetBlock(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlock")
-	defer span.End()
-
-	blk, err := bs.Blocker.Block(ctx, req.BlockId)
-	err = rpchelpers.HandleGetBlockError(blk, err)
-	if err != nil {
-		return nil, err
-	}
-	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-
-	return &ethpbv1.BlockResponse{
-		Data: &ethpbv1.BeaconBlockContainer{
-			Message:   signedBeaconBlock.Block,
-			Signature: signedBeaconBlock.Signature,
-		},
-	}, nil
-}
-
-// GetBlockSSZ returns the SSZ-serialized version of the becaon block for given block ID.
-// DEPRECATED: please use GetBlockV2SSZ instead
-func (bs *Server) GetBlockSSZ(ctx context.Context, req *ethpbv1.BlockRequest) (*ethpbv1.BlockSSZResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetBlockSSZ")
-	defer span.End()
-
-	blk, err := bs.Blocker.Block(ctx, req.BlockId)
-	err = rpchelpers.HandleGetBlockError(blk, err)
-	if err != nil {
-		return nil, err
-	}
-	signedBeaconBlock, err := migration.SignedBeaconBlock(blk)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get signed beacon block: %v", err)
-	}
-	sszBlock, err := signedBeaconBlock.MarshalSSZ()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not marshal block into SSZ: %v", err)
-	}
-
-	return &ethpbv1.BlockSSZResponse{Data: sszBlock}, nil
 }

@@ -45,10 +45,6 @@ type RandaoResponseJson struct {
 	Finalized           bool `json:"finalized"`
 }
 
-type BlockResponseJson struct {
-	Data *SignedBeaconBlockJson `json:"data"`
-}
-
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
