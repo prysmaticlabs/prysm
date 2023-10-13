@@ -279,43 +279,6 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
 }
 
-type tempSyncCommitteesResponseJson struct {
-	Data *tempSyncCommitteeValidatorsJson `json:"data"`
-}
-
-type tempSyncCommitteeValidatorsJson struct {
-	Validators          []string                              `json:"validators"`
-	ValidatorAggregates []*tempSyncSubcommitteeValidatorsJson `json:"validator_aggregates"`
-}
-
-type tempSyncSubcommitteeValidatorsJson struct {
-	Validators []string `json:"validators"`
-}
-
-// https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.0.0#/Beacon/getEpochSyncCommittees returns validator_aggregates as a nested array.
-// grpc-gateway returns a struct with nested fields which we have to transform into a plain 2D array.
-func prepareValidatorAggregates(body []byte, responseContainer interface{}) (apimiddleware.RunDefault, apimiddleware.ErrorJson) {
-	tempContainer := &tempSyncCommitteesResponseJson{}
-	if err := json.Unmarshal(body, tempContainer); err != nil {
-		return false, apimiddleware.InternalServerErrorWithMessage(err, "could not unmarshal response into temp container")
-	}
-	container, ok := responseContainer.(*SyncCommitteesResponseJson)
-	if !ok {
-		return false, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
-	}
-
-	container.Data = &SyncCommitteeValidatorsJson{}
-	container.Data.Validators = tempContainer.Data.Validators
-	container.Data.ValidatorAggregates = make([][]string, len(tempContainer.Data.ValidatorAggregates))
-	for i, srcValAgg := range tempContainer.Data.ValidatorAggregates {
-		dstValAgg := make([]string, len(srcValAgg.Validators))
-		copy(dstValAgg, tempContainer.Data.ValidatorAggregates[i].Validators)
-		container.Data.ValidatorAggregates[i] = dstValAgg
-	}
-
-	return false, nil
-}
-
 type phase0BlockResponseJson struct {
 	Version             string                 `json:"version" enum:"true"`
 	Data                *SignedBeaconBlockJson `json:"data"`
