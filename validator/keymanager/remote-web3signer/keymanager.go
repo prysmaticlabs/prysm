@@ -119,7 +119,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
 		return handleAggregateAttestationAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Slot:
-		return handleSlot(ctx, validator, request, genesisValidatorsRoot)
+		return handleAggregationSlot(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlockAltair:
 		return handleBlockAltair(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlockBellatrix:
@@ -144,7 +144,7 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		// tech debt that prysm uses signing type epoch
 		return handleRandaoReveal(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Exit:
-		return handleExit(ctx, validator, request, genesisValidatorsRoot)
+		return handleVoluntaryExit(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
 		return handleSyncMessageBlockRoot(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
@@ -198,7 +198,7 @@ func handleAggregateAttestationAndProof(ctx context.Context, validator *validato
 	return json.Marshal(aggregateAndProofSignRequest)
 }
 
-func handleSlot(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+func handleAggregationSlot(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
 	aggregationSlotSignRequest, err := web3signerv1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
@@ -306,7 +306,7 @@ func handleRandaoReveal(ctx context.Context, validator *validator.Validate, requ
 	return json.Marshal(randaoRevealSignRequest)
 }
 
-func handleExit(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+func handleVoluntaryExit(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
 	voluntaryExitRequest, err := web3signerv1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
 	if err != nil {
 		return nil, err
