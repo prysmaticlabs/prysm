@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -321,11 +321,11 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			syncingResponseJson := apimiddleware.SyncingResponseJson{}
+			syncingResponseJson := node.SyncStatusResponse{}
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
-			expected := apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			expected := node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: testCase.isSyncing,
 				},
 			}
@@ -359,7 +359,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	syncingResponseJson := apimiddleware.SyncingResponseJson{}
+	syncingResponseJson := node.SyncStatusResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 	ctx := context.Background()
