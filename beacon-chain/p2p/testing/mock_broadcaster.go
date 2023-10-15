@@ -22,7 +22,7 @@ type MockBroadcaster struct {
 func (m *MockBroadcaster) Broadcast(_ context.Context, msg proto.Message) error {
 	m.BroadcastCalled.Store(true)
 	m.msgLock.Lock()
-	defer m.attLock.Unlock()
+	defer m.msgLock.Unlock()
 	m.BroadcastMessages = append(m.BroadcastMessages, msg)
 	return nil
 }
