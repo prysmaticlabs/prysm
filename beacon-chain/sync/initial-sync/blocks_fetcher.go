@@ -398,6 +398,7 @@ var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs
 var errMismatchedBlobBlockRoot = errors.Wrap(errBlobVerification, "BlockRoot in BlobSidecar does not match the expected root")
 var errMissingBlobIndex = errors.Wrap(errBlobVerification, "missing expected blob index")
 var errMismatchedBlobCommitments = errors.Wrap(errBlobVerification, "commitments at given slot, root and index do not match")
+var errMismatchedProposerIndex = errors.Wrap(errBlobVerification, "proposer index does not match")
 
 func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
 	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
@@ -436,6 +437,14 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 			if bytesutil.ToBytes32(bl.BlockRoot) != bb.Block.Root() {
 				return nil, errors.Wrapf(errMismatchedBlobBlockRoot,
 					"block root %#x != BlobSidecar.BlockRoot %#x at slot %d", bb.Block.Root(), bl.BlockRoot, block.Slot())
+			}
+			if bytesutil.ToBytes32(bl.BlockParentRoot) != block.ParentRoot() {
+				return nil, errors.Wrapf(errMismatchedBlobBlockRoot,
+					"block parent root %#x != BlobSidecar.BlockParentRoot %#x at slot %d", block.ParentRoot(), bl.BlockParentRoot, block.Slot())
+			}
+			if bl.ProposerIndex != block.ProposerIndex() {
+				return nil, errors.Wrapf(errMismatchedProposerIndex,
+					"block proposer index %d != BlobSidecar.ProposerIndex %d at slot %d", block.ProposerIndex(), bl.ProposerIndex, block.Slot())
 			}
 			if ci != int(bl.Index) {
 				return nil, errors.Wrapf(errMissingBlobIndex,
