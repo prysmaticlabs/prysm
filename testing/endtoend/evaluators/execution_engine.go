@@ -30,7 +30,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 	for nodeIndex := range conns {
 		path := fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/head", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex)
 		resp := beacon.GetBlockV2Response{}
-		httpResp, err := http.Get(path)
+		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param and node index
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		for i := startSlot; i <= primitives.Slot(headSlot); i++ {
 			path = fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/%d", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex, i)
 			resp = beacon.GetBlockV2Response{}
-			httpResp, err = http.Get(path)
+			httpResp, err = http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param and node index
 			if err != nil {
 				return err
 			}
