@@ -21,6 +21,22 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetVoluntaryExit")
 	defer span.End()
 
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready", http.StatusBadRequest)
+		return
+	}
+
+	if s.wallet == nil {
+		http2.HandleError(w, "No wallet found", http.StatusBadRequest)
+		return
+	}
+
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	rawPubkey := mux.Vars(r)["pubkey"]
 	if rawPubkey == "" {
 		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
@@ -40,20 +56,6 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	epoch = primitives.Epoch(e)
 
-	if s.validatorService == nil {
-		http2.HandleError(w, "Validator service not ready", http.StatusPreconditionRequired)
-		return
-	}
-
-	if s.wallet == nil {
-		http2.HandleError(w, "No wallet found", http.StatusPreconditionRequired)
-		return
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusPreconditionRequired)
-		return
-	}
 	if epoch == 0 {
 		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
 		if err != nil {
