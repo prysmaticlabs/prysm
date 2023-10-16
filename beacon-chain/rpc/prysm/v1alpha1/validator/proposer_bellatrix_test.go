@@ -78,7 +78,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 		b := blk.Block()
 
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
@@ -199,7 +199,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		vs.HeadFetcher = chain
 
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
@@ -213,7 +213,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
@@ -254,7 +254,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		}
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
 		b := blk.Block()
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, b, capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
@@ -285,7 +285,7 @@ func TestServer_setExecutionData(t *testing.T) {
 			ExecutionPayloadDeneb: &v1.ExecutionPayloadDeneb{BlockNumber: 4},
 			BlockValue:            0}
 		blk.SetSlot(primitives.Slot(params.BeaconConfig().DenebForkEpoch) * params.BeaconConfig().SlotsPerEpoch)
-		localPayload, _, err := vs.getLocalPayloadAndBlobs(ctx, blk.Block(), capellaTransitionState)
+		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), localPayload.BlockNumber())
 		require.DeepEqual(t, fullBlobsBundle, blobsBundle)
