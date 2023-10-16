@@ -153,7 +153,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			epoch:  30000000,
 			pubkey: hexutil.Encode(pubKeys[0][:]),
 			wError: &wantError{
-				expectedStatusCode: http.StatusPreconditionRequired,
+				expectedStatusCode: http.StatusServiceUnavailable,
 				expectedErrorMsg:   "No wallet found",
 			},
 			mockSetup: func(s *Server) error {
