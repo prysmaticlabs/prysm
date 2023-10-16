@@ -44,6 +44,12 @@ const (
 	eth1dataTimeout     = 2 * time.Second
 )
 
+// blindBlobsBundle holds the KZG commitments and other relevant sidecar data for a builder's beacon block.
+var blindBlobsBundle *enginev1.BlindedBlobsBundle
+
+// fullBlobsBundle holds the KZG commitments and other relevant sidecar data for a local beacon block.
+var fullBlobsBundle *enginev1.BlobsBundle
+
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -106,10 +112,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	var blobBundle *enginev1.BlobsBundle
-	var blindBlobBundle *enginev1.BlindedBlobsBundle
-	blindBlobBundle, blobBundle, err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost)
-	if err != nil {
+	if err = vs.BuildBlockParallel(ctx, sBlk, head, false); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
@@ -119,11 +122,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(blobBundle, sBlk.Block())
+	fullBlobs, err := blobsBundleToSidecars(fullBlobsBundle, sBlk.Block())
+	fullBlobsBundle = nil // Reset full blobs bundle after use.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 	}
-	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobBundle, sBlk.Block())
+
+	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
+	blindBlobsBundle = nil // Reset blind blobs bundle after use.
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
 	}
@@ -137,7 +143,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) (*enginev1.BlindedBlobsBundle, *enginev1.BlobsBundle, error) {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -178,17 +184,16 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, blobsBundle, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+	localPayload, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
 	if err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not get local payload: %v", err)
+		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
 
 	// There's no reason to try to get a builder bid if local override is true.
 	var builderPayload interfaces.ExecutionData
-	var blindBlobsBundle *enginev1.BlindedBlobsBundle
 	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
 	if !overrideBuilder {
-		builderPayload, blindBlobsBundle, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+		builderPayload, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 		if err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Error("Could not get builder payload")
@@ -196,16 +201,12 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 	}
 
 	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not set execution data: %v", err)
-	}
-
-	if err := setKzgCommitments(sBlk, blobsBundle, blindBlobsBundle); err != nil {
-		return nil, nil, status.Errorf(codes.Internal, "Could not set kzg commitment: %v", err)
+		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
 	wg.Wait() // Wait until block is built via consensus and execution fields.
 
-	return blindBlobsBundle, blobsBundle, nil
+	return nil
 }
 
 // ProposeBeaconBlock is called by a proposer during its assigned slot to create a block in an attempt

@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -57,7 +56,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 	// Use local payload if builder payload is nil.
 	if builderPayload == nil {
-		return blk.SetExecution(localPayload)
+		return setLocalExecution(blk, localPayload)
 	}
 
 	switch {
@@ -70,14 +69,14 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		builderValueGwei, err := builderPayload.ValueInGwei()
 		if err != nil {
 			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		}
 
 		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		}
 
 		// Use builder payload if the following in true:
@@ -88,10 +87,10 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
 			blk.SetBlinded(true)
-			if err := blk.SetExecution(builderPayload); err != nil {
+			if err := setBuilderExecution(blk, builderPayload); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
 				blk.SetBlinded(false)
-				return blk.SetExecution(localPayload)
+				return setLocalExecution(blk, localPayload)
 			} else {
 				return nil
 			}
@@ -109,13 +108,13 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
 		)
-		return blk.SetExecution(localPayload)
+		return setLocalExecution(blk, localPayload)
 	default: // Bellatrix case.
 		blk.SetBlinded(true)
-		if err := blk.SetExecution(builderPayload); err != nil {
+		if err := setBuilderExecution(blk, builderPayload); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
 			blk.SetBlinded(false)
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		} else {
 			return nil
 		}
@@ -124,26 +123,26 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, *enginev1.BlindedBlobsBundle, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
 	defer span.End()
 
 	if slots.ToEpoch(slot) < params.BeaconConfig().BellatrixForkEpoch {
-		return nil, nil, errors.New("can't get payload header from builder before bellatrix epoch")
+		return nil, errors.New("can't get payload header from builder before bellatrix epoch")
 	}
 
 	b, err := vs.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	h, err := b.Block().Body().Execution()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get execution header")
+		return nil, errors.Wrap(err, "failed to get execution header")
 	}
 	pk, err := vs.HeadFetcher.HeadValidatorIndexToPublicKey(ctx, idx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, blockBuilderTimeout)
@@ -151,72 +150,71 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 
 	signedBid, err := vs.BlockBuilder.GetHeader(ctx, slot, bytesutil.ToBytes32(h.BlockHash()), pk)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if signedBid.IsNil() {
-		return nil, nil, errors.New("builder returned nil bid")
+		return nil, errors.New("builder returned nil bid")
 	}
 	fork, err := forks.Fork(slots.ToEpoch(slot))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "unable to get fork information")
+		return nil, errors.Wrap(err, "unable to get fork information")
 	}
 	forkName, ok := params.BeaconConfig().ForkVersionNames[bytesutil.ToBytes4(fork.CurrentVersion)]
 	if !ok {
-		return nil, nil, errors.New("unable to find current fork in schedule")
+		return nil, errors.New("unable to find current fork in schedule")
 	}
 	if !strings.EqualFold(version.String(signedBid.Version()), forkName) {
-		return nil, nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
+		return nil, fmt.Errorf("builder bid response version: %d is different from head block version: %d for epoch %d", signedBid.Version(), b.Version(), slots.ToEpoch(slot))
 	}
 
 	bid, err := signedBid.Message()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get bid")
+		return nil, errors.Wrap(err, "could not get bid")
 	}
 	if bid.IsNil() {
-		return nil, nil, errors.New("builder returned nil bid")
+		return nil, errors.New("builder returned nil bid")
 	}
 
 	v := bytesutil.LittleEndianBytesToBigInt(bid.Value())
 	if v.String() == "0" {
-		return nil, nil, errors.New("builder returned header with 0 bid amount")
+		return nil, errors.New("builder returned header with 0 bid amount")
 	}
 
 	header, err := bid.Header()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get bid header")
+		return nil, errors.Wrap(err, "could not get bid header")
 	}
 	txRoot, err := header.TransactionsRoot()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not get transaction root")
+		return nil, errors.Wrap(err, "could not get transaction root")
 	}
 	if bytesutil.ToBytes32(txRoot) == emptyTransactionsRoot {
-		return nil, nil, errors.New("builder returned header with an empty tx root")
+		return nil, errors.New("builder returned header with an empty tx root")
 	}
 
 	if !bytes.Equal(header.ParentHash(), h.BlockHash()) {
-		return nil, nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
+		return nil, fmt.Errorf("incorrect parent hash %#x != %#x", header.ParentHash(), h.BlockHash())
 	}
 
 	t, err := slots.ToTime(uint64(vs.TimeFetcher.GenesisTime().Unix()), slot)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if header.Timestamp() != uint64(t.Unix()) {
-		return nil, nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
+		return nil, fmt.Errorf("incorrect timestamp %d != %d", header.Timestamp(), uint64(t.Unix()))
 	}
 
 	if err := validateBuilderSignature(signedBid); err != nil {
-		return nil, nil, errors.Wrap(err, "could not validate builder signature")
+		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
-	var bundle *enginev1.BlindedBlobsBundle
 	if bid.Version() >= version.Deneb {
-		bundle, err = bid.BlindedBlobsBundle()
+		blindBlobsBundle, err = bid.BlindedBlobsBundle()
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "could not get blinded blobs bundle")
+			return nil, errors.Wrap(err, "could not get blinded blobs bundle")
 		}
-		if bundle != nil {
-			log.WithField("blindBlobCount", len(bundle.BlobRoots))
+		if blindBlobsBundle != nil {
+			log.WithField("blindBlobCount", len(blindBlobsBundle.BlobRoots))
 		}
 	}
 
@@ -235,7 +233,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		trace.StringAttribute("blockHash", fmt.Sprintf("%#x", header.BlockHash())),
 	)
 
-	return header, bundle, nil
+	return header, nil
 }
 
 // Validates builder signature and returns an error if the signature is invalid.
@@ -281,4 +279,60 @@ func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, err
 		return false, nil
 	}
 	return true, nil
+}
+
+// setLocalExecution sets the execution context for a local beacon block.
+// It delegates to setExecution for the actual work.
+func setLocalExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
+	var kzgCommitments [][]byte
+	if fullBlobsBundle != nil {
+		kzgCommitments = fullBlobsBundle.KzgCommitments
+	}
+	return setExecution(blk, execution, false, kzgCommitments)
+}
+
+// setBuilderExecution sets the execution context for a builder's beacon block.
+// It delegates to setExecution for the actual work.
+func setBuilderExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
+	var kzgCommitments [][]byte
+	if blindBlobsBundle != nil {
+		kzgCommitments = blindBlobsBundle.KzgCommitments
+	}
+	return setExecution(blk, execution, true, kzgCommitments)
+}
+
+// setExecution sets the execution context for a beacon block. It also sets KZG commitments based on the block version.
+// The function is designed to be flexible and handle both local and builder executions.
+func setExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData, isBlinded bool, kzgCommitments [][]byte) error {
+	if execution == nil {
+		return errors.New("execution is nil")
+	}
+
+	// Set the blinded status of the block
+	blk.SetBlinded(isBlinded)
+
+	// Set the execution data for the block
+	errMessage := "failed to set local execution"
+	if isBlinded {
+		errMessage = "failed to set builder execution"
+	}
+	if err := blk.SetExecution(execution); err != nil {
+		return errors.Wrap(err, errMessage)
+	}
+
+	// If the block version is below Deneb, no further actions are needed
+	if blk.Version() < version.Deneb {
+		return nil
+	}
+
+	// Set the KZG commitments for the block
+	errMessage = "failed to set local kzg commitments"
+	if isBlinded {
+		errMessage = "failed to set builder kzg commitments"
+	}
+	if err := blk.SetBlobKzgCommitments(kzgCommitments); err != nil {
+		return errors.Wrap(err, errMessage)
+	}
+
+	return nil
 }
