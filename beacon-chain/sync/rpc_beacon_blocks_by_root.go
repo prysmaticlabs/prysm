@@ -9,9 +9,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -154,7 +156,18 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 		return err
 	}
 
+	block, err := s.cfg.beaconDB.Block(ctx, bytesutil.ToBytes32(request[0].BlockRoot))
+	if err != nil {
+		return err
+	}
+	RoBlock, err := blocks.NewROBlock(block)
+	if err != nil {
+		return err
+	}
 	for _, sidecar := range sidecars {
+		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
+			return err
+		}
 		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")
 	}
 
