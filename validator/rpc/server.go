@@ -208,6 +208,9 @@ func (s *Server) Start() {
 	}
 
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)
 }
 
 // Stop the gRPC server.
@@ -220,7 +223,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-// Status returns nil or credentialError.
+// KeyStatus returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
 }
