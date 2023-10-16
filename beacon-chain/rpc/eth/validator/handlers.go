@@ -943,15 +943,16 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	isCurrentCommitteeRequested := requestedEpoch < nextSyncCommitteeFirstEpoch
 	var committee *ethpbalpha.SyncCommittee
-	if requestedEpoch >= nextSyncCommitteeFirstEpoch {
-		committee, err = st.NextSyncCommittee()
+	if isCurrentCommitteeRequested {
+		committee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
-		committee, err = st.CurrentSyncCommittee()
+		committee, err = st.NextSyncCommittee()
 		if err != nil {
 			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -962,10 +963,29 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], strconv.FormatUint(uint64(j), 10))
 	}
-	duties, err := syncCommitteeDuties(requestedValIndices, st, committeePubkeys)
+	duties, vals, err := syncCommitteeDutiesAndVals(st, requestedValIndices, committeePubkeys)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	var registerSyncSubnet func(state.BeaconState, primitives.Epoch, []byte, validator2.ValidatorStatus) error
+	if isCurrentCommitteeRequested {
+		registerSyncSubnet = core.RegisterSyncSubnetCurrentPeriod
+	} else {
+		registerSyncSubnet = core.RegisterSyncSubnetNextPeriod
+	}
+	for _, v := range vals {
+		pk := v.PublicKey()
+		valStatus, err := rpchelpers.ValidatorStatus(v, requestedEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := registerSyncSubnet(st, requestedEpoch, pk[:], valStatus); err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not register sync subnet for pubkey %#x", pk), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -1134,29 +1154,38 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives
 	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
 }
 
-func syncCommitteeDuties(
-	valIndices []primitives.ValidatorIndex,
+// syncCommitteeDutiesAndVals takes a list of requested validator indices and the actual sync committee pubkeys.
+// It returns duties for the validator indices that are part of the sync committee.
+// Additionally, it returns read-only validator objects for these validator indices.
+func syncCommitteeDutiesAndVals(
 	st state.BeaconState,
+	requestedValIndices []primitives.ValidatorIndex,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]string,
-) ([]*SyncCommitteeDuty, error) {
+) ([]*SyncCommitteeDuty, []state.ReadOnlyValidator, error) {
 	duties := make([]*SyncCommitteeDuty, 0)
-	for _, index := range valIndices {
+	vals := make([]state.ReadOnlyValidator, 0)
+	for _, index := range requestedValIndices {
 		duty := &SyncCommitteeDuty{
 			ValidatorIndex: strconv.FormatUint(uint64(index), 10),
 		}
 		valPubkey := st.PubkeyAtIndex(index)
 		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(valPubkey[:], zeroPubkey[:]) {
-			return nil, errors.Errorf("Invalid validator index %d", index)
+			return nil, nil, errors.Errorf("Invalid validator index %d", index)
 		}
 		duty.Pubkey = hexutil.Encode(valPubkey[:])
 		indices, ok := committeePubkeys[valPubkey]
 		if ok {
 			duty.ValidatorSyncCommitteeIndices = indices
 			duties = append(duties, duty)
+			v, err := st.ValidatorAtIndexReadOnly(index)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not get validator at index %d", index)
+			}
+			vals = append(vals, v)
 		}
 	}
-	return duties, nil
+	return duties, vals, nil
 }
 
 func sortProposerDuties(w http.ResponseWriter, duties []*ProposerDuty) bool {
