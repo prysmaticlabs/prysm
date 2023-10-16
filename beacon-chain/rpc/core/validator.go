@@ -529,6 +529,8 @@ func RegisterSyncSubnetNextPeriodProto(s beaconState.BeaconState, epoch primitiv
 	return nil
 }
 
+// registerSyncSubnet checks the status and pubkey of a particular validator
+// to discern whether persistent subnets need to be registered for them.
 func registerSyncSubnet(
 	currEpoch primitives.Epoch,
 	syncPeriod uint64,
@@ -555,8 +557,6 @@ func registerSyncSubnetProto(
 	registerSyncSubnetInternal(currEpoch, syncPeriod, pubkey, syncCommittee)
 }
 
-// registerSyncSubnet checks the status and pubkey of a particular validator
-// to discern whether persistent subnets need to be registered for them.
 func registerSyncSubnetInternal(
 	currEpoch primitives.Epoch,
 	syncPeriod uint64,

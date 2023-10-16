@@ -978,9 +978,9 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	currentCommitteeRequested := requestedEpoch < nextSyncCommitteeFirstEpoch
+	isCurrentCommitteeRequested := requestedEpoch < nextSyncCommitteeFirstEpoch
 	var committee *ethpbalpha.SyncCommittee
-	if currentCommitteeRequested {
+	if isCurrentCommitteeRequested {
 		committee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
@@ -998,36 +998,29 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], strconv.FormatUint(uint64(j), 10))
 	}
-	duties, vals, err := syncCommitteeDutiesAndVals(requestedValIndices, st, committeePubkeys)
+	committeeValIndices
+	duties, vals, err := syncCommitteeDutiesAndVals(st, requestedValIndices, committeePubkeys)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if currentCommitteeRequested {
-		for _, v := range vals {
-			pk := v.PublicKey()
-			valStatus, err := rpchelpers.ValidatorStatus(v, requestedEpoch)
-			if err != nil {
-				http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if err := core.RegisterSyncSubnetCurrentPeriod(st, requestedEpoch, pk[:], valStatus); err != nil {
-				http2.HandleError(w, fmt.Sprintf("Could not register sync subnet for pubkey %#x", pk), http.StatusInternalServerError)
-				return
-			}
-		}
+
+	var registerSyncSubnet func(state.BeaconState, primitives.Epoch, []byte, validator2.ValidatorStatus) error
+	if isCurrentCommitteeRequested {
+		registerSyncSubnet = core.RegisterSyncSubnetCurrentPeriod
 	} else {
-		for _, v := range vals {
-			pk := v.PublicKey()
-			valStatus, err := rpchelpers.ValidatorStatus(v, requestedEpoch)
-			if err != nil {
-				http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if err := core.RegisterSyncSubnetNextPeriod(st, requestedEpoch, pk[:], valStatus); err != nil {
-				http2.HandleError(w, fmt.Sprintf("Could not register sync subnet for pubkey %#x", pk), http.StatusInternalServerError)
-				return
-			}
+		registerSyncSubnet = core.RegisterSyncSubnetNextPeriod
+	}
+	for _, v := range vals {
+		pk := v.PublicKey()
+		valStatus, err := rpchelpers.ValidatorStatus(v, requestedEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := registerSyncSubnet(st, requestedEpoch, pk[:], valStatus); err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not register sync subnet for pubkey %#x", pk), http.StatusInternalServerError)
+			return
 		}
 	}
 
@@ -1197,14 +1190,17 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives
 	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
 }
 
+// syncCommitteeDutiesAndVals takes a list of requested validator indices and the actual sync committee pubkeys.
+// It returns duties for the validator indices that are part of the sync committee.
+// Additionally, it returns read-only validator objects for these validator indices.
 func syncCommitteeDutiesAndVals(
-	valIndices []primitives.ValidatorIndex,
 	st state.BeaconState,
+	requestedValIndices []primitives.ValidatorIndex,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]string,
 ) ([]*SyncCommitteeDuty, []state.ReadOnlyValidator, error) {
 	duties := make([]*SyncCommitteeDuty, 0)
 	vals := make([]state.ReadOnlyValidator, 0)
-	for _, index := range valIndices {
+	for _, index := range requestedValIndices {
 		duty := &SyncCommitteeDuty{
 			ValidatorIndex: strconv.FormatUint(uint64(index), 10),
 		}
