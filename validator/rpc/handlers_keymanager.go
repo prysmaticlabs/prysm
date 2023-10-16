@@ -27,7 +27,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if s.wallet == nil {
-		http2.HandleError(w, "No wallet found", http.StatusNotFound)
+		http2.HandleError(w, "No wallet found", http.StatusServiceUnavailable)
 		return
 	}
 
