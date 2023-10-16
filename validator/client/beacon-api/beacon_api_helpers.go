@@ -10,8 +10,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
@@ -100,10 +100,10 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 	return livenessResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddleware.SyncingResponseJson, error) {
+func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncStatusResponse, error) {
 	const endpoint = "/eth/v1/node/syncing"
 
-	syncingResponseJson := &apimiddleware.SyncingResponseJson{}
+	syncingResponseJson := &node.SyncStatusResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,

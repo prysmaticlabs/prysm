@@ -29,6 +29,7 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -296,12 +297,12 @@ func TestRequestPendingBlobs(t *testing.T) {
 	t.Run("old block should not fail", func(t *testing.T) {
 		b, err := blocks.NewBeaconBlock(util.NewBeaconBlock().Block)
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, []byte{}, "test"))
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
 	})
 	t.Run("empty commitment block should not fail", func(t *testing.T) {
 		b, err := blocks.NewBeaconBlock(util.NewBeaconBlockDeneb().Block)
 		require.NoError(t, err)
-		require.NoError(t, s.requestPendingBlobs(context.Background(), b, []byte{}, "test"))
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
 	})
 	t.Run("unsupported protocol", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
@@ -321,15 +322,88 @@ func TestRequestPendingBlobs(t *testing.T) {
 		p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{FinalizedEpoch: 1})
 		s := &Service{
 			cfg: &config{
-				p2p:   p1,
-				chain: chain,
-				clock: startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				p2p:      p1,
+				chain:    chain,
+				clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				beaconDB: db.SetupDB(t),
 			},
 		}
 		b := util.NewBeaconBlockDeneb()
 		b.Block.Body.BlobKzgCommitments = make([][]byte, 1)
 		b1, err := blocks.NewBeaconBlock(b.Block)
 		require.NoError(t, err)
-		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, []byte{}, p2.PeerID()))
+		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, p2.PeerID()))
 	})
+}
+
+func TestConstructPendingBlobsRequest(t *testing.T) {
+	d := db.SetupDB(t)
+	s := &Service{cfg: &config{beaconDB: d}}
+	ctx := context.Background()
+
+	// No unknown indices.
+	root := [32]byte{1}
+	count := 3
+	actual, err := s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(actual))
+	for i, id := range actual {
+		require.Equal(t, uint64(i), id.Index)
+		require.DeepEqual(t, root[:], id.BlockRoot)
+	}
+
+	// Has indices.
+	blobSidecars := []*ethpb.BlobSidecar{
+		{Index: 0, BlockRoot: root[:]},
+		{Index: 2, BlockRoot: root[:]},
+	}
+	require.NoError(t, d.SaveBlobSidecar(ctx, blobSidecars))
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 1, BlockRoot: root[:]},
+	}
+	actual, err = s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
+	require.Equal(t, expected[0].Index, actual[0].Index)
+	require.DeepEqual(t, expected[0].BlockRoot, actual[0].BlockRoot)
+}
+
+func TestIndexSetFromBlobs(t *testing.T) {
+	blobs := []*ethpb.BlobSidecar{
+		{Index: 0},
+		{Index: 1},
+		{Index: 2},
+	}
+
+	expected := map[uint64]struct{}{
+		0: {},
+		1: {},
+		2: {},
+	}
+
+	actual := indexSetFromBlobs(blobs)
+	require.DeepEqual(t, expected, actual)
+}
+
+func TestFilterUnknownIndices(t *testing.T) {
+	knownIndices := map[uint64]struct{}{
+		0: {},
+		1: {},
+		2: {},
+	}
+
+	blockRoot := [32]byte{}
+	count := 5
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 3, BlockRoot: blockRoot[:]},
+		{Index: 4, BlockRoot: blockRoot[:]},
+	}
+
+	actual := filterUnknownIndices(knownIndices, count, blockRoot)
+	require.Equal(t, len(expected), len(actual))
+	require.Equal(t, expected[0].Index, actual[0].Index)
+	require.DeepEqual(t, actual[0].BlockRoot, expected[0].BlockRoot)
+	require.Equal(t, expected[1].Index, actual[1].Index)
+	require.DeepEqual(t, actual[1].BlockRoot, expected[1].BlockRoot)
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -49,10 +50,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.StateRootResponseJson{},
+			"json": &beacon.GetStateRootResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.StateRootResponseJson{},
+			"json": &beacon.GetStateRootResponse{},
 		},
 	},
 	"/beacon/states/{param1}/finality_checkpoints": {
@@ -188,23 +189,36 @@ var beaconPathsAndObjects = map[string]metadata{
 			"json": &beacon.GetBlockHeaderResponse{},
 		},
 	},
+	// we want to test comma-separated query params
+	"/beacon/states/{param1}/validators?id=0,1": {
+		basepath: v1MiddlewarePathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+	},
 	"/node/identity": {
 		basepath: v1MiddlewarePathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.IdentityResponseJson{},
+			"json": &node.GetIdentityResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.IdentityResponseJson{},
+			"json": &node.GetIdentityResponse{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedp, ok := prysmResp.(*apimiddleware.IdentityResponseJson)
+			castedp, ok := prysmResp.(*node.GetIdentityResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
-			castedl, ok := lhouseResp.(*apimiddleware.IdentityResponseJson)
+			castedl, ok := lhouseResp.(*node.GetIdentityResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
@@ -223,17 +237,17 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.PeersResponseJson{},
+			"json": &node.GetPeersResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.PeersResponseJson{},
+			"json": &node.GetPeersResponse{},
 		},
 		customEvaluation: func(prysmResp interface{}, lhouseResp interface{}) error {
-			castedp, ok := prysmResp.(*apimiddleware.PeersResponseJson)
+			castedp, ok := prysmResp.(*node.GetPeersResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}
-			castedl, ok := lhouseResp.(*apimiddleware.PeersResponseJson)
+			castedl, ok := lhouseResp.(*node.GetPeersResponse)
 			if !ok {
 				return errors.New("failed to cast type")
 			}

@@ -271,6 +271,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Registering RPC Service")
 	router := mux.NewRouter()
+	router.Use(middleware)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}

@@ -664,13 +664,13 @@ func (s *Server) GetStateFork(w http.ResponseWriter, r *http.Request) {
 	}
 	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		shared.WriteStateFetchError(w, err)
 		return
 	}
 	fork := st.Fork()
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
-		http2.HandleError(w, errors.Wrap(err, "Could not check if slot's block is optimistic").Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not check optimistic status"+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
@@ -772,7 +772,7 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
-		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -805,10 +805,6 @@ func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
 func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
 	defer span.End()
-
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	rawSlot := r.URL.Query().Get("slot")
 	rawParentRoot := r.URL.Query().Get("parent_root")
@@ -971,7 +967,7 @@ func (s *Server) GetFinalityCheckpoints(w http.ResponseWriter, r *http.Request) 
 	}
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
-		http2.HandleError(w, "Could not check if slot's block is optimistic: "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()

@@ -460,12 +460,12 @@ func (s *Service) GetAttestationData(
 
 // SubmitSyncMessage submits the sync committee message to the network.
 // It also saves the sync committee message into the pending pool for block inclusion.
-func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) error {
+func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitteeMessage) *RpcError {
 	errs, ctx := errgroup.WithContext(ctx)
 
 	headSyncCommitteeIndices, err := s.HeadFetcher.HeadSyncCommitteeIndices(ctx, msg.ValidatorIndex, msg.Slot)
 	if err != nil {
-		return err
+		return &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head sync committee indices")}
 	}
 	// Broadcasting and saving message into the pool in parallel. As one fail should not affect another.
 	// This broadcasts for all subnets.
@@ -478,11 +478,14 @@ func (s *Service) SubmitSyncMessage(ctx context.Context, msg *ethpb.SyncCommitte
 	}
 
 	if err := s.SyncCommitteePool.SaveSyncCommitteeMessage(msg); err != nil {
-		return err
+		return &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not save sync committee message")}
 	}
 
 	// Wait for p2p broadcast to complete and return the first error (if any)
-	return errs.Wait()
+	if err = errs.Wait(); err != nil {
+		return &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not broadcast sync committee message")}
+	}
+	return nil
 }
 
 // RegisterSyncSubnetCurrentPeriod registers a persistent subnet for the current sync committee period.

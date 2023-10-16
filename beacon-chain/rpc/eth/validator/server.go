@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -34,4 +35,5 @@ type Server struct {
 	BlockBuilder           builder.BlockBuilder
 	OperationNotifier      operation.Notifier
 	CoreService            *core.Service
+	BlockRewardFetcher     rewards.BlockRewardsFetcher
 }

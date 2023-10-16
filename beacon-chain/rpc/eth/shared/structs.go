@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -13,22 +14,22 @@ import (
 )
 
 type Attestation struct {
-	AggregationBits string           `json:"aggregation_bits" validate:"required,hexadecimal"`
-	Data            *AttestationData `json:"data" validate:"required"`
-	Signature       string           `json:"signature" validate:"required,hexadecimal"`
+	AggregationBits string           `json:"aggregation_bits"`
+	Data            *AttestationData `json:"data"`
+	Signature       string           `json:"signature"`
 }
 
 type AttestationData struct {
-	Slot            string      `json:"slot" validate:"required,number,gte=0"`
-	CommitteeIndex  string      `json:"index" validate:"required,number,gte=0"`
-	BeaconBlockRoot string      `json:"beacon_block_root" validate:"required,hexadecimal"`
-	Source          *Checkpoint `json:"source" validate:"required"`
-	Target          *Checkpoint `json:"target" validate:"required"`
+	Slot            string      `json:"slot"`
+	CommitteeIndex  string      `json:"index"`
+	BeaconBlockRoot string      `json:"beacon_block_root"`
+	Source          *Checkpoint `json:"source"`
+	Target          *Checkpoint `json:"target"`
 }
 
 type Checkpoint struct {
-	Epoch string `json:"epoch" validate:"required,number,gte=0"`
-	Root  string `json:"root" validate:"required,hexadecimal"`
+	Epoch string `json:"epoch"`
+	Root  string `json:"root"`
 }
 
 type Committee struct {
@@ -38,59 +39,59 @@ type Committee struct {
 }
 
 type SignedContributionAndProof struct {
-	Message   *ContributionAndProof `json:"message" validate:"required"`
-	Signature string                `json:"signature" validate:"required,hexadecimal"`
+	Message   *ContributionAndProof `json:"message"`
+	Signature string                `json:"signature"`
 }
 
 type ContributionAndProof struct {
-	AggregatorIndex string                     `json:"aggregator_index" validate:"required,number,gte=0"`
-	Contribution    *SyncCommitteeContribution `json:"contribution" validate:"required"`
-	SelectionProof  string                     `json:"selection_proof" validate:"required,hexadecimal"`
+	AggregatorIndex string                     `json:"aggregator_index"`
+	Contribution    *SyncCommitteeContribution `json:"contribution"`
+	SelectionProof  string                     `json:"selection_proof"`
 }
 
 type SyncCommitteeContribution struct {
-	Slot              string `json:"slot" validate:"required,number,gte=0"`
-	BeaconBlockRoot   string `json:"beacon_block_root" hex:"true" validate:"required,hexadecimal"`
-	SubcommitteeIndex string `json:"subcommittee_index" validate:"required,number,gte=0"`
-	AggregationBits   string `json:"aggregation_bits" hex:"true" validate:"required,hexadecimal"`
-	Signature         string `json:"signature" hex:"true" validate:"required,hexadecimal"`
+	Slot              string `json:"slot"`
+	BeaconBlockRoot   string `json:"beacon_block_root"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
+	AggregationBits   string `json:"aggregation_bits"`
+	Signature         string `json:"signature"`
 }
 
 type SignedAggregateAttestationAndProof struct {
-	Message   *AggregateAttestationAndProof `json:"message" validate:"required"`
-	Signature string                        `json:"signature" validate:"required,hexadecimal"`
+	Message   *AggregateAttestationAndProof `json:"message"`
+	Signature string                        `json:"signature"`
 }
 
 type AggregateAttestationAndProof struct {
-	AggregatorIndex string       `json:"aggregator_index" validate:"required,number,gte=0"`
-	Aggregate       *Attestation `json:"aggregate" validate:"required"`
-	SelectionProof  string       `json:"selection_proof" validate:"required,hexadecimal"`
+	AggregatorIndex string       `json:"aggregator_index"`
+	Aggregate       *Attestation `json:"aggregate"`
+	SelectionProof  string       `json:"selection_proof"`
 }
 
 type SyncCommitteeSubscription struct {
-	ValidatorIndex       string   `json:"validator_index" validate:"required,number,gte=0"`
-	SyncCommitteeIndices []string `json:"sync_committee_indices" validate:"required,dive,number,gte=0"`
-	UntilEpoch           string   `json:"until_epoch" validate:"required,number,gte=0"`
+	ValidatorIndex       string   `json:"validator_index"`
+	SyncCommitteeIndices []string `json:"sync_committee_indices"`
+	UntilEpoch           string   `json:"until_epoch"`
 }
 
 type BeaconCommitteeSubscription struct {
-	ValidatorIndex   string `json:"validator_index" validate:"required,number,gte=0"`
-	CommitteeIndex   string `json:"committee_index" validate:"required,number,gte=0"`
-	CommitteesAtSlot string `json:"committees_at_slot" validate:"required,number,gte=0"`
-	Slot             string `json:"slot" validate:"required,number,gte=0"`
+	ValidatorIndex   string `json:"validator_index"`
+	CommitteeIndex   string `json:"committee_index"`
+	CommitteesAtSlot string `json:"committees_at_slot"`
+	Slot             string `json:"slot"`
 	IsAggregator     bool   `json:"is_aggregator"`
 }
 
 type ValidatorRegistration struct {
-	FeeRecipient string `json:"fee_recipient" validate:"required,hexadecimal"`
-	GasLimit     string `json:"gas_limit" validate:"required,number,gte=0"`
-	Timestamp    string `json:"timestamp" validate:"required,number,gte=0"`
-	Pubkey       string `json:"pubkey" validate:"required,hexadecimal"`
+	FeeRecipient string `json:"fee_recipient"`
+	GasLimit     string `json:"gas_limit"`
+	Timestamp    string `json:"timestamp"`
+	Pubkey       string `json:"pubkey"`
 }
 
 type SignedValidatorRegistration struct {
-	Message   *ValidatorRegistration `json:"message" validate:"required"`
-	Signature string                 `json:"signature" validate:"required,hexadecimal"`
+	Message   *ValidatorRegistration `json:"message"`
+	Signature string                 `json:"signature"`
 }
 
 type FeeRecipient struct {
@@ -99,19 +100,103 @@ type FeeRecipient struct {
 }
 
 type SignedVoluntaryExit struct {
-	Message   *VoluntaryExit `json:"message" validate:"required"`
-	Signature string         `json:"signature" validate:"required,hexadecimal"`
+	Message   *VoluntaryExit `json:"message"`
+	Signature string         `json:"signature"`
 }
 
 type VoluntaryExit struct {
-	Epoch          string `json:"epoch" validate:"required,number,gte=0"`
-	ValidatorIndex string `json:"validator_index" validate:"required,number,gte=0"`
+	Epoch          string `json:"epoch"`
+	ValidatorIndex string `json:"validator_index"`
 }
 
 type Fork struct {
 	PreviousVersion string `json:"previous_version"`
 	CurrentVersion  string `json:"current_version"`
 	Epoch           string `json:"epoch"`
+}
+
+type SignedBLSToExecutionChange struct {
+	Message   *BLSToExecutionChange `json:"message"`
+	Signature string                `json:"signature"`
+}
+
+func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
+	change, err := s.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	return &eth.SignedBLSToExecutionChange{
+		Message:   change,
+		Signature: sig,
+	}, nil
+}
+
+type BLSToExecutionChange struct {
+	ValidatorIndex     string `json:"validator_index"`
+	FromBLSPubkey      string `json:"from_bls_pubkey"`
+	ToExecutionAddress string `json:"to_execution_address"`
+}
+
+func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) {
+	index, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ValidatorIndex")
+	}
+	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "FromBLSPubkey")
+	}
+	executionAddress, err := DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "ToExecutionAddress")
+	}
+	return &eth.BLSToExecutionChange{
+		ValidatorIndex:     primitives.ValidatorIndex(index),
+		FromBlsPubkey:      pubkey,
+		ToExecutionAddress: executionAddress,
+	}, nil
+}
+
+func BlsToExecutionChangeFromConsensus(blsToExecutionChange *eth.BLSToExecutionChange) (*BLSToExecutionChange, error) {
+	if blsToExecutionChange == nil {
+		return nil, errors.New("BLSToExecutionChange is empty")
+	}
+
+	return &BLSToExecutionChange{
+		ValidatorIndex:     strconv.FormatUint(uint64(blsToExecutionChange.ValidatorIndex), 10),
+		FromBLSPubkey:      hexutil.Encode(blsToExecutionChange.FromBlsPubkey),
+		ToExecutionAddress: hexutil.Encode(blsToExecutionChange.ToExecutionAddress),
+	}, nil
+}
+
+func SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange *eth.SignedBLSToExecutionChange) (*SignedBLSToExecutionChange, error) {
+	if signedBlsToExecutionChange == nil {
+		return nil, errors.New("SignedBLSToExecutionChange is empty")
+	}
+	bls, err := BlsToExecutionChangeFromConsensus(signedBlsToExecutionChange.Message)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBLSToExecutionChange{
+		Message:   bls,
+		Signature: hexutil.Encode(signedBlsToExecutionChange.Signature),
+	}, nil
+}
+
+func SignedBlsToExecutionChangesFromConsensus(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) ([]*SignedBLSToExecutionChange, error) {
+	jsonBlsToExecutionChanges := make([]*SignedBLSToExecutionChange, len(blsToExecutionChanges))
+	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
+		sbls, err := SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("blsExecutionChange message failed to encode at index %d", index))
+		}
+		jsonBlsToExecutionChanges[index] = sbls
+	}
+	return jsonBlsToExecutionChanges, nil
 }
 
 func (s *Fork) ToConsensus() (*eth.Fork, error) {
@@ -135,10 +220,10 @@ func (s *Fork) ToConsensus() (*eth.Fork, error) {
 }
 
 type SyncCommitteeMessage struct {
-	Slot            string `json:"slot" validate:"required,number,gte=0"`
-	BeaconBlockRoot string `json:"beacon_block_root" validate:"required,hexadecimal"`
-	ValidatorIndex  string `json:"validator_index" validate:"required,number,gte=0"`
-	Signature       string `json:"signature" validate:"required,hexadecimal"`
+	Slot            string `json:"slot"`
+	BeaconBlockRoot string `json:"beacon_block_root"`
+	ValidatorIndex  string `json:"validator_index"`
+	Signature       string `json:"signature"`
 }
 
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
@@ -146,12 +231,9 @@ func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistr
 	if err != nil {
 		return nil, NewDecodeError(err, "Message")
 	}
-	sig, err := hexutil.Decode(s.Signature)
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
-	}
-	if len(sig) != fieldparams.BLSSignatureLength {
-		return nil, fmt.Errorf("Signature length was %d when expecting length %d", len(sig), fieldparams.BLSSignatureLength)
 	}
 	return &eth.SignedValidatorRegistrationV1{
 		Message:   msg,
@@ -160,19 +242,13 @@ func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistr
 }
 
 func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
-	feeRecipient, err := hexutil.Decode(s.FeeRecipient)
+	feeRecipient, err := DecodeHexWithLength(s.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "FeeRecipient")
 	}
-	if len(feeRecipient) != fieldparams.FeeRecipientLength {
-		return nil, fmt.Errorf("feeRecipient length was %d when expecting length %d", len(feeRecipient), fieldparams.FeeRecipientLength)
-	}
-	pubKey, err := hexutil.Decode(s.Pubkey)
+	pubKey, err := DecodeHexWithLength(s.Pubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "FeeRecipient")
-	}
-	if len(pubKey) != fieldparams.BLSPubkeyLength {
-		return nil, fmt.Errorf("FeeRecipient length was %d when expecting length %d", len(pubKey), fieldparams.BLSPubkeyLength)
+		return nil, NewDecodeError(err, "Pubkey")
 	}
 	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
 	if err != nil {

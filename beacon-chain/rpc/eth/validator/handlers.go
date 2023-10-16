@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
@@ -25,9 +24,9 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -44,10 +43,6 @@ import (
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
-
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
 	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
@@ -127,11 +122,6 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	for _, item := range req.Data {
 		consensusItem, err := item.ToConsensus()
@@ -163,11 +153,6 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -223,11 +208,6 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 	}
 	if len(req.Data) == 0 {
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
-		return
-	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -340,11 +320,6 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	}
-	validate := validator.New()
-	if err := validate.Struct(req); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	st, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
@@ -364,8 +339,8 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		subscriptions[i] = consensusItem
 		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
 		if err != nil {
-			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+			if errors.Is(err, consensus_types.ErrOutOfBounds) {
+				http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
@@ -423,10 +398,6 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
 	defer span.End()
 
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
@@ -478,10 +449,6 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
-
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	subIndex := r.URL.Query().Get("subcommittee_index")
 	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
@@ -570,13 +537,8 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	validate := validator.New()
 	registrations := make([]*ethpbalpha.SignedValidatorRegistrationV1, len(jsonRegistrations))
 	for i, registration := range jsonRegistrations {
-		if err := validate.Struct(registration); err != nil {
-			http2.HandleError(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 		reg, err := registration.ToConsensus()
 		if err != nil {
 			http2.HandleError(w, err.Error(), http.StatusBadRequest)
@@ -868,6 +830,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, slot := range proposalSlots {
+			s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, index, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
 			duties = append(duties, &ProposerDuty{
 				Pubkey:         hexutil.Encode(pubkey),
 				ValidatorIndex: strconv.FormatUint(uint64(index), 10),
@@ -875,6 +838,8 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
+
+	s.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
 
 	dependentRoot, err := proposalDependentRoot(st, requestedEpoch)
 	if err != nil {
