@@ -24,13 +24,15 @@ func (s *Service) processPendingBlobs() {
 	defer sub.Unsubscribe()
 
 	// Initialize the cleanup ticker at 11s mark. The node is less busy that time.
-	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.clock.GenesisTime(), []time.Duration{11 * time.Second})
+	cleanupTicker := slots.NewSlotTickerWithIntervals(s.cfg.clock.GenesisTime(), []time.Duration{time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second} /* 11s */)
 
 	for {
 		select {
 		case <-s.ctx.Done():
+			log.Debug("Stopping pending blobs queue")
 			return
 		case <-sub.Err():
+			log.Debugf("Stopping pending blobs queue due to state feed error: %v", sub.Err())
 			return
 		case e := <-eventFeed:
 			s.handleEvent(s.ctx, e)
