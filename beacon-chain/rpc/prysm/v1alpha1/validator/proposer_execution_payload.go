@@ -42,8 +42,7 @@ var (
 )
 
 // This returns the local execution payload of a given slot. The function has full awareness of pre and post merge.
-// It also returns the blobs bundle.
-func (vs *Server) getLocalPayloadAndBlobs(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, bool, error) {
+func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock, st state.BeaconState) (interfaces.ExecutionData, bool, error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getLocalPayload")
 	defer span.End()
 

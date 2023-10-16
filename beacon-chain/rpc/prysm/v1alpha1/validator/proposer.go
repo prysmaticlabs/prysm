@@ -184,7 +184,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		vs.setBlsToExecData(sBlk, head)
 	}()
 
-	localPayload, overrideBuilder, err := vs.getLocalPayloadAndBlobs(ctx, sBlk.Block(), head)
+	localPayload, overrideBuilder, err := vs.getLocalPayload(ctx, sBlk.Block(), head)
 	if err != nil {
 		return status.Errorf(codes.Internal, "Could not get local payload: %v", err)
 	}
