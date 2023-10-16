@@ -118,7 +118,6 @@ func (s *State) saveStateByRoot(ctx context.Context, blockRoot [32]byte, st stat
 		}
 	}
 
-	// On an intermediate slot, save state summary.
 	if err := s.beaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{
 		Slot: st.Slot(),
 		Root: blockRoot[:],
