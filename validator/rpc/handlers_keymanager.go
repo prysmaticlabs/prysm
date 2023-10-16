@@ -22,18 +22,18 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	if s.validatorService == nil {
-		http2.HandleError(w, "Validator service not ready", http.StatusBadRequest)
+		http2.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
 
 	if s.wallet == nil {
-		http2.HandleError(w, "No wallet found", http.StatusBadRequest)
+		http2.HandleError(w, "No wallet found", http.StatusNotFound)
 		return
 	}
 
 	km, err := s.validatorService.Keymanager()
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusBadRequest)
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
