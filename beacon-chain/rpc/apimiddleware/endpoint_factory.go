@@ -16,9 +16,6 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 // Paths is a collection of all valid beacon chain API paths.
 func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
-		"/eth/v1/beacon/states/{state_id}/root",
-		"/eth/v1/beacon/states/{state_id}/sync_committees",
-		"/eth/v1/beacon/states/{state_id}/randao",
 		"/eth/v1/beacon/blinded_blocks",
 		"/eth/v1/beacon/blocks/{block_id}",
 		"/eth/v2/beacon/blocks/{block_id}",
@@ -45,17 +42,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
-	case "/eth/v1/beacon/states/{state_id}/root":
-		endpoint.GetResponse = &StateRootResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/sync_committees":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
-		endpoint.GetResponse = &SyncCommitteesResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareValidatorAggregates,
-		}
-	case "/eth/v1/beacon/states/{state_id}/randao":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
-		endpoint.GetResponse = &RandaoResponseJson{}
 	case "/eth/v1/beacon/blocks/{block_id}":
 		endpoint.GetResponse = &BlockResponseJson{}
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}

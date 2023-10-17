@@ -20,30 +20,6 @@ type WeakSubjectivityResponse struct {
 	} `json:"data"`
 }
 
-type StateRootResponseJson struct {
-	Data                *StateRootResponse_StateRootJson `json:"data"`
-	ExecutionOptimistic bool                             `json:"execution_optimistic"`
-	Finalized           bool                             `json:"finalized"`
-}
-
-type StateRootResponse_StateRootJson struct {
-	StateRoot string `json:"root" hex:"true"`
-}
-
-type SyncCommitteesResponseJson struct {
-	Data                *SyncCommitteeValidatorsJson `json:"data"`
-	ExecutionOptimistic bool                         `json:"execution_optimistic"`
-	Finalized           bool                         `json:"finalized"`
-}
-
-type RandaoResponseJson struct {
-	Data *struct {
-		Randao string `json:"randao" hex:"true"`
-	} `json:"data"`
-	ExecutionOptimistic bool `json:"execution_optimistic"`
-	Finalized           bool `json:"finalized"`
-}
-
 type BlockResponseJson struct {
 	Data *SignedBeaconBlockJson `json:"data"`
 }
@@ -872,11 +848,6 @@ type SyncCommitteeJson struct {
 	AggregatePubkey string   `json:"aggregate_pubkey" hex:"true"`
 }
 
-type SyncCommitteeValidatorsJson struct {
-	Validators          []string   `json:"validators"`
-	ValidatorAggregates [][]string `json:"validator_aggregates"`
-}
-
 type PendingAttestationJson struct {
 	AggregationBits string               `json:"aggregation_bits" hex:"true"`
 	Data            *AttestationDataJson `json:"data"`
@@ -1109,6 +1080,14 @@ type PayloadAttributesV2Json struct {
 	Random                string            `json:"prev_randao" hex:"true"`
 	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" hex:"true"`
 	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
+}
+
+type EventBlobSidecarJson struct {
+	BlockRoot     string `json:"block_root" hex:"true"`
+	Index         string `json:"index"`
+	Slot          string `json:"slot"`
+	KzgCommitment string `json:"kzg_commitment" hex:"true"`
+	VersionedHash string `json:"versioned_hash" hex:"true"`
 }
 
 // ---------------
