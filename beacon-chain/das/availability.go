@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
@@ -34,7 +33,6 @@ type AvailabilityStore interface {
 }
 
 type CachingDBVerifiedStore struct {
-	sync.RWMutex
 	db    BlobsDB
 	cache *nonblocking.LRU[[32]byte, [][]byte]
 }
