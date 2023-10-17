@@ -18,7 +18,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/rpc",
     visibility = [
-       "//visibility:public"
+        "//visibility:public",
     ],
     deps = [
         "//api/grpc:go_default_library",
