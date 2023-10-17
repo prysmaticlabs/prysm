@@ -326,8 +326,8 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		if len(bb.Blobs) == 0 {
 			continue
 		}
-		if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.Blobs); err != nil {
-			return errors.Wrapf(err, "failed to save blobs for block %#x", bb.Block.Root())
+		if err := s.cfg.AVS.SaveIfAvailable(ctx, s.clock.CurrentSlot(), bb); err != nil {
+			return errors.Wrapf(err, "failed to verify blob commitments and save to db for root %#x", bb.Block.Root())
 		}
 		blobCount += len(bb.Blobs)
 	}

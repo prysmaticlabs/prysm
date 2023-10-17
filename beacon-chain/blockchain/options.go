@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
@@ -175,6 +176,13 @@ func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
 func WithSyncComplete(c chan struct{}) Option {
 	return func(s *Service) error {
 		s.syncComplete = c
+		return nil
+	}
+}
+
+func WithAvailabilityStore(vs das.AvailabilityStore) Option {
+	return func(s *Service) error {
+		s.avs = vs
 		return nil
 	}
 }
