@@ -1082,6 +1082,14 @@ type PayloadAttributesV2Json struct {
 	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
 }
 
+type EventBlobSidecarJson struct {
+	BlockRoot     string `json:"block_root" hex:"true"`
+	Index         string `json:"index"`
+	Slot          string `json:"slot"`
+	KzgCommitment string `json:"kzg_commitment" hex:"true"`
+	VersionedHash string `json:"versioned_hash" hex:"true"`
+}
+
 // ---------------
 // Error handling.
 // ---------------
