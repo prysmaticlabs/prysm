@@ -478,7 +478,7 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 			continue
 		}
 		for _, key := range km.providedPublicKeys {
-			if bytes.Equal(key[:], pubkeyBytes[:]) {
+			if bytes.Equal(key[:], pubkeyBytes) {
 				found = true
 				break
 			}
@@ -530,7 +530,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 				}
 				continue
 			}
-			if bytes.Equal(key[:], pubkeyBytes[:]) {
+			if bytes.Equal(key[:], pubkeyBytes) {
 				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
 					Status:  StatusDeleted,
