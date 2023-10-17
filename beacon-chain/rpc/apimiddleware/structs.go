@@ -168,32 +168,6 @@ type BeaconBlockBodyJson struct {
 	VoluntaryExits    []*SignedVoluntaryExitJson `json:"voluntary_exits"`
 }
 
-type SignedBeaconBlockContainerV2Json struct {
-	Phase0Block    *BeaconBlockJson          `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson    `json:"altair_block"`
-	BellatrixBlock *BeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BeaconBlockDenebJson     `json:"deneb_block"`
-	Signature      string                    `json:"signature" hex:"true"`
-}
-
-type SignedBlindedBeaconBlockContainerJson struct {
-	Phase0Block    *BeaconBlockJson                 `json:"phase0_block"`
-	AltairBlock    *BeaconBlockAltairJson           `json:"altair_block"`
-	BellatrixBlock *BlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
-	CapellaBlock   *BlindedBeaconBlockCapellaJson   `json:"capella_block"`
-	DenebBlock     *BlindedBeaconBlockDenebJson     `json:"deneb_block"`
-	Signature      string                           `json:"signature" hex:"true"`
-}
-
-type SignedBlindedBeaconBlockContentsContainerJson struct {
-	Phase0Block    *SignedBeaconBlockJson                     `json:"phase0_block"`
-	AltairBlock    *SignedBeaconBlockAltairJson               `json:"altair_block"`
-	BellatrixBlock *SignedBlindedBeaconBlockBellatrixJson     `json:"bellatrix_block"`
-	CapellaBlock   *SignedBlindedBeaconBlockCapellaJson       `json:"capella_block"`
-	DenebContents  *SignedBlindedBeaconBlockContentsDenebJson `json:"deneb_contents"`
-}
-
 type BeaconBlockContainerV2Json struct {
 	Phase0Block    *BeaconBlockJson              `json:"phase0_block"`
 	AltairBlock    *BeaconBlockAltairJson        `json:"altair_block"`
