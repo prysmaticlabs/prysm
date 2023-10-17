@@ -28,6 +28,7 @@ import (
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
@@ -129,6 +130,9 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 
 	configureFastSSZHashingAlgorithm()
 
+	// initialize router used for endpoints
+	router := mux.NewRouter()
+	router.Use(server.NormalizeQueryValuesHandler)
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
@@ -137,13 +141,13 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
 		}
 		log.Info("Enabling web portal to manage the validator client")
-		if err := validatorClient.initializeForWeb(cliCtx); err != nil {
+		if err := validatorClient.initializeForWeb(cliCtx, router); err != nil {
 			return nil, err
 		}
 		return validatorClient, nil
 	}
 
-	if err := validatorClient.initializeFromCLI(cliCtx); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx, router); err != nil {
 		return nil, err
 	}
 
@@ -195,7 +199,7 @@ func (c *ValidatorClient) Close() {
 	close(c.stop)
 }
 
-func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
 	var err error
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
@@ -267,17 +271,17 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context) error {
 		return err
 	}
 	if cliCtx.Bool(flags.EnableRPCFlag.Name) {
-		if err := c.registerRPCService(cliCtx); err != nil {
+		if err := c.registerRPCService(router); err != nil {
 			return err
 		}
-		if err := c.registerRPCGatewayService(cliCtx); err != nil {
+		if err := c.registerRPCGatewayService(router); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
+func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
 	var err error
 	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
@@ -342,10 +346,11 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context) error {
 	if err := c.registerValidatorService(cliCtx); err != nil {
 		return err
 	}
-	if err := c.registerRPCService(cliCtx); err != nil {
+
+	if err := c.registerRPCService(router); err != nil {
 		return err
 	}
-	if err := c.registerRPCGatewayService(cliCtx); err != nil {
+	if err := c.registerRPCGatewayService(router); err != nil {
 		return err
 	}
 	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
@@ -722,26 +727,26 @@ func reviewGasLimit(gasLimit validator.Uint64) validator.Uint64 {
 	return gasLimit
 }
 
-func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
+func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	var vs *client.ValidatorService
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
 	}
-	validatorGatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
-	validatorGatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
-	validatorMonitoringHost := cliCtx.String(cmd.MonitoringHostFlag.Name)
-	validatorMonitoringPort := cliCtx.Int(flags.MonitoringPortFlag.Name)
-	rpcHost := cliCtx.String(flags.RPCHost.Name)
-	rpcPort := cliCtx.Int(flags.RPCPort.Name)
-	nodeGatewayEndpoint := cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
-	beaconClientEndpoint := cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+	validatorGatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
+	validatorGatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	validatorMonitoringHost := c.cliCtx.String(cmd.MonitoringHostFlag.Name)
+	validatorMonitoringPort := c.cliCtx.Int(flags.MonitoringPortFlag.Name)
+	rpcHost := c.cliCtx.String(flags.RPCHost.Name)
+	rpcPort := c.cliCtx.Int(flags.RPCPort.Name)
+	nodeGatewayEndpoint := c.cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
+	beaconClientEndpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
 	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
 	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	walletDir := c.cliCtx.String(flags.WalletDirFlag.Name)
 	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
 	clientCert := c.cliCtx.String(flags.CertFlag.Name)
-	server := rpc.NewServer(cliCtx.Context, &rpc.Config{
+	server := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
 		ValDB:                    c.db,
 		Host:                     rpcHost,
 		Port:                     fmt.Sprintf("%d", rpcPort),
@@ -762,31 +767,32 @@ func (c *ValidatorClient) registerRPCService(cliCtx *cli.Context) error {
 		ClientGrpcRetryDelay:     grpcRetryDelay,
 		ClientGrpcHeaders:        strings.Split(grpcHeaders, ","),
 		ClientWithCert:           clientCert,
+		Router:                   router,
 	})
 	return c.services.RegisterService(server)
 }
 
-func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
-	gatewayHost := cliCtx.String(flags.GRPCGatewayHost.Name)
+func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
+	gatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
 	if gatewayHost != flags.DefaultGatewayHost {
 		log.WithField("web-host", gatewayHost).Warn(
 			"You are using a non-default web host. Web traffic is served by HTTP, so be wary of " +
 				"changing this parameter if you are exposing this host to the Internet!",
 		)
 	}
-	gatewayPort := cliCtx.Int(flags.GRPCGatewayPort.Name)
-	rpcHost := cliCtx.String(flags.RPCHost.Name)
-	rpcPort := cliCtx.Int(flags.RPCPort.Name)
+	gatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
+	rpcHost := c.cliCtx.String(flags.RPCHost.Name)
+	rpcPort := c.cliCtx.Int(flags.RPCPort.Name)
 	rpcAddr := net.JoinHostPort(rpcHost, fmt.Sprintf("%d", rpcPort))
 	gatewayAddress := net.JoinHostPort(gatewayHost, fmt.Sprintf("%d", gatewayPort))
-	timeout := cliCtx.Int(cmd.ApiTimeoutFlag.Name)
+	timeout := c.cliCtx.Int(cmd.ApiTimeoutFlag.Name)
 	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	if c.cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(c.cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	} else {
 		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
 	}
-	maxCallSize := cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
 		validatorpb.RegisterAuthHandler,
@@ -837,11 +843,15 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 	// remove "/accounts/", "/v2/" after WebUI DEPRECATED
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns:      []string{"/accounts/", "/v2/", "/internal/eth/v1/"},
-		Mux:           gwmux,
+		Patterns: []string{
+			"/accounts/",
+			"/v2/",
+			"/internal/eth/v1/",
+		},
+		Mux: gwmux,
 	}
 	opts := []gateway.Option{
-		gateway.WithRouter(mux.NewRouter()),
+		gateway.WithRouter(router),
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
@@ -851,7 +861,7 @@ func (c *ValidatorClient) registerRPCGatewayService(cliCtx *cli.Context) error {
 		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}
-	gw, err := gateway.New(cliCtx.Context, opts...)
+	gw, err := gateway.New(c.cliCtx.Context, opts...)
 	if err != nil {
 		return err
 	}
