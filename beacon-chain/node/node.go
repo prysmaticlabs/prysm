@@ -716,6 +716,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithExecutionPayloadReconstructor(web3Service),
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
+		regularsync.WithStateNotifier(b),
 	)
 	return b.services.RegisterService(rs)
 }
