@@ -2025,18 +2025,19 @@ func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlock{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBody{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2068,6 +2069,10 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BeaconBlockAltair{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -2075,12 +2080,8 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyAltair{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2120,18 +2121,19 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BlindedBeaconBlockBellatrix{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2202,18 +2204,19 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 	for i, tx := range b.Body.ExecutionPayload.Transactions {
 		transactions[i] = hexutil.Encode(tx)
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlockBellatrix{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyBellatrix{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2273,6 +2276,10 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BlindedBeaconBlockCapella{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -2280,12 +2287,8 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyCapella{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2371,18 +2374,19 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlockCapella{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyCapella{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2532,10 +2536,13 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 	if err != nil {
 		return nil, err
 	}
-
 	blobKzgCommitments := make([]string, len(b.Body.BlobKzgCommitments))
 	for i := range b.Body.BlobKzgCommitments {
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
+	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
 	}
 
 	return &BlindedBeaconBlockDeneb{
@@ -2544,12 +2551,8 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyDeneb{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2642,6 +2645,10 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 	for i := range b.Body.BlobKzgCommitments {
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BeaconBlockDeneb{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -2649,12 +2656,8 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyDeneb{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
