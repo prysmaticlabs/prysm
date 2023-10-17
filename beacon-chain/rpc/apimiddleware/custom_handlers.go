@@ -314,7 +314,7 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 					return apimiddleware.InternalServerError(errors.New("payload version unsupported"))
 				}
 			case events.BlobSidecarTopic:
-				data = &BlobSidecarJson{}
+				data = &EventBlobSidecarJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:
