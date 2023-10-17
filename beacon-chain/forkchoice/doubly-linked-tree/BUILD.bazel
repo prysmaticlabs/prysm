@@ -48,6 +48,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "benchmarks_test.go",
         "ffg_update_test.go",
         "forkchoice_test.go",
         "last_root_test.go",
@@ -78,5 +79,6 @@ go_test(
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
+        "//time/slots:go_default_library",
     ],
 )
