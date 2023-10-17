@@ -33,9 +33,6 @@ type PerformExitCfg struct {
 	OutputDirectory  string
 }
 
-// ExitPassphrase exported for use in test.
-const ExitPassphrase = "Exit my validator"
-
 // Exit performs a voluntary exit on one or more accounts.
 func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
 	// User decided to cancel the voluntary exit.
@@ -180,7 +177,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	}
 }
 
-func writeSignedVoluntaryExitJSON(ctx context.Context, sve *eth.SignedVoluntaryExit, outputDirectory string) error {
+func writeSignedVoluntaryExitJSON(_ context.Context, sve *eth.SignedVoluntaryExit, outputDirectory string) error {
 	if err := file.MkdirAll(outputDirectory); err != nil {
 		return err
 	}

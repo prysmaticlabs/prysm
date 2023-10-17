@@ -202,21 +202,18 @@ func FilterExitAccountsFromUserInput(
 		return rawPubKeys, formattedPubKeys, nil
 	}
 
-	promptHeader := au.Red("===============IMPORTANT===============")
-	promptDescription := "Please navigate to the following website and make sure you understand the current implications " +
-		"of a voluntary exit before making the final decision:"
-	promptURL := au.Blue("https://docs.prylabs.network/docs/wallet/exiting-a-validator")
-	promptQuestion := "If you still want to continue with the voluntary exit, please input a phrase found at the above URL"
-	promptText := fmt.Sprintf("%s\n%s\n%s\n%s", promptHeader, promptDescription, promptURL, promptQuestion)
+	promptHeader := au.Red("===============CONFIRMATION NEEDED===============")
+	promptQuestion := "continue with the voluntary exit? (Y/n)"
+	promptText := fmt.Sprintf("%s\n%s", promptHeader, promptQuestion)
 	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
-		return prompt.ValidatePhrase(input, ExitPassphrase)
+		return prompt.ValidatePhrase(input, "Y", "Yes", "N", "No")
 	})
 	if err != nil {
 		return nil, nil, err
 	}
-	if strings.EqualFold(resp, "n") {
+	err = prompt.ValidatePhrase(resp, "N", "No")
+	if err == nil {
 		return nil, nil, nil
 	}
-
 	return rawPubKeys, formattedPubKeys, nil
 }
