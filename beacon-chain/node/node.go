@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
@@ -245,13 +246,19 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Registering Blockchain Service")
-	if err := beacon.registerBlockchainService(beacon.forkChoicer, synchronizer, beacon.initialSyncComplete); err != nil {
+	avs := das.NewCachingDBVerifiedStore(beacon.db)
+	bcOpts := []blockchain.Option{
+		blockchain.WithForkChoiceStore(beacon.forkChoicer),
+		blockchain.WithClockSynchronizer(synchronizer),
+		blockchain.WithSyncComplete(beacon.initialSyncComplete),
+		blockchain.WithAvailabilityStore(avs),
+	}
+	if err := beacon.registerBlockchainService(bcOpts); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering Initial Sync Service")
-	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete); err != nil {
+	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete, avs); err != nil {
 		return nil, err
 	}
 
@@ -607,7 +614,8 @@ func (b *BeaconNode) registerAttestationPool() error {
 	return b.services.RegisterService(s)
 }
 
-func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *startup.ClockSynchronizer, syncComplete chan struct{}) error {
+func (b *BeaconNode) registerBlockchainService(required []blockchain.Option) error {
+	log.Debugln("Registering Blockchain Service")
 	var web3Service *execution.Service
 	if err := b.services.FetchService(&web3Service); err != nil {
 		return err
@@ -618,10 +626,9 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		return err
 	}
 
+	opts := append(b.serviceFlagOpts.blockchainFlagOpts, required...)
 	// skipcq: CRT-D0001
-	opts := append(
-		b.serviceFlagOpts.blockchainFlagOpts,
-		blockchain.WithForkChoiceStore(fc),
+	opts = append(opts,
 		blockchain.WithDatabase(b.db),
 		blockchain.WithDepositCache(b.depositCache),
 		blockchain.WithChainStartFetcher(web3Service),
@@ -637,8 +644,6 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
-		blockchain.WithClockSynchronizer(gs),
-		blockchain.WithSyncComplete(syncComplete),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -721,7 +726,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 	return b.services.RegisterService(rs)
 }
 
-func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
+func (b *BeaconNode) registerInitialSyncService(complete chan struct{}, avs das.AvailabilityStore) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -735,6 +740,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
+		AVS:                 avs,
 	})
 	return b.services.RegisterService(is)
 }
