@@ -203,16 +203,14 @@ func FilterExitAccountsFromUserInput(
 	}
 
 	promptHeader := au.Red("===============CONFIRMATION NEEDED===============")
-	promptQuestion := "continue with the voluntary exit? (Y/n)"
+	promptQuestion := "continue with the voluntary exit? (y/n)"
 	promptText := fmt.Sprintf("%s\n%s", promptHeader, promptQuestion)
-	resp, err := prompt.ValidatePrompt(r, promptText, func(input string) error {
-		return prompt.ValidatePhrase(input, "Y", "Yes", "N", "No")
-	})
+	resp, err := prompt.ValidatePrompt(r, promptText, prompt.ValidateYesOrNo)
 	if err != nil {
 		return nil, nil, err
 	}
-	err = prompt.ValidatePhrase(resp, "N", "No")
-	if err == nil {
+	if strings.EqualFold(resp, "n") {
+		log.Info("voluntary exit aborted")
 		return nil, nil, nil
 	}
 	return rawPubKeys, formattedPubKeys, nil
