@@ -171,12 +171,20 @@ func TestKeymanager_Sign(t *testing.T) {
 			want:    desiredSig,
 			wantErr: false,
 		},
+		{
+			name: "BLOB_SIDECAR",
+			args: args{
+				request: mock.GetMockSignRequest("BLOB_SIDECAR"),
+			},
+			want:    desiredSig,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := km.Sign(ctx, tt.args.request)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetVoluntaryExitSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("name:%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
 				return
 			}
 			require.DeepEqual(t, got, tt.want)
