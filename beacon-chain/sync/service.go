@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -88,6 +89,7 @@ type config struct {
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
+	stateNotifier                 statefeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
@@ -146,6 +148,7 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	pendingBlobSidecars              *pendingBlobSidecars
 }
 
 // NewService initializes new regular sync service.
@@ -161,6 +164,7 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
+		pendingBlobSidecars:  newPendingBlobSidecars(),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -187,6 +191,7 @@ func (s *Service) Start() {
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
+	s.processPendingBlobs()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 
