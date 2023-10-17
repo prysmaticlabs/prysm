@@ -6,10 +6,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	v1 "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1"
+	log "github.com/sirupsen/logrus"
 )
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -363,6 +365,24 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 				BlindedBlockCapella: util.HydrateBlindedBeaconBlockCapella(&eth.BlindedBeaconBlockCapella{}),
 			},
 		}
+	case "BLOCK_V2_DENEB":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlockDeneb{
+				BlockDeneb: util.HydrateBeaconBlockDeneb(&eth.BeaconBlockDeneb{}),
+			},
+		}
+	case "BLOCK_V2_BLINDED_DENEB":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlindedBlockDeneb{
+				BlindedBlockDeneb: util.HydrateBlindedBeaconBlockDeneb(&eth.BlindedBeaconBlockDeneb{}),
+			},
+		}
 	case "RANDAO_REVEAL":
 		return &validatorpb.SignRequest{
 			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
@@ -440,6 +460,49 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 					GasLimit:     uint64(0),
 					Timestamp:    uint64(0),
 					Pubkey:       make([]byte, fieldparams.BLSSignatureLength),
+				},
+			},
+			SigningSlot: 0,
+		}
+	case "BLOB_SIDECAR":
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_Blob{
+				Blob: &eth.BlobSidecar{
+					BlockRoot:       make([]byte, fieldparams.RootLength),
+					Index:           uint64(0),
+					Slot:            0,
+					BlockParentRoot: make([]byte, fieldparams.RootLength),
+					ProposerIndex:   0,
+					Blob:            make([]byte, fieldparams.BlobLength),
+					KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+					KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
+				},
+			},
+			SigningSlot: 0,
+		}
+	case "BLINDED_BLOB_SIDECAR":
+		blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
+		if err != nil {
+			log.Error(err)
+			return nil
+		}
+		return &validatorpb.SignRequest{
+			PublicKey:       make([]byte, fieldparams.BLSPubkeyLength),
+			SigningRoot:     make([]byte, fieldparams.RootLength),
+			SignatureDomain: make([]byte, 4),
+			Object: &validatorpb.SignRequest_BlindedBlob{
+				BlindedBlob: &eth.BlindedBlobSidecar{
+					BlockRoot:       make([]byte, fieldparams.RootLength),
+					Index:           uint64(0),
+					Slot:            0,
+					BlockParentRoot: make([]byte, fieldparams.RootLength),
+					ProposerIndex:   0,
+					BlobRoot:        blobRoot[:],
+					KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+					KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
 				},
 			},
 			SigningSlot: 0,
@@ -602,6 +665,30 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 			GasLimit:     fmt.Sprint(0),
 			Timestamp:    fmt.Sprint(0),
 			Pubkey:       make([]byte, fieldparams.BLSSignatureLength),
+		},
+	}
+}
+
+// MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
+func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
+	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
+	if err != nil {
+		log.Error(err)
+		return nil
+	}
+	return &v1.BlobSidecarSignRequest{
+		Type:        "BLOB_SIDECAR",
+		ForkInfo:    MockForkInfo(),
+		SigningRoot: make([]byte, fieldparams.RootLength),
+		BlobSidecar: &v1.BlobSidecar{
+			BlockRoot:       make([]byte, fieldparams.RootLength),
+			Index:           fmt.Sprint(0),
+			Slot:            fmt.Sprint(0),
+			BlockParentRoot: make([]byte, fieldparams.RootLength),
+			ProposerIndex:   fmt.Sprint(0),
+			BlobRoot:        blobRoot[:],
+			KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+			KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
 		},
 	}
 }

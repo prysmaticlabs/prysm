@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v4/api/gateway"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
@@ -271,7 +272,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Registering RPC Service")
 	router := mux.NewRouter()
-	router.Use(middleware)
+	router.Use(server.NormalizeQueryValuesHandler)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -715,6 +716,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithExecutionPayloadReconstructor(web3Service),
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
+		regularsync.WithStateNotifier(b),
 	)
 	return b.services.RegisterService(rs)
 }

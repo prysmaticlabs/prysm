@@ -256,9 +256,17 @@ func createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
 	rawYaml := params.ConfigToYaml(params.BeaconConfig())
+
 	// Add in deposit contract in yaml
-	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
+	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s\n", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
+	rawYaml = append(rawYaml, params.NetworkConfigToYaml(params.BeaconNetworkConfig())...)
+
+	rawYaml = append(rawYaml, []byte("\nEPOCHS_PER_SUBNET_SUBSCRIPTION: 256\n")...)
+	rawYaml = append(rawYaml, []byte("\nMIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024\n")...)
+	rawYaml = append(rawYaml, []byte("\nSUBNETS_PER_NODE: 2\n")...)
+	rawYaml = append(rawYaml, []byte("\nATTESTATION_SUBNET_EXTRA_BITS: 0\n")...)
+	rawYaml = append(rawYaml, []byte("\nATTESTATION_SUBNET_PREFIX_BITS: 6\n")...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err

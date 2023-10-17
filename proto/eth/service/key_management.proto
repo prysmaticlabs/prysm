@@ -18,7 +18,6 @@ package ethereum.eth.service;
 import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
-import "proto/eth/ext/options.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/service";
@@ -217,25 +216,6 @@ service KeyManagement {
       body: "*"
     };
   }
-
-  // SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
-  //
-  //  Spec page: https://ethereum.github.io/keymanager-APIs/?urls.primaryName=dev#/Voluntary%20Exit/signVoluntaryExit
-  //
-  // HTTP response status codes:
-  //  - 200: Successfully created and signed voluntary exit
-  //  - 400: Bad request, malformed request
-  //  - 401: Unauthorized, no token is found.
-  //  - 403: Forbidden, a token is found but is invalid
-  //  - 404: Path not found
-  //  - 500: Validator internal error
-  rpc SetVoluntaryExit(SetVoluntaryExitRequest) returns (SetVoluntaryExitResponse) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/validator/{pubkey}/voluntary_exit",
-      body: "*"
-    };
-  }
-
 }
 
 message ListKeystoresResponse {
@@ -370,21 +350,4 @@ message SetGasLimitRequest {
 
 message DeleteGasLimitRequest {
   bytes pubkey = 1;
-}
-
-message SetVoluntaryExitRequest {
-  bytes pubkey = 1 [(ethereum.eth.ext.ssz_size) = "48"];
-  uint64 epoch = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-}
-
-message SetVoluntaryExitResponse {
-  message SignedVoluntaryExit {
-    message VoluntaryExit {
-      uint64 epoch = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
-      uint64 validator_index = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-    }
-    VoluntaryExit message = 1;
-    bytes signature = 2;
-  }
-  SignedVoluntaryExit data = 1;
 }

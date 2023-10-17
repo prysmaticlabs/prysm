@@ -1,18 +1,14 @@
 package validator
 
 import (
-	"bytes"
 	"context"
-	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	beaconState "github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -205,7 +201,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				return nil, status.Errorf(codes.Internal, "Could not determine current epoch sync committee: %v", err)
 			}
 			if assignment.IsSyncCommittee {
-				if err := registerSyncSubnetCurrentPeriod(s, req.Epoch, pubKey, assignment.Status); err != nil {
+				if err := core.RegisterSyncSubnetCurrentPeriodProto(s, req.Epoch, pubKey, assignment.Status); err != nil {
 					return nil, err
 				}
 			}
@@ -222,7 +218,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 					return nil, status.Errorf(codes.Internal, "Could not determine next epoch sync committee: %v", err)
 				}
 				if nextAssignment.IsSyncCommittee {
-					if err := registerSyncSubnetNextPeriod(s, req.Epoch, pubKey, nextAssignment.Status); err != nil {
+					if err := core.RegisterSyncSubnetNextPeriodProto(s, req.Epoch, pubKey, nextAssignment.Status); err != nil {
 						return nil, err
 					}
 				}
@@ -250,72 +246,4 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 func (vs *Server) AssignValidatorToSubnet(_ context.Context, req *ethpb.AssignValidatorToSubnetRequest) (*emptypb.Empty, error) {
 	core.AssignValidatorToSubnetProto(req.PublicKey, req.Status)
 	return &emptypb.Empty{}, nil
-}
-
-func registerSyncSubnetCurrentPeriod(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
-	committee, err := s.CurrentSyncCommittee()
-	if err != nil {
-		return err
-	}
-	syncCommPeriod := slots.SyncCommitteePeriod(epoch)
-	registerSyncSubnet(epoch, syncCommPeriod, pubKey, committee, status)
-	return nil
-}
-
-func registerSyncSubnetNextPeriod(s beaconState.BeaconState, epoch primitives.Epoch, pubKey []byte, status ethpb.ValidatorStatus) error {
-	committee, err := s.NextSyncCommittee()
-	if err != nil {
-		return err
-	}
-	syncCommPeriod := slots.SyncCommitteePeriod(epoch)
-	registerSyncSubnet(epoch, syncCommPeriod+1, pubKey, committee, status)
-	return nil
-}
-
-// registerSyncSubnet checks the status and pubkey of a particular validator
-// to discern whether persistent subnets need to be registered for them.
-func registerSyncSubnet(currEpoch primitives.Epoch, syncPeriod uint64, pubkey []byte,
-	syncCommittee *ethpb.SyncCommittee, status ethpb.ValidatorStatus) {
-	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
-		return
-	}
-	startEpoch := primitives.Epoch(syncPeriod * uint64(params.BeaconConfig().EpochsPerSyncCommitteePeriod))
-	currPeriod := slots.SyncCommitteePeriod(currEpoch)
-	endEpoch := startEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
-	_, _, ok, expTime := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(pubkey, startEpoch)
-	if ok && expTime.After(prysmTime.Now()) {
-		return
-	}
-	firstValidEpoch, err := startEpoch.SafeSub(params.BeaconConfig().SyncCommitteeSubnetCount)
-	if err != nil {
-		firstValidEpoch = 0
-	}
-	// If we are processing for a future period, we only
-	// add to the relevant subscription once we are at the valid
-	// bound.
-	if syncPeriod != currPeriod && currEpoch < firstValidEpoch {
-		return
-	}
-	subs := subnetsFromCommittee(pubkey, syncCommittee)
-	// Handle overflow in the event current epoch is less
-	// than end epoch. This is an impossible condition, so
-	// it is a defensive check.
-	epochsToWatch, err := endEpoch.SafeSub(uint64(currEpoch))
-	if err != nil {
-		epochsToWatch = 0
-	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	totalDuration := epochDuration * time.Duration(epochsToWatch) * time.Second
-	cache.SyncSubnetIDs.AddSyncCommitteeSubnets(pubkey, startEpoch, subs, totalDuration)
-}
-
-// subnetsFromCommittee retrieves the relevant subnets for the chosen validator.
-func subnetsFromCommittee(pubkey []byte, comm *ethpb.SyncCommittee) []uint64 {
-	positions := make([]uint64, 0)
-	for i, pkey := range comm.Pubkeys {
-		if bytes.Equal(pubkey, pkey) {
-			positions = append(positions, uint64(i)/(params.BeaconConfig().SyncCommitteeSize/params.BeaconConfig().SyncCommitteeSubnetCount))
-		}
-	}
-	return positions
 }

@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -271,8 +273,8 @@ func GetSyncCommitteeContributionAndProofSignRequest(request *validatorpb.SignRe
 	}, nil
 }
 
-// GetBlockV2BlindedSignRequest maps the request for signing types
-// Supports Bellatrix and Capella
+// GetBlockV2BlindedSignRequest maps the request for signing types (GetBlockV2 id defined by the remote signer interface and not the beacon APIs)
+// Supports Bellatrix, Capella, Deneb
 func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlockV2BlindedSignRequest, error) {
 	if request == nil {
 		return nil, errors.New("nil sign request provided")
@@ -337,6 +339,34 @@ func GetBlockV2BlindedSignRequest(request *validatorpb.SignRequest, genesisValid
 			return nil, err
 		}
 		b = beaconBlock
+	case *validatorpb.SignRequest_BlockDeneb:
+		version = "DENEB"
+		blockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to deneb block")
+		}
+		if blockDeneb == nil {
+			return nil, errors.New("invalid sign request: deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blockDeneb.BlockDeneb)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		version = "DENEB"
+		blindedBlockDeneb, ok := request.Object.(*validatorpb.SignRequest_BlindedBlockDeneb)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded deneb block")
+		}
+		if blindedBlockDeneb == nil {
+			return nil, errors.New("invalid sign request: blinded deneb block is nil")
+		}
+		beaconBlock, err := blocks.NewBeaconBlock(blindedBlockDeneb.BlindedBlockDeneb)
+		if err != nil {
+			return nil, err
+		}
+		b = beaconBlock
 	default:
 		return nil, errors.New("invalid sign request - invalid object type")
 	}
@@ -384,5 +414,68 @@ func GetValidatorRegistrationSignRequest(request *validatorpb.SignRequest) (*Val
 			Timestamp:    fmt.Sprint(registration.Timestamp),
 			Pubkey:       registration.Pubkey,
 		},
+	}, nil
+}
+
+// GetBlobSignRequest maps the request for signing type BLOB_SIDECAR
+func GetBlobSignRequest(request *validatorpb.SignRequest, genesisValidatorsRoot []byte) (*BlobSidecarSignRequest, error) {
+	if request == nil {
+		return nil, errors.New("nil sign request provided")
+	}
+	fork, err := MapForkInfo(request.SigningSlot, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	var blobSidecar *BlobSidecar
+	switch request.Object.(type) {
+	case *validatorpb.SignRequest_Blob:
+		blob, ok := request.Object.(*validatorpb.SignRequest_Blob)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blob sidecar")
+		}
+		if blob == nil || blob.Blob == nil {
+			return nil, errors.New("invalid sign request: blob sidecar is nil")
+		}
+		blobRoot, err := ssz.ByteSliceRoot(blob.Blob.Blob, fieldparams.BlobLength)
+		if err != nil {
+			return nil, errors.Wrap(err, "unable to get blob root from ssz roots")
+		}
+		blobSidecar = &BlobSidecar{
+			BlockRoot:       blob.Blob.BlockRoot,
+			Index:           fmt.Sprint(blob.Blob.Index),
+			Slot:            fmt.Sprint(blob.Blob.Slot),
+			BlockParentRoot: blob.Blob.BlockParentRoot,
+			ProposerIndex:   fmt.Sprint(blob.Blob.ProposerIndex),
+			BlobRoot:        blobRoot[:],
+			KzgCommitment:   blob.Blob.KzgCommitment,
+			KzgProof:        blob.Blob.KzgProof,
+		}
+	case *validatorpb.SignRequest_BlindedBlob:
+		blindedBlob, ok := request.Object.(*validatorpb.SignRequest_BlindedBlob)
+		if !ok {
+			return nil, errors.New("failed to cast request object to blinded blob sidecar")
+		}
+		if blindedBlob == nil || blindedBlob.BlindedBlob == nil {
+			return nil, errors.New("invalid sign request: blinded blob sidecar is nil")
+		}
+		blobSidecar = &BlobSidecar{
+			BlockRoot:       blindedBlob.BlindedBlob.BlockRoot,
+			Index:           fmt.Sprint(blindedBlob.BlindedBlob.Index),
+			Slot:            fmt.Sprint(blindedBlob.BlindedBlob.Slot),
+			BlockParentRoot: blindedBlob.BlindedBlob.BlockParentRoot,
+			ProposerIndex:   fmt.Sprint(blindedBlob.BlindedBlob.ProposerIndex),
+			BlobRoot:        blindedBlob.BlindedBlob.BlobRoot,
+			KzgCommitment:   blindedBlob.BlindedBlob.KzgCommitment,
+			KzgProof:        blindedBlob.BlindedBlob.KzgProof,
+		}
+	default:
+		return nil, errors.New("invalid sign request: invalid object type")
+	}
+
+	return &BlobSidecarSignRequest{
+		Type:        "BLOB_SIDECAR",
+		ForkInfo:    fork,
+		SigningRoot: request.SigningRoot,
+		BlobSidecar: blobSidecar,
 	}, nil
 }

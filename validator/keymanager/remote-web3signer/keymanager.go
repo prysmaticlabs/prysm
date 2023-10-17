@@ -113,95 +113,27 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	}
 	switch request.Object.(type) {
 	case *validatorpb.SignRequest_Block:
-		bockSignRequest, err := web3signerv1.GetBlockSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, bockSignRequest); err != nil {
-			return nil, err
-		}
-		blockSignRequestsTotal.Inc()
-		return json.Marshal(bockSignRequest)
+		return handleBlock(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_AttestationData:
-		attestationSignRequest, err := web3signerv1.GetAttestationSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, attestationSignRequest); err != nil {
-			return nil, err
-		}
-		attestationSignRequestsTotal.Inc()
-		return json.Marshal(attestationSignRequest)
+		return handleAttestationData(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_AggregateAttestationAndProof:
-		aggregateAndProofSignRequest, err := web3signerv1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
-			return nil, err
-		}
-		aggregateAndProofSignRequestsTotal.Inc()
-		return json.Marshal(aggregateAndProofSignRequest)
+		return handleAggregateAttestationAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Slot:
-		aggregationSlotSignRequest, err := web3signerv1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, aggregationSlotSignRequest); err != nil {
-			return nil, err
-		}
-		aggregationSlotSignRequestsTotal.Inc()
-		return json.Marshal(aggregationSlotSignRequest)
+		return handleAggregationSlot(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlockAltair:
-		blockv2AltairSignRequest, err := web3signerv1.GetBlockAltairSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, blockv2AltairSignRequest); err != nil {
-			return nil, err
-		}
-		blockAltairSignRequestsTotal.Inc()
-		return json.Marshal(blockv2AltairSignRequest)
+		return handleBlockAltair(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlockBellatrix:
-		blockv2BellatrixSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
-			return nil, err
-		}
-		blockBellatrixSignRequestsTotal.Inc()
-		return json.Marshal(blockv2BellatrixSignRequest)
+		return handleBlockBellatrix(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlindedBlockBellatrix:
-		blindedBlockv2SignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
-			return nil, err
-		}
-		blindedBlockBellatrixSignRequestsTotal.Inc()
-		return json.Marshal(blindedBlockv2SignRequest)
+		return handleBlindedBlockBellatrix(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlockCapella:
-		blockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, blockv2CapellaSignRequest); err != nil {
-			return nil, err
-		}
-		blockCapellaSignRequestsTotal.Inc()
-		return json.Marshal(blockv2CapellaSignRequest)
+		return handleBlockCapella(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_BlindedBlockCapella:
-		blindedBlockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, blindedBlockv2CapellaSignRequest); err != nil {
-			return nil, err
-		}
-		blindedBlockCapellaSignRequestsTotal.Inc()
-		return json.Marshal(blindedBlockv2CapellaSignRequest)
+		return handleBlindedBlockCapella(ctx, validator, request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlockDeneb:
+		return handleBlockDeneb(ctx, validator, request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlindedBlockDeneb:
+		return handleBlindedBlockDeneb(ctx, validator, request, genesisValidatorsRoot)
 	// We do not support "DEPOSIT" type.
 	/*
 		case *validatorpb.:
@@ -209,68 +141,253 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 	*/
 
 	case *validatorpb.SignRequest_Epoch:
-		randaoRevealSignRequest, err := web3signerv1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, randaoRevealSignRequest); err != nil {
-			return nil, err
-		}
-		randaoRevealSignRequestsTotal.Inc()
-		return json.Marshal(randaoRevealSignRequest)
+		// tech debt that prysm uses signing type epoch
+		return handleRandaoReveal(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Exit:
-		voluntaryExitRequest, err := web3signerv1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, voluntaryExitRequest); err != nil {
-			return nil, err
-		}
-		voluntaryExitSignRequestsTotal.Inc()
-		return json.Marshal(voluntaryExitRequest)
+		return handleVoluntaryExit(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_SyncMessageBlockRoot:
-		syncCommitteeMessageRequest, err := web3signerv1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, syncCommitteeMessageRequest); err != nil {
-			return nil, err
-		}
-		syncCommitteeMessageSignRequestsTotal.Inc()
-		return json.Marshal(syncCommitteeMessageRequest)
+		return handleSyncMessageBlockRoot(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_SyncAggregatorSelectionData:
-		syncCommitteeSelectionProofRequest, err := web3signerv1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, syncCommitteeSelectionProofRequest); err != nil {
-			return nil, err
-		}
-		syncCommitteeSelectionProofSignRequestsTotal.Inc()
-		return json.Marshal(syncCommitteeSelectionProofRequest)
+		return handleSyncAggregatorSelectionData(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_ContributionAndProof:
-		contributionAndProofRequest, err := web3signerv1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, contributionAndProofRequest); err != nil {
-			return nil, err
-		}
-		syncCommitteeContributionAndProofSignRequestsTotal.Inc()
-		return json.Marshal(contributionAndProofRequest)
+		return handleContributionAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Registration:
-		validatorRegistrationRequest, err := web3signerv1.GetValidatorRegistrationSignRequest(request)
-		if err != nil {
-			return nil, err
-		}
-		if err = validator.StructCtx(ctx, validatorRegistrationRequest); err != nil {
-			return nil, err
-		}
-		validatorRegistrationSignRequestsTotal.Inc()
-		return json.Marshal(validatorRegistrationRequest)
+		return handleRegistration(ctx, validator, request)
+	case *validatorpb.SignRequest_Blob:
+		return handleBlob(ctx, validator, request, genesisValidatorsRoot)
+	case *validatorpb.SignRequest_BlindedBlob:
+		return handleBlindedBlob(ctx, validator, request, genesisValidatorsRoot)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
+}
+
+func handleBlock(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	bockSignRequest, err := web3signerv1.GetBlockSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, bockSignRequest); err != nil {
+		return nil, err
+	}
+	blockSignRequestsTotal.Inc()
+	return json.Marshal(bockSignRequest)
+}
+
+func handleAttestationData(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	attestationSignRequest, err := web3signerv1.GetAttestationSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, attestationSignRequest); err != nil {
+		return nil, err
+	}
+	attestationSignRequestsTotal.Inc()
+	return json.Marshal(attestationSignRequest)
+}
+
+func handleAggregateAttestationAndProof(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	aggregateAndProofSignRequest, err := web3signerv1.GetAggregateAndProofSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, aggregateAndProofSignRequest); err != nil {
+		return nil, err
+	}
+	aggregateAndProofSignRequestsTotal.Inc()
+	return json.Marshal(aggregateAndProofSignRequest)
+}
+
+func handleAggregationSlot(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	aggregationSlotSignRequest, err := web3signerv1.GetAggregationSlotSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, aggregationSlotSignRequest); err != nil {
+		return nil, err
+	}
+	aggregationSlotSignRequestsTotal.Inc()
+	return json.Marshal(aggregationSlotSignRequest)
+}
+
+func handleBlockAltair(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blockv2AltairSignRequest, err := web3signerv1.GetBlockAltairSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blockv2AltairSignRequest); err != nil {
+		return nil, err
+	}
+	blockAltairSignRequestsTotal.Inc()
+	return json.Marshal(blockv2AltairSignRequest)
+}
+
+func handleBlockBellatrix(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blockv2BellatrixSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blockv2BellatrixSignRequest); err != nil {
+		return nil, err
+	}
+	blockBellatrixSignRequestsTotal.Inc()
+	return json.Marshal(blockv2BellatrixSignRequest)
+}
+
+func handleBlindedBlockBellatrix(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blindedBlockv2SignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blindedBlockv2SignRequest); err != nil {
+		return nil, err
+	}
+	blindedBlockBellatrixSignRequestsTotal.Inc()
+	return json.Marshal(blindedBlockv2SignRequest)
+}
+
+func handleBlockCapella(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blockv2CapellaSignRequest); err != nil {
+		return nil, err
+	}
+	blockCapellaSignRequestsTotal.Inc()
+	return json.Marshal(blockv2CapellaSignRequest)
+}
+
+func handleBlindedBlockCapella(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blindedBlockv2CapellaSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blindedBlockv2CapellaSignRequest); err != nil {
+		return nil, err
+	}
+	blindedBlockCapellaSignRequestsTotal.Inc()
+	return json.Marshal(blindedBlockv2CapellaSignRequest)
+}
+
+func handleBlockDeneb(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blockv2DenebSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blockv2DenebSignRequest); err != nil {
+		return nil, err
+	}
+	blockDenebSignRequestsTotal.Inc()
+	return json.Marshal(blockv2DenebSignRequest)
+}
+
+func handleBlindedBlockDeneb(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blindedBlockv2DenebSignRequest, err := web3signerv1.GetBlockV2BlindedSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blindedBlockv2DenebSignRequest); err != nil {
+		return nil, err
+	}
+	blindedBlockDenebSignRequestsTotal.Inc()
+	return json.Marshal(blindedBlockv2DenebSignRequest)
+}
+
+func handleRandaoReveal(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	randaoRevealSignRequest, err := web3signerv1.GetRandaoRevealSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, randaoRevealSignRequest); err != nil {
+		return nil, err
+	}
+	randaoRevealSignRequestsTotal.Inc()
+	return json.Marshal(randaoRevealSignRequest)
+}
+
+func handleVoluntaryExit(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	voluntaryExitRequest, err := web3signerv1.GetVoluntaryExitSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, voluntaryExitRequest); err != nil {
+		return nil, err
+	}
+	voluntaryExitSignRequestsTotal.Inc()
+	return json.Marshal(voluntaryExitRequest)
+}
+
+func handleSyncMessageBlockRoot(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	syncCommitteeMessageRequest, err := web3signerv1.GetSyncCommitteeMessageSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, syncCommitteeMessageRequest); err != nil {
+		return nil, err
+	}
+	syncCommitteeMessageSignRequestsTotal.Inc()
+	return json.Marshal(syncCommitteeMessageRequest)
+}
+
+func handleSyncAggregatorSelectionData(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	syncCommitteeSelectionProofRequest, err := web3signerv1.GetSyncCommitteeSelectionProofSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, syncCommitteeSelectionProofRequest); err != nil {
+		return nil, err
+	}
+	syncCommitteeSelectionProofSignRequestsTotal.Inc()
+	return json.Marshal(syncCommitteeSelectionProofRequest)
+}
+
+func handleContributionAndProof(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	contributionAndProofRequest, err := web3signerv1.GetSyncCommitteeContributionAndProofSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, contributionAndProofRequest); err != nil {
+		return nil, err
+	}
+	syncCommitteeContributionAndProofSignRequestsTotal.Inc()
+	return json.Marshal(contributionAndProofRequest)
+}
+
+func handleRegistration(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest) ([]byte, error) {
+	validatorRegistrationRequest, err := web3signerv1.GetValidatorRegistrationSignRequest(request)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, validatorRegistrationRequest); err != nil {
+		return nil, err
+	}
+	validatorRegistrationSignRequestsTotal.Inc()
+	return json.Marshal(validatorRegistrationRequest)
+}
+
+func handleBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blobRequest); err != nil {
+		return nil, err
+	}
+	blobSignRequestsTotal.Inc()
+	return json.Marshal(blobRequest)
+}
+
+func handleBlindedBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
+	blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
+	if err != nil {
+		return nil, err
+	}
+	if err = validator.StructCtx(ctx, blindedBlobRequest); err != nil {
+		return nil, err
+	}
+	blindedBlobSignRequestsTotal.Inc()
+	return json.Marshal(blindedBlobRequest)
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
