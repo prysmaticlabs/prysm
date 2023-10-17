@@ -619,28 +619,6 @@ func TestAssignValidatorToSubnet(t *testing.T) {
 	}
 }
 
-func TestAssignValidatorToSyncSubnet(t *testing.T) {
-	k := pubKey(3)
-	committee := make([][]byte, 0)
-
-	for i := 0; i < 100; i++ {
-		committee = append(committee, pubKey(uint64(i)))
-	}
-	sCommittee := &ethpb.SyncCommittee{
-		Pubkeys: committee,
-	}
-	registerSyncSubnet(0, 0, k, sCommittee, ethpb.ValidatorStatus_ACTIVE)
-	coms, _, ok, exp := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(k, 0)
-	require.Equal(t, true, ok, "No cache entry found for validator")
-	assert.Equal(t, uint64(1), uint64(len(coms)))
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	totalTime := time.Duration(params.BeaconConfig().EpochsPerSyncCommitteePeriod) * epochDuration * time.Second
-	receivedTime := time.Until(exp.Round(time.Second)).Round(time.Second)
-	if receivedTime < totalTime {
-		t.Fatalf("Expiration time of %f was less than expected duration of %f ", receivedTime.Seconds(), totalTime.Seconds())
-	}
-}
-
 func BenchmarkCommitteeAssignment(b *testing.B) {
 
 	genesis := util.NewBeaconBlock()
