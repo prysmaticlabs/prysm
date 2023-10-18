@@ -96,6 +96,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		beaconNodeValidatorClient: beaconClient,
 		wallet:                    w,
 		beaconNodeClient:          mockNodeClient,
+		walletInitialized:         w != nil,
 	}
 
 	type want struct {
@@ -163,6 +164,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			},
 			mockSetup: func(s *Server) error {
 				s.wallet = nil
+				s.walletInitialized = false
 				return nil
 			},
 		},
