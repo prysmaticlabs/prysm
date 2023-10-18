@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -91,13 +92,48 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
 	case pubsub.ValidationIgnore:
-		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
+		log.WithFields(blobFields(blob)).Debug("Parent block not found - saving blob to cache")
+		go func() {
+			if err := s.sendBatchRootRequest(ctx, [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
+				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
+			}
+		}()
+		s.pendingBlobSidecars.add(sBlob)
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
 		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
 		return pubsub.ValidationReject, nil
 	default:
 	}
+
+	pubsubResult, err := s.validateBlobPostSeenParent(ctx, sBlob)
+	if err != nil {
+		return pubsubResult, err
+	}
+	if pubsubResult != pubsub.ValidationAccept {
+		return pubsubResult, nil
+	}
+
+	startTime, err := slots.ToTime(genesisTime, blob.Slot)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	fields := blobFields(blob)
+	sinceSlotStartTime := receivedTime.Sub(startTime)
+	fields["sinceSlotStartTime"] = sinceSlotStartTime
+	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
+	log.WithFields(fields).Debug("Received blob sidecar gossip")
+
+	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+
+	msg.ValidatorData = sBlob
+
+	return pubsub.ValidationAccept, nil
+}
+
+func (s *Service) validateBlobPostSeenParent(ctx context.Context, sBlob *eth.SignedBlobSidecar) (pubsub.ValidationResult, error) {
+	blob := sBlob.Message
+	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
 
 	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
@@ -140,21 +176,6 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationReject, err
 	}
-
-	startTime, err := slots.ToTime(genesisTime, blob.Slot)
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	fields := blobFields(blob)
-	sinceSlotStartTime := receivedTime.Sub(startTime)
-	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = prysmTime.Now().Sub(receivedTime)
-	log.WithFields(fields).Debug("Received blob sidecar gossip")
-
-	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
-
-	msg.ValidatorData = sBlob
-
 	return pubsub.ValidationAccept, nil
 }
 
