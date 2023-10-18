@@ -210,7 +210,7 @@ func FilterExitAccountsFromUserInput(
 		return nil, nil, err
 	}
 	if strings.EqualFold(resp, "n") {
-		log.Info("voluntary exit aborted")
+		log.Info("Voluntary exit aborted")
 		return nil, nil, nil
 	}
 	return rawPubKeys, formattedPubKeys, nil
