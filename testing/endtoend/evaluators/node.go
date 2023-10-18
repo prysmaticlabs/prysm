@@ -132,6 +132,7 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))
+	chainHeads := make([]*eth.ChainHead, len(conns))
 	for i, conn := range conns {
 		beaconClient := eth.NewBeaconChainClient(conn)
 		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
@@ -142,6 +143,8 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 		justifiedRoots[i] = chainHead.JustifiedBlockRoot
 		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
 		finalizedRoots[i] = chainHead.FinalizedBlockRoot
+		chainHeads[i] = chainHead
+
 		time.Sleep(connTimeDelay)
 	}
 
@@ -156,10 +159,12 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 		}
 		if !bytes.Equal(justifiedRoots[0], justifiedRoots[i]) {
 			return fmt.Errorf(
-				"received conflicting justified block roots on node %d, expected %#x, received %#x",
+				"received conflicting justified block roots on node %d, expected %#x, received %#x: %s and %s",
 				i,
 				justifiedRoots[0],
 				justifiedRoots[i],
+				chainHeads[0].String(),
+				chainHeads[i].String(),
 			)
 		}
 		if !bytes.Equal(prevJustifiedRoots[0], prevJustifiedRoots[i]) {
