@@ -19,7 +19,6 @@ import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v2/blobs.proto";
-import "proto/eth/v2/version.proto";
 import "proto/eth/v2/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
 
@@ -29,26 +28,6 @@ option java_multiple_files = true;
 option java_outer_classname = "SyncCommitteeProto";
 option java_package = "org.ethereum.eth.v2";
 option php_namespace = "Ethereum\\Eth\\v2";
-
-message BlockRequestV2 {
-  // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
-  // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
-  bytes block_id = 1;
-}
-
-message BlockResponseV2 {
-  v2.Version version = 1;
-  SignedBeaconBlockContainer data = 2;
-  bool execution_optimistic = 3;
-  bool finalized = 4;
-}
-
-message BlindedBlockResponse {
-  v2.Version version = 1;
-  SignedBlindedBeaconBlockContainer data = 2;
-  bool execution_optimistic = 3;
-  bool finalized = 4;
-}
 
 message BeaconBlockContainerV2 {
   oneof block {
