@@ -858,7 +858,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 			FinalizedRoot:  finalizedRoot[:],
 		}
 		if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-			log.WithError(err).Debug("Could not write to stream")
+			log.WithError(err).Trace("Could not write to stream")
 		}
 		_, err := r.cfg.p2p.Encoding().EncodeWithMaxLength(stream, expected)
 		assert.NoError(t, err)

@@ -52,7 +52,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 		if baseTopic == p2p.RPCMetaDataTopicV1 || baseTopic == p2p.RPCMetaDataTopicV2 {
 			if err := handle(context.Background(), base, stream); err != nil {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 			}
 			return
@@ -78,7 +78,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 			}
 			if err := handle(context.Background(), msg, stream); err != nil {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 			}
 		} else {
@@ -89,12 +89,12 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := c.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).Debug("Could not decode stream message")
+				log.WithError(err).Trace("Could not decode stream message")
 				return
 			}
 			if err := handle(context.Background(), nTyp.Elem().Interface(), stream); err != nil {
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 			}
 		}

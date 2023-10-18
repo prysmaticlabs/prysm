@@ -36,7 +36,7 @@ func (s *Service) metaDataHandler(_ context.Context, _ interface{}, stream libp2
 		if err != nil {
 			log.WithError(err).Debug("Could not generate a response error")
 		} else if _, err := stream.Write(resp); err != nil {
-			log.WithError(err).Debug("Could not write to stream")
+			log.WithError(err).Trace("Could not write to stream")
 		}
 		return nilErr
 	}

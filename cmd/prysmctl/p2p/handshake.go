@@ -73,7 +73,7 @@ func (c *client) statusRPCHandler(ctx context.Context, _ interface{}, stream lib
 	}
 
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
-		log.WithError(err).Debug("Could not write to stream")
+		log.WithError(err).Trace("Could not write to stream")
 		return err
 	}
 	_, err = c.Encoding().EncodeWithMaxLength(stream, status)

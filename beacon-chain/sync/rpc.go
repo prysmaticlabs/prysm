@@ -189,7 +189,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			if err := handle(ctx, base, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)
 			}
@@ -206,7 +206,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Trace("Could not decode stream message")
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -214,7 +214,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			if err := handle(ctx, msg, stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)
 			}
@@ -226,7 +226,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				log.WithError(err).WithField("topic", topic).Trace("Could not decode stream message")
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -234,7 +234,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			if err := handle(ctx, nTyp.Elem().Interface(), stream); err != nil {
 				messageFailedProcessingCounter.WithLabelValues(topic).Inc()
 				if err != p2ptypes.ErrWrongForkDigestVersion {
-					log.WithError(err).Debug("Could not handle p2p RPC")
+					log.WithError(err).Trace("Could not handle p2p RPC")
 				}
 				tracing.AnnotateError(span, err)
 			}

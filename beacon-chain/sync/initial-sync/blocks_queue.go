@@ -215,7 +215,7 @@ func (q *blocksQueue) loop() {
 						"epoch":                     slots.ToEpoch(fsm.start),
 						"start":                     fsm.start,
 						"error":                     err.Error(),
-					}).Debug("Can not trigger event")
+					}).Trace("Can not trigger event")
 					if errors.Is(err, errNoRequiredPeers) {
 						forceExit := q.exitConditions.noRequiredPeersErrRetries > noRequiredPeersErrMaxRetries
 						if q.mode == modeStopOnFinalizedEpoch || forceExit {
