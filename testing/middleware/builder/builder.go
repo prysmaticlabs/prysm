@@ -255,7 +255,7 @@ func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		p.validatorMap[string(r.Message.Pubkey)] = msg
+		p.validatorMap[r.Message.Pubkey] = msg
 	}
 	// TODO: Verify Signatures from validators
 	w.WriteHeader(http.StatusOK)
