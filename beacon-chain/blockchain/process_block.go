@@ -565,7 +565,9 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 			s.blobNotifiers.delete(root)
 			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
 				log.WithField("root", fmt.Sprintf("%#x", root)).Warn("removing blob sidecars with invalid proofs")
-				s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root)
+				if err2 := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err2 != nil {
+					log.WithError(err2).Error("could not delete sidecars")
+				}
 				return err
 			}
 			logBlobSidecar(sidecars, t)
