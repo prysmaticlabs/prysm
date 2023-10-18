@@ -395,5 +395,5 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 	require.Equal(t, 1, len(formattedExitedKeys))
 	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
 
-	require.Equal(t, true, file.FileExists(path.Join(out, "validator-exit-1.json")), "Expected file to exist")
+	require.Equal(t, true, file.Exists(path.Join(out, "validator-exit-1.json")), "Expected file to exist")
 }

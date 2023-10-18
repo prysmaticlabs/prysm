@@ -119,7 +119,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hash.HashProto(att.Data)
+	attRoot, err := hash.Proto(att.Data)
 	if err != nil {
 		return false, err
 	}

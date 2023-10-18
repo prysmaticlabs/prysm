@@ -85,7 +85,7 @@ func (*requestLogger) observe(r *http.Request) (e error) {
 var _ observer = &requestLogger{}
 
 // BuilderClient provides a collection of helper methods for calling Builder API endpoints.
-type BuilderClient interface {
+type Client interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error

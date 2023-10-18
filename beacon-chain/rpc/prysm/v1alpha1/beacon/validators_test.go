@@ -461,7 +461,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: nil,
 		},
-		StateGen: &mockstategen.MockStateManager{
+		StateGen: &mockstategen.StateManager{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0: nil,
 			},

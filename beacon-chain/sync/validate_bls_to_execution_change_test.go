@@ -178,7 +178,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
@@ -396,7 +396,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic

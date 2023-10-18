@@ -384,7 +384,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
@@ -414,7 +414,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
-		[]validatorType.ValidatorStatus{validatorType.Active},
+		[]validatorType.Status{validatorType.Active},
 	).Return([]iface.ValidatorCount{}, nil).Times(2)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ValidatorActivationResponse{},

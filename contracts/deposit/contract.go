@@ -26,106 +26,106 @@ var (
 )
 
 // DepositContractABI is the input ABI used to generate the binding from.
-const DepositContractABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
+const ContractABI = "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"amount\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"index\",\"type\":\"bytes\"}],\"name\":\"DepositEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"pubkey\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"withdrawal_credentials\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"deposit_data_root\",\"type\":\"bytes32\"}],\"name\":\"deposit\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_count\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"get_deposit_root\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"}]"
 
 // DepositContract is an auto generated Go binding around an Ethereum contract.
-type DepositContract struct {
-	DepositContractCaller     // Read-only binding to the contract
-	DepositContractTransactor // Write-only binding to the contract
-	DepositContractFilterer   // Log filterer for contract events
+type Contract struct {
+	ContractCaller     // Read-only binding to the contract
+	ContractTransactor // Write-only binding to the contract
+	ContractFilterer   // Log filterer for contract events
 }
 
 // DepositContractCaller is an auto generated read-only Go binding around an Ethereum contract.
-type DepositContractCaller struct {
+type ContractCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // DepositContractTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type DepositContractTransactor struct {
+type ContractTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // DepositContractFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type DepositContractFilterer struct {
+type ContractFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
 // DepositContractSession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type DepositContractSession struct {
-	Contract     *DepositContract  // Generic contract binding to set the session for
+type ContractSession struct {
+	Contract     *Contract         // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
 	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
 }
 
 // DepositContractCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type DepositContractCallerSession struct {
-	Contract *DepositContractCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts          // Call options to use throughout this session
+type ContractCallerSession struct {
+	Contract *ContractCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts   // Call options to use throughout this session
 }
 
 // DepositContractTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type DepositContractTransactorSession struct {
-	Contract     *DepositContractTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts          // Transaction auth options to use throughout this session
+type ContractTransactorSession struct {
+	Contract     *ContractTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts   // Transaction auth options to use throughout this session
 }
 
 // DepositContractRaw is an auto generated low-level Go binding around an Ethereum contract.
-type DepositContractRaw struct {
-	Contract *DepositContract // Generic contract binding to access the raw methods on
+type ContractRaw struct {
+	Contract *Contract // Generic contract binding to access the raw methods on
 }
 
 // DepositContractCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type DepositContractCallerRaw struct {
-	Contract *DepositContractCaller // Generic read-only contract binding to access the raw methods on
+type ContractCallerRaw struct {
+	Contract *ContractCaller // Generic read-only contract binding to access the raw methods on
 }
 
 // DepositContractTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type DepositContractTransactorRaw struct {
-	Contract *DepositContractTransactor // Generic write-only contract binding to access the raw methods on
+type ContractTransactorRaw struct {
+	Contract *ContractTransactor // Generic write-only contract binding to access the raw methods on
 }
 
 // NewDepositContract creates a new instance of DepositContract, bound to a specific deployed contract.
-func NewDepositContract(address common.Address, backend bind.ContractBackend) (*DepositContract, error) {
+func NewDepositContract(address common.Address, backend bind.ContractBackend) (*Contract, error) {
 	contract, err := bindDepositContract(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &DepositContract{DepositContractCaller: DepositContractCaller{contract: contract}, DepositContractTransactor: DepositContractTransactor{contract: contract}, DepositContractFilterer: DepositContractFilterer{contract: contract}}, nil
+	return &Contract{DepositContractCaller: ContractCaller{contract: contract}, DepositContractTransactor: ContractTransactor{contract: contract}, DepositContractFilterer: ContractFilterer{contract: contract}}, nil
 }
 
 // NewDepositContractCaller creates a new read-only instance of DepositContract, bound to a specific deployed contract.
-func NewDepositContractCaller(address common.Address, caller bind.ContractCaller) (*DepositContractCaller, error) {
+func NewDepositContractCaller(address common.Address, caller bind.ContractCaller) (*ContractCaller, error) {
 	contract, err := bindDepositContract(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &DepositContractCaller{contract: contract}, nil
+	return &ContractCaller{contract: contract}, nil
 }
 
 // NewDepositContractTransactor creates a new write-only instance of DepositContract, bound to a specific deployed contract.
-func NewDepositContractTransactor(address common.Address, transactor bind.ContractTransactor) (*DepositContractTransactor, error) {
+func NewDepositContractTransactor(address common.Address, transactor bind.ContractTransactor) (*ContractTransactor, error) {
 	contract, err := bindDepositContract(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &DepositContractTransactor{contract: contract}, nil
+	return &ContractTransactor{contract: contract}, nil
 }
 
 // NewDepositContractFilterer creates a new log filterer instance of DepositContract, bound to a specific deployed contract.
-func NewDepositContractFilterer(address common.Address, filterer bind.ContractFilterer) (*DepositContractFilterer, error) {
+func NewDepositContractFilterer(address common.Address, filterer bind.ContractFilterer) (*ContractFilterer, error) {
 	contract, err := bindDepositContract(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &DepositContractFilterer{contract: contract}, nil
+	return &ContractFilterer{contract: contract}, nil
 }
 
 // bindDepositContract binds a generic wrapper to an already deployed contract.
 func bindDepositContract(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(DepositContractABI))
+	parsed, err := abi.JSON(strings.NewReader(ContractABI))
 	if err != nil {
 		return nil, err
 	}
@@ -136,18 +136,18 @@ func bindDepositContract(address common.Address, caller bind.ContractCaller, tra
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_DepositContract *DepositContractRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+func (_DepositContract *ContractRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _DepositContract.Contract.DepositContractCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_DepositContract *DepositContractRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_DepositContract *ContractRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _DepositContract.Contract.DepositContractTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_DepositContract *DepositContractRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+func (_DepositContract *ContractRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _DepositContract.Contract.DepositContractTransactor.contract.Transact(opts, method, params...)
 }
 
@@ -155,25 +155,25 @@ func (_DepositContract *DepositContractRaw) Transact(opts *bind.TransactOpts, me
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_DepositContract *DepositContractCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+func (_DepositContract *ContractCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
 	return _DepositContract.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_DepositContract *DepositContractTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+func (_DepositContract *ContractTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
 	return _DepositContract.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_DepositContract *DepositContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+func (_DepositContract *ContractTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _DepositContract.Contract.contract.Transact(opts, method, params...)
 }
 
 // GetDepositCount is a free data retrieval call binding the contract method 0x621fd130.
 //
 // Solidity: function get_deposit_count() view returns(bytes)
-func (_DepositContract *DepositContractCaller) GetDepositCount(opts *bind.CallOpts) ([]byte, error) {
+func (_DepositContract *ContractCaller) GetDepositCount(opts *bind.CallOpts) ([]byte, error) {
 	var out []interface{}
 	err := _DepositContract.contract.Call(opts, &out, "get_deposit_count")
 
@@ -190,21 +190,21 @@ func (_DepositContract *DepositContractCaller) GetDepositCount(opts *bind.CallOp
 // GetDepositCount is a free data retrieval call binding the contract method 0x621fd130.
 //
 // Solidity: function get_deposit_count() view returns(bytes)
-func (_DepositContract *DepositContractSession) GetDepositCount() ([]byte, error) {
+func (_DepositContract *ContractSession) GetDepositCount() ([]byte, error) {
 	return _DepositContract.Contract.GetDepositCount(&_DepositContract.CallOpts)
 }
 
 // GetDepositCount is a free data retrieval call binding the contract method 0x621fd130.
 //
 // Solidity: function get_deposit_count() view returns(bytes)
-func (_DepositContract *DepositContractCallerSession) GetDepositCount() ([]byte, error) {
+func (_DepositContract *ContractCallerSession) GetDepositCount() ([]byte, error) {
 	return _DepositContract.Contract.GetDepositCount(&_DepositContract.CallOpts)
 }
 
 // GetDepositRoot is a free data retrieval call binding the contract method 0xc5f2892f.
 //
 // Solidity: function get_deposit_root() view returns(bytes32)
-func (_DepositContract *DepositContractCaller) GetDepositRoot(opts *bind.CallOpts) ([32]byte, error) {
+func (_DepositContract *ContractCaller) GetDepositRoot(opts *bind.CallOpts) ([32]byte, error) {
 	var out []interface{}
 	err := _DepositContract.contract.Call(opts, &out, "get_deposit_root")
 
@@ -221,21 +221,21 @@ func (_DepositContract *DepositContractCaller) GetDepositRoot(opts *bind.CallOpt
 // GetDepositRoot is a free data retrieval call binding the contract method 0xc5f2892f.
 //
 // Solidity: function get_deposit_root() view returns(bytes32)
-func (_DepositContract *DepositContractSession) GetDepositRoot() ([32]byte, error) {
+func (_DepositContract *ContractSession) GetDepositRoot() ([32]byte, error) {
 	return _DepositContract.Contract.GetDepositRoot(&_DepositContract.CallOpts)
 }
 
 // GetDepositRoot is a free data retrieval call binding the contract method 0xc5f2892f.
 //
 // Solidity: function get_deposit_root() view returns(bytes32)
-func (_DepositContract *DepositContractCallerSession) GetDepositRoot() ([32]byte, error) {
+func (_DepositContract *ContractCallerSession) GetDepositRoot() ([32]byte, error) {
 	return _DepositContract.Contract.GetDepositRoot(&_DepositContract.CallOpts)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) pure returns(bool)
-func (_DepositContract *DepositContractCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
+func (_DepositContract *ContractCaller) SupportsInterface(opts *bind.CallOpts, interfaceId [4]byte) (bool, error) {
 	var out []interface{}
 	err := _DepositContract.contract.Call(opts, &out, "supportsInterface", interfaceId)
 
@@ -252,41 +252,41 @@ func (_DepositContract *DepositContractCaller) SupportsInterface(opts *bind.Call
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) pure returns(bool)
-func (_DepositContract *DepositContractSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+func (_DepositContract *ContractSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _DepositContract.Contract.SupportsInterface(&_DepositContract.CallOpts, interfaceId)
 }
 
 // SupportsInterface is a free data retrieval call binding the contract method 0x01ffc9a7.
 //
 // Solidity: function supportsInterface(bytes4 interfaceId) pure returns(bool)
-func (_DepositContract *DepositContractCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
+func (_DepositContract *ContractCallerSession) SupportsInterface(interfaceId [4]byte) (bool, error) {
 	return _DepositContract.Contract.SupportsInterface(&_DepositContract.CallOpts, interfaceId)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Solidity: function deposit(bytes pubkey, bytes withdrawal_credentials, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractTransactor) Deposit(opts *bind.TransactOpts, pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+func (_DepositContract *ContractTransactor) Deposit(opts *bind.TransactOpts, pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
 	return _DepositContract.contract.Transact(opts, "deposit", pubkey, withdrawal_credentials, signature, deposit_data_root)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Solidity: function deposit(bytes pubkey, bytes withdrawal_credentials, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractSession) Deposit(pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+func (_DepositContract *ContractSession) Deposit(pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
 	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_credentials, signature, deposit_data_root)
 }
 
 // Deposit is a paid mutator transaction binding the contract method 0x22895118.
 //
 // Solidity: function deposit(bytes pubkey, bytes withdrawal_credentials, bytes signature, bytes32 deposit_data_root) payable returns()
-func (_DepositContract *DepositContractTransactorSession) Deposit(pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
+func (_DepositContract *ContractTransactorSession) Deposit(pubkey []byte, withdrawal_credentials []byte, signature []byte, deposit_data_root [32]byte) (*types.Transaction, error) {
 	return _DepositContract.Contract.Deposit(&_DepositContract.TransactOpts, pubkey, withdrawal_credentials, signature, deposit_data_root)
 }
 
 // DepositContractDepositEventIterator is returned from FilterDepositEvent and is used to iterate over the raw logs and unpacked data for DepositEvent events raised by the DepositContract contract.
-type DepositContractDepositEventIterator struct {
-	Event *DepositContractDepositEvent // Event containing the contract specifics and raw log
+type ContractDepositEventIterator struct {
+	Event *ContractDepositEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -300,7 +300,7 @@ type DepositContractDepositEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *DepositContractDepositEventIterator) Next() bool {
+func (it *ContractDepositEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -309,7 +309,7 @@ func (it *DepositContractDepositEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(DepositContractDepositEvent)
+			it.Event = new(ContractDepositEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -324,7 +324,7 @@ func (it *DepositContractDepositEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(DepositContractDepositEvent)
+		it.Event = new(ContractDepositEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -340,19 +340,19 @@ func (it *DepositContractDepositEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *DepositContractDepositEventIterator) Error() error {
+func (it *ContractDepositEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *DepositContractDepositEventIterator) Close() error {
+func (it *ContractDepositEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
 // DepositContractDepositEvent represents a DepositEvent event raised by the DepositContract contract.
-type DepositContractDepositEvent struct {
+type ContractDepositEvent struct {
 	Pubkey                []byte
 	WithdrawalCredentials []byte
 	Amount                []byte
@@ -364,19 +364,19 @@ type DepositContractDepositEvent struct {
 // FilterDepositEvent is a free log retrieval operation binding the contract event 0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5.
 //
 // Solidity: event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)
-func (_DepositContract *DepositContractFilterer) FilterDepositEvent(opts *bind.FilterOpts) (*DepositContractDepositEventIterator, error) {
+func (_DepositContract *ContractFilterer) FilterDepositEvent(opts *bind.FilterOpts) (*ContractDepositEventIterator, error) {
 
 	logs, sub, err := _DepositContract.contract.FilterLogs(opts, "DepositEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &DepositContractDepositEventIterator{contract: _DepositContract.contract, event: "DepositEvent", logs: logs, sub: sub}, nil
+	return &ContractDepositEventIterator{contract: _DepositContract.contract, event: "DepositEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchDepositEvent is a free log subscription operation binding the contract event 0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5.
 //
 // Solidity: event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)
-func (_DepositContract *DepositContractFilterer) WatchDepositEvent(opts *bind.WatchOpts, sink chan<- *DepositContractDepositEvent) (event.Subscription, error) {
+func (_DepositContract *ContractFilterer) WatchDepositEvent(opts *bind.WatchOpts, sink chan<- *ContractDepositEvent) (event.Subscription, error) {
 
 	logs, sub, err := _DepositContract.contract.WatchLogs(opts, "DepositEvent")
 	if err != nil {
@@ -388,7 +388,7 @@ func (_DepositContract *DepositContractFilterer) WatchDepositEvent(opts *bind.Wa
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(DepositContractDepositEvent)
+				event := new(ContractDepositEvent)
 				if err := _DepositContract.contract.UnpackLog(event, "DepositEvent", log); err != nil {
 					return err
 				}
@@ -413,8 +413,8 @@ func (_DepositContract *DepositContractFilterer) WatchDepositEvent(opts *bind.Wa
 // ParseDepositEvent is a log parse operation binding the contract event 0x649bbc62d0e31342afea4e5cd82d4049e7e1ee912fc0889aa790803be39038c5.
 //
 // Solidity: event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)
-func (_DepositContract *DepositContractFilterer) ParseDepositEvent(log types.Log) (*DepositContractDepositEvent, error) {
-	event := new(DepositContractDepositEvent)
+func (_DepositContract *ContractFilterer) ParseDepositEvent(log types.Log) (*ContractDepositEvent, error) {
+	event := new(ContractDepositEvent)
 	if err := _DepositContract.contract.UnpackLog(event, "DepositEvent", log); err != nil {
 		return nil, err
 	}

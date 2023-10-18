@@ -25,7 +25,7 @@ import (
 func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	debounceFileChangesInterval := features.Get().KeystoreImportDebounceInterval
 	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
-	if !file.FileExists(accountsFilePath) {
+	if !file.Exists(accountsFilePath) {
 		return
 	}
 	watcher, err := fsnotify.NewWatcher()

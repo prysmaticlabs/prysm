@@ -19,7 +19,7 @@ func TestDepositInput_GeneratesPb(t *testing.T) {
 	k2, err := bls.RandKey()
 	require.NoError(t, err)
 
-	result, _, err := deposit.DepositInput(k1, k2, 0)
+	result, _, err := deposit.Input(k1, k2, 0)
 	require.NoError(t, err)
 	assert.DeepEqual(t, k1.PublicKey().Marshal(), result.PublicKey)
 
