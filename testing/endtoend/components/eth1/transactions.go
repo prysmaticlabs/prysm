@@ -28,6 +28,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var fundedAccount *keystore.Key
+
 type TransactionGenerator struct {
 	keystore string
 	seed     int64
@@ -51,8 +53,9 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	defer client.Close()
 
 	seed := t.seed
+	newGen := rand.NewDeterministicGenerator()
 	if seed == 0 {
-		seed = rand.NewDeterministicGenerator().Int63()
+		seed = newGen.Int63()
 		logrus.Infof("Seed for transaction generator is: %d", seed)
 	}
 	// Set seed so that all transactions can be
@@ -67,6 +70,11 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	newKey := keystore.NewKeyForDirectICAP(newGen)
+	if err := fundAccount(client, mineKey, newKey); err != nil {
+		return err
+	}
+	fundedAccount = newKey
 	rnd := make([]byte, 10000)
 	// #nosec G404
 	_, err = mathRand.Read(rnd)
@@ -122,7 +130,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	for i := uint64(0); i < 10; i++ {
 		index := i
 		g.Go(func() error {
-			tx, err := RandomBlobTx(client, f, sender, nonce+index, gasPrice, chainid, al)
+			tx, err := RandomBlobTx(client, f, fundedAccount.Address, nonce+index, gasPrice, chainid, al)
 			if err != nil {
 				logrus.WithError(err).Error("Could not create blob tx")
 				// In the event the transaction constructed is not valid, we continue with the routine
@@ -130,7 +138,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 				//nolint:nilerr
 				return nil
 			}
-			signedTx, err := types.SignTx(tx, types.NewCancunSigner(chainid), key)
+			signedTx, err := types.SignTx(tx, types.NewCancunSigner(chainid), fundedAccount.PrivateKey)
 			if err != nil {
 				logrus.WithError(err).Error("Could not sign blob tx")
 				// We continue on in the event there is a reason we can't sign this
@@ -411,4 +419,31 @@ func getCaps(rpc *rpc.Client, defaultGasPrice *big.Int) (*big.Int, *big.Int, err
 	}
 	feeCap, err := client.SuggestGasPrice(context.Background())
 	return tip, feeCap, err
+}
+
+func fundAccount(client *rpc.Client, sourceKey, destKey *keystore.Key) error {
+	backend := ethclient.NewClient(client)
+	defer backend.Close()
+	nonce, err := backend.PendingNonceAt(context.Background(), sourceKey.Address)
+	if err != nil {
+		return err
+	}
+	chainid, err := backend.ChainID(context.Background())
+	if err != nil {
+		return err
+	}
+	expectedPrice, err := backend.SuggestGasPrice(context.Background())
+	if err != nil {
+		return err
+	}
+	val, ok := big.NewInt(0).SetString("10000000000000000000000000", 10)
+	if !ok {
+		return errors.New("could not set big int for value")
+	}
+	tx := types.NewTransaction(nonce, destKey.Address, val, 100000, expectedPrice, nil)
+	signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), sourceKey.PrivateKey)
+	if err != nil {
+		return err
+	}
+	return backend.SendTransaction(context.Background(), signedTx)
 }
