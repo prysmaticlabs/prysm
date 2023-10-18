@@ -52,8 +52,7 @@ func TestWriteSignedVoluntaryExitJSON(t *testing.T) {
 	}
 
 	output := path.Join(bazel.TestTmpDir(), "TestWriteSignedVoluntaryExitJSON")
-	require.NoError(t, writeSignedVoluntaryExitJSON(
-		sve, output))
+	require.NoError(t, writeSignedVoluntaryExitJSON(sve, output))
 
 	b, err := file.ReadFileAsBytes(path.Join(output, "validator-exit-300.json"))
 	require.NoError(t, err)
