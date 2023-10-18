@@ -90,7 +90,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
-	stdin.Write([]byte(accounts.ExitPassphrase))
+	stdin.Write([]byte("Y"))
 	rawPubKeys, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(
 		cliCtx, &stdin, validatingPublicKeys, false,
 	)
@@ -190,7 +190,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
-	stdin.Write([]byte(accounts.ExitPassphrase))
+	stdin.Write([]byte("Y"))
 	rawPubKeys, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(
 		cliCtx, &stdin, validatingPublicKeys, false,
 	)
