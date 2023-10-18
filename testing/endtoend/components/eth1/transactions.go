@@ -110,7 +110,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 	addr string, N uint64, backend *ethclient.Client, al bool) error {
 
 	sender := common.HexToAddress(addr)
-	nonce, err := backend.PendingNonceAt(context.Background(), sender)
+	nonce, err := backend.PendingNonceAt(context.Background(), fundedAccount.Address)
 	if err != nil {
 		return err
 	}
