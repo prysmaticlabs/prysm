@@ -9,7 +9,7 @@ import (
 
 // UnpackDepositLogData unpacks the data from a deposit log using the ABI decoder.
 func UnpackDepositLogData(data []byte) (pubkey, withdrawalCredentials, amount, signature, index []byte, err error) {
-	reader := bytes.NewReader([]byte(DepositContractABI))
+	reader := bytes.NewReader([]byte(ContractABI))
 	contractAbi, err := abi.JSON(reader)
 	if err != nil {
 		return nil, nil, nil, nil, nil, errors.Wrap(err, "unable to generate contract abi")

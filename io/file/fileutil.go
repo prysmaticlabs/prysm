@@ -92,7 +92,7 @@ func WriteFile(file string, data []byte) error {
 	if err != nil {
 		return err
 	}
-	if FileExists(expanded) {
+	if Exists(expanded) {
 		info, err := os.Stat(expanded)
 		if err != nil {
 			return err
@@ -143,7 +143,7 @@ func HasReadWritePermissions(itemPath string) (bool, error) {
 
 // FileExists returns true if a file is not a directory and exists
 // at the specified path.
-func FileExists(filename string) bool {
+func Exists(filename string) bool {
 	filePath, err := ExpandPath(filename)
 	if err != nil {
 		return false
@@ -201,7 +201,7 @@ func ReadFileAsBytes(filename string) ([]byte, error) {
 
 // CopyFile copy a file from source to destination path.
 func CopyFile(src, dst string) error {
-	if !FileExists(src) {
+	if !Exists(src) {
 		return errors.New("source file does not exist at provided path")
 	}
 	f, err := os.Open(src) // #nosec G304

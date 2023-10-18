@@ -150,7 +150,7 @@ type Service struct {
 	rpcClient               RPCClient
 	headerCache             *headerCache // cache to store block hash/block height.
 	latestEth1Data          *ethpb.LatestETH1Data
-	depositContractCaller   *contracts.DepositContractCaller
+	depositContractCaller   *contracts.ContractCaller
 	depositTrie             cache.MerkleTree
 	chainStartData          *ethpb.ChainStartData
 	lastReceivedMerkleIndex int64 // Keeps track of the last received index to prevent log spam.

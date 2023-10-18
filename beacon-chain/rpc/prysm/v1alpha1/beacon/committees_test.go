@@ -76,8 +76,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
-	cc := &mockstategen.MockCanonicalChecker{Is: true, Err: nil}
-	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	cc := &mockstategen.CanonicalChecker{Is: true, Err: nil}
+	cs := &mockstategen.CurrentSlotter{Slot: math.MaxUint64 - 1}
 	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 

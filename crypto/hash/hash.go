@@ -81,7 +81,7 @@ var keccak256Pool = sync.Pool{New: func() interface{} {
 
 // HashKeccak256 defines a function which returns the Keccak-256/SHA3
 // hash of the data passed in.
-func HashKeccak256(data []byte) [32]byte {
+func Keccak256(data []byte) [32]byte {
 	var b [32]byte
 
 	h, ok := keccak256Pool.Get().(hash.Hash)
@@ -103,7 +103,7 @@ func HashKeccak256(data []byte) [32]byte {
 }
 
 // HashProto hashes a protocol buffer message using sha256.
-func HashProto(msg proto.Message) (result [32]byte, err error) {
+func Proto(msg proto.Message) (result [32]byte, err error) {
 	if msg == nil || reflect.ValueOf(msg).IsNil() {
 		return [32]byte{}, ErrNilProto
 	}

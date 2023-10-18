@@ -969,7 +969,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	var registerSyncSubnet func(state.BeaconState, primitives.Epoch, []byte, validator2.ValidatorStatus) error
+	var registerSyncSubnet func(state.BeaconState, primitives.Epoch, []byte, validator2.Status) error
 	if isCurrentCommitteeRequested {
 		registerSyncSubnet = core.RegisterSyncSubnetCurrentPeriod
 	} else {
@@ -1091,14 +1091,14 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &GetLivenessResponse{
-		Data: make([]*ValidatorLiveness, len(requestedValIndices)),
+		Data: make([]*Liveness, len(requestedValIndices)),
 	}
 	for i, vi := range requestedValIndices {
 		if vi >= primitives.ValidatorIndex(len(participation)) {
 			http2.HandleError(w, fmt.Sprintf("Validator index %d is invalid", vi), http.StatusBadRequest)
 			return
 		}
-		resp.Data[i] = &ValidatorLiveness{
+		resp.Data[i] = &Liveness{
 			Index:  strconv.FormatUint(uint64(vi), 10),
 			IsLive: participation[vi] != 0,
 		}

@@ -51,7 +51,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 
-	m := &mock.MockValidator{Km: km}
+	m := &mock.Validator{Km: km}
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Validator: m,
 	})

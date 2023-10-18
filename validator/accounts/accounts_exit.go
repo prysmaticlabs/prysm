@@ -34,7 +34,7 @@ type PerformExitCfg struct {
 }
 
 // Exit performs a voluntary exit on one or more accounts.
-func (acm *AccountsCLIManager) Exit(ctx context.Context) error {
+func (acm *CLIManager) Exit(ctx context.Context) error {
 	// User decided to cancel the voluntary exit.
 	if acm.rawPubKeys == nil && acm.formattedPubKeys == nil {
 		return nil

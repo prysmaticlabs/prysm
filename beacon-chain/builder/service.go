@@ -36,7 +36,7 @@ type BlockBuilder interface {
 
 // config defines a config struct for dependencies into the service.
 type config struct {
-	builderClient builder.BuilderClient
+	builderClient builder.Client
 	beaconDB      db.HeadAccessDatabase
 	headFetcher   blockchain.HeadFetcher
 }
@@ -44,7 +44,7 @@ type config struct {
 // Service defines a service that provides a client for interacting with the beacon chain and MEV relay network.
 type Service struct {
 	cfg               *config
-	c                 builder.BuilderClient
+	c                 builder.Client
 	ctx               context.Context
 	cancel            context.CancelFunc
 	registrationCache *cache.RegistrationCache

@@ -37,9 +37,9 @@ import (
 )
 
 var (
-	_ = ExecutionPayloadReconstructor(&Service{})
+	_ = PayloadReconstructor(&Service{})
 	_ = EngineCaller(&Service{})
-	_ = ExecutionPayloadReconstructor(&Service{})
+	_ = PayloadReconstructor(&Service{})
 	_ = EngineCaller(&mocks.EngineClient{})
 )
 
@@ -141,14 +141,14 @@ func TestClient_IPC(t *testing.T) {
 		err := srv.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
 	})
-	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
+	t.Run(BlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		resp, err := srv.LatestExecutionBlock(ctx)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, resp)
 	})
-	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
+	t.Run(BlockByHashMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		arg := common.BytesToHash([]byte("foo"))
@@ -644,7 +644,7 @@ func TestClient_HTTP(t *testing.T) {
 		require.ErrorIs(t, ErrUnknownPayloadStatus, err)
 		require.DeepEqual(t, []uint8(nil), resp)
 	})
-	t.Run(ExecutionBlockByNumberMethod, func(t *testing.T) {
+	t.Run(BlockByNumberMethod, func(t *testing.T) {
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -712,7 +712,7 @@ func TestClient_HTTP(t *testing.T) {
 		err = client.ExchangeTransitionConfiguration(ctx, want)
 		require.NoError(t, err)
 	})
-	t.Run(ExecutionBlockByHashMethod, func(t *testing.T) {
+	t.Run(BlockByHashMethod, func(t *testing.T) {
 		arg := common.BytesToHash([]byte("foo"))
 		want, ok := fix["ExecutionBlock"].(*pb.ExecutionBlock)
 		require.Equal(t, true, ok)
