@@ -94,7 +94,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	case pubsub.ValidationIgnore:
 		log.WithFields(blobFields(blob)).Debug("Parent block not found - saving blob to cache")
 		go func() {
-			if err := s.sendBatchRootRequest(ctx, [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
+			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()
