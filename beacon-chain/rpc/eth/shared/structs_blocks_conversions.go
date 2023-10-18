@@ -2117,11 +2117,11 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
 	if err != nil {
 		return nil, err
 	}
-	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	payload, err := ExecutionPayloadHeaderFromConsensus(b.Body.ExecutionPayloadHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -2144,22 +2144,7 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeader{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-			},
+			ExecutionPayloadHeader: payload,
 		},
 	}, nil
 }
@@ -2268,15 +2253,15 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
-	if err != nil {
-		return nil, err
-	}
 	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
 	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := ExecutionPayloadHeaderCapellaFromConsensus(b.Body.ExecutionPayloadHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -2299,24 +2284,8 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeaderCapella{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-				WithdrawalsRoot:  hexutil.Encode(b.Body.ExecutionPayloadHeader.WithdrawalsRoot), // new in capella
-			},
-			BlsToExecutionChanges: blsChanges, // new in capella
+			ExecutionPayloadHeader: payload,
+			BlsToExecutionChanges:  blsChanges, // new in capella
 		},
 	}, nil
 }
@@ -2528,10 +2497,6 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
-	if err != nil {
-		return nil, err
-	}
 	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
@@ -2541,6 +2506,10 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
 	}
 	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := ExecutionPayloadHeaderDenebFromConsensus(b.Body.ExecutionPayloadHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -2563,27 +2532,9 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeaderDeneb{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-				WithdrawalsRoot:  hexutil.Encode(b.Body.ExecutionPayloadHeader.WithdrawalsRoot),
-				BlobGasUsed:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlobGasUsed),   // new in deneb TODO: rename to blob
-				ExcessBlobGas:    fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.ExcessBlobGas), // new in deneb TODO: rename to blob
-			},
-			BlsToExecutionChanges: blsChanges,         // new in capella
-			BlobKzgCommitments:    blobKzgCommitments, // new in deneb
+			ExecutionPayloadHeader: payload,
+			BlsToExecutionChanges:  blsChanges,         // new in capella
+			BlobKzgCommitments:     blobKzgCommitments, // new in deneb
 		},
 	}, nil
 }
@@ -3201,6 +3152,94 @@ func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBl
 		}
 	}
 	return changes, nil
+}
+
+func ExecutionPayloadHeaderFromConsensus(payload *enginev1.ExecutionPayloadHeader) (*ExecutionPayloadHeader, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeader{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+	}, nil
+}
+
+func ExecutionPayloadHeaderCapellaFromConsensus(payload *enginev1.ExecutionPayloadHeaderCapella) (*ExecutionPayloadHeaderCapella, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeaderCapella{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
+	}, nil
+}
+
+func ExecutionPayloadHeaderDenebFromConsensus(payload *enginev1.ExecutionPayloadHeaderDeneb) (*ExecutionPayloadHeaderDeneb, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeaderDeneb{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlobGasUsed:      fmt.Sprintf("%d", payload.BlobGasUsed),   // new in deneb TODO: rename to blob
+		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas), // new in deneb TODO: rename to blob
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
+	}, nil
 }
 
 func Uint256ToSSZBytes(num string) ([]byte, error) {
