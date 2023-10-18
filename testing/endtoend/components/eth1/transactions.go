@@ -84,12 +84,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			backend := ethclient.NewClient(client)
-			sender := common.HexToAddress(mineKey.Address.String())
-			nonce, err := backend.PendingNonceAt(context.Background(), sender)
-			if err != nil {
-				return err
-			}
-			err = SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, backend, nonce, false)
+			err = SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, backend, false)
 			if err != nil {
 				return err
 			}
@@ -104,9 +99,13 @@ func (s *TransactionGenerator) Started() <-chan struct{} {
 }
 
 func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int,
-	addr string, N uint64, backend *ethclient.Client, nonce uint64, al bool) error {
+	addr string, N uint64, backend *ethclient.Client, al bool) error {
 
 	sender := common.HexToAddress(addr)
+	nonce, err := backend.PendingNonceAt(context.Background(), sender)
+	if err != nil {
+		return err
+	}
 	chainid, err := backend.ChainID(context.Background())
 	if err != nil {
 		return err
@@ -119,51 +118,71 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		gasPrice = expectedPrice
 	}
 	g, _ := errgroup.WithContext(context.Background())
-	txs := make([]*types.Transaction, N)
+	txs := make([]*types.Transaction, 10)
+	for i := uint64(0); i < 10; i++ {
+		index := i
+		g.Go(func() error {
+			tx, err := RandomBlobTx(client, f, sender, nonce+index, gasPrice, chainid, al)
+			if err != nil {
+				logrus.WithError(err).Error("Could not create blob tx")
+				// In the event the transaction constructed is not valid, we continue with the routine
+				// rather than complete stop it.
+				//nolint:nilerr
+				return nil
+			}
+			signedTx, err := types.SignTx(tx, types.NewCancunSigner(chainid), key)
+			if err != nil {
+				logrus.WithError(err).Error("Could not sign blob tx")
+				// We continue on in the event there is a reason we can't sign this
+				// transaction(unlikely).
+				//nolint:nilerr
+				return nil
+			}
+			txs[index] = signedTx
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	for _, tx := range txs {
+		if tx == nil {
+			continue
+		}
+		err = backend.SendTransaction(context.Background(), tx)
+		if err != nil {
+			// Do nothing
+			continue
+		}
+	}
+
+	nonce, err = backend.PendingNonceAt(context.Background(), sender)
+	if err != nil {
+		return err
+	}
+
+	txs = make([]*types.Transaction, N)
 	for i := uint64(0); i < N; i++ {
 		index := i
-		if i < 90 {
-			g.Go(func() error {
-				tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, chainid, al)
-				if err != nil {
-					// In the event the transaction constructed is not valid, we continue with the routine
-					// rather than complete stop it.
-					//nolint:nilerr
-					return nil
-				}
-				signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
-				if err != nil {
-					// We continue on in the event there is a reason we can't sign this
-					// transaction(unlikely).
-					//nolint:nilerr
-					return nil
-				}
-				txs[index] = signedTx
+		g.Go(func() error {
+			tx, err := txfuzz.RandomValidTx(client, f, sender, nonce+index, gasPrice, chainid, al)
+			if err != nil {
+				// In the event the transaction constructed is not valid, we continue with the routine
+				// rather than complete stop it.
+				//nolint:nilerr
 				return nil
-			})
-		} else {
-			g.Go(func() error {
-				tx, err := RandomBlobTx(client, f, sender, nonce+index, gasPrice, chainid, al)
-				if err != nil {
-					logrus.WithError(err).Error("Could not create blob tx")
-					// In the event the transaction constructed is not valid, we continue with the routine
-					// rather than complete stop it.
-					//nolint:nilerr
-					return nil
-				}
-				signedTx, err := types.SignTx(tx, types.NewCancunSigner(chainid), key)
-				if err != nil {
-					logrus.WithError(err).Error("Could not sign blob tx")
-					// We continue on in the event there is a reason we can't sign this
-					// transaction(unlikely).
-					//nolint:nilerr
-					return nil
-				}
-				txs[index] = signedTx
-
+			}
+			signedTx, err := types.SignTx(tx, types.NewLondonSigner(chainid), key)
+			if err != nil {
+				// We continue on in the event there is a reason we can't sign this
+				// transaction(unlikely).
+				//nolint:nilerr
 				return nil
-			})
-		}
+			}
+			txs[index] = signedTx
+			return nil
+		})
 	}
 	if err := g.Wait(); err != nil {
 		return err
