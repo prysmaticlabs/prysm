@@ -194,7 +194,7 @@ func (s *Server) Start() {
 		}
 	}()
 
-	log.WithField("address", address).Info("gRPC server listening on address")
+	log.WithField("address", address).Info("validator gRPC server listening")
 	if s.walletDir != "" {
 		token, err := s.initializeAuthToken(s.walletDir)
 		if err != nil {
@@ -215,7 +215,7 @@ func (s *Server) Stop() error {
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
-		log.Debug("Initiated graceful stop of server")
+		log.Debug("Completed graceful stop of validator gRPC server")
 	}
 	return nil
 }

@@ -148,7 +148,7 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		log.WithError(err).Errorf("Could not listen to port in Start() %s", address)
 	}
 	s.listener = lis
-	log.WithField("address", address).Info("gRPC server listening on port")
+	log.WithField("address", address).Info("beacon-chain gRPC server listening")
 
 	opts := []grpc.ServerOption{
 		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
@@ -517,7 +517,7 @@ func (s *Service) Stop() error {
 	s.cancel()
 	if s.listener != nil {
 		s.grpcServer.GracefulStop()
-		log.Debug("Initiated graceful stop of gRPC server")
+		log.Debug("Completed graceful stop of beacon-chain gRPC server")
 	}
 	return nil
 }
