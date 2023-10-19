@@ -125,7 +125,7 @@ var Commands = []*cli.Command{
 			},
 			{
 				Name:    "proposer-settings",
-				Aliases: []string{"w"},
+				Aliases: []string{"ps"},
 				Usage:   "Display or recreate currently used proposer settings.",
 				Flags: []cli.Flag{
 					cmd.ConfigFileFlag,

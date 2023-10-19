@@ -66,7 +66,7 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.Validator{
+		Validator: &mock.MockValidator{
 			Km: km,
 		},
 	})
@@ -123,7 +123,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.Validator{
+		Validator: &mock.MockValidator{
 			Km: km,
 		},
 	})
@@ -262,7 +262,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.Validator{
+		Validator: &mock.MockValidator{
 			Km: km,
 		},
 	})
@@ -478,7 +478,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.Validator{
+		Validator: &mock.MockValidator{
 			Km: km,
 		},
 	})
@@ -511,7 +511,7 @@ func setupServerWithWallet(t testing.TB) *Server {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.Validator{
+		Validator: &mock.MockValidator{
 			Km: km,
 		},
 	})
@@ -540,161 +540,6 @@ func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
 		Version:     encryptor.Version(),
 		Description: encryptor.Name(),
 	}
-}
-
-func TestServer_ListRemoteKeys(t *testing.T) {
-	t.Run("wallet not ready", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
-	})
-	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
-	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
-	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
-	}
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.Validator{
-			Km: km,
-		},
-		Web3SignerConfig: config,
-	})
-	require.NoError(t, err)
-	s := &Server{
-		walletInitialized: true,
-		wallet:            w,
-		validatorService:  vs,
-	}
-	expectedKeys, err := km.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
-
-	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
-		resp, err := s.ListRemoteKeys(context.Background(), &empty.Empty{})
-		require.NoError(t, err)
-		for i := 0; i < len(resp.Data); i++ {
-			require.DeepEqual(t, expectedKeys[i][:], resp.Data[i].Pubkey)
-		}
-	})
-}
-
-func TestServer_ImportRemoteKeys(t *testing.T) {
-	t.Run("wallet not ready", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
-	})
-	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
-	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    nil,
-	}
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.Validator{
-			Km: km,
-		},
-		Web3SignerConfig: config,
-	})
-	require.NoError(t, err)
-	s := &Server{
-		walletInitialized: true,
-		wallet:            w,
-		validatorService:  vs,
-	}
-	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	require.NoError(t, err)
-	remoteKeys := []*ethpbservice.ImportRemoteKeysRequest_Keystore{
-		{
-			Pubkey: bytevalue,
-		},
-	}
-
-	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
-		resp, err := s.ImportRemoteKeys(context.Background(), &ethpbservice.ImportRemoteKeysRequest{
-			RemoteKeys: remoteKeys,
-		})
-		expectedStatuses := []*ethpbservice.ImportedRemoteKeysStatus{
-			{
-				Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
-				Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(bytevalue)),
-			},
-		}
-		require.NoError(t, err)
-		for i := 0; i < len(resp.Data); i++ {
-			require.DeepEqual(t, expectedStatuses[i], resp.Data[i])
-		}
-	})
-}
-
-func TestServer_DeleteRemoteKeys(t *testing.T) {
-	t.Run("wallet not ready", func(t *testing.T) {
-		s := Server{}
-		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
-		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
-	})
-	ctx := context.Background()
-	w := wallet.NewWalletForWeb3Signer()
-	root := make([]byte, fieldparams.RootLength)
-	root[0] = 1
-	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
-	require.NoError(t, err)
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
-	config := &remoteweb3signer.SetupConfig{
-		BaseEndpoint:          "http://example.com",
-		GenesisValidatorsRoot: root,
-		ProvidedPublicKeys:    pubkeys,
-	}
-	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
-	require.NoError(t, err)
-	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Wallet: w,
-		Validator: &mock.Validator{
-			Km: km,
-		},
-		Web3SignerConfig: config,
-	})
-	require.NoError(t, err)
-	s := &Server{
-		walletInitialized: true,
-		wallet:            w,
-		validatorService:  vs,
-	}
-
-	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
-		resp, err := s.DeleteRemoteKeys(context.Background(), &ethpbservice.DeleteRemoteKeysRequest{
-			Pubkeys: [][]byte{bytevalue},
-		})
-		expectedStatuses := []*ethpbservice.DeletedRemoteKeysStatus{
-			{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
-				Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(bytevalue)),
-			},
-		}
-		require.NoError(t, err)
-		for i := 0; i < len(resp.Data); i++ {
-			require.DeepEqual(t, expectedStatuses[i], resp.Data[i])
-
-		}
-		expectedKeys, err := km.FetchValidatingPublicKeys(ctx)
-		require.NoError(t, err)
-		require.Equal(t, 0, len(expectedKeys))
-	})
 }
 
 func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
@@ -762,7 +607,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 
@@ -799,7 +644,7 @@ func TestServer_ListFeeRecipientByPubKey_BeaconNodeError(t *testing.T) {
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("custom error"))
 
 	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Validator: &mock.Validator{},
+		Validator: &mock.MockValidator{},
 	})
 	require.NoError(t, err)
 
@@ -823,7 +668,7 @@ func TestServer_ListFeeRecipientByPubKey_NoFeeRecipientSet(t *testing.T) {
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Validator: &mock.Validator{},
+		Validator: &mock.MockValidator{},
 	})
 	require.NoError(t, err)
 
@@ -999,7 +844,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1102,7 +947,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1199,7 +1044,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1349,7 +1194,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1519,7 +1364,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
+			m := &mock.MockValidator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})

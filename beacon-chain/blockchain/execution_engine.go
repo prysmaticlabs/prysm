@@ -390,7 +390,7 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 			return err
 		}
 		// No op if the sidecar does not exist.
-		if err := s.cfg.BeaconDB.DeleteBlobSidecar(ctx, root); err != nil {
+		if err := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err != nil {
 			return err
 		}
 	}

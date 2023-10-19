@@ -261,7 +261,7 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 }
 
 // DeleteBlobSidecar returns true if the blobs are in the db.
-func (s *Store) DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte) error {
+func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {

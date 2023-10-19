@@ -13,9 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -23,9 +26,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
 	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	mocks "github.com/prysmaticlabs/prysm/v4/validator/testing"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -91,6 +96,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		beaconNodeValidatorClient: beaconClient,
 		wallet:                    w,
 		beaconNodeClient:          mockNodeClient,
+		walletInitialized:         w != nil,
 	}
 
 	type want struct {
@@ -158,6 +164,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			},
 			mockSetup: func(s *Server) error {
 				s.wallet = nil
+				s.walletInitialized = false
 				return nil
 			},
 		},
@@ -215,4 +222,180 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestServer_ListRemoteKeys(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
+		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
+	})
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	bytevalue, err := hexutil.Decode("0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a")
+	require.NoError(t, err)
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
+	config := &remoteweb3signer.SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		ProvidedPublicKeys:    pubkeys,
+	}
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+		Web3SignerConfig: config,
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+	expectedKeys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+
+	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/eth/v1/remotekeys", nil)
+		w := httptest.NewRecorder()
+		w.Body = &bytes.Buffer{}
+		s.ListRemoteKeys(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		resp := &ListRemoteKeysResponse{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
+		for i := 0; i < len(resp.Data); i++ {
+			require.DeepEqual(t, hexutil.Encode(expectedKeys[i][:]), resp.Data[i].Pubkey)
+		}
+	})
+}
+
+func TestServer_ImportRemoteKeys(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
+		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
+	})
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	config := &remoteweb3signer.SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		ProvidedPublicKeys:    nil,
+	}
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+		Web3SignerConfig: config,
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+	pubkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+	remoteKeys := []*RemoteKey{
+		{
+			Pubkey: pubkey,
+		},
+	}
+
+	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
+		var body bytes.Buffer
+		b, err := json.Marshal(&ImportRemoteKeysRequest{RemoteKeys: remoteKeys})
+		require.NoError(t, err)
+		body.Write(b)
+		req := httptest.NewRequest("GET", "/eth/v1/remotekeys", &body)
+		w := httptest.NewRecorder()
+		w.Body = &bytes.Buffer{}
+		s.ImportRemoteKeys(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		expectedStatuses := []*keymanager.KeyStatus{
+			{
+				Status:  remoteweb3signer.StatusImported,
+				Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
+			},
+		}
+		resp := &RemoteKeysResponse{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
+		for i := 0; i < len(resp.Data); i++ {
+			require.DeepEqual(t, expectedStatuses[i], resp.Data[i])
+		}
+	})
+}
+
+func TestServer_DeleteRemoteKeys(t *testing.T) {
+	t.Run("wallet not ready", func(t *testing.T) {
+		s := Server{}
+		_, err := s.ListKeystores(context.Background(), &empty.Empty{})
+		require.ErrorContains(t, "Prysm Wallet not initialized. Please create a new wallet.", err)
+	})
+	ctx := context.Background()
+	w := wallet.NewWalletForWeb3Signer()
+	root := make([]byte, fieldparams.RootLength)
+	root[0] = 1
+	pkey := "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+	bytevalue, err := hexutil.Decode(pkey)
+	require.NoError(t, err)
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{bytesutil.ToBytes48(bytevalue)}
+	config := &remoteweb3signer.SetupConfig{
+		BaseEndpoint:          "http://example.com",
+		GenesisValidatorsRoot: root,
+		ProvidedPublicKeys:    pubkeys,
+	}
+	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false, Web3SignerConfig: config})
+	require.NoError(t, err)
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Wallet: w,
+		Validator: &mock.MockValidator{
+			Km: km,
+		},
+		Web3SignerConfig: config,
+	})
+	require.NoError(t, err)
+	s := &Server{
+		walletInitialized: true,
+		wallet:            w,
+		validatorService:  vs,
+	}
+
+	t.Run("returns proper data with existing pub keystores", func(t *testing.T) {
+		var body bytes.Buffer
+		b, err := json.Marshal(&DeleteRemoteKeysRequest{
+			Pubkeys: []string{pkey},
+		})
+		require.NoError(t, err)
+		body.Write(b)
+		req := httptest.NewRequest("DELETE", "/eth/v1/remotekeys", &body)
+		w := httptest.NewRecorder()
+		w.Body = &bytes.Buffer{}
+		s.DeleteRemoteKeys(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
+		expectedStatuses := []*keymanager.KeyStatus{
+			{
+				Status:  remoteweb3signer.StatusDeleted,
+				Message: fmt.Sprintf("Successfully deleted pubkey: %v", pkey),
+			},
+		}
+		resp := &RemoteKeysResponse{}
+		require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
+		for i := 0; i < len(resp.Data); i++ {
+			require.DeepEqual(t, expectedStatuses[i], resp.Data[i])
+
+		}
+		expectedKeys, err := km.FetchValidatingPublicKeys(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 0, len(expectedKeys))
+	})
 }

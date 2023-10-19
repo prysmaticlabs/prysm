@@ -807,7 +807,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.Equal(t, len(pubKeys), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -902,7 +902,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	assert.Equal(t, len(beaconState.Validators), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
