@@ -1,4 +1,4 @@
-package beaconapi_evaluators
+package beaconapi
 
 import (
 	"bytes"
