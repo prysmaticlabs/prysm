@@ -7,14 +7,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
-// MockStateManager is a fake implementation of StateManager.
+// StateManager is a fake implementation of StateManager.
 type StateManager struct {
 	StatesByRoot map[[32]byte]state.BeaconState
 	StatesBySlot map[primitives.Slot]state.BeaconState
 }
 
-// NewMockService --
-func NewMockService() *StateManager {
+// NewService --
+func NewService() *StateManager {
 	return &StateManager{
 		StatesByRoot: make(map[[32]byte]state.BeaconState),
 		StatesBySlot: make(map[primitives.Slot]state.BeaconState),

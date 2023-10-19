@@ -22,8 +22,8 @@ type SecretKeyMockRecorder struct {
 	mock *SecretKey
 }
 
-// NewMockSecretKey creates a new mock instance.
-func NewMockSecretKey(ctrl *gomock.Controller) *SecretKey {
+// NewSecretKey creates a new mock instance.
+func NewSecretKey(ctrl *gomock.Controller) *SecretKey {
 	mock := &SecretKey{ctrl: ctrl}
 	mock.recorder = &SecretKeyMockRecorder{mock}
 	return mock
@@ -87,8 +87,8 @@ type PublicKeyMockRecorder struct {
 	mock *PublicKey
 }
 
-// NewMockPublicKey creates a new mock instance.
-func NewMockPublicKey(ctrl *gomock.Controller) *PublicKey {
+// NewPublicKey creates a new mock instance.
+func NewPublicKey(ctrl *gomock.Controller) *PublicKey {
 	mock := &PublicKey{ctrl: ctrl}
 	mock.recorder = &PublicKeyMockRecorder{mock}
 	return mock
@@ -180,8 +180,8 @@ type SignatureMockRecorder struct {
 	mock *Signature
 }
 
-// NewMockSignature creates a new mock instance.
-func NewMockSignature(ctrl *gomock.Controller) *Signature {
+// NewSignature creates a new mock instance.
+func NewSignature(ctrl *gomock.Controller) *Signature {
 	mock := &Signature{ctrl: ctrl}
 	mock.recorder = &SignatureMockRecorder{mock}
 	return mock

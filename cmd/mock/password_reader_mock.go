@@ -21,8 +21,8 @@ type PasswordReaderMockRecorder struct {
 	mock *PasswordReader
 }
 
-// NewMockPasswordReader creates a new mock instance
-func NewMockPasswordReader(ctrl *gomock.Controller) *PasswordReader {
+// NewPasswordReader creates a new mock instance
+func NewPasswordReader(ctrl *gomock.Controller) *PasswordReader {
 	mock := &PasswordReader{ctrl: ctrl}
 	mock.recorder = &PasswordReaderMockRecorder{mock}
 	return mock

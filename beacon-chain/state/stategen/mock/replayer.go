@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
-func NewMockReplayerBuilder(opt ...ReplayerBuilderOption) *ReplayerBuilder {
+func NewReplayerBuilder(opt ...ReplayerBuilderOption) *ReplayerBuilder {
 	b := &ReplayerBuilder{}
 	for _, o := range opt {
 		o(b)

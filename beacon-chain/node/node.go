@@ -295,9 +295,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	// db.DatabasePath is the path to the containing directory
-	// db.NewDBFilename expands that to the canonical full path using
+	// db.NewFileName expands that to the canonical full path using
 	// the same construction as NewDB()
-	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
+	c, err := newBeaconNodePromCollector(db.NewFileName(beacon.db.DatabasePath()))
 	if err != nil {
 		return nil, err
 	}
@@ -713,7 +713,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithStateGen(b.stateGen),
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
-		regularsync.WithExecutionPayloadReconstructor(web3Service),
+		regularsync.WithPayloadReconstructor(web3Service),
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
