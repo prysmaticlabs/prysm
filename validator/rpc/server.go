@@ -213,6 +213,8 @@ func (s *Server) Start() {
 	}
 }
 
+// InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
+// needs to be called before the Serve function
 func (s *Server) InitializeRoutes() error {
 	if s.router == nil {
 		return errors.New("no router found on server")
