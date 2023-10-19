@@ -224,7 +224,7 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-// KeyStatus returns nil or credentialError.
+// Status returns nil or credentialError.
 func (s *Server) Status() error {
 	return s.credentialError
 }

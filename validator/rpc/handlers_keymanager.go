@@ -115,12 +115,12 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusPreconditionFailed)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
 		return
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		http2.HandleError(w, errors.Errorf("Could not retrieve keystores: %v", err).Error(), http.StatusInternalServerError)
+		http2.HandleError(w, errors.Errorf("Could not retrieve public keys: %v", err).Error(), http.StatusInternalServerError)
 		return
 	}
 	keystoreResponse := make([]*RemoteKey, len(pubKeys))
@@ -157,7 +157,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusPreconditionFailed)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
 		return
 	}
 
@@ -214,7 +214,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusPreconditionFailed)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
 		return
 	}
 	var req DeleteRemoteKeysRequest
