@@ -29,7 +29,7 @@ func FlagOptions(c *cli.Context) ([]Option, error) {
 }
 
 // WithBuilderClient sets the builder client for the beacon chain builder service.
-func WithBuilderClient(client builder.Client) Option {
+func WithBuilderClient(client builder.BuilderClient) Option {
 	return func(s *Service) error {
 		s.cfg.builderClient = client
 		return nil

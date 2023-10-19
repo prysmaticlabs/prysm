@@ -89,8 +89,8 @@ type ExecPayloadResponse struct {
 type ExecHeaderResponseCapella struct {
 	Version string `json:"version"`
 	Data    struct {
-		Signature hexutil.Bytes          `json:"signature"`
-		Message   *builderAPI.BidCapella `json:"message"`
+		Signature hexutil.Bytes                 `json:"signature"`
+		Message   *builderAPI.BuilderBidCapella `json:"message"`
 	} `json:"data"`
 }
 
@@ -313,7 +313,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	weiEth := gEth.Mul(gEth, gEth)
 	val := builderAPI.Uint256{Int: weiEth}
 	wrappedHdr := &builderAPI.ExecutionPayloadHeader{ExecutionPayloadHeader: hdr}
-	bid := &builderAPI.Bid{
+	bid := &builderAPI.BuilderBid{
 		Header: wrappedHdr,
 		Value:  val,
 		Pubkey: secKey.PublicKey().Marshal(),
@@ -341,8 +341,8 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	hdrResp := &builderAPI.ExecHeaderResponse{
 		Version: "bellatrix",
 		Data: struct {
-			Signature hexutil.Bytes   `json:"signature"`
-			Message   *builderAPI.Bid `json:"message"`
+			Signature hexutil.Bytes          `json:"signature"`
+			Message   *builderAPI.BuilderBid `json:"message"`
 		}{
 			Signature: sig.Marshal(),
 			Message:   bid,
@@ -394,7 +394,7 @@ func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	}
 	val := builderAPI.Uint256{Int: v}
 	wrappedHdr := &builderAPI.ExecutionPayloadHeaderCapella{ExecutionPayloadHeaderCapella: hdr}
-	bid := &builderAPI.BidCapella{
+	bid := &builderAPI.BuilderBidCapella{
 		Header: wrappedHdr,
 		Value:  val,
 		Pubkey: secKey.PublicKey().Marshal(),
@@ -422,8 +422,8 @@ func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	hdrResp := &ExecHeaderResponseCapella{
 		Version: "capella",
 		Data: struct {
-			Signature hexutil.Bytes          `json:"signature"`
-			Message   *builderAPI.BidCapella `json:"message"`
+			Signature hexutil.Bytes                 `json:"signature"`
+			Message   *builderAPI.BuilderBidCapella `json:"message"`
 		}{
 			Signature: sig.Marshal(),
 			Message:   bid,

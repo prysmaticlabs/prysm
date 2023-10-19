@@ -122,7 +122,7 @@ type ExecHeaderResponse struct {
 	Version string `json:"version"`
 	Data    struct {
 		Signature hexutil.Bytes `json:"signature"`
-		Message   *Bid          `json:"message"`
+		Message   *BuilderBid   `json:"message"`
 	} `json:"data"`
 }
 
@@ -139,7 +139,7 @@ func (ehr *ExecHeaderResponse) ToProto() (*eth.SignedBuilderBid, error) {
 }
 
 // ToProto returns a BuilderBid Proto for Bellatrix.
-func (bb *Bid) ToProto() (*eth.BuilderBid, error) {
+func (bb *BuilderBid) ToProto() (*eth.BuilderBid, error) {
 	header, err := bb.Header.ToProto()
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (h *ExecutionPayloadHeader) ToProto() (*v1.ExecutionPayloadHeader, error) {
 }
 
 // BuilderBid is part of ExecHeaderResponse for Bellatrix.
-type Bid struct {
+type BuilderBid struct {
 	Header *ExecutionPayloadHeader `json:"header"`
 	Value  Uint256                 `json:"value"`
 	Pubkey hexutil.Bytes           `json:"pubkey"`
@@ -360,8 +360,8 @@ func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCape
 // ExecHeaderResponseCapella is the response of builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey} for Capella.
 type ExecHeaderResponseCapella struct {
 	Data struct {
-		Signature hexutil.Bytes `json:"signature"`
-		Message   *BidCapella   `json:"message"`
+		Signature hexutil.Bytes      `json:"signature"`
+		Message   *BuilderBidCapella `json:"message"`
 	} `json:"data"`
 }
 
@@ -378,7 +378,7 @@ func (ehr *ExecHeaderResponseCapella) ToProto() (*eth.SignedBuilderBidCapella, e
 }
 
 // ToProto returns a BuilderBidCapella Proto.
-func (bb *BidCapella) ToProto() (*eth.BuilderBidCapella, error) {
+func (bb *BuilderBidCapella) ToProto() (*eth.BuilderBidCapella, error) {
 	header, err := bb.Header.ToProto()
 	if err != nil {
 		return nil, err
@@ -412,7 +412,7 @@ func (h *ExecutionPayloadHeaderCapella) ToProto() (*v1.ExecutionPayloadHeaderCap
 }
 
 // BuilderBidCapella is field of ExecHeaderResponseCapella.
-type BidCapella struct {
+type BuilderBidCapella struct {
 	Header *ExecutionPayloadHeaderCapella `json:"header"`
 	Value  Uint256                        `json:"value"`
 	Pubkey hexutil.Bytes                  `json:"pubkey"`
@@ -846,8 +846,8 @@ func (ch *BLSToExecutionChange) MarshalJSON() ([]byte, error) {
 // ExecHeaderResponseDeneb is the header response for builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey}.
 type ExecHeaderResponseDeneb struct {
 	Data struct {
-		Signature hexutil.Bytes `json:"signature"`
-		Message   *BidDeneb     `json:"message"`
+		Signature hexutil.Bytes    `json:"signature"`
+		Message   *BuilderBidDeneb `json:"message"`
 	} `json:"data"`
 }
 
@@ -864,7 +864,7 @@ func (ehr *ExecHeaderResponseDeneb) ToProto() (*eth.SignedBuilderBidDeneb, error
 }
 
 // ToProto creates a BuilderBidDeneb Proto from BuilderBidDeneb.
-func (bb *BidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
+func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	header, err := bb.Header.ToProto()
 	if err != nil {
 		return nil, err
@@ -885,7 +885,7 @@ func (bb *BidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 }
 
 // BuilderBidDeneb is a field of ExecHeaderResponseDeneb.
-type BidDeneb struct {
+type BuilderBidDeneb struct {
 	Header             *ExecutionPayloadHeaderDeneb `json:"header"`
 	BlindedBlobsBundle *BlindedBlobsBundle          `json:"blinded_blobs_bundle"`
 	Value              Uint256                      `json:"value"`
