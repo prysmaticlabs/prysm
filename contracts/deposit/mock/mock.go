@@ -27,7 +27,7 @@ var (
 type TestAccount struct {
 	Addr         common.Address
 	ContractAddr common.Address
-	Contract     *deposit.Contract
+	Contract     *deposit.DepositContract
 	Backend      *backends.SimulatedBackend
 	TxOpts       *bind.TransactOpts
 }
@@ -80,8 +80,8 @@ func LessThan1Eth() *big.Int {
 }
 
 // DeployDepositContract deploys a new Ethereum contract, binding an instance of DepositContract to it.
-func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *deposit.Contract, error) {
-	parsed, err := abi.JSON(strings.NewReader(deposit.ContractABI))
+func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *deposit.DepositContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(deposit.DepositContractABI))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -90,7 +90,7 @@ func DeployDepositContract(auth *bind.TransactOpts, backend bind.ContractBackend
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
-	return address, tx, &deposit.Contract{
+	return address, tx, &deposit.DepositContract{
 		DepositContractCaller:     deposit.NewDepositContractCallerFromBoundContract(contract),
 		DepositContractTransactor: deposit.NewDepositContractTransactorFromBoundContract(contract),
 		DepositContractFilterer:   deposit.NewDepositContractFiltererFromBoundContract(contract),
