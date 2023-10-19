@@ -32,6 +32,7 @@ go_test(
     srcs = [
         "custom_handlers_test.go",
         "custom_hooks_test.go",
+        "endpoint_factory_test.go",
         "structs_marshalling_test.go",
     ],
     embed = [":go_default_library"],

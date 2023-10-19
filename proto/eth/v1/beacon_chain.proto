@@ -37,35 +37,6 @@ message StateRequest {
     bytes state_id = 1;
 }
 
-// Beacon Block API related messages.
-
-message BlockAttestationsResponse {
-    repeated ethereum.eth.v1.Attestation data = 1;
-    bool execution_optimistic = 2;
-    bool finalized  = 3;
-}
-
-message BlockRequest {
-    // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
-    // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
-    bytes block_id = 1;
-}
-
-message BlockResponse {
-    BeaconBlockContainer data = 1;
-}
-
-message BlockSSZResponse {
-    bytes data = 1;
-}
-
-message BeaconBlockContainer {
-    BeaconBlock message = 1;
-
-    // 96 byte BLS signature from the validator that produced this block.
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
 // Beacon Pool related API service.
 
 message AttesterSlashingsPoolResponse {

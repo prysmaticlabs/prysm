@@ -333,8 +333,9 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 	timeStamp := hexutil.Uint64(e.Timestamp)
 	recipient := common.BytesToAddress(e.FeeRecipient)
 	logsBloom := hexutil.Bytes(e.LogsBloom)
-	if e.Withdrawals == nil {
-		e.Withdrawals = make([]*Withdrawal, 0)
+	withdrawals := e.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
 	}
 	return json.Marshal(ExecutionPayloadCapellaJSON{
 		ParentHash:    &pHash,
@@ -351,7 +352,7 @@ func (e *ExecutionPayloadCapella) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
-		Withdrawals:   e.Withdrawals,
+		Withdrawals:   withdrawals,
 	})
 }
 
@@ -764,8 +765,9 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 	timeStamp := hexutil.Uint64(e.Timestamp)
 	recipient := common.BytesToAddress(e.FeeRecipient)
 	logsBloom := hexutil.Bytes(e.LogsBloom)
-	if e.Withdrawals == nil {
-		e.Withdrawals = make([]*Withdrawal, 0)
+	withdrawals := e.Withdrawals
+	if withdrawals == nil {
+		withdrawals = make([]*Withdrawal, 0)
 	}
 	blobGasUsed := hexutil.Uint64(e.BlobGasUsed)
 	excessBlobGas := hexutil.Uint64(e.ExcessBlobGas)
@@ -785,7 +787,7 @@ func (e *ExecutionPayloadDeneb) MarshalJSON() ([]byte, error) {
 		BaseFeePerGas: baseFeeHex,
 		BlockHash:     &bHash,
 		Transactions:  transactions,
-		Withdrawals:   e.Withdrawals,
+		Withdrawals:   withdrawals,
 		BlobGasUsed:   &blobGasUsed,
 		ExcessBlobGas: &excessBlobGas,
 	})
