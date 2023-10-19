@@ -1,6 +1,8 @@
 package beacon
 
 import (
+	"encoding/json"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
@@ -120,6 +122,28 @@ type Validator struct {
 type ValidatorBalance struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
+}
+
+type GetBlockResponse struct {
+	Data *SignedBlock `json:"data"`
+}
+
+type GetBlockV2Response struct {
+	Version             string       `json:"version"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
+	Data                *SignedBlock `json:"data"`
+}
+
+type SignedBlock struct {
+	Message   json.RawMessage `json:"message"` // represents the block values based on the version
+	Signature string          `json:"signature"`
+}
+
+type GetBlockAttestationsResponse struct {
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+	Data                []*shared.Attestation `json:"data"`
 }
 
 type GetStateRootResponse struct {
