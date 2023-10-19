@@ -16,7 +16,7 @@ func (a *Attestation) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the Attestation object to a target array
 func (a *Attestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 228
+	offset := int(228)
 
 	// Offset (0) 'AggregationBits'
 	dst = ssz.WriteOffset(dst, offset)
@@ -149,7 +149,7 @@ func (a *AggregateAttestationAndProof) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the AggregateAttestationAndProof object to a target array
 func (a *AggregateAttestationAndProof) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 108
+	offset := int(108)
 
 	// Field (0) 'AggregatorIndex'
 	dst = ssz.MarshalUint64(dst, uint64(a.AggregatorIndex))
@@ -271,7 +271,7 @@ func (s *SignedAggregateAttestationAndProof) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedAggregateAttestationAndProof object to a target array
 func (s *SignedAggregateAttestationAndProof) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Message'
 	dst = ssz.WriteOffset(dst, offset)
@@ -585,7 +585,7 @@ func (b *BeaconBlock) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlock object to a target array
 func (b *BeaconBlock) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -736,7 +736,7 @@ func (s *SignedBeaconBlock) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlock object to a target array
 func (s *SignedBeaconBlock) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -849,7 +849,7 @@ func (b *BeaconBlockAltair) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockAltair object to a target array
 func (b *BeaconBlockAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -1000,7 +1000,7 @@ func (s *SignedBeaconBlockAltair) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlockAltair object to a target array
 func (s *SignedBeaconBlockAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -1113,7 +1113,7 @@ func (b *BeaconBlockBody) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBody object to a target array
 func (b *BeaconBlockBody) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 220
+	offset := int(220)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -1567,7 +1567,7 @@ func (b *BeaconBlockBodyAltair) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBodyAltair object to a target array
 func (b *BeaconBlockBodyAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 380
+	offset := int(380)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -2130,7 +2130,7 @@ func (a *AttesterSlashing) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the AttesterSlashing object to a target array
 func (a *AttesterSlashing) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 8
+	offset := int(8)
 
 	// Offset (0) 'Attestation_1'
 	dst = ssz.WriteOffset(dst, offset)
@@ -2830,7 +2830,7 @@ func (i *IndexedAttestation) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the IndexedAttestation object to a target array
 func (i *IndexedAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 228
+	offset := int(228)
 
 	// Offset (0) 'AttestingIndices'
 	dst = ssz.WriteOffset(dst, offset)
@@ -3065,7 +3065,7 @@ func (s *SignedBeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlockBellatrix object to a target array
 func (s *SignedBeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -3178,7 +3178,7 @@ func (b *BeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBellatrix object to a target array
 func (b *BeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -3329,7 +3329,7 @@ func (b *BeaconBlockBodyBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBodyBellatrix object to a target array
 func (b *BeaconBlockBodyBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 384
+	offset := int(384)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -3843,7 +3843,7 @@ func (s *SignedBlindedBeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBlindedBeaconBlockBellatrix object to a target array
 func (s *SignedBlindedBeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -3956,7 +3956,7 @@ func (b *BlindedBeaconBlockBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockBellatrix object to a target array
 func (b *BlindedBeaconBlockBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -4107,7 +4107,7 @@ func (b *BlindedBeaconBlockBodyBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockBodyBellatrix object to a target array
 func (b *BlindedBeaconBlockBodyBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 384
+	offset := int(384)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -4621,7 +4621,7 @@ func (s *SignedBeaconBlockAndBlobsDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlockAndBlobsDeneb object to a target array
 func (s *SignedBeaconBlockAndBlobsDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 8
+	offset := int(8)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -4775,7 +4775,7 @@ func (s *SignedBeaconBlockDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlockDeneb object to a target array
 func (s *SignedBeaconBlockDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -4888,7 +4888,7 @@ func (b *BeaconBlockAndBlobsDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockAndBlobsDeneb object to a target array
 func (b *BeaconBlockAndBlobsDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 8
+	offset := int(8)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -5042,7 +5042,7 @@ func (b *BeaconBlockDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockDeneb object to a target array
 func (b *BeaconBlockDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -5193,7 +5193,7 @@ func (b *BeaconBlockBodyDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBodyDeneb object to a target array
 func (b *BeaconBlockBodyDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 392
+	offset := int(392)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -5832,7 +5832,7 @@ func (s *SignedBeaconBlockCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBeaconBlockCapella object to a target array
 func (s *SignedBeaconBlockCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -5945,7 +5945,7 @@ func (b *BeaconBlockCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockCapella object to a target array
 func (b *BeaconBlockCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -6096,7 +6096,7 @@ func (b *BeaconBlockBodyCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconBlockBodyCapella object to a target array
 func (b *BeaconBlockBodyCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 388
+	offset := int(388)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -6671,7 +6671,7 @@ func (s *SignedBlindedBeaconBlockCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBlindedBeaconBlockCapella object to a target array
 func (s *SignedBlindedBeaconBlockCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -6784,7 +6784,7 @@ func (b *BlindedBeaconBlockCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockCapella object to a target array
 func (b *BlindedBeaconBlockCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -6935,7 +6935,7 @@ func (b *BlindedBeaconBlockBodyCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockBodyCapella object to a target array
 func (b *BlindedBeaconBlockBodyCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 388
+	offset := int(388)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -7510,7 +7510,7 @@ func (s *SignedBlindedBeaconBlockAndBlobsDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBlindedBeaconBlockAndBlobsDeneb object to a target array
 func (s *SignedBlindedBeaconBlockAndBlobsDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 8
+	offset := int(8)
 
 	// Offset (0) 'SignedBlindedBlock'
 	dst = ssz.WriteOffset(dst, offset)
@@ -7664,7 +7664,7 @@ func (b *BlindedBeaconBlockAndBlobsDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockAndBlobsDeneb object to a target array
 func (b *BlindedBeaconBlockAndBlobsDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 8
+	offset := int(8)
 
 	// Offset (0) 'Block'
 	dst = ssz.WriteOffset(dst, offset)
@@ -7818,7 +7818,7 @@ func (s *SignedBlindedBeaconBlockDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the SignedBlindedBeaconBlockDeneb object to a target array
 func (s *SignedBlindedBeaconBlockDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 100
+	offset := int(100)
 
 	// Offset (0) 'Message'
 	dst = ssz.WriteOffset(dst, offset)
@@ -7931,7 +7931,7 @@ func (b *BlindedBeaconBlockDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockDeneb object to a target array
 func (b *BlindedBeaconBlockDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Field (0) 'Slot'
 	dst = ssz.MarshalUint64(dst, uint64(b.Slot))
@@ -8082,7 +8082,7 @@ func (b *BlindedBeaconBlockBodyDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BlindedBeaconBlockBodyDeneb object to a target array
 func (b *BlindedBeaconBlockBodyDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 392
+	offset := int(392)
 
 	// Field (0) 'RandaoReveal'
 	if size := len(b.RandaoReveal); size != 96 {
@@ -8912,7 +8912,7 @@ func (b *BuilderBid) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BuilderBid object to a target array
 func (b *BuilderBid) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Offset (0) 'Header'
 	dst = ssz.WriteOffset(dst, offset)
@@ -9045,7 +9045,7 @@ func (b *BuilderBidCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BuilderBidCapella object to a target array
 func (b *BuilderBidCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 84
+	offset := int(84)
 
 	// Offset (0) 'Header'
 	dst = ssz.WriteOffset(dst, offset)
@@ -9178,7 +9178,7 @@ func (b *BuilderBidDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BuilderBidDeneb object to a target array
 func (b *BuilderBidDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 88
+	offset := int(88)
 
 	// Offset (0) 'Header'
 	dst = ssz.WriteOffset(dst, offset)
@@ -9465,7 +9465,7 @@ func (b *BeaconState) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconState object to a target array
 func (b *BeaconState) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 2687377
+	offset := int(2687377)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -10273,7 +10273,7 @@ func (b *BeaconStateAltair) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconStateAltair object to a target array
 func (b *BeaconStateAltair) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 2736629
+	offset := int(2736629)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -11210,7 +11210,7 @@ func (p *PendingAttestation) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the PendingAttestation object to a target array
 func (p *PendingAttestation) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 148
+	offset := int(148)
 
 	// Offset (0) 'AggregationBits'
 	dst = ssz.WriteOffset(dst, offset)
@@ -11916,7 +11916,7 @@ func (b *BeaconStateBellatrix) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconStateBellatrix object to a target array
 func (b *BeaconStateBellatrix) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 2736633
+	offset := int(2736633)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -12797,7 +12797,7 @@ func (b *BeaconStateCapella) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconStateCapella object to a target array
 func (b *BeaconStateCapella) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 2736653
+	offset := int(2736653)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
@@ -13757,7 +13757,7 @@ func (b *BeaconStateDeneb) MarshalSSZ() ([]byte, error) {
 // MarshalSSZTo ssz marshals the BeaconStateDeneb object to a target array
 func (b *BeaconStateDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) {
 	dst = buf
-	offset := 2736653
+	offset := int(2736653)
 
 	// Field (0) 'GenesisTime'
 	dst = ssz.MarshalUint64(dst, b.GenesisTime)
