@@ -66,7 +66,7 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -123,7 +123,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -262,7 +262,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -478,7 +478,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -511,7 +511,7 @@ func setupServerWithWallet(t testing.TB) *Server {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -607,7 +607,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
 
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 
@@ -644,7 +644,7 @@ func TestServer_ListFeeRecipientByPubKey_BeaconNodeError(t *testing.T) {
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, errors.New("custom error"))
 
 	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Validator: &mock.MockValidator{},
+		Validator: &mock.Validator{},
 	})
 	require.NoError(t, err)
 
@@ -668,7 +668,7 @@ func TestServer_ListFeeRecipientByPubKey_NoFeeRecipientSet(t *testing.T) {
 	mockValidatorClient.EXPECT().GetFeeRecipientByPubKey(gomock.Any(), gomock.Any()).Return(nil, nil)
 
 	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Validator: &mock.MockValidator{},
+		Validator: &mock.Validator{},
 	})
 	require.NoError(t, err)
 
@@ -844,7 +844,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -947,7 +947,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1044,7 +1044,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1194,7 +1194,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -1364,7 +1364,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
