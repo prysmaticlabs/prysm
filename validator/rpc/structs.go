@@ -47,5 +47,4 @@ type DeleteRemoteKeysRequest struct {
 
 type RemoteKeysResponse struct {
 	Data []*keymanager.KeyStatus `json:"data"`
-
 }
