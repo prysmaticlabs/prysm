@@ -8,10 +8,10 @@ import (
 )
 
 func TestBeaconEndpointFactory_AllPathsRegistered(t *testing.T) {
-  f := &apimiddleware.BeaconEndpointFactory{}
+	f := &apimiddleware.BeaconEndpointFactory{}
 
-  for _, p := range f.Paths() {
-    _, err := f.Create(p)
-    require.NoError(t, err, "failed to register %s", p)
-  }
+	for _, p := range f.Paths() {
+		_, err := f.Create(p)
+		require.NoError(t, err, "failed to register %s", p)
+	}
 }
