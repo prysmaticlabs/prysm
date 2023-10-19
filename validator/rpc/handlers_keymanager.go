@@ -197,7 +197,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 
 // DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
 func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ImportRemoteKeys")
+	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteRemoteKeys")
 	defer span.End()
 
 	if s.validatorService == nil {
