@@ -167,7 +167,10 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 
 	var req ImportRemoteKeysRequest
 	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
-    adder, ok := km.(keymanager.PublicKeyAdder)
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	adder, ok := km.(keymanager.PublicKeyAdder)
 	if !ok {
 		statuses := make([]*keymanager.KeyStatus, len(req.RemoteKeys))
 		for i := 0; i < len(req.RemoteKeys); i++ {
@@ -238,7 +241,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 
 	http2.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
 }
-  
+
 // GetGasLimit returns the gas limit measured in gwei defined for the custom mev builder by public key
 func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGasLimit")
