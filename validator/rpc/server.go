@@ -212,7 +212,6 @@ func (s *Server) Start() {
 		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
-
 }
 
 // Stop the gRPC server.
