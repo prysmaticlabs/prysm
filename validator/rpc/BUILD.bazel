@@ -18,8 +18,7 @@ go_library(
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/rpc",
     visibility = [
-        "//cmd/validator:__subpackages__",
-        "//validator:__subpackages__",
+        "//visibility:public",
     ],
     deps = [
         "//api/grpc:go_default_library",
@@ -58,6 +57,7 @@ go_library(
         "//validator/keymanager:go_default_library",
         "//validator/keymanager/derived:go_default_library",
         "//validator/keymanager/local:go_default_library",
+        "//validator/keymanager/remote-web3signer:go_default_library",
         "//validator/slashing-protection-history:go_default_library",
         "//validator/slashing-protection-history/format:go_default_library",
         "@com_github_ethereum_go_ethereum//common:go_default_library",
