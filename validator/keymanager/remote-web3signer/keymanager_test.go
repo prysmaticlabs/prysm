@@ -8,10 +8,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/internal"
@@ -299,20 +297,14 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	require.NoError(t, err)
-	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
-		bytesutil.ToBytes48(pubkey),
-	}
-	statuses, err := km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
+	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, StatusImported, status.Status)
 	}
-	statuses, err = km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	statuses = km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_DUPLICATE, status.Status)
+		require.Equal(t, StatusDuplicate, status.Status)
 	}
 }
 
@@ -330,26 +322,19 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	if err != nil {
 		fmt.Printf("error: %v", err)
 	}
-	pubkey, err := hexutil.Decode("0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820")
-	require.NoError(t, err)
-	publicKeys := [][fieldparams.BLSPubkeyLength]byte{
-		bytesutil.ToBytes48(pubkey),
-	}
-	statuses, err := km.AddPublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
+	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, ethpbservice.ImportedRemoteKeysStatus_IMPORTED, status.Status)
+		require.Equal(t, StatusImported, status.Status)
 	}
 
-	s, err := km.DeletePublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	s := km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_DELETED, status.Status)
+		require.Equal(t, StatusDeleted, status.Status)
 	}
 
-	s, err = km.DeletePublicKeys(ctx, publicKeys)
-	require.NoError(t, err)
+	s = km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND, status.Status)
+		require.Equal(t, StatusNotFound, status.Status)
 	}
 }
