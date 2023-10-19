@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
 	var port int
 	if len(bnType) > 0 {
 		switch bnType[0] {
@@ -41,7 +41,7 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
+func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
 	client := &http.Client{}
 	var port int
 	if len(bnType) > 0 {
@@ -82,7 +82,7 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 	return body, nil
 }
 
-func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
 	var port int
 	if len(bnType) > 0 {
 		switch bnType[0] {

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
@@ -22,7 +21,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
+var (
+	errSszCast  = errors.New("ssz response is not a byte array")
+	errJsonCast = errors.New("json response has wrong structure")
+)
+
 type metadata struct {
+	start            primitives.Epoch
 	basepath         string
 	params           func(encoding string, currentEpoch primitives.Epoch) []string
 	requestObject    interface{}
@@ -31,9 +36,9 @@ type metadata struct {
 	customEvaluation func(interface{}, interface{}) error
 }
 
-var beaconPathsAndObjects = map[string]metadata{
+var requests = map[string]metadata{
 	"/beacon/genesis": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
@@ -45,7 +50,7 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 	},
 	"/beacon/states/{param1}/root": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{"head"}
 		},
@@ -54,43 +59,10 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 		lighthouseResps: map[string]interface{}{
 			"json": &beacon.GetStateRootResponse{},
-		},
-	},
-	"/beacon/states/{param1}/finality_checkpoints": {
-		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{"head"}
-		},
-		prysmResps: map[string]interface{}{
-			"json": &beacon.GetFinalityCheckpointsResponse{},
-		},
-		lighthouseResps: map[string]interface{}{
-			"json": &beacon.GetFinalityCheckpointsResponse{},
-		},
-	},
-	"/beacon/blocks/{param1}": {
-		basepath: v2MiddlewarePathTemplate,
-		params: func(t string, e primitives.Epoch) []string {
-			if t == "ssz" {
-				if e < 4 {
-					return []string{"genesis"}
-				}
-				return []string{"finalized"}
-			}
-			return []string{"head"}
-
-		},
-		prysmResps: map[string]interface{}{
-			"json": &beacon.GetBlockV2Response{},
-			"ssz":  []byte{},
-		},
-		lighthouseResps: map[string]interface{}{
-			"json": &beacon.GetBlockV2Response{},
-			"ssz":  []byte{},
 		},
 	},
 	"/beacon/states/{param1}/fork": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{"finalized"}
 		},
@@ -101,8 +73,166 @@ var beaconPathsAndObjects = map[string]metadata{
 			"json": &beacon.GetStateForkResponse{},
 		},
 	},
+	"/beacon/states/{param1}/finality_checkpoints": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetFinalityCheckpointsResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetFinalityCheckpointsResponse{},
+		},
+	},
+	// we want to test comma-separated query params
+	"/beacon/states/{param1}/validators?id=0,1": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetValidatorsResponse{},
+		},
+	},
+	"/beacon/states/{param1}/validators/{param2}": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head", "0"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetValidatorResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetValidatorResponse{},
+		},
+	},
+	"/beacon/states/{param1}/validator_balances?id=0,1": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetValidatorBalancesResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetValidatorBalancesResponse{},
+		},
+	},
+	"/beacon/states/{param1}/committees?index=0": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetCommitteesResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetCommitteesResponse{},
+		},
+	},
+	"/beacon/states/{param1}/sync_committees": {
+		start:    helpers.AltairE2EForkEpoch,
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetSyncCommitteeResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetSyncCommitteeResponse{},
+		},
+	},
+	"/beacon/states/{param1}/randao": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetRandaoResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetRandaoResponse{},
+		},
+	},
+	"/beacon/headers": {
+		basepath: v1PathTemplate,
+		params: func(_ string, _ primitives.Epoch) []string {
+			return []string{}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetBlockHeadersResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetBlockHeadersResponse{},
+		},
+	},
+	"/beacon/headers/{param1}": {
+		basepath: v1PathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			slot := uint64(0)
+			if e > 0 {
+				slot = (uint64(e) * uint64(params.BeaconConfig().SlotsPerEpoch)) - 1
+			}
+			return []string{fmt.Sprintf("%v", slot)}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetBlockHeaderResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetBlockHeaderResponse{},
+		},
+	},
+	"/beacon/blocks/{param1}": {
+		basepath: v2PathTemplate,
+		params: func(t string, e primitives.Epoch) []string {
+			if t == "ssz" {
+				if e < 4 {
+					return []string{"genesis"}
+				}
+				return []string{"finalized"}
+			}
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetBlockV2Response{},
+			"ssz":  []byte{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetBlockV2Response{},
+			"ssz":  []byte{},
+		},
+	},
+	"/beacon/blocks/{param1}/root": {
+		basepath: v1PathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.BlockRootResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.BlockRootResponse{},
+		},
+	},
+	"/beacon/blocks/{param1}/attestations": {
+		basepath: v1PathTemplate,
+		params: func(_ string, e primitives.Epoch) []string {
+			return []string{"head"}
+		},
+		prysmResps: map[string]interface{}{
+			"json": &beacon.GetBlockAttestationsResponse{},
+		},
+		lighthouseResps: map[string]interface{}{
+			"json": &beacon.GetBlockAttestationsResponse{},
+		},
+	},
 	"/debug/beacon/states/{param1}": {
-		basepath: v2MiddlewarePathTemplate,
+		basepath: v2PathTemplate,
 		params: func(_ string, e primitives.Epoch) []string {
 			return []string{"head"}
 		},
@@ -114,7 +244,7 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 	},
 	"/validator/duties/proposer/{param1}": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, e primitives.Epoch) []string {
 			return []string{fmt.Sprintf("%v", e)}
 		},
@@ -138,7 +268,7 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 	},
 	"/validator/duties/attester/{param1}": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, e primitives.Epoch) []string {
 			//ask for a future epoch to test this case
 			return []string{fmt.Sprintf("%v", e+1)}
@@ -173,37 +303,8 @@ var beaconPathsAndObjects = map[string]metadata{
 			return compareJSONResponseObjects(prysmResp, castedl)
 		},
 	},
-	"/beacon/headers/{param1}": {
-		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, e primitives.Epoch) []string {
-			slot := uint64(0)
-			if e > 0 {
-				slot = (uint64(e) * uint64(params.BeaconConfig().SlotsPerEpoch)) - 1
-			}
-			return []string{fmt.Sprintf("%v", slot)}
-		},
-		prysmResps: map[string]interface{}{
-			"json": &beacon.GetBlockHeaderResponse{},
-		},
-		lighthouseResps: map[string]interface{}{
-			"json": &beacon.GetBlockHeaderResponse{},
-		},
-	},
-	// we want to test comma-separated query params
-	"/beacon/states/{param1}/validators?id=0,1": {
-		basepath: v1MiddlewarePathTemplate,
-		params: func(_ string, e primitives.Epoch) []string {
-			return []string{"head"}
-		},
-		prysmResps: map[string]interface{}{
-			"json": &beacon.GetValidatorsResponse{},
-		},
-		lighthouseResps: map[string]interface{}{
-			"json": &beacon.GetValidatorsResponse{},
-		},
-	},
 	"/node/identity": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
@@ -232,7 +333,7 @@ var beaconPathsAndObjects = map[string]metadata{
 		},
 	},
 	"/node/peers": {
-		basepath: v1MiddlewarePathTemplate,
+		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
 			return []string{}
 		},
@@ -264,8 +365,8 @@ var beaconPathsAndObjects = map[string]metadata{
 
 func withCompareBeaconAPIs(beaconNodeIdx int) error {
 	genesisResp := &beacon.GetGenesisResponse{}
-	err := doMiddlewareJSONGetRequest(
-		v1MiddlewarePathTemplate,
+	err := doJSONGetRequest(
+		v1PathTemplate,
 		"/beacon/genesis",
 		beaconNodeIdx,
 		genesisResp,
@@ -279,7 +380,10 @@ func withCompareBeaconAPIs(beaconNodeIdx int) error {
 	}
 	currentEpoch := slots.EpochsSinceGenesis(time.Unix(genesisTime, 0))
 
-	for path, meta := range beaconPathsAndObjects {
+	for path, meta := range requests {
+		if currentEpoch < meta.start {
+			continue
+		}
 		for key := range meta.prysmResps {
 			switch key {
 			case "json":
@@ -290,8 +394,8 @@ func withCompareBeaconAPIs(beaconNodeIdx int) error {
 					meta.basepath,
 					apipath,
 					meta.requestObject,
-					beaconPathsAndObjects[path].prysmResps[key],
-					beaconPathsAndObjects[path].lighthouseResps[key],
+					requests[path].prysmResps[key],
+					requests[path].lighthouseResps[key],
 					meta.customEvaluation,
 				); err != nil {
 					return err
@@ -307,104 +411,88 @@ func withCompareBeaconAPIs(beaconNodeIdx int) error {
 				if err != nil {
 					return err
 				}
-				beaconPathsAndObjects[path].prysmResps[key] = prysmr
-				beaconPathsAndObjects[path].lighthouseResps[key] = lighthouser
+				requests[path].prysmResps[key] = prysmr
+				requests[path].lighthouseResps[key] = lighthouser
 			default:
 				return fmt.Errorf("unknown encoding type %s", key)
 			}
 		}
 	}
-	return orderedEvaluationOnResponses(beaconPathsAndObjects, genesisResp)
+	return postEvaluation(requests)
 }
 
-func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, genesisData *beacon.GetGenesisResponse) error {
-	forkPathData := beaconPathsAndObjects["/beacon/states/{param1}/fork"]
+// postEvaluation performs additional evaluation after all requests have been completed.
+// It is useful for things such as checking if specific fields match between endpoints.
+func postEvaluation(requests map[string]metadata) error {
+	// verify that SSZ responses have the correct structure
+	forkPathData := requests["/beacon/states/{param1}/fork"]
 	prysmForkData, ok := forkPathData.prysmResps["json"].(*beacon.GetStateForkResponse)
 	if !ok {
-		return errors.New("failed to cast type")
+		return errJsonCast
 	}
-	lighthouseForkData, ok := forkPathData.lighthouseResps["json"].(*beacon.GetStateForkResponse)
-	if !ok {
-		return errors.New("failed to cast type")
-	}
-	if prysmForkData.Data.Epoch != lighthouseForkData.Data.Epoch {
-		return fmt.Errorf("prysm epoch %v does not match lighthouse epoch %v",
-			prysmForkData.Data.Epoch,
-			lighthouseForkData.Data.Epoch)
-	}
-
 	finalizedEpoch, err := strconv.ParseUint(prysmForkData.Data.Epoch, 10, 64)
 	if err != nil {
 		return err
 	}
-	blockPathData := beaconPathsAndObjects["/beacon/blocks/{param1}"]
-	sszrspL, ok := blockPathData.prysmResps["ssz"].([]byte)
+	blockPathData := requests["/beacon/blocks/{param1}"]
+	sszL, ok := blockPathData.prysmResps["ssz"].([]byte)
 	if !ok {
-		return errors.New("failed to cast type")
+		return errSszCast
 	}
-	sszrspP, ok := blockPathData.lighthouseResps["ssz"].([]byte)
+	sszP, ok := blockPathData.lighthouseResps["ssz"].([]byte)
 	if !ok {
-		return errors.New("failed to cast type")
+		return errSszCast
 	}
 	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
 		blockP := &ethpb.SignedBeaconBlock{}
 		blockL := &ethpb.SignedBeaconBlock{}
-		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
+		if err := blockL.UnmarshalSSZ(sszL); err != nil {
 			return errors.Wrap(err, "failed to unmarshal lighthouse ssz")
 		}
-		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-			return errors.Wrap(err, "failed to unmarshal rysm ssz")
-		}
-		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-			return errors.New("prysm signature does not match lighthouse signature")
+		if err := blockP.UnmarshalSSZ(sszP); err != nil {
+			return errors.Wrap(err, "failed to unmarshal prysm ssz")
 		}
 	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockAltair{}
 		blockL := &ethpb.SignedBeaconBlockAltair{}
-		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-			return errors.Wrap(err, "lighthouse ssz error")
+		if err := blockL.UnmarshalSSZ(sszL); err != nil {
+			return errors.Wrap(err, "failed to unmarshal lighthouse ssz")
 		}
-		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-			return errors.Wrap(err, "prysm ssz error")
+		if err := blockP.UnmarshalSSZ(sszP); err != nil {
+			return errors.Wrap(err, "failed to unmarshal prysm ssz")
 		}
-
-		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-				blockP,
-				blockL)
-		}
-	} else {
+	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
 		blockP := &ethpb.SignedBeaconBlockBellatrix{}
 		blockL := &ethpb.SignedBeaconBlockBellatrix{}
-		if err := blockL.UnmarshalSSZ(sszrspL); err != nil {
-			return errors.Wrap(err, "lighthouse ssz error")
+		if err := blockL.UnmarshalSSZ(sszL); err != nil {
+			return errors.Wrap(err, "failed to unmarshal lighthouse ssz")
 		}
-		if err := blockP.UnmarshalSSZ(sszrspP); err != nil {
-			return errors.Wrap(err, "prysm ssz error")
+		if err := blockP.UnmarshalSSZ(sszP); err != nil {
+			return errors.Wrap(err, "failed to unmarshal prysm ssz")
 		}
+	} else {
+		blockP := &ethpb.SignedBeaconBlockCapella{}
+		blockL := &ethpb.SignedBeaconBlockCapella{}
+		if err := blockL.UnmarshalSSZ(sszL); err != nil {
+			return errors.Wrap(err, "failed to unmarshal lighthouse ssz")
+		}
+		if err := blockP.UnmarshalSSZ(sszP); err != nil {
+			return errors.Wrap(err, "failed to unmarshal prysm ssz")
+		}
+	}
 
-		if len(blockP.Signature) == 0 || len(blockL.Signature) == 0 || hexutil.Encode(blockP.Signature) != hexutil.Encode(blockL.Signature) {
-			return fmt.Errorf("prysm response %v does not match lighthouse response %v",
-				blockP,
-				blockL)
-		}
-	}
-	blockheaderData := beaconPathsAndObjects["/beacon/headers/{param1}"]
-	prysmHeader, ok := blockheaderData.prysmResps["json"].(*beacon.GetBlockHeaderResponse)
+	// verify that dependent root of proposer duties matches block header
+	blockHeaderData := requests["/beacon/headers/{param1}"]
+	prysmHeader, ok := blockHeaderData.prysmResps["json"].(*beacon.GetBlockHeaderResponse)
 	if !ok {
-		return errors.New("failed to cast type")
+		return errJsonCast
 	}
-	proposerdutiesData := beaconPathsAndObjects["/validator/duties/proposer/{param1}"]
-	prysmDuties, ok := proposerdutiesData.prysmResps["json"].(*validator.GetProposerDutiesResponse)
+	proposerDutiesData := requests["/validator/duties/proposer/{param1}"]
+	prysmDuties, ok := proposerDutiesData.prysmResps["json"].(*validator.GetProposerDutiesResponse)
 	if !ok {
-		return errors.New("failed to cast type")
+		return errJsonCast
 	}
 	if prysmHeader.Data.Root != prysmDuties.DependentRoot {
-		genesisTime, err := strconv.ParseUint(genesisData.Data.GenesisTime, 10, 64)
-		if err != nil {
-			return errors.Wrapf(err, "could not parse genesis time")
-		}
-		fmt.Printf("current slot: %v\n", slots.CurrentSlot(genesisTime))
 		return fmt.Errorf("header root %s does not match duties root %s ", prysmHeader.Data.Root, prysmDuties.DependentRoot)
 	}
 
@@ -413,7 +501,7 @@ func orderedEvaluationOnResponses(beaconPathsAndObjects map[string]metadata, gen
 
 func compareJSONMulticlient(beaconNodeIdx int, base string, path string, requestObj, respJSONPrysm interface{}, respJSONLighthouse interface{}, customEvaluator func(interface{}, interface{}) error) error {
 	if requestObj != nil {
-		if err := doMiddlewareJSONPostRequest(
+		if err := doJSONPostRequest(
 			base,
 			path,
 			beaconNodeIdx,
@@ -423,7 +511,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, request
 			return errors.Wrap(err, "could not perform POST request for Prysm JSON")
 		}
 
-		if err := doMiddlewareJSONPostRequest(
+		if err := doJSONPostRequest(
 			base,
 			path,
 			beaconNodeIdx,
@@ -434,7 +522,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, request
 			return errors.Wrap(err, "could not perform POST request for Lighthouse JSON")
 		}
 	} else {
-		if err := doMiddlewareJSONGetRequest(
+		if err := doJSONGetRequest(
 			base,
 			path,
 			beaconNodeIdx,
@@ -443,7 +531,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, request
 			return errors.Wrap(err, "could not perform GET request for Prysm JSON")
 		}
 
-		if err := doMiddlewareJSONGetRequest(
+		if err := doJSONGetRequest(
 			base,
 			path,
 			beaconNodeIdx,
@@ -461,7 +549,7 @@ func compareJSONMulticlient(beaconNodeIdx int, base string, path string, request
 }
 
 func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte, []byte, error) {
-	sszrspL, err := doMiddlewareSSZGetRequest(
+	sszrspL, err := doSSZGetRequest(
 		base,
 		path,
 		beaconNodeIdx,
@@ -471,7 +559,7 @@ func compareSSZMulticlient(beaconNodeIdx int, base string, path string) ([]byte,
 		return nil, nil, errors.Wrap(err, "could not perform GET request for Lighthouse SSZ")
 	}
 
-	sszrspP, err := doMiddlewareSSZGetRequest(
+	sszrspP, err := doSSZGetRequest(
 		base,
 		path,
 		beaconNodeIdx,
@@ -505,7 +593,7 @@ func compareJSONResponseObjects(prysmResp interface{}, lighthouseResp interface{
 func pathFromParams(path string, params []string) string {
 	apiPath := path
 	for index := range params {
-		apiPath = strings.Replace(path, fmt.Sprintf("{param%d}", index+1), params[index], 1)
+		apiPath = strings.Replace(apiPath, fmt.Sprintf("{param%d}", index+1), params[index], 1)
 	}
 	return apiPath
 }
