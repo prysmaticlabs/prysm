@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -44,7 +45,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		if err != nil {
 			return err
 		}
-		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot, id); err != nil {
+		if err := s.requestPendingBlobs(ctx, blk, blkRoot, id); err != nil {
 			return err
 		}
 	}
@@ -116,12 +117,12 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 }
 
 // requestPendingBlobs handles the request for pending blobs based on the given beacon block.
-func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte, peerID peer.ID) error {
+func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, peerID peer.ID) error {
 	if block.Version() < version.Deneb {
 		return nil // Block before deneb has no blob.
 	}
 
-	commitments, err := block.Body().BlobKzgCommitments()
+	commitments, err := block.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		return err
 	}
@@ -140,11 +141,11 @@ func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.Read
 		return err
 	}
 
-	return s.sendAndSaveBlobSidecars(ctx, request, contextByte, peerID)
+	return s.sendAndSaveBlobSidecars(ctx, request, contextByte, peerID, block)
 }
 
 // sendAndSaveBlobSidecars sends the blob request and saves received sidecars.
-func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, contextByte ContextByteVersions, peerID peer.ID) error {
+func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, contextByte ContextByteVersions, peerID peer.ID, block interfaces.ReadOnlySignedBeaconBlock) error {
 	if len(request) == 0 {
 		return nil
 	}
@@ -154,7 +155,14 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 		return err
 	}
 
+	RoBlock, err := blocks.NewROBlock(block)
+	if err != nil {
+		return err
+	}
 	for _, sidecar := range sidecars {
+		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
+			return err
+		}
 		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")
 	}
 
