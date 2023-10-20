@@ -31,3 +31,17 @@ type DeleteRemoteKeysRequest struct {
 type RemoteKeysResponse struct {
 	Data []*keymanager.KeyStatus `json:"data"`
 }
+
+// Fee Recipient keymanager api
+type FeeRecipient struct {
+	Pubkey     string `json:"pubkey" hex:"true"`
+	Ethaddress string `json:"ethaddress" address:"true"`
+}
+
+type GetFeeRecipientByPubkeyResponse struct {
+	Data *FeeRecipient `json:"data"`
+}
+
+type SetFeeRecipientByPubkeyRequest struct {
+	Ethaddress string `json:"ethaddress" hex:"true"`
+}

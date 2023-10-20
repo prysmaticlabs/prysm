@@ -33,26 +33,9 @@ type DeleteKeystoresResponseJson struct {
 	SlashingProtection string        `json:"slashing_protection"`
 }
 
-type FeeRecipientJson struct {
-	Pubkey     string `json:"pubkey" hex:"true"`
-	Ethaddress string `json:"ethaddress" address:"true"`
-}
-
 type GasLimitJson struct {
 	Pubkey   string `json:"pubkey" hex:"true"`
 	GasLimit string `json:"gas_limit"`
-}
-
-type GetFeeRecipientByPubkeyResponseJson struct {
-	Data *FeeRecipientJson `json:"data"`
-}
-
-type SetFeeRecipientByPubkeyRequestJson struct {
-	Ethaddress string `json:"ethaddress" hex:"true"`
-}
-
-type DeleteFeeRecipientByPubkeyRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
 }
 
 type GetGasLimitResponseJson struct {
