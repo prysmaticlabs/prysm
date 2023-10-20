@@ -343,7 +343,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			if settings.DefaultConfig == nil {
-				http2.HandleError(w, "gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
+				http2.HandleError(w, "Gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
 				return
 			}
 			option := settings.DefaultConfig.Clone()
