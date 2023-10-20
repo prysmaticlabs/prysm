@@ -20,7 +20,7 @@ var (
 )
 
 // WalletRecover uses a menmonic seed phrase to recover a wallet into the path provided.
-func (acm *AccountsCLIManager) WalletRecover(ctx context.Context) (*wallet.Wallet, error) {
+func (acm *CLIManager) WalletRecover(ctx context.Context) (*wallet.Wallet, error) {
 	// Ensure that the wallet directory does not contain a wallet already
 	dirExists, err := wallet.Exists(acm.walletDir)
 	if err != nil {

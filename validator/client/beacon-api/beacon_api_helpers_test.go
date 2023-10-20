@@ -239,7 +239,7 @@ func TestGetLiveness_Nominal(t *testing.T) {
 	require.NoError(t, err)
 
 	expected := validator.GetLivenessResponse{
-		Data: []*validator.ValidatorLiveness{
+		Data: []*validator.Liveness{
 			{
 				Index:  "1",
 				IsLive: true,

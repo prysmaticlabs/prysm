@@ -64,7 +64,7 @@ func TestServer_ListKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -121,7 +121,7 @@ func TestServer_ImportKeystores(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -260,7 +260,7 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -476,7 +476,7 @@ func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -509,7 +509,7 @@ func setupServerWithWallet(t testing.TB) *Server {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -593,7 +593,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 			vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -743,7 +743,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -913,7 +913,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})

@@ -51,7 +51,7 @@ func TestServer_ListAccounts(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -124,7 +124,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -235,7 +235,7 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
