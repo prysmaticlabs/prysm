@@ -370,3 +370,33 @@ func TestValidateBlob_EverythingPasses(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, result, pubsub.ValidationAccept)
 }
+
+func TestValidateBlob_handleParentStatus(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	ctx := context.Background()
+	p := p2ptest.NewTestP2P(t)
+	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
+	s := &Service{
+		cfg: &config{
+			p2p:         p,
+			initialSync: &mockSync.Sync{},
+			chain:       chainService,
+			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)},
+
+		badBlockCache: lruwrpr.New(10),
+	}
+
+	chainService.BlockSlot = chainService.CurrentSlot() + 1
+	bb := util.NewBeaconBlock()
+	bb.Block.Slot = chainService.CurrentSlot() + 1
+	signedBb, err := blocks.NewSignedBeaconBlock(bb)
+	require.NoError(t, err)
+	require.NoError(t, db.SaveBlock(ctx, signedBb))
+	r, err := signedBb.Block().HashTreeRoot()
+	require.NoError(t, err)
+	require.Equal(t, pubsub.ValidationAccept, s.handleBlobParentStatus(ctx, r))
+	badRoot := [32]byte{'a'}
+	require.Equal(t, pubsub.ValidationIgnore, s.handleBlobParentStatus(ctx, badRoot))
+	s.setBadBlock(ctx, badRoot)
+	require.Equal(t, pubsub.ValidationReject, s.handleBlobParentStatus(ctx, badRoot))
+}

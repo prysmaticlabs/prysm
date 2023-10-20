@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
 	"path/filepath"
 	"time"
 
+	"github.com/gorilla/mux"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -51,6 +53,7 @@ type Config struct {
 	GenesisFetcher           client.GenesisFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
+	Router                   *mux.Router
 	Wallet                   *wallet.Wallet
 }
 
@@ -93,6 +96,7 @@ type Server struct {
 	validatorGatewayPort      int
 	beaconApiEndpoint         string
 	beaconApiTimeout          time.Duration
+	router                    *mux.Router
 }
 
 // NewServer instantiates a new gRPC server.
@@ -126,6 +130,7 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
 		validatorGatewayHost:     cfg.ValidatorGatewayHost,
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
+		router:                   cfg.Router,
 	}
 }
 
@@ -153,7 +158,6 @@ func (s *Server) Start() {
 		)),
 	}
 	grpcprometheus.EnableHandlingTimeHistogram()
-
 	if s.withCert != "" && s.withKey != "" {
 		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
 		if err != nil {
@@ -182,6 +186,12 @@ func (s *Server) Start() {
 	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+
+	// routes needs to be set before the server calls the server function
 	go func() {
 		if s.listener != nil {
 			if err := s.grpcServer.Serve(s.listener); err != nil {
@@ -189,6 +199,7 @@ func (s *Server) Start() {
 			}
 		}
 	}()
+
 	log.WithField("address", address).Info("gRPC server listening on address")
 	if s.walletDir != "" {
 		token, err := s.initializeAuthToken(s.walletDir)

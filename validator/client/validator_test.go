@@ -358,12 +358,14 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
@@ -379,7 +381,11 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	prysmBeaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validatorType.ValidatorStatus{validatorType.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -389,12 +395,14 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -403,7 +411,11 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).Times(2)
+	prysmBeaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validatorType.ValidatorStatus{validatorType.Active},
+	).Return([]iface.ValidatorCount{}, nil).Times(2)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ValidatorActivationResponse{},
 		nil,

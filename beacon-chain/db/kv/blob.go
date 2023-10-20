@@ -225,7 +225,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 }
 
 // BlobSidecarsBySlot retrieves BlobSidecars for the given slot.
-// If the `indices` argument is omitted, all blobs for the root will be returned.
+// If the `indices` argument is omitted, all blobs for the slot will be returned.
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
 // The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
@@ -261,7 +261,7 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 }
 
 // DeleteBlobSidecar returns true if the blobs are in the db.
-func (s *Store) DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte) error {
+func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {

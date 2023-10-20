@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
@@ -34,12 +35,42 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-func TestBlockRewards(t *testing.T) {
+func BlockRewardTestSetup(t *testing.T, forkName string) (state.BeaconState, interfaces.SignedBeaconBlock, error) {
 	helpers.ClearCache()
-
+	var sbb interfaces.SignedBeaconBlock
+	var st state.BeaconState
+	var err error
+	switch forkName {
+	case "phase0":
+		return nil, nil, errors.New("phase0 not supported")
+	case "altair":
+		st, err = util.NewBeaconStateAltair()
+		require.NoError(t, err)
+		b := util.HydrateSignedBeaconBlockAltair(util.NewBeaconBlockAltair())
+		sbb, err = blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+	case "bellatrix":
+		st, err = util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
+		b := util.HydrateSignedBeaconBlockBellatrix(util.NewBeaconBlockBellatrix())
+		sbb, err = blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+	case "capella":
+		st, err = util.NewBeaconStateCapella()
+		require.NoError(t, err)
+		b := util.HydrateSignedBeaconBlockCapella(util.NewBeaconBlockCapella())
+		sbb, err = blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+	case "deneb":
+		st, err = util.NewBeaconStateDeneb()
+		require.NoError(t, err)
+		b := util.HydrateSignedBeaconBlockDeneb(util.NewBeaconBlockDeneb())
+		sbb, err = blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+	default:
+		return nil, nil, errors.New("fork is not supported")
+	}
 	valCount := 64
-
-	st, err := util.NewBeaconStateCapella()
 	require.NoError(t, st.SetSlot(1))
 	require.NoError(t, err)
 	validators := make([]*eth.Validator, 0, valCount)
@@ -68,11 +99,10 @@ func TestBlockRewards(t *testing.T) {
 	bRoots[0] = slot0bRoot
 	require.NoError(t, st.SetBlockRoots(bRoots))
 
-	b := util.HydrateSignedBeaconBlockCapella(util.NewBeaconBlockCapella())
-	b.Block.Slot = 2
+	sbb.SetSlot(2)
 	// we have to set the proposer index to the value that will be randomly chosen (fortunately it's deterministic)
-	b.Block.ProposerIndex = 12
-	b.Block.Body.Attestations = []*eth.Attestation{
+	sbb.SetProposerIndex(12)
+	sbb.SetAttestations([]*eth.Attestation{
 		{
 			AggregationBits: bitfield.Bitlist{0b00000111},
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
@@ -83,7 +113,8 @@ func TestBlockRewards(t *testing.T) {
 			Data:            util.HydrateAttestationData(&eth.AttestationData{}),
 			Signature:       make([]byte, fieldparams.BLSSignatureLength),
 		},
-	}
+	})
+
 	attData1 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root1"), 32)})
 	attData2 := util.HydrateAttestationData(&eth.AttestationData{BeaconBlockRoot: bytesutil.PadTo([]byte("root2"), 32)})
 	domain, err := signing.Domain(st.Fork(), 0, params.BeaconConfig().DomainBeaconAttester, st.GenesisValidatorsRoot())
@@ -92,7 +123,7 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	sigRoot2, err := signing.ComputeSigningRoot(attData2, domain)
 	require.NoError(t, err)
-	b.Block.Body.AttesterSlashings = []*eth.AttesterSlashing{
+	sbb.SetAttesterSlashings([]*eth.AttesterSlashing{
 		{
 			Attestation_1: &eth.IndexedAttestation{
 				AttestingIndices: []uint64{0},
@@ -105,7 +136,7 @@ func TestBlockRewards(t *testing.T) {
 				Signature:        secretKeys[0].Sign(sigRoot2[:]).Marshal(),
 			},
 		},
-	}
+	})
 	header1 := &eth.BeaconBlockHeader{
 		Slot:          0,
 		ProposerIndex: 1,
@@ -126,7 +157,7 @@ func TestBlockRewards(t *testing.T) {
 	require.NoError(t, err)
 	sigRoot2, err = signing.ComputeSigningRoot(header2, domain)
 	require.NoError(t, err)
-	b.Block.Body.ProposerSlashings = []*eth.ProposerSlashing{
+	sbb.SetProposerSlashings([]*eth.ProposerSlashing{
 		{
 			Header_1: &eth.SignedBeaconBlockHeader{
 				Header:    header1,
@@ -137,7 +168,7 @@ func TestBlockRewards(t *testing.T) {
 				Signature: secretKeys[1].Sign(sigRoot2[:]).Marshal(),
 			},
 		},
-	}
+	})
 	scBits := bitfield.NewBitvector512()
 	scBits.SetBitAt(10, true)
 	scBits.SetBitAt(100, true)
@@ -153,24 +184,51 @@ func TestBlockRewards(t *testing.T) {
 	sig2, err := blst.SignatureFromBytes(secretKeys[19].Sign(r[:]).Marshal())
 	require.NoError(t, err)
 	aggSig := bls.AggregateSignatures([]bls.Signature{sig1, sig2}).Marshal()
-	b.Block.Body.SyncAggregate = &eth.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignature: aggSig}
-
-	sbb, err := blocks.NewSignedBeaconBlock(b)
+	err = sbb.SetSyncAggregate(&eth.SyncAggregate{SyncCommitteeBits: scBits, SyncCommitteeSignature: aggSig})
 	require.NoError(t, err)
+
+	return st, sbb, nil
+}
+
+func TestBlockRewards(t *testing.T) {
 	phase0block, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 	require.NoError(t, err)
-	mockChainService := &mock.ChainService{Optimistic: true}
-	s := &Server{
-		Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
-			0: phase0block,
-			2: sbb,
-		}},
-		OptimisticModeFetcher: mockChainService,
-		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
-	}
+	t.Run("phase 0", func(t *testing.T) {
+		mockChainService := &mock.ChainService{Optimistic: true}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				0: phase0block,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+		}
+		url := "http://only.the.slot.number.at.the.end.is.important/0"
+		request := httptest.NewRequest("GET", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-	t.Run("ok", func(t *testing.T) {
+		s.BlockRewards(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.Equal(t, "Block rewards are not supported for Phase 0 blocks", e.Message)
+	})
+	t.Run("altair", func(t *testing.T) {
+		st, sbb, err := BlockRewardTestSetup(t, "altair")
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{Optimistic: true}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				0: phase0block,
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+		}
+
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
 		request := httptest.NewRequest("GET", url, nil)
 		writer := httptest.NewRecorder()
@@ -189,18 +247,104 @@ func TestBlockRewards(t *testing.T) {
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 		assert.Equal(t, false, resp.Finalized)
 	})
-	t.Run("phase 0", func(t *testing.T) {
-		url := "http://only.the.slot.number.at.the.end.is.important/0"
+	t.Run("bellatrix", func(t *testing.T) {
+		st, sbb, err := BlockRewardTestSetup(t, "bellatrix")
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{Optimistic: true}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				0: phase0block,
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+		}
+
+		url := "http://only.the.slot.number.at.the.end.is.important/2"
 		request := httptest.NewRequest("GET", url, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 
 		s.BlockRewards(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, "Block rewards are not supported for Phase 0 blocks", e.Message)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &BlockRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "12", resp.Data.ProposerIndex)
+		assert.Equal(t, "125089490", resp.Data.Total)
+		assert.Equal(t, "89442", resp.Data.Attestations)
+		assert.Equal(t, "48", resp.Data.SyncAggregate)
+		assert.Equal(t, "62500000", resp.Data.AttesterSlashings)
+		assert.Equal(t, "62500000", resp.Data.ProposerSlashings)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+		assert.Equal(t, false, resp.Finalized)
+	})
+	t.Run("capella", func(t *testing.T) {
+		st, sbb, err := BlockRewardTestSetup(t, "capella")
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{Optimistic: true}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				0: phase0block,
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+		}
+
+		url := "http://only.the.slot.number.at.the.end.is.important/2"
+		request := httptest.NewRequest("GET", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.BlockRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &BlockRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "12", resp.Data.ProposerIndex)
+		assert.Equal(t, "125089490", resp.Data.Total)
+		assert.Equal(t, "89442", resp.Data.Attestations)
+		assert.Equal(t, "48", resp.Data.SyncAggregate)
+		assert.Equal(t, "62500000", resp.Data.AttesterSlashings)
+		assert.Equal(t, "62500000", resp.Data.ProposerSlashings)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+		assert.Equal(t, false, resp.Finalized)
+	})
+	t.Run("deneb", func(t *testing.T) {
+		st, sbb, err := BlockRewardTestSetup(t, "deneb")
+		require.NoError(t, err)
+
+		mockChainService := &mock.ChainService{Optimistic: true}
+		s := &Server{
+			Blocker: &testutil.MockBlocker{SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+				0: phase0block,
+				2: sbb,
+			}},
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+		}
+
+		url := "http://only.the.slot.number.at.the.end.is.important/2"
+		request := httptest.NewRequest("GET", url, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.BlockRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &BlockRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "12", resp.Data.ProposerIndex)
+		assert.Equal(t, "125089490", resp.Data.Total)
+		assert.Equal(t, "89442", resp.Data.Attestations)
+		assert.Equal(t, "48", resp.Data.SyncAggregate)
+		assert.Equal(t, "62500000", resp.Data.AttesterSlashings)
+		assert.Equal(t, "62500000", resp.Data.ProposerSlashings)
+		assert.Equal(t, true, resp.ExecutionOptimistic)
+		assert.Equal(t, false, resp.Finalized)
 	})
 }
 
@@ -560,7 +704,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		ReplayerBuilder:       mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {
