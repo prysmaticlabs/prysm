@@ -336,7 +336,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
 		if found {
 			if proposerOption.BuilderConfig == nil || !proposerOption.BuilderConfig.Enabled {
-				http2.HandleError(w, "gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
+				http2.HandleError(w, "Gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
 				return
 			} else {
 				proposerOption.BuilderConfig.GasLimit = validator.Uint64(gasLimit)
