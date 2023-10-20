@@ -325,7 +325,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if settings.ProposeConfig == nil {
 		if settings.DefaultConfig == nil || settings.DefaultConfig.BuilderConfig == nil || !settings.DefaultConfig.BuilderConfig.Enabled {
-			http2.HandleError(w, "gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
+			http2.HandleError(w, "Gas limit changes only apply when builder is enabled", http.StatusInternalServerError)
 			return
 		}
 		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
