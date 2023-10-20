@@ -22,7 +22,7 @@ func TestGetValidatorCount(t *testing.T) {
 		versionEndpointError        error
 		validatorCountEndpointError error
 		versionResponse             node.GetVersionResponse
-		validatorCountResponse      validator2.ValidatorCountResponse
+		validatorCountResponse      validator2.CountResponse
 		validatorCountCalled        int
 		expectedResponse            []iface.ValidatorCount
 		expectedError               string
@@ -32,10 +32,10 @@ func TestGetValidatorCount(t *testing.T) {
 			versionResponse: node.GetVersionResponse{
 				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*validator2.Count{
 					{
 						Status: "active",
 						Count:  "10",
@@ -76,7 +76,7 @@ func TestGetValidatorCount(t *testing.T) {
 			versionResponse: node.GetVersionResponse{
 				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
 				Data:                nil,
@@ -89,10 +89,10 @@ func TestGetValidatorCount(t *testing.T) {
 			versionResponse: node.GetVersionResponse{
 				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*validator2.Count{
 					{
 						Status: "active",
 						Count:  "10",
@@ -130,7 +130,7 @@ func TestGetValidatorCount(t *testing.T) {
 				test.versionResponse,
 			)
 
-			var validatorCountResponse validator2.ValidatorCountResponse
+			var validatorCountResponse validator2.CountResponse
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				"/eth/v1/beacon/states/head/validator_count?status=active",
@@ -149,7 +149,7 @@ func TestGetValidatorCount(t *testing.T) {
 				jsonRestHandler: jsonRestHandler,
 			}
 
-			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.ValidatorStatus{validator.Active})
+			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.Status{validator.Active})
 
 			if len(test.expectedResponse) == 0 {
 				require.ErrorContains(t, test.expectedError, err)

@@ -15,31 +15,31 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockBeaconChainClient is a mock of BeaconChainClient interface.
-type MockBeaconChainClient struct {
+// BeaconChainClient is a mock of BeaconChainClient interface.
+type BeaconChainClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChainClientMockRecorder
+	recorder *BeaconChainClientMockRecorder
 }
 
-// MockBeaconChainClientMockRecorder is the mock recorder for MockBeaconChainClient.
-type MockBeaconChainClientMockRecorder struct {
-	mock *MockBeaconChainClient
+// BeaconChainClientMockRecorder is the mock recorder for MockBeaconChainClient.
+type BeaconChainClientMockRecorder struct {
+	mock *BeaconChainClient
 }
 
 // NewMockBeaconChainClient creates a new mock instance.
-func NewMockBeaconChainClient(ctrl *gomock.Controller) *MockBeaconChainClient {
-	mock := &MockBeaconChainClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChainClientMockRecorder{mock}
+func NewMockBeaconChainClient(ctrl *gomock.Controller) *BeaconChainClient {
+	mock := &BeaconChainClient{ctrl: ctrl}
+	mock.recorder = &BeaconChainClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChainClient) EXPECT() *MockBeaconChainClientMockRecorder {
+func (m *BeaconChainClient) EXPECT() *BeaconChainClientMockRecorder {
 	return m.recorder
 }
 
 // AttestationPool mocks base method.
-func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *eth.AttestationPoolRequest, arg2 ...grpc.CallOption) (*eth.AttestationPoolResponse, error) {
+func (m *BeaconChainClient) AttestationPool(arg0 context.Context, arg1 *eth.AttestationPoolRequest, arg2 ...grpc.CallOption) (*eth.AttestationPoolResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -52,14 +52,14 @@ func (m *MockBeaconChainClient) AttestationPool(arg0 context.Context, arg1 *eth.
 }
 
 // AttestationPool indicates an expected call of AttestationPool.
-func (mr *MockBeaconChainClientMockRecorder) AttestationPool(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) AttestationPool(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationPool", reflect.TypeOf((*MockBeaconChainClient)(nil).AttestationPool), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AttestationPool", reflect.TypeOf((*BeaconChainClient)(nil).AttestationPool), varargs...)
 }
 
 // GetBeaconConfig mocks base method.
-func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.BeaconConfig, error) {
+func (m *BeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.BeaconConfig, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -72,14 +72,14 @@ func (m *MockBeaconChainClient) GetBeaconConfig(arg0 context.Context, arg1 *empt
 }
 
 // GetBeaconConfig indicates an expected call of GetBeaconConfig.
-func (mr *MockBeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetBeaconConfig(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*MockBeaconChainClient)(nil).GetBeaconConfig), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBeaconConfig", reflect.TypeOf((*BeaconChainClient)(nil).GetBeaconConfig), varargs...)
 }
 
 // GetChainHead mocks base method.
-func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ChainHead, error) {
+func (m *BeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ChainHead, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -92,14 +92,14 @@ func (m *MockBeaconChainClient) GetChainHead(arg0 context.Context, arg1 *emptypb
 }
 
 // GetChainHead indicates an expected call of GetChainHead.
-func (mr *MockBeaconChainClientMockRecorder) GetChainHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetChainHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainHead", reflect.TypeOf((*MockBeaconChainClient)(nil).GetChainHead), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetChainHead", reflect.TypeOf((*BeaconChainClient)(nil).GetChainHead), varargs...)
 }
 
 // GetIndividualVotes mocks base method.
-func (m *MockBeaconChainClient) GetIndividualVotes(arg0 context.Context, arg1 *eth.IndividualVotesRequest, arg2 ...grpc.CallOption) (*eth.IndividualVotesRespond, error) {
+func (m *BeaconChainClient) GetIndividualVotes(arg0 context.Context, arg1 *eth.IndividualVotesRequest, arg2 ...grpc.CallOption) (*eth.IndividualVotesRespond, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -112,14 +112,14 @@ func (m *MockBeaconChainClient) GetIndividualVotes(arg0 context.Context, arg1 *e
 }
 
 // GetIndividualVotes indicates an expected call of GetIndividualVotes.
-func (mr *MockBeaconChainClientMockRecorder) GetIndividualVotes(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetIndividualVotes(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndividualVotes", reflect.TypeOf((*MockBeaconChainClient)(nil).GetIndividualVotes), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIndividualVotes", reflect.TypeOf((*BeaconChainClient)(nil).GetIndividualVotes), varargs...)
 }
 
 // GetValidator mocks base method.
-func (m *MockBeaconChainClient) GetValidator(arg0 context.Context, arg1 *eth.GetValidatorRequest, arg2 ...grpc.CallOption) (*eth.Validator, error) {
+func (m *BeaconChainClient) GetValidator(arg0 context.Context, arg1 *eth.GetValidatorRequest, arg2 ...grpc.CallOption) (*eth.Validator, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -132,14 +132,14 @@ func (m *MockBeaconChainClient) GetValidator(arg0 context.Context, arg1 *eth.Get
 }
 
 // GetValidator indicates an expected call of GetValidator.
-func (mr *MockBeaconChainClientMockRecorder) GetValidator(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetValidator(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidator", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidator), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidator", reflect.TypeOf((*BeaconChainClient)(nil).GetValidator), varargs...)
 }
 
 // GetValidatorActiveSetChanges mocks base method.
-func (m *MockBeaconChainClient) GetValidatorActiveSetChanges(arg0 context.Context, arg1 *eth.GetValidatorActiveSetChangesRequest, arg2 ...grpc.CallOption) (*eth.ActiveSetChanges, error) {
+func (m *BeaconChainClient) GetValidatorActiveSetChanges(arg0 context.Context, arg1 *eth.GetValidatorActiveSetChangesRequest, arg2 ...grpc.CallOption) (*eth.ActiveSetChanges, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -152,14 +152,14 @@ func (m *MockBeaconChainClient) GetValidatorActiveSetChanges(arg0 context.Contex
 }
 
 // GetValidatorActiveSetChanges indicates an expected call of GetValidatorActiveSetChanges.
-func (mr *MockBeaconChainClientMockRecorder) GetValidatorActiveSetChanges(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetValidatorActiveSetChanges(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorActiveSetChanges", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorActiveSetChanges), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorActiveSetChanges", reflect.TypeOf((*BeaconChainClient)(nil).GetValidatorActiveSetChanges), varargs...)
 }
 
 // GetValidatorParticipation mocks base method.
-func (m *MockBeaconChainClient) GetValidatorParticipation(arg0 context.Context, arg1 *eth.GetValidatorParticipationRequest, arg2 ...grpc.CallOption) (*eth.ValidatorParticipationResponse, error) {
+func (m *BeaconChainClient) GetValidatorParticipation(arg0 context.Context, arg1 *eth.GetValidatorParticipationRequest, arg2 ...grpc.CallOption) (*eth.ValidatorParticipationResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -172,14 +172,14 @@ func (m *MockBeaconChainClient) GetValidatorParticipation(arg0 context.Context, 
 }
 
 // GetValidatorParticipation indicates an expected call of GetValidatorParticipation.
-func (mr *MockBeaconChainClientMockRecorder) GetValidatorParticipation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetValidatorParticipation(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorParticipation", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorParticipation), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorParticipation", reflect.TypeOf((*BeaconChainClient)(nil).GetValidatorParticipation), varargs...)
 }
 
 // GetValidatorPerformance mocks base method.
-func (m *MockBeaconChainClient) GetValidatorPerformance(arg0 context.Context, arg1 *eth.ValidatorPerformanceRequest, arg2 ...grpc.CallOption) (*eth.ValidatorPerformanceResponse, error) {
+func (m *BeaconChainClient) GetValidatorPerformance(arg0 context.Context, arg1 *eth.ValidatorPerformanceRequest, arg2 ...grpc.CallOption) (*eth.ValidatorPerformanceResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -192,14 +192,14 @@ func (m *MockBeaconChainClient) GetValidatorPerformance(arg0 context.Context, ar
 }
 
 // GetValidatorPerformance indicates an expected call of GetValidatorPerformance.
-func (mr *MockBeaconChainClientMockRecorder) GetValidatorPerformance(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetValidatorPerformance(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorPerformance", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorPerformance), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorPerformance", reflect.TypeOf((*BeaconChainClient)(nil).GetValidatorPerformance), varargs...)
 }
 
 // GetValidatorQueue mocks base method.
-func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ValidatorQueue, error) {
+func (m *BeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*eth.ValidatorQueue, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -212,14 +212,14 @@ func (m *MockBeaconChainClient) GetValidatorQueue(arg0 context.Context, arg1 *em
 }
 
 // GetValidatorQueue indicates an expected call of GetValidatorQueue.
-func (mr *MockBeaconChainClientMockRecorder) GetValidatorQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) GetValidatorQueue(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorQueue", reflect.TypeOf((*MockBeaconChainClient)(nil).GetValidatorQueue), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetValidatorQueue", reflect.TypeOf((*BeaconChainClient)(nil).GetValidatorQueue), varargs...)
 }
 
 // ListAttestations mocks base method.
-func (m *MockBeaconChainClient) ListAttestations(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsResponse, error) {
+func (m *BeaconChainClient) ListAttestations(arg0 context.Context, arg1 *eth.ListAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListAttestationsResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -232,14 +232,14 @@ func (m *MockBeaconChainClient) ListAttestations(arg0 context.Context, arg1 *eth
 }
 
 // ListAttestations indicates an expected call of ListAttestations.
-func (mr *MockBeaconChainClientMockRecorder) ListAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).ListAttestations), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAttestations", reflect.TypeOf((*BeaconChainClient)(nil).ListAttestations), varargs...)
 }
 
 // ListBeaconBlocks mocks base method.
-func (m *MockBeaconChainClient) ListBeaconBlocks(arg0 context.Context, arg1 *eth.ListBlocksRequest, arg2 ...grpc.CallOption) (*eth.ListBeaconBlocksResponse, error) {
+func (m *BeaconChainClient) ListBeaconBlocks(arg0 context.Context, arg1 *eth.ListBlocksRequest, arg2 ...grpc.CallOption) (*eth.ListBeaconBlocksResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -252,14 +252,14 @@ func (m *MockBeaconChainClient) ListBeaconBlocks(arg0 context.Context, arg1 *eth
 }
 
 // ListBeaconBlocks indicates an expected call of ListBeaconBlocks.
-func (mr *MockBeaconChainClientMockRecorder) ListBeaconBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListBeaconBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBeaconBlocks", reflect.TypeOf((*MockBeaconChainClient)(nil).ListBeaconBlocks), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBeaconBlocks", reflect.TypeOf((*BeaconChainClient)(nil).ListBeaconBlocks), varargs...)
 }
 
 // ListBeaconCommittees mocks base method.
-func (m *MockBeaconChainClient) ListBeaconCommittees(arg0 context.Context, arg1 *eth.ListCommitteesRequest, arg2 ...grpc.CallOption) (*eth.BeaconCommittees, error) {
+func (m *BeaconChainClient) ListBeaconCommittees(arg0 context.Context, arg1 *eth.ListCommitteesRequest, arg2 ...grpc.CallOption) (*eth.BeaconCommittees, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -272,14 +272,14 @@ func (m *MockBeaconChainClient) ListBeaconCommittees(arg0 context.Context, arg1 
 }
 
 // ListBeaconCommittees indicates an expected call of ListBeaconCommittees.
-func (mr *MockBeaconChainClientMockRecorder) ListBeaconCommittees(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListBeaconCommittees(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBeaconCommittees", reflect.TypeOf((*MockBeaconChainClient)(nil).ListBeaconCommittees), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBeaconCommittees", reflect.TypeOf((*BeaconChainClient)(nil).ListBeaconCommittees), varargs...)
 }
 
 // ListIndexedAttestations mocks base method.
-func (m *MockBeaconChainClient) ListIndexedAttestations(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsResponse, error) {
+func (m *BeaconChainClient) ListIndexedAttestations(arg0 context.Context, arg1 *eth.ListIndexedAttestationsRequest, arg2 ...grpc.CallOption) (*eth.ListIndexedAttestationsResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -292,14 +292,14 @@ func (m *MockBeaconChainClient) ListIndexedAttestations(arg0 context.Context, ar
 }
 
 // ListIndexedAttestations indicates an expected call of ListIndexedAttestations.
-func (mr *MockBeaconChainClientMockRecorder) ListIndexedAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListIndexedAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexedAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).ListIndexedAttestations), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIndexedAttestations", reflect.TypeOf((*BeaconChainClient)(nil).ListIndexedAttestations), varargs...)
 }
 
 // ListValidatorAssignments mocks base method.
-func (m *MockBeaconChainClient) ListValidatorAssignments(arg0 context.Context, arg1 *eth.ListValidatorAssignmentsRequest, arg2 ...grpc.CallOption) (*eth.ValidatorAssignments, error) {
+func (m *BeaconChainClient) ListValidatorAssignments(arg0 context.Context, arg1 *eth.ListValidatorAssignmentsRequest, arg2 ...grpc.CallOption) (*eth.ValidatorAssignments, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -312,14 +312,14 @@ func (m *MockBeaconChainClient) ListValidatorAssignments(arg0 context.Context, a
 }
 
 // ListValidatorAssignments indicates an expected call of ListValidatorAssignments.
-func (mr *MockBeaconChainClientMockRecorder) ListValidatorAssignments(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListValidatorAssignments(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatorAssignments", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidatorAssignments), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatorAssignments", reflect.TypeOf((*BeaconChainClient)(nil).ListValidatorAssignments), varargs...)
 }
 
 // ListValidatorBalances mocks base method.
-func (m *MockBeaconChainClient) ListValidatorBalances(arg0 context.Context, arg1 *eth.ListValidatorBalancesRequest, arg2 ...grpc.CallOption) (*eth.ValidatorBalances, error) {
+func (m *BeaconChainClient) ListValidatorBalances(arg0 context.Context, arg1 *eth.ListValidatorBalancesRequest, arg2 ...grpc.CallOption) (*eth.ValidatorBalances, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -332,14 +332,14 @@ func (m *MockBeaconChainClient) ListValidatorBalances(arg0 context.Context, arg1
 }
 
 // ListValidatorBalances indicates an expected call of ListValidatorBalances.
-func (mr *MockBeaconChainClientMockRecorder) ListValidatorBalances(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListValidatorBalances(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatorBalances", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidatorBalances), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatorBalances", reflect.TypeOf((*BeaconChainClient)(nil).ListValidatorBalances), varargs...)
 }
 
 // ListValidators mocks base method.
-func (m *MockBeaconChainClient) ListValidators(arg0 context.Context, arg1 *eth.ListValidatorsRequest, arg2 ...grpc.CallOption) (*eth.Validators, error) {
+func (m *BeaconChainClient) ListValidators(arg0 context.Context, arg1 *eth.ListValidatorsRequest, arg2 ...grpc.CallOption) (*eth.Validators, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -352,14 +352,14 @@ func (m *MockBeaconChainClient) ListValidators(arg0 context.Context, arg1 *eth.L
 }
 
 // ListValidators indicates an expected call of ListValidators.
-func (mr *MockBeaconChainClientMockRecorder) ListValidators(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) ListValidators(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidators", reflect.TypeOf((*MockBeaconChainClient)(nil).ListValidators), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidators", reflect.TypeOf((*BeaconChainClient)(nil).ListValidators), varargs...)
 }
 
 // StreamAttestations mocks base method.
-func (m *MockBeaconChainClient) StreamAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamAttestationsClient, error) {
+func (m *BeaconChainClient) StreamAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamAttestationsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -372,14 +372,14 @@ func (m *MockBeaconChainClient) StreamAttestations(arg0 context.Context, arg1 *e
 }
 
 // StreamAttestations indicates an expected call of StreamAttestations.
-func (mr *MockBeaconChainClientMockRecorder) StreamAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) StreamAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamAttestations), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamAttestations", reflect.TypeOf((*BeaconChainClient)(nil).StreamAttestations), varargs...)
 }
 
 // StreamBlocks mocks base method.
-func (m *MockBeaconChainClient) StreamBlocks(arg0 context.Context, arg1 *eth.StreamBlocksRequest, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamBlocksClient, error) {
+func (m *BeaconChainClient) StreamBlocks(arg0 context.Context, arg1 *eth.StreamBlocksRequest, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamBlocksClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -392,14 +392,14 @@ func (m *MockBeaconChainClient) StreamBlocks(arg0 context.Context, arg1 *eth.Str
 }
 
 // StreamBlocks indicates an expected call of StreamBlocks.
-func (mr *MockBeaconChainClientMockRecorder) StreamBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) StreamBlocks(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocks", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamBlocks), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocks", reflect.TypeOf((*BeaconChainClient)(nil).StreamBlocks), varargs...)
 }
 
 // StreamChainHead mocks base method.
-func (m *MockBeaconChainClient) StreamChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamChainHeadClient, error) {
+func (m *BeaconChainClient) StreamChainHead(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamChainHeadClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -412,14 +412,14 @@ func (m *MockBeaconChainClient) StreamChainHead(arg0 context.Context, arg1 *empt
 }
 
 // StreamChainHead indicates an expected call of StreamChainHead.
-func (mr *MockBeaconChainClientMockRecorder) StreamChainHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) StreamChainHead(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamChainHead", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamChainHead), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamChainHead", reflect.TypeOf((*BeaconChainClient)(nil).StreamChainHead), varargs...)
 }
 
 // StreamIndexedAttestations mocks base method.
-func (m *MockBeaconChainClient) StreamIndexedAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamIndexedAttestationsClient, error) {
+func (m *BeaconChainClient) StreamIndexedAttestations(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (eth.BeaconChain_StreamIndexedAttestationsClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -432,14 +432,14 @@ func (m *MockBeaconChainClient) StreamIndexedAttestations(arg0 context.Context, 
 }
 
 // StreamIndexedAttestations indicates an expected call of StreamIndexedAttestations.
-func (mr *MockBeaconChainClientMockRecorder) StreamIndexedAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) StreamIndexedAttestations(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamIndexedAttestations", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamIndexedAttestations), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamIndexedAttestations", reflect.TypeOf((*BeaconChainClient)(nil).StreamIndexedAttestations), varargs...)
 }
 
 // StreamValidatorsInfo mocks base method.
-func (m *MockBeaconChainClient) StreamValidatorsInfo(arg0 context.Context, arg1 ...grpc.CallOption) (eth.BeaconChain_StreamValidatorsInfoClient, error) {
+func (m *BeaconChainClient) StreamValidatorsInfo(arg0 context.Context, arg1 ...grpc.CallOption) (eth.BeaconChain_StreamValidatorsInfoClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0}
 	for _, a := range arg1 {
@@ -452,14 +452,14 @@ func (m *MockBeaconChainClient) StreamValidatorsInfo(arg0 context.Context, arg1 
 }
 
 // StreamValidatorsInfo indicates an expected call of StreamValidatorsInfo.
-func (mr *MockBeaconChainClientMockRecorder) StreamValidatorsInfo(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) StreamValidatorsInfo(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0}, arg1...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamValidatorsInfo", reflect.TypeOf((*MockBeaconChainClient)(nil).StreamValidatorsInfo), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamValidatorsInfo", reflect.TypeOf((*BeaconChainClient)(nil).StreamValidatorsInfo), varargs...)
 }
 
 // SubmitAttesterSlashing mocks base method.
-func (m *MockBeaconChainClient) SubmitAttesterSlashing(arg0 context.Context, arg1 *eth.AttesterSlashing, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
+func (m *BeaconChainClient) SubmitAttesterSlashing(arg0 context.Context, arg1 *eth.AttesterSlashing, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -472,14 +472,14 @@ func (m *MockBeaconChainClient) SubmitAttesterSlashing(arg0 context.Context, arg
 }
 
 // SubmitAttesterSlashing indicates an expected call of SubmitAttesterSlashing.
-func (mr *MockBeaconChainClientMockRecorder) SubmitAttesterSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) SubmitAttesterSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitAttesterSlashing), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitAttesterSlashing", reflect.TypeOf((*BeaconChainClient)(nil).SubmitAttesterSlashing), varargs...)
 }
 
 // SubmitProposerSlashing mocks base method.
-func (m *MockBeaconChainClient) SubmitProposerSlashing(arg0 context.Context, arg1 *eth.ProposerSlashing, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
+func (m *BeaconChainClient) SubmitProposerSlashing(arg0 context.Context, arg1 *eth.ProposerSlashing, arg2 ...grpc.CallOption) (*eth.SubmitSlashingResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -492,37 +492,37 @@ func (m *MockBeaconChainClient) SubmitProposerSlashing(arg0 context.Context, arg
 }
 
 // SubmitProposerSlashing indicates an expected call of SubmitProposerSlashing.
-func (mr *MockBeaconChainClientMockRecorder) SubmitProposerSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *BeaconChainClientMockRecorder) SubmitProposerSlashing(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitProposerSlashing", reflect.TypeOf((*MockBeaconChainClient)(nil).SubmitProposerSlashing), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitProposerSlashing", reflect.TypeOf((*BeaconChainClient)(nil).SubmitProposerSlashing), varargs...)
 }
 
-// MockBeaconChain_StreamChainHeadClient is a mock of BeaconChain_StreamChainHeadClient interface.
-type MockBeaconChain_StreamChainHeadClient struct {
+// BeaconChain_StreamChainHeadClient is a mock of BeaconChain_StreamChainHeadClient interface.
+type BeaconChain_StreamChainHeadClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChain_StreamChainHeadClientMockRecorder
+	recorder *BeaconChain_StreamChainHeadClientMockRecorder
 }
 
-// MockBeaconChain_StreamChainHeadClientMockRecorder is the mock recorder for MockBeaconChain_StreamChainHeadClient.
-type MockBeaconChain_StreamChainHeadClientMockRecorder struct {
-	mock *MockBeaconChain_StreamChainHeadClient
+// BeaconChain_StreamChainHeadClientMockRecorder is the mock recorder for MockBeaconChain_StreamChainHeadClient.
+type BeaconChain_StreamChainHeadClientMockRecorder struct {
+	mock *BeaconChain_StreamChainHeadClient
 }
 
 // NewMockBeaconChain_StreamChainHeadClient creates a new mock instance.
-func NewMockBeaconChain_StreamChainHeadClient(ctrl *gomock.Controller) *MockBeaconChain_StreamChainHeadClient {
-	mock := &MockBeaconChain_StreamChainHeadClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChain_StreamChainHeadClientMockRecorder{mock}
+func NewMockBeaconChain_StreamChainHeadClient(ctrl *gomock.Controller) *BeaconChain_StreamChainHeadClient {
+	mock := &BeaconChain_StreamChainHeadClient{ctrl: ctrl}
+	mock.recorder = &BeaconChain_StreamChainHeadClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChain_StreamChainHeadClient) EXPECT() *MockBeaconChain_StreamChainHeadClientMockRecorder {
+func (m *BeaconChain_StreamChainHeadClient) EXPECT() *BeaconChain_StreamChainHeadClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) CloseSend() error {
+func (m *BeaconChain_StreamChainHeadClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -530,13 +530,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) Context() context.Context {
+func (m *BeaconChain_StreamChainHeadClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -544,13 +544,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Context() *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) Header() (metadata.MD, error) {
+func (m *BeaconChain_StreamChainHeadClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -559,13 +559,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) Header() (metadata.MD, error) {
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Header() *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) Recv() (*eth.ChainHead, error) {
+func (m *BeaconChain_StreamChainHeadClient) Recv() (*eth.ChainHead, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*eth.ChainHead)
@@ -574,13 +574,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) Recv() (*eth.ChainHead, error) {
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Recv() *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) RecvMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamChainHeadClient) RecvMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -588,13 +588,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) RecvMsg(arg0 interface{}) error 
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).RecvMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).RecvMsg), arg0)
 }
 
 // SendMsg mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) SendMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamChainHeadClient) SendMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -602,13 +602,13 @@ func (m *MockBeaconChain_StreamChainHeadClient) SendMsg(arg0 interface{}) error 
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).SendMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method.
-func (m *MockBeaconChain_StreamChainHeadClient) Trailer() metadata.MD {
+func (m *BeaconChain_StreamChainHeadClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -616,36 +616,36 @@ func (m *MockBeaconChain_StreamChainHeadClient) Trailer() metadata.MD {
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockBeaconChain_StreamChainHeadClientMockRecorder) Trailer() *gomock.Call {
+func (mr *BeaconChain_StreamChainHeadClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamChainHeadClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*BeaconChain_StreamChainHeadClient)(nil).Trailer))
 }
 
-// MockBeaconChain_StreamAttestationsClient is a mock of BeaconChain_StreamAttestationsClient interface.
-type MockBeaconChain_StreamAttestationsClient struct {
+// BeaconChain_StreamAttestationsClient is a mock of BeaconChain_StreamAttestationsClient interface.
+type BeaconChain_StreamAttestationsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChain_StreamAttestationsClientMockRecorder
+	recorder *BeaconChain_StreamAttestationsClientMockRecorder
 }
 
-// MockBeaconChain_StreamAttestationsClientMockRecorder is the mock recorder for MockBeaconChain_StreamAttestationsClient.
-type MockBeaconChain_StreamAttestationsClientMockRecorder struct {
-	mock *MockBeaconChain_StreamAttestationsClient
+// BeaconChain_StreamAttestationsClientMockRecorder is the mock recorder for MockBeaconChain_StreamAttestationsClient.
+type BeaconChain_StreamAttestationsClientMockRecorder struct {
+	mock *BeaconChain_StreamAttestationsClient
 }
 
 // NewMockBeaconChain_StreamAttestationsClient creates a new mock instance.
-func NewMockBeaconChain_StreamAttestationsClient(ctrl *gomock.Controller) *MockBeaconChain_StreamAttestationsClient {
-	mock := &MockBeaconChain_StreamAttestationsClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChain_StreamAttestationsClientMockRecorder{mock}
+func NewMockBeaconChain_StreamAttestationsClient(ctrl *gomock.Controller) *BeaconChain_StreamAttestationsClient {
+	mock := &BeaconChain_StreamAttestationsClient{ctrl: ctrl}
+	mock.recorder = &BeaconChain_StreamAttestationsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChain_StreamAttestationsClient) EXPECT() *MockBeaconChain_StreamAttestationsClientMockRecorder {
+func (m *BeaconChain_StreamAttestationsClient) EXPECT() *BeaconChain_StreamAttestationsClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) CloseSend() error {
+func (m *BeaconChain_StreamAttestationsClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -653,13 +653,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) Context() context.Context {
+func (m *BeaconChain_StreamAttestationsClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -667,13 +667,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Context() *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) Header() (metadata.MD, error) {
+func (m *BeaconChain_StreamAttestationsClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -682,13 +682,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) Header() (metadata.MD, error)
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Header() *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) Recv() (*eth.Attestation, error) {
+func (m *BeaconChain_StreamAttestationsClient) Recv() (*eth.Attestation, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*eth.Attestation)
@@ -697,13 +697,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) Recv() (*eth.Attestation, err
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Recv() *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) RecvMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamAttestationsClient) RecvMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -711,13 +711,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) RecvMsg(arg0 interface{}) err
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).RecvMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).RecvMsg), arg0)
 }
 
 // SendMsg mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) SendMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamAttestationsClient) SendMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -725,13 +725,13 @@ func (m *MockBeaconChain_StreamAttestationsClient) SendMsg(arg0 interface{}) err
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).SendMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method.
-func (m *MockBeaconChain_StreamAttestationsClient) Trailer() metadata.MD {
+func (m *BeaconChain_StreamAttestationsClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -739,36 +739,36 @@ func (m *MockBeaconChain_StreamAttestationsClient) Trailer() metadata.MD {
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockBeaconChain_StreamAttestationsClientMockRecorder) Trailer() *gomock.Call {
+func (mr *BeaconChain_StreamAttestationsClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamAttestationsClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*BeaconChain_StreamAttestationsClient)(nil).Trailer))
 }
 
-// MockBeaconChain_StreamBlocksClient is a mock of BeaconChain_StreamBlocksClient interface.
-type MockBeaconChain_StreamBlocksClient struct {
+// BeaconChain_StreamBlocksClient is a mock of BeaconChain_StreamBlocksClient interface.
+type BeaconChain_StreamBlocksClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChain_StreamBlocksClientMockRecorder
+	recorder *BeaconChain_StreamBlocksClientMockRecorder
 }
 
-// MockBeaconChain_StreamBlocksClientMockRecorder is the mock recorder for MockBeaconChain_StreamBlocksClient.
-type MockBeaconChain_StreamBlocksClientMockRecorder struct {
-	mock *MockBeaconChain_StreamBlocksClient
+// BeaconChain_StreamBlocksClientMockRecorder is the mock recorder for MockBeaconChain_StreamBlocksClient.
+type BeaconChain_StreamBlocksClientMockRecorder struct {
+	mock *BeaconChain_StreamBlocksClient
 }
 
 // NewMockBeaconChain_StreamBlocksClient creates a new mock instance.
-func NewMockBeaconChain_StreamBlocksClient(ctrl *gomock.Controller) *MockBeaconChain_StreamBlocksClient {
-	mock := &MockBeaconChain_StreamBlocksClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChain_StreamBlocksClientMockRecorder{mock}
+func NewMockBeaconChain_StreamBlocksClient(ctrl *gomock.Controller) *BeaconChain_StreamBlocksClient {
+	mock := &BeaconChain_StreamBlocksClient{ctrl: ctrl}
+	mock.recorder = &BeaconChain_StreamBlocksClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChain_StreamBlocksClient) EXPECT() *MockBeaconChain_StreamBlocksClientMockRecorder {
+func (m *BeaconChain_StreamBlocksClient) EXPECT() *BeaconChain_StreamBlocksClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) CloseSend() error {
+func (m *BeaconChain_StreamBlocksClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -776,13 +776,13 @@ func (m *MockBeaconChain_StreamBlocksClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) Context() context.Context {
+func (m *BeaconChain_StreamBlocksClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -790,13 +790,13 @@ func (m *MockBeaconChain_StreamBlocksClient) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Context() *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) Header() (metadata.MD, error) {
+func (m *BeaconChain_StreamBlocksClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -805,13 +805,13 @@ func (m *MockBeaconChain_StreamBlocksClient) Header() (metadata.MD, error) {
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Header() *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) Recv() (*eth.SignedBeaconBlock, error) {
+func (m *BeaconChain_StreamBlocksClient) Recv() (*eth.SignedBeaconBlock, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*eth.SignedBeaconBlock)
@@ -820,13 +820,13 @@ func (m *MockBeaconChain_StreamBlocksClient) Recv() (*eth.SignedBeaconBlock, err
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Recv() *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) RecvMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamBlocksClient) RecvMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -834,13 +834,13 @@ func (m *MockBeaconChain_StreamBlocksClient) RecvMsg(arg0 interface{}) error {
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).RecvMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).RecvMsg), arg0)
 }
 
 // SendMsg mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) SendMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamBlocksClient) SendMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -848,13 +848,13 @@ func (m *MockBeaconChain_StreamBlocksClient) SendMsg(arg0 interface{}) error {
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).SendMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method.
-func (m *MockBeaconChain_StreamBlocksClient) Trailer() metadata.MD {
+func (m *BeaconChain_StreamBlocksClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -862,36 +862,36 @@ func (m *MockBeaconChain_StreamBlocksClient) Trailer() metadata.MD {
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockBeaconChain_StreamBlocksClientMockRecorder) Trailer() *gomock.Call {
+func (mr *BeaconChain_StreamBlocksClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamBlocksClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*BeaconChain_StreamBlocksClient)(nil).Trailer))
 }
 
-// MockBeaconChain_StreamValidatorsInfoClient is a mock of BeaconChain_StreamValidatorsInfoClient interface.
-type MockBeaconChain_StreamValidatorsInfoClient struct {
+// BeaconChain_StreamValidatorsInfoClient is a mock of BeaconChain_StreamValidatorsInfoClient interface.
+type BeaconChain_StreamValidatorsInfoClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChain_StreamValidatorsInfoClientMockRecorder
+	recorder *BeaconChain_StreamValidatorsInfoClientMockRecorder
 }
 
-// MockBeaconChain_StreamValidatorsInfoClientMockRecorder is the mock recorder for MockBeaconChain_StreamValidatorsInfoClient.
-type MockBeaconChain_StreamValidatorsInfoClientMockRecorder struct {
-	mock *MockBeaconChain_StreamValidatorsInfoClient
+// BeaconChain_StreamValidatorsInfoClientMockRecorder is the mock recorder for MockBeaconChain_StreamValidatorsInfoClient.
+type BeaconChain_StreamValidatorsInfoClientMockRecorder struct {
+	mock *BeaconChain_StreamValidatorsInfoClient
 }
 
 // NewMockBeaconChain_StreamValidatorsInfoClient creates a new mock instance.
-func NewMockBeaconChain_StreamValidatorsInfoClient(ctrl *gomock.Controller) *MockBeaconChain_StreamValidatorsInfoClient {
-	mock := &MockBeaconChain_StreamValidatorsInfoClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChain_StreamValidatorsInfoClientMockRecorder{mock}
+func NewMockBeaconChain_StreamValidatorsInfoClient(ctrl *gomock.Controller) *BeaconChain_StreamValidatorsInfoClient {
+	mock := &BeaconChain_StreamValidatorsInfoClient{ctrl: ctrl}
+	mock.recorder = &BeaconChain_StreamValidatorsInfoClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) EXPECT() *MockBeaconChain_StreamValidatorsInfoClientMockRecorder {
+func (m *BeaconChain_StreamValidatorsInfoClient) EXPECT() *BeaconChain_StreamValidatorsInfoClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) CloseSend() error {
+func (m *BeaconChain_StreamValidatorsInfoClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -899,13 +899,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) Context() context.Context {
+func (m *BeaconChain_StreamValidatorsInfoClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -913,13 +913,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Context() *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) Header() (metadata.MD, error) {
+func (m *BeaconChain_StreamValidatorsInfoClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -928,13 +928,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Header() (metadata.MD, erro
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Header() *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) Recv() (*eth.ValidatorInfo, error) {
+func (m *BeaconChain_StreamValidatorsInfoClient) Recv() (*eth.ValidatorInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*eth.ValidatorInfo)
@@ -943,13 +943,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Recv() (*eth.ValidatorInfo,
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Recv() *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) RecvMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamValidatorsInfoClient) RecvMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -957,13 +957,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) RecvMsg(arg0 interface{}) e
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).RecvMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).RecvMsg), arg0)
 }
 
 // Send mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) Send(arg0 *eth.ValidatorChangeSet) error {
+func (m *BeaconChain_StreamValidatorsInfoClient) Send(arg0 *eth.ValidatorChangeSet) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -971,13 +971,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Send(arg0 *eth.ValidatorCha
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Send), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).Send), arg0)
 }
 
 // SendMsg mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) SendMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamValidatorsInfoClient) SendMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -985,13 +985,13 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) SendMsg(arg0 interface{}) e
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).SendMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method.
-func (m *MockBeaconChain_StreamValidatorsInfoClient) Trailer() metadata.MD {
+func (m *BeaconChain_StreamValidatorsInfoClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -999,36 +999,36 @@ func (m *MockBeaconChain_StreamValidatorsInfoClient) Trailer() metadata.MD {
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockBeaconChain_StreamValidatorsInfoClientMockRecorder) Trailer() *gomock.Call {
+func (mr *BeaconChain_StreamValidatorsInfoClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamValidatorsInfoClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoClient)(nil).Trailer))
 }
 
-// MockBeaconChain_StreamIndexedAttestationsClient is a mock of BeaconChain_StreamIndexedAttestationsClient interface.
-type MockBeaconChain_StreamIndexedAttestationsClient struct {
+// BeaconChain_StreamIndexedAttestationsClient is a mock of BeaconChain_StreamIndexedAttestationsClient interface.
+type BeaconChain_StreamIndexedAttestationsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder
+	recorder *BeaconChain_StreamIndexedAttestationsClientMockRecorder
 }
 
-// MockBeaconChain_StreamIndexedAttestationsClientMockRecorder is the mock recorder for MockBeaconChain_StreamIndexedAttestationsClient.
-type MockBeaconChain_StreamIndexedAttestationsClientMockRecorder struct {
-	mock *MockBeaconChain_StreamIndexedAttestationsClient
+// BeaconChain_StreamIndexedAttestationsClientMockRecorder is the mock recorder for MockBeaconChain_StreamIndexedAttestationsClient.
+type BeaconChain_StreamIndexedAttestationsClientMockRecorder struct {
+	mock *BeaconChain_StreamIndexedAttestationsClient
 }
 
 // NewMockBeaconChain_StreamIndexedAttestationsClient creates a new mock instance.
-func NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl *gomock.Controller) *MockBeaconChain_StreamIndexedAttestationsClient {
-	mock := &MockBeaconChain_StreamIndexedAttestationsClient{ctrl: ctrl}
-	mock.recorder = &MockBeaconChain_StreamIndexedAttestationsClientMockRecorder{mock}
+func NewMockBeaconChain_StreamIndexedAttestationsClient(ctrl *gomock.Controller) *BeaconChain_StreamIndexedAttestationsClient {
+	mock := &BeaconChain_StreamIndexedAttestationsClient{ctrl: ctrl}
+	mock.recorder = &BeaconChain_StreamIndexedAttestationsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) EXPECT() *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder {
+func (m *BeaconChain_StreamIndexedAttestationsClient) EXPECT() *BeaconChain_StreamIndexedAttestationsClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) CloseSend() error {
+func (m *BeaconChain_StreamIndexedAttestationsClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -1036,13 +1036,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) Context() context.Context {
+func (m *BeaconChain_StreamIndexedAttestationsClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -1050,13 +1050,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) Context() context.Cont
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) Context() *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) Header() (metadata.MD, error) {
+func (m *BeaconChain_StreamIndexedAttestationsClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -1065,13 +1065,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) Header() (metadata.MD,
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) Header() *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) Recv() (*eth.IndexedAttestation, error) {
+func (m *BeaconChain_StreamIndexedAttestationsClient) Recv() (*eth.IndexedAttestation, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*eth.IndexedAttestation)
@@ -1080,13 +1080,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) Recv() (*eth.IndexedAt
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) Recv() *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) RecvMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamIndexedAttestationsClient) RecvMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RecvMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -1094,13 +1094,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) RecvMsg(arg0 interface
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) RecvMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).RecvMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).RecvMsg), arg0)
 }
 
 // SendMsg mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) SendMsg(arg0 interface{}) error {
+func (m *BeaconChain_StreamIndexedAttestationsClient) SendMsg(arg0 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendMsg", arg0)
 	ret0, _ := ret[0].(error)
@@ -1108,13 +1108,13 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) SendMsg(arg0 interface
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) SendMsg(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).SendMsg), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).SendMsg), arg0)
 }
 
 // Trailer mocks base method.
-func (m *MockBeaconChain_StreamIndexedAttestationsClient) Trailer() metadata.MD {
+func (m *BeaconChain_StreamIndexedAttestationsClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -1122,7 +1122,7 @@ func (m *MockBeaconChain_StreamIndexedAttestationsClient) Trailer() metadata.MD 
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockBeaconChain_StreamIndexedAttestationsClientMockRecorder) Trailer() *gomock.Call {
+func (mr *BeaconChain_StreamIndexedAttestationsClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockBeaconChain_StreamIndexedAttestationsClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*BeaconChain_StreamIndexedAttestationsClient)(nil).Trailer))
 }

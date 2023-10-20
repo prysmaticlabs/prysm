@@ -93,7 +93,7 @@ func TestRateBLSChanges(t *testing.T) {
 		epoch := params.BeaconConfig().CapellaForkEpoch + 1
 		domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 		assert.NoError(t, err)
-		htr, err := signing.SigningData(message.HashTreeRoot, domain)
+		htr, err := signing.Data(message.HashTreeRoot, domain)
 		assert.NoError(t, err)
 		signed := &ethpb.SignedBLSToExecutionChange{
 			Message:   message,

@@ -694,7 +694,7 @@ func TestStreamEvents_CommaSeparatedTopics(t *testing.T) {
 	})
 }
 
-func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller, *mock.MockEvents_StreamEventsServer) {
+func setupServer(ctx context.Context, t testing.TB) (*Server, *gomock.Controller, *mock.Events_StreamEventsServer) {
 	srv := &Server{
 		StateNotifier:     &mockChain.MockStateNotifier{},
 		OperationNotifier: &mockChain.MockOperationNotifier{},
@@ -709,7 +709,7 @@ type assertFeedArgs struct {
 	t             *testing.T
 	topics        []string
 	srv           *Server
-	stream        *mock.MockEvents_StreamEventsServer
+	stream        *mock.Events_StreamEventsServer
 	shouldReceive interface{}
 	itemToSend    *feed.Event
 	feed          *event.Feed
