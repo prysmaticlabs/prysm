@@ -33,40 +33,6 @@ type DeleteKeystoresResponseJson struct {
 	SlashingProtection string        `json:"slashing_protection"`
 }
 
-//remote keymanager api
-
-type ListRemoteKeysResponseJson struct {
-	Keystores []*RemoteKeysListJson `json:"data"`
-}
-
-type RemoteKeysListJson struct {
-	Pubkey   string `json:"pubkey" hex:"true"`
-	Url      string `json:"url"`
-	Readonly bool   `json:"readonly"`
-}
-
-type RemoteKeysJson struct {
-	Pubkey   string `json:"pubkey" hex:"true"`
-	Url      string `json:"url"`
-	Readonly bool   `json:"readonly"`
-}
-
-type ImportRemoteKeysRequestJson struct {
-	Keystores []*RemoteKeysJson `json:"remote_keys"`
-}
-
-type ImportRemoteKeysResponseJson struct {
-	Statuses []*StatusJson `json:"data"`
-}
-
-type DeleteRemoteKeysRequestJson struct {
-	PublicKeys []string `json:"pubkeys" hex:"true"`
-}
-
-type DeleteRemoteKeysResponseJson struct {
-	Statuses []*StatusJson `json:"data"`
-}
-
 type FeeRecipientJson struct {
 	Pubkey     string `json:"pubkey" hex:"true"`
 	Ethaddress string `json:"ethaddress" address:"true"`
@@ -99,23 +65,4 @@ type SetGasLimitRequestJson struct {
 
 type DeleteGasLimitRequestJson struct {
 	Pubkey string `json:"pubkey" hex:"true"`
-}
-
-type SetVoluntaryExitRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
-	Epoch  string `json:"epoch"`
-}
-
-type SetVoluntaryExitResponseJson struct {
-	SignedVoluntaryExit *SignedVoluntaryExitJson `json:"data"`
-}
-
-type SignedVoluntaryExitJson struct {
-	VoluntaryExit *VoluntaryExitJson `json:"message"`
-	Signature     string             `json:"signature" hex:"true"`
-}
-
-type VoluntaryExitJson struct {
-	Epoch          string `json:"epoch"`
-	ValidatorIndex string `json:"validator_index"`
 }

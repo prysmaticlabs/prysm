@@ -424,6 +424,32 @@ func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 			}(t), "CAPELLA"),
 			wantErr: false,
 		},
+		{
+			name: "Happy Path Test non blinded Deneb",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_DENEB"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.MockBlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xbce73ee2c617851846af2b3ea2287e3b686098e18ae508c7271aaa06ab1d06cd")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "DENEB"),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test blinded Deneb",
+			args: args{
+				request:               mock.GetMockSignRequest("BLOCK_V2_BLINDED_DENEB"),
+				genesisValidatorsRoot: make([]byte, fieldparams.RootLength),
+			},
+			want: mock.MockBlockV2BlindedSignRequest(func(t *testing.T) []byte {
+				bytevalue, err := hexutil.Decode("0xfeb1f7e4f704e72544f4f097b36cb3f3af83043765ad9ad3c3a6cd7fac605055")
+				require.NoError(t, err)
+				return bytevalue
+			}(t), "DENEB"),
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -434,6 +460,47 @@ func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetBlockV2BlindedSignRequest() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetBlobSignRequest(t *testing.T) {
+	type args struct {
+		request *validatorpb.SignRequest
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *v1.BlobSidecarSignRequest
+		wantErr bool
+	}{
+		{
+			name: "Happy Path Test",
+			args: args{
+				request: mock.GetMockSignRequest("BLOB_SIDECAR"),
+			},
+			want:    mock.MockBlobSidecarSignRequest(),
+			wantErr: false,
+		},
+		{
+			name: "Happy Path Test Blinded",
+			args: args{
+				request: mock.GetMockSignRequest("BLINDED_BLOB_SIDECAR"),
+			},
+			want:    mock.MockBlobSidecarSignRequest(),
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := v1.GetBlobSignRequest(tt.args.request, make([]byte, fieldparams.RootLength))
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetBlobSignRequest() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetBlobSignRequest() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

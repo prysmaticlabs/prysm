@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
@@ -25,7 +24,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // ListKeystores implements the standard validator key management API.
@@ -263,137 +261,6 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 		}
 	}
 	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
-}
-
-// ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
-func (s *Server) ListRemoteKeys(ctx context.Context, _ *empty.Empty) (*ethpbservice.ListRemoteKeysResponse, error) {
-	if !s.walletInitialized {
-		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
-	}
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
-	}
-	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
-	}
-	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not retrieve keystores: %v", err)
-	}
-	keystoreResponse := make([]*ethpbservice.ListRemoteKeysResponse_Keystore, len(pubKeys))
-	for i := 0; i < len(pubKeys); i++ {
-		keystoreResponse[i] = &ethpbservice.ListRemoteKeysResponse_Keystore{
-			Pubkey:   pubKeys[i][:],
-			Url:      s.validatorService.Web3SignerConfig.BaseEndpoint,
-			Readonly: true,
-		}
-	}
-	return &ethpbservice.ListRemoteKeysResponse{
-		Data: keystoreResponse,
-	}, nil
-}
-
-// ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
-func (s *Server) ImportRemoteKeys(ctx context.Context, req *ethpbservice.ImportRemoteKeysRequest) (*ethpbservice.ImportRemoteKeysResponse, error) {
-	if !s.walletInitialized {
-		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
-	}
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, fmt.Sprintf("Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err))
-	}
-	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
-	}
-	adder, ok := km.(keymanager.PublicKeyAdder)
-	if !ok {
-		statuses := groupImportRemoteKeysErrors(req, "Keymanager kind cannot import public keys for web3signer keymanager type.")
-		return &ethpbservice.ImportRemoteKeysResponse{Data: statuses}, nil
-	}
-
-	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.RemoteKeys))
-	isUrlUsed := false
-	for i, obj := range req.RemoteKeys {
-		remoteKeys[i] = bytesutil.ToBytes48(obj.Pubkey)
-		if obj.Url != "" {
-			isUrlUsed = true
-		}
-	}
-	if isUrlUsed {
-		log.Warnf("Setting web3signer base url for imported keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signer.")
-	}
-
-	statuses, err := adder.AddPublicKeys(ctx, remoteKeys)
-	if err != nil {
-		sts := groupImportRemoteKeysErrors(req, fmt.Sprintf("Could not add keys;error: %v", err))
-		return &ethpbservice.ImportRemoteKeysResponse{Data: sts}, nil
-	}
-	return &ethpbservice.ImportRemoteKeysResponse{
-		Data: statuses,
-	}, nil
-}
-
-func groupImportRemoteKeysErrors(req *ethpbservice.ImportRemoteKeysRequest, errorMessage string) []*ethpbservice.ImportedRemoteKeysStatus {
-	statuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(req.RemoteKeys))
-	for i := 0; i < len(req.RemoteKeys); i++ {
-		statuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-			Status:  ethpbservice.ImportedRemoteKeysStatus_ERROR,
-			Message: errorMessage,
-		}
-	}
-	return statuses
-}
-
-// DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
-func (s *Server) DeleteRemoteKeys(ctx context.Context, req *ethpbservice.DeleteRemoteKeysRequest) (*ethpbservice.DeleteRemoteKeysResponse, error) {
-	if !s.walletInitialized {
-		return nil, status.Error(codes.FailedPrecondition, "Prysm Wallet not initialized. Please create a new wallet.")
-	}
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready.")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get Prysm keymanager (possibly due to beacon node unavailable): %v", err)
-	}
-	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		return nil, status.Errorf(codes.FailedPrecondition, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.")
-	}
-	deleter, ok := km.(keymanager.PublicKeyDeleter)
-	if !ok {
-		statuses := groupDeleteRemoteKeysErrors(req, "Keymanager kind cannot delete public keys for web3signer keymanager type.")
-		return &ethpbservice.DeleteRemoteKeysResponse{Data: statuses}, nil
-	}
-	remoteKeys := make([][fieldparams.BLSPubkeyLength]byte, len(req.Pubkeys))
-	for i, key := range req.Pubkeys {
-		remoteKeys[i] = bytesutil.ToBytes48(key)
-	}
-	statuses, err := deleter.DeletePublicKeys(ctx, remoteKeys)
-	if err != nil {
-		sts := groupDeleteRemoteKeysErrors(req, fmt.Sprintf("Could not delete keys;error: %v", err))
-		return &ethpbservice.DeleteRemoteKeysResponse{Data: sts}, nil
-	}
-	return &ethpbservice.DeleteRemoteKeysResponse{
-		Data: statuses,
-	}, nil
-}
-
-func groupDeleteRemoteKeysErrors(req *ethpbservice.DeleteRemoteKeysRequest, errorMessage string) []*ethpbservice.DeletedRemoteKeysStatus {
-	statuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(req.Pubkeys))
-	for i := 0; i < len(req.Pubkeys); i++ {
-		statuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-			Status:  ethpbservice.DeletedRemoteKeysStatus_ERROR,
-			Message: errorMessage,
-		}
-	}
-	return statuses
 }
 
 func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetGasLimitResponse, error) {
@@ -680,52 +547,4 @@ func validatePublicKey(pubkey []byte) error {
 			codes.InvalidArgument, "Provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
 	}
 	return nil
-}
-
-// SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
-func (s *Server) SetVoluntaryExit(ctx context.Context, req *ethpbservice.SetVoluntaryExitRequest) (*ethpbservice.SetVoluntaryExitResponse, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
-	}
-	if err := validatePublicKey(req.Pubkey); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-	if s.wallet == nil {
-		return nil, status.Error(codes.FailedPrecondition, "No wallet found")
-	}
-	km, err := s.validatorService.Keymanager()
-	if err != nil {
-		return nil, err
-	}
-	if req.Epoch == 0 {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-		}
-		epoch, err := client.CurrentEpoch(genesisResponse.GenesisTime)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "gRPC call to get genesis time failed: %v", err)
-		}
-		req.Epoch = epoch
-	}
-	sve, err := client.CreateSignedVoluntaryExit(
-		ctx,
-		s.beaconNodeValidatorClient,
-		km.Sign,
-		req.Pubkey,
-		req.Epoch,
-	)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not create voluntary exit: %v", err)
-	}
-
-	return &ethpbservice.SetVoluntaryExitResponse{
-		Data: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit{
-			Message: &ethpbservice.SetVoluntaryExitResponse_SignedVoluntaryExit_VoluntaryExit{
-				Epoch:          uint64(sve.Exit.Epoch),
-				ValidatorIndex: uint64(sve.Exit.ValidatorIndex),
-			},
-			Signature: sve.Signature,
-		},
-	}, nil
 }

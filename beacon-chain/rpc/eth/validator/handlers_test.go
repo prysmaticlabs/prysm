@@ -2079,6 +2079,8 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 	}
 
 	t.Run("single validator", func(t *testing.T) {
+		cache.SyncSubnetIDs.EmptyAllCaches()
+
 		var body bytes.Buffer
 		_, err := body.WriteString("[\"1\"]")
 		require.NoError(t, err)
@@ -2097,6 +2099,9 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 		assert.Equal(t, "1", duty.ValidatorIndex)
 		require.Equal(t, 1, len(duty.ValidatorSyncCommitteeIndices))
 		assert.Equal(t, "1", duty.ValidatorSyncCommitteeIndices[0])
+		subnetId, _, ok, _ := cache.SyncSubnetIDs.GetSyncCommitteeSubnets(vals[1].PublicKey, 0)
+		require.Equal(t, true, ok)
+		assert.Equal(t, 1, len(subnetId))
 	})
 	t.Run("multiple validators", func(t *testing.T) {
 		var body bytes.Buffer

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,7 +42,7 @@ type TestP2P struct {
 	BHost           host.Host
 	pubsub          *pubsub.PubSub
 	joinedTopics    map[string]*pubsub.Topic
-	BroadcastCalled bool
+	BroadcastCalled atomic.Bool
 	DelaySend       bool
 	Digest          [4]byte
 	peers           *peers.Status
@@ -160,25 +161,25 @@ func (p *TestP2P) ReceivePubSub(topic string, msg proto.Message) {
 
 // Broadcast a message.
 func (p *TestP2P) Broadcast(_ context.Context, _ proto.Message) error {
-	p.BroadcastCalled = true
+	p.BroadcastCalled.Store(true)
 	return nil
 }
 
 // BroadcastAttestation broadcasts an attestation.
 func (p *TestP2P) BroadcastAttestation(_ context.Context, _ uint64, _ *ethpb.Attestation) error {
-	p.BroadcastCalled = true
+	p.BroadcastCalled.Store(true)
 	return nil
 }
 
 // BroadcastSyncCommitteeMessage broadcasts a sync committee message.
 func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *ethpb.SyncCommitteeMessage) error {
-	p.BroadcastCalled = true
+	p.BroadcastCalled.Store(true)
 	return nil
 }
 
 // BroadcastBlob broadcasts a blob for mock.
 func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
-	p.BroadcastCalled = true
+	p.BroadcastCalled.Store(true)
 	return nil
 }
 

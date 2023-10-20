@@ -57,7 +57,6 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
-		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -134,7 +133,6 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
-		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -191,7 +189,6 @@ func scenarioEvals() []types.Evaluator {
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
-		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -213,7 +210,6 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
 		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
-		ev.APIMiddlewareVerifyIntegrity,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,

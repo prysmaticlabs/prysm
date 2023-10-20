@@ -1,6 +1,8 @@
 package beacon
 
 import (
+	"encoding/json"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
@@ -120,6 +122,59 @@ type Validator struct {
 type ValidatorBalance struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
+}
+
+type GetBlockResponse struct {
+	Data *SignedBlock `json:"data"`
+}
+
+type GetBlockV2Response struct {
+	Version             string       `json:"version"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
+	Data                *SignedBlock `json:"data"`
+}
+
+type SignedBlock struct {
+	Message   json.RawMessage `json:"message"` // represents the block values based on the version
+	Signature string          `json:"signature"`
+}
+
+type GetBlockAttestationsResponse struct {
+	ExecutionOptimistic bool                  `json:"execution_optimistic"`
+	Finalized           bool                  `json:"finalized"`
+	Data                []*shared.Attestation `json:"data"`
+}
+
+type GetStateRootResponse struct {
+	ExecutionOptimistic bool       `json:"execution_optimistic"`
+	Finalized           bool       `json:"finalized"`
+	Data                *StateRoot `json:"data"`
+}
+
+type StateRoot struct {
+	Root string `json:"root"`
+}
+
+type GetRandaoResponse struct {
+	ExecutionOptimistic bool    `json:"execution_optimistic"`
+	Finalized           bool    `json:"finalized"`
+	Data                *Randao `json:"data"`
+}
+
+type Randao struct {
+	Randao string `json:"randao"`
+}
+
+type GetSyncCommitteeResponse struct {
+	ExecutionOptimistic bool                     `json:"execution_optimistic"`
+	Finalized           bool                     `json:"finalized"`
+	Data                *SyncCommitteeValidators `json:"data"`
+}
+
+type SyncCommitteeValidators struct {
+	Validators          []string   `json:"validators"`
+	ValidatorAggregates [][]string `json:"validator_aggregates"`
 }
 
 type BLSToExecutionChangesPoolResponse struct {
