@@ -405,5 +405,5 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 	}
 	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
 	// we respond "not found".
-	http2.HandleError(w, fmt.Sprintf("no gaslimt found for pubkey: %q", rawPubkey), http.StatusNotFound)
+	http2.HandleError(w, fmt.Sprintf("No gaslimt found for pubkey: %q", rawPubkey), http.StatusNotFound)
 }
