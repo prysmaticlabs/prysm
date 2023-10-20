@@ -362,7 +362,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 
 // DeleteGasLimit deletes the gas limit by public key
 func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGasLimit")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteGasLimit")
 	defer span.End()
 
 	if s.validatorService == nil {
