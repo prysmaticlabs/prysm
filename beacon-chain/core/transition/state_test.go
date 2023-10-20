@@ -103,8 +103,8 @@ func TestGenesisState_HashEquality(t *testing.T) {
 	pbstate, err := state_native.ProtobufBeaconStatePhase0(state.ToProto())
 	require.NoError(t, err)
 
-	root1, err1 := hash.HashProto(pbState1)
-	root2, err2 := hash.HashProto(pbstate)
+	root1, err1 := hash.Proto(pbState1)
+	root2, err2 := hash.Proto(pbstate)
 
 	if err1 != nil || err2 != nil {
 		t.Fatalf("Failed to marshal state to bytes: %v %v", err1, err2)

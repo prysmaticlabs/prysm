@@ -85,7 +85,7 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	require.NoError(t, err)
 
 	mockChain := &mock.ChainService{State: beaconState}
-	gen := mockstategen.NewMockService()
+	gen := mockstategen.NewService()
 	gen.AddStateForRoot(beaconState, [32]byte{})
 
 	gs := startup.NewClockSynchronizer()
