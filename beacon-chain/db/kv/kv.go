@@ -92,7 +92,7 @@ type Store struct {
 	ctx                 context.Context
 }
 
-// KVStoreDatafilePath is the canonical construction of a full
+// StoreDatafilePath is the canonical construction of a full
 // database file path from the directory path, so that code outside
 // this package can find the full path in a consistent way.
 func StoreDatafilePath(dirPath string) string {

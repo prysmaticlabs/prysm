@@ -75,7 +75,7 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
-// StateGenOption is a functional option for controlling the initialization of a *State value
+// Option is a functional option for controlling the initialization of a *State value
 type Option func(*State)
 
 func WithBackfillStatus(bfs *backfill.Status) Option {

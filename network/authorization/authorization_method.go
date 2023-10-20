@@ -1,6 +1,6 @@
 package authorization
 
-// AuthorizationMethod is an authorization method such as 'Basic' or 'Bearer'.
+// Method is an authorization method such as 'Basic' or 'Bearer'.
 type Method uint8
 
 const (

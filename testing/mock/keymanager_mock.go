@@ -14,13 +14,13 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockRemoteSignerClient is a mock of RemoteSignerClient interface.
+// RemoteSignerClient is a mock of RemoteSignerClient interface.
 type RemoteSignerClient struct {
 	ctrl     *gomock.Controller
 	recorder *RemoteSignerClientMockRecorder
 }
 
-// MockRemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient.
+// RemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient.
 type RemoteSignerClientMockRecorder struct {
 	mock *RemoteSignerClient
 }

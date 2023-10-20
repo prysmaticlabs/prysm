@@ -112,7 +112,7 @@ func (s *Status) Reload(ctx context.Context) error {
 	return nil
 }
 
-// BackfillDB describes the set of DB methods that the Status type needs to function.
+// DB describes the set of DB methods that the Status type needs to function.
 type DB interface {
 	SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)

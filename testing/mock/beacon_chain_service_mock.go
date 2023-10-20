@@ -13,13 +13,13 @@ import (
 	metadata "google.golang.org/grpc/metadata"
 )
 
-// MockBeaconChain_StreamChainHeadServer is a mock of BeaconChain_StreamChainHeadServer interface.
+// BeaconChain_StreamChainHeadServer is a mock of BeaconChain_StreamChainHeadServer interface.
 type BeaconChain_StreamChainHeadServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconChain_StreamChainHeadServerMockRecorder
 }
 
-// MockBeaconChain_StreamChainHeadServerMockRecorder is the mock recorder for MockBeaconChain_StreamChainHeadServer.
+// BeaconChain_StreamChainHeadServerMockRecorder is the mock recorder for MockBeaconChain_StreamChainHeadServer.
 type BeaconChain_StreamChainHeadServerMockRecorder struct {
 	mock *BeaconChain_StreamChainHeadServer
 }
@@ -132,13 +132,13 @@ func (mr *BeaconChain_StreamChainHeadServerMockRecorder) SetTrailer(arg0 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconChain_StreamChainHeadServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconChain_StreamAttestationsServer is a mock of BeaconChain_StreamAttestationsServer interface.
+// BeaconChain_StreamAttestationsServer is a mock of BeaconChain_StreamAttestationsServer interface.
 type BeaconChain_StreamAttestationsServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconChain_StreamAttestationsServerMockRecorder
 }
 
-// MockBeaconChain_StreamAttestationsServerMockRecorder is the mock recorder for MockBeaconChain_StreamAttestationsServer.
+// BeaconChain_StreamAttestationsServerMockRecorder is the mock recorder for MockBeaconChain_StreamAttestationsServer.
 type BeaconChain_StreamAttestationsServerMockRecorder struct {
 	mock *BeaconChain_StreamAttestationsServer
 }
@@ -251,13 +251,13 @@ func (mr *BeaconChain_StreamAttestationsServerMockRecorder) SetTrailer(arg0 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconChain_StreamAttestationsServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconChain_StreamBlocksServer is a mock of BeaconChain_StreamBlocksServer interface.
+// BeaconChain_StreamBlocksServer is a mock of BeaconChain_StreamBlocksServer interface.
 type BeaconChain_StreamBlocksServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconChain_StreamBlocksServerMockRecorder
 }
 
-// MockBeaconChain_StreamBlocksServerMockRecorder is the mock recorder for MockBeaconChain_StreamBlocksServer.
+// BeaconChain_StreamBlocksServerMockRecorder is the mock recorder for MockBeaconChain_StreamBlocksServer.
 type BeaconChain_StreamBlocksServerMockRecorder struct {
 	mock *BeaconChain_StreamBlocksServer
 }
@@ -370,13 +370,13 @@ func (mr *BeaconChain_StreamBlocksServerMockRecorder) SetTrailer(arg0 interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconChain_StreamBlocksServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconChain_StreamValidatorsInfoServer is a mock of BeaconChain_StreamValidatorsInfoServer interface.
+// BeaconChain_StreamValidatorsInfoServer is a mock of BeaconChain_StreamValidatorsInfoServer interface.
 type BeaconChain_StreamValidatorsInfoServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconChain_StreamValidatorsInfoServerMockRecorder
 }
 
-// MockBeaconChain_StreamValidatorsInfoServerMockRecorder is the mock recorder for MockBeaconChain_StreamValidatorsInfoServer.
+// BeaconChain_StreamValidatorsInfoServerMockRecorder is the mock recorder for MockBeaconChain_StreamValidatorsInfoServer.
 type BeaconChain_StreamValidatorsInfoServerMockRecorder struct {
 	mock *BeaconChain_StreamValidatorsInfoServer
 }
@@ -504,13 +504,13 @@ func (mr *BeaconChain_StreamValidatorsInfoServerMockRecorder) SetTrailer(arg0 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconChain_StreamValidatorsInfoServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconChain_StreamIndexedAttestationsServer is a mock of BeaconChain_StreamIndexedAttestationsServer interface.
+// BeaconChain_StreamIndexedAttestationsServer is a mock of BeaconChain_StreamIndexedAttestationsServer interface.
 type BeaconChain_StreamIndexedAttestationsServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconChain_StreamIndexedAttestationsServerMockRecorder
 }
 
-// MockBeaconChain_StreamIndexedAttestationsServerMockRecorder is the mock recorder for MockBeaconChain_StreamIndexedAttestationsServer.
+// BeaconChain_StreamIndexedAttestationsServerMockRecorder is the mock recorder for MockBeaconChain_StreamIndexedAttestationsServer.
 type BeaconChain_StreamIndexedAttestationsServerMockRecorder struct {
 	mock *BeaconChain_StreamIndexedAttestationsServer
 }

@@ -14,13 +14,13 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockNodeClient is a mock of NodeClient interface.
+// NodeClient is a mock of NodeClient interface.
 type NodeClient struct {
 	ctrl     *gomock.Controller
 	recorder *NodeClientMockRecorder
 }
 
-// MockNodeClientMockRecorder is the mock recorder for MockNodeClient.
+// NodeClientMockRecorder is the mock recorder for MockNodeClient.
 type NodeClientMockRecorder struct {
 	mock *NodeClient
 }

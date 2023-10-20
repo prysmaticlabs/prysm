@@ -14,13 +14,13 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockBeaconNodeValidatorServer is a mock of BeaconNodeValidatorServer interface.
+// BeaconNodeValidatorServer is a mock of BeaconNodeValidatorServer interface.
 type BeaconNodeValidatorServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconNodeValidatorServerMockRecorder
 }
 
-// MockBeaconNodeValidatorServerMockRecorder is the mock recorder for MockBeaconNodeValidatorServer.
+// BeaconNodeValidatorServerMockRecorder is the mock recorder for MockBeaconNodeValidatorServer.
 type BeaconNodeValidatorServerMockRecorder struct {
 	mock *BeaconNodeValidatorServer
 }
@@ -453,13 +453,13 @@ func (mr *BeaconNodeValidatorServerMockRecorder) WaitForChainStart(arg0, arg1 in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForChainStart", reflect.TypeOf((*BeaconNodeValidatorServer)(nil).WaitForChainStart), arg0, arg1)
 }
 
-// MockBeaconNodeValidator_WaitForActivationServer is a mock of BeaconNodeValidator_WaitForActivationServer interface.
+// BeaconNodeValidator_WaitForActivationServer is a mock of BeaconNodeValidator_WaitForActivationServer interface.
 type BeaconNodeValidator_WaitForActivationServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconNodeValidator_WaitForActivationServerMockRecorder
 }
 
-// MockBeaconNodeValidator_WaitForActivationServerMockRecorder is the mock recorder for MockBeaconNodeValidator_WaitForActivationServer.
+// BeaconNodeValidator_WaitForActivationServerMockRecorder is the mock recorder for MockBeaconNodeValidator_WaitForActivationServer.
 type BeaconNodeValidator_WaitForActivationServerMockRecorder struct {
 	mock *BeaconNodeValidator_WaitForActivationServer
 }
@@ -572,13 +572,13 @@ func (mr *BeaconNodeValidator_WaitForActivationServerMockRecorder) SetTrailer(ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconNodeValidator_WaitForActivationServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconNodeValidator_WaitForChainStartServer is a mock of BeaconNodeValidator_WaitForChainStartServer interface.
+// BeaconNodeValidator_WaitForChainStartServer is a mock of BeaconNodeValidator_WaitForChainStartServer interface.
 type BeaconNodeValidator_WaitForChainStartServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconNodeValidator_WaitForChainStartServerMockRecorder
 }
 
-// MockBeaconNodeValidator_WaitForChainStartServerMockRecorder is the mock recorder for MockBeaconNodeValidator_WaitForChainStartServer.
+// BeaconNodeValidator_WaitForChainStartServerMockRecorder is the mock recorder for MockBeaconNodeValidator_WaitForChainStartServer.
 type BeaconNodeValidator_WaitForChainStartServerMockRecorder struct {
 	mock *BeaconNodeValidator_WaitForChainStartServer
 }
@@ -691,13 +691,13 @@ func (mr *BeaconNodeValidator_WaitForChainStartServerMockRecorder) SetTrailer(ar
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*BeaconNodeValidator_WaitForChainStartServer)(nil).SetTrailer), arg0)
 }
 
-// MockBeaconNodeValidator_StreamDutiesServer is a mock of BeaconNodeValidator_StreamDutiesServer interface.
+// BeaconNodeValidator_StreamDutiesServer is a mock of BeaconNodeValidator_StreamDutiesServer interface.
 type BeaconNodeValidator_StreamDutiesServer struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconNodeValidator_StreamDutiesServerMockRecorder
 }
 
-// MockBeaconNodeValidator_StreamDutiesServerMockRecorder is the mock recorder for MockBeaconNodeValidator_StreamDutiesServer.
+// BeaconNodeValidator_StreamDutiesServerMockRecorder is the mock recorder for MockBeaconNodeValidator_StreamDutiesServer.
 type BeaconNodeValidator_StreamDutiesServerMockRecorder struct {
 	mock *BeaconNodeValidator_StreamDutiesServer
 }

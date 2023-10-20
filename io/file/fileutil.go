@@ -141,7 +141,7 @@ func HasReadWritePermissions(itemPath string) (bool, error) {
 	return info.Mode() == params.BeaconIoConfig().ReadWritePermissions, nil
 }
 
-// FileExists returns true if a file is not a directory and exists
+// Exists returns true if a file is not a directory and exists
 // at the specified path.
 func Exists(filename string) bool {
 	filePath, err := ExpandPath(filename)

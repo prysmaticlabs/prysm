@@ -513,7 +513,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 	}
 }
 
-// MockAggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
+// AggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
 func AggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
 	return &v1.AggregationSlotSignRequest{
 		Type:            "AGGREGATION_SLOT",
@@ -523,7 +523,7 @@ func AggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
 	}
 }
 
-// MockAggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
+// AggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
 func AggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
 	return &v1.AggregateAndProofSignRequest{
 		Type:        "AGGREGATE_AND_PROOF",
@@ -537,7 +537,7 @@ func AggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
 	}
 }
 
-// MockAttestationSignRequest is a mock implementation of the AttestationSignRequest.
+// AttestationSignRequest is a mock implementation of the AttestationSignRequest.
 func AttestationSignRequest() *v1.AttestationSignRequest {
 	return &v1.AttestationSignRequest{
 		Type:        "ATTESTATION",
@@ -547,7 +547,7 @@ func AttestationSignRequest() *v1.AttestationSignRequest {
 	}
 }
 
-// MockBlockSignRequest is a mock implementation of the BlockSignRequest.
+// BlockSignRequest is a mock implementation of the BlockSignRequest.
 func BlockSignRequest() *v1.BlockSignRequest {
 	return &v1.BlockSignRequest{
 		Type:        "BLOCK",
@@ -563,7 +563,7 @@ func BlockSignRequest() *v1.BlockSignRequest {
 	}
 }
 
-// MockBlockV2AltairSignRequest is a mock implementation of the BlockAltairSignRequest.
+// BlockV2AltairSignRequest is a mock implementation of the BlockAltairSignRequest.
 func BlockV2AltairSignRequest() *v1.BlockAltairSignRequest {
 	return &v1.BlockAltairSignRequest{
 		Type:        "BLOCK_V2",
@@ -594,7 +594,7 @@ func BlockV2BlindedSignRequest(bodyRoot []byte, version string) *v1.BlockV2Blind
 	}
 }
 
-// MockRandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
+// RandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
 func RandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
 	return &v1.RandaoRevealSignRequest{
 		Type:        "RANDAO_REVEAL",
@@ -606,7 +606,7 @@ func RandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
 	}
 }
 
-// MockSyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
+// SyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
 func SyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContributionAndProofSignRequest {
 	return &v1.SyncCommitteeContributionAndProofSignRequest{
 		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
@@ -616,7 +616,7 @@ func SyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContributio
 	}
 }
 
-// MockSyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
+// SyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
 func SyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 	return &v1.SyncCommitteeMessageSignRequest{
 		Type:        "SYNC_COMMITTEE_MESSAGE",
@@ -629,7 +629,7 @@ func SyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 	}
 }
 
-// MockSyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
+// SyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
 func SyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProofSignRequest {
 	return &v1.SyncCommitteeSelectionProofSignRequest{
 		Type:        "SYNC_COMMITTEE_SELECTION_PROOF",
@@ -642,7 +642,7 @@ func SyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProofSig
 	}
 }
 
-// MockVoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
+// VoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
 func VoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 	return &v1.VoluntaryExitSignRequest{
 		Type:        "VOLUNTARY_EXIT",
@@ -655,7 +655,7 @@ func VoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 	}
 }
 
-// MockValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
+// ValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
 func ValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
 	return &v1.ValidatorRegistrationSignRequest{
 		Type:        "VALIDATOR_REGISTRATION",
@@ -669,7 +669,7 @@ func ValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
 	}
 }
 
-// MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
+// BlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
 func BlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
 	if err != nil {
@@ -697,7 +697,7 @@ func BlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-// MockForkInfo is a mock implementation of the ForkInfo.
+// ForkInfo is a mock implementation of the ForkInfo.
 func ForkInfo() *v1.ForkInfo {
 	return &v1.ForkInfo{
 		Fork: &v1.Fork{
@@ -709,7 +709,7 @@ func ForkInfo() *v1.ForkInfo {
 	}
 }
 
-// MockAttestation is a mock implementation of the Attestation.
+// Attestation is a mock implementation of the Attestation.
 func Attestation() *v1.Attestation {
 	return &v1.Attestation{
 		AggregationBits: []byte(bitfield.Bitlist{0b1101}),

@@ -21,7 +21,7 @@ import (
 // an already exited validator
 var ValidatorAlreadyExitedErr = errors.New("validator already exited")
 
-// ValidatorsMaxExitEpochAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
+// MaxExitEpochAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
 // epoch and the number of them
 func MaxExitEpochAndChurn(s state.BeaconState) (maxExitEpoch primitives.Epoch, churn uint64) {
 	farFutureEpoch := params.BeaconConfig().FarFutureEpoch

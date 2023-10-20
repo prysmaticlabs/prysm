@@ -13,13 +13,13 @@ import (
 	metadata "google.golang.org/grpc/metadata"
 )
 
-// MockBeaconNodeValidatorAltair_StreamBlocksClient is a mock of BeaconNodeValidatorAltair_StreamBlocksClient interface
+// BeaconNodeValidatorAltair_StreamBlocksClient is a mock of BeaconNodeValidatorAltair_StreamBlocksClient interface
 type BeaconNodeValidatorAltair_StreamBlocksClient struct {
 	ctrl     *gomock.Controller
 	recorder *BeaconNodeValidatorAltair_StreamBlocksClientMockRecorder
 }
 
-// MockBeaconNodeValidatorAltair_StreamBlocksClientMockRecorder is the mock recorder for MockBeaconNodeValidatorAltair_StreamBlocksClient
+// BeaconNodeValidatorAltair_StreamBlocksClientMockRecorder is the mock recorder for MockBeaconNodeValidatorAltair_StreamBlocksClient
 type BeaconNodeValidatorAltair_StreamBlocksClientMockRecorder struct {
 	mock *BeaconNodeValidatorAltair_StreamBlocksClient
 }

@@ -10,13 +10,13 @@ import (
 	gomock "github.com/golang/mock/gomock"
 )
 
-// MockPasswordReader is a mock of PasswordReader interface
+// PasswordReader is a mock of PasswordReader interface
 type PasswordReader struct {
 	ctrl     *gomock.Controller
 	recorder *PasswordReaderMockRecorder
 }
 
-// MockPasswordReaderMockRecorder is the mock recorder for MockPasswordReader
+// PasswordReaderMockRecorder is the mock recorder for MockPasswordReader
 type PasswordReaderMockRecorder struct {
 	mock *PasswordReader
 }

@@ -51,7 +51,7 @@ func (m *StateManager) StateByRoot(_ context.Context, blockRoot [32]byte) (state
 	return m.StatesByRoot[blockRoot], nil
 }
 
-// BalancesByRoot --
+// ActiveNonSlashedBalancesByRoot --
 func (*StateManager) ActiveNonSlashedBalancesByRoot(_ context.Context, _ [32]byte) ([]uint64, error) {
 	return []uint64{}, nil
 }

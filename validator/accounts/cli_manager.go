@@ -30,7 +30,7 @@ func NewCLIManager(opts ...Option) (*CLIManager, error) {
 	return acc, nil
 }
 
-// AccountsCLIManager defines a struct capable of performing various validator
+// CLIManager defines a struct capable of performing various validator
 // wallet & account operations via the command line.
 type CLIManager struct {
 	wallet               *wallet.Wallet
