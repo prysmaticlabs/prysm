@@ -321,7 +321,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 
 	settings := s.validatorService.ProposerSettings()
 	if settings == nil {
-		http2.HandleError(w, "no proposer settings were found to update", http.StatusInternalServerError)
+		http2.HandleError(w, "No proposer settings were found to update", http.StatusInternalServerError)
 		return
 	} else if settings.ProposeConfig == nil {
 		if settings.DefaultConfig == nil || settings.DefaultConfig.BuilderConfig == nil || !settings.DefaultConfig.BuilderConfig.Enabled {
