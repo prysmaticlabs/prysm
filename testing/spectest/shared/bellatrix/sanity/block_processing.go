@@ -50,7 +50,7 @@ func RunBlockProcessingTest(t *testing.T, config, folderPath string) {
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
 			require.NoError(t, err)
 
-			metaYaml := &SanityConfig{}
+			metaYaml := &Config{}
 			require.NoError(t, utils.UnmarshalYaml(file, metaYaml), "Failed to Unmarshal")
 
 			var transitionError error

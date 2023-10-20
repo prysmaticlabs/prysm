@@ -121,7 +121,7 @@ func TestServer_ListValidatorBalances_NoResults(t *testing.T) {
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, beaconDB.SaveState(ctx, headState, gRoot))
 
-	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
+	bs.ReplayerBuilder = mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState))
 
 	wanted := &ethpb.ValidatorBalances{
 		Balances:      make([]*ethpb.ValidatorBalances_Balance, 0),
@@ -180,7 +180,7 @@ func TestServer_ListValidatorBalances_DefaultResponse_NoArchive(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: st,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	res, err := bs.ListValidatorBalances(
 		ctx,
@@ -209,7 +209,7 @@ func TestServer_ListValidatorBalances_PaginationOutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 200, len(headState.Balances()))
@@ -258,7 +258,7 @@ func TestServer_ListValidatorBalances_Pagination_Default(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -342,7 +342,7 @@ func TestServer_ListValidatorBalances_Pagination_CustomPageSizes(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	tests := []struct {
@@ -410,7 +410,7 @@ func TestServer_ListValidatorBalances_OutOfRange(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	req := &ethpb.ListValidatorBalancesRequest{Indices: []primitives.ValidatorIndex{primitives.ValidatorIndex(1)}, QueryFilter: &ethpb.ListValidatorBalancesRequest_Epoch{Epoch: 0}}
@@ -461,7 +461,7 @@ func TestServer_ListValidators_reqStateIsNil(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: nil,
 		},
-		StateGen: &mockstategen.MockStateManager{
+		StateGen: &mockstategen.StateManager{
 			StatesBySlot: map[primitives.Slot]state.BeaconState{
 				0: nil,
 			},
@@ -673,7 +673,7 @@ func TestServer_ListValidatorBalances_UnknownValidatorInResponse(t *testing.T) {
 		HeadFetcher: &mock.ChainService{
 			State: headState,
 		},
-		ReplayerBuilder: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState)),
+		ReplayerBuilder: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState)),
 	}
 
 	nonExistentPubKey := [32]byte{8}

@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func AccountsExit(c *cli.Context, r io.Reader) error {
+func Exit(c *cli.Context, r io.Reader) error {
 	var w *wallet.Wallet
 	var km keymanager.IKeymanager
 	var err error

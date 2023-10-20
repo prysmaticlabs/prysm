@@ -228,7 +228,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.sharedFieldReferences[types.Validators] = stateutil.NewRef(1)
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
@@ -337,7 +337,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
@@ -448,7 +448,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
@@ -563,7 +563,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
@@ -676,7 +676,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 		b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(b, finalizerCleanup)
 	return b, nil
@@ -842,7 +842,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		}
 	}
 
-	state.StateCount.Inc()
+	state.Count.Inc()
 	// Finalizer runs when dst is being destroyed in garbage collection.
 	runtime.SetFinalizer(dst, finalizerCleanup)
 	return dst
@@ -1172,7 +1172,7 @@ func finalizerCleanup(b *BeaconState) {
 		}
 	}
 
-	state.StateCount.Sub(1)
+	state.Count.Sub(1)
 }
 
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {

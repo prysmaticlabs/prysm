@@ -10,12 +10,12 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-type ValidatorPerformanceRequest struct {
+type PerformanceRequest struct {
 	PublicKeys [][]byte                    `json:"public_keys,omitempty"`
 	Indices    []primitives.ValidatorIndex `json:"indices,omitempty"`
 }
 
-type ValidatorPerformanceResponse struct {
+type PerformanceResponse struct {
 	PublicKeys                    [][]byte `json:"public_keys,omitempty"`
 	CorrectlyVotedSource          []bool   `json:"correctly_voted_source,omitempty"`
 	CorrectlyVotedTarget          []bool   `json:"correctly_voted_target,omitempty"`
@@ -29,7 +29,7 @@ type ValidatorPerformanceResponse struct {
 
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
 func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
-	var req ValidatorPerformanceRequest
+	var req PerformanceRequest
 	if r.Body != http.NoBody {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			handleHTTPError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
@@ -47,7 +47,7 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 		handleHTTPError(w, "Could not compute validator performance: "+err.Err.Error(), core.ErrorReasonToHTTP(err.Reason))
 		return
 	}
-	response := &ValidatorPerformanceResponse{
+	response := &PerformanceResponse{
 		PublicKeys:                    computed.PublicKeys,
 		CorrectlyVotedSource:          computed.CorrectlyVotedSource,
 		CorrectlyVotedTarget:          computed.CorrectlyVotedTarget, // In altair, when this is true then the attestation was definitely included.

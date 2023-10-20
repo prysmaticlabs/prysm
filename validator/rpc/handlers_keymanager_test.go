@@ -56,7 +56,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	km, err := w.InitializeKeymanager(ctx, iface.InitKeymanagerConfig{ListenForChanges: false})
 	require.NoError(t, err)
 
-	m := &mock.MockValidator{Km: km}
+	m := &mock.Validator{Km: km}
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Validator: m,
 	})
@@ -246,7 +246,7 @@ func TestServer_ListRemoteKeys(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 		Web3SignerConfig: config,
@@ -293,7 +293,7 @@ func TestServer_ImportRemoteKeys(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 		Web3SignerConfig: config,
@@ -358,7 +358,7 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 		Web3SignerConfig: config,

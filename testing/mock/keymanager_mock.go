@@ -14,31 +14,31 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-// MockRemoteSignerClient is a mock of RemoteSignerClient interface.
-type MockRemoteSignerClient struct {
+// RemoteSignerClient is a mock of RemoteSignerClient interface.
+type RemoteSignerClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockRemoteSignerClientMockRecorder
+	recorder *RemoteSignerClientMockRecorder
 }
 
-// MockRemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient.
-type MockRemoteSignerClientMockRecorder struct {
-	mock *MockRemoteSignerClient
+// RemoteSignerClientMockRecorder is the mock recorder for MockRemoteSignerClient.
+type RemoteSignerClientMockRecorder struct {
+	mock *RemoteSignerClient
 }
 
 // NewMockRemoteSignerClient creates a new mock instance.
-func NewMockRemoteSignerClient(ctrl *gomock.Controller) *MockRemoteSignerClient {
-	mock := &MockRemoteSignerClient{ctrl: ctrl}
-	mock.recorder = &MockRemoteSignerClientMockRecorder{mock}
+func NewMockRemoteSignerClient(ctrl *gomock.Controller) *RemoteSignerClient {
+	mock := &RemoteSignerClient{ctrl: ctrl}
+	mock.recorder = &RemoteSignerClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockRemoteSignerClient) EXPECT() *MockRemoteSignerClientMockRecorder {
+func (m *RemoteSignerClient) EXPECT() *RemoteSignerClientMockRecorder {
 	return m.recorder
 }
 
 // ListValidatingPublicKeys mocks base method.
-func (m *MockRemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*validatorpb.ListPublicKeysResponse, error) {
+func (m *RemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, arg1 *emptypb.Empty, arg2 ...grpc.CallOption) (*validatorpb.ListPublicKeysResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -51,14 +51,14 @@ func (m *MockRemoteSignerClient) ListValidatingPublicKeys(arg0 context.Context, 
 }
 
 // ListValidatingPublicKeys indicates an expected call of ListValidatingPublicKeys.
-func (mr *MockRemoteSignerClientMockRecorder) ListValidatingPublicKeys(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *RemoteSignerClientMockRecorder) ListValidatingPublicKeys(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatingPublicKeys", reflect.TypeOf((*MockRemoteSignerClient)(nil).ListValidatingPublicKeys), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListValidatingPublicKeys", reflect.TypeOf((*RemoteSignerClient)(nil).ListValidatingPublicKeys), varargs...)
 }
 
 // Sign mocks base method.
-func (m *MockRemoteSignerClient) Sign(arg0 context.Context, arg1 *validatorpb.SignRequest, arg2 ...grpc.CallOption) (*validatorpb.SignResponse, error) {
+func (m *RemoteSignerClient) Sign(arg0 context.Context, arg1 *validatorpb.SignRequest, arg2 ...grpc.CallOption) (*validatorpb.SignResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -71,8 +71,8 @@ func (m *MockRemoteSignerClient) Sign(arg0 context.Context, arg1 *validatorpb.Si
 }
 
 // Sign indicates an expected call of Sign.
-func (mr *MockRemoteSignerClientMockRecorder) Sign(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *RemoteSignerClientMockRecorder) Sign(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sign", reflect.TypeOf((*MockRemoteSignerClient)(nil).Sign), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sign", reflect.TypeOf((*RemoteSignerClient)(nil).Sign), varargs...)
 }
