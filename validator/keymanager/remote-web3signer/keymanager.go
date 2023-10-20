@@ -24,6 +24,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	StatusImported  = "IMPORTED"
+	StatusError     = "ERROR"
+	StatusDuplicate = "DUPLICATE"
+	StatusUnknown   = "UNKNOWN"
+	StatusNotFound  = "NOT_FOUND"
+	StatusDeleted   = "DELETED"
+)
+
 // SetupConfig includes configuration values for initializing.
 // a keymanager, such as passwords, the wallet, and more.
 // Web3Signer contains one public keys option. Either through a URL or a static key list.
@@ -449,71 +458,95 @@ func DisplayRemotePublicKeys(validatingPubKeys [][48]byte) {
 }
 
 // AddPublicKeys imports a list of public keys into the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) AddPublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error) {
-	if ctx == nil {
-		return nil, errors.New("context is nil")
-	}
-	importedRemoteKeysStatuses := make([]*ethpbservice.ImportedRemoteKeysStatus, len(pubKeys))
-	for i, pubKey := range pubKeys {
+func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
+	importedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
+	for i, pubkey := range pubKeys {
 		found := false
+		pubkeyBytes, err := hexutil.Decode(pubkey)
+		if err != nil {
+			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  StatusError,
+				Message: err.Error(),
+			}
+			continue
+		}
+		if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
+			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  StatusError,
+				Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
+			}
+			continue
+		}
 		for _, key := range km.providedPublicKeys {
-			if bytes.Equal(key[:], pubKey[:]) {
+			if bytes.Equal(key[:], pubkeyBytes) {
 				found = true
 				break
 			}
 		}
 		if found {
-			importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-				Status:  ethpbservice.ImportedRemoteKeysStatus_DUPLICATE,
-				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", hexutil.Encode(pubKey[:])),
+			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  StatusDuplicate,
+				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", pubkey),
 			}
 			continue
 		}
-		km.providedPublicKeys = append(km.providedPublicKeys, pubKey)
-		importedRemoteKeysStatuses[i] = &ethpbservice.ImportedRemoteKeysStatus{
-			Status:  ethpbservice.ImportedRemoteKeysStatus_IMPORTED,
-			Message: fmt.Sprintf("Successfully added pubkey: %v", hexutil.Encode(pubKey[:])),
+		km.providedPublicKeys = append(km.providedPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
+		importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+			Status:  StatusImported,
+			Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
 		}
-		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", hexutil.Encode(pubKey[:]))
+		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
 	}
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return importedRemoteKeysStatuses, nil
+	return importedRemoteKeysStatuses
 }
 
 // DeletePublicKeys removes a list of public keys from the keymanager for web3signer use. Returns status with message.
-func (km *Keymanager) DeletePublicKeys(ctx context.Context, pubKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error) {
-	if ctx == nil {
-		return nil, errors.New("context is nil")
-	}
-	deletedRemoteKeysStatuses := make([]*ethpbservice.DeletedRemoteKeysStatus, len(pubKeys))
+func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus {
+	deletedRemoteKeysStatuses := make([]*keymanager.KeyStatus, len(pubKeys))
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
-			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
+			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  StatusNotFound,
 				Message: "No pubkeys are set in validator",
 			}
 		}
-		return deletedRemoteKeysStatuses, nil
+		return deletedRemoteKeysStatuses
 	}
 	for i, pubkey := range pubKeys {
 		for in, key := range km.providedPublicKeys {
-			if bytes.Equal(key[:], pubkey[:]) {
-				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
-				deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-					Status:  ethpbservice.DeletedRemoteKeysStatus_DELETED,
-					Message: fmt.Sprintf("Successfully deleted pubkey: %v", hexutil.Encode(pubkey[:])),
+			pubkeyBytes, err := hexutil.Decode(pubkey)
+			if err != nil {
+				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+					Status:  StatusError,
+					Message: err.Error(),
 				}
-				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", hexutil.Encode(pubkey[:]))
+				continue
+			}
+			if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
+				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+					Status:  StatusError,
+					Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
+				}
+				continue
+			}
+			if bytes.Equal(key[:], pubkeyBytes) {
+				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
+				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+					Status:  StatusDeleted,
+					Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
+				}
+				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
 				break
 			}
 		}
 		if deletedRemoteKeysStatuses[i] == nil {
-			deletedRemoteKeysStatuses[i] = &ethpbservice.DeletedRemoteKeysStatus{
-				Status:  ethpbservice.DeletedRemoteKeysStatus_NOT_FOUND,
-				Message: fmt.Sprintf("Pubkey: %v not found", hexutil.Encode(pubkey[:])),
+			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
+				Status:  StatusNotFound,
+				Message: fmt.Sprintf("Pubkey: %v not found", pubkey),
 			}
 		}
 	}
 	km.accountsChangedFeed.Send(km.providedPublicKeys)
-	return deletedRemoteKeysStatuses, nil
+	return deletedRemoteKeysStatuses
 }
