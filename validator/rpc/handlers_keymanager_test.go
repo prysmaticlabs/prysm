@@ -640,15 +640,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			// Set up global default value for builder gas limit.
 			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
 
-			request := &DeleteGasLimitRequest{
-				Pubkey: hexutil.Encode(tt.pubkey),
-			}
-
-			var buf bytes.Buffer
-			err = json.NewEncoder(&buf).Encode(request)
-			require.NoError(t, err)
-
-			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), &buf)
+			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), nil)
 			req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(tt.pubkey)})
 			w := httptest.NewRecorder()
 			w.Body = &bytes.Buffer{}

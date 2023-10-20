@@ -22,10 +22,6 @@ type SetGasLimitRequest struct {
 	GasLimit string `json:"gas_limit"`
 }
 
-type DeleteGasLimitRequest struct {
-	Pubkey string `json:"pubkey"`
-}
-
 // remote keymanager api
 type ListRemoteKeysResponse struct {
 	Data []*RemoteKey `json:"data"`

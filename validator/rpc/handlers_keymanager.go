@@ -265,7 +265,8 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 
 	resp := &GetGasLimitResponse{
 		Data: &GasLimitMetaData{
-			Pubkey: rawPubkey,
+			Pubkey:   rawPubkey,
+			GasLimit: fmt.Sprintf("%d", params.BeaconConfig().DefaultBuilderGasLimit),
 		},
 	}
 	settings := s.validatorService.ProposerSettings()
@@ -283,7 +284,6 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	resp.Data.GasLimit = fmt.Sprintf("%d", params.BeaconConfig().DefaultBuilderGasLimit)
 	http2.WriteJson(w, resp)
 }
 
