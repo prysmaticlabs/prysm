@@ -179,7 +179,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
-		require.NoError(t, db.DeleteBlobSidecar(ctx, bytesutil.ToBytes32(scs[0].BlockRoot)))
+		require.NoError(t, db.DeleteBlobSidecars(ctx, bytesutil.ToBytes32(scs[0].BlockRoot)))
 		got, err = db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.ErrorIs(t, ErrNotFound, err)
 		require.Equal(t, 0, len(got))

@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -53,7 +54,7 @@ func (b *BeaconState) validatorsReferences() []*ethpb.Validator {
 		return nil
 	}
 
-	res := make([]*ethpb.Validator, len(b.validators))
+	res := make([]*ethpb.Validator, len(b.validators), len(b.validators)+int(params.BeaconConfig().MaxDeposits))
 	for i := 0; i < len(res); i++ {
 		validator := b.validators[i]
 		if validator == nil {
