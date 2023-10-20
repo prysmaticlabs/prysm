@@ -287,7 +287,7 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, resp)
 }
 
-// SetGasLimit updates GasLimt of the public key.
+// SetGasLimit updates the gas limit by public key
 func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGasLimit")
 	defer span.End()
