@@ -339,7 +339,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			pubkey:           pubkey1,
 			newGasLimit:      9999,
 			proposerSettings: nil,
-			wantErr:          "no proposer settings were found to update",
+			wantErr:          "No proposer settings were found to update",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -349,7 +349,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				ProposeConfig: nil,
 				DefaultConfig: nil,
 			},
-			wantErr: "gas limit changes only apply when builder is enabled",
+			wantErr: "Gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is nil AND ProposerSettings.DefaultConfig.BuilderConfig is nil",
@@ -361,7 +361,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 					BuilderConfig: nil,
 				},
 			},
-			wantErr: "gas limit changes only apply when builder is enabled",
+			wantErr: "Gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is nil AND ProposerSettings.DefaultConfig is nil",
@@ -375,7 +375,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			wantErr: "gas limit changes only apply when builder is enabled",
+			wantErr: "Gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
@@ -389,7 +389,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 				},
 				DefaultConfig: nil,
 			},
-			wantErr: "gas limit changes only apply when builder is enabled",
+			wantErr: "Gas limit changes only apply when builder is enabled",
 		},
 		{
 			name:        "ProposerSettings.ProposeConfig is NOT defined for pubkey, BuilderConfig is defined AND ProposerSettings.DefaultConfig is nil",
