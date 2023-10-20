@@ -62,12 +62,18 @@ type KeyStoreExtractor interface {
 
 // PublicKeyAdder allows adding public keys to the keymanager.
 type PublicKeyAdder interface {
-	AddPublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.ImportedRemoteKeysStatus, error)
+	AddPublicKeys(publicKeys []string) []*KeyStatus
+}
+
+// KeyStatus is a json representation of the status fields for the keymanager apis
+type KeyStatus struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.
 type PublicKeyDeleter interface {
-	DeletePublicKeys(ctx context.Context, publicKeys [][fieldparams.BLSPubkeyLength]byte) ([]*ethpbservice.DeletedRemoteKeysStatus, error)
+	DeletePublicKeys(publicKeys []string) []*KeyStatus
 }
 
 type ListKeymanagerAccountConfig struct {

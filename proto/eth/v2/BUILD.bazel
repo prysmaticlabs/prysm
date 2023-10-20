@@ -8,7 +8,6 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 proto_library(
     name = "proto",
     srcs = [
-        "beacon_chain.proto",
         "ssz.proto",
         "version.proto",
         ":ssz_proto_files",

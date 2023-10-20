@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -22,7 +23,7 @@ type beaconApiNodeClient struct {
 }
 
 func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty) (*ethpb.SyncStatus, error) {
-	syncingResponse := apimiddleware.SyncingResponseJson{}
+	syncingResponse := node.SyncStatusResponse{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/node/syncing", &syncingResponse); err != nil {
 		return nil, errors.Wrap(err, "failed to get sync status")
 	}
@@ -76,7 +77,7 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 }
 
 func (c *beaconApiNodeClient) GetVersion(ctx context.Context, _ *empty.Empty) (*ethpb.Version, error) {
-	var versionResponse apimiddleware.VersionResponseJson
+	var versionResponse node.GetVersionResponse
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/node/version", &versionResponse); err != nil {
 		return nil, errors.Wrapf(err, "failed to query node version")
 	}
