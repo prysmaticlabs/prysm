@@ -13,6 +13,7 @@ go_library(
     deps = [
         "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
+        "//beacon-chain/rpc/eth/node:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",

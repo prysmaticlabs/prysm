@@ -79,7 +79,7 @@ func BenchmarkAppendPreviousEpochAttestations(b *testing.B) {
 	st, err := InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(b, err)
 
-	max := uint64(params.BeaconConfig().PreviousEpochAttestationsLength())
+	max := params.BeaconConfig().PreviousEpochAttestationsLength()
 	if max < 2 {
 		b.Fatalf("previous epoch attestations length is less than 2: %d", max)
 	}

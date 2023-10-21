@@ -62,7 +62,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // syncToFinalizedEpoch sync from head to best known finalized epoch.
 func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) error {
-	highestFinalizedSlot, err := slots.EpochStart(s.highestFinalizedEpoch() + 1)
+	highestFinalizedSlot, err := slots.EpochStart(s.highestFinalizedEpoch())
 	if err != nil {
 		return err
 	}

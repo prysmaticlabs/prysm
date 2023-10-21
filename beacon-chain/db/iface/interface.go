@@ -96,7 +96,7 @@ type NoHeadAccessDatabase interface {
 
 	// Blob operations.
 	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
-	DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte) error
+	DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error
 }
@@ -170,7 +170,7 @@ type SlasherDatabase interface {
 // Database interface with full access.
 type Database interface {
 	io.Closer
-	backup.BackupExporter
+	backup.Exporter
 	HeadAccessDatabase
 
 	DatabasePath() string

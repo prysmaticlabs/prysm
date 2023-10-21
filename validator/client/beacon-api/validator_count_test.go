@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,21 +21,21 @@ func TestGetValidatorCount(t *testing.T) {
 		name                        string
 		versionEndpointError        error
 		validatorCountEndpointError error
-		versionResponse             apimiddleware.VersionResponseJson
-		validatorCountResponse      validator2.ValidatorCountResponse
+		versionResponse             node.GetVersionResponse
+		validatorCountResponse      validator2.CountResponse
 		validatorCountCalled        int
 		expectedResponse            []iface.ValidatorCount
 		expectedError               string
 	}{
 		{
 			name: "success",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*validator2.Count{
 					{
 						Status: "active",
 						Count:  "10",
@@ -52,8 +52,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "not supported beacon node",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: "lighthouse/v0.0.1"},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: "lighthouse/v0.0.1"},
 			},
 			expectedError: "endpoint not supported",
 		},
@@ -64,8 +64,8 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "fails to get validator count",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
 			validatorCountEndpointError: errors.New("foo error"),
 			validatorCountCalled:        1,
@@ -73,10 +73,10 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "nil validator count data",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
 				Data:                nil,
@@ -86,13 +86,13 @@ func TestGetValidatorCount(t *testing.T) {
 		},
 		{
 			name: "invalid validator count",
-			versionResponse: apimiddleware.VersionResponseJson{
-				Data: &apimiddleware.VersionJson{Version: nodeVersion},
+			versionResponse: node.GetVersionResponse{
+				Data: &node.Version{Version: nodeVersion},
 			},
-			validatorCountResponse: validator2.ValidatorCountResponse{
+			validatorCountResponse: validator2.CountResponse{
 				ExecutionOptimistic: "false",
 				Finalized:           "true",
-				Data: []*validator2.ValidatorCount{
+				Data: []*validator2.Count{
 					{
 						Status: "active",
 						Count:  "10",
@@ -117,7 +117,7 @@ func TestGetValidatorCount(t *testing.T) {
 			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 
 			// Expect node version endpoint call.
-			var nodeVersionResponse apimiddleware.VersionResponseJson
+			var nodeVersionResponse node.GetVersionResponse
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				"/eth/v1/node/version",
@@ -130,7 +130,7 @@ func TestGetValidatorCount(t *testing.T) {
 				test.versionResponse,
 			)
 
-			var validatorCountResponse validator2.ValidatorCountResponse
+			var validatorCountResponse validator2.CountResponse
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				"/eth/v1/beacon/states/head/validator_count?status=active",
@@ -149,7 +149,7 @@ func TestGetValidatorCount(t *testing.T) {
 				jsonRestHandler: jsonRestHandler,
 			}
 
-			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.ValidatorStatus{validator.Active})
+			countResponse, err := client.GetValidatorCount(ctx, "head", []validator.Status{validator.Active})
 
 			if len(test.expectedResponse) == 0 {
 				require.ErrorContains(t, test.expectedError, err)

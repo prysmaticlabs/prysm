@@ -64,10 +64,10 @@ const (
 	GetPayloadMethodV3 = "engine_getPayloadV3"
 	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
-	// ExecutionBlockByHashMethod request string for JSON-RPC.
-	ExecutionBlockByHashMethod = "eth_getBlockByHash"
-	// ExecutionBlockByNumberMethod request string for JSON-RPC.
-	ExecutionBlockByNumberMethod = "eth_getBlockByNumber"
+	// BlockByHashMethod request string for JSON-RPC.
+	BlockByHashMethod = "eth_getBlockByHash"
+	// BlockByNumberMethod request string for JSON-RPC.
+	BlockByNumberMethod = "eth_getBlockByNumber"
 	// GetPayloadBodiesByHashV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
 	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
@@ -89,7 +89,7 @@ type ForkchoiceUpdatedResponse struct {
 // ExecutionPayloadReconstructor defines a service that can reconstruct a full beacon
 // block with an execution payload from a signed beacon block and a connection
 // to an execution client's engine API.
-type ExecutionPayloadReconstructor interface {
+type PayloadReconstructor interface {
 	ReconstructFullBlock(
 		ctx context.Context, blindedBlock interfaces.ReadOnlySignedBeaconBlock,
 	) (interfaces.SignedBeaconBlock, error)
@@ -463,7 +463,7 @@ func (s *Service) LatestExecutionBlock(ctx context.Context) (*pb.ExecutionBlock,
 	err := s.rpcClient.CallContext(
 		ctx,
 		result,
-		ExecutionBlockByNumberMethod,
+		BlockByNumberMethod,
 		"latest",
 		false, /* no full transaction objects */
 	)
@@ -476,7 +476,7 @@ func (s *Service) ExecutionBlockByHash(ctx context.Context, hash common.Hash, wi
 	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExecutionBlockByHash")
 	defer span.End()
 	result := &pb.ExecutionBlock{}
-	err := s.rpcClient.CallContext(ctx, result, ExecutionBlockByHashMethod, hash, withTxs)
+	err := s.rpcClient.CallContext(ctx, result, BlockByHashMethod, hash, withTxs)
 	return result, handleRPCError(err)
 }
 
@@ -495,7 +495,7 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 		blk := &pb.ExecutionBlock{}
 		newH := h
 		elems = append(elems, gethRPC.BatchElem{
-			Method: ExecutionBlockByHashMethod,
+			Method: BlockByHashMethod,
 			Args:   []interface{}{newH, withTxs},
 			Result: blk,
 			Error:  error(nil),
@@ -517,7 +517,7 @@ func (s *Service) ExecutionBlocksByHashes(ctx context.Context, hashes []common.H
 // HeaderByHash returns the relevant header details for the provided block hash.
 func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
-	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByHashMethod, hash, false /* no transactions */)
+	err := s.rpcClient.CallContext(ctx, &hdr, BlockByHashMethod, hash, false /* no transactions */)
 	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
@@ -527,7 +527,7 @@ func (s *Service) HeaderByHash(ctx context.Context, hash common.Hash) (*types.He
 // HeaderByNumber returns the relevant header details for the provided block number.
 func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.HeaderInfo, error) {
 	var hdr *types.HeaderInfo
-	err := s.rpcClient.CallContext(ctx, &hdr, ExecutionBlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
+	err := s.rpcClient.CallContext(ctx, &hdr, BlockByNumberMethod, toBlockNumArg(number), false /* no transactions */)
 	if err == nil && hdr == nil {
 		err = ethereum.NotFound
 	}
