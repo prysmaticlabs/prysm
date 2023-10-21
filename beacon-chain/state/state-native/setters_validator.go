@@ -41,7 +41,6 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	var changedVals []uint64
 	if features.Get().EnableExperimentalState {
-
 		l := b.validatorsMultiValue.Len(b)
 		for i := 0; i < l; i++ {
 			v, err := b.validatorsMultiValue.At(b, uint64(i))
@@ -59,7 +58,6 @@ func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator
 				}
 			}
 		}
-
 	} else {
 		b.lock.Lock()
 
