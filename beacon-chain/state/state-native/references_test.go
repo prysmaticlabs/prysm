@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -1012,6 +1013,43 @@ func TestValidatorReferences_RemainsConsistent_Bellatrix(t *testing.T) {
 	assert.NoError(t, a.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		assert.NotEqual(t, bytesutil.ToBytes48([]byte{'V'}), val.PublicKey())
 		return nil
+	}))
+}
+
+func TestValidatorReferences_ApplyValidator_BalancesRead(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableExperimentalState: true,
+	})
+	defer resetCfg()
+	s, err := InitializeFromProtoUnsafeAltair(&ethpb.BeaconStateAltair{
+		Validators: []*ethpb.Validator{
+			{PublicKey: []byte{'A'}},
+			{PublicKey: []byte{'B'}},
+			{PublicKey: []byte{'C'}},
+			{PublicKey: []byte{'D'}},
+			{PublicKey: []byte{'E'}},
+		},
+		Balances: []uint64{0, 0, 0, 0, 0},
+	})
+	require.NoError(t, err)
+	a, ok := s.(*BeaconState)
+	require.Equal(t, true, ok)
+
+	// Create a second state.
+	copied := a.Copy()
+	b, ok := copied.(*BeaconState)
+	require.Equal(t, true, ok)
+
+	// Modify all validators from copied state, it should not deadlock.
+	assert.NoError(t, b.ApplyToEveryValidator(func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error) {
+		b, err := b.BalanceAtIndex(0)
+		if err != nil {
+			return false, nil, err
+		}
+		newVal := ethpb.CopyValidator(val)
+		newVal.EffectiveBalance += b
+		val.EffectiveBalance += b
+		return true, val, nil
 	}))
 }
 
