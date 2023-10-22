@@ -247,9 +247,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_test_version = "v1.4.0-beta.2-hotfix"
-
-consensus_spec_version = "v1.4.0-beta.2"
+consensus_spec_version = "v1.4.0-beta.3"
 
 bls_test_version = "v0.1.1"
 
@@ -265,8 +263,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "99770a001189f66204a4ef79161c8002bcbbcbd8236f1c6479bd5b83a3c68d42",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_test_version,
+    sha256 = "67ae5b8fc368853da23d4297e480a4b7f4722fb970d1c7e2b6a5b7faef9cb907",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -281,8 +279,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "56763f6492ee137108271007d62feef60d8e3f1698e53dee4bc4b07e55f7326b",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_test_version,
+    sha256 = "82474f29fff4abd09fb1e71bafa98827e2573cf0ad02cf119610961831dc3bb5",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -297,8 +295,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "bc1cac1a991cdc7426efea14385dcf215df85ed3f0572b824ad6a1d7ca0c89ad",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_test_version,
+    sha256 = "60e4b6eb6c341daab7ee5614a8e3f28567247c504c593b951bfe919622c8ef8f",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -312,7 +310,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c5898001aaab2a5bb38a39ff9d17a52f1f9befcc26e63752cbf556040f0c884e",
+    sha256 = "fdab9756c93a250219ff6a10d5a9faee1e2e6878a14508410409e307362c6991",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )
