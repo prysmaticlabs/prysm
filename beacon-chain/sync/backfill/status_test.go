@@ -168,9 +168,9 @@ func TestReload(t *testing.T) {
 	require.NoError(t, err)
 
 	cases := []struct {
-		name string
-		db   DB
-		err  error
+		name     string
+		db       DB
+		err      error
 		expected *Status
 	}{
 		/*{
