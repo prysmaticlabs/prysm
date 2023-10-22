@@ -625,7 +625,7 @@ message Validator {
     uint64 effective_balance = 3;
 
     // Keeps track of slashed categories.
-    uint8 slashed = 4;
+    uint32 slashed = 4;
 
     // Epoch when the validator became eligible for activation. This field may
     // be zero if the validator was present in the Ethereum proof of stake genesis. This

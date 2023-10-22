@@ -20,7 +20,6 @@ import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/blobs.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
-import "proto/prysm/v1alpha1/inclusioin_list.proto";
 import "proto/prysm/v1alpha1/payload_attestation.proto";
 import "proto/prysm/v1alpha1/execution.proto";
 
@@ -949,8 +948,8 @@ message SignedBuilderBidDeneb {
 }
 
 message BuilderBidEpbs {
-    ethereum.engine.v1.ExecutionPayloadHeaderEpbs header = 1;
-    ethereum.engine.v1.BlindedBlobsBundle blinded_blobs_bundle = 2; // new in deneb
+    ExecutionPayloadHeaderEpbs header = 1;
+    ethereum.engine.v1.BlindedBlobsBundle blinded_blobs_bundle = 2;
     bytes value = 3 [(ethereum.eth.ext.ssz_size) = "32"];
     bytes pubkey = 4 [(ethereum.eth.ext.ssz_size) = "48"];
 }

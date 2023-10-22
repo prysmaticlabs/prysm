@@ -424,13 +424,13 @@ message HistoricalSummary {
 }
 
 message PendingBalanceDeposit {
-  uint64 index;
-  uint64 amount;
+  uint64 index = 1;
+  uint64 amount = 2;
 }
 
 message PartialWithdrawals {
-    uint64 index;
-    uint64 amount;
-    uint64 withdrawable_epoch;
+    uint64 index = 1;
+    uint64 amount = 2;
+    uint64 withdrawable_epoch = 3;
 }
   
