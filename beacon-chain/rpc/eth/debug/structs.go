@@ -3,6 +3,7 @@ package debug
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -251,7 +252,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = string(p)
+		prevPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -259,7 +260,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = string(p)
+		currPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -410,7 +411,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = string(p)
+		prevPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -418,7 +419,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = string(p)
+		currPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -585,7 +586,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = string(p)
+		prevPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -593,7 +594,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = string(p)
+		currPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -782,7 +783,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = string(p)
+		prevPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -790,7 +791,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = string(p)
+		currPart[i] = strconv.FormatUint(uint64(p), 10)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
