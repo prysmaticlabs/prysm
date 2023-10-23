@@ -256,9 +256,9 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 			)
 			return nil
 		case ethpbservice.ImportedKeystoreStatus_ERROR:
-			return fmt.Errorf("Could not import keystore for %s: %s", keystore.Pubkey, status.Message)
+			return fmt.Errorf("could not import keystore for %s: %s", keystore.Pubkey, status.Message)
 		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
-			return fmt.Errorf("Duplicate key %s skipped", keystore.Pubkey)
+			return fmt.Errorf("duplicate key %s skipped", keystore.Pubkey)
 		}
 	}
 
