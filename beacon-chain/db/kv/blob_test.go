@@ -91,7 +91,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
 		expect := make([]*ethpb.BlobSidecar, 2)
@@ -108,7 +108,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot), uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -127,7 +127,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -147,7 +147,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
 		expect := make([]*ethpb.BlobSidecar, 2)
@@ -165,7 +165,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot, uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -175,7 +175,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))

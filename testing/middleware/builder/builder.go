@@ -244,7 +244,7 @@ func (p *Builder) isBuilderCall(req *http.Request) bool {
 }
 
 func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
-	registrations := []shared.SignedValidatorRegistration{}
+	var registrations []shared.SignedValidatorRegistration
 	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -255,7 +255,7 @@ func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		p.validatorMap[string(r.Message.Pubkey)] = msg
+		p.validatorMap[r.Message.Pubkey] = msg
 	}
 	// TODO: Verify Signatures from validators
 	w.WriteHeader(http.StatusOK)

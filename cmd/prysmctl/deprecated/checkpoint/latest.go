@@ -13,5 +13,5 @@ var checkpointCmd = &cli.Command{
 }
 
 func cliDeprecatedLatest(_ *cli.Context) error {
-	return fmt.Errorf("This command has moved. Please use 'prysmctl weak-subjectivity checkpoint' instead!")
+	return fmt.Errorf("this command has moved. Please use 'prysmctl weak-subjectivity checkpoint' instead")
 }
