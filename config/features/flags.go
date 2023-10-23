@@ -144,7 +144,7 @@ var (
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	enableEIP4881 = &cli.BoolFlag{
+	EnableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP4881",
 	}
@@ -168,7 +168,7 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
-	enableEIP4881,
+	EnableEIP4881,
 	enableExperimentalState,
 }
 
@@ -216,7 +216,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	enableEIP4881,
+	EnableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	disableAggregateParallel,
