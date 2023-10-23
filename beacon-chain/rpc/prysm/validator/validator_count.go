@@ -20,13 +20,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type ValidatorCountResponse struct {
-	ExecutionOptimistic string            `json:"execution_optimistic"`
-	Finalized           string            `json:"finalized"`
-	Data                []*ValidatorCount `json:"data"`
+type CountResponse struct {
+	ExecutionOptimistic string   `json:"execution_optimistic"`
+	Finalized           string   `json:"finalized"`
+	Data                []*Count `json:"data"`
 }
 
-type ValidatorCount struct {
+type Count struct {
 	Status string `json:"status"`
 	Count  string `json:"count"`
 }
@@ -93,7 +93,7 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 
 	isFinalized := vs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	var statusVals []validator.ValidatorStatus
+	var statusVals []validator.Status
 	for _, status := range r.URL.Query()["status"] {
 		statusVal, ok := ethpb.ValidatorStatus_value[strings.ToUpper(status)]
 		if !ok {
@@ -105,13 +105,13 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		statusVals = append(statusVals, validator.ValidatorStatus(statusVal))
+		statusVals = append(statusVals, validator.Status(statusVal))
 	}
 
 	// If no status was provided then consider all the statuses to return validator count for each status.
 	if len(statusVals) == 0 {
 		for _, val := range ethpb.ValidatorStatus_value {
-			statusVals = append(statusVals, validator.ValidatorStatus(val))
+			statusVals = append(statusVals, validator.Status(val))
 		}
 	}
 
@@ -126,7 +126,7 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valCountResponse := &ValidatorCountResponse{
+	valCountResponse := &CountResponse{
 		ExecutionOptimistic: strconv.FormatBool(isOptimistic),
 		Finalized:           strconv.FormatBool(isFinalized),
 		Data:                valCount,
@@ -136,8 +136,8 @@ func (vs *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 }
 
 // validatorCountByStatus returns a slice of validator count for each status in the given epoch.
-func validatorCountByStatus(validators []*eth.Validator, statuses []validator.ValidatorStatus, epoch primitives.Epoch) ([]*ValidatorCount, error) {
-	countByStatus := make(map[validator.ValidatorStatus]uint64)
+func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]*Count, error) {
+	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
 		if err != nil {
@@ -159,9 +159,9 @@ func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Va
 		}
 	}
 
-	var resp []*ValidatorCount
+	var resp []*Count
 	for status, count := range countByStatus {
-		resp = append(resp, &ValidatorCount{
+		resp = append(resp, &Count{
 			Status: status.String(),
 			Count:  strconv.FormatUint(count, 10),
 		})

@@ -52,7 +52,7 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
 	require.NoError(t, db.SaveState(ctx, headState, gRoot))
 
-	bs.ReplayerBuilder = mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(headState))
+	bs.ReplayerBuilder = mockstategen.NewReplayerBuilder(mockstategen.WithMockState(headState))
 
 	activeIndices, err := helpers.ActiveValidatorIndices(ctx, headState, 0)
 	require.NoError(t, err)
@@ -76,8 +76,8 @@ func TestServer_ListBeaconCommittees_CurrentEpoch(t *testing.T) {
 }
 
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
-	cc := &mockstategen.MockCanonicalChecker{Is: true, Err: nil}
-	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	cc := &mockstategen.CanonicalChecker{Is: true, Err: nil}
+	cs := &mockstategen.CurrentSlotter{Slot: math.MaxUint64 - 1}
 	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 

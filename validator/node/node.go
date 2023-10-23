@@ -243,7 +243,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		}
 	} else {
 		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-		if !file.FileExists(dataFile) {
+		if !file.Exists(dataFile) {
 			log.Warnf("Slashing protection file %s is missing.\n"+
 				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
@@ -369,7 +369,7 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 			additionalHandlers,
 			prometheus.Handler{
 				Path:    "/db/backup",
-				Handler: backup.BackupHandler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
+				Handler: backup.Handler(c.db, cliCtx.String(cmd.BackupWebhookOutputDir.Name)),
 			},
 		)
 	}
@@ -871,7 +871,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if file.FileExists(defaultWalletPasswordFilePath) {
+	if file.Exists(defaultWalletPasswordFilePath) {
 		// Ensure file has proper permissions.
 		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {

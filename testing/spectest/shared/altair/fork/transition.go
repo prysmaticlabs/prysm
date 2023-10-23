@@ -23,7 +23,7 @@ func init() {
 	transition.SkipSlotCache.Disable()
 }
 
-type ForkConfig struct {
+type Config struct {
 	PostFork    string `json:"post_fork"`
 	ForkEpoch   int    `json:"fork_epoch"`
 	ForkBlock   *int   `json:"fork_block"`
@@ -44,7 +44,7 @@ func RunForkTransitionTest(t *testing.T, config string) {
 			helpers.ClearCache()
 			file, err := util.BazelFileBytes(testsFolderPath, folder.Name(), "meta.yaml")
 			require.NoError(t, err)
-			config := &ForkConfig{}
+			config := &Config{}
 			require.NoError(t, utils.UnmarshalYaml(file, config), "Failed to Unmarshal")
 
 			preforkBlocks := make([]*ethpb.SignedBeaconBlock, 0)
