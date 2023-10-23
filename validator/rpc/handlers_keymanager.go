@@ -245,7 +245,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
 func (s *Server) ListFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteRemoteKeys")
+	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListFeeRecipientByPubkey")
 	defer span.End()
 
 	if s.validatorService == nil {

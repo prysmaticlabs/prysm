@@ -254,11 +254,3 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 	}
 	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
 }
-
-func validatePublicKey(pubkey []byte) error {
-	if len(pubkey) != fieldparams.BLSPubkeyLength {
-		return status.Errorf(
-			codes.InvalidArgument, "Provided public key in path is not byte length %d and not a valid bls public key", fieldparams.BLSPubkeyLength)
-	}
-	return nil
-}
