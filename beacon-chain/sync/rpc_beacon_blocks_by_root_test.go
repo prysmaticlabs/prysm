@@ -295,12 +295,12 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 func TestRequestPendingBlobs(t *testing.T) {
 	s := &Service{}
 	t.Run("old block should not fail", func(t *testing.T) {
-		b, err := blocks.NewBeaconBlock(util.NewBeaconBlock().Block)
+		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
 	})
 	t.Run("empty commitment block should not fail", func(t *testing.T) {
-		b, err := blocks.NewBeaconBlock(util.NewBeaconBlockDeneb().Block)
+		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
 		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
 	})
@@ -330,7 +330,7 @@ func TestRequestPendingBlobs(t *testing.T) {
 		}
 		b := util.NewBeaconBlockDeneb()
 		b.Block.Body.BlobKzgCommitments = make([][]byte, 1)
-		b1, err := blocks.NewBeaconBlock(b.Block)
+		b1, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
 		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, p2.PeerID()))
 	})

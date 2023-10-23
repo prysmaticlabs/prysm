@@ -343,7 +343,7 @@ func (e executionPayloadHeader) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbV2 --
+// PbCapella --
 func (executionPayloadHeader) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
@@ -543,7 +543,7 @@ func (e executionPayloadCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbV2 --
+// PbCapella --
 func (e executionPayloadCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return e.p, nil
 }
@@ -715,7 +715,7 @@ func (e executionPayloadHeaderCapella) ExcessBlobGas() (uint64, error) {
 	return 0, consensus_types.ErrUnsupportedField
 }
 
-// PbV2 --
+// PbCapella --
 func (executionPayloadHeaderCapella) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }

@@ -29,7 +29,7 @@ func RunShuffleTests(t *testing.T, config string) {
 			testCaseFile, err := util.BazelFileBytes(path.Join(testsFolderPath, folder.Name(), "mapping.yaml"))
 			require.NoError(t, err, "Could not read YAML tests directory")
 
-			testCase := &ShuffleTestCase{}
+			testCase := &TestCase{}
 			require.NoError(t, yaml.Unmarshal(testCaseFile, testCase), "Could not unmarshal YAML file into test struct")
 			require.NoError(t, runShuffleTest(t, testCase), "Shuffle test failed")
 		})
@@ -38,7 +38,7 @@ func RunShuffleTests(t *testing.T, config string) {
 
 // RunShuffleTest uses validator set specified from a YAML file, runs the validator shuffle
 // algorithm, then compare the output with the expected output from the YAML file.
-func runShuffleTest(t *testing.T, testCase *ShuffleTestCase) error {
+func runShuffleTest(t *testing.T, testCase *TestCase) error {
 	baseSeed, err := hex.DecodeString(testCase.Seed[2:])
 	if err != nil {
 		return err

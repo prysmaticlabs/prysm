@@ -82,11 +82,11 @@ var beaconPathsAndObjects = map[string]metadata{
 
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.BlockResponseJson{},
+			"json": &beacon.GetBlockV2Response{},
 			"ssz":  []byte{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.BlockResponseJson{},
+			"json": &beacon.GetBlockV2Response{},
 			"ssz":  []byte{},
 		},
 	},

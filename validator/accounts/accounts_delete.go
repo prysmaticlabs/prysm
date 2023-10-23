@@ -13,7 +13,7 @@ import (
 )
 
 // Delete the accounts that the user requests to be deleted from the wallet.
-func (acm *AccountsCLIManager) Delete(ctx context.Context) error {
+func (acm *CLIManager) Delete(ctx context.Context) error {
 	rawPublicKeys := make([][]byte, len(acm.filteredPubKeys))
 	formattedPubKeys := make([]string, len(acm.filteredPubKeys))
 	for i, pk := range acm.filteredPubKeys {
