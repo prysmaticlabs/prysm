@@ -432,18 +432,6 @@ var requests = map[string]metadata{
 			return compareJSONResponseObjects(pSchedule, lSchedule)
 		},
 	},
-	/*"/config/spec": {
-		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
-		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.SpecResponseJson{},
-		},
-		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.SpecResponseJson{},
-		},
-	},*/
 	"/config/deposit_contract": {
 		basepath: v1PathTemplate,
 		params: func(_ string, _ primitives.Epoch) []string {
@@ -595,6 +583,9 @@ var requests = map[string]metadata{
 			}
 			if lResp.Data == nil {
 				return errEmptyLighthouseData
+			}
+			if !strings.Contains(lResp.Data.Version, "Lighthouse") {
+				return errors.New("version response does not contain Lighthouse client name")
 			}
 			return nil
 		},
