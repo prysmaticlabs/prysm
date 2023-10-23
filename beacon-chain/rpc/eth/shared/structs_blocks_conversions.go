@@ -3260,5 +3260,5 @@ func sszBytesToUint256String(b []byte) (string, error) {
 	if !math.IsValidUint256(bi) {
 		return "", fmt.Errorf("%s is not a valid Uint256", bi.String())
 	}
-	return string([]byte(bi.String())), nil
+	return string(bi.String()), nil
 }

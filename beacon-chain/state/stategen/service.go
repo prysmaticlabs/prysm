@@ -75,17 +75,17 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
-// StateGenOption is a functional option for controlling the initialization of a *State value
-type StateGenOption func(*State)
+// Option is a functional option for controlling the initialization of a *State value
+type Option func(*State)
 
-func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+func WithBackfillStatus(bfs *backfill.Status) Option {
 	return func(sg *State) {
 		sg.backfillStatus = bfs
 	}
 }
 
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...StateGenOption) *State {
+func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...Option) *State {
 	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),

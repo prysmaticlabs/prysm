@@ -24,7 +24,7 @@ func Test_ValidatorStatus(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    validator.ValidatorStatus
+		want    validator.Status
 		wantErr bool
 	}{
 		{
@@ -162,7 +162,7 @@ func Test_ValidatorSubStatus(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    validator.ValidatorStatus
+		want    validator.Status
 		wantErr bool
 	}{
 		{

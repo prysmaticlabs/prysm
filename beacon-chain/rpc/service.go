@@ -81,7 +81,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.PayloadReconstructor
 	Host                          string
 	Port                          string
 	CertFlag                      string

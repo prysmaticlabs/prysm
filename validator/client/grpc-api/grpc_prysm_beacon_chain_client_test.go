@@ -312,9 +312,9 @@ func TestGetValidatorCount(t *testing.T) {
 				beaconChainClient: beaconChainClient,
 			}
 
-			var statuses []validator.ValidatorStatus
+			var statuses []validator.Status
 			for _, status := range test.statuses {
-				ok, valStatus := validator.ValidatorStatusFromString(status)
+				ok, valStatus := validator.StatusFromString(status)
 				require.Equal(t, true, ok)
 				statuses = append(statuses, valStatus)
 			}

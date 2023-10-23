@@ -51,7 +51,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		prysmBeaconClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validator2.ValidatorStatus{validator2.Active},
+			[]validator2.Status{validator2.Active},
 		).Return([]iface.ValidatorCount{}, nil)
 
 		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactive.pub, active.pub})
@@ -87,7 +87,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		prysmBeaconClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
-			[]validator2.ValidatorStatus{validator2.Active},
+			[]validator2.Status{validator2.Active},
 		).Return([]iface.ValidatorCount{}, nil)
 
 		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{kp.pub})
