@@ -32,20 +32,3 @@ type DeleteKeystoresResponseJson struct {
 	Statuses           []*StatusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
 }
-
-type GasLimitJson struct {
-	Pubkey   string `json:"pubkey" hex:"true"`
-	GasLimit string `json:"gas_limit"`
-}
-
-type GetGasLimitResponseJson struct {
-	Data *GasLimitJson `json:"data"`
-}
-
-type SetGasLimitRequestJson struct {
-	GasLimit string `json:"gas_limit"`
-}
-
-type DeleteGasLimitRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
-}
