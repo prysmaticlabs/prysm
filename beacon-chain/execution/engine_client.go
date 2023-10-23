@@ -622,9 +622,9 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 	if len(blindedBlocks) == 0 {
 		return []interfaces.SignedBeaconBlock{}, nil
 	}
-	executionHashes := []common.Hash{}
-	validExecPayloads := []int{}
-	zeroExecPayloads := []int{}
+	var executionHashes []common.Hash
+	var validExecPayloads []int
+	var zeroExecPayloads []int
 	for i, b := range blindedBlocks {
 		if err := blocks.BeaconBlockIsNil(b); err != nil {
 			return nil, errors.Wrap(err, "cannot reconstruct bellatrix block from nil data")
