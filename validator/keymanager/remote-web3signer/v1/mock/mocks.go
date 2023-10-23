@@ -18,7 +18,7 @@ import (
 //////////////// Mock Requests //////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-func MockSyncComitteeBits() []byte {
+func SyncComitteeBits() []byte {
 	currSize := new(eth.SyncAggregate).SyncCommitteeBits.Len()
 	switch currSize {
 	case 512:
@@ -30,7 +30,7 @@ func MockSyncComitteeBits() []byte {
 	}
 }
 
-func MockAggregationBits() []byte {
+func AggregationBits() []byte {
 	currSize := new(eth.SyncCommitteeContribution).AggregationBits.Len()
 	switch currSize {
 	case 128:
@@ -322,7 +322,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 						},
 						SyncAggregate: &eth.SyncAggregate{
 							SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-							SyncCommitteeBits:      MockSyncComitteeBits(),
+							SyncCommitteeBits:      SyncComitteeBits(),
 						},
 					},
 				},
@@ -405,7 +405,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 						Slot:              0,
 						BlockRoot:         make([]byte, fieldparams.RootLength),
 						SubcommitteeIndex: 0,
-						AggregationBits:   MockAggregationBits(),
+						AggregationBits:   AggregationBits(),
 						Signature:         make([]byte, fieldparams.BLSSignatureLength),
 					},
 					SelectionProof: make([]byte, fieldparams.BLSSignatureLength),
@@ -513,73 +513,73 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 	}
 }
 
-// MockAggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
-func MockAggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
+// AggregationSlotSignRequest is a mock implementation of the AggregationSlotSignRequest.
+func AggregationSlotSignRequest() *v1.AggregationSlotSignRequest {
 	return &v1.AggregationSlotSignRequest{
 		Type:            "AGGREGATION_SLOT",
-		ForkInfo:        MockForkInfo(),
+		ForkInfo:        ForkInfo(),
 		SigningRoot:     make([]byte, fieldparams.RootLength),
 		AggregationSlot: &v1.AggregationSlot{Slot: "0"},
 	}
 }
 
-// MockAggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
-func MockAggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
+// AggregateAndProofSignRequest is a mock implementation of the AggregateAndProofSignRequest.
+func AggregateAndProofSignRequest() *v1.AggregateAndProofSignRequest {
 	return &v1.AggregateAndProofSignRequest{
 		Type:        "AGGREGATE_AND_PROOF",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		AggregateAndProof: &v1.AggregateAndProof{
 			AggregatorIndex: "0",
-			Aggregate:       MockAttestation(),
+			Aggregate:       Attestation(),
 			SelectionProof:  make([]byte, fieldparams.BLSSignatureLength),
 		},
 	}
 }
 
-// MockAttestationSignRequest is a mock implementation of the AttestationSignRequest.
-func MockAttestationSignRequest() *v1.AttestationSignRequest {
+// AttestationSignRequest is a mock implementation of the AttestationSignRequest.
+func AttestationSignRequest() *v1.AttestationSignRequest {
 	return &v1.AttestationSignRequest{
 		Type:        "ATTESTATION",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
-		Attestation: MockAttestation().Data,
+		Attestation: Attestation().Data,
 	}
 }
 
-// MockBlockSignRequest is a mock implementation of the BlockSignRequest.
-func MockBlockSignRequest() *v1.BlockSignRequest {
+// BlockSignRequest is a mock implementation of the BlockSignRequest.
+func BlockSignRequest() *v1.BlockSignRequest {
 	return &v1.BlockSignRequest{
 		Type:        "BLOCK",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		Block: &v1.BeaconBlock{
 			Slot:          "0",
 			ProposerIndex: "0",
 			ParentRoot:    make([]byte, fieldparams.RootLength),
 			StateRoot:     make([]byte, fieldparams.RootLength),
-			Body:          MockBeaconBlockBody(),
+			Body:          BeaconBlockBody(),
 		},
 	}
 }
 
-// MockBlockV2AltairSignRequest is a mock implementation of the BlockAltairSignRequest.
-func MockBlockV2AltairSignRequest() *v1.BlockAltairSignRequest {
+// BlockV2AltairSignRequest is a mock implementation of the BlockAltairSignRequest.
+func BlockV2AltairSignRequest() *v1.BlockAltairSignRequest {
 	return &v1.BlockAltairSignRequest{
 		Type:        "BLOCK_V2",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		BeaconBlock: &v1.BeaconBlockAltairBlockV2{
 			Version: "ALTAIR",
-			Block:   MockBeaconBlockAltair(),
+			Block:   BeaconBlockAltair(),
 		},
 	}
 }
 
-func MockBlockV2BlindedSignRequest(bodyRoot []byte, version string) *v1.BlockV2BlindedSignRequest {
+func BlockV2BlindedSignRequest(bodyRoot []byte, version string) *v1.BlockV2BlindedSignRequest {
 	return &v1.BlockV2BlindedSignRequest{
 		Type:        "BLOCK_V2",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		BeaconBlock: &v1.BeaconBlockV2Blinded{
 			Version: version,
@@ -594,11 +594,11 @@ func MockBlockV2BlindedSignRequest(bodyRoot []byte, version string) *v1.BlockV2B
 	}
 }
 
-// MockRandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
-func MockRandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
+// RandaoRevealSignRequest is a mock implementation of the RandaoRevealSignRequest.
+func RandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
 	return &v1.RandaoRevealSignRequest{
 		Type:        "RANDAO_REVEAL",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		RandaoReveal: &v1.RandaoReveal{
 			Epoch: "0",
@@ -606,21 +606,21 @@ func MockRandaoRevealSignRequest() *v1.RandaoRevealSignRequest {
 	}
 }
 
-// MockSyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
-func MockSyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContributionAndProofSignRequest {
+// SyncCommitteeContributionAndProofSignRequest is a mock implementation of the SyncCommitteeContributionAndProofSignRequest.
+func SyncCommitteeContributionAndProofSignRequest() *v1.SyncCommitteeContributionAndProofSignRequest {
 	return &v1.SyncCommitteeContributionAndProofSignRequest{
 		Type:                 "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF",
-		ForkInfo:             MockForkInfo(),
+		ForkInfo:             ForkInfo(),
 		SigningRoot:          make([]byte, fieldparams.RootLength),
-		ContributionAndProof: MockContributionAndProof(),
+		ContributionAndProof: ContributionAndProof(),
 	}
 }
 
-// MockSyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
-func MockSyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
+// SyncCommitteeMessageSignRequest is a mock implementation of the SyncCommitteeMessageSignRequest.
+func SyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 	return &v1.SyncCommitteeMessageSignRequest{
 		Type:        "SYNC_COMMITTEE_MESSAGE",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		SyncCommitteeMessage: &v1.SyncCommitteeMessage{
 			BeaconBlockRoot: make([]byte, fieldparams.RootLength),
@@ -629,11 +629,11 @@ func MockSyncCommitteeMessageSignRequest() *v1.SyncCommitteeMessageSignRequest {
 	}
 }
 
-// MockSyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
-func MockSyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProofSignRequest {
+// SyncCommitteeSelectionProofSignRequest is a mock implementation of the SyncCommitteeSelectionProofSignRequest.
+func SyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProofSignRequest {
 	return &v1.SyncCommitteeSelectionProofSignRequest{
 		Type:        "SYNC_COMMITTEE_SELECTION_PROOF",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		SyncAggregatorSelectionData: &v1.SyncAggregatorSelectionData{
 			Slot:              "0",
@@ -642,11 +642,11 @@ func MockSyncCommitteeSelectionProofSignRequest() *v1.SyncCommitteeSelectionProo
 	}
 }
 
-// MockVoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
-func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
+// VoluntaryExitSignRequest is a mock implementation of the VoluntaryExitSignRequest.
+func VoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 	return &v1.VoluntaryExitSignRequest{
 		Type:        "VOLUNTARY_EXIT",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		VoluntaryExit: &v1.VoluntaryExit{
 			Epoch:          "0",
@@ -655,8 +655,8 @@ func MockVoluntaryExitSignRequest() *v1.VoluntaryExitSignRequest {
 	}
 }
 
-// MockValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
-func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
+// ValidatorRegistrationSignRequest is a mock implementation of the ValidatorRegistrationSignRequest.
+func ValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest {
 	return &v1.ValidatorRegistrationSignRequest{
 		Type:        "VALIDATOR_REGISTRATION",
 		SigningRoot: make([]byte, fieldparams.RootLength),
@@ -669,8 +669,8 @@ func MockValidatorRegistrationSignRequest() *v1.ValidatorRegistrationSignRequest
 	}
 }
 
-// MockBlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
-func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
+// BlobSidecarSignRequest is a mock implementation of the BlobSidecarSignRequest.
+func BlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 	blobRoot, err := ssz.ByteSliceRoot(make([]byte, fieldparams.BlobLength), fieldparams.BlobLength)
 	if err != nil {
 		log.Error(err)
@@ -678,7 +678,7 @@ func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 	}
 	return &v1.BlobSidecarSignRequest{
 		Type:        "BLOB_SIDECAR",
-		ForkInfo:    MockForkInfo(),
+		ForkInfo:    ForkInfo(),
 		SigningRoot: make([]byte, fieldparams.RootLength),
 		BlobSidecar: &v1.BlobSidecar{
 			BlockRoot:       make([]byte, fieldparams.RootLength),
@@ -697,8 +697,8 @@ func MockBlobSidecarSignRequest() *v1.BlobSidecarSignRequest {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-// MockForkInfo is a mock implementation of the ForkInfo.
-func MockForkInfo() *v1.ForkInfo {
+// ForkInfo is a mock implementation of the ForkInfo.
+func ForkInfo() *v1.ForkInfo {
 	return &v1.ForkInfo{
 		Fork: &v1.Fork{
 			PreviousVersion: make([]byte, 4),
@@ -709,8 +709,8 @@ func MockForkInfo() *v1.ForkInfo {
 	}
 }
 
-// MockAttestation is a mock implementation of the Attestation.
-func MockAttestation() *v1.Attestation {
+// Attestation is a mock implementation of the Attestation.
+func Attestation() *v1.Attestation {
 	return &v1.Attestation{
 		AggregationBits: []byte(bitfield.Bitlist{0b1101}),
 		Data: &v1.AttestationData{
@@ -730,7 +730,7 @@ func MockAttestation() *v1.Attestation {
 	}
 }
 
-func MockIndexedAttestation() *v1.IndexedAttestation {
+func IndexedAttestation() *v1.IndexedAttestation {
 	return &v1.IndexedAttestation{
 		AttestingIndices: []string{"0", "1", "2"},
 		Data: &v1.AttestationData{
@@ -750,7 +750,7 @@ func MockIndexedAttestation() *v1.IndexedAttestation {
 	}
 }
 
-func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
+func BeaconBlockAltair() *v1.BeaconBlockAltair {
 	return &v1.BeaconBlockAltair{
 		Slot:          "0",
 		ProposerIndex: "0",
@@ -790,12 +790,12 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			},
 			AttesterSlashings: []*v1.AttesterSlashing{
 				{
-					Attestation1: MockIndexedAttestation(),
-					Attestation2: MockIndexedAttestation(),
+					Attestation1: IndexedAttestation(),
+					Attestation2: IndexedAttestation(),
 				},
 			},
 			Attestations: []*v1.Attestation{
-				MockAttestation(),
+				Attestation(),
 			},
 			Deposits: []*v1.Deposit{
 				{
@@ -819,13 +819,13 @@ func MockBeaconBlockAltair() *v1.BeaconBlockAltair {
 			},
 			SyncAggregate: &v1.SyncAggregate{
 				SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
-				SyncCommitteeBits:      MockSyncComitteeBits(),
+				SyncCommitteeBits:      SyncComitteeBits(),
 			},
 		},
 	}
 }
 
-func MockBeaconBlockBody() *v1.BeaconBlockBody {
+func BeaconBlockBody() *v1.BeaconBlockBody {
 	return &v1.BeaconBlockBody{
 		RandaoReveal: make([]byte, 32),
 		Eth1Data: &v1.Eth1Data{
@@ -860,12 +860,12 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 		},
 		AttesterSlashings: []*v1.AttesterSlashing{
 			{
-				Attestation1: MockIndexedAttestation(),
-				Attestation2: MockIndexedAttestation(),
+				Attestation1: IndexedAttestation(),
+				Attestation2: IndexedAttestation(),
 			},
 		},
 		Attestations: []*v1.Attestation{
-			MockAttestation(),
+			Attestation(),
 		},
 		Deposits: []*v1.Deposit{
 			{
@@ -890,14 +890,14 @@ func MockBeaconBlockBody() *v1.BeaconBlockBody {
 	}
 }
 
-func MockContributionAndProof() *v1.ContributionAndProof {
+func ContributionAndProof() *v1.ContributionAndProof {
 	return &v1.ContributionAndProof{
 		AggregatorIndex: "0",
 		Contribution: &v1.SyncCommitteeContribution{
 			Slot:              "0",
 			BeaconBlockRoot:   make([]byte, fieldparams.RootLength),
 			SubcommitteeIndex: "0",
-			AggregationBits:   MockAggregationBits(),
+			AggregationBits:   AggregationBits(),
 			Signature:         make([]byte, fieldparams.BLSSignatureLength),
 		},
 		SelectionProof: make([]byte, fieldparams.BLSSignatureLength),

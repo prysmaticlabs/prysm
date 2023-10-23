@@ -66,7 +66,7 @@ func TestEnterPassword(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			m := mock.NewMockPasswordReader(ctrl)
+			m := mock.NewPasswordReader(ctrl)
 			for _, ret := range tc.rets {
 				m.EXPECT().ReadPassword().Return(ret.pw, ret.err)
 			}

@@ -43,7 +43,7 @@ func TestServer_SubmitProposerSlashing(t *testing.T) {
 
 	_, err = bs.SubmitProposerSlashing(ctx, slashing)
 	require.NoError(t, err)
-	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called")
+	assert.Equal(t, true, mb.BroadcastCalled.Load(), "Expected broadcast to be called")
 }
 
 func TestServer_SubmitAttesterSlashing(t *testing.T) {
@@ -74,7 +74,7 @@ func TestServer_SubmitAttesterSlashing(t *testing.T) {
 	// slashed indices.
 	_, err = bs.SubmitAttesterSlashing(ctx, slashing)
 	require.NoError(t, err)
-	assert.Equal(t, true, mb.BroadcastCalled, "Expected broadcast to be called when flag is set")
+	assert.Equal(t, true, mb.BroadcastCalled.Load(), "Expected broadcast to be called when flag is set")
 }
 
 func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
@@ -111,7 +111,7 @@ func TestServer_SubmitProposerSlashing_DontBroadcast(t *testing.T) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
 
-	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
+	assert.Equal(t, false, mb.BroadcastCalled.Load(), "Expected broadcast not to be called by default")
 
 	slashing, err = util.GenerateProposerSlashingForValidator(st, privs[5], primitives.ValidatorIndex(5))
 	require.NoError(t, err)
@@ -158,7 +158,7 @@ func TestServer_SubmitAttesterSlashing_DontBroadcast(t *testing.T) {
 	if !proto.Equal(wanted, res) {
 		t.Errorf("Wanted %v, received %v", wanted, res)
 	}
-	assert.Equal(t, false, mb.BroadcastCalled, "Expected broadcast not to be called by default")
+	assert.Equal(t, false, mb.BroadcastCalled.Load(), "Expected broadcast not to be called by default")
 
 	slashing, err = util.GenerateAttesterSlashingForValidator(st, privs[5], primitives.ValidatorIndex(5))
 	require.NoError(t, err)

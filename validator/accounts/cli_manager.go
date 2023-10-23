@@ -18,8 +18,8 @@ import (
 )
 
 // NewCLIManager allows for managing validator accounts via CLI commands.
-func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
-	acc := &AccountsCLIManager{
+func NewCLIManager(opts ...Option) (*CLIManager, error) {
+	acc := &CLIManager{
 		mnemonicLanguage: derived.DefaultMnemonicLanguage,
 	}
 	for _, opt := range opts {
@@ -30,9 +30,9 @@ func NewCLIManager(opts ...Option) (*AccountsCLIManager, error) {
 	return acc, nil
 }
 
-// AccountsCLIManager defines a struct capable of performing various validator
+// CLIManager defines a struct capable of performing various validator
 // wallet & account operations via the command line.
-type AccountsCLIManager struct {
+type CLIManager struct {
 	wallet               *wallet.Wallet
 	keymanager           keymanager.IKeymanager
 	keymanagerKind       keymanager.Kind
@@ -66,7 +66,7 @@ type AccountsCLIManager struct {
 	beaconApiTimeout     time.Duration
 }
 
-func (acm *AccountsCLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *iface.NodeClient, error) {
+func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *iface.NodeClient, error) {
 	if acm.dialOpts == nil {
 		return nil, nil, errors.New("failed to construct dial options for beacon clients")
 	}

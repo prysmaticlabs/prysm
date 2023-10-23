@@ -235,7 +235,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not convert bytes to public key")
 		}
 		batch.PublicKeys[i] = publicKey
-		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		htr, err := signing.Data(change.Message.HashTreeRoot, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}

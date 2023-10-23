@@ -92,7 +92,7 @@ func GethShanghaiTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint
 	return shanghaiTime
 }
 
-// GethShanghaiTime calculates the absolute time of the shanghai (aka capella) fork block
+// GethCancunTime calculates the absolute time of the shanghai (aka capella) fork block
 // by adding the relative time of the capella the fork epoch to the given genesis timestamp.
 func GethCancunTime(genesisTime uint64, cfg *clparams.BeaconChainConfig) *uint64 {
 	var cancunTime *uint64

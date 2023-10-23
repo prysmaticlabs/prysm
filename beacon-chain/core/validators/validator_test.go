@@ -410,7 +410,7 @@ func TestValidatorMaxExitEpochAndChurn(t *testing.T) {
 	for _, tt := range tests {
 		s, err := state_native.InitializeFromProtoPhase0(tt.state)
 		require.NoError(t, err)
-		epoch, churn := ValidatorsMaxExitEpochAndChurn(s)
+		epoch, churn := MaxExitEpochAndChurn(s)
 		require.Equal(t, tt.wantedEpoch, epoch)
 		require.Equal(t, tt.wantedChurn, churn)
 	}
