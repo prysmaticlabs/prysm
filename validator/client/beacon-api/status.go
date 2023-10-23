@@ -55,7 +55,7 @@ func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Conte
 	stringRetrievedPubKeys := make(map[string]struct{})
 
 	// Contains all keys in targetPubKeys but not in retrievedPubKeys
-	missingPubKeys := [][]byte{}
+	var missingPubKeys [][]byte
 
 	totalLen := len(inPubKeys) + len(inIndexes)
 

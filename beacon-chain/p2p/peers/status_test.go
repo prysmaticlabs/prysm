@@ -788,7 +788,7 @@ func TestPrunePeers_TrustedPeers(t *testing.T) {
 		createPeer(t, p, nil, network.DirInbound, peerdata.PeerConnectionState(ethpb.ConnectionState_CONNECTED))
 	}
 
-	trustedPeers := []peer.ID{}
+	var trustedPeers []peer.ID
 	// Set up bad scores for inbound peers.
 	inboundPeers := p.InboundConnected()
 	for i, pid := range inboundPeers {
