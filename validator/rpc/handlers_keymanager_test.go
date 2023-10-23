@@ -455,7 +455,7 @@ func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.args)
 			require.NoError(t, err)
 
@@ -484,7 +484,7 @@ func TestServer_ListFeeRecipientByPubKey_NoFeeRecipientSet(t *testing.T) {
 	ctx := context.Background()
 
 	vs, err := client.NewValidatorService(ctx, &client.Config{
-		Validator: &mock.MockValidator{},
+		Validator: &mock.Validator{},
 	})
 	require.NoError(t, err)
 
@@ -665,7 +665,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
@@ -775,7 +775,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.MockValidator{}
+			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
