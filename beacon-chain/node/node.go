@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
@@ -246,19 +245,17 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	avs := das.NewCachingDBVerifiedStore(beacon.db)
 	bcOpts := []blockchain.Option{
 		blockchain.WithForkChoiceStore(beacon.forkChoicer),
 		blockchain.WithClockSynchronizer(synchronizer),
 		blockchain.WithSyncComplete(beacon.initialSyncComplete),
-		blockchain.WithAvailabilityStore(avs),
 	}
 	if err := beacon.registerBlockchainService(bcOpts); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering Initial Sync Service")
-	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete, avs); err != nil {
+	if err := beacon.registerInitialSyncService(beacon.initialSyncComplete); err != nil {
 		return nil, err
 	}
 
@@ -726,7 +723,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 	return b.services.RegisterService(rs)
 }
 
-func (b *BeaconNode) registerInitialSyncService(complete chan struct{}, avs das.AvailabilityStore) error {
+func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
@@ -740,7 +737,6 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}, avs das.
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
-		AVS:                 avs,
 	})
 	return b.services.RegisterService(is)
 }

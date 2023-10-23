@@ -2,15 +2,21 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["availability.go"],
+    srcs = [
+        "availability.go",
+        "cache.go",
+        "mock.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/das",
     visibility = ["//visibility:public"],
     deps = [
         "//beacon-chain/blockchain/kzg:go_default_library",
-        "//cache/nonblocking:go_default_library",
+        "//beacon-chain/db:go_default_library",
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//encoding/bytesutil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",

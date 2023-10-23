@@ -10,6 +10,7 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -27,7 +28,7 @@ const (
 type blockReceiverFn func(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
 
 // batchBlockReceiverFn defines batch receiving function.
-type batchBlockReceiverFn func(ctx context.Context, blks []blocks.ROBlock) error
+type batchBlockReceiverFn func(ctx context.Context, blks []blocks.ROBlock, avs das.AvailabilityStore) error
 
 // Round Robin sync looks at the latest peer statuses and syncs up to the highest known epoch.
 //
@@ -321,25 +322,12 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
 	s.logBatchSyncStatus(genesis, first, len(bwb))
-	blobCount := 0
+	avs := das.NewCachingDBVerifiedStore(s.cfg.DB)
 	for _, bb := range bwb {
-		if len(bb.Blobs) == 0 {
-			continue
-		}
-		if err := s.cfg.AVS.SaveIfAvailable(ctx, s.clock.CurrentSlot(), bb); err != nil {
-			return errors.Wrapf(err, "failed to verify blob commitments and save to db for root %#x", bb.Block.Root())
-		}
-		blobCount += len(bb.Blobs)
-	}
-	if blobCount > 0 {
-		log.WithFields(logrus.Fields{
-			"startSlot": bwb[0].Block.Block().Slot(),
-			"endSlot":   bwb[len(bwb)-1].Block.Block().Slot(),
-			"count":     blobCount,
-		}).Info("Processed blob sidecars")
+		avs.PersistBlobs(ctx, bb.Block.Block().Slot(), bb.Blobs...)
 	}
 
-	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks())
+	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks(), avs)
 }
 
 // updatePeerScorerStats adjusts monitored metrics for a peer.

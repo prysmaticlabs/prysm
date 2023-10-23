@@ -1,13 +1,13 @@
 package das
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
-	"github.com/prysmaticlabs/prysm/v4/cache/nonblocking"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -18,83 +18,168 @@ import (
 )
 
 var (
-	errCachedCommitmentMismatch = errors.New("previously verified commitments do not match those in block")
-	// concurrentBlockFetchers * blocks per request is used to size the LRU so that we can have one cache
-	// for many worker goroutines without them evicting each others results.
-	// TODO: figure out how to determine the max number of init sync workers.
-	concurrentBlockFetchers = 10
+	errDBInconsistentWithBlock = errors.New("a value saved to the db is inconsistent with observed block commitments")
+	errDAIncomplete            = errors.New("some commitments are missing at this time")
 )
+
+// BlobsDB specifies the persistence store methods needed by the AvailabilityStore.
+type BlobsDB interface {
+	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error)
+	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
+}
 
 // AvailabilityStore describes a component that can verify and save sidecars for a given block, and confirm previously
 // verified and saved sidecars.
 type AvailabilityStore interface {
 	VerifyAvailability(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error
-	SaveIfAvailable(ctx context.Context, current primitives.Slot, b blocks.BlockWithVerifiedBlobs) error
+	PersistBlobs(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar)
+	//WaitToVerify(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error
 }
 
 type CachingDBVerifiedStore struct {
 	db    BlobsDB
-	cache *nonblocking.LRU[[32]byte, [][]byte]
+	cache *cache
 }
 
 var _ AvailabilityStore = &CachingDBVerifiedStore{}
 
 func NewCachingDBVerifiedStore(db BlobsDB) *CachingDBVerifiedStore {
-	discardev := func([32]byte, [][]byte) {}
-	size := int(params.BeaconNetworkConfig().MaxRequestBlocks) * concurrentBlockFetchers
-	cache, err := nonblocking.NewLRU[[32]byte, [][]byte](size, discardev)
-	if err != nil {
-		panic(err)
-	}
 	return &CachingDBVerifiedStore{
 		db:    db,
-		cache: cache,
+		cache: newSidecarCache(),
+	}
+}
+
+// PersistBlobs adds blobs to the working blob cache (in-memory or disk backed is an implementation
+// detail). Blobs stored in this cache will be persisted for at least as long as the node is
+// running. Once VerifyAvailability succeed, all blobs referenced by the given block are guaranteed
+// to be persisted for the remainder of the retention period.
+func (s *CachingDBVerifiedStore) PersistBlobs(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) {
+	if len(sc) < 1 {
+		return
+	}
+	var key cacheKey
+	var entry *cacheEntry
+	for i := range sc {
+		if !params.WithinDAPeriod(slots.ToEpoch(sc[i].Slot), slots.ToEpoch(current)) {
+			continue
+		}
+		if sc[i].Index > fieldparams.MaxBlobsPerBlock-1 {
+			log.WithField("block_root", sc[i].BlockRoot).WithField("index", sc[i].Index).Error("discarding BlobSidecar with out of bound commitment")
+		}
+		skey := keyFromSidecar(sc[i])
+		if key != skey {
+			key = skey
+			entry = s.cache.ensure(key)
+		}
+		entry.persist(sc[i])
 	}
 }
 
 func (s *CachingDBVerifiedStore) VerifyAvailability(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
 	c := commitmentsToCheck(b, current)
 	if len(c) == 0 {
+		// TODO: trigger cache cleanup?
 		return nil
 	}
-	// get the previously verified commitments
-	vc, ok := s.cache.Get(b.Root())
-	if !ok {
+	key := keyFromBlock(b)
+	entry := s.cache.get(key)
+	if entry == nil {
 		return s.databaseDACheck(ctx, current, b.Root(), c)
 	}
-	// check commitments to make sure that they match
-	if len(c) != len(vc) {
-		return errors.Wrapf(errCachedCommitmentMismatch, "cache=%d, block=%d", len(vc), len(c))
-	}
-	for i := range vc {
-		// check each commitment in the block against value previously validated and saved.
-		if !bytes.Equal(vc[i], c[i]) {
-			return errors.Wrapf(errCachedCommitmentMismatch, "commitment %#x at index %d does not match cache %#x", c[i], i, vc[i])
+	m, scs := entry.filterByBlock(c)
+	// Happy path - we have all the sidecars we need in cache, and we just need to verify them.
+	if m == len(c) {
+		if err := kzg.IsDataAvailable(c, scs); err == nil {
+			// We have all the committed sidecars in cache. If flushing them to succeeds, then we can confirm DA.
+			if err := s.db.SaveBlobSidecar(ctx, scs); err != nil {
+				return err
+			}
+			s.cache.delete(keyFromSidecar(scs[0]))
 		}
 	}
-	// all commitments match
-	return nil
+	// Since we don't have all the sidecars we need, we'll try the more complicated check:
+	// merge the blobs in cache with those observed in the db. Verify the commitments one by one
+	// and write any that match back to the db. Anything already written to the db can be assumed correct, as it was
+	// previously observed in a block with the given root.
+	return s.bisectPruneOrSave(ctx, b.Root(), c, scs)
 }
 
-func (s *CachingDBVerifiedStore) SaveIfAvailable(ctx context.Context, current primitives.Slot, bwb blocks.BlockWithVerifiedBlobs) error {
-	b := bwb.Block
-	c := commitmentsToCheck(b, current)
-	if len(c) == 0 {
-		return nil
+func (s *CachingDBVerifiedStore) bisectPruneOrSave(ctx context.Context, root [32]byte, cmts [][]byte, scs []*ethpb.BlobSidecar) error {
+	dbscs, err := s.db.BlobSidecarsByRoot(ctx, root)
+	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		log.WithError(err).Error("failed to lookup saved BlobSidecars")
 	}
-	if err := kzg.IsDataAvailable(c, bwb.Blobs); err != nil {
-		return errors.Wrapf(err, "kzg.IsDataAvailable check failed for %#x", b.Root())
+
+	check := make([]*ethpb.BlobSidecar, len(cmts))
+	for i := range dbscs {
+		if dbscs[i].Index >= uint64(len(cmts)) {
+			// TODO: This check is necessary to avoid a panic but shouldn't be possible, because it would mean we've seen 2 versions of a block
+			// that somehow have the same root, but different commitments.
+			return errors.Wrapf(errDBInconsistentWithBlock, "db BlobSidecar.Index=%d > len(block.KzgCommitments)=%d", dbscs[i].Index, len(cmts))
+		}
+		check[dbscs[i].Index] = dbscs[i]
 	}
-	if err := s.db.SaveBlobSidecar(ctx, bwb.Blobs); err != nil {
-		return errors.Wrapf(err, "error while trying to save verified blob sidecars for root %#x", b.Root())
+
+	bisect := make([]*ethpb.BlobSidecar, 0, len(cmts))
+	incomplete := false
+	for i := range check {
+		if check[i] != nil {
+			continue
+		}
+		if i < len(scs) && scs[i] != nil {
+			bisect = append(bisect, scs[i])
+			check[i] = scs[i]
+			continue
+		}
+		incomplete = true
 	}
-	// cache the commitments that matched so that we can confirm them cheaply while they remain in cache.
-	s.cache.Add(b.Root(), c)
-	return nil
+
+	var daErr error
+	if !incomplete {
+		// We don't want to react to this error yet, because there could still be good sidecars to save.
+		// So stash the error in daErr to return later.
+		if daErr = kzg.IsDataAvailable(cmts, check); daErr == nil {
+			if len(bisect) > 0 {
+				if err := s.db.SaveBlobSidecar(ctx, bisect); err != nil {
+					return errors.Wrap(err, "unable to save BlobSidecars to complete DA check")
+				}
+			}
+			s.cache.delete(keyFromSidecar(check[0]))
+			return nil
+		}
+	}
+
+	// Either we have an incomplete set of commitments, or we failed the da test.
+	// In either case, check if any of the sidecars from the cache are valid. If so save them to the db.
+	save := make([]*ethpb.BlobSidecar, 0, len(bisect))
+	indices := make([]uint64, 0, len(bisect))
+	for i := range bisect {
+		if err := kzg.IsDataAvailable([][]byte{bisect[i].KzgCommitment}, []*ethpb.BlobSidecar{bisect[i]}); err != nil {
+			log.WithField("block_root", fmt.Sprintf("%#x", root)).WithField("index", bisect[i].Index).
+				WithField("commitment", fmt.Sprintf("%#x", bisect[i].KzgCommitment)).WithError(err).
+				Error("commitment proof failure")
+			continue
+		}
+		// DA check was successful for this BlobSidecar, so we'll save it to the db.
+		save = append(save, bisect[i])
+		indices = append(indices, bisect[i].Index)
+	}
+	if len(save) > 0 {
+		if err := s.db.SaveBlobSidecar(ctx, save); err != nil {
+			log.WithError(err).Error("failed to save BlobSidecar")
+		}
+		s.cache.delete(keyFromSidecar(save[0]), indices...)
+	}
+
+	if daErr != nil {
+		return daErr
+	}
+	return errDAIncomplete
 }
 
 func (s *CachingDBVerifiedStore) databaseDACheck(ctx context.Context, current primitives.Slot, root [32]byte, cmts [][]byte) error {
-	log.WithField("root", fmt.Sprintf("%#x", root)).Warn("Falling back to database DA check")
+	log.WithField("root", fmt.Sprintf("%#x", root)).Info("Falling back to database DA check")
 	sidecars, err := s.db.BlobSidecarsByRoot(ctx, root)
 	if err != nil {
 		return errors.Wrap(err, "could not get blob sidecars")
@@ -102,13 +187,7 @@ func (s *CachingDBVerifiedStore) databaseDACheck(ctx context.Context, current pr
 	if err := kzg.IsDataAvailable(cmts, sidecars); err != nil {
 		return err
 	}
-	s.cache.Add(root, cmts)
 	return nil
-}
-
-type BlobsDB interface {
-	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error)
-	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
 }
 
 func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) [][]byte {

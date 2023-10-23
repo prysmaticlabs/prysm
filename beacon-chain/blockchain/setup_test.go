@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
@@ -83,7 +82,6 @@ type testServiceRequirements struct {
 func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceRequirements) {
 	ctx := context.Background()
 	beaconDB := testDB.SetupDB(t)
-	avs := das.NewCachingDBVerifiedStore(beaconDB)
 	fcs := doublylinkedtree.New()
 	sg := stategen.New(beaconDB, fcs)
 	notif := &mockBeaconNode{}
@@ -116,7 +114,6 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithAttestationService(req.attSrv),
 		WithBLSToExecPool(req.blsPool),
 		WithDepositCache(dc),
-		WithAvailabilityStore(avs),
 	}
 	// append the variadic opts so they override the defaults by being processed afterwards
 	opts = append(defOpts, opts...)

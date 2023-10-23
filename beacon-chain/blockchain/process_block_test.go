@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
@@ -66,7 +67,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		blks = append(blks, rwsb)
 	}
-	err := service.onBlockBatch(ctx, blks)
+	err := service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{})
 	require.NoError(t, err)
 	jcp := service.CurrentJustifiedCheckpt()
 	jroot := bytesutil.ToBytes32(jcp.Root)
@@ -96,7 +97,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, service.saveInitSyncBlock(ctx, rwsb.Root(), wsb))
 		blks = append(blks, rwsb)
 	}
-	require.NoError(t, service.onBlockBatch(ctx, blks))
+	require.NoError(t, service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{}))
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
@@ -1943,7 +1944,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	rwsb, err := consensusblocks.NewROBlock(wsb)
 	require.NoError(t, err)
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
-	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}))
+	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, &das.MockAvailabilityStore{}))
 	// Check that the head is now VALID and the node is not optimistic
 	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
