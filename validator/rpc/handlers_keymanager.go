@@ -275,13 +275,9 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 		if found {
 			if proposerOption.BuilderConfig != nil {
 				resp.Data.GasLimit = fmt.Sprintf("%d", proposerOption.BuilderConfig.GasLimit)
-				http2.WriteJson(w, resp)
-				return
 			}
 		} else if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
 			resp.Data.GasLimit = fmt.Sprintf("%d", s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig.GasLimit)
-			http2.WriteJson(w, resp)
-			return
 		}
 	}
 	http2.WriteJson(w, resp)
