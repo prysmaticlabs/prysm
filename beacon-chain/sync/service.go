@@ -83,7 +83,7 @@ type config struct {
 	initialSync                   Checker
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
-	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	executionPayloadReconstructor execution.PayloadReconstructor
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed

@@ -77,7 +77,7 @@ type ImportAccountsConfig struct {
 // Import can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet. This uses the CLI to extract
 // values necessary to run the function.
-func (acm *AccountsCLIManager) Import(ctx context.Context) error {
+func (acm *CLIManager) Import(ctx context.Context) error {
 	k, ok := acm.keymanager.(keymanager.Importer)
 	if !ok {
 		return errors.New("keymanager cannot import keystores")
@@ -211,7 +211,7 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 	if err != nil {
 		return errors.Wrapf(err, "could not expand file path for %s", privKeyFile)
 	}
-	if !file.FileExists(fullPath) {
+	if !file.Exists(fullPath) {
 		return fmt.Errorf("file %s does not exist", fullPath)
 	}
 	privKeyHex, err := os.ReadFile(fullPath) // #nosec G304

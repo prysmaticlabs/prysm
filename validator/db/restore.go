@@ -21,7 +21,7 @@ func Restore(cliCtx *cli.Context) error {
 	sourceFile := cliCtx.String(cmd.RestoreSourceFileFlag.Name)
 	targetDir := cliCtx.String(cmd.RestoreTargetDirFlag.Name)
 
-	if file.FileExists(path.Join(targetDir, kv.ProtectionDbFileName)) {
+	if file.Exists(path.Join(targetDir, kv.ProtectionDbFileName)) {
 		resp, err := prompt.ValidatePrompt(
 			os.Stdin, dbExistsYesNoPrompt, prompt.ValidateYesOrNo,
 		)

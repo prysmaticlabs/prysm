@@ -245,8 +245,8 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
 	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
 	assert.Equal(t, true, ok)
 }
@@ -325,8 +325,8 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1AttSlashingToV1Alpha1(slashing), pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
 	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
 	assert.Equal(t, true, ok)
 }
@@ -372,7 +372,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	_, err = s.SubmitAttesterSlashing(ctx, slashing)
 	require.ErrorContains(t, "Invalid attester slashing", err)
-	assert.Equal(t, false, broadcaster.BroadcastCalled)
+	assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
 }
 
 func TestSubmitProposerSlashing_Ok(t *testing.T) {
@@ -442,8 +442,8 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
 	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
 	assert.Equal(t, true, ok)
 }
@@ -514,8 +514,8 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
 	require.Equal(t, 1, len(pendingSlashings))
 	assert.DeepEqual(t, migration.V1ProposerSlashingToV1Alpha1(slashing), pendingSlashings[0])
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
-	require.Equal(t, 1, len(broadcaster.BroadcastMessages))
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
 	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
 	assert.Equal(t, true, ok)
 }
@@ -554,5 +554,5 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	_, err = s.SubmitProposerSlashing(ctx, slashing)
 	require.ErrorContains(t, "Invalid proposer slashing", err)
-	assert.Equal(t, false, broadcaster.BroadcastCalled)
+	assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
 }
