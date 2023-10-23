@@ -461,7 +461,7 @@ func convertToUdpMultiAddr(node *enode.Node) ([]ma.Multiaddr, error) {
 }
 
 func peerIdsFromMultiAddrs(addrs []ma.Multiaddr) []peer.ID {
-	peers := []peer.ID{}
+	var peers []peer.ID
 	for _, a := range addrs {
 		info, err := peer.AddrInfoFromP2pAddr(a)
 		if err != nil {
