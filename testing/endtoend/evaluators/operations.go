@@ -153,7 +153,7 @@ func processesDepositsInBlocks(ec *e2etypes.EvaluationContext, conns ...*grpc.Cl
 			observed[k] = v + d.Data.Amount
 		}
 	}
-	mismatches := []string{}
+	var mismatches []string
 	for k, ev := range expected {
 		ov := observed[k]
 		if ev != ov {
@@ -361,7 +361,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	if err != nil {
 		return errors.Wrap(err, "could not get state")
 	}
-	execIndices := []int{}
+	var execIndices []int
 	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if val.WithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
 			execIndices = append(execIndices, idx)
