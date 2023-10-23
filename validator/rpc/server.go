@@ -230,7 +230,7 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
 	// ...
 	log.Info("Initialized REST API routes")
-	return nil // or any error that might occur during initialization
+	return nil
 }
 
 // Stop the gRPC server.
