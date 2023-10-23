@@ -6,19 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
 	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
