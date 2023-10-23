@@ -4,11 +4,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestNormalizeQueryValuesHandler(t *testing.T) {
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("next handler"))
+		_, err := w.Write([]byte("next handler"))
+		require.NoError(t, err)
 	})
 
 	handler := NormalizeQueryValuesHandler(nextHandler)
