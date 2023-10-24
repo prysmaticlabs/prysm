@@ -245,7 +245,6 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	for i, s := range srcslashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
-	// TODO: błąd
 	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
@@ -147,34 +148,43 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			return err
 		}
 
-		var missSrcVals []uint64
-		var missTgtVals []uint64
-		var missHeadVals []uint64
+		var respPrevEpochParticipation []string
 		switch resp.Version {
 		case version.String(version.Phase0):
 		// Do Nothing
-		/*case version.String(version.Altair):
+		case version.String(version.Altair):
 			st := &debug.BeaconStateAltair{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
-			particip
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.AltairState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
-			}
+			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Bellatrix):
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
+			st := &debug.BeaconStateBellatrix{}
+			if err = json.Unmarshal(resp.Data, st); err != nil {
+				return err
 			}
+			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Capella):
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
-			}*/
+			st := &debug.BeaconStateCapella{}
+			if err = json.Unmarshal(resp.Data, st); err != nil {
+				return err
+			}
+			respPrevEpochParticipation = st.PreviousEpochParticipation
 		default:
 			return fmt.Errorf("unrecognized version %s", resp.Version)
+		}
+
+		prevEpochParticipation := make([]byte, len(respPrevEpochParticipation))
+		for i, p := range respPrevEpochParticipation {
+			n, err := strconv.ParseUint(p, 10, 64)
+			if err != nil {
+				return err
+			}
+			prevEpochParticipation[i] = byte(n)
+		}
+		missSrcVals, missTgtVals, missHeadVals, err := findMissingValidators(prevEpochParticipation)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing validators")
 		}
 
 		return fmt.Errorf(
