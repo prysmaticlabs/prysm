@@ -1103,12 +1103,15 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 		require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 		var wg sync.WaitGroup
 		wg.Add(4)
+		var lock sync.Mutex
 		go func() {
 			preState, err := service.getBlockPreState(ctx, wsb1.Block())
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb1)
 			require.NoError(t, err)
+			lock.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, wsb1, r1, postState, true))
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1116,7 +1119,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb2)
 			require.NoError(t, err)
+			lock.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, wsb2, r2, postState, true))
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1124,7 +1129,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb3)
 			require.NoError(t, err)
+			lock.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, wsb3, r3, postState, true))
+			lock.Unlock()
 			wg.Done()
 		}()
 		go func() {
@@ -1132,7 +1139,9 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			require.NoError(t, err)
 			postState, err := service.validateStateTransition(ctx, preState, wsb4)
 			require.NoError(t, err)
+			lock.Lock()
 			require.NoError(t, service.postBlockProcess(ctx, wsb4, r4, postState, true))
+			lock.Unlock()
 			wg.Done()
 		}()
 		wg.Wait()

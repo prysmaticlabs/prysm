@@ -83,10 +83,10 @@ type ProduceBlockV3Response struct {
 }
 
 type GetLivenessResponse struct {
-	Data []*ValidatorLiveness `json:"data"`
+	Data []*Liveness `json:"data"`
 }
 
-type ValidatorLiveness struct {
+type Liveness struct {
 	Index  string `json:"index"`
 	IsLive bool   `json:"is_live"`
 }

@@ -322,14 +322,14 @@ func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *e
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
-	request, err := json.Marshal(validator.ValidatorPerformanceRequest{
+	request, err := json.Marshal(validator.PerformanceRequest{
 		PublicKeys: in.PublicKeys,
 		Indices:    in.Indices,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
-	resp := &validator.ValidatorPerformanceResponse{}
+	resp := &validator.PerformanceResponse{}
 	if _, err := c.jsonRestHandler.PostRestJson(
 		ctx,
 		getValidatorPerformanceEndpoint,

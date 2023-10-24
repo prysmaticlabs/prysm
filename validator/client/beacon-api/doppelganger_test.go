@@ -252,7 +252,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -273,7 +273,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -627,7 +627,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{nil},
+						Data: []*validator.Liveness{nil},
 					},
 				},
 			},
@@ -650,7 +650,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
@@ -679,14 +679,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},
@@ -709,7 +709,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							{
 								Index: "42",
 							},
@@ -720,7 +720,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},

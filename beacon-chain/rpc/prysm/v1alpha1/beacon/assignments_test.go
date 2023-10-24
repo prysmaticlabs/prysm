@@ -62,7 +62,7 @@ func TestServer_ListAssignments_NoResults(t *testing.T) {
 		BeaconDB:           db,
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, doublylinkedtree.New()),
-		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st)),
+		ReplayerBuilder:    mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
 	}
 	wanted := &ethpb.ValidatorAssignments{
 		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
@@ -124,7 +124,7 @@ func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, doublylinkedtree.New()),
-		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
+		ReplayerBuilder:    mockstategen.NewReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	wanted := fmt.Sprintf("page start %d >= list %d", 500, count)
@@ -200,7 +200,7 @@ func TestServer_ListAssignments_Pagination_DefaultPageSize_NoArchive(t *testing.
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, doublylinkedtree.New()),
-		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
+		ReplayerBuilder:    mockstategen.NewReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	res, err := bs.ListValidatorAssignments(context.Background(), &ethpb.ListValidatorAssignmentsRequest{
@@ -267,7 +267,7 @@ func TestServer_ListAssignments_FilterPubkeysIndices_NoPagination(t *testing.T) 
 		},
 		GenesisTimeFetcher: &mock.ChainService{},
 		StateGen:           stategen.New(db, doublylinkedtree.New()),
-		ReplayerBuilder:    mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(s)),
+		ReplayerBuilder:    mockstategen.NewReplayerBuilder(mockstategen.WithMockState(s)),
 	}
 
 	pubKey1 := make([]byte, params.BeaconConfig().BLSPubkeyLength)

@@ -38,11 +38,6 @@ type FeeRecipientJson struct {
 	Ethaddress string `json:"ethaddress" address:"true"`
 }
 
-type GasLimitJson struct {
-	Pubkey   string `json:"pubkey" hex:"true"`
-	GasLimit string `json:"gas_limit"`
-}
-
 type GetFeeRecipientByPubkeyResponseJson struct {
 	Data *FeeRecipientJson `json:"data"`
 }
@@ -52,17 +47,5 @@ type SetFeeRecipientByPubkeyRequestJson struct {
 }
 
 type DeleteFeeRecipientByPubkeyRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
-}
-
-type GetGasLimitResponseJson struct {
-	Data *GasLimitJson `json:"data"`
-}
-
-type SetGasLimitRequestJson struct {
-	GasLimit string `json:"gas_limit"`
-}
-
-type DeleteGasLimitRequestJson struct {
 	Pubkey string `json:"pubkey" hex:"true"`
 }

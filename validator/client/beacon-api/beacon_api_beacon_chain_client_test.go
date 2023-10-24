@@ -943,12 +943,12 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	request, err := json.Marshal(validator.ValidatorPerformanceRequest{
+	request, err := json.Marshal(validator.PerformanceRequest{
 		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 	})
 	require.NoError(t, err)
 
-	wantResponse := &validator.ValidatorPerformanceResponse{}
+	wantResponse := &validator.PerformanceResponse{}
 	want := &ethpb.ValidatorPerformanceResponse{}
 	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().PostRestJson(
