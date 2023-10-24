@@ -47,8 +47,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 	t.Run("phase0", func(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
-		require.NoError(t, fakeState.SetSlot(123))
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 		chainService := &blockchainmock.ChainService{}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -75,8 +75,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 	})
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateAltair()
-		require.NoError(t, fakeState.SetSlot(123))
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 		chainService := &blockchainmock.ChainService{}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -103,8 +103,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateBellatrix()
-		require.NoError(t, fakeState.SetSlot(123))
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 		chainService := &blockchainmock.ChainService{}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -131,8 +131,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 	})
 	t.Run("Capella", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateCapella()
-		require.NoError(t, fakeState.SetSlot(123))
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 		chainService := &blockchainmock.ChainService{}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -159,8 +159,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateDeneb()
-		require.NoError(t, fakeState.SetSlot(123))
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 		chainService := &blockchainmock.ChainService{}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -194,7 +194,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		fakeState, _ := util.NewBeaconStateBellatrix()
+		fakeState, err := util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
 		chainService := &blockchainmock.ChainService{Optimistic: true}
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -226,7 +227,8 @@ func TestGetBeaconStateV2(t *testing.T) {
 		util.SaveBlock(t, ctx, db, blk)
 		require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
 
-		fakeState, _ := util.NewBeaconStateBellatrix()
+		fakeState, err := util.NewBeaconStateBellatrix()
+		require.NoError(t, err)
 		headerRoot, err := fakeState.LatestBlockHeader().HashTreeRoot()
 		require.NoError(t, err)
 		chainService := &blockchainmock.ChainService{
@@ -261,6 +263,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Phase 0", func(t *testing.T) {
 		fakeState, err := util.NewBeaconState()
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -284,6 +287,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Altair", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateAltair()
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -307,6 +311,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Bellatrix", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateBellatrix()
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -330,6 +335,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Capella", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateCapella()
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 
 		s := &Server{
 			Stater: &testutil.MockStater{
@@ -353,6 +359,7 @@ func TestGetBeaconStateSSZV2(t *testing.T) {
 	t.Run("Deneb", func(t *testing.T) {
 		fakeState, err := util.NewBeaconStateDeneb()
 		require.NoError(t, err)
+		require.NoError(t, fakeState.SetSlot(123))
 
 		s := &Server{
 			Stater: &testutil.MockStater{
