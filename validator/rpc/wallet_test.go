@@ -67,24 +67,9 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	numKeystores := 5
-	password := "12345678"
-	encodedKeystores := make([]string, numKeystores)
-	passwords := make([]string, numKeystores)
-	for i := 0; i < numKeystores; i++ {
-		enc, err := json.Marshal(createRandomKeystore(t, password))
-		encodedKeystores[i] = string(enc)
-		require.NoError(t, err)
-		passwords[i] = password
-	}
-
-	importReq := &ImportKeystoresRequest{
-		Keystores: encodedKeystores,
-		Passwords: passwords,
-	}
-
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
+	passwords := make([]string, 3)
 	for i := 0; i < len(keystores); i++ {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
@@ -103,8 +88,15 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		encodedFile, err := json.MarshalIndent(item, "", "\t")
 		require.NoError(t, err)
 		keystores[i] = string(encodedFile)
+		if i < len(passwords) {
+			passwords[i] = strongPass
+		}
 	}
-	importReq.Keystores = keystores
+
+	importReq := &ImportKeystoresRequest{
+		Keystores: keystores,
+		Passwords: passwords,
+	}
 
 	var buf bytes.Buffer
 	err = json.NewEncoder(&buf).Encode(importReq)
