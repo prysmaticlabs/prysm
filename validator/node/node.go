@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
@@ -58,7 +57,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
-	validatormiddleware "github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -802,7 +800,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
-		ethpbservice.RegisterKeyManagementHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -857,7 +854,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithApiMiddleware(&validatormiddleware.ValidatorEndpointFactory{}),
 		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}

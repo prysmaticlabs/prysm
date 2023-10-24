@@ -9,7 +9,6 @@ import (
 	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/schollz/progressbar/v3"
 	"github.com/sirupsen/logrus"
@@ -26,7 +25,7 @@ func (km *Keymanager) ImportKeystores(
 	ctx context.Context,
 	keystores []*keymanager.Keystore,
 	passwords []string,
-) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+) ([]*keymanager.KeyStatus, error) {
 	if len(passwords) == 0 {
 		return nil, ErrNoPasswords
 	}
@@ -36,7 +35,7 @@ func (km *Keymanager) ImportKeystores(
 	decryptor := keystorev4.New()
 	bar := initializeProgressBar(len(keystores), "Importing accounts...")
 	keys := map[string]string{}
-	statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(keystores))
+	statuses := make([]*keymanager.KeyStatus, len(keystores))
 	var err error
 	// 1) Copy the in memory keystore
 	storeCopy := km.accountsStore.Copy()
@@ -50,8 +49,8 @@ func (km *Keymanager) ImportKeystores(
 		var pubKeyBytes []byte
 		privKeyBytes, pubKeyBytes, _, err = km.attemptDecryptKeystore(decryptor, keystores[i], passwords[i])
 		if err != nil {
-			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status:  ethpbservice.ImportedKeystoreStatus_ERROR,
+			statuses[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
 				Message: err.Error(),
 			}
 			continue
@@ -64,16 +63,16 @@ func (km *Keymanager) ImportKeystores(
 		_, isDuplicateInExisting := existingPubKeys[string(pubKeyBytes)]
 		if isDuplicateInArray || isDuplicateInExisting {
 			log.Warnf("Duplicate key in import will be ignored: %#x", pubKeyBytes)
-			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status: ethpbservice.ImportedKeystoreStatus_DUPLICATE,
+			statuses[i] = &keymanager.KeyStatus{
+				Status: keymanager.StatusDuplicate,
 			}
 			continue
 		}
 
 		keys[string(pubKeyBytes)] = string(privKeyBytes)
 		importedKeys = append(importedKeys, pubKeyBytes)
-		statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-			Status: ethpbservice.ImportedKeystoreStatus_IMPORTED,
+		statuses[i] = &keymanager.KeyStatus{
+			Status: keymanager.StatusImported,
 		}
 	}
 	if len(importedKeys) == 0 {

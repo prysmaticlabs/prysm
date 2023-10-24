@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/io/logs"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
@@ -184,7 +183,6 @@ func (s *Server) Start() {
 	validatorpb.RegisterHealthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
-	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	if err := s.InitializeRoutes(); err != nil {
@@ -221,6 +219,9 @@ func (s *Server) InitializeRoutes() error {
 	}
 	// Register all services, HandleFunc calls, etc.
 	// ...
+	s.router.HandleFunc("/eth/v1/keystores", s.ListRemoteKeys).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/keystores", s.ImportRemoteKeys).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/keystores", s.DeleteRemoteKeys).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)

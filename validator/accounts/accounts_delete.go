@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
 
 // Delete the accounts that the user requests to be deleted from the wallet.
@@ -76,11 +76,11 @@ func DeleteAccount(ctx context.Context, cfg *DeleteConfig) error {
 	}
 	for i, status := range statuses {
 		switch status.Status {
-		case ethpbservice.DeletedKeystoreStatus_ERROR:
+		case keymanager.StatusError:
 			log.Errorf("Error deleting key %#x: %s", bytesutil.Trunc(cfg.DeletePublicKeys[i]), status.Message)
-		case ethpbservice.DeletedKeystoreStatus_NOT_ACTIVE:
+		case keymanager.StatusNotActive:
 			log.Warnf("Duplicate key %#x found in delete request", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
-		case ethpbservice.DeletedKeystoreStatus_NOT_FOUND:
+		case keymanager.StatusNotFound:
 			log.Warnf("Could not find keystore for %#x", bytesutil.Trunc(cfg.DeletePublicKeys[i]))
 		}
 	}
