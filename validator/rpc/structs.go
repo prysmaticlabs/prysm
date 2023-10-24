@@ -56,5 +56,5 @@ type GetFeeRecipientByPubkeyResponse struct {
 }
 
 type SetFeeRecipientByPubkeyRequest struct {
-	Ethaddress string `json:"ethaddress" hex:"true"`
+	Ethaddress string `json:"ethaddress"`
 }
