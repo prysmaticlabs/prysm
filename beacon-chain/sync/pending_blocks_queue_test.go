@@ -933,7 +933,7 @@ func TestExpirationCache_PruneOldBlocksCorrectly(t *testing.T) {
 	require.Equal(t, 2, len(r.pendingBlocksInCache(1)))
 
 	// Wait for expiration cache to cleanup and remove old block.
-	time.Sleep(3 * pendingBlockExpTime)
+	time.Sleep(2 * pendingBlockExpTime)
 
 	// Run pending queue with expired blocks.
 	require.NoError(t, r.processPendingBlocks(ctx))
