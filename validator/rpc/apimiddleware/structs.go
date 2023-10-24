@@ -32,20 +32,3 @@ type DeleteKeystoresResponseJson struct {
 	Statuses           []*StatusJson `json:"data"`
 	SlashingProtection string        `json:"slashing_protection"`
 }
-
-type FeeRecipientJson struct {
-	Pubkey     string `json:"pubkey" hex:"true"`
-	Ethaddress string `json:"ethaddress" address:"true"`
-}
-
-type GetFeeRecipientByPubkeyResponseJson struct {
-	Data *FeeRecipientJson `json:"data"`
-}
-
-type SetFeeRecipientByPubkeyRequestJson struct {
-	Ethaddress string `json:"ethaddress" hex:"true"`
-}
-
-type DeleteFeeRecipientByPubkeyRequestJson struct {
-	Pubkey string `json:"pubkey" hex:"true"`
-}
