@@ -20,7 +20,7 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 	// for that index at the same time and there was a race condition. This is unlikely, but
 	// just in case it does happen, this saves us from some unnecessary work.
 	alreadySeen := s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
-	if alreadySeen == true {
+	if alreadySeen {
 		return nil
 	}
 
