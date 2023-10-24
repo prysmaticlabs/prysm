@@ -10,9 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -261,123 +259,6 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 		}
 	}
 	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
-}
-
-func (s *Server) GetGasLimit(_ context.Context, req *ethpbservice.PubkeyRequest) (*ethpbservice.GetGasLimitResponse, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
-	}
-	validatorKey := req.Pubkey
-	if err := validatePublicKey(validatorKey); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-	resp := &ethpbservice.GetGasLimitResponse{
-		Data: &ethpbservice.GetGasLimitResponse_GasLimit{
-			Pubkey: validatorKey,
-		},
-	}
-	settings := s.validatorService.ProposerSettings()
-	if settings != nil {
-		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
-		if found {
-			if proposerOption.BuilderConfig != nil {
-				resp.Data.GasLimit = uint64(proposerOption.BuilderConfig.GasLimit)
-				return resp, nil
-			}
-		} else if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
-			resp.Data.GasLimit = uint64(s.validatorService.ProposerSettings().DefaultConfig.BuilderConfig.GasLimit)
-			return resp, nil
-		}
-	}
-	resp.Data.GasLimit = params.BeaconConfig().DefaultBuilderGasLimit
-	return resp, nil
-}
-
-// SetGasLimit updates GasLimt of the public key.
-func (s *Server) SetGasLimit(ctx context.Context, req *ethpbservice.SetGasLimitRequest) (*empty.Empty, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
-	}
-	validatorKey := req.Pubkey
-
-	if err := validatePublicKey(validatorKey); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-	settings := s.validatorService.ProposerSettings()
-	if settings == nil {
-		return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "no proposer settings were found to update")
-	} else if settings.ProposeConfig == nil {
-		if settings.DefaultConfig == nil || settings.DefaultConfig.BuilderConfig == nil || !settings.DefaultConfig.BuilderConfig.Enabled {
-			return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
-		}
-		settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
-		option := settings.DefaultConfig.Clone()
-		option.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
-		settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = option
-	} else {
-		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
-		if found {
-			if proposerOption.BuilderConfig == nil || !proposerOption.BuilderConfig.Enabled {
-				return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
-			} else {
-				proposerOption.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
-			}
-		} else {
-			if settings.DefaultConfig == nil {
-				return &empty.Empty{}, status.Errorf(codes.FailedPrecondition, "gas limit changes only apply when builder is enabled")
-			}
-			option := settings.DefaultConfig.Clone()
-			option.BuilderConfig.GasLimit = validator.Uint64(req.GasLimit)
-			settings.ProposeConfig[bytesutil.ToBytes48(validatorKey)] = option
-		}
-	}
-	// save the settings
-	if err := s.validatorService.SetProposerSettings(ctx, settings); err != nil {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set proposer settings: %v", err)
-	}
-	// override the 200 success with 202 according to the specs
-	if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "202")); err != nil {
-		return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom success code header: %v", err)
-	}
-
-	return &empty.Empty{}, nil
-}
-
-func (s *Server) DeleteGasLimit(ctx context.Context, req *ethpbservice.DeleteGasLimitRequest) (*empty.Empty, error) {
-	if s.validatorService == nil {
-		return nil, status.Error(codes.FailedPrecondition, "Validator service not ready")
-	}
-	validatorKey := req.Pubkey
-	if err := validatePublicKey(validatorKey); err != nil {
-		return nil, status.Error(codes.FailedPrecondition, err.Error())
-	}
-
-	proposerSettings := s.validatorService.ProposerSettings()
-	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
-		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(validatorKey)]
-		if found && proposerOption.BuilderConfig != nil {
-			// If proposerSettings has default value, use it.
-			if proposerSettings.DefaultConfig != nil && proposerSettings.DefaultConfig.BuilderConfig != nil {
-				proposerOption.BuilderConfig.GasLimit = proposerSettings.DefaultConfig.BuilderConfig.GasLimit
-			} else {
-				// Fallback to using global default.
-				proposerOption.BuilderConfig.GasLimit = validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit)
-			}
-			// save the settings
-			if err := s.validatorService.SetProposerSettings(ctx, proposerSettings); err != nil {
-				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set proposer settings: %v", err)
-			}
-			// Successfully deleted gas limit (reset to proposer config default or global default).
-			// Return with success http code "204".
-			if err := grpc.SetHeader(ctx, metadata.Pairs("x-http-code", "204")); err != nil {
-				return &empty.Empty{}, status.Errorf(codes.Internal, "Could not set custom http code 204 header: %v", err)
-			}
-			return &empty.Empty{}, nil
-		}
-	}
-	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
-	// we response "not found".
-	return nil, status.Error(codes.NotFound, fmt.Sprintf("no gaslimt found for pubkey: %q", hexutil.Encode(validatorKey)))
 }
 
 // ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
