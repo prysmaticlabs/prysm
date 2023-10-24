@@ -16,7 +16,13 @@ func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
 		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)
 	}
 
-	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
+	// If the blob has already been seen, that means we started to validate multiple blobs
+	// for that index at the same time and there was a race condition. This is unlikely, but
+	// just in case it does happen, this saves us from some unnecessary work.
+	alreadySeen := s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
+	if alreadySeen == true {
+		return nil
+	}
 
 	if err := s.cfg.chain.ReceiveBlob(ctx, b.Message); err != nil {
 		return err

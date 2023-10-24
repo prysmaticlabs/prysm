@@ -221,12 +221,13 @@ func (s *Service) hasSeenBlobIndex(root []byte, index uint64) bool {
 	return seen
 }
 
-// Set blob index and root as seen.
-func (s *Service) setSeenBlobIndex(root []byte, index uint64) {
+// Set blob index and root as seen, returns true if the blob has been seen before.
+func (s *Service) setSeenBlobIndex(root []byte, index uint64) bool {
 	s.seenBlobLock.Lock()
 	defer s.seenBlobLock.Unlock()
 	b := append(root, bytesutil.Bytes32(index)...)
-	s.seenBlobCache.Add(string(b), true)
+	alreadySeen, _ := s.seenBlobCache.ContainsOrAdd(string(b), true)
+	return alreadySeen
 }
 
 func blobFields(b *eth.BlobSidecar) logrus.Fields {

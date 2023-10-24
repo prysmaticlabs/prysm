@@ -45,7 +45,7 @@ var _ runtime.Service = (*Service)(nil)
 
 const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
-const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
+const seenBlobSize = seenBlockSize * 6 // Each block can have max 6 blobs. Worst case 384kB for cache.
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.

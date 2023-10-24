@@ -262,7 +262,8 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	require.NoError(t, err)
 	topic = s.addDigestAndIndexToTopic(topic, digest, 0)
 
-	s.setSeenBlobIndex(bytesutil.PadTo([]byte{}, 32), 0)
+	alreadySeen := s.setSeenBlobIndex(bytesutil.PadTo([]byte{}, 32), 0)
+	require.Equal(t, alreadySeen, false)
 	result, err := s.validateBlob(ctx, "", &pubsub.Message{
 		Message: &pb.Message{
 			Data:  buf.Bytes(),
