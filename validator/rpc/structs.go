@@ -9,6 +9,19 @@ type SetVoluntaryExitResponse struct {
 	Data *shared.SignedVoluntaryExit `json:"data"`
 }
 
+type GasLimitMetaData struct {
+	Pubkey   string `json:"pubkey"`
+	GasLimit string `json:"gas_limit"`
+}
+
+type GetGasLimitResponse struct {
+	Data *GasLimitMetaData `json:"data"`
+}
+
+type SetGasLimitRequest struct {
+	GasLimit string `json:"gas_limit"`
+}
+
 // remote keymanager api
 type ListRemoteKeysResponse struct {
 	Data []*RemoteKey `json:"data"`

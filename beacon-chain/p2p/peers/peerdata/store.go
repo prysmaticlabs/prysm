@@ -118,7 +118,7 @@ func (s *Store) SetTrustedPeers(peers []peer.ID) {
 // GetTrustedPeers gets our desired trusted peer ids.
 // Important: it is assumed that store mutex is locked when calling this method.
 func (s *Store) GetTrustedPeers() []peer.ID {
-	peers := []peer.ID{}
+	var peers []peer.ID
 	for p := range s.trustedPeers {
 		peers = append(peers, p)
 	}

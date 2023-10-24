@@ -60,7 +60,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		// Contains all keys in targetPubKeys but not in retrievedPubKeys
 		var missingPubKeys [][]byte
 
-		statuses := []*ethpb.ValidatorActivationResponse_Status{}
+		var statuses []*ethpb.ValidatorActivationResponse_Status
 
 		for index, publicKey := range c.ValidatorActivationRequest.PublicKeys {
 			stringPubKey := hexutil.Encode(publicKey)

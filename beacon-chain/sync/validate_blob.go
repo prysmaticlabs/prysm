@@ -61,8 +61,8 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	blob := sBlob.Message
 
-	// [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
-	want := fmt.Sprintf("blob_sidecar_%d", blob.Index)
+	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
+	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
 		log.WithFields(blobFields(blob)).Debug("Sidecar blob does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
@@ -236,4 +236,8 @@ func blobFields(b *eth.BlobSidecar) logrus.Fields {
 		"blockRoot":     fmt.Sprintf("%#x", b.BlockRoot),
 		"index":         b.Index,
 	}
+}
+
+func computeSubnetForBlobSidecar(index uint64) uint64 {
+	return index % params.BeaconConfig().BlobsidecarSubnetCount
 }
