@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -242,6 +243,178 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, RemoteKeysResponse{Data: deleter.DeletePublicKeys(req.Pubkeys)})
 }
 
+// ListFeeRecipientByPubkey returns the public key to eth address mapping object to the end user.
+func (s *Server) ListFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListFeeRecipientByPubkey")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+
+	rawPubkey := mux.Vars(r)["pubkey"]
+	if rawPubkey == "" {
+		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
+	if !valid {
+		return
+	}
+	finalResp := &GetFeeRecipientByPubkeyResponse{
+		Data: &FeeRecipient{
+			Pubkey: rawPubkey,
+		},
+	}
+
+	proposerSettings := s.validatorService.ProposerSettings()
+
+	// If fee recipient is defined for this specific pubkey in proposer configuration, use it
+	if proposerSettings != nil && proposerSettings.ProposeConfig != nil {
+		proposerOption, found := proposerSettings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
+
+		if found && proposerOption.FeeRecipientConfig != nil {
+			finalResp.Data.Ethaddress = proposerOption.FeeRecipientConfig.FeeRecipient.String()
+			http2.WriteJson(w, finalResp)
+			return
+		}
+	}
+
+	// If fee recipient is defined in default configuration, use it
+	if proposerSettings != nil && proposerSettings.DefaultConfig != nil && proposerSettings.DefaultConfig.FeeRecipientConfig != nil {
+		finalResp.Data.Ethaddress = proposerSettings.DefaultConfig.FeeRecipientConfig.FeeRecipient.String()
+		http2.WriteJson(w, finalResp)
+		return
+	}
+
+	http2.HandleError(w, "No fee recipient set", http.StatusBadRequest)
+}
+
+// SetFeeRecipientByPubkey updates the eth address mapped to the public key.
+func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetFeeRecipientByPubkey")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+
+	rawPubkey := mux.Vars(r)["pubkey"]
+	if rawPubkey == "" {
+		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
+	if !valid {
+		return
+	}
+	var req SetFeeRecipientByPubkeyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	ethAddress, valid := shared.ValidateHex(w, "Ethereum Address", req.Ethaddress, fieldparams.FeeRecipientLength)
+	if !valid {
+		return
+	}
+	feeRecipient := common.BytesToAddress(ethAddress)
+	settings := s.validatorService.ProposerSettings()
+	switch {
+	case settings == nil:
+		settings = &validatorServiceConfig.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+				bytesutil.ToBytes48(pubkey): {
+					FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient,
+					},
+					BuilderConfig: nil,
+				},
+			},
+			DefaultConfig: nil,
+		}
+	case settings.ProposeConfig == nil:
+		var builderConfig *validatorServiceConfig.BuilderConfig
+		if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
+			builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
+		}
+		settings.ProposeConfig = map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+			bytesutil.ToBytes48(pubkey): {
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: feeRecipient,
+				},
+				BuilderConfig: builderConfig,
+			},
+		}
+	default:
+		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
+		if found && proposerOption != nil {
+			proposerOption.FeeRecipientConfig = &validatorServiceConfig.FeeRecipientConfig{
+				FeeRecipient: feeRecipient,
+			}
+		} else {
+			var builderConfig = &validatorServiceConfig.BuilderConfig{}
+			if settings.DefaultConfig != nil && settings.DefaultConfig.BuilderConfig != nil {
+				builderConfig = settings.DefaultConfig.BuilderConfig.Clone()
+			}
+			settings.ProposeConfig[bytesutil.ToBytes48(pubkey)] = &validatorServiceConfig.ProposerOption{
+				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipient: feeRecipient,
+				},
+				BuilderConfig: builderConfig,
+			}
+		}
+	}
+	// save the settings
+	if err := s.validatorService.SetProposerSettings(ctx, settings); err != nil {
+		http2.HandleError(w, "Could not set proposer settings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	// override the 200 success with 202 according to the specs
+	w.WriteHeader(http.StatusAccepted)
+}
+
+// DeleteFeeRecipientByPubkey updates the eth address mapped to the public key to the default fee recipient listed
+func (s *Server) DeleteFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteFeeRecipientByPubkey")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	rawPubkey := mux.Vars(r)["pubkey"]
+	if rawPubkey == "" {
+		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
+		return
+	}
+
+	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
+	if !valid {
+		return
+	}
+	settings := s.validatorService.ProposerSettings()
+
+	if settings != nil && settings.ProposeConfig != nil {
+		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
+		if found {
+			proposerOption.FeeRecipientConfig = nil
+		}
+	}
+
+	// save the settings
+	if err := s.validatorService.SetProposerSettings(ctx, settings); err != nil {
+		http2.HandleError(w, "Could not set proposer settings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// override the 200 success with 204 according to the specs
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetGasLimit returns the gas limit measured in gwei defined for the custom mev builder by public key
 func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGasLimit")
@@ -292,7 +465,6 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-
 	rawPubkey := mux.Vars(r)["pubkey"]
 	if rawPubkey == "" {
 		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
@@ -352,7 +524,6 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Could not set proposer settings: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -365,7 +536,6 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-
 	rawPubkey := mux.Vars(r)["pubkey"]
 	if rawPubkey == "" {
 		http2.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
