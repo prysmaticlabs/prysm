@@ -108,13 +108,13 @@ func (c *Client) GetFeeRecipientAddresses(ctx context.Context, validators []stri
 }
 
 // GetFeeRecipientAddress takes a public key and calls the keymanager API to return its fee recipient.
-func (c *Client) GetFeeRecipientAddress(ctx context.Context, pubkey string) (*apimiddleware.GetFeeRecipientByPubkeyResponseJson, error) {
+func (c *Client) GetFeeRecipientAddress(ctx context.Context, pubkey string) (*rpc.GetFeeRecipientByPubkeyResponse, error) {
 	path := strings.Replace(feeRecipientPath, "{pubkey}", pubkey, 1)
 	b, err := c.Get(ctx, path, client.WithAuthorizationToken(c.Token()))
 	if err != nil {
 		return nil, err
 	}
-	feejson := &apimiddleware.GetFeeRecipientByPubkeyResponseJson{}
+	feejson := &rpc.GetFeeRecipientByPubkeyResponse{}
 	if err := json.Unmarshal(b, feejson); err != nil {
 		return nil, errors.Wrap(err, "failed to parse fee recipient")
 	}
