@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -159,11 +160,14 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 	if err != nil {
 		return err
 	}
+	if len(sidecars) != len(request) {
+		return fmt.Errorf("received %d blob sidecars, expected %d for RPC", len(sidecars), len(request))
+	}
 	for _, sidecar := range sidecars {
 		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
 			return err
 		}
-		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")
+		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar RPC")
 	}
 
 	return s.cfg.beaconDB.SaveBlobSidecar(ctx, sidecars)
