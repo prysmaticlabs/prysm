@@ -219,9 +219,9 @@ func (s *Server) InitializeRoutes() error {
 	}
 	// Register all services, HandleFunc calls, etc.
 	// ...
-	s.router.HandleFunc("/eth/v1/keystores", s.ListRemoteKeys).Methods(http.MethodGet)
-	s.router.HandleFunc("/eth/v1/keystores", s.ImportRemoteKeys).Methods(http.MethodPost)
-	s.router.HandleFunc("/eth/v1/keystores", s.DeleteRemoteKeys).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/keystores", s.ImportKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/keystores", s.DeleteKeystores).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)
