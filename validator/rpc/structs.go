@@ -47,7 +47,7 @@ type RemoteKeysResponse struct {
 
 // Fee Recipient keymanager api
 type FeeRecipient struct {
-	Pubkey     string `json:"pubkey" hex:"true"`
+	Pubkey     string `json:"pubkey"`
 	Ethaddress string `json:"ethaddress"`
 }
 
