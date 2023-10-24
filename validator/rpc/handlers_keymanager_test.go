@@ -834,3 +834,426 @@ func TestServer_DeleteRemoteKeys(t *testing.T) {
 		require.Equal(t, 0, len(expectedKeys))
 	})
 }
+
+func TestServer_ListFeeRecipientByPubkey(t *testing.T) {
+	ctx := context.Background()
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+	byteval, err := hexutil.Decode(pubkey)
+	require.NoError(t, err)
+
+	type want struct {
+		EthAddress string
+	}
+
+	tests := []struct {
+		name   string
+		args   *validatorserviceconfig.ProposerSettings
+		want   *want
+		cached *eth.FeeRecipientByPubKeyResponse
+	}{
+		{
+			name: "ProposerSettings.ProposeConfig.FeeRecipientConfig defined for pubkey (and ProposerSettings.DefaultConfig.FeeRecipientConfig defined)",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+						},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"),
+					},
+				},
+			},
+			want: &want{
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+		},
+		{
+			name: "ProposerSettings.ProposeConfig.FeeRecipientConfig NOT defined for pubkey and ProposerSettings.DefaultConfig.FeeRecipientConfig defined",
+			args: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+					},
+				},
+			},
+			want: &want{
+				EthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &mock.Validator{}
+			err := m.SetProposerSettings(ctx, tt.args)
+			require.NoError(t, err)
+
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator: m,
+			})
+			require.NoError(t, err)
+
+			s := &Server{
+				validatorService: vs,
+			}
+			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+			w := httptest.NewRecorder()
+			w.Body = &bytes.Buffer{}
+			s.ListFeeRecipientByPubkey(w, req)
+			assert.Equal(t, http.StatusOK, w.Code)
+			resp := &GetFeeRecipientByPubkeyResponse{}
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
+			assert.Equal(t, tt.want.EthAddress, resp.Data.Ethaddress)
+		})
+	}
+}
+
+func TestServer_ListFeeRecipientByPubKey_NoFeeRecipientSet(t *testing.T) {
+	ctx := context.Background()
+
+	vs, err := client.NewValidatorService(ctx, &client.Config{
+		Validator: &mock.Validator{},
+	})
+	require.NoError(t, err)
+
+	s := &Server{
+		validatorService: vs,
+	}
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.ListFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusOK, w.Code)
+	require.StringContains(t, "No fee recipient set", w.Body.String())
+}
+
+func TestServer_ListFeeRecipientByPubkey_ValidatorServiceNil(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0x00"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.SetFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusOK, w.Code)
+	require.StringContains(t, "Validator service not ready", w.Body.String())
+}
+
+func TestServer_ListFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
+	s := &Server{
+		validatorService: &client.ValidatorService{},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0x00"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.SetFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusOK, w.Code)
+	require.StringContains(t, "Invalid pubkey", w.Body.String())
+}
+
+func TestServer_FeeRecipientByPubkey(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	beaconClient := validatormock.NewMockValidatorClient(ctrl)
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+	byteval, err := hexutil.Decode(pubkey)
+	require.NoError(t, err)
+
+	type want struct {
+		valEthAddress     string
+		defaultEthaddress string
+	}
+	type beaconResp struct {
+		resp  *eth.FeeRecipientByPubKeyResponse
+		error error
+	}
+	tests := []struct {
+		name             string
+		args             string
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		want             *want
+		wantErr          bool
+		beaconReturn     *beaconResp
+	}{
+		{
+			name:             "ProposerSetting is nil",
+			args:             "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: nil,
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig is nil",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: nil,
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig is nil AND ProposerSetting.Defaultconfig is defined",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: nil,
+				DefaultConfig: &validatorserviceconfig.ProposerOption{},
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig is defined for pubkey",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {},
+				},
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig not defined for pubkey",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{},
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig is nil for pubkey",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): nil,
+				},
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+		{
+			name: "ProposerSetting.ProposeConfig is nil for pubkey AND DefaultConfig is not nil",
+			args: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): nil,
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{},
+			},
+			want: &want{
+				valEthAddress: "0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9",
+			},
+			wantErr: false,
+			beaconReturn: &beaconResp{
+				resp:  nil,
+				error: nil,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &mock.Validator{}
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+
+			// save a default here
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator: m,
+				ValDB:     validatorDB,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService:          vs,
+				beaconNodeValidatorClient: beaconClient,
+				valDB:                     validatorDB,
+			}
+			request := &SetFeeRecipientByPubkeyRequest{
+				Ethaddress: tt.args,
+			}
+
+			var buf bytes.Buffer
+			err = json.NewEncoder(&buf).Encode(request)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), &buf)
+			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+			w := httptest.NewRecorder()
+			w.Body = &bytes.Buffer{}
+			s.SetFeeRecipientByPubkey(w, req)
+			assert.Equal(t, http.StatusAccepted, w.Code)
+
+			assert.Equal(t, tt.want.valEthAddress, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig.FeeRecipient.Hex())
+		})
+	}
+}
+
+func TestServer_SetFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
+	s := &Server{
+		validatorService: &client.ValidatorService{},
+	}
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0x00"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.SetFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusAccepted, w.Code)
+	require.StringContains(t, "Invalid pubkey", w.Body.String())
+}
+
+func TestServer_SetFeeRecipientByPubkey_InvalidFeeRecipient(t *testing.T) {
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+
+	s := &Server{
+		validatorService: &client.ValidatorService{},
+	}
+	request := &SetFeeRecipientByPubkeyRequest{
+		Ethaddress: "0x00",
+	}
+
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), &buf)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.SetFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusAccepted, w.Code)
+
+	require.StringContains(t, "Invalid Ethereum Address", w.Body.String())
+}
+
+func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
+	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+	byteval, err := hexutil.Decode(pubkey)
+	require.NoError(t, err)
+	type want struct {
+		EthAddress string
+	}
+	tests := []struct {
+		name             string
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		want             *want
+		wantErr          bool
+	}{
+		{
+			name: "Happy Path Test",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: map[[48]byte]*validatorserviceconfig.ProposerOption{
+					bytesutil.ToBytes48(byteval): {
+						FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+							FeeRecipient: common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9738D5"),
+						},
+					},
+				},
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
+					},
+				},
+			},
+			want: &want{
+				EthAddress: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9").Hex(),
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &mock.Validator{}
+			err := m.SetProposerSettings(ctx, tt.proposerSettings)
+			require.NoError(t, err)
+			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			vs, err := client.NewValidatorService(ctx, &client.Config{
+				Validator: m,
+				ValDB:     validatorDB,
+			})
+			require.NoError(t, err)
+			s := &Server{
+				validatorService: vs,
+				valDB:            validatorDB,
+			}
+			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+			w := httptest.NewRecorder()
+			w.Body = &bytes.Buffer{}
+			s.DeleteFeeRecipientByPubkey(w, req)
+			assert.Equal(t, http.StatusNoContent, w.Code)
+			assert.Equal(t, true, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig == nil)
+		})
+	}
+}
+
+func TestServer_DeleteFeeRecipientByPubkey_ValidatorServiceNil(t *testing.T) {
+	s := &Server{}
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0x1234567878903438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.DeleteFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusNoContent, w.Code)
+	require.StringContains(t, "Validator service not ready", w.Body.String())
+}
+
+func TestServer_DeleteFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
+	s := &Server{
+		validatorService: &client.ValidatorService{},
+	}
+
+	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": "0x123"})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.DeleteFeeRecipientByPubkey(w, req)
+	assert.NotEqual(t, http.StatusNoContent, w.Code)
+
+	require.StringContains(t, "pubkey is invalid", w.Body.String())
+}
