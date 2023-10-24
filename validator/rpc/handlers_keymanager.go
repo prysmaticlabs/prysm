@@ -30,7 +30,7 @@ import (
 
 // ListKeystores implements the standard validator key management API.
 func (s *Server) ListKeystores(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListRemoteKeys")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListKeystores")
 	defer span.End()
 
 	if s.validatorService == nil {
@@ -72,7 +72,7 @@ func (s *Server) ListKeystores(w http.ResponseWriter, r *http.Request) {
 
 // ImportKeystores allows for importing keystores into Prysm with their slashing protection history.
 func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListRemoteKeys")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ImportKeystores")
 	defer span.End()
 
 	if s.validatorService == nil {
@@ -166,7 +166,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 
 // DeleteKeystores allows for deleting specified public keys from Prysm.
 func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListRemoteKeys")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteKeystores")
 	defer span.End()
 
 	if s.validatorService == nil {
