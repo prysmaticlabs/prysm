@@ -125,55 +125,6 @@ service KeyManagement {
       body: "*"
     };
   }
-
-  // GetGasLimit returns the execution gas limit for an individual validator.
-  //
-  // HTTP response status codes:
-  //  - 400: Bad request
-  //  - 401: Unauthorized
-  //  - 403: Forbidden
-  //  - 500: Validator internal error
-  rpc GetGasLimit(PubkeyRequest) returns (GetGasLimitResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/validator/{pubkey}/gas_limit"
-    };
-  }
-
-  // SetGasLimit sets the gas limit for the specific public key, overrides the existing one.
-  //
-  // Spec page: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/SetGasLimit
-  // 
-  // HTTP response status codes:
-  //  - 202: Successful response
-  //  - 400: Bad request
-  //  - 401: Unauthorized
-  //  - 403: Forbidden from accessing the resource
-  //  - 404: Path not found
-  //  - 500: Validator internal error
-  rpc SetGasLimit(SetGasLimitRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/validator/{pubkey}/gas_limit",
-      body: "*"
-    };
-  }
-
-  // DeleteGasLimit deletes the gas limit for the specific public key.
-  //
-  // Spec page: https://ethereum.github.io/keymanager-APIs/#/Gas%20Limit/DeleteGasLimit
-  //
-  // HTTP response status codes:
-  //  - 204: Successfully removed the gas limit or there was no gas limit set for the requested pubkey.
-  //  - 400: Bad request, malformed request
-  //  - 401: Unauthorized, no token is found.
-  //  - 403: A gas limit was found but cannot be removed. This may be because the gas limit was in configuration files that cannot be updated.
-  //  - 404: The key was not found on the server, nothing to delete.
-  //  - 500: Validator internal error
-  rpc DeleteGasLimit(DeleteGasLimitRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/internal/eth/v1/validator/{pubkey}/gas_limit",
-      body: "*"
-    };
-  }
 }
 
 message ListKeystoresResponse {
@@ -241,19 +192,3 @@ message SetFeeRecipientByPubkeyRequest {
   bytes ethaddress = 2;
 }
 
-message GetGasLimitResponse {
-  message GasLimit {
-    bytes pubkey = 1;
-    uint64 gas_limit = 2;
-  }
-  GasLimit data = 1;
-}
-
-message SetGasLimitRequest {
-  bytes pubkey = 1;
-  uint64 gas_limit = 2;
-}
-
-message DeleteGasLimitRequest {
-  bytes pubkey = 1;
-}
