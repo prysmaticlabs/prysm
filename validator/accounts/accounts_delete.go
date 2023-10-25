@@ -3,7 +3,6 @@ package accounts
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -26,7 +25,7 @@ func (acm *CLIManager) Delete(ctx context.Context) error {
 		if len(acm.filteredPubKeys) == 1 {
 			promptText := "Are you sure you want to delete 1 account? (%s) Y/N"
 			resp, err := prompt.ValidatePrompt(
-				os.Stdin, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
+				acm.inputReader, fmt.Sprintf(promptText, au.BrightGreen(formattedPubKeys[0])), prompt.ValidateYesOrNo,
 			)
 			if err != nil {
 				return err
@@ -41,7 +40,7 @@ func (acm *CLIManager) Delete(ctx context.Context) error {
 			} else {
 				promptText = fmt.Sprintf(promptText, len(acm.filteredPubKeys), au.BrightGreen(allAccountStr))
 			}
-			resp, err := prompt.ValidatePrompt(os.Stdin, promptText, prompt.ValidateYesOrNo)
+			resp, err := prompt.ValidatePrompt(acm.inputReader, promptText, prompt.ValidateYesOrNo)
 			if err != nil {
 				return err
 			}
