@@ -9,16 +9,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
-
-type abstractProduceBlockResponseJson struct {
-	Version string          `json:"version" enum:"true"`
-	Data    json.RawMessage `json:"data"`
-}
 
 func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
 	queryParams := neturl.Values{}
@@ -28,11 +23,11 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		queryParams.Add("graffiti", hexutil.Encode(graffiti))
 	}
 
-	queryUrl := buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
+	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), queryParams)
 
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
-	produceBlockResponseJson := abstractProduceBlockResponseJson{}
+	produceBlockResponseJson := validator.ProduceBlockV3Response{}
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlockResponseJson); err != nil {
 		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	}
@@ -41,74 +36,94 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 	decoder := json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
 	decoder.DisallowUnknownFields()
 
-	response := &ethpb.GenericBeaconBlock{}
-
+	var response *ethpb.GenericBeaconBlock
 	switch produceBlockResponseJson.Version {
 	case "phase0":
-		jsonPhase0Block := apimiddleware.BeaconBlockJson{}
+		jsonPhase0Block := shared.BeaconBlock{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode phase0 block response json")
 		}
-
-		phase0Block, err := c.beaconBlockConverter.ConvertRESTPhase0BlockToProto(&jsonPhase0Block)
+		genericBlock, err := jsonPhase0Block.ToGeneric()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get phase0 block")
 		}
-		response.Block = &ethpb.GenericBeaconBlock_Phase0{
-			Phase0: phase0Block,
-		}
-
+		response = genericBlock
 	case "altair":
-		jsonAltairBlock := apimiddleware.BeaconBlockAltairJson{}
+		jsonAltairBlock := shared.BeaconBlockAltair{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode altair block response json")
 		}
-
-		altairBlock, err := c.beaconBlockConverter.ConvertRESTAltairBlockToProto(&jsonAltairBlock)
+		genericBlock, err := jsonAltairBlock.ToGeneric()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get altair block")
 		}
-		response.Block = &ethpb.GenericBeaconBlock_Altair{
-			Altair: altairBlock,
-		}
-
+		response = genericBlock
 	case "bellatrix":
-		jsonBellatrixBlock := apimiddleware.BeaconBlockBellatrixJson{}
-		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
-			return nil, errors.Wrap(err, "failed to decode bellatrix block response json")
+		if produceBlockResponseJson.ExecutionPayloadBlinded {
+			jsonBellatrixBlock := shared.BlindedBeaconBlockBellatrix{}
+			if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
+				return nil, errors.Wrap(err, "failed to decode bellatrix block response json")
+			}
+			genericBlock, err := jsonBellatrixBlock.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get bellatrix block")
+			}
+			response = genericBlock
+		} else {
+			jsonBellatrixBlock := shared.BeaconBlockBellatrix{}
+			if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
+				return nil, errors.Wrap(err, "failed to decode bellatrix block response json")
+			}
+			genericBlock, err := jsonBellatrixBlock.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get bellatrix block")
+			}
+			response = genericBlock
 		}
-
-		bellatrixBlock, err := c.beaconBlockConverter.ConvertRESTBellatrixBlockToProto(&jsonBellatrixBlock)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get bellatrix block")
-		}
-		response.Block = &ethpb.GenericBeaconBlock_Bellatrix{
-			Bellatrix: bellatrixBlock,
-		}
-
 	case "capella":
-		jsonCapellaBlock := apimiddleware.BeaconBlockCapellaJson{}
-		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
-			return nil, errors.Wrap(err, "failed to decode capella block response json")
-		}
-
-		capellaBlock, err := c.beaconBlockConverter.ConvertRESTCapellaBlockToProto(&jsonCapellaBlock)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get capella block")
-		}
-		response.Block = &ethpb.GenericBeaconBlock_Capella{
-			Capella: capellaBlock,
+		if produceBlockResponseJson.ExecutionPayloadBlinded {
+			jsonCapellaBlock := shared.BlindedBeaconBlockCapella{}
+			if err := decoder.Decode(&jsonCapellaBlock); err != nil {
+				return nil, errors.Wrap(err, "failed to decode capella block response json")
+			}
+			genericBlock, err := jsonCapellaBlock.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get capella block")
+			}
+			response = genericBlock
+		} else {
+			jsonCapellaBlock := shared.BeaconBlockCapella{}
+			if err := decoder.Decode(&jsonCapellaBlock); err != nil {
+				return nil, errors.Wrap(err, "failed to decode capella block response json")
+			}
+			genericBlock, err := jsonCapellaBlock.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get capella block")
+			}
+			response = genericBlock
 		}
 	case "deneb":
-		jsonDenebBlockContents := shared.BeaconBlockContentsDeneb{}
-		if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
-			return nil, errors.Wrap(err, "failed to decode deneb block response json")
+		if produceBlockResponseJson.ExecutionPayloadBlinded {
+			jsonDenebBlockContents := shared.BlindedBeaconBlockContentsDeneb{}
+			if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
+				return nil, errors.Wrap(err, "failed to decode deneb block response json")
+			}
+			genericBlock, err := jsonDenebBlockContents.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert deneb block contents to generic block")
+			}
+			response = genericBlock
+		} else {
+			jsonDenebBlockContents := shared.BeaconBlockContentsDeneb{}
+			if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
+				return nil, errors.Wrap(err, "failed to decode deneb block response json")
+			}
+			genericBlock, err := jsonDenebBlockContents.ToGeneric()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not convert deneb block contents to generic block")
+			}
+			response = genericBlock
 		}
-		genericBlock, err := jsonDenebBlockContents.ToGeneric()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not convert deneb block contents to generic block")
-		}
-		response = genericBlock
 	default:
 		return nil, errors.Errorf("unsupported consensus version `%s`", produceBlockResponseJson.Version)
 	}

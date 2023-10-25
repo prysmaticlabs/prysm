@@ -963,7 +963,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'b'},
+			want: bytesutil.PadTo([]byte{'b'}, 32),
 		},
 		{name: "use default file graffiti",
 			v: &validator{
@@ -972,7 +972,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'c'},
+			want: bytesutil.PadTo([]byte{'c'}, 32),
 		},
 		{name: "use random file graffiti",
 			v: &validator{
@@ -982,7 +982,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'d'},
+			want: bytesutil.PadTo([]byte{'d'}, 32),
 		},
 		{name: "use validator file graffiti, has validator",
 			v: &validator{
@@ -996,14 +996,14 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'g'},
+			want: bytesutil.PadTo([]byte{'g'}, 32),
 		},
 		{name: "use validator file graffiti, none specified",
 			v: &validator{
 				validatorClient: m.validatorClient,
 				graffitiStruct:  &graffiti.Graffiti{},
 			},
-			want: []byte{},
+			want: bytesutil.PadTo([]byte{}, 32),
 		},
 	}
 
