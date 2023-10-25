@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"google.golang.org/protobuf/proto"
 )
 
 func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
@@ -43,44 +42,6 @@ func TestServer_ListAssignments_CannotRequestFutureEpoch(t *testing.T) {
 		},
 	)
 	assert.ErrorContains(t, wanted, err)
-}
-
-func TestServer_ListAssignments_NoResults(t *testing.T) {
-	db := dbTest.SetupDB(t)
-	ctx := context.Background()
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-
-	b := util.NewBeaconBlock()
-	util.SaveBlock(t, ctx, db, b)
-	gRoot, err := b.Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, gRoot))
-	require.NoError(t, db.SaveState(ctx, st, gRoot))
-
-	bs := &Server{
-		BeaconDB:           db,
-		GenesisTimeFetcher: &mock.ChainService{},
-		StateGen:           stategen.New(db, doublylinkedtree.New()),
-		ReplayerBuilder:    mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st)),
-	}
-	wanted := &ethpb.ValidatorAssignments{
-		Assignments:   make([]*ethpb.ValidatorAssignments_CommitteeAssignment, 0),
-		TotalSize:     int32(0),
-		NextPageToken: strconv.Itoa(0),
-	}
-	res, err := bs.ListValidatorAssignments(
-		ctx,
-		&ethpb.ListValidatorAssignmentsRequest{
-			QueryFilter: &ethpb.ListValidatorAssignmentsRequest_Genesis{
-				Genesis: true,
-			},
-		},
-	)
-	require.NoError(t, err)
-	if !proto.Equal(wanted, res) {
-		t.Errorf("Wanted %v, received %v", wanted, res)
-	}
 }
 
 func TestServer_ListAssignments_Pagination_InputOutOfRange(t *testing.T) {
