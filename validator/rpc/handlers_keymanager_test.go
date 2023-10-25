@@ -560,7 +560,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	}()
 
 	request := &DeleteKeystoresRequest{
-		Pubkeys: []string{"a"},
+		Pubkeys: []string{"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494"},
 	}
 	var buf bytes.Buffer
 	err = json.NewEncoder(&buf).Encode(request)
@@ -574,7 +574,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 	require.Equal(t, 1, len(resp.Data))
 	require.Equal(t, keymanager.StatusError, resp.Data[0].Status)
-	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history.",
+	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history",
 		resp.Data[0].Message,
 	)
 }

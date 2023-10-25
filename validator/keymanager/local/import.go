@@ -111,10 +111,11 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 	// 2) Update store and remove duplicates
 	updateAccountsStoreKeys(storeCopy, privKeys, pubKeys)
 
-	// 3 & 4) save to disk and re-initializes keystore
+	// 3) & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return err
 	}
+
 	// 5) verify if store was not updated
 	if len(km.accountsStore.PublicKeys) < len(storeCopy.PublicKeys) {
 		return fmt.Errorf("keys were not imported successfully, expected %d got %d", len(storeCopy.PublicKeys), len(km.accountsStore.PublicKeys))
@@ -125,7 +126,7 @@ func (km *Keymanager) ImportKeypairs(ctx context.Context, privKeys, pubKeys [][]
 // Retrieves the private key and public key from an EIP-2335 keystore file
 // by decrypting using a specified password. If the password fails,
 // it prompts the user for the correct password until it confirms.
-func (_ *Keymanager) attemptDecryptKeystore(
+func (*Keymanager) attemptDecryptKeystore(
 	enc *keystorev4.Encryptor, keystore *keymanager.Keystore, password string,
 ) ([]byte, []byte, string, error) {
 	// Attempt to decrypt the keystore with the specifies password.
