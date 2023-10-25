@@ -14,6 +14,8 @@ import (
 	"go.opencensus.io/trace"
 )
 
+const errMsgStateFromConsensus = "Could not convert consensus state to response"
+
 // GetBeaconStateSSZ returns the SSZ-serialized version of the full beacon state object for given state ID.
 //
 // DEPRECATED: please use GetBeaconStateV2 instead
@@ -82,31 +84,31 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 	case version.Phase0:
 		respSt, err = BeaconStateFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, "Could not convert consensus state to response : "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Altair:
 		respSt, err = BeaconStateAltairFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, "Could not convert consensus state to response : "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Bellatrix:
 		respSt, err = BeaconStateBellatrixFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, "Could not convert consensus state to response : "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Capella:
 		respSt, err = BeaconStateCapellaFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, "Could not convert consensus state to response : "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Deneb:
 		respSt, err = BeaconStateDenebFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, "Could not convert consensus state to response : "+err.Error(), http.StatusInternalServerError)
+			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
