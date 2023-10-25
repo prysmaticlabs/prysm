@@ -124,7 +124,7 @@ func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 	}
 }
 
-func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
+func WithPayloadReconstructor(r execution.PayloadReconstructor) Option {
 	return func(s *Service) error {
 		s.cfg.executionPayloadReconstructor = r
 		return nil

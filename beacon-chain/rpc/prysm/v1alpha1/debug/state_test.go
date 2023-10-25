@@ -18,8 +18,8 @@ import (
 )
 
 func addDefaultReplayerBuilder(s *Server, h stategen.HistoryAccessor) {
-	cc := &mockstategen.MockCanonicalChecker{Is: true}
-	cs := &mockstategen.MockCurrentSlotter{Slot: math.MaxUint64 - 1}
+	cc := &mockstategen.CanonicalChecker{Is: true}
+	cs := &mockstategen.CurrentSlotter{Slot: math.MaxUint64 - 1}
 	s.ReplayerBuilder = stategen.NewCanonicalHistory(h, cc, cs)
 }
 

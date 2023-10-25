@@ -22,7 +22,7 @@ type Endpoint struct {
 
 // AuthorizationData holds all information necessary to authorize with HTTP.
 type AuthorizationData struct {
-	Method authorization.AuthorizationMethod
+	Method authorization.Method
 	Value  string
 }
 
@@ -100,7 +100,7 @@ func HttpEndpoint(eth1Provider string) Endpoint {
 }
 
 // Method returns the authorizationmethod.AuthorizationMethod corresponding with the parameter value.
-func Method(auth string) authorization.AuthorizationMethod {
+func Method(auth string) authorization.Method {
 	if strings.HasPrefix(strings.ToLower(auth), "basic") {
 		return authorization.Basic
 	}

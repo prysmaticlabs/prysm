@@ -236,8 +236,8 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
-		assert.Equal(t, 1, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+		assert.Equal(t, 1, broadcaster.NumAttestations())
 		assert.Equal(t, "0x03", hexutil.Encode(broadcaster.BroadcastAttestations[0].AggregationBits))
 		assert.Equal(t, "0x8146f4397bfd8fd057ebbcd6a67327bdc7ed5fb650533edcb6377b650dea0b6da64c14ecd60846d5c0a0cd43893d6972092500f82c9d8a955e2b58c5ed3cbe885d84008ace6bd86ba9e23652f58e2ec207cec494c916063257abf285b9b15b15", hexutil.Encode(broadcaster.BroadcastAttestations[0].Signature))
 		assert.Equal(t, primitives.Slot(0), broadcaster.BroadcastAttestations[0].Data.Slot)
@@ -263,8 +263,8 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
-		assert.Equal(t, 2, len(broadcaster.BroadcastAttestations))
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+		assert.Equal(t, 2, broadcaster.NumAttestations())
 		assert.Equal(t, 2, s.AttestationsPool.UnaggregatedAttestationCount())
 	})
 	t.Run("no body", func(t *testing.T) {
@@ -390,7 +390,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		pendingExits, err := s.VoluntaryExitsPool.PendingExits()
 		require.NoError(t, err)
 		require.Equal(t, 1, len(pendingExits))
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	})
 	t.Run("across fork", func(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
@@ -422,7 +422,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		pendingExits, err := s.VoluntaryExitsPool.PendingExits()
 		require.NoError(t, err)
 		require.Equal(t, 1, len(pendingExits))
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
@@ -534,7 +534,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", hexutil.Encode(msgsInPool[0].BlockRoot))
 		assert.Equal(t, primitives.ValidatorIndex(1), msgsInPool[0].ValidatorIndex)
 		assert.Equal(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505", hexutil.Encode(msgsInPool[0].Signature))
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	})
 	t.Run("multiple", func(t *testing.T) {
 		broadcaster := &p2pMock.MockBroadcaster{}
@@ -565,7 +565,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		msgsInPool, err = s.CoreService.SyncCommitteePool.SyncCommitteeMessages(2)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(msgsInPool))
-		assert.Equal(t, true, broadcaster.BroadcastCalled)
+		assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	})
 	t.Run("invalid", func(t *testing.T) {
 		broadcaster := &p2pMock.MockBroadcaster{}
@@ -595,7 +595,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
 		require.NoError(t, err)
 		assert.Equal(t, 0, len(msgsInPool))
-		assert.Equal(t, false, broadcaster.BroadcastCalled)
+		assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
 	})
 	t.Run("empty", func(t *testing.T) {
 		s := &Server{}
@@ -756,7 +756,7 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	s.SubmitBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 	time.Sleep(100 * time.Millisecond) // Delay to let the routine start
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages))
 
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
@@ -874,7 +874,7 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 	assert.Equal(t, http.StatusOK, writer.Code)
 	// Check that we didn't broadcast the messages but did in fact fill in
 	// the pool
-	assert.Equal(t, false, broadcaster.BroadcastCalled)
+	assert.Equal(t, false, broadcaster.BroadcastCalled.Load())
 
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
 	require.Equal(t, len(poolChanges), len(signedChanges))
@@ -979,7 +979,7 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, writer.Code)
 	time.Sleep(10 * time.Millisecond) // Delay to allow the routine to start
 	require.StringContains(t, "One or more BLSToExecutionChange failed validation", writer.Body.String())
-	assert.Equal(t, true, broadcaster.BroadcastCalled)
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
 	assert.Equal(t, numValidators, len(broadcaster.BroadcastMessages)+1)
 
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()

@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -78,6 +79,31 @@ func TestValidateBlob_InvalidMessageType(t *testing.T) {
 			Topic: &topic,
 		}})
 	require.ErrorIs(t, errWrongMessage, err)
+	require.Equal(t, result, pubsub.ValidationReject)
+}
+
+func TestValidateBlob_InvalidIndex(t *testing.T) {
+	ctx := context.Background()
+	p := p2ptest.NewTestP2P(t)
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
+	s := &Service{cfg: &config{p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+
+	msg := util.NewBlobsidecar()
+	msg.Message.Index = fieldparams.MaxBlobsPerBlock
+	buf := new(bytes.Buffer)
+	_, err := p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := s.currentForkDigest()
+	require.NoError(t, err)
+	topic = s.addDigestAndIndexToTopic(topic, digest, 1)
+	result, err := s.validateBlob(ctx, "", &pubsub.Message{
+		Message: &pb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		}})
+	require.ErrorContains(t, "incorrect blob sidecar index", err)
 	require.Equal(t, result, pubsub.ValidationReject)
 }
 
