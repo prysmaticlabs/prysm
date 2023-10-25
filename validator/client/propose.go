@@ -452,5 +452,5 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		return bytesutil.PadTo([]byte(v.graffitiStruct.Default), 32), nil
 	}
 
-	return bytesutil.PadTo([]byte{}, 32), nil
+	return []byte{}, nil
 }

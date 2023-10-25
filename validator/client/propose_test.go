@@ -1003,7 +1003,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 				validatorClient: m.validatorClient,
 				graffitiStruct:  &graffiti.Graffiti{},
 			},
-			want: bytesutil.PadTo([]byte{}, 32),
+			want: []byte{},
 		},
 	}
 
