@@ -205,7 +205,12 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+	// Calculate the deadline time by adding two slots duration to the current time
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	twoSlotDuration := 2 * time.Duration(secondsPerSlot) * time.Second
+	ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, twoSlotDuration)
+	defer cancelFunction()
+	if err := s.cfg.chain.ReceiveBlock(ctxWithTimeout, b, blkRoot); err != nil {
 		return err
 	}
 
