@@ -82,6 +82,15 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if err != nil {
 				return err
 			}
+		case version.String(version.Deneb):
+			b := &shared.BeaconBlockDeneb{}
+			if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+				return err
+			}
+			headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+			if err != nil {
+				return err
+			}
 		default:
 			return errors.New("no valid block type retrieved")
 		}
