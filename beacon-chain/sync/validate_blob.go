@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
@@ -61,10 +62,16 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	blob := sBlob.Message
 
+	// [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `sidecar.index < MAX_BLOBS_PER_BLOCK`
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
+		log.WithFields(blobFields(blob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
+		return pubsub.ValidationReject, errors.New("incorrect blob sidecar index")
+	}
+
 	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
 	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
-		log.WithFields(blobFields(blob)).Debug("Sidecar blob does not match topic")
+		log.WithFields(blobFields(blob)).Debug("Sidecar index  does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
