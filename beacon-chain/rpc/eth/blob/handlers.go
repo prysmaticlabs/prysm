@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -86,7 +85,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, errors.Wrapf(err, "could not retrieve blobs for slot %d", slot).Error(), http.StatusInternalServerError)
 				return
 			}
-			http2.WriteJson(w, buildSidecardsResponse(sidecars))
+			http2.WriteJson(w, buildSidecarsResponse(sidecars))
 			return
 		}
 	}
@@ -117,14 +116,12 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http2.WriteJson(w, buildSidecardsResponse(sidecars))
+	http2.WriteJson(w, buildSidecarsResponse(sidecars))
 }
 
 // parseIndices filters out invalid and duplicate blob indices
 func parseIndices(url *url.URL) []uint64 {
-	query := url.Query()
-	helpers.NormalizeQueryValues(query)
-	rawIndices := query["indices"]
+	rawIndices := url.Query()["indices"]
 	indices := make([]uint64, 0, field_params.MaxBlobsPerBlock)
 loop:
 	for _, raw := range rawIndices {
@@ -132,8 +129,11 @@ loop:
 		if err != nil {
 			continue
 		}
+		if ix >= field_params.MaxBlobsPerBlock {
+			continue
+		}
 		for i := range indices {
-			if ix == indices[i] || ix >= field_params.MaxBlobsPerBlock {
+			if ix == indices[i] {
 				continue loop
 			}
 		}
@@ -142,7 +142,7 @@ loop:
 	return indices
 }
 
-func buildSidecardsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
+func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
 	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		resp.Data[i] = &Sidecar{

@@ -98,7 +98,7 @@ func TestBackupAccounts_Noninteractive_Derived(t *testing.T) {
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, accounts.ArchiveFilename)
-	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
+	assert.DeepEqual(t, true, file.Exists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
 	f, err := os.Open(zipFilePath)
@@ -189,7 +189,7 @@ func TestBackupAccounts_Noninteractive_Imported(t *testing.T) {
 
 	// We check a backup.zip file was created at the output path.
 	zipFilePath := filepath.Join(backupDir, accounts.ArchiveFilename)
-	assert.DeepEqual(t, true, file.FileExists(zipFilePath))
+	assert.DeepEqual(t, true, file.Exists(zipFilePath))
 
 	// We attempt to unzip the file and verify the keystores do match our accounts.
 	f, err := os.Open(zipFilePath)

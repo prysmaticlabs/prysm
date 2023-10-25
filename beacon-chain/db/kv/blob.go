@@ -48,7 +48,7 @@ func (rk blobRotatingKey) BlockRoot() []byte {
 
 // SaveBlobSidecar saves the blobs for a given epoch in the sidecar bucket. When we receive a blob:
 //
-//  1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = MAX_BLOB_EPOCHS*SLOTS_PER_EPOCH
+//  1. Convert slot using a modulo operator to [0, maxSlots] where maxSlots = MAX_EPOCHS_TO_PERSIST_BLOBS*SLOTS_PER_EPOCH
 //
 //  2. Compute key for blob as bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 //
@@ -121,7 +121,8 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	})
 }
 
-// validUniqueSidecars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and no more than MAX_BLOB_EPOCHS.
+// validUniqueSidecars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and
+// there are no more than MAX_BLOBS_PER_BLOCK sidecars.
 func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
 	if len(scs) == 0 {
 		return nil, errEmptySidecar
@@ -225,7 +226,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 }
 
 // BlobSidecarsBySlot retrieves BlobSidecars for the given slot.
-// If the `indices` argument is omitted, all blobs for the root will be returned.
+// If the `indices` argument is omitted, all blobs for the slot will be returned.
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
 // The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
@@ -260,8 +261,8 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 	return filterForIndices(sc, indices...)
 }
 
-// DeleteBlobSidecar returns true if the blobs are in the db.
-func (s *Store) DeleteBlobSidecar(ctx context.Context, beaconBlockRoot [32]byte) error {
+// DeleteBlobSidecars returns true if the blobs are in the db.
+func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.DeleteBlobSidecar")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {

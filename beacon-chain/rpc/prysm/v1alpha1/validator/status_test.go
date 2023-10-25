@@ -807,7 +807,7 @@ func TestMultipleValidatorStatus_Pubkeys(t *testing.T) {
 	assert.Equal(t, len(pubKeys), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -902,7 +902,7 @@ func TestMultipleValidatorStatus_Indices(t *testing.T) {
 	assert.Equal(t, len(beaconState.Validators), len(response.Statuses))
 	for i, resp := range response.Statuses {
 		if !proto.Equal(want[i], resp) {
-			t.Fatalf("Wanted %v\n Recieved: %v\n", want[i], resp)
+			t.Fatalf("Wanted %v\n Received: %v\n", want[i], resp)
 		}
 	}
 }
@@ -963,7 +963,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				vs := &Server{
 					HeadFetcher: &mockChain.ChainService{
@@ -995,7 +995,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[2] = 1
@@ -1045,7 +1045,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				prevIndices := make([]byte, 64)
 				prevIndices[2] = 1
 				require.NoError(t, ps.SetPreviousParticipationBits(prevIndices))
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 
 				vs := &Server{
@@ -1093,7 +1093,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 				currentIndices[10] = 1
 				currentIndices[11] = 2
 				require.NoError(t, hs.SetPreviousParticipationBits(currentIndices))
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 
 				prevIndices := make([]byte, 64)
@@ -1145,7 +1145,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[0] = 1
@@ -1182,7 +1182,7 @@ func TestServer_CheckDoppelGanger(t *testing.T) {
 			wantErr: false,
 			svSetup: func(t *testing.T) (*Server, *ethpb.DoppelGangerRequest, *ethpb.DoppelGangerResponse) {
 				hs, ps, keys := createStateSetupAltair(t, 3)
-				rb := mockstategen.NewMockReplayerBuilder()
+				rb := mockstategen.NewReplayerBuilder()
 				rb.SetMockStateForSlot(ps, 23)
 				currentIndices := make([]byte, 64)
 				currentIndices[0] = 1

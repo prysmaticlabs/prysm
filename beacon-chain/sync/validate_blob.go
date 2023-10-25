@@ -12,8 +12,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -21,6 +23,19 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 )
+
+func (s *Service) handleBlobParentStatus(ctx context.Context, root [32]byte) pubsub.ValidationResult {
+	if s.cfg.chain.HasBlock(ctx, root) {
+		// the parent will not be kept if it's invalid
+		return pubsub.ValidationAccept
+	}
+	if s.hasBadBlock(root) {
+		// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+		return pubsub.ValidationReject
+	}
+	// [IGNORE] The sidecar's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
+	return pubsub.ValidationIgnore
+}
 
 func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Message) (pubsub.ValidationResult, error) {
 	receivedTime := prysmTime.Now()
@@ -47,10 +62,16 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 	blob := sBlob.Message
 
-	// [REJECT] The sidecar is for the correct topic -- i.e. sidecar.index matches the topic {index}.
-	want := fmt.Sprintf("blob_sidecar_%d", blob.Index)
+	// [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `sidecar.index < MAX_BLOBS_PER_BLOCK`
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
+		log.WithFields(blobFields(blob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
+		return pubsub.ValidationReject, errors.New("incorrect blob sidecar index")
+	}
+
+	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
+	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
-		log.WithFields(blobFields(blob)).Debug("Sidecar blob does not match topic")
+		log.WithFields(blobFields(blob)).Debug("Sidecar index  does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
@@ -74,19 +95,58 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 
-	// [IGNORE] The sidecar's block's parent (defined by sidecar.block_parent_root) has been seen (via both gossip and non-gossip sources)
+	// Handle the parent status (not seen or invalid cases)
 	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
-	if !s.cfg.chain.HasBlock(ctx, parentRoot) {
-		log.WithFields(blobFields(blob)).Debug("Ignored blob: parent block not found")
+	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
+	case pubsub.ValidationIgnore:
+		log.WithFields(blobFields(blob)).Debug("Parent block not found - saving blob to cache")
+		go func() {
+			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
+				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
+			}
+		}()
+		s.pendingBlobSidecars.add(sBlob)
 		return pubsub.ValidationIgnore, nil
+	case pubsub.ValidationReject:
+		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
+		return pubsub.ValidationReject, nil
+	default:
 	}
 
-	// [REJECT] The sidecar's block's parent (defined by sidecar.block_parent_root) passes validation.
+	pubsubResult, err := s.validateBlobPostSeenParent(ctx, sBlob)
+	if err != nil {
+		return pubsubResult, err
+	}
+	if pubsubResult != pubsub.ValidationAccept {
+		return pubsubResult, nil
+	}
+
+	startTime, err := slots.ToTime(genesisTime, blob.Slot)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	fields := blobFields(blob)
+	sinceSlotStartTime := receivedTime.Sub(startTime)
+	fields["sinceSlotStartTime"] = sinceSlotStartTime
+	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
+	log.WithFields(fields).Debug("Received blob sidecar gossip")
+
+	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
+
+	msg.ValidatorData = sBlob
+
+	return pubsub.ValidationAccept, nil
+}
+
+func (s *Service) validateBlobPostSeenParent(ctx context.Context, sBlob *eth.SignedBlobSidecar) (pubsub.ValidationResult, error) {
+	blob := sBlob.Message
+	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
+
+	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	if parentSlot >= blob.Slot {
 		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", parentSlot, blob.Slot)
 		log.WithFields(blobFields(blob)).Debug(err)
@@ -123,21 +183,6 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationReject, err
 	}
-
-	startTime, err := slots.ToTime(genesisTime, blob.Slot)
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	fields := blobFields(blob)
-	sinceSlotStartTime := receivedTime.Sub(startTime)
-	fields["sinceSlotStartTime"] = sinceSlotStartTime
-	fields["validationTime"] = prysmTime.Now().Sub(receivedTime)
-	log.WithFields(fields).Debug("Received blob sidecar gossip")
-
-	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
-
-	msg.ValidatorData = sBlob
-
 	return pubsub.ValidationAccept, nil
 }
 
@@ -198,4 +243,8 @@ func blobFields(b *eth.BlobSidecar) logrus.Fields {
 		"blockRoot":     fmt.Sprintf("%#x", b.BlockRoot),
 		"index":         b.Index,
 	}
+}
+
+func computeSubnetForBlobSidecar(index uint64) uint64 {
+	return index % params.BeaconConfig().BlobsidecarSubnetCount
 }

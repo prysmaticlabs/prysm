@@ -33,38 +33,9 @@ func handleGetBeaconStateSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimi
 	return handleGetSSZ(m, endpoint, w, req, config)
 }
 
-func handleGetBeaconBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	config := sszConfig{
-		fileName:     "beacon_block.ssz",
-		responseJson: &SszResponseJson{},
-	}
-	return handleGetSSZ(m, endpoint, w, req, config)
-}
-
 func handleGetBeaconStateSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	config := sszConfig{
 		fileName:     "beacon_state.ssz",
-		responseJson: &VersionedSSZResponseJson{},
-	}
-	return handleGetSSZ(m, endpoint, w, req, config)
-}
-
-func handleGetBeaconBlockSSZV2(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	config := sszConfig{
-		fileName:     "beacon_block.ssz",
-		responseJson: &VersionedSSZResponseJson{},
-	}
-	return handleGetSSZ(m, endpoint, w, req, config)
-}
-
-func handleGetBlindedBeaconBlockSSZ(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	w http.ResponseWriter,
-	req *http.Request,
-) (handled bool) {
-	config := sszConfig{
-		fileName:     "beacon_block.ssz",
 		responseJson: &VersionedSSZResponseJson{},
 	}
 	return handleGetSSZ(m, endpoint, w, req, config)
@@ -313,6 +284,8 @@ func receiveEvents(eventChan <-chan *sse.Event, w http.ResponseWriter, req *http
 				default:
 					return apimiddleware.InternalServerError(errors.New("payload version unsupported"))
 				}
+			case events.BlobSidecarTopic:
+				data = &EventBlobSidecarJson{}
 			case "error":
 				data = &EventErrorJson{}
 			default:

@@ -18,6 +18,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	apigateway "github.com/prysmaticlabs/prysm/v4/api/gateway"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
@@ -271,6 +272,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	log.Debugln("Registering RPC Service")
 	router := mux.NewRouter()
+	router.Use(server.NormalizeQueryValuesHandler)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -293,9 +295,9 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	// db.DatabasePath is the path to the containing directory
-	// db.NewDBFilename expands that to the canonical full path using
+	// db.NewFileName expands that to the canonical full path using
 	// the same construction as NewDB()
-	c, err := newBeaconNodePromCollector(db.NewDBFilename(beacon.db.DatabasePath()))
+	c, err := newBeaconNodePromCollector(db.NewFileName(beacon.db.DatabasePath()))
 	if err != nil {
 		return nil, err
 	}
@@ -512,7 +514,7 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 }
 
 func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, fc forkchoice.ForkChoicer) error {
-	opts := []stategen.StateGenOption{stategen.WithBackfillStatus(bfs)}
+	opts := []stategen.Option{stategen.WithBackfillStatus(bfs)}
 	sg := stategen.New(b.db, fc, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
@@ -711,9 +713,10 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithStateGen(b.stateGen),
 		regularsync.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		regularsync.WithSlasherBlockHeadersFeed(b.slasherBlockHeadersFeed),
-		regularsync.WithExecutionPayloadReconstructor(web3Service),
+		regularsync.WithPayloadReconstructor(web3Service),
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
+		regularsync.WithStateNotifier(b),
 	)
 	return b.services.RegisterService(rs)
 }

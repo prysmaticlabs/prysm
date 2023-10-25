@@ -52,7 +52,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 	}
 	if flags.EnableHTTPEthAPI(httpModules) {
 		ethRegistrations := []gateway.PbHandlerRegistration{
-			ethpbservice.RegisterBeaconNodeHandler,
 			ethpbservice.RegisterBeaconChainHandler,
 			ethpbservice.RegisterBeaconValidatorHandler,
 			ethpbservice.RegisterEventsHandler,

@@ -13,7 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-var hashFn = hash.HashProto
+var hashFn = hash.Proto
 
 // AttCaches defines the caches used to satisfy attestation pool interface.
 // These caches are KV store for various attestations

@@ -24,9 +24,9 @@ import (
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -43,10 +43,6 @@ import (
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
-
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
 	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
@@ -343,8 +339,8 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		subscriptions[i] = consensusItem
 		val, err := st.ValidatorAtIndexReadOnly(consensusItem.ValidatorIndex)
 		if err != nil {
-			if outOfRangeErr, ok := err.(*state_native.ValidatorIndexOutOfRangeError); ok {
-				http2.HandleError(w, "Could not get validator: "+outOfRangeErr.Error(), http.StatusBadRequest)
+			if errors.Is(err, consensus_types.ErrOutOfBounds) {
+				http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusBadRequest)
 				return
 			}
 			http2.HandleError(w, "Could not get validator: "+err.Error(), http.StatusInternalServerError)
@@ -402,10 +398,6 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAttestationData")
 	defer span.End()
 
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
@@ -458,10 +450,6 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
 
-	query := r.URL.Query()
-	rpchelpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	subIndex := r.URL.Query().Get("subcommittee_index")
 	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
 	if !valid {
@@ -478,7 +466,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 		http2.HandleError(w, "Invalid Beacon Block Root: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, []byte(blockRoot))
+	contribution, ok := s.produceSyncCommitteeContribution(ctx, w, primitives.Slot(slot), index, blockRoot)
 	if !ok {
 		return
 	}
@@ -955,15 +943,16 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	nextSyncCommitteeFirstEpoch := currentSyncCommitteeFirstEpoch + params.BeaconConfig().EpochsPerSyncCommitteePeriod
+	isCurrentCommitteeRequested := requestedEpoch < nextSyncCommitteeFirstEpoch
 	var committee *ethpbalpha.SyncCommittee
-	if requestedEpoch >= nextSyncCommitteeFirstEpoch {
-		committee, err = st.NextSyncCommittee()
+	if isCurrentCommitteeRequested {
+		committee, err = st.CurrentSyncCommittee()
 		if err != nil {
 			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
-		committee, err = st.CurrentSyncCommittee()
+		committee, err = st.NextSyncCommittee()
 		if err != nil {
 			http2.HandleError(w, "Could not get sync committee: "+err.Error(), http.StatusInternalServerError)
 			return
@@ -974,10 +963,29 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		pubkey48 := bytesutil.ToBytes48(pubkey)
 		committeePubkeys[pubkey48] = append(committeePubkeys[pubkey48], strconv.FormatUint(uint64(j), 10))
 	}
-	duties, err := syncCommitteeDuties(requestedValIndices, st, committeePubkeys)
+	duties, vals, err := syncCommitteeDutiesAndVals(st, requestedValIndices, committeePubkeys)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	var registerSyncSubnet func(state.BeaconState, primitives.Epoch, []byte, validator2.Status) error
+	if isCurrentCommitteeRequested {
+		registerSyncSubnet = core.RegisterSyncSubnetCurrentPeriod
+	} else {
+		registerSyncSubnet = core.RegisterSyncSubnetNextPeriod
+	}
+	for _, v := range vals {
+		pk := v.PublicKey()
+		valStatus, err := rpchelpers.ValidatorStatus(v, requestedEpoch)
+		if err != nil {
+			http2.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := registerSyncSubnet(st, requestedEpoch, pk[:], valStatus); err != nil {
+			http2.HandleError(w, fmt.Sprintf("Could not register sync subnet for pubkey %#x", pk), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	isOptimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -1083,14 +1091,14 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &GetLivenessResponse{
-		Data: make([]*ValidatorLiveness, len(requestedValIndices)),
+		Data: make([]*Liveness, len(requestedValIndices)),
 	}
 	for i, vi := range requestedValIndices {
 		if vi >= primitives.ValidatorIndex(len(participation)) {
 			http2.HandleError(w, fmt.Sprintf("Validator index %d is invalid", vi), http.StatusBadRequest)
 			return
 		}
-		resp.Data[i] = &ValidatorLiveness{
+		resp.Data[i] = &Liveness{
 			Index:  strconv.FormatUint(uint64(vi), 10),
 			IsLive: participation[vi] != 0,
 		}
@@ -1146,29 +1154,38 @@ func syncCommitteeDutiesLastValidEpoch(currentEpoch primitives.Epoch) primitives
 	return (currentSyncPeriodIndex+2)*params.BeaconConfig().EpochsPerSyncCommitteePeriod - 1
 }
 
-func syncCommitteeDuties(
-	valIndices []primitives.ValidatorIndex,
+// syncCommitteeDutiesAndVals takes a list of requested validator indices and the actual sync committee pubkeys.
+// It returns duties for the validator indices that are part of the sync committee.
+// Additionally, it returns read-only validator objects for these validator indices.
+func syncCommitteeDutiesAndVals(
 	st state.BeaconState,
+	requestedValIndices []primitives.ValidatorIndex,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]string,
-) ([]*SyncCommitteeDuty, error) {
+) ([]*SyncCommitteeDuty, []state.ReadOnlyValidator, error) {
 	duties := make([]*SyncCommitteeDuty, 0)
-	for _, index := range valIndices {
+	vals := make([]state.ReadOnlyValidator, 0)
+	for _, index := range requestedValIndices {
 		duty := &SyncCommitteeDuty{
 			ValidatorIndex: strconv.FormatUint(uint64(index), 10),
 		}
 		valPubkey := st.PubkeyAtIndex(index)
 		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
 		if bytes.Equal(valPubkey[:], zeroPubkey[:]) {
-			return nil, errors.Errorf("Invalid validator index %d", index)
+			return nil, nil, errors.Errorf("Invalid validator index %d", index)
 		}
 		duty.Pubkey = hexutil.Encode(valPubkey[:])
 		indices, ok := committeePubkeys[valPubkey]
 		if ok {
 			duty.ValidatorSyncCommitteeIndices = indices
 			duties = append(duties, duty)
+			v, err := st.ValidatorAtIndexReadOnly(index)
+			if err != nil {
+				return nil, nil, fmt.Errorf("could not get validator at index %d", index)
+			}
+			vals = append(vals, v)
 		}
 	}
-	return duties, nil
+	return duties, vals, nil
 }
 
 func sortProposerDuties(w http.ResponseWriter, duties []*ProposerDuty) bool {

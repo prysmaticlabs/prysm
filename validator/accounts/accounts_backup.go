@@ -27,7 +27,7 @@ const (
 // Backup allows users to select validator accounts from their wallet
 // and export them as a backup.zip file containing the keys as EIP-2335 compliant
 // keystore.json files, which are compatible with importing in other Ethereum consensus clients.
-func (acm *AccountsCLIManager) Backup(ctx context.Context) error {
+func (acm *CLIManager) Backup(ctx context.Context) error {
 	keystoresToBackup, err := acm.keymanager.ExtractKeystores(ctx, acm.filteredPubKeys, acm.backupsPassword)
 	if err != nil {
 		return errors.Wrap(err, "could not extract keys from keymanager")
@@ -47,7 +47,7 @@ func zipKeystoresToOutputDir(keystoresToBackup []*keymanager.Keystore, outputDir
 	// Marshal and zip all keystore files together and write the zip file
 	// to the specified output directory.
 	archivePath := filepath.Join(outputDir, ArchiveFilename)
-	if file.FileExists(archivePath) {
+	if file.Exists(archivePath) {
 		return errors.Errorf("Zip file already exists in directory: %s", archivePath)
 	}
 	// We create a new file to store our backup.zip.

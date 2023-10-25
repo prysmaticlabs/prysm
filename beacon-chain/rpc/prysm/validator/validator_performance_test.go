@@ -67,7 +67,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -78,7 +78,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
 
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -98,7 +98,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -133,7 +133,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, err)
 		extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -143,7 +143,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			Indices: []primitives.ValidatorIndex{2, 1, 0},
 		}
 		var buf bytes.Buffer
@@ -163,7 +163,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -198,7 +198,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		require.NoError(t, err)
 		extraBal := params.BeaconConfig().MaxEffectiveBalance + params.BeaconConfig().GweiPerEth
 
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -208,7 +208,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			BalancesAfterEpochTransition:  []uint64{vp[1].AfterEpochTransitionBalance, vp[2].AfterEpochTransitionBalance},
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:]}, Indices: []primitives.ValidatorIndex{1, 2},
 		}
 		var buf bytes.Buffer
@@ -228,7 +228,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -259,7 +259,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -270,7 +270,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -290,7 +290,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -321,7 +321,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -332,7 +332,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -352,7 +352,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})
@@ -383,7 +383,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 				SyncChecker:        &mockSync.Sync{IsSyncing: false},
 			},
 		}
-		want := &ValidatorPerformanceResponse{
+		want := &PerformanceResponse{
 			PublicKeys:                    [][]byte{publicKeys[1][:], publicKeys[2][:]},
 			CurrentEffectiveBalances:      []uint64{params.BeaconConfig().MaxEffectiveBalance, params.BeaconConfig().MaxEffectiveBalance},
 			CorrectlyVotedSource:          []bool{false, false},
@@ -394,7 +394,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 			MissingValidators:             [][]byte{publicKeys[0][:]},
 			InactivityScores:              []uint64{0, 0},
 		}
-		request := &ValidatorPerformanceRequest{
+		request := &PerformanceRequest{
 			PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 		}
 		var buf bytes.Buffer
@@ -414,7 +414,7 @@ func TestServer_GetValidatorPerformance(t *testing.T) {
 		body, err := io.ReadAll(rawResp.Body)
 		require.NoError(t, err)
 
-		response := &ValidatorPerformanceResponse{}
+		response := &PerformanceResponse{}
 		require.NoError(t, json.Unmarshal(body, response))
 		require.DeepEqual(t, want, response)
 	})

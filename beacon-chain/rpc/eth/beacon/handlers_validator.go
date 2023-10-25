@@ -26,10 +26,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidators")
 	defer span.End()
 
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
-
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
 		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
@@ -105,9 +101,9 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filteredStatuses := make(map[validator.ValidatorStatus]bool, len(statuses))
+	filteredStatuses := make(map[validator.Status]bool, len(statuses))
 	for _, ss := range statuses {
-		ok, vs := validator.ValidatorStatusFromString(ss)
+		ok, vs := validator.StatusFromString(ss)
 		if !ok {
 			http2.HandleError(w, "Invalid status "+ss, http.StatusBadRequest)
 			return
@@ -214,10 +210,6 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
-
-	query := r.URL.Query()
-	helpers.NormalizeQueryValues(query)
-	r.URL.RawQuery = query.Encode()
 
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
@@ -366,7 +358,7 @@ func valContainerFromReadOnlyVal(
 	val state.ReadOnlyValidator,
 	id primitives.ValidatorIndex,
 	bal uint64,
-	valStatus validator.ValidatorStatus,
+	valStatus validator.Status,
 ) *ValidatorContainer {
 	pubkey := val.PublicKey()
 	return &ValidatorContainer{
