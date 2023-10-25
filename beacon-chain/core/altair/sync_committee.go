@@ -111,10 +111,6 @@ func NextSyncCommitteeIndices(ctx context.Context, s state.BeaconState) ([]primi
 	if err != nil {
 		return nil, err
 	}
-	if len(indices) == 0 {
-		// This should never happen, but a divide by zero is possible if len(indices) == 0.
-		return nil, errors.New("no active validator indices")
-	}
 	seed, err := helpers.Seed(s, epoch, params.BeaconConfig().DomainSyncCommittee)
 	if err != nil {
 		return nil, err
