@@ -11,8 +11,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -107,10 +107,10 @@ var beaconPathsAndObjects = map[string]metadata{
 			return []string{"head"}
 		},
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.BeaconStateV2ResponseJson{},
+			"json": &debug.GetBeaconStateV2Response{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.BeaconStateV2ResponseJson{},
+			"json": &debug.GetBeaconStateV2Response{},
 		},
 	},
 	"/validator/duties/proposer/{param1}": {
