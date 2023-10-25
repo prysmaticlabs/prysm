@@ -85,7 +85,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, errors.Wrapf(err, "could not retrieve blobs for slot %d", slot).Error(), http.StatusInternalServerError)
 				return
 			}
-			http2.WriteJson(w, buildSidecardsResponse(sidecars))
+			http2.WriteJson(w, buildSidecarsResponse(sidecars))
 			return
 		}
 	}
@@ -116,7 +116,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http2.WriteJson(w, buildSidecardsResponse(sidecars))
+	http2.WriteJson(w, buildSidecarsResponse(sidecars))
 }
 
 // parseIndices filters out invalid and duplicate blob indices
@@ -129,8 +129,11 @@ loop:
 		if err != nil {
 			continue
 		}
+		if ix >= field_params.MaxBlobsPerBlock {
+			continue
+		}
 		for i := range indices {
-			if ix == indices[i] || ix >= field_params.MaxBlobsPerBlock {
+			if ix == indices[i] {
 				continue loop
 			}
 		}
@@ -139,7 +142,7 @@ loop:
 	return indices
 }
 
-func buildSidecardsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
+func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
 	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		resp.Data[i] = &Sidecar{
