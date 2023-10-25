@@ -4,7 +4,9 @@ go_library(
     name = "go_default_library",
     srcs = [
         "availability.go",
+        "blocking.go",
         "cache.go",
+        "error.go",
         "mock.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/das",

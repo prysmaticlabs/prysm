@@ -266,7 +266,7 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return err
 			}
 		}
-		if err := avs.VerifyAvailability(ctx, s.CurrentSlot(), b); err != nil {
+		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), b); err != nil {
 			return errors.Wrap(err, "could not validate blob data availability")
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),

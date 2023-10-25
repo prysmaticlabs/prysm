@@ -324,7 +324,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	s.logBatchSyncStatus(genesis, first, len(bwb))
 	avs := das.NewCachingDBVerifiedStore(s.cfg.DB)
 	for _, bb := range bwb {
-		avs.PersistBlobs(ctx, bb.Block.Block().Slot(), bb.Blobs...)
+		avs.PersistOnceCommitted(ctx, bb.Block.Block().Slot(), bb.Blobs...)
 	}
 
 	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks(), avs)
