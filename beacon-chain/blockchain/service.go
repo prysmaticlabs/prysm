@@ -97,23 +97,29 @@ type blobNotifierMap struct {
 	seenIndex map[[32]byte]map[uint64]struct{}
 }
 
-func (bn *blobNotifierMap) setSeenIndex(root [32]byte, idx uint64) {
+func (bn *blobNotifierMap) notifyIndex(root [32]byte, idx uint64) {
 	bn.Lock()
 	defer bn.Unlock()
+
+	// Initialize the map for the given root if it doesn't exist
 	if _, ok := bn.seenIndex[root]; !ok {
 		bn.seenIndex[root] = make(map[uint64]struct{})
 	}
-	bn.seenIndex[root][idx] = struct{}{}
-}
 
-func (bn *blobNotifierMap) isSeen(root [32]byte, idx uint64) bool {
-	bn.RLock()
-	defer bn.RUnlock()
-	if _, ok := bn.seenIndex[root]; !ok {
-		return false
+	// Check if the index has already been seen for the given root
+	if _, ok := bn.seenIndex[root][idx]; ok {
+		return
 	}
-	_, ok := bn.seenIndex[root][idx]
-	return ok
+	bn.seenIndex[root][idx] = struct{}{}
+
+	// Retrieve or create the notifier channel for the given root
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+
+	c <- idx
 }
 
 func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
@@ -130,6 +136,7 @@ func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
 func (bn *blobNotifierMap) delete(root [32]byte) {
 	bn.Lock()
 	defer bn.Unlock()
+	delete(bn.seenIndex, root)
 	delete(bn.notifiers, root)
 }
 

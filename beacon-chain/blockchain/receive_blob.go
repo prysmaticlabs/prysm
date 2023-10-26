@@ -9,11 +9,7 @@ import (
 // SendNewBlobEvent sends a message to the BlobNotifier channel that the blob
 // for the blocroot `root` is ready in the database
 func (s *Service) sendNewBlobEvent(root [32]byte, index uint64) {
-	if s.blobNotifiers.isSeen(root, index) {
-		return
-	}
-	s.blobNotifiers.forRoot(root) <- index
-	s.blobNotifiers.setSeenIndex(root, index)
+	s.blobNotifiers.notifyIndex(root, index)
 }
 
 // ReceiveBlob saves the blob to database and sends the new event

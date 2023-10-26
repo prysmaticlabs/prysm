@@ -514,3 +514,41 @@ func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 	s.G = g
 	return s.Err
 }
+
+func TestNotifyIndex(t *testing.T) {
+	bn := &blobNotifierMap{
+		seenIndex: make(map[[32]byte]map[uint64]struct{}),
+		notifiers: make(map[[32]byte]chan uint64),
+	}
+
+	root := [32]byte{1, 2, 3}
+	idx := uint64(5)
+
+	// Test that a new index is properly notified and recorded
+	bn.notifyIndex(root, idx)
+	if _, ok := bn.seenIndex[root][idx]; !ok {
+		t.Errorf("Index %d for root %v was not recorded", idx, root)
+	}
+
+	c, ok := bn.notifiers[root]
+	if !ok {
+		t.Errorf("Notifier channel for root %v was not created", root)
+	}
+
+	select {
+	case receivedIdx := <-c:
+		if receivedIdx != idx {
+			t.Errorf("Received index %d, expected %d", receivedIdx, idx)
+		}
+	default:
+		t.Errorf("No index was sent to the notifier channel")
+	}
+
+	// Test that a previously seen index is not notified again
+	bn.notifyIndex(root, idx)
+	select {
+	case <-c:
+		t.Errorf("Previously seen index %d was notified again", idx)
+	default:
+	}
+}
