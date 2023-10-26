@@ -19,8 +19,7 @@ import (
 )
 
 var (
-	errDBInconsistentWithBlock = errors.New("a value saved to the db is inconsistent with observed block commitments")
-	errDAIncomplete            = errors.New("some commitments are not available at this time")
+	errDAIncomplete = errors.New("some commitments are not available at this time")
 )
 
 // BlobsDB specifies the persistence store methods needed by the AvailabilityStore.
