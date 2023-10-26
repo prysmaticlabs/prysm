@@ -62,6 +62,7 @@ func TestDelete(t *testing.T) {
 			ListenForChanges: false,
 		},
 	)
+	require.NoError(t, err)
 	acc.keymanager = km
 
 	_, err = km.ImportKeystores(cliCtx.Context, keystores, passwords)
