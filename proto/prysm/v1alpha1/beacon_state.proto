@@ -397,12 +397,12 @@ message BeaconStateEpbs {
 
   // Fields introduced in Epbs fork [12001-13000]
   SignedExecutionPayloadHeaderEnvelope signed_execution_payload_header_envelope = 12001;
-  bytes  last_withdrawals_root = 12002;
+  bytes  last_withdrawals_root = 12002 [(ethereum.eth.ext.ssz_size) = "32"];
   uint64 deposit_balance_to_consume = 12003;
   uint64 exit_balance_to_consume = 12004;
   uint64 earliest_exit_epoch =12005;
   repeated PendingBalanceDeposit pending_balance_deposits = 12006 [(ethereum.eth.ext.ssz_max) = "1048576"];
-  PartialWithdrawals pending_partial_withdrawals = 12007 [(ethereum.eth.ext.ssz_max) = "1048576"];
+  repeated PartialWithdrawals pending_partial_withdrawals = 12007 [(ethereum.eth.ext.ssz_max) = "1048576"];
 }
 
 // PowBlock is a definition from Bellatrix fork choice spec to represent a block with total difficulty in the PoW chain.
@@ -424,12 +424,12 @@ message HistoricalSummary {
 }
 
 message PendingBalanceDeposit {
-  uint64 index = 1;
+  uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
   uint64 amount = 2;
 }
 
 message PartialWithdrawals {
-    uint64 index = 1;
+    uint64 index = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
     uint64 amount = 2;
     uint64 withdrawable_epoch = 3;
 }

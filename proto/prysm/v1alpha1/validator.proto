@@ -614,7 +614,7 @@ message CommitteeSubnetsSubscribeRequest {
 }
 
 message GenericValidator {
-    oneof block {
+    oneof validator {
         // Representing a phase 0 validator.
         Validator phase0 = 1;
         
@@ -674,9 +674,6 @@ message ValidatorEpbs {
     // Keeps track of slashed categories.
     uint32 slashed = 4;
 
-    // Epoch when the validator became eligible for activation. This field may
-    // be zero if the validator was present in the Ethereum proof of stake genesis. This
-    // field is FAR_FUTURE_EPOCH if the validator has not been activated.
     uint64 activation_eligibility_epoch = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Epoch"];
 
     // Epoch when the validator was activated. This field may be zero if the
