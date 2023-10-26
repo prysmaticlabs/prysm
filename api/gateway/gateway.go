@@ -244,7 +244,6 @@ func (g *Gateway) dialTCP(ctx context.Context, addr string) (*grpc.ClientConn, e
 		security,
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
-
 	return grpc.DialContext(ctx, addr, opts...)
 }
 
