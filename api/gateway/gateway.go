@@ -50,7 +50,6 @@ type config struct {
 	allowedOrigins               []string
 	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
 	muxHandler                   MuxHandler
-	ignorePath                   string
 	pbHandlers                   []*PbMux
 	router                       *mux.Router
 	timeout                      time.Duration

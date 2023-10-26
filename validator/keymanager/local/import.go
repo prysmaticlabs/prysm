@@ -85,7 +85,7 @@ func (km *Keymanager) ImportKeystores(
 		storeCopy.PublicKeys = append(storeCopy.PublicKeys, []byte(pubKey))
 		storeCopy.PrivateKeys = append(storeCopy.PrivateKeys, []byte(privKey))
 	}
-	//3 & 4) save to disk and re-initializes keystore
+	// 3) & 4) save to disk and re-initializes keystore
 	if err := km.SaveStoreAndReInitialize(ctx, storeCopy); err != nil {
 		return nil, err
 	}
