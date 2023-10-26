@@ -68,12 +68,8 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := c.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				// Debug logs for goodbye/status errors
-				if strings.Contains(topic, p2p.RPCGoodByeTopicV1) || strings.Contains(topic, p2p.RPCStatusTopicV1) {
-					log.WithError(err).Debug("Could not decode goodbye stream message")
-					return
-				}
-				log.WithError(err).Debug("Could not decode stream message")
+				// Trace logs for goodbye errors
+				logStreamErrors(err, topic)
 				return
 			}
 			if err := handle(context.Background(), msg, stream); err != nil {
@@ -89,7 +85,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := c.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).Debug("Could not decode stream message")
+				logStreamErrors(err, topic)
 				return
 			}
 			if err := handle(context.Background(), nTyp.Elem().Interface(), stream); err != nil {
@@ -99,4 +95,12 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 			}
 		}
 	})
+}
+
+func logStreamErrors(err error, topic string) {
+	if strings.Contains(topic, p2p.RPCGoodByeTopicV1) {
+		log.WithError(err).Trace("Could not decode goodbye stream message")
+		return
+	}
+	log.WithError(err).Debug("Could not decode stream message")
 }

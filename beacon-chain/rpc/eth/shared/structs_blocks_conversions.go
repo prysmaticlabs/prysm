@@ -1256,7 +1256,7 @@ func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedB
 		}
 		signedBlindedBlobSidecars = make([]*eth.SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
 		for i := range b.SignedBlindedBlobSidecars {
-			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConensus(i)
+			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConsensus()
 			if err != nil {
 				return nil, NewDecodeError(err, fmt.Sprintf("SignedBlindedBlobSidecars[%d]", i))
 			}
@@ -1926,7 +1926,7 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 	}, nil
 }
 
-func (s *SignedBlindedBlobSidecar) ToConensus(i int) (*eth.SignedBlindedBlobSidecar, error) {
+func (s *SignedBlindedBlobSidecar) ToConsensus() (*eth.SignedBlindedBlobSidecar, error) {
 	if s == nil {
 		return nil, errNilValue
 	}
@@ -2025,18 +2025,19 @@ func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlock{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBody{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2044,6 +2045,17 @@ func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 			Deposits:          deposits,
 			VoluntaryExits:    exits,
 		},
+	}, nil
+}
+
+func SignedBeaconBlockFromConsensus(b *eth.SignedBeaconBlock) (*SignedBeaconBlock, error) {
+	block, err := BeaconBlockFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlock{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2068,6 +2080,10 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BeaconBlockAltair{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -2075,12 +2091,8 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyAltair{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2092,6 +2104,17 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
 		},
+	}, nil
+}
+
+func SignedBeaconBlockAltairFromConsensus(b *eth.SignedBeaconBlockAltair) (*SignedBeaconBlockAltair, error) {
+	block, err := BeaconBlockAltairFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockAltair{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2116,22 +2139,23 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
 	if err != nil {
 		return nil, err
 	}
+	payload, err := ExecutionPayloadHeaderFromConsensus(b.Body.ExecutionPayloadHeader)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BlindedBeaconBlockBellatrix{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyBellatrix{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2142,22 +2166,7 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeader{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-			},
+			ExecutionPayloadHeader: payload,
 		},
 	}, nil
 }
@@ -2202,18 +2211,19 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 	for i, tx := range b.Body.ExecutionPayload.Transactions {
 		transactions[i] = hexutil.Encode(tx)
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlockBellatrix{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyBellatrix{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2244,6 +2254,17 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 	}, nil
 }
 
+func SignedBeaconBlockBellatrixFromConsensus(b *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlockBellatrix, error) {
+	block, err := BeaconBlockBellatrixFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockBellatrix{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*BlindedBeaconBlockCapella, error) {
 	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
@@ -2265,11 +2286,15 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
+	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
-	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := ExecutionPayloadHeaderCapellaFromConsensus(b.Body.ExecutionPayloadHeader)
 	if err != nil {
 		return nil, err
 	}
@@ -2280,12 +2305,8 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyCapella{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2296,24 +2317,8 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeaderCapella{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-				WithdrawalsRoot:  hexutil.Encode(b.Body.ExecutionPayloadHeader.WithdrawalsRoot), // new in capella
-			},
-			BlsToExecutionChanges: blsChanges, // new in capella
+			ExecutionPayloadHeader: payload,
+			BlsToExecutionChanges:  blsChanges, // new in capella
 		},
 	}, nil
 }
@@ -2371,18 +2376,19 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 	if err != nil {
 		return nil, err
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &BeaconBlockCapella{
 		Slot:          fmt.Sprintf("%d", b.Slot),
 		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyCapella{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2412,6 +2418,17 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 			},
 			BlsToExecutionChanges: blsChanges, // new in capella
 		},
+	}, nil
+}
+
+func SignedBeaconBlockCapellaFromConsensus(b *eth.SignedBeaconBlockCapella) (*SignedBeaconBlockCapella, error) {
+	block, err := BeaconBlockCapellaFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockCapella{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2524,18 +2541,21 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 	if err != nil {
 		return nil, err
 	}
-	baseFeePerGas, err := sszBytesToUint256String(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
-	if err != nil {
-		return nil, err
-	}
 	blsChanges, err := BlsChangesFromConsensus(b.Body.BlsToExecutionChanges)
 	if err != nil {
 		return nil, err
 	}
-
 	blobKzgCommitments := make([]string, len(b.Body.BlobKzgCommitments))
 	for i := range b.Body.BlobKzgCommitments {
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
+	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
+	payload, err := ExecutionPayloadHeaderDenebFromConsensus(b.Body.ExecutionPayloadHeader)
+	if err != nil {
+		return nil, err
 	}
 
 	return &BlindedBeaconBlockDeneb{
@@ -2544,12 +2564,8 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyDeneb{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -2560,27 +2576,9 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 				SyncCommitteeBits:      hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeBits),
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
-			ExecutionPayloadHeader: &ExecutionPayloadHeaderDeneb{
-				ParentHash:       hexutil.Encode(b.Body.ExecutionPayloadHeader.ParentHash),
-				FeeRecipient:     hexutil.Encode(b.Body.ExecutionPayloadHeader.FeeRecipient),
-				StateRoot:        hexutil.Encode(b.Body.ExecutionPayloadHeader.StateRoot),
-				ReceiptsRoot:     hexutil.Encode(b.Body.ExecutionPayloadHeader.ReceiptsRoot),
-				LogsBloom:        hexutil.Encode(b.Body.ExecutionPayloadHeader.LogsBloom),
-				PrevRandao:       hexutil.Encode(b.Body.ExecutionPayloadHeader.PrevRandao),
-				BlockNumber:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlockNumber),
-				GasLimit:         fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasLimit),
-				GasUsed:          fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.GasUsed),
-				Timestamp:        fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.Timestamp),
-				ExtraData:        hexutil.Encode(b.Body.ExecutionPayloadHeader.ExtraData),
-				BaseFeePerGas:    baseFeePerGas,
-				BlockHash:        hexutil.Encode(b.Body.ExecutionPayloadHeader.BlockHash),
-				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
-				WithdrawalsRoot:  hexutil.Encode(b.Body.ExecutionPayloadHeader.WithdrawalsRoot),
-				BlobGasUsed:      fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.BlobGasUsed),   // new in deneb TODO: rename to blob
-				ExcessBlobGas:    fmt.Sprintf("%d", b.Body.ExecutionPayloadHeader.ExcessBlobGas), // new in deneb TODO: rename to blob
-			},
-			BlsToExecutionChanges: blsChanges,         // new in capella
-			BlobKzgCommitments:    blobKzgCommitments, // new in deneb
+			ExecutionPayloadHeader: payload,
+			BlsToExecutionChanges:  blsChanges,         // new in capella
+			BlobKzgCommitments:     blobKzgCommitments, // new in deneb
 		},
 	}, nil
 }
@@ -2642,6 +2640,10 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 	for i := range b.Body.BlobKzgCommitments {
 		blobKzgCommitments[i] = hexutil.Encode(b.Body.BlobKzgCommitments[i])
 	}
+	e1d, err := Eth1DataFromConsensus(b.Body.Eth1Data)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BeaconBlockDeneb{
 		Slot:          fmt.Sprintf("%d", b.Slot),
@@ -2649,12 +2651,8 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyDeneb{
-			RandaoReveal: hexutil.Encode(b.Body.RandaoReveal),
-			Eth1Data: &Eth1Data{
-				DepositRoot:  hexutil.Encode(b.Body.Eth1Data.DepositRoot),
-				DepositCount: fmt.Sprintf("%d", b.Body.Eth1Data.DepositCount),
-				BlockHash:    hexutil.Encode(b.Body.Eth1Data.BlockHash),
-			},
+			RandaoReveal:      hexutil.Encode(b.Body.RandaoReveal),
+			Eth1Data:          e1d,
 			Graffiti:          hexutil.Encode(b.Body.Graffiti),
 			ProposerSlashings: proposerSlashings,
 			AttesterSlashings: attesterSlashings,
@@ -3200,6 +3198,94 @@ func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBl
 	return changes, nil
 }
 
+func ExecutionPayloadHeaderFromConsensus(payload *enginev1.ExecutionPayloadHeader) (*ExecutionPayloadHeader, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeader{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+	}, nil
+}
+
+func ExecutionPayloadHeaderCapellaFromConsensus(payload *enginev1.ExecutionPayloadHeaderCapella) (*ExecutionPayloadHeaderCapella, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeaderCapella{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
+	}, nil
+}
+
+func ExecutionPayloadHeaderDenebFromConsensus(payload *enginev1.ExecutionPayloadHeaderDeneb) (*ExecutionPayloadHeaderDeneb, error) {
+	if payload == nil {
+		return nil, errors.New("payload header is empty")
+	}
+
+	baseFeePerGas, err := sszBytesToUint256String(payload.BaseFeePerGas)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecutionPayloadHeaderDeneb{
+		ParentHash:       hexutil.Encode(payload.ParentHash),
+		FeeRecipient:     hexutil.Encode(payload.FeeRecipient),
+		StateRoot:        hexutil.Encode(payload.StateRoot),
+		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
+		LogsBloom:        hexutil.Encode(payload.LogsBloom),
+		PrevRandao:       hexutil.Encode(payload.PrevRandao),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
+		ExtraData:        hexutil.Encode(payload.ExtraData),
+		BaseFeePerGas:    baseFeePerGas,
+		BlobGasUsed:      fmt.Sprintf("%d", payload.BlobGasUsed),   // new in deneb TODO: rename to blob
+		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas), // new in deneb TODO: rename to blob
+		BlockHash:        hexutil.Encode(payload.BlockHash),
+		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
+		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
+	}, nil
+}
+
 func Uint256ToSSZBytes(num string) ([]byte, error) {
 	uint256, ok := new(big.Int).SetString(num, 10)
 	if !ok {
@@ -3216,5 +3302,5 @@ func sszBytesToUint256String(b []byte) (string, error) {
 	if !math.IsValidUint256(bi) {
 		return "", fmt.Errorf("%s is not a valid Uint256", bi.String())
 	}
-	return string([]byte(bi.String())), nil
+	return string(bi.String()), nil
 }

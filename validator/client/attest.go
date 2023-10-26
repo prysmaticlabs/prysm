@@ -235,7 +235,7 @@ func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index p
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
-	h, err := hash.HashProto(data)
+	h, err := hash.Proto(data)
 	if err != nil {
 		return err
 	}

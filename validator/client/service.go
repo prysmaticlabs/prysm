@@ -189,6 +189,7 @@ func (v *ValidatorService) Start() {
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
+	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
 
 	valStruct := &validator{
 		db:                             v.db,
@@ -218,6 +219,7 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
+		prysmBeaconClient:              prysmBeaconClient,
 	}
 
 	// To resolve a race condition at startup due to the interface

@@ -3,43 +3,12 @@ package validator
 import (
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
-
-func Test_setKzgCommitments(t *testing.T) {
-	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, err)
-	require.NoError(t, setKzgCommitments(b, nil, nil))
-	b, err = blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
-	require.NoError(t, err)
-	require.NoError(t, setKzgCommitments(b, nil, nil))
-
-	cfg := params.BeaconConfig().Copy()
-	cfg.DenebForkEpoch = 0
-	params.OverrideBeaconConfig(cfg)
-
-	kcs := [][]byte{[]byte("kzg"), []byte("kzg1"), []byte("kzg2")}
-	bundle := &enginev1.BlobsBundle{KzgCommitments: kcs}
-	bkcs := [][]byte{[]byte("bkzg"), []byte("bkzg1"), []byte("bkzg2")}
-	blindBundle := &enginev1.BlindedBlobsBundle{KzgCommitments: bkcs}
-	require.NoError(t, setKzgCommitments(b, bundle, blindBundle))
-	got, err := b.Block().Body().BlobKzgCommitments()
-	require.NoError(t, err)
-	require.DeepEqual(t, got, kcs)
-
-	b, err = blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
-	require.NoError(t, err)
-	b.SetBlinded(true)
-	require.NoError(t, setKzgCommitments(b, bundle, blindBundle))
-	got, err = b.Block().Body().BlobKzgCommitments()
-	require.NoError(t, err)
-	require.DeepEqual(t, got, bkcs)
-}
 
 func Test_blobsBundleToSidecars(t *testing.T) {
 	b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())

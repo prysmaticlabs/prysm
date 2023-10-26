@@ -78,14 +78,15 @@ type ProduceBlockV3Response struct {
 	Version                 string          `json:"version"`
 	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
+	ConsensusBlockValue     string          `json:"consensus_block_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
 }
 
 type GetLivenessResponse struct {
-	Data []*ValidatorLiveness `json:"data"`
+	Data []*Liveness `json:"data"`
 }
 
-type ValidatorLiveness struct {
+type Liveness struct {
 	Index  string `json:"index"`
 	IsLive bool   `json:"is_live"`
 }

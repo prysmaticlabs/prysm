@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -40,30 +41,23 @@ func (b *BeaconState) SetValidators(val []*ethpb.Validator) error {
 func (b *BeaconState) ApplyToEveryValidator(f func(idx int, val *ethpb.Validator) (bool, *ethpb.Validator, error)) error {
 	var changedVals []uint64
 	if features.Get().EnableExperimentalState {
-		b.lock.Lock()
-
 		l := b.validatorsMultiValue.Len(b)
 		for i := 0; i < l; i++ {
 			v, err := b.validatorsMultiValue.At(b, uint64(i))
 			if err != nil {
-				b.lock.Unlock()
 				return err
 			}
 			changed, newVal, err := f(i, v)
 			if err != nil {
-				b.lock.Unlock()
 				return err
 			}
 			if changed {
 				changedVals = append(changedVals, uint64(i))
 				if err = b.validatorsMultiValue.UpdateAt(b, uint64(i), newVal); err != nil {
-					b.lock.Unlock()
 					return errors.Wrapf(err, "could not update validator at index %d", i)
 				}
 			}
 		}
-
-		b.lock.Unlock()
 	} else {
 		b.lock.Lock()
 
@@ -272,7 +266,7 @@ func (b *BeaconState) AppendBalance(bal uint64) error {
 
 		bals := b.balances
 		if b.sharedFieldReferences[types.Balances].Refs() > 1 {
-			bals = make([]uint64, 0, len(b.balances)+1)
+			bals = make([]uint64, 0, len(b.balances)+int(params.BeaconConfig().MaxDeposits))
 			bals = append(bals, b.balances...)
 			b.sharedFieldReferences[types.Balances].MinusRef()
 			b.sharedFieldReferences[types.Balances] = stateutil.NewRef(1)
@@ -305,7 +299,7 @@ func (b *BeaconState) AppendInactivityScore(s uint64) error {
 
 		scores := b.inactivityScores
 		if b.sharedFieldReferences[types.InactivityScores].Refs() > 1 {
-			scores = make([]uint64, 0, len(b.inactivityScores)+1)
+			scores = make([]uint64, 0, len(b.inactivityScores)+int(params.BeaconConfig().MaxDeposits))
 			scores = append(scores, b.inactivityScores...)
 			b.sharedFieldReferences[types.InactivityScores].MinusRef()
 			b.sharedFieldReferences[types.InactivityScores] = stateutil.NewRef(1)

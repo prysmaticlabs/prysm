@@ -16,13 +16,11 @@ syntax = "proto3";
 package ethereum.eth.v1;
 
 import "google/protobuf/descriptor.proto";
-import "google/protobuf/timestamp.proto";
 
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_state.proto";
-import "proto/eth/v1/validator.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/v1";
@@ -37,46 +35,6 @@ message StateRequest {
     // The state id which can be any of: "head" (canonical head in node's view),
     // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
     bytes state_id = 1;
-}
-
-message StateRootResponse {
-    StateRoot data = 1;
-    bool execution_optimistic = 2;
-    bool finalized = 3;
-
-    message StateRoot {
-        // SSZ encoded state root for the requested state.
-        bytes root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-    }
-}
-
-// Beacon Block API related messages.
-
-message BlockAttestationsResponse {
-    repeated ethereum.eth.v1.Attestation data = 1;
-    bool execution_optimistic = 2;
-    bool finalized  = 3;
-}
-
-message BlockRequest {
-    // The block identifier. Can be one of: "head" (canonical head in node's view), "genesis",
-    // "finalized", <slot>, <hex encoded blockRoot with 0x prefix>.
-    bytes block_id = 1;
-}
-
-message BlockResponse {
-    BeaconBlockContainer data = 1;
-}
-
-message BlockSSZResponse {
-    bytes data = 1;
-}
-
-message BeaconBlockContainer {
-    BeaconBlock message = 1;
-
-    // 96 byte BLS signature from the validator that produced this block.
-    bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
 // Beacon Pool related API service.

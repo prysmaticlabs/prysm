@@ -1,9 +1,9 @@
 package rewards
 
 type BlockRewardsResponse struct {
-	Data                BlockRewards `json:"data"`
-	ExecutionOptimistic bool         `json:"execution_optimistic"`
-	Finalized           bool         `json:"finalized"`
+	Data                *BlockRewards `json:"data"`
+	ExecutionOptimistic bool          `json:"execution_optimistic"`
+	Finalized           bool          `json:"finalized"`
 }
 
 type BlockRewards struct {

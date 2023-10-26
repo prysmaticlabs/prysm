@@ -4,6 +4,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -123,7 +124,7 @@ func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 	}
 }
 
-func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
+func WithPayloadReconstructor(r execution.PayloadReconstructor) Option {
 	return func(s *Service) error {
 		s.cfg.executionPayloadReconstructor = r
 		return nil
@@ -140,6 +141,14 @@ func WithClockWaiter(cw startup.ClockWaiter) Option {
 func WithInitialSyncComplete(c chan struct{}) Option {
 	return func(s *Service) error {
 		s.initialSyncComplete = c
+		return nil
+	}
+}
+
+// WithStateNotifier to notify an event feed of state processing.
+func WithStateNotifier(n statefeed.Notifier) Option {
+	return func(s *Service) error {
+		s.cfg.stateNotifier = n
 		return nil
 	}
 }

@@ -46,7 +46,7 @@ func (s *Service) goodbyeRPCHandler(_ context.Context, msg interface{}, stream l
 	}
 	s.rateLimiter.add(stream, 1)
 	log := log.WithField("Reason", goodbyeMessage(*m))
-	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Peer has sent a goodbye message")
+	log.WithField("peer", stream.Conn().RemotePeer()).Trace("Peer has sent a goodbye message")
 	s.cfg.p2p.Peers().SetNextValidTime(stream.Conn().RemotePeer(), goodByeBackoff(*m))
 	// closes all streams with the peer
 	return s.cfg.p2p.Disconnect(stream.Conn().RemotePeer())
@@ -87,7 +87,7 @@ func (s *Service) sendGoodByeAndDisconnect(ctx context.Context, code p2ptypes.RP
 		log.WithFields(logrus.Fields{
 			"error": err,
 			"peer":  id,
-		}).Debug("Could not send goodbye message to peer")
+		}).Trace("Could not send goodbye message to peer")
 	}
 	return s.cfg.p2p.Disconnect(id)
 }
@@ -107,7 +107,7 @@ func (s *Service) sendGoodByeMessage(ctx context.Context, code p2ptypes.RPCGoodb
 	defer closeStream(stream, log)
 
 	log := log.WithField("Reason", goodbyeMessage(code))
-	log.WithField("peer", stream.Conn().RemotePeer()).Debug("Sending Goodbye message to peer")
+	log.WithField("peer", stream.Conn().RemotePeer()).Trace("Sending Goodbye message to peer")
 
 	// Wait up to the response timeout for the peer to receive the goodbye
 	// and close the stream (or disconnect). We usually don't bother waiting

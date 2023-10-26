@@ -214,3 +214,28 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 	yamlFile := []byte(strings.Join(lines, "\n"))
 	return yamlFile
 }
+
+// NetworkConfigToYaml takes a provided network config and outputs its contents
+// in yaml. This allows prysm's network configs to be read by other clients.
+func NetworkConfigToYaml(cfg *NetworkConfig) []byte {
+	lines := []string{
+		fmt.Sprintf("GOSSIP_MAX_SIZE: %d", cfg.GossipMaxSize),
+		fmt.Sprintf("GOSSIP_MAX_SIZE_BELLATRIX: %d", cfg.GossipMaxSizeBellatrix),
+		fmt.Sprintf("MAX_CHUNK_SIZE: %d", cfg.MaxChunkSize),
+		fmt.Sprintf("MAX_CHUNK_SIZE_BELLATRIX: %d", cfg.MaxChunkSizeBellatrix),
+		fmt.Sprintf("ATTESTATION_SUBNET_COUNT: %d", cfg.AttestationSubnetCount),
+		fmt.Sprintf("ATTESTATION_PROPAGATION_SLOT_RANGE: %d", cfg.AttestationPropagationSlotRange),
+		fmt.Sprintf("MAX_REQUEST_BLOCKS: %d", cfg.MaxRequestBlocks),
+		fmt.Sprintf("TTFB_TIMEOUT: %d", int(cfg.TtfbTimeout.Seconds())),
+		fmt.Sprintf("RESP_TIMEOUT: %d", int(cfg.RespTimeout.Seconds())),
+		fmt.Sprintf("MAXIMUM_GOSSIP_CLOCK_DISPARITY: %d", int(cfg.MaximumGossipClockDisparity.Seconds())),
+		fmt.Sprintf("MESSAGE_DOMAIN_INVALID_SNAPPY:  %#x", cfg.MessageDomainInvalidSnappy),
+		fmt.Sprintf("MESSAGE_DOMAIN_VALID_SNAPPY: %#x", cfg.MessageDomainValidSnappy),
+		fmt.Sprintf("MIN_EPOCHS_FOR_BLOBS_SIDECARS_REQUEST: %d", cfg.MinEpochsForBlobsSidecarsRequest),
+		fmt.Sprintf("MAX_REQUEST_BLOB_SIDECARS: %d", cfg.MaxRequestBlobSidecars),
+		fmt.Sprintf("MAX_REQUEST_BLOCKS_DENEB: %d", cfg.MaxRequestBlocksDeneb),
+	}
+
+	yamlFile := []byte(strings.Join(lines, "\n"))
+	return yamlFile
+}

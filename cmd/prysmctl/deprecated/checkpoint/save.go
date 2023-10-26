@@ -13,5 +13,5 @@ var saveCmd = &cli.Command{
 }
 
 func cliActionDeprecatedSave(_ *cli.Context) error {
-	return fmt.Errorf("This command has moved. Please use 'prysmctl checkpoint-sync download' instead!")
+	return fmt.Errorf("this command has moved. Please use 'prysmctl checkpoint-sync download' instead")
 }

@@ -28,10 +28,10 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 			}
 		}
 		st, err := state_native.InitializeFromProtoAltair(&ethpb.BeaconStateAltair{
-			Validators:  validators,
 			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		})
 		require.NoError(t, err)
+		require.NoError(t, st.SetValidators(validators))
 		return st
 	}
 
@@ -68,6 +68,15 @@ func TestSyncCommitteeIndices_CanGet(t *testing.T) {
 				epoch: 100,
 			},
 			wantErr: false,
+		},
+		{
+			name: "no active validators, epoch 100",
+			args: args{
+				state: getState(t, 0), // Regression test for divide by zero. Issue #13051.
+				epoch: 100,
+			},
+			wantErr:   true,
+			errString: "no active validator indices",
 		},
 	}
 	for _, tt := range tests {
