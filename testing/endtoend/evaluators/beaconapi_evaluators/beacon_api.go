@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
@@ -41,9 +42,6 @@ type metadata struct {
 var requests = map[string]metadata{
 	"/beacon/genesis": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &beacon.GetGenesisResponse{},
 		},
@@ -163,9 +161,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/headers": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &beacon.GetBlockHeadersResponse{},
 		},
@@ -255,9 +250,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/pool/attestations": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &beacon.ListAttestationsResponse{},
 		},
@@ -284,9 +276,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/pool/attester_slashings": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.AttesterSlashingsPoolResponseJson{},
 		},
@@ -313,9 +302,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/pool/proposer_slashings": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.ProposerSlashingsPoolResponseJson{},
 		},
@@ -342,9 +328,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/pool/voluntary_exits": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &beacon.ListVoluntaryExitsResponse{},
 		},
@@ -371,9 +354,6 @@ var requests = map[string]metadata{
 	},
 	"/beacon/pool/bls_to_execution_changes": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &beacon.BLSToExecutionChangesPoolResponse{},
 		},
@@ -400,9 +380,6 @@ var requests = map[string]metadata{
 	},
 	"/config/fork_schedule": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.ForkScheduleResponseJson{},
 		},
@@ -434,9 +411,6 @@ var requests = map[string]metadata{
 	},
 	"/config/deposit_contract": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.DepositContractResponseJson{},
 		},
@@ -458,9 +432,6 @@ var requests = map[string]metadata{
 	},
 	"/debug/beacon/heads": {
 		basepath: v2PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &apimiddleware.V2ForkChoiceHeadsResponseJson{},
 		},
@@ -470,9 +441,6 @@ var requests = map[string]metadata{
 	},
 	"/node/identity": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &node.GetIdentityResponse{},
 		},
@@ -499,9 +467,6 @@ var requests = map[string]metadata{
 	},
 	"/node/peers": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &node.GetPeersResponse{},
 		},
@@ -528,9 +493,6 @@ var requests = map[string]metadata{
 	},
 	"/node/peer_count": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &node.GetPeerCountResponse{},
 		},
@@ -557,9 +519,6 @@ var requests = map[string]metadata{
 	},
 	"/node/version": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &node.GetVersionResponse{},
 		},
@@ -592,9 +551,6 @@ var requests = map[string]metadata{
 	},
 	"/node/syncing": {
 		basepath: v1PathTemplate,
-		params: func(_ string, _ primitives.Epoch) []string {
-			return []string{}
-		},
 		prysmResps: map[string]interface{}{
 			"json": &node.SyncStatusResponse{},
 		},
@@ -688,8 +644,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int) error {
 		for key := range meta.prysmResps {
 			switch key {
 			case "json":
-				jsonparams := meta.params("json", currentEpoch)
-				apipath := pathFromParams(path, jsonparams)
+				apipath := path
+				if meta.params != nil {
+					jsonparams := meta.params("json", currentEpoch)
+					apipath = pathFromParams(path, jsonparams)
+				}
 				fmt.Printf("executing json api path: %s\n", apipath)
 				if err := compareJSONMulticlient(beaconNodeIdx,
 					meta.basepath,
@@ -702,11 +661,11 @@ func withCompareBeaconAPIs(beaconNodeIdx int) error {
 					return err
 				}
 			case "ssz":
-				sszparams := meta.params("ssz", currentEpoch)
-				if len(sszparams) == 0 {
-					continue
+				apipath := path
+				if meta.params != nil {
+					sszparams := meta.params("ssz", currentEpoch)
+					apipath = pathFromParams(path, sszparams)
 				}
-				apipath := pathFromParams(path, sszparams)
 				fmt.Printf("executing ssz api path: %s\n", apipath)
 				prysmr, lighthouser, err := compareSSZMulticlient(beaconNodeIdx, meta.basepath, apipath)
 				if err != nil {
