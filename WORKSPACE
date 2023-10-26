@@ -206,7 +206,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.20.9",
+    go_version = "1.20.10",
     nogo = "@//:nogo",
 )
 
