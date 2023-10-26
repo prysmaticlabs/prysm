@@ -138,7 +138,8 @@ func (e *cacheEntry) ensureDbidx(scs ...*ethpb.BlobSidecar) dbidx {
 		if e.dbx[scs[i].Index] != nil {
 			continue
 		}
-		*e.dbx[scs[i].Index] = bytesutil.ToBytes48(scs[i].KzgCommitment)
+		c := bytesutil.ToBytes48(scs[i].KzgCommitment)
+		e.dbx[scs[i].Index] = &c
 	}
 	return e.dbx
 }

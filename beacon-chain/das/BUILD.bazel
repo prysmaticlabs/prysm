@@ -29,13 +29,18 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["availability_test.go"],
+    srcs = [
+        "availability_test.go",
+        "cache_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//config/fieldparams:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
+        "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
         "//time/slots:go_default_library",
