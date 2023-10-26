@@ -94,6 +94,26 @@ var ErrMissingClockSetter = errors.New("blockchain Service initialized without a
 type blobNotifierMap struct {
 	sync.RWMutex
 	notifiers map[[32]byte]chan uint64
+	seenIndex map[[32]byte]map[uint64]struct{}
+}
+
+func (bn *blobNotifierMap) setSeenIndex(root [32]byte, idx uint64) {
+	bn.Lock()
+	defer bn.Unlock()
+	if _, ok := bn.seenIndex[root]; !ok {
+		bn.seenIndex[root] = make(map[uint64]struct{})
+	}
+	bn.seenIndex[root][idx] = struct{}{}
+}
+
+func (bn *blobNotifierMap) isSeen(root [32]byte, idx uint64) bool {
+	bn.RLock()
+	defer bn.RUnlock()
+	if _, ok := bn.seenIndex[root]; !ok {
+		return false
+	}
+	_, ok := bn.seenIndex[root][idx]
+	return ok
 }
 
 func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
