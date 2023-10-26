@@ -922,7 +922,7 @@ func PendingAttestationFromConsensus(a *eth.PendingAttestation) (*PendingAttesta
 
 	return &PendingAttestation{
 		AggregationBits: hexutil.Encode(a.AggregationBits),
-		Data:            nil,
+		Data:            shared.AttestationDataFromConsensus(a.Data),
 		InclusionDelay:  fmt.Sprintf("%d", a.InclusionDelay),
 		ProposerIndex:   fmt.Sprintf("%d", a.ProposerIndex),
 	}, nil
