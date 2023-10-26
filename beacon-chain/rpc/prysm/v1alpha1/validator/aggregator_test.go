@@ -74,8 +74,8 @@ func TestSubmitAggregateAndProof_IsAggregatorAndNoAtts(t *testing.T) {
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
 		Validators: []*ethpb.Validator{
-			{PublicKey: pubKey(0)},
-			{PublicKey: pubKey(1)},
+			{PublicKey: pubKey(0), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
+			{PublicKey: pubKey(1), ExitEpoch: params.BeaconConfig().FarFutureEpoch},
 		},
 	})
 	require.NoError(t, err)

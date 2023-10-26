@@ -19,8 +19,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/weak_subjectivity",
-		"/eth/v1/debug/beacon/states/{state_id}",
-		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
@@ -45,15 +43,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
-	case "/eth/v1/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &BeaconStateResponseJson{}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZ}
-	case "/eth/v2/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &BeaconStateV2ResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeV2State,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &ForkChoiceHeadsResponseJson{}
 	case "/eth/v2/debug/beacon/heads":

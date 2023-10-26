@@ -241,6 +241,7 @@ func blobFields(b *eth.BlobSidecar) logrus.Fields {
 		"slot":          b.Slot,
 		"proposerIndex": b.ProposerIndex,
 		"blockRoot":     fmt.Sprintf("%#x", b.BlockRoot),
+		"kzgCommitment": fmt.Sprintf("%#x", b.KzgCommitment),
 		"index":         b.Index,
 	}
 }
