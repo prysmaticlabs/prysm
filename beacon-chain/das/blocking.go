@@ -15,7 +15,7 @@ import (
 // If the context given to IsDataAvailable is cancelled, the result of IsDataAvailable will be ctx.Error().
 type BlockingAvailabilityStore struct {
 	notif *idxNotifiers
-	s     *CachingDBVerifiedStore
+	s     AvailabilityStore
 }
 
 func (bs *BlockingAvailabilityStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {

@@ -5,12 +5,11 @@ import (
 	"strings"
 )
 
-func NewMissingIndicesError(root [32]byte, missing []uint64) *MissingIndicesError {
-	return &MissingIndicesError{root: root, indices: missing}
+func NewMissingIndicesError(missing []uint64) *MissingIndicesError {
+	return &MissingIndicesError{indices: missing}
 }
 
 type MissingIndicesError struct {
-	root    [32]byte
 	indices []uint64
 }
 
