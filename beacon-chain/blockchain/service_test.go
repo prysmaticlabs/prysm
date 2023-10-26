@@ -25,6 +25,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -516,39 +517,46 @@ func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 }
 
 func TestNotifyIndex(t *testing.T) {
+	// Initialize a blobNotifierMap
 	bn := &blobNotifierMap{
-		seenIndex: make(map[[32]byte]map[uint64]struct{}),
+		seenIndex: make(map[[32]byte]*[fieldparams.MaxBlobsPerBlock]bool),
 		notifiers: make(map[[32]byte]chan uint64),
 	}
 
-	root := [32]byte{1, 2, 3}
-	idx := uint64(5)
+	// Sample root and index
+	var root [32]byte
+	copy(root[:], "exampleRoot")
 
-	// Test that a new index is properly notified and recorded
-	bn.notifyIndex(root, idx)
-	if _, ok := bn.seenIndex[root][idx]; !ok {
-		t.Errorf("Index %d for root %v was not recorded", idx, root)
+	// Test notifying a new index
+	bn.notifyIndex(root, 1)
+	if bn.seenIndex[root] == nil || !bn.seenIndex[root][1] {
+		t.Errorf("Index was not marked as seen")
 	}
 
-	c, ok := bn.notifiers[root]
-	if !ok {
-		t.Errorf("Notifier channel for root %v was not created", root)
+	// Test that a new channel is created
+	if _, ok := bn.notifiers[root]; !ok {
+		t.Errorf("Notifier channel was not created")
 	}
 
+	// Test notifying an already seen index
+	bn.notifyIndex(root, 1)
+	if len(bn.notifiers[root]) > 1 {
+		t.Errorf("Notifier channel should not receive multiple messages for the same index")
+	}
+
+	// Test notifying a new index again
+	bn.notifyIndex(root, 2)
+	if !bn.seenIndex[root][2] {
+		t.Errorf("Index was not marked as seen")
+	}
+
+	// Test that the notifier channel receives the index
 	select {
-	case receivedIdx := <-c:
-		if receivedIdx != idx {
-			t.Errorf("Received index %d, expected %d", receivedIdx, idx)
+	case idx := <-bn.notifiers[root]:
+		if idx != 1 {
+			t.Errorf("Received index on channel is incorrect")
 		}
 	default:
-		t.Errorf("No index was sent to the notifier channel")
-	}
-
-	// Test that a previously seen index is not notified again
-	bn.notifyIndex(root, idx)
-	select {
-	case <-c:
-		t.Errorf("Previously seen index %d was notified again", idx)
-	default:
+		t.Errorf("Notifier channel did not receive the index")
 	}
 }
