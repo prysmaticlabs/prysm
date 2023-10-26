@@ -818,15 +818,13 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		),
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
-	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+
+	// TODO: remove api middleware from this
+	muxHandler := func(_ *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
-		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
 		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
-		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
-			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
-			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
-			apiMware.ServeHTTP(w, req)
-		} else if strings.HasPrefix(req.URL.Path, "/api") {
+		// note: keymanager api endpoints are handled by reregistering all the route handlers before the catchall
+		if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
 			// Else, we handle with the Prysm API gateway without a middleware.
 			h(w, req)
@@ -843,18 +841,17 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		Patterns: []string{
 			"/accounts/",
 			"/v2/",
-			"/internal/eth/v1/",
 		},
 		Mux: gwmux,
 	}
 	opts := []gateway.Option{
+		gateway.WithMuxHandler(muxHandler),
 		gateway.WithRouter(router),
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}
 	gw, err := gateway.New(c.cliCtx.Context, opts...)
