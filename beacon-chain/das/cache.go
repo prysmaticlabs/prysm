@@ -1,7 +1,6 @@
 package das
 
 import (
-	"bytes"
 	"sync"
 
 	errors "github.com/pkg/errors"
@@ -29,7 +28,7 @@ type cache struct {
 	entries map[cacheKey]*cacheEntry
 }
 
-func newSidecarCache() *cache {
+func newCache() *cache {
 	return &cache{entries: make(map[cacheKey]*cacheEntry)}
 }
 
@@ -49,7 +48,7 @@ func (c *cache) ensure(key cacheKey) *cacheEntry {
 	defer c.Unlock()
 	e, ok := c.entries[key]
 	if !ok {
-		e = newCacheEntry()
+		e = &cacheEntry{}
 		c.entries[key] = e
 	}
 	return e
@@ -65,19 +64,18 @@ func (c *cache) delete(key cacheKey) {
 // dbidx is a compact representation of the set of BlobSidecars in the database for a given root,
 // organized as a map from BlobSidecar.Index->BlobSidecar.KzgCommitment.
 // This representation is convenient for comparison to a block's commitments.
-type dbidx map[uint64][48]byte
+type dbidx [fieldparams.MaxBlobsPerBlock]*[48]byte
 
 // missing compares the set of BlobSidecars observed in the backing store to the set of commitments
 // observed in a block - cmts is the BlobKzgCommitments field from a block.
 func (idx dbidx) missing(cmts [][]byte) ([]uint64, error) {
 	m := make([]uint64, 0, len(cmts))
 	for i := range cmts {
-		x := uint64(i)
-		c, ok := idx[x]
-		if !ok {
-			m = append(m, x)
+		if idx[i] == nil {
+			m = append(m, uint64(i))
 			continue
 		}
+		c := *idx[i]
 		if c != bytesutil.ToBytes48(cmts[i]) {
 			return nil, errors.Wrapf(errDBCommitmentMismatch,
 				"index=%d, db=%#x, block=%#x", i, c, cmts[i])
@@ -92,8 +90,9 @@ func (idx dbidx) missing(cmts [][]byte) ([]uint64, error) {
 // dbx assumes that all writes to the backing store go through the same cache.
 type cacheEntry struct {
 	sync.RWMutex
-	scs [fieldparams.MaxBlobsPerBlock]*ethpb.BlobSidecar
-	dbx dbidx
+	scs    [fieldparams.MaxBlobsPerBlock]*ethpb.BlobSidecar
+	dbx    dbidx
+	dbRead bool
 }
 
 // stash adds an item to the in-memory cache of BlobSidecars.
@@ -112,52 +111,34 @@ func (e *cacheEntry) dbidx() dbidx {
 	return e.dbx
 }
 
-// filter evicts any BlobSidecars that do not have a KzgCommitment field that matches blkCmts,
-// which is the block's BlobKzgCommitments field.
-// The first return value is the number of commitments that matched the block, ie the number of
-// non-nil vaues in the second return value, which is a copy of the slice of cached BlobSidecars
-// that match blkCmts.
-func (e *cacheEntry) filter(blkCmts [][]byte) (int, []*ethpb.BlobSidecar) {
-	matches := 0
-	scs := make([]*ethpb.BlobSidecar, len(blkCmts))
-	for i := range blkCmts {
-		// Clear any blobs that don't match the block.
-		if !bytes.Equal(blkCmts[i], e.scs[i].KzgCommitment) {
-			e.scs[i] = nil
-		} else {
-			matches += 1
-		}
-	}
-	// Clear any blobs that the block doesn't include.
-	for i := len(blkCmts); i < fieldparams.MaxBlobsPerBlock; i++ {
-		e.scs[i] = nil
-	}
-	copy(scs, e.scs[:])
-	return matches, scs
+func (e *cacheEntry) dbidxInitialized() bool {
+	return e.dbRead
 }
 
-// moveToDB evicts then given BlobSidecars from the in-memory cache, and updates the
-// db cache representation to include them.
-func (e *cacheEntry) moveToDB(scs ...*ethpb.BlobSidecar) dbidx {
-	e.ensureDbidx(scs...)
-	for i := range scs {
-		e.scs[scs[i].Index] = nil
+func (e *cacheEntry) cacheSlice(n int) ([]uint64, []*ethpb.BlobSidecar) {
+	notInCache := make([]uint64, 0, n)
+	for i := 0; i < len(e.scs); i++ {
+		if e.scs[i] == nil {
+			notInCache = append(notInCache, uint64(i))
+		}
 	}
-	return e.dbx
+	return notInCache, e.scs[0:n]
 }
 
 // ensureDbidx updates the db cache representation to include the given BlobSidecars.
 func (e *cacheEntry) ensureDbidx(scs ...*ethpb.BlobSidecar) dbidx {
-	if e.dbx == nil {
-		e.dbx = make(dbidx)
+	if e.dbRead == false {
+		e.dbRead = true
 	}
 	for i := range scs {
-		e.dbx[scs[i].Index] = bytesutil.ToBytes48(scs[i].KzgCommitment)
+		if scs[i].Index >= fieldparams.MaxBlobsPerBlock {
+			continue
+		}
+		// Don't overwrite.
+		if e.dbx[scs[i].Index] != nil {
+			continue
+		}
+		*e.dbx[scs[i].Index] = bytesutil.ToBytes48(scs[i].KzgCommitment)
 	}
 	return e.dbx
-}
-
-func newCacheEntry() *cacheEntry {
-	// dbidx is initialized with a nil value to differentiate absent BlobSidecars from an uninitialized db cache.
-	return &cacheEntry{dbx: nil}
 }
