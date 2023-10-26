@@ -499,6 +499,8 @@ func (s *Service) Start() {
 			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 			ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		}
+		s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateSSZ).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateV2).Methods(http.MethodGet)
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}

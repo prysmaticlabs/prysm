@@ -560,12 +560,24 @@ func TestActiveValidatorIndices(t *testing.T) {
 			},
 			want: []primitives.ValidatorIndex{0, 2, 3},
 		},
+		{
+			name: "impossible_zero_validators", // Regression test for issue #13051
+			args: args{
+				state: &ethpb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					Validators:  make([]*ethpb.Validator, 0),
+				},
+				epoch: 10,
+			},
+			wantedErr: "no active validator indices",
+		},
 	}
 	defer ClearCache()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := state_native.InitializeFromProtoPhase0(tt.args.state)
 			require.NoError(t, err)
+			require.NoError(t, s.SetValidators(tt.args.state.Validators))
 			got, err := ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)

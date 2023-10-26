@@ -47,7 +47,7 @@ func walletCreate(c *cli.Context) error {
 
 // ConstructCLIManagerOpts prompts the user for wallet creation input.
 func ConstructCLIManagerOpts(cliCtx *cli.Context, keymanagerKind keymanager.Kind) ([]accounts.Option, error) {
-	cliOpts := []accounts.Option{}
+	var cliOpts []accounts.Option
 	// Get wallet dir and check that no wallet exists at the location.
 	walletDir, err := userprompt.InputDirectory(cliCtx, userprompt.WalletDirPromptText, flags.WalletDirFlag)
 	if err != nil {

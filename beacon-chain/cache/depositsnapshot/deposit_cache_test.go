@@ -769,7 +769,7 @@ func TestFinalizedDeposits_ReturnsTrieCorrectly(t *testing.T) {
 		}
 	}
 
-	ctrs := []*ethpb.DepositContainer{}
+	var ctrs []*ethpb.DepositContainer
 	for i := 0; i < 2000; i++ {
 		ctrs = append(ctrs, generateCtr(uint64(10+(i/2)), int64(i)))
 	}
