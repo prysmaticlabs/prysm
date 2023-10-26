@@ -70,7 +70,7 @@ func (s *CachingDBVerifiedStore) PersistOnceCommitted(ctx context.Context, curre
 			key = skey
 			entry = s.cache.ensure(key)
 		}
-		if entry.persist(sc[i]) {
+		if entry.stash(sc[i]) {
 			persisted = append(persisted, sc[i])
 		}
 	}
