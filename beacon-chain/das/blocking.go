@@ -38,7 +38,7 @@ func (bs *BlockingStore) IsDataAvailable(ctx context.Context, current primitives
 			return nil
 		}
 		mie := &MissingIndicesError{}
-		if !errors.As(err, mie) {
+		if !errors.As(err, &mie) {
 			return err
 		}
 		waitFor := make(map[uint64]struct{})
