@@ -27,5 +27,6 @@ go_library(
 go_binary(
     name = "client-stats",
     embed = [":go_default_library"],
+    linkmode = "pie",
     visibility = ["//visibility:public"],
 )

@@ -75,8 +75,11 @@ cc_library(
     ],
     copts = OPTS + [
         "-std=c++03",
+        "-fPIC",
     ],
-    linkopts = select({
+    linkopts = [
+         "-Wl,-z,notext",
+        ] + select({
         ":use_gmp": ["-lgmp"],
         "//conditions:default": [],
     }) + select({
