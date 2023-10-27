@@ -94,7 +94,7 @@ var ErrMissingClockSetter = errors.New("blockchain Service initialized without a
 type blobNotifierMap struct {
 	sync.RWMutex
 	notifiers map[[32]byte]chan uint64
-	seenIndex map[[32]byte]*[fieldparams.MaxBlobsPerBlock]bool
+	seenIndex map[[32]byte][fieldparams.MaxBlobsPerBlock]bool
 }
 
 // notifyIndex notifies a blob by its index for a given root.
@@ -105,27 +105,13 @@ func (bn *blobNotifierMap) notifyIndex(root [32]byte, idx uint64) {
 	}
 
 	bn.Lock()
-
-	// Initialize the map for the given root if it doesn't exist.
-	if bn.seenIndex[root] == nil {
-		bn.seenIndex[root] = &[fieldparams.MaxBlobsPerBlock]bool{}
-	}
-
-	seenIndices := bn.seenIndex[root]
-
-	// Check if the index is within bounds.
-	if idx >= uint64(len(seenIndices)) {
+	seen := bn.seenIndex[root]
+	if seen[idx] {
 		bn.Unlock()
 		return
 	}
-
-	// Check if the index has already been seen.
-	if seenIndices[idx] {
-		bn.Unlock()
-		return
-	}
-
-	seenIndices[idx] = true
+	seen[idx] = true
+	bn.seenIndex[root] = seen
 
 	// Retrieve or create the notifier channel for the given root.
 	c, ok := bn.notifiers[root]

@@ -519,7 +519,7 @@ func (s *MockClockSetter) SetClock(g *startup.Clock) error {
 func TestNotifyIndex(t *testing.T) {
 	// Initialize a blobNotifierMap
 	bn := &blobNotifierMap{
-		seenIndex: make(map[[32]byte]*[fieldparams.MaxBlobsPerBlock]bool),
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
 		notifiers: make(map[[32]byte]chan uint64),
 	}
 
@@ -529,7 +529,7 @@ func TestNotifyIndex(t *testing.T) {
 
 	// Test notifying a new index
 	bn.notifyIndex(root, 1)
-	if bn.seenIndex[root] == nil || !bn.seenIndex[root][1] {
+	if !bn.seenIndex[root][1] {
 		t.Errorf("Index was not marked as seen")
 	}
 
