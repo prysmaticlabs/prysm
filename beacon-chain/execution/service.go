@@ -754,6 +754,10 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 			}
 		}
 	} else {
+		if eth1DataInDB.Trie == nil && eth1DataInDB.DepositSnapshot != nil {
+			return errors.Errorf("trying to use old deposit trie after migration to the new trie. "+
+				"Run with the --%s flag to resume normal operations.", features.EnableEIP4881.Name)
+		}
 		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
 	}
 	if err != nil {
