@@ -85,46 +85,6 @@ service KeyManagement {
     };
   }
 
-  // ListFeeRecipientByPubkey returns the hex encoded fee recipient address for the given pubkey.
-  //
-  // HTTP response status codes:
-  //  - 200: Successful response
-  //  - 401: Unauthorized
-  //  - 403: Forbidden from accessing the resource
-  //  - 500: Validator internal error
-  rpc ListFeeRecipientByPubkey(PubkeyRequest) returns (GetFeeRecipientByPubkeyResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/validator/{pubkey}/feerecipient"
-    };
-  }
-
-  // SetFeeRecipientByPubkey sets the fee recipient for the specific public key, overrides the existing one.
-  //
-  // HTTP response status codes:
-  //  - 202: Successful response
-  //  - 401: Unauthorized
-  //  - 403: Forbidden from accessing the resource
-  //  - 500: Validator internal error
-  rpc SetFeeRecipientByPubkey(SetFeeRecipientByPubkeyRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/validator/{pubkey}/feerecipient",
-      body: "*"
-    };
-  }
-
-  // DeleteFeeRecipientByPubkey deletes the current settings on the fee recipient and replaces with the default fallback fee recipient.
-  //
-  // HTTP response status codes:
-  //  - 204: No Content
-  //  - 401: Unauthorized
-  //  - 403: Forbidden from accessing the resource
-  //  - 500: Validator internal error
-  rpc DeleteFeeRecipientByPubkey(PubkeyRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete: "/internal/eth/v1/validator/{pubkey}/feerecipient",
-      body: "*"
-    };
-  }
 }
 
 message ListKeystoresResponse {
@@ -178,17 +138,3 @@ message DeletedKeystoreStatus {
 message PubkeyRequest {
   bytes pubkey = 1;
 }
-
-message GetFeeRecipientByPubkeyResponse {
-  message FeeRecipient {
-    bytes pubkey = 1;
-    bytes ethaddress = 2;
-  }
-  FeeRecipient data = 1;
-}
-
-message SetFeeRecipientByPubkeyRequest {
-  bytes pubkey = 1;
-  bytes ethaddress = 2;
-}
-

@@ -219,6 +219,18 @@ func (s *Fork) ToConsensus() (*eth.Fork, error) {
 	}, nil
 }
 
+func ForkFromConsensus(f *eth.Fork) (*Fork, error) {
+	if f == nil {
+		return nil, errors.New("fork is empty")
+	}
+
+	return &Fork{
+		PreviousVersion: hexutil.Encode(f.PreviousVersion),
+		CurrentVersion:  hexutil.Encode(f.CurrentVersion),
+		Epoch:           strconv.FormatUint(uint64(f.Epoch), 10),
+	}, nil
+}
+
 type SyncCommitteeMessage struct {
 	Slot            string `json:"slot"`
 	BeaconBlockRoot string `json:"beacon_block_root"`
