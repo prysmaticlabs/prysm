@@ -15,91 +15,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse/v2"
 )
-
-type sszConfig struct {
-	fileName     string
-	responseJson SszResponse
-}
-
-func handleProduceBlockSSZ(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
-	config := sszConfig{
-		fileName:     "produce_beacon_block.ssz",
-		responseJson: &VersionedSSZResponseJson{},
-	}
-	return handleGetSSZ(m, endpoint, w, req, config)
-}
-
-func handleProduceBlindedBlockSSZ(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	w http.ResponseWriter,
-	req *http.Request,
-) (handled bool) {
-	config := sszConfig{
-		fileName:     "produce_blinded_beacon_block.ssz",
-		responseJson: &VersionedSSZResponseJson{},
-	}
-	return handleGetSSZ(m, endpoint, w, req, config)
-}
-
-func handleGetSSZ(
-	m *apimiddleware.ApiProxyMiddleware,
-	endpoint apimiddleware.Endpoint,
-	w http.ResponseWriter,
-	req *http.Request,
-	config sszConfig,
-) (handled bool) {
-	ssz := http2.SszRequested(req)
-	if !ssz {
-		return false
-	}
-
-	if errJson := prepareSSZRequestForProxying(m, endpoint, req); errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	grpcResponse, errJson := m.ProxyRequest(req)
-	if errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	grpcResponseBody, errJson := apimiddleware.ReadGrpcResponseBody(grpcResponse.Body)
-	if errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	respHasError, errJson := apimiddleware.HandleGrpcResponseError(endpoint.Err, grpcResponse, grpcResponseBody, w)
-	if errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	if respHasError {
-		return true
-	}
-	if errJson := apimiddleware.DeserializeGrpcResponseBodyIntoContainer(grpcResponseBody, config.responseJson); errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	respVersion, responseSsz, errJson := serializeMiddlewareResponseIntoSSZ(config.responseJson)
-	if errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	if errJson := writeSSZResponseHeaderAndBody(grpcResponse, w, responseSsz, respVersion, config.fileName); errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-	if errJson := apimiddleware.Cleanup(grpcResponse.Body); errJson != nil {
-		apimiddleware.WriteError(w, errJson, nil)
-		return true
-	}
-
-	return true
-}
 
 func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
 	req.URL.Scheme = "http"

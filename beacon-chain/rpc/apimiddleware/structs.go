@@ -54,20 +54,6 @@ type SpecResponseJson struct {
 	Data interface{} `json:"data"`
 }
 
-type ProduceBlockResponseJson struct {
-	Data *BeaconBlockJson `json:"data"`
-}
-
-type ProduceBlockResponseV2Json struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *BeaconBlockContainerV2Json `json:"data"`
-}
-
-type ProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockContainerJson `json:"data"`
-}
-
 type AggregateAttestationResponseJson struct {
 	Data *AttestationJson `json:"data"`
 }
