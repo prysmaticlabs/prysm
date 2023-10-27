@@ -115,9 +115,13 @@ func (e *cacheEntry) dbidxInitialized() bool {
 	return e.dbRead
 }
 
+// cacheSlice slices the sidecar cache up to the index n and returns the
+// set of indices that are nil and the slice of the cache up to the given index.
+// The first return value is the set of indices that are not in the cache,
+// the second return value is a slice of the cache up to the index n.
 func (e *cacheEntry) cacheSlice(n int) ([]uint64, []*ethpb.BlobSidecar) {
 	notInCache := make([]uint64, 0, n)
-	for i := 0; i < len(e.scs); i++ {
+	for i := 0; i < n; i++ {
 		if e.scs[i] == nil {
 			notInCache = append(notInCache, uint64(i))
 		}
