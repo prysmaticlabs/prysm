@@ -1,5 +1,13 @@
 package shared
 
+import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+)
+
 type SignedBeaconBlock struct {
 	Message   *BeaconBlock `json:"message" validate:"required"`
 	Signature string       `json:"signature" validate:"required"`
@@ -287,6 +295,18 @@ type Eth1Data struct {
 	DepositRoot  string `json:"deposit_root" validate:"required"`
 	DepositCount string `json:"deposit_count" validate:"required"`
 	BlockHash    string `json:"block_hash" validate:"required"`
+}
+
+func Eth1DataFromConsensus(e1d *eth.Eth1Data) (*Eth1Data, error) {
+	if e1d == nil {
+		return nil, errors.New("eth1data is nil")
+	}
+
+	return &Eth1Data{
+		DepositRoot:  hexutil.Encode(e1d.DepositRoot),
+		DepositCount: fmt.Sprintf("%d", e1d.DepositCount),
+		BlockHash:    hexutil.Encode(e1d.BlockHash),
+	}, nil
 }
 
 type ProposerSlashing struct {

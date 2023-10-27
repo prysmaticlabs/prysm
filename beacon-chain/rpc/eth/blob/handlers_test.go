@@ -23,7 +23,7 @@ import (
 )
 
 func TestParseIndices(t *testing.T) {
-	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
+	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=100&indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
 }
 
 func TestBlobs(t *testing.T) {

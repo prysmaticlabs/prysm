@@ -55,6 +55,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
+	// Remove old blocks from our expiration cache.
+	s.deleteExpiredBlocksFromCache()
+
 	// Validate pending slots before processing.
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
@@ -202,7 +205,12 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+	// Calculate the deadline time by adding two slots duration to the current time
+	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+	twoSlotDuration := 2 * time.Duration(secondsPerSlot) * time.Second
+	ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, twoSlotDuration)
+	defer cancelFunction()
+	if err := s.cfg.chain.ReceiveBlock(ctxWithTimeout, b, blkRoot); err != nil {
 		return err
 	}
 
@@ -430,6 +438,15 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 	}
 	delete(s.seenPendingBlocks, r)
 	return nil
+}
+
+// This method manually clears our cache so that all expired
+// entries are correctly removed.
+func (s *Service) deleteExpiredBlocksFromCache() {
+	s.pendingQueueLock.Lock()
+	defer s.pendingQueueLock.Unlock()
+
+	s.slotToPendingBlocks.DeleteExpired()
 }
 
 // Insert block to the list in the pending queue using the slot as key.
