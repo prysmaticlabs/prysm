@@ -91,6 +91,7 @@ func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, bloc
 	sidecars, cacheErr := entry.filter(root, blockCommitments)
 	if cacheErr == nil {
 		if err := s.verifyKZG(blockCommitments, sidecars); err != nil {
+			s.cache.delete(keyFromSidecar(sidecars[0]))
 			return err
 		}
 		// We have all the committed sidecars in cache, and they all have valid proofs.
