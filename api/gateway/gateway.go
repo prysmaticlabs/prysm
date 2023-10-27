@@ -117,23 +117,6 @@ func (g *Gateway) Start() {
 	}
 
 	if g.cfg.muxHandler != nil {
-		// reregister existing routes first
-		err = g.cfg.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-			pathTemplate, err := route.GetPathTemplate()
-			if err != nil {
-				return err
-			}
-			methods, err := route.GetMethods()
-			if err != nil {
-				return err
-			}
-			handler := route.GetHandler()
-			g.cfg.router.NewRoute().Path(pathTemplate).Handler(handler).Methods(methods...)
-			return nil
-		})
-		if err != nil {
-			log.WithError(err).Error("Failed to re-register handlers")
-		}
 		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			g.cfg.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
 		})

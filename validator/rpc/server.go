@@ -102,7 +102,7 @@ type Server struct {
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Server{
+	server := &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
 		logsStreamer:             logs.NewStreamServer(),
@@ -132,6 +132,11 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
 		router:                   cfg.Router,
 	}
+	// immediately register routes to override any catchalls
+	if err := server.InitializeRoutes(); err != nil {
+		log.WithError(err).Fatal("Could not initialize routes")
+	}
+	return server
 }
 
 // Start the gRPC server.
@@ -185,9 +190,6 @@ func (s *Server) Start() {
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
-	if err := s.InitializeRoutes(); err != nil {
-		log.WithError(err).Fatal("Could not initialize routes")
-	}
 	// routes needs to be set before the server calls the server function
 	go func() {
 		if s.listener != nil {
