@@ -11,17 +11,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+	if len(bnType) == 0 {
+		bnType = []string{"prysm"}
+	}
+
 	var port int
-	if len(bnType) > 0 {
-		switch bnType[0] {
-		case "lighthouse":
-			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-		default:
-			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
-		}
-	} else {
+	switch bnType[0] {
+	case "prysm":
 		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	case "lighthouse":
+		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	default:
+		return fmt.Errorf("unknown node type %s", bnType[0])
 	}
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
@@ -36,23 +38,25 @@ func doMiddlewareJSONGetRequest(template string, requestPath string, beaconNodeI
 		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
 			return err
 		}
-		return fmt.Errorf("request failed with response code: %d with response body %s", httpResp.StatusCode, body)
+		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
 
-func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
+func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
+	if len(bnType) == 0 {
+		bnType = []string{"prysm"}
+	}
+
 	client := &http.Client{}
 	var port int
-	if len(bnType) > 0 {
-		switch bnType[0] {
-		case "lighthouse":
-			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-		default:
-			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
-		}
-	} else {
+	switch bnType[0] {
+	case "prysm":
 		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	case "lighthouse":
+		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	default:
+		return nil, fmt.Errorf("unknown node type %s", bnType[0])
 	}
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
@@ -71,7 +75,7 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 		if err := json.NewDecoder(rsp.Body).Decode(&body); err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf("request failed with response code: %d with response body %s", rsp.StatusCode, body)
+		return nil, fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], rsp.StatusCode, body)
 	}
 	defer closeBody(rsp.Body)
 	body, err := io.ReadAll(rsp.Body)
@@ -82,18 +86,21 @@ func doMiddlewareSSZGetRequest(template string, requestPath string, beaconNodeId
 	return body, nil
 }
 
-func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
-	var port int
-	if len(bnType) > 0 {
-		switch bnType[0] {
-		case "lighthouse":
-			port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
-		default:
-			port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
-		}
-	} else {
-		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+	if len(bnType) == 0 {
+		bnType = []string{"prysm"}
 	}
+
+	var port int
+	switch bnType[0] {
+	case "prysm":
+		port = params.TestParams.Ports.PrysmBeaconNodeGatewayPort
+	case "lighthouse":
+		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
+	default:
+		return fmt.Errorf("unknown node type %s", bnType[0])
+	}
+
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 	b, err := json.Marshal(postData)
 	if err != nil {
@@ -112,7 +119,7 @@ func doMiddlewareJSONPostRequest(template string, requestPath string, beaconNode
 		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
 			return err
 		}
-		return fmt.Errorf("request failed with response code: %d with response body %s", httpResp.StatusCode, body)
+		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
