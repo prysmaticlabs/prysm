@@ -95,7 +95,6 @@ func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddlewa
 				return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
 			}
 		}
-
 		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
 	}
 

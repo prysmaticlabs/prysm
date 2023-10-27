@@ -10,13 +10,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
+
+type abstractProduceBlockResponseJson struct {
+	Version string          `json:"version"`
+	Data    json.RawMessage `json:"data"`
+}
 
 func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
 	queryParams := neturl.Values{}
@@ -38,40 +42,20 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		ver = produceBlockV3ResponseJson.Version
 		blinded = produceBlockV3ResponseJson.ExecutionPayloadBlinded
 		decoder = json.NewDecoder(bytes.NewReader(produceBlockV3ResponseJson.Data))
-		decoder.DisallowUnknownFields()
 	} else if errJson == nil {
 		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 	} else if errJson.Code == http.StatusNotFound {
 		log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
-		produceBlindedBlockResponseJson := apimiddleware.ProduceBlindedBlockResponseJson{}
+		produceBlindedBlockResponseJson := abstractProduceBlockResponseJson{}
 		queryUrl = buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
 		errJson, err = c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlindedBlockResponseJson)
 		if err == nil {
 			ver = produceBlindedBlockResponseJson.Version
 			blinded = true
-
-			var b interface{}
-			switch produceBlindedBlockResponseJson.Version {
-			case version.String(version.Phase0):
-				b = produceBlindedBlockResponseJson.Data.Phase0Block
-			case version.String(version.Altair):
-				b = produceBlindedBlockResponseJson.Data.AltairBlock
-			case version.String(version.Bellatrix):
-				b = produceBlindedBlockResponseJson.Data.BellatrixBlock
-			case version.String(version.Capella):
-				b = produceBlindedBlockResponseJson.Data.CapellaBlock
-			case version.String(version.Deneb):
-				b = produceBlindedBlockResponseJson.Data.DenebContents
-			}
-			j, err := json.Marshal(b)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to marshal block into JSON")
-			}
-			decoder = json.NewDecoder(bytes.NewReader(j))
-			decoder.DisallowUnknownFields()
+			decoder = json.NewDecoder(bytes.NewReader(produceBlindedBlockResponseJson.Data))
 		} else {
 			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
-			produceBlockResponseJson := apimiddleware.ProduceBlockResponseV2Json{}
+			produceBlockResponseJson := abstractProduceBlockResponseJson{}
 			queryUrl = buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
 			errJson, err = c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlockResponseJson)
 			if err != nil {
@@ -79,26 +63,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 			}
 			ver = produceBlockResponseJson.Version
 			blinded = false
-
-			var b interface{}
-			switch produceBlockResponseJson.Version {
-			case version.String(version.Phase0):
-				b = produceBlockResponseJson.Data.Phase0Block
-			case version.String(version.Altair):
-				b = produceBlockResponseJson.Data.AltairBlock
-			case version.String(version.Bellatrix):
-				b = produceBlockResponseJson.Data.BellatrixBlock
-			case version.String(version.Capella):
-				b = produceBlockResponseJson.Data.CapellaBlock
-			case version.String(version.Deneb):
-				b = produceBlockResponseJson.Data.DenebContents
-			}
-			j, err := json.Marshal(b)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to marshal block into JSON")
-			}
-			decoder = json.NewDecoder(bytes.NewReader(j))
-			decoder.DisallowUnknownFields()
+			decoder = json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
 		}
 	} else {
 		return nil, fmt.Errorf("failed to query GET REST endpoint: %s (status code %d)", errJson.Message, errJson.Code)
