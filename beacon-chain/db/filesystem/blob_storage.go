@@ -5,25 +5,12 @@ import (
 	"os"
 	"path"
 
-	"github.com/alexflint/go-filemutex"
 	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	log "github.com/sirupsen/logrus"
 )
 
 type BlobStorage struct {
-	baseDir  string
-	fileLock *filemutex.FileMutex
-}
-
-// newFileMutex creates a new file mutex for a file given its path.
-func (bs *BlobStorage) newFileMutex(path string) error {
-	fileLock, err := filemutex.New(path)
-	if err != nil {
-		return err
-	}
-	bs.fileLock = fileLock
-	return nil
+	baseDir string
 }
 
 func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
@@ -37,21 +24,6 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		}
 		// Create a partial file and write the blob data to it.
 		partialFilePath := filepath + ".partial"
-
-		err := bs.newFileMutex(partialFilePath)
-		if err != nil {
-			return errors.Wrap(err, "failed to create file lock")
-		}
-		err = bs.fileLock.Lock()
-		if err != nil {
-			return errors.Wrap(err, "failed to acquire file lock")
-		}
-		defer func() {
-			if err := bs.fileLock.Unlock(); err != nil {
-				log.Errorf("Error releasing mutex%v", err)
-			}
-		}()
-
 		partialFile, err := os.Create(partialFilePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to create partial file")

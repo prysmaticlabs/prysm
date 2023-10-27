@@ -3,60 +3,81 @@ package filesystem
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path"
 	"strings"
-	"sync"
 	"testing"
 
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func TestSaveBlobDataErrors(t *testing.T) {
-	bs := &BlobStorage{baseDir: "testdir"}
+func TestBlobStorage_SaveBlobData(t *testing.T) {
 	t.Run("NoBlobData", func(t *testing.T) {
+		tempDir := t.TempDir()
+		bs := &BlobStorage{baseDir: tempDir}
 		err := bs.SaveBlobData([]*ethpb.BlobSidecar{})
 		require.ErrorContains(t, "no blob data to save", err)
-	})
-	t.Run("CreateFileLockError", func(t *testing.T) {
-		err := bs.SaveBlobData([]*ethpb.BlobSidecar{{}})
-		require.ErrorContains(t, "failed to create file lock", err)
-	})
-}
-
-func TestSaveBlobDataMultipleSidecars(t *testing.T) {
-	tempDir := t.TempDir()
-	numGoroutines := 10
-
-	// Use a wait group to synchronize goroutines.
-	var wg sync.WaitGroup
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			bs := &BlobStorage{baseDir: tempDir}
-			err := bs.SaveBlobData(testSidecars)
+		t.Cleanup(func() {
+			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
 			require.NoError(t, err)
-		}()
-	}
-	// Wait for all goroutines to finish.
-	wg.Wait()
+		})
+	})
+	t.Run("BlobExists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		bs := &BlobStorage{baseDir: tempDir}
+		existingSidecar := testSidecars[0]
+		blobPath := path.Join(tempDir, fmt.Sprintf(
+			"%d_%x_%d_%x.blob",
+			existingSidecar.Slot,
+			existingSidecar.BlockRoot,
+			existingSidecar.Index,
+			existingSidecar.KzgCommitment,
+		))
 
-	// Check the number of files in the directory.
-	files, err := os.ReadDir(tempDir)
-	require.NoError(t, err)
-	require.Equal(t, len(files), len(testSidecars))
-
-	for _, file := range files {
-		content, err := os.ReadFile(path.Join(tempDir, file.Name()))
+		err := os.MkdirAll(path.Dir(blobPath), os.ModePerm)
+		require.NoError(t, err)
+		err = os.WriteFile(blobPath, []byte("Test Blob Data 1"), os.ModePerm)
 		require.NoError(t, err)
 
-		// Find the corresponding test sidecar based on the file name.
-		sidecar := findTestSidecarsByFileName(t, file.Name())
-		require.NotNil(t, sidecar)
-		require.Equal(t, string(sidecar.Blob), string(content))
-	}
+		err = bs.SaveBlobData([]*ethpb.BlobSidecar{existingSidecar})
+		require.NoError(t, err)
+
+		// Ensure that the blob data was not modified.
+		content, err := os.ReadFile(blobPath)
+		require.NoError(t, err)
+		require.Equal(t, "Test Blob Data 1", string(content))
+		t.Cleanup(func() {
+			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
+			require.NoError(t, err)
+		})
+	})
+	t.Run("SaveBlobDataNoErrors", func(t *testing.T) {
+		tempDir := t.TempDir()
+		bs := &BlobStorage{baseDir: tempDir}
+		err := bs.SaveBlobData(testSidecars)
+		require.NoError(t, err)
+
+		// Check the number of files in the directory.
+		files, err := os.ReadDir(tempDir)
+		require.NoError(t, err)
+		require.Equal(t, len(testSidecars), len(files))
+
+		for _, file := range files {
+			content, err := os.ReadFile(path.Join(tempDir, file.Name()))
+			require.NoError(t, err)
+
+			// Find the corresponding test sidecar based on the file name.
+			sidecar := findTestSidecarsByFileName(t, file.Name())
+			require.NotNil(t, sidecar)
+			require.Equal(t, string(sidecar.Blob), string(content))
+		}
+		t.Cleanup(func() {
+			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
+			require.NoError(t, err)
+		})
+	})
 }
 
 func findTestSidecarsByFileName(t *testing.T, fileName string) *ethpb.BlobSidecar {
