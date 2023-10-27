@@ -1432,13 +1432,6 @@ func fixtures() map[string]interface{} {
 		},
 		PayloadId: &id,
 	}
-	b, _ := new(big.Int).SetString(params.BeaconConfig().TerminalTotalDifficulty, 10)
-	ttd, _ := uint256.FromBig(b)
-	transitionCfg := &pb.TransitionConfiguration{
-		TerminalBlockHash:       params.BeaconConfig().TerminalBlockHash[:],
-		TerminalTotalDifficulty: ttd.Hex(),
-		TerminalBlockNumber:     big.NewInt(0).Bytes(),
-	}
 	validStatus := &pb.PayloadStatus{
 		Status:          pb.PayloadStatus_VALID,
 		LatestValidHash: foo[:],
@@ -1481,7 +1474,6 @@ func fixtures() map[string]interface{} {
 		"ForkchoiceUpdatedSyncingResponse":  forkChoiceSyncingResp,
 		"ForkchoiceUpdatedAcceptedResponse": forkChoiceAcceptedResp,
 		"ForkchoiceUpdatedInvalidResponse":  forkChoiceInvalidResp,
-		"TransitionConfiguration":           transitionCfg,
 	}
 }
 
@@ -1782,17 +1774,6 @@ func (*testEngineService) GetPayloadV2(
 ) *pb.ExecutionPayloadCapellaWithValue {
 	fix := fixtures()
 	item, ok := fix["ExecutionPayloadCapellaWithValue"].(*pb.ExecutionPayloadCapellaWithValue)
-	if !ok {
-		panic("not found")
-	}
-	return item
-}
-
-func (*testEngineService) ExchangeTransitionConfigurationV1(
-	_ context.Context, _ *pb.TransitionConfiguration,
-) *pb.TransitionConfiguration {
-	fix := fixtures()
-	item, ok := fix["TransitionConfiguration"].(*pb.TransitionConfiguration)
 	if !ok {
 		panic("not found")
 	}
