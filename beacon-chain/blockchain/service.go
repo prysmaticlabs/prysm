@@ -156,6 +156,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	bn := &blobNotifierMap{
 		notifiers: make(map[[32]byte]chan uint64),
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
 	}
 	srv := &Service{
 		ctx:                  ctx,
