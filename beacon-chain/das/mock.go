@@ -28,3 +28,24 @@ func (m *MockAvailabilityStore) PersistOnceCommitted(ctx context.Context, curren
 	}
 	return sc
 }
+
+type mockBlobsDB struct {
+	BlobSidecarsByRootCallback func(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error)
+	SaveBlobSidecarCallback    func(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
+}
+
+var _ BlobsDB = &mockBlobsDB{}
+
+func (b *mockBlobsDB) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
+	if b.BlobSidecarsByRootCallback != nil {
+		return b.BlobSidecarsByRootCallback(ctx, root, indices...)
+	}
+	return nil, nil
+}
+
+func (b *mockBlobsDB) SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error {
+	if b.SaveBlobSidecarCallback != nil {
+		return b.SaveBlobSidecarCallback(ctx, sidecars)
+	}
+	return nil
+}

@@ -1,6 +1,8 @@
 package das
 
 import (
+	"bytes"
+	"fmt"
 	"sync"
 
 	errors "github.com/pkg/errors"
@@ -9,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -115,18 +118,50 @@ func (e *cacheEntry) dbidxInitialized() bool {
 	return e.dbRead
 }
 
-// cacheSlice slices the sidecar cache up to the index n and returns the
-// set of indices that are nil and the slice of the cache up to the given index.
-// The first return value is the set of indices that are not in the cache,
-// the second return value is a slice of the cache up to the index n.
-func (e *cacheEntry) cacheSlice(n int) ([]uint64, []*ethpb.BlobSidecar) {
-	notInCache := make([]uint64, 0, n)
-	for i := 0; i < n; i++ {
+// filter evicts sidecars that are not commited to by the block and returns custom
+// errors if the cache is missing any of the commitments, or if the commitments in
+// the cache do not match those found in the block. If err is nil, then all expected
+// commitments were found in the cache and the sidecar slice return value can be used
+// to perform a DA check against the cached sidecars.
+func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) ([]*ethpb.BlobSidecar, error) {
+	// Evict any blobs that are out of range.
+	for i := len(blkCmts); i < fieldparams.MaxBlobsPerBlock; i++ {
 		if e.scs[i] == nil {
-			notInCache = append(notInCache, uint64(i))
+			continue
+		}
+		log.WithField("block_root", root).
+			WithField("index", i).
+			WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
+			Warn("Evicting BlobSidecar with index > maximum blob commitment")
+		e.scs[i] = nil
+	}
+	// Generate a MissingIndicesError for any missing indices.
+	// Generate a CommitmentMismatchError for any mismatched commitments.
+	missing := make([]uint64, 0, len(blkCmts))
+	mismatch := make([]uint64, 0, len(blkCmts))
+	for i := range blkCmts {
+		if e.scs[i] == nil {
+			missing = append(missing, uint64(i))
+			continue
+		}
+		if !bytes.Equal(blkCmts[i], e.scs[i].KzgCommitment) {
+			mismatch = append(mismatch, uint64(i))
+			log.WithField("block_root", root).
+				WithField("index", i).
+				WithField("expected_commitment", fmt.Sprintf("%#x", blkCmts[i])).
+				WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
+				Error("Evicting BlobSidecar with incorrect commitment")
+			e.scs[i] = nil
+			continue
 		}
 	}
-	return notInCache, e.scs[0:n]
+	if len(mismatch) > 0 {
+		return nil, NewCommitmentMismatchError(mismatch)
+	}
+	if len(missing) > 0 {
+		return nil, NewMissingIndicesError(missing)
+	}
+	return e.scs[0:len(blkCmts)], nil
 }
 
 // ensureDbidx updates the db cache representation to include the given BlobSidecars.

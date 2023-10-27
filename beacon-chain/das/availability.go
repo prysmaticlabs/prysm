@@ -16,32 +16,21 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var errDAIncomplete = errors.New("some commitments are not available at this time")
+type kzgVerifier func([][]byte, []*ethpb.BlobSidecar) error
 
-// BlobsDB specifies the persistence store methods needed by the AvailabilityStore.
-type BlobsDB interface {
-	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error)
-	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
+type LazilyPersistentStore struct {
+	db        BlobsDB
+	cache     *cache
+	verifyKZG kzgVerifier
 }
 
-// AvailabilityStore describes a component that can verify and save sidecars for a given block, and confirm previously
-// verified and saved sidecars.
-type AvailabilityStore interface {
-	IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error
-	PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar
-}
+var _ AvailabilityStore = &LazilyPersistentStore{}
 
-type CachingDBVerifiedStore struct {
-	db    BlobsDB
-	cache *cache
-}
-
-var _ AvailabilityStore = &CachingDBVerifiedStore{}
-
-func NewCachingDBVerifiedStore(db BlobsDB) *CachingDBVerifiedStore {
-	return &CachingDBVerifiedStore{
-		db:    db,
-		cache: newCache(),
+func NewLazilyPersistentStore(db BlobsDB) *LazilyPersistentStore {
+	return &LazilyPersistentStore{
+		db:        db,
+		cache:     newCache(),
+		verifyKZG: kzg.IsDataAvailable,
 	}
 }
 
@@ -49,7 +38,7 @@ func NewCachingDBVerifiedStore(db BlobsDB) *CachingDBVerifiedStore {
 // detail). Blobs stored in this cache will be persisted for at least as long as the node is
 // running. Once IsDataAvailable succeeds, all blobs referenced by the given block are guaranteed
 // to be persisted for the remainder of the retention period.
-func (s *CachingDBVerifiedStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {
+func (s *LazilyPersistentStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {
 	var key cacheKey
 	var entry *cacheEntry
 	persisted := make([]*ethpb.BlobSidecar, 0, len(sc))
@@ -57,8 +46,9 @@ func (s *CachingDBVerifiedStore) PersistOnceCommitted(ctx context.Context, curre
 		if !params.WithinDAPeriod(slots.ToEpoch(sc[i].Slot), slots.ToEpoch(current)) {
 			continue
 		}
-		if sc[i].Index > fieldparams.MaxBlobsPerBlock-1 {
-			log.WithField("block_root", sc[i].BlockRoot).WithField("index", sc[i].Index).Error("discarding BlobSidecar with out of bound commitment")
+		if sc[i].Index >= fieldparams.MaxBlobsPerBlock {
+			log.WithField("block_root", sc[i].BlockRoot).WithField("index", sc[i].Index).Error("discarding BlobSidecar with index >= MaxBlobsPerBlock")
+			continue
 		}
 		skey := keyFromSidecar(sc[i])
 		if key != skey {
@@ -78,7 +68,7 @@ func (s *CachingDBVerifiedStore) PersistOnceCommitted(ctx context.Context, curre
 // - When BlobSidecars are written to the db, their cache entries are cleared.
 // - BlobSidecar cache entries with commitments that do not match the block will be evicted.
 // - BlobSidecar cachee entries with commitments that fail proof verification will be evicted.
-func (s *CachingDBVerifiedStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
+func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
 	blockCommitments := commitmentsToCheck(b, current)
 	if len(blockCommitments) == 0 {
 		return nil
@@ -97,16 +87,18 @@ func (s *CachingDBVerifiedStore) IsDataAvailable(ctx context.Context, current pr
 	return nil
 }
 
-func (s *CachingDBVerifiedStore) daCheck(ctx context.Context, root [32]byte, blockCommitments [][]byte, entry *cacheEntry) error {
-	notInCache, sidecars := entry.cacheSlice(len(blockCommitments))
-	if len(notInCache) == 0 {
-		if err := kzg.IsDataAvailable(blockCommitments, sidecars); err == nil {
-			// We have all the committed sidecars in cache, and they all have valid proofs.
-			// If flushing them to backing storage succeeds, then we can confirm DA.
-			return s.db.SaveBlobSidecar(ctx, sidecars)
+func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, blockCommitments [][]byte, entry *cacheEntry) error {
+	sidecars, cacheErr := entry.filter(root, blockCommitments)
+	if cacheErr == nil {
+		if err := s.verifyKZG(blockCommitments, sidecars); err != nil {
+			return err
 		}
+		// We have all the committed sidecars in cache, and they all have valid proofs.
+		// If flushing them to backing storage succeeds, then we can confirm DA.
+		return s.db.SaveBlobSidecar(ctx, sidecars)
 	}
-	// Check if we have the commitments already in the database.
+
+	// Before returning the cache error, check if we have the data in the db.
 	dbidx, err := s.persisted(ctx, root, entry)
 	// persisted() accounts for db.ErrNotFound, so this is a real database error.
 	if err != nil {
@@ -121,13 +113,13 @@ func (s *CachingDBVerifiedStore) daCheck(ctx context.Context, root [32]byte, blo
 	if len(notInDb) == 0 {
 		return nil
 	}
-	// Return an error that indicates which committed indices are not in the cache.
-	return NewMissingIndicesError(notInCache)
+
+	return cacheErr
 }
 
 // persisted populate the db cache, which contains a mapping from Index->KzgCommitment for BlobSidecars previously verified
 // (proof verification) and saved to the backend.
-func (s *CachingDBVerifiedStore) persisted(ctx context.Context, root [32]byte, entry *cacheEntry) (dbidx, error) {
+func (s *LazilyPersistentStore) persisted(ctx context.Context, root [32]byte, entry *cacheEntry) (dbidx, error) {
 	if entry.dbidxInitialized() {
 		return entry.dbidx(), nil
 	}

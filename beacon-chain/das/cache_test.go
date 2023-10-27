@@ -120,31 +120,3 @@ func generateMinimalBlobSidecars(n int) []*ethpb.BlobSidecar {
 	}
 	return scs
 }
-
-func TestEntryCacheSlice(t *testing.T) {
-	scs := generateMinimalBlobSidecars(6)
-	entry := &cacheEntry{}
-	require.Equal(t, true, entry.stash(scs[0]))
-	require.Equal(t, false, entry.stash(scs[0]))
-	missing, sc := entry.cacheSlice(0)
-	require.Equal(t, 0, len(missing))
-	require.Equal(t, 0, len(sc))
-	missing, sc = entry.cacheSlice(1)
-	require.Equal(t, 0, len(missing))
-	require.Equal(t, 1, len(sc))
-	missing, sc = entry.cacheSlice(6)
-	require.Equal(t, 5, len(missing))
-	require.Equal(t, 6, len(sc))
-	entry.stash(scs[1])
-	missing, sc = entry.cacheSlice(6)
-	require.Equal(t, 4, len(missing))
-	require.Equal(t, 6, len(sc))
-	entry.stash(scs[2])
-	missing, sc = entry.cacheSlice(6)
-	require.Equal(t, 3, len(missing))
-	entry.stash(scs[3])
-	entry.stash(scs[4])
-	entry.stash(scs[5])
-	missing, sc = entry.cacheSlice(6)
-	require.Equal(t, 0, len(missing))
-}

@@ -322,7 +322,7 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 			errParentDoesNotExist, first.Block().ParentRoot(), first.Block().Slot())
 	}
 	s.logBatchSyncStatus(genesis, first, len(bwb))
-	avs := das.NewCachingDBVerifiedStore(s.cfg.DB)
+	avs := das.NewLazilyPersistentStore(s.cfg.DB)
 	for _, bb := range bwb {
 		avs.PersistOnceCommitted(ctx, bb.Block.Block().Slot(), bb.Blobs...)
 	}
