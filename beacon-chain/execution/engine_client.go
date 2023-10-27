@@ -39,7 +39,6 @@ var (
 		ForkchoiceUpdatedMethodV2,
 		GetPayloadMethod,
 		GetPayloadMethodV2,
-		ExchangeTransitionConfigurationMethod,
 		GetPayloadBodiesByHashV1,
 		GetPayloadBodiesByRangeV1,
 	}
@@ -62,8 +61,6 @@ const (
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
 	GetPayloadMethodV3 = "engine_getPayloadV3"
-	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
-	ExchangeTransitionConfigurationMethod = "engine_exchangeTransitionConfigurationV1"
 	// BlockByHashMethod request string for JSON-RPC.
 	BlockByHashMethod = "eth_getBlockByHash"
 	// BlockByNumberMethod request string for JSON-RPC.
@@ -106,9 +103,6 @@ type EngineCaller interface {
 		ctx context.Context, state *pb.ForkchoiceState, attrs payloadattribute.Attributer,
 	) (*pb.PayloadIDBytes, []byte, error)
 	GetPayload(ctx context.Context, payloadId [8]byte, slot primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error)
-	ExchangeTransitionConfiguration(
-		ctx context.Context, cfg *pb.TransitionConfiguration,
-	) error
 	ExecutionBlockByHash(ctx context.Context, hash common.Hash, withTxs bool) (*pb.ExecutionBlock, error)
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
@@ -297,51 +291,6 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		return nil, nil, false, err
 	}
 	return ed, nil, false, nil
-}
-
-// ExchangeTransitionConfiguration calls the engine_exchangeTransitionConfigurationV1 method via JSON-RPC.
-func (s *Service) ExchangeTransitionConfiguration(
-	ctx context.Context, cfg *pb.TransitionConfiguration,
-) error {
-	ctx, span := trace.StartSpan(ctx, "powchain.engine-api-client.ExchangeTransitionConfiguration")
-	defer span.End()
-
-	// We set terminal block number to 0 as the parameter is not set on the consensus layer.
-	zeroBigNum := big.NewInt(0)
-	cfg.TerminalBlockNumber = zeroBigNum.Bytes()
-	d := time.Now().Add(defaultEngineTimeout)
-	ctx, cancel := context.WithDeadline(ctx, d)
-	defer cancel()
-	result := &pb.TransitionConfiguration{}
-	if err := s.rpcClient.CallContext(ctx, result, ExchangeTransitionConfigurationMethod, cfg); err != nil {
-		return handleRPCError(err)
-	}
-
-	// We surface an error to the user if local configuration settings mismatch
-	// according to the response from the execution node.
-	cfgTerminalHash := params.BeaconConfig().TerminalBlockHash[:]
-	if !bytes.Equal(cfgTerminalHash, result.TerminalBlockHash) {
-		return errors.Wrapf(
-			ErrConfigMismatch,
-			"got %#x from execution node, wanted %#x",
-			result.TerminalBlockHash,
-			cfgTerminalHash,
-		)
-	}
-	ttdCfg := params.BeaconConfig().TerminalTotalDifficulty
-	ttdResult, err := hexutil.DecodeBig(result.TerminalTotalDifficulty)
-	if err != nil {
-		return errors.Wrap(err, "could not decode received terminal total difficulty")
-	}
-	if ttdResult.String() != ttdCfg {
-		return errors.Wrapf(
-			ErrConfigMismatch,
-			"got %s from execution node, wanted %s",
-			ttdResult.String(),
-			ttdCfg,
-		)
-	}
-	return nil
 }
 
 func (s *Service) ExchangeCapabilities(ctx context.Context) ([]string, error) {
