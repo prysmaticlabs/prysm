@@ -89,7 +89,11 @@ func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddlewa
 	if resp.StatusCode != http.StatusOK {
 		errorJson := &apimiddleware.DefaultErrorJson{}
 		if err := decoder.Decode(errorJson); err != nil {
-			return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+			if resp.StatusCode == http.StatusNotFound {
+				errorJson = &apimiddleware.DefaultErrorJson{Code: http.StatusNotFound, Message: "Resource not found"}
+			} else {
+				return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+			}
 		}
 
 		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
