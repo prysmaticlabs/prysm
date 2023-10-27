@@ -11,8 +11,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi_evaluators",
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
-        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
+        "//beacon-chain/rpc/eth/debug:go_default_library",
         "//beacon-chain/rpc/eth/node:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",
         "//config/params:go_default_library",
