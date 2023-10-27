@@ -5,10 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	http2 "net/http"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	apimiddleware2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -504,6 +507,116 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 			BlindedDeneb: proto,
 		},
 		IsBlinded: true,
+	}
+
+	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
+}
+
+func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	proto := test_helpers.GenerateProtoBlindedDenebBeaconBlock()
+	block := test_helpers.GenerateJsonBlindedDenebBeaconBlock()
+
+	const slot = primitives.Slot(1)
+	randaoReveal := []byte{2}
+	graffiti := []byte{3}
+
+	ctx := context.Background()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&validator.ProduceBlockV3Response{},
+	).Return(
+		&apimiddleware.DefaultErrorJson{Code: http2.StatusNotFound},
+		errors.New("foo"),
+	).Times(1)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&apimiddleware2.ProduceBlindedBlockResponseJson{},
+	).SetArg(
+		2,
+		apimiddleware2.ProduceBlindedBlockResponseJson{
+			Version: "deneb",
+			Data:    &apimiddleware2.BlindedBeaconBlockContainerJson{DenebContents: block},
+		},
+	).Return(
+		nil,
+		nil,
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	require.NoError(t, err)
+
+	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
+		Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
+			BlindedDeneb: proto,
+		},
+		IsBlinded: true,
+	}
+
+	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
+}
+
+func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	proto := test_helpers.GenerateProtoDenebBeaconBlock()
+	block := test_helpers.GenerateJsonDenebBeaconBlock()
+
+	const slot = primitives.Slot(1)
+	randaoReveal := []byte{2}
+	graffiti := []byte{3}
+
+	ctx := context.Background()
+
+	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&validator.ProduceBlockV3Response{},
+	).Return(
+		&apimiddleware.DefaultErrorJson{Code: http2.StatusNotFound},
+		errors.New("foo"),
+	).Times(1)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&apimiddleware2.ProduceBlindedBlockResponseJson{},
+	).Return(
+		&apimiddleware.DefaultErrorJson{Code: http2.StatusInternalServerError},
+		errors.New("foo"),
+	).Times(1)
+	jsonRestHandler.EXPECT().GetRestJsonResponse(
+		ctx,
+		fmt.Sprintf("/eth/v2/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		&apimiddleware2.ProduceBlockResponseV2Json{},
+	).SetArg(
+		2,
+		apimiddleware2.ProduceBlockResponseV2Json{
+			Version: "deneb",
+			Data:    &apimiddleware2.BeaconBlockContainerV2Json{DenebContents: block},
+		},
+	).Return(
+		nil,
+		nil,
+	).Times(1)
+
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	require.NoError(t, err)
+
+	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
+		Block: &ethpb.GenericBeaconBlock_Deneb{
+			Deneb: proto,
+		},
+		IsBlinded: false,
 	}
 
 	assert.DeepEqual(t, expectedBeaconBlock, beaconBlock)
