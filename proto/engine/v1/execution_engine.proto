@@ -154,12 +154,6 @@ message ExecutionPayloadHeaderDeneb {
 	uint64 excess_blob_gas  = 17;
 }
 
-message TransitionConfiguration {
-	string terminal_total_difficulty = 1;
-	bytes terminal_block_hash        = 2;
-	bytes terminal_block_number      = 3;
-}
-
 message PayloadAttributes {
 	uint64 timestamp              = 1;
 	bytes prev_randao             = 2 [(ethereum.eth.ext.ssz_size) = "32"];
