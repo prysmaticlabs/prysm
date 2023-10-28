@@ -113,43 +113,16 @@ func BlindedDenebToV1Alpha1SignedBlock(denebBlk *ethpbv2.SignedBlindedBeaconBloc
 	return v1alpha1Block, nil
 }
 
-// SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs converts an array of v2 SignedBlindedBlobSidecar objects to its v1alpha1 equivalent.
-func SignedBlindedBlobsToV1Alpha1SignedBlindedBlobs(sidecars []*ethpbv2.SignedBlindedBlobSidecar) []*ethpbalpha.SignedBlindedBlobSidecar {
-	result := make([]*ethpbalpha.SignedBlindedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = &ethpbalpha.SignedBlindedBlobSidecar{
-			Message: &ethpbalpha.BlindedBlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				BlobRoot:        bytesutil.SafeCopyBytes(sc.Message.BlobRoot),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
-	}
-	return result
-}
-
 // SignedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlobSidecar objects to its v1alpha1 equivalent.
-func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlobSidecar) []*ethpbalpha.SignedBlobSidecar {
-	result := make([]*ethpbalpha.SignedBlobSidecar, len(sidecars))
+func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.BlobSidecar) []*ethpbalpha.BlobSidecar {
+	result := make([]*ethpbalpha.BlobSidecar, len(sidecars))
 	for i, sc := range sidecars {
-		result[i] = &ethpbalpha.SignedBlobSidecar{
-			Message: &ethpbalpha.BlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				Blob:            bytesutil.SafeCopyBytes(sc.Message.Blob),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
+		result[i] = &ethpbalpha.BlobSidecar{
+			Index:         sc.Index,
+			Blob:          bytesutil.SafeCopyBytes(sc.Blob),
+			KzgCommitment: bytesutil.SafeCopyBytes(sc.KzgCommitment),
+			KzgProof:      bytesutil.SafeCopyBytes(sc.KzgProof),
+			// TODO: add signed block header
 		}
 	}
 	return result

@@ -8,16 +8,14 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -55,12 +53,11 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, err
 	}
 
-	sBlob, ok := m.(*eth.SignedBlobSidecar)
+	blob, ok := m.(*eth.BlobSidecar)
 	if !ok {
 		log.WithField("message", m).Error("Message is not of type *eth.SignedBlobSidecar")
 		return pubsub.ValidationReject, errWrongMessage
 	}
-	blob := sBlob.Message
 
 	// [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `sidecar.index < MAX_BLOBS_PER_BLOCK`
 	if blob.Index >= fieldparams.MaxBlobsPerBlock {
@@ -75,28 +72,29 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
-	// [IGNORE] The sidecar is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance) --
-	// i.e. validate that sidecar.slot <= current_slot (a client MAY queue future blocks for processing at the appropriate slot).
+	// [IGNORE] The sidecar is not from a future slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance) -- i.e. validate that `block_header.slot <= current_slot`
+	// (a client MAY queue future sidecars for processing at the appropriate slot).
+	blockHeader := blob.SignedBlockHeader.Header
 	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
-	if err := slots.VerifyTime(genesisTime, blob.Slot, earlyBlockProcessingTolerance); err != nil {
+	if err := slots.VerifyTime(genesisTime, blockHeader.Slot, earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithFields(blobFields(blob)).Debug("Ignored blob: too far into future")
 		return pubsub.ValidationIgnore, errors.Wrap(err, "blob too far into future")
 	}
 
 	// [IGNORE] The sidecar is from a slot greater than the latest finalized slot --
-	// i.e. validate that sidecar.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
+	// i.e. validate that `block_header.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)`
 	startSlot, err := slots.EpochStart(s.cfg.chain.FinalizedCheckpt().Epoch)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if startSlot >= blob.Slot {
-		err := fmt.Errorf("finalized slot %d greater or equal to blob slot %d", startSlot, blob.Slot)
+	if startSlot >= blockHeader.Slot {
+		err := fmt.Errorf("finalized slot %d greater or equal to blob slot %d", startSlot, blockHeader.Slot)
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationIgnore, err
 	}
 
 	// Handle the parent status (not seen or invalid cases)
-	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
+	parentRoot := bytesutil.ToBytes32(blockHeader.ParentRoot)
 	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
 	case pubsub.ValidationIgnore:
 		log.WithFields(blobFields(blob)).Debug("Parent block not found - saving blob to cache")
@@ -105,7 +103,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()
-		s.pendingBlobSidecars.add(sBlob)
+		s.pendingBlobSidecars.add(blob)
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
 		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
@@ -113,7 +111,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	default:
 	}
 
-	pubsubResult, err := s.validateBlobPostSeenParent(ctx, sBlob)
+	pubsubResult, err := s.validateBlobPostSeenParent(ctx, blob)
 	if err != nil {
 		return pubsubResult, err
 	}
@@ -121,7 +119,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsubResult, nil
 	}
 
-	startTime, err := slots.ToTime(genesisTime, blob.Slot)
+	startTime, err := slots.ToTime(genesisTime, blob.SignedBlockHeader.Header.Slot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -133,44 +131,46 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
 
-	msg.ValidatorData = sBlob
+	msg.ValidatorData = blob
 
 	return pubsub.ValidationAccept, nil
 }
 
-func (s *Service) validateBlobPostSeenParent(ctx context.Context, sBlob *eth.SignedBlobSidecar) (pubsub.ValidationResult, error) {
-	blob := sBlob.Message
-	parentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
+func (s *Service) validateBlobPostSeenParent(ctx context.Context, blob *eth.BlobSidecar) (pubsub.ValidationResult, error) {
+	header := blob.SignedBlockHeader.Header
+	parentRoot := bytesutil.ToBytes32(header.ParentRoot)
 
 	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if parentSlot >= blob.Slot {
-		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", parentSlot, blob.Slot)
+	if parentSlot >= header.Slot {
+		err := fmt.Errorf("parent block slot %d greater or equal to blob slot %d", parentSlot, header.Slot)
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationReject, err
 	}
 
-	// [REJECT] The proposer signature, signed_blob_sidecar.signature,
-	// is valid with respect to the sidecar.proposer_index pubkey.
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, parentRoot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if err := verifyBlobSignature(parentState, sBlob); err != nil {
-		log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to verify blob signature")
+
+	// [REJECT] The proposer signature of `blob_sidecar.signed_block_header`, is valid with respect to the `block_header.proposer_index` pubkey.
+	if err := blocks.VerifyBlockSignature(parentState, header.ProposerIndex, blob.SignedBlockHeader.Signature, header.HashTreeRoot); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.block_root, sidecar.index).
-	if s.hasSeenBlobIndex(blob.BlockRoot, blob.Index) {
+	// TODO: The sidecar's inclusion proof is valid as verified by `verify_blob_sidecar_inclusion_proof`.
+
+	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index)
+	// with valid header signature and sidecar inclusion proof
+	if s.hasSeenBlobIndex(header.Slot, header.ProposerIndex, blob.Index) {
 		return pubsub.ValidationIgnore, nil
 	}
 
 	// [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot in the context of the current shuffling (defined by block_parent_root/slot)
-	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blob.Slot)
+	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], header.Slot)
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
@@ -178,69 +178,38 @@ func (s *Service) validateBlobPostSeenParent(ctx context.Context, sBlob *eth.Sig
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	if blob.ProposerIndex != idx {
-		err := fmt.Errorf("expected proposer index %d, got %d", idx, blob.ProposerIndex)
+	if header.ProposerIndex != idx {
+		err := fmt.Errorf("expected proposer index %d, got %d", idx, header.ProposerIndex)
 		log.WithFields(blobFields(blob)).Debug(err)
 		return pubsub.ValidationReject, err
 	}
 	return pubsub.ValidationAccept, nil
 }
 
-func verifyBlobSignature(st state.BeaconState, blob *eth.SignedBlobSidecar) error {
-	currentEpoch := slots.ToEpoch(blob.Message.Slot)
-	fork, err := forks.Fork(currentEpoch)
-	if err != nil {
-		return err
-	}
-	domain, err := signing.Domain(fork, currentEpoch, params.BeaconConfig().DomainBlobSidecar, st.GenesisValidatorsRoot())
-	if err != nil {
-		return err
-	}
-	proposer, err := st.ValidatorAtIndex(blob.Message.ProposerIndex)
-	if err != nil {
-		return err
-	}
-	pb, err := bls.PublicKeyFromBytes(proposer.PublicKey)
-	if err != nil {
-		return err
-	}
-	sig, err := bls.SignatureFromBytes(blob.Signature)
-	if err != nil {
-		return err
-	}
-	sr, err := signing.ComputeSigningRoot(blob.Message, domain)
-	if err != nil {
-		return err
-	}
-	if !sig.Verify(pb, sr[:]) {
-		return signing.ErrSigFailedToVerify
-	}
-
-	return nil
-}
-
 // Returns true if the blob with the same root and index has been seen before.
-func (s *Service) hasSeenBlobIndex(root []byte, index uint64) bool {
+func (s *Service) hasSeenBlobIndex(slot primitives.Slot, proposerIndex primitives.ValidatorIndex, index uint64) bool {
 	s.seenBlobLock.RLock()
 	defer s.seenBlobLock.RUnlock()
-	b := append(root, bytesutil.Bytes32(index)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIndex))...)
+	b = append(b, bytesutil.Bytes32(index)...)
 	_, seen := s.seenBlobCache.Get(string(b))
 	return seen
 }
 
 // Set blob index and root as seen.
-func (s *Service) setSeenBlobIndex(root []byte, index uint64) {
+func (s *Service) setSeenBlobIndex(slot primitives.Slot, proposerIndex primitives.ValidatorIndex, index uint64) {
 	s.seenBlobLock.Lock()
 	defer s.seenBlobLock.Unlock()
-	b := append(root, bytesutil.Bytes32(index)...)
+	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIndex))...)
+	b = append(b, bytesutil.Bytes32(index)...)
 	s.seenBlobCache.Add(string(b), true)
 }
 
 func blobFields(b *eth.BlobSidecar) logrus.Fields {
+	h := b.SignedBlockHeader.Header
 	return logrus.Fields{
-		"slot":          b.Slot,
-		"proposerIndex": b.ProposerIndex,
-		"blockRoot":     fmt.Sprintf("%#x", b.BlockRoot),
+		"slot":          h.Slot,
+		"proposerIndex": h.ProposerIndex,
 		"kzgCommitment": fmt.Sprintf("%#x", b.KzgCommitment),
 		"index":         b.Index,
 	}

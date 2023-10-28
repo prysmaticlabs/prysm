@@ -9,7 +9,6 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -19,11 +18,10 @@ import (
 
 type unblinder struct {
 	b       interfaces.SignedBeaconBlock
-	blobs   []*ethpb.SignedBlindedBlobSidecar
 	builder builder.BlockBuilder
 }
 
-func newUnblinder(b interfaces.SignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar, builder builder.BlockBuilder) (*unblinder, error) {
+func newUnblinder(b interfaces.SignedBeaconBlock, builder builder.BlockBuilder) (*unblinder, error) {
 	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
 		return nil, err
 	}
@@ -32,12 +30,11 @@ func newUnblinder(b interfaces.SignedBeaconBlock, blobs []*ethpb.SignedBlindedBl
 	}
 	return &unblinder{
 		b:       b,
-		blobs:   blobs,
 		builder: builder,
 	}, nil
 }
 
-func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, []*ethpb.SignedBlobSidecar, error) {
+func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedBeaconBlock, []*ethpb.BlobSidecar, error) {
 	if !u.b.IsBlinded() || u.b.Version() < version.Bellatrix {
 		return u.b, nil, nil
 	}
@@ -63,7 +60,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 	if err = sb.SetExecution(h); err != nil {
 		return nil, nil, errors.Wrap(err, "could not set execution")
 	}
-	payload, blobsBundle, err := u.builder.SubmitBlindedBlock(ctx, sb, u.blobs)
+	payload, blobsBundle, err := u.builder.SubmitBlindedBlock(ctx, sb)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not submit blinded block")
 	}
@@ -112,35 +109,21 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		"txs":          len(txs),
 	}).Info("Retrieved full payload from builder")
 
-	bundle, err := unblindBlobsSidecars(u.blobs, blobsBundle)
+	scs, err := unblindBlobsSidecars(blobsBundle)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not unblind blobs sidecars")
 	}
 
-	return wb, bundle, nil
+	return wb, scs, nil
 }
 
-func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundle *enginev1.BlobsBundle) ([]*ethpb.SignedBlobSidecar, error) {
+func unblindBlobsSidecars(bundle *enginev1.BlobsBundle) ([]*ethpb.BlobSidecar, error) {
 	if bundle == nil {
 		return nil, nil
 	}
 
-	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
-	for i, b := range blindSidecars {
-		sidecars[i] = &ethpb.SignedBlobSidecar{
-			Message: &ethpb.BlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlockRoot),
-				Index:           b.Message.Index,
-				Slot:            b.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(b.Message.BlockParentRoot),
-				ProposerIndex:   b.Message.ProposerIndex,
-				Blob:            bytesutil.SafeCopyBytes(bundle.Blobs[i]),
-				KzgCommitment:   bytesutil.SafeCopyBytes(b.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(b.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(b.Signature),
-		}
-	}
+	sidecars := make([]*ethpb.BlobSidecar, len(bundle.Blobs))
+	// TODO: Fix validator
 	return sidecars, nil
 }
 

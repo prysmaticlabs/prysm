@@ -63,7 +63,10 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 	defer span.End()
 
 	first := scs[0]
-	newKey := blobSidecarKey(first)
+	newKey, err := blobSidecarKey(first)
+	if err != nil {
+		return err
+	}
 	prefix := newKey.BufferPrefix()
 	var prune []blobRotatingKey
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -74,18 +77,23 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 		for k, v := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, v = c.Next() {
 			key := blobRotatingKey(k)
 			ks := key.Slot()
-			if ks < first.Slot {
+			header := first.SignedBlockHeader.Header
+			if ks < header.Slot {
 				// Mark older blobs at the same position of the ring buffer for deletion.
 				prune = append(prune, key)
 				continue
 			}
-			if ks > first.Slot {
+			if ks > first.SignedBlockHeader.Header.Slot {
 				// We shouldn't be overwriting newer blobs with older blobs. Something is wrong.
 				return errNewerBlobExists
 			}
 			// The slot isn't older or newer, so it must be equal.
 			// If the roots match, then we want to merge the new sidecars with the existing data.
-			if bytes.Equal(first.BlockRoot, key.BlockRoot()) {
+			headerRoot, err := header.HashTreeRoot()
+			if err != nil {
+				return err
+			}
+			if bytes.Equal(headerRoot[:], key.BlockRoot()) {
 				existing = v
 				if err := decode(ctx, v, sc); err != nil {
 					return err
@@ -134,20 +142,19 @@ func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 	}
 
 	prev := scs[0]
+	prevHeader := prev.SignedBlockHeader.Header
 	didx := 1
 	for i := 1; i < len(scs); i++ {
 		sc := scs[i]
-		if sc.Slot != prev.Slot {
-			return nil, errors.Wrapf(errBlobSlotMismatch, "%d != %d", sc.Slot, prev.Slot)
+		header := sc.SignedBlockHeader.Header
+		if header.Slot != prevHeader.Slot {
+			return nil, errors.Wrapf(errBlobSlotMismatch, "%d != %d", header.Slot, prevHeader.Slot)
 		}
-		if !bytes.Equal(sc.BlockParentRoot, prev.BlockParentRoot) {
-			return nil, errors.Wrapf(errBlobParentMismatch, "%x != %x", sc.BlockParentRoot, prev.BlockParentRoot)
+		if !bytes.Equal(header.ParentRoot, prevHeader.ParentRoot) {
+			return nil, errors.Wrapf(errBlobParentMismatch, "%x != %x", header.ParentRoot, prevHeader.ParentRoot)
 		}
-		if !bytes.Equal(sc.BlockRoot, prev.BlockRoot) {
-			return nil, errors.Wrapf(errBlobRootMismatch, "%x != %x", sc.BlockRoot, prev.BlockRoot)
-		}
-		if sc.ProposerIndex != prev.ProposerIndex {
-			return nil, errors.Wrapf(errBlobProposerMismatch, "%d != %d", sc.ProposerIndex, prev.ProposerIndex)
+		if header.ProposerIndex != prevHeader.ProposerIndex {
+			return nil, errors.Wrapf(errBlobProposerMismatch, "%d != %d", header.ProposerIndex, prevHeader.ProposerIndex)
 		}
 		// skip duplicate
 		if sc.Index == prev.Index {
@@ -157,6 +164,7 @@ func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 			scs[didx] = scs[i]
 		}
 		prev = scs[i]
+		prevHeader = prev.SignedBlockHeader.Header
 		didx += 1
 	}
 
@@ -281,11 +289,16 @@ func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte
 
 // We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
-func blobSidecarKey(blob *ethpb.BlobSidecar) blobRotatingKey {
-	key := slotKey(blob.Slot)
-	key = append(key, bytesutil.SlotToBytesBigEndian(blob.Slot)...)
-	key = append(key, blob.BlockRoot...)
-	return key
+func blobSidecarKey(blob *ethpb.BlobSidecar) (blobRotatingKey, error) {
+	header := blob.SignedBlockHeader.Header
+	key := slotKey(header.Slot)
+	key = append(key, bytesutil.SlotToBytesBigEndian(header.Slot)...)
+	root, err := header.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	key = append(key, root[:]...)
+	return key, nil
 }
 
 func slotKey(slot types.Slot) []byte {

@@ -83,14 +83,17 @@ func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockD
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
 	sc := &ethpb.BlobSidecar{
-		BlockRoot:       root[:],
-		Index:           uint64(index),
-		Slot:            block.Block.Slot,
-		BlockParentRoot: block.Block.ParentRoot,
-		ProposerIndex:   block.Block.ProposerIndex,
-		Blob:            blob,
-		KzgCommitment:   commitment,
-		KzgProof:        commitment,
+		SignedBlockHeader: &ethpb.SignedBeaconBlockHeader{
+			Header: &ethpb.BeaconBlockHeader{
+				Slot:          block.Block.Slot,
+				ParentRoot:    block.Block.ParentRoot,
+				ProposerIndex: block.Block.ProposerIndex,
+			},
+		},
+		Index:         uint64(index),
+		Blob:          blob,
+		KzgCommitment: commitment,
+		KzgProof:      commitment,
 	}
 	return sc
 }

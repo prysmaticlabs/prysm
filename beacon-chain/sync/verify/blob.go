@@ -37,34 +37,21 @@ func BlobAlignsWithBlock(blob *ethpb.BlobSidecar, block blocks.ROBlock) error {
 		return errors.Wrapf(ErrIncorrectBlobIndex, "blob index %d >= max blobs per block %d", blob.Index, field_params.MaxBlobsPerBlock)
 	}
 
-	// Verify slot
-	blobSlot := blob.Slot
-	blockSlot := block.Block().Slot()
-	if blobSlot != blockSlot {
-		return errors.Wrapf(ErrMismatchedBlobBlockSlot, "slot %d != BlobSidecar.Slot %d", blockSlot, blobSlot)
+	header := blob.SignedBlockHeader
+	headerRoot, err := header.Header.HashTreeRoot()
+	if err != nil {
+		return err
 	}
-
 	// Verify block and parent roots
-	blockRoot := bytesutil.ToBytes32(blob.BlockRoot)
-	if blockRoot != block.Root() {
-		return errors.Wrapf(ErrMismatchedBlobBlockRoot, "block root %#x != BlobSidecar.BlockRoot %#x at slot %d", block.Root(), blockRoot, blobSlot)
-	}
-
-	blockParentRoot := bytesutil.ToBytes32(blob.BlockParentRoot)
-	if blockParentRoot != block.Block().ParentRoot() {
-		return errors.Wrapf(ErrMismatchedBlobBlockRoot, "block parent root %#x != BlobSidecar.BlockParentRoot %#x at slot %d", block.Block().ParentRoot(), blockParentRoot, blobSlot)
-	}
-
-	// Verify proposer index
-	if blob.ProposerIndex != block.Block().ProposerIndex() {
-		return errors.Wrapf(ErrMismatchedProposerIndex, "proposer index %d != BlobSidecar.ProposerIndex %d at slot %d", block.Block().ProposerIndex(), blob.ProposerIndex, blobSlot)
+	if headerRoot != block.Root() {
+		return errors.Wrapf(ErrMismatchedBlobBlockRoot, "block root %#x != BlobSidecar.BlockRoot %#x at slot %d", block.Root(), headerRoot, header.Header.Slot)
 	}
 
 	// Verify commitment
 	blockCommitment := bytesutil.ToBytes48(commits[blob.Index])
 	blobCommitment := bytesutil.ToBytes48(blob.KzgCommitment)
 	if blobCommitment != blockCommitment {
-		return errors.Wrapf(ErrMismatchedBlobCommitments, "commitment %#x != block commitment %#x, at index %d for block root %#x at slot %d ", blobCommitment, blockCommitment, blob.Index, blockRoot, blobSlot)
+		return errors.Wrapf(ErrMismatchedBlobCommitments, "commitment %#x != block commitment %#x, at index %d for block root %#x at slot %d ", blobCommitment, blockCommitment, blob.Index, headerRoot, header.Header.Slot)
 	}
 
 	return nil

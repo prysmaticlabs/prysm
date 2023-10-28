@@ -58,5 +58,5 @@ type BLSToExecutionChangeReceivedData struct {
 
 // BlobSidecarReceivedData is the data sent with BlobSidecarReceived events.
 type BlobSidecarReceivedData struct {
-	Blob *ethpb.SignedBlobSidecar
+	Blob *ethpb.BlobSidecar
 }

@@ -22,7 +22,6 @@ type SignedBid interface {
 // Bid is an interface describing the method set of a builder bid.
 type Bid interface {
 	Header() (interfaces.ExecutionData, error)
-	BlindedBlobsBundle() (*enginev1.BlindedBlobsBundle, error)
 	Value() []byte
 	Pubkey() []byte
 	Version() int

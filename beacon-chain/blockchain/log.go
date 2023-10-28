@@ -152,10 +152,16 @@ func logBlobSidecar(scs []*ethpb.BlobSidecar, startTime time.Time) {
 	if len(scs) == 0 {
 		return
 	}
+	header := scs[0].SignedBlockHeader.Header
+	blockRoot, err := header.HashTreeRoot()
+	if err != nil {
+		log.WithError(err).Error("Failed to get block root")
+		return
+	}
 	log.WithFields(logrus.Fields{
 		"count":          len(scs),
-		"slot":           scs[0].Slot,
-		"block":          hex.EncodeToString(scs[0].BlockRoot),
+		"slot":           header.Slot,
+		"block":          hex.EncodeToString(blockRoot[:]),
 		"validationTime": time.Since(startTime),
 	}).Debug("Synced new blob sidecars")
 }

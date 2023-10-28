@@ -129,56 +129,6 @@ func V1Alpha1BlindedBlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlindedBlobSide
 	return v2Blobs, nil
 }
 
-// V1Alpha1SignedBlindedBlobSidecarsToV2 converts an array of v1alpha1 objects to its v2 SignedBlindedBlobSidecar equivalent.
-func V1Alpha1SignedBlindedBlobSidecarsToV2(sidecars []*ethpbalpha.SignedBlindedBlobSidecar) []*ethpbv2.SignedBlindedBlobSidecar {
-	result := make([]*ethpbv2.SignedBlindedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = &ethpbv2.SignedBlindedBlobSidecar{
-			Message: &ethpbv2.BlindedBlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				BlobRoot:        bytesutil.SafeCopyBytes(sc.Message.BlobRoot),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
-	}
-	return result
-}
-
-// V1Alpha1SignedBlobsToV2 converts an array of v1alpha1 objects to its v2 SignedBlobSidecar equivalent.
-func V1Alpha1SignedBlobsToV2(sidecars []*ethpbalpha.SignedBlobSidecar) []*ethpbv2.SignedBlobSidecar {
-	result := make([]*ethpbv2.SignedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = V1Alpha1SignedBlobToV2(sc)
-	}
-	return result
-}
-
-// V1Alpha1SignedBlobToV2 converts a v1alpha1 object to its v2 SignedBlobSidecar equivalent.
-func V1Alpha1SignedBlobToV2(sidecar *ethpbalpha.SignedBlobSidecar) *ethpbv2.SignedBlobSidecar {
-	if sidecar == nil || sidecar.Message == nil {
-		return &ethpbv2.SignedBlobSidecar{}
-	}
-	return &ethpbv2.SignedBlobSidecar{
-		Message: &ethpbv2.BlobSidecar{
-			BlockRoot:       bytesutil.SafeCopyBytes(sidecar.Message.BlockRoot),
-			Index:           sidecar.Message.Index,
-			Slot:            sidecar.Message.Slot,
-			BlockParentRoot: bytesutil.SafeCopyBytes(sidecar.Message.BlockParentRoot),
-			ProposerIndex:   sidecar.Message.ProposerIndex,
-			Blob:            bytesutil.SafeCopyBytes(sidecar.Message.Blob),
-			KzgCommitment:   bytesutil.SafeCopyBytes(sidecar.Message.KzgCommitment),
-			KzgProof:        bytesutil.SafeCopyBytes(sidecar.Message.KzgProof),
-		},
-		Signature: bytesutil.SafeCopyBytes(sidecar.Signature),
-	}
-}
-
 // V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
 // Deneb block.
 func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockAndBlobsDeneb) (*ethpbv2.BeaconBlockContentsDeneb, error) {
@@ -200,7 +150,10 @@ func V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.Signed
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert block")
 	}
-	v2Blobs := V1Alpha1SignedBlobsToV2(v1alpha1Block.Blobs)
+	v2Blobs, err := V1Alpha1BlobSidecarsToV2(v1alpha1Block.Blobs)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not convert blobs")
+	}
 	return &ethpbv2.SignedBeaconBlockContentsDeneb{
 		SignedBlock:        v2Block,
 		SignedBlobSidecars: v2Blobs,
@@ -278,15 +231,8 @@ func V1Alpha1BlindedBlockAndBlobsDenebToV2Blinded(
 func V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(
 	v1Alpha1BlkAndBlobs *ethpbalpha.SignedBlindedBeaconBlockAndBlobsDeneb,
 ) (*ethpbv2.SignedBlindedBeaconBlockContentsDeneb, error) {
-	v2Block, err := V1Alpha1SignedBeaconBlockBlindedDenebToV2Blinded(v1Alpha1BlkAndBlobs.SignedBlindedBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	v2Blobs := V1Alpha1SignedBlindedBlobSidecarsToV2(v1Alpha1BlkAndBlobs.SignedBlindedBlobSidecars)
-	return &ethpbv2.SignedBlindedBeaconBlockContentsDeneb{
-		SignedBlindedBlock:        v2Block,
-		SignedBlindedBlobSidecars: v2Blobs,
-	}, nil
+	// TODO: Blob is no longer required
+	return nil, nil
 }
 
 // V1Alpha1BeaconBlockBellatrixToV2Blinded converts a v1alpha1 Bellatrix beacon block to a v2

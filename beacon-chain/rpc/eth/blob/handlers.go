@@ -146,14 +146,11 @@ func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
 	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		resp.Data[i] = &Sidecar{
-			BlockRoot:       hexutil.Encode(sc.BlockRoot),
-			Index:           strconv.FormatUint(sc.Index, 10),
-			Slot:            strconv.FormatUint(uint64(sc.Slot), 10),
-			BlockParentRoot: hexutil.Encode(sc.BlockParentRoot),
-			ProposerIndex:   strconv.FormatUint(uint64(sc.ProposerIndex), 10),
-			Blob:            hexutil.Encode(sc.Blob),
-			KZGCommitment:   hexutil.Encode(sc.KzgCommitment),
-			KZGProof:        hexutil.Encode(sc.KzgProof),
+			Index:         strconv.FormatUint(sc.Index, 10),
+			Blob:          hexutil.Encode(sc.Blob),
+			KZGCommitment: hexutil.Encode(sc.KzgCommitment),
+			KZGProof:      hexutil.Encode(sc.KzgProof),
+			// TODO: Add block header
 		}
 	}
 	return resp

@@ -8,11 +8,8 @@ import (
 // HydrateBlobSidecar hydrates a blob sidecar with correct field length sizes
 // to comply with SSZ marshalling and unmarshalling rules.
 func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
-	if b.BlockRoot == nil {
-		b.BlockRoot = make([]byte, fieldparams.RootLength)
-	}
-	if b.BlockParentRoot == nil {
-		b.BlockParentRoot = make([]byte, fieldparams.RootLength)
+	if b.SignedBlockHeader == nil {
+		b.SignedBlockHeader = HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{})
 	}
 	if b.Blob == nil {
 		b.Blob = make([]byte, fieldparams.BlobLength)
@@ -26,24 +23,11 @@ func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
 	return b
 }
 
-// HydrateSignedBlindedBlobSidecar hydrates a signed blinded blob sidecar with correct field length sizes
-// to comply with SSZ marshalling and unmarshalling rules.
-func HydrateSignedBlindedBlobSidecar(b *ethpb.SignedBlindedBlobSidecar) *ethpb.SignedBlindedBlobSidecar {
-	if b.Signature == nil {
-		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
-	}
-	b.Message = HydrateBlindedBlobSidecar(b.Message)
-	return b
-}
-
 // HydrateBlindedBlobSidecar hydrates a blinded blob sidecar with correct field length sizes
 // to comply with SSZ marshalling and unmarshalling rules.
 func HydrateBlindedBlobSidecar(b *ethpb.BlindedBlobSidecar) *ethpb.BlindedBlobSidecar {
-	if b.BlockRoot == nil {
-		b.BlockRoot = make([]byte, fieldparams.RootLength)
-	}
-	if b.BlockParentRoot == nil {
-		b.BlockParentRoot = make([]byte, fieldparams.RootLength)
+	if b.SignedBlockHeader == nil {
+		b.SignedBlockHeader = HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{})
 	}
 	if b.KzgCommitment == nil {
 		b.KzgCommitment = make([]byte, fieldparams.BLSPubkeyLength)

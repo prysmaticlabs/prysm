@@ -18,6 +18,10 @@ func (s *Service) ReceiveBlob(ctx context.Context, b *ethpb.BlobSidecar) error {
 		return err
 	}
 
-	s.sendNewBlobEvent([32]byte(b.BlockRoot), b.Index)
+	headerRoot, err := b.SignedBlockHeader.Header.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	s.sendNewBlobEvent(headerRoot, b.Index)
 	return nil
 }

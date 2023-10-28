@@ -75,7 +75,7 @@ func (s *Service) processBlobsFromSidecars(ctx context.Context, parentRoot [32]b
 }
 
 // receiveBlob validates and processes a blob.
-func (s *Service) receiveBlob(ctx context.Context, blob *eth.SignedBlobSidecar) error {
+func (s *Service) receiveBlob(ctx context.Context, blob *eth.BlobSidecar) error {
 	result, err := s.validateBlobPostSeenParent(ctx, blob)
 	if err != nil {
 		return err
@@ -83,12 +83,12 @@ func (s *Service) receiveBlob(ctx context.Context, blob *eth.SignedBlobSidecar) 
 	if result != pubsub.ValidationAccept {
 		return fmt.Errorf("unexpected pubsub result: %d", result)
 	}
-	return s.cfg.chain.ReceiveBlob(ctx, blob.Message)
+	return s.cfg.chain.ReceiveBlob(ctx, blob)
 }
 
 // blobWithExpiration holds blobs with an expiration time.
 type blobWithExpiration struct {
-	blob      []*eth.SignedBlobSidecar
+	blob      []*eth.BlobSidecar
 	expiresAt time.Time
 }
 
@@ -106,29 +106,30 @@ func newPendingBlobSidecars() *pendingBlobSidecars {
 }
 
 // add adds a new blob to the cache.
-func (p *pendingBlobSidecars) add(blob *eth.SignedBlobSidecar) {
+func (p *pendingBlobSidecars) add(blob *eth.BlobSidecar) {
 	p.Lock()
 	defer p.Unlock()
-	parentRoot := bytesutil.ToBytes32(blob.Message.BlockParentRoot)
+	header := blob.SignedBlockHeader.Header
+	parentRoot := bytesutil.ToBytes32(header.ParentRoot)
 	expirationTime := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	if existing, exists := p.blobSidecars[parentRoot]; exists {
 		for _, sidecar := range existing.blob {
-			if sidecar.Message.Index == blob.Message.Index {
+			if sidecar.Index == blob.Index {
 				return // Ignore duplicate blob index
 			}
 		}
 		existing.blob = append(existing.blob, blob)
 	} else {
 		p.blobSidecars[parentRoot] = &blobWithExpiration{
-			blob:      []*eth.SignedBlobSidecar{blob},
+			blob:      []*eth.BlobSidecar{blob},
 			expiresAt: expirationTime,
 		}
 	}
 }
 
 // pop removes and returns blobs for a given parent root.
-func (p *pendingBlobSidecars) pop(parentRoot [32]byte) []*eth.SignedBlobSidecar {
+func (p *pendingBlobSidecars) pop(parentRoot [32]byte) []*eth.BlobSidecar {
 	p.Lock()
 	defer p.Unlock()
 	blobs, exists := p.blobSidecars[parentRoot]

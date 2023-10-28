@@ -11,14 +11,15 @@ import (
 )
 
 func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
-	b, ok := msg.(*eth.SignedBlobSidecar)
+	b, ok := msg.(*eth.BlobSidecar)
 	if !ok {
 		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)
 	}
 
-	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
+	h := b.SignedBlockHeader.Header
+	s.setSeenBlobIndex(h.Slot, h.ProposerIndex, b.Index)
 
-	if err := s.cfg.chain.ReceiveBlob(ctx, b.Message); err != nil {
+	if err := s.cfg.chain.ReceiveBlob(ctx, b); err != nil {
 		return err
 	}
 

@@ -17,7 +17,6 @@ package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
-import "proto/prysm/v1alpha1/blobs.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
 
@@ -49,10 +48,10 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
         // Representing a signed, post-Deneb fork beacon block content.
-        SignedBeaconBlockAndBlobsDeneb deneb  = 7;
+        SignedBeaconBlockDeneb deneb  = 7;
 
         // Representing a signed, post-Deneb fork blinded beacon block content.
-        SignedBlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
+        SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
     uint64 payload_value = 101;
@@ -79,10 +78,10 @@ message GenericBeaconBlock {
         BlindedBeaconBlockCapella blinded_capella = 6;
 
         // Representing a signed, post-Deneb fork beacon block content.
-        BeaconBlockAndBlobsDeneb deneb  = 7;
+        BeaconBlockDeneb deneb  = 7;
 
         // Representing a signed, post-Deneb fork blinded beacon block content.
-        BlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
+        BlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
     uint64 payload_value = 101;
@@ -453,22 +452,12 @@ message BlindedBeaconBlockBodyBellatrix {
     ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
-message SignedBeaconBlockAndBlobsDeneb {
-    SignedBeaconBlockDeneb block = 1;
-    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
 message SignedBeaconBlockDeneb {
     // The unsigned beacon block itself.
     BeaconBlockDeneb block = 1;
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
-message BeaconBlockAndBlobsDeneb {
-    BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BeaconBlockDeneb {
@@ -654,16 +643,6 @@ message BlindedBeaconBlockBodyCapella {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
-message SignedBlindedBeaconBlockAndBlobsDeneb {
-    SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
-    repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
-message BlindedBeaconBlockAndBlobsDeneb {
-    BlindedBeaconBlockDeneb block = 1;
-    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
 message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.
     BlindedBeaconBlockDeneb message = 1;
@@ -777,3 +756,33 @@ message SignedBuilderBidDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message BlobSidecar {
+    uint64 index = 1;
+    bytes blob = 2 [(ethereum.eth.ext.ssz_size) = "blob.size"];
+    bytes kzg_commitment = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes kzg_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    SignedBeaconBlockHeader signed_block_header = 5;
+    repeated bytes commitment_inclusion_proof = 6  [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "kzg_commitment_inclusion_proof_depth.size"];
+}
+
+message BlindedBlobSidecars {
+    repeated BlindedBlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
+}
+
+message BlindedBlobSidecar {
+    uint64 index = 1;
+    bytes blob_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
+    bytes kzg_commitment = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes kzg_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    SignedBeaconBlockHeader signed_block_header = 5;
+    repeated bytes commitment_inclusion_proof = 6  [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "kzg_commitment_inclusion_proof_depth.size"];
+}
+
+message BlobIdentifier {
+    bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+    uint64 index = 2;
+}
+
+message BlobSidecars {
+    repeated BlobSidecar sidecars = 1;
+}
