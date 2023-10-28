@@ -19,10 +19,6 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		bs := &BlobStorage{baseDir: tempDir}
 		err := bs.SaveBlobData([]*ethpb.BlobSidecar{})
 		require.ErrorContains(t, "no blob data to save", err)
-		t.Cleanup(func() {
-			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
-			require.NoError(t, err)
-		})
 	})
 	t.Run("BlobExists", func(t *testing.T) {
 		tempDir := t.TempDir()
@@ -48,10 +44,6 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		content, err := os.ReadFile(blobPath)
 		require.NoError(t, err)
 		require.Equal(t, "Test Blob Data 1", string(content))
-		t.Cleanup(func() {
-			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
-			require.NoError(t, err)
-		})
 	})
 	t.Run("SaveBlobDataNoErrors", func(t *testing.T) {
 		tempDir := t.TempDir()
@@ -73,10 +65,6 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 			require.NotNil(t, sidecar)
 			require.Equal(t, string(sidecar.Blob), string(content))
 		}
-		t.Cleanup(func() {
-			err = os.RemoveAll(tempDir) // Clean up the temporary directory.
-			require.NoError(t, err)
-		})
 	})
 }
 
