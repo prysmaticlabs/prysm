@@ -7,11 +7,13 @@ import (
 
 var errNilBlockHeader = errors.New("received nil beacon block header")
 
+// ROBlob represents a read-only blob sidecar with its block root.
 type ROBlob struct {
 	*ethpb.BlobSidecar
 	root [32]byte
 }
 
+// NewROBlobWithRoot creates a new ROBlob with a given root.
 func NewROBlobWithRoot(b *ethpb.BlobSidecar, root [32]byte) (ROBlob, error) {
 	if b == nil {
 		return ROBlob{}, errNilBlock
@@ -19,6 +21,7 @@ func NewROBlobWithRoot(b *ethpb.BlobSidecar, root [32]byte) (ROBlob, error) {
 	return ROBlob{BlobSidecar: b, root: root}, nil
 }
 
+// NewROBlob creates a new ROBlob by computing the HashTreeRoot of the header.
 func NewROBlob(b *ethpb.BlobSidecar) (ROBlob, error) {
 	if b == nil {
 		return ROBlob{}, errNilBlock
@@ -31,4 +34,9 @@ func NewROBlob(b *ethpb.BlobSidecar) (ROBlob, error) {
 		return ROBlob{}, err
 	}
 	return ROBlob{BlobSidecar: b, root: root}, nil
+}
+
+// BlockRoot returns the root of the block.
+func (b *ROBlob) BlockRoot() [32]byte {
+	return b.root
 }
