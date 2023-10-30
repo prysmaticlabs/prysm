@@ -52,7 +52,7 @@ func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 
 func Test_theOrderOfVersionNamesOutPutIsFixed(t *testing.T) {
 	versionsOld, versionMapOld := version.CreateVersions()
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 100; i++ {
 		versionsNew, versionMapNew := version.CreateVersions()
 		assert.DeepEqual(t, versionsNew, versionsOld)
 		assert.DeepEqual(t, versionMapNew, versionMapOld)
