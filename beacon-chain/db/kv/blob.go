@@ -55,7 +55,7 @@ func (rk blobRotatingKey) BlockRoot() []byte {
 //  3. Begin the save algorithm:  If the incoming blob has a slot bigger than the saved slot at the spot
 //     in the rotating keys buffer, we overwrite all elements for that slot. Otherwise, we merge the blob with an existing one.
 //     Trying to replace a newer blob with an older one is an error.
-func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) error {
+func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.DeprecatedBlobSidecar) error {
 	if len(scs) == 0 {
 		return errEmptySidecar
 	}
@@ -123,7 +123,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.BlobSidecar) e
 
 // validUniqueSidecars ensures that all sidecars have the same slot, parent root, block root, and proposer index, and
 // there are no more than MAX_BLOBS_PER_BLOCK sidecars.
-func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
+func validUniqueSidecars(scs []*ethpb.DeprecatedBlobSidecar) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	if len(scs) == 0 {
 		return nil, errEmptySidecar
 	}
@@ -167,7 +167,7 @@ func validUniqueSidecars(scs []*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 }
 
 // sortSidecars sorts the sidecars by their index.
-func sortSidecars(scs []*ethpb.BlobSidecar) {
+func sortSidecars(scs []*ethpb.DeprecatedBlobSidecar) {
 	sort.Slice(scs, func(i, j int) bool {
 		return scs[i].Index < scs[j].Index
 	})
@@ -178,7 +178,7 @@ func sortSidecars(scs []*ethpb.BlobSidecar) {
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
 // The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
-func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
+func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsByRoot")
 	defer span.End()
 
@@ -207,7 +207,7 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices .
 	return filterForIndices(sc, indices...)
 }
 
-func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
+func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	if len(indices) == 0 {
 		return sc.Sidecars, nil
 	}
@@ -215,7 +215,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 	// in ascending order from eg 0..3, without gaps. This allows us to assume the indices argument
 	// maps 1:1 with indices in the BlobSidecars storage object.
 	maxIdx := uint64(len(sc.Sidecars)) - 1
-	sidecars := make([]*ethpb.BlobSidecar, len(indices))
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(indices))
 	for i, idx := range indices {
 		if idx > maxIdx {
 			return nil, errors.Wrapf(ErrNotFound, "BlobSidecars missing index: index %d", idx)
@@ -230,7 +230,7 @@ func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobS
 // Otherwise, the result will be filtered to only include the specified indices.
 // An error will result if an invalid index is specified.
 // The bucket size is bounded by 131072 entries. That's the most blobs a node will keep before rotating it out.
-func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
+func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobSidecarsBySlot")
 	defer span.End()
 
@@ -281,7 +281,7 @@ func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte
 
 // We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
-func blobSidecarKey(blob *ethpb.BlobSidecar) blobRotatingKey {
+func blobSidecarKey(blob *ethpb.DeprecatedBlobSidecar) blobRotatingKey {
 	key := slotKey(blob.Slot)
 	key = append(key, bytesutil.SlotToBytesBigEndian(blob.Slot)...)
 	key = append(key, blob.BlockRoot...)

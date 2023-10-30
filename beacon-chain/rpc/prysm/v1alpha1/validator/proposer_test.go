@@ -715,10 +715,10 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
 					Block: blockToPropose,
 					Blobs: []*ethpb.SignedBlobSidecar{
-						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
 					},
 				}}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
@@ -734,13 +734,13 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
 					Block: blockToPropose,
 					Blobs: []*ethpb.SignedBlobSidecar{
-						{Message: &ethpb.BlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 5, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.BlobSidecar{Index: 6, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 5, Slot: 5, BlockParentRoot: parent[:]}},
+						{Message: &ethpb.DeprecatedBlobSidecar{Index: 6, Slot: 5, BlockParentRoot: parent[:]}},
 					},
 				}}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
@@ -2857,9 +2857,9 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 
 func Test_extractBlobs(t *testing.T) {
 	blobs := []*ethpb.SignedBlobSidecar{
-		{Message: &ethpb.BlobSidecar{Index: 0}}, {Message: &ethpb.BlobSidecar{Index: 1}},
-		{Message: &ethpb.BlobSidecar{Index: 2}}, {Message: &ethpb.BlobSidecar{Index: 3}},
-		{Message: &ethpb.BlobSidecar{Index: 4}}, {Message: &ethpb.BlobSidecar{Index: 5}}}
+		{Message: &ethpb.DeprecatedBlobSidecar{Index: 0}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 1}},
+		{Message: &ethpb.DeprecatedBlobSidecar{Index: 2}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 3}},
+		{Message: &ethpb.DeprecatedBlobSidecar{Index: 4}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 5}}}
 	req := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Deneb{
 		Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
 			Blobs: blobs,

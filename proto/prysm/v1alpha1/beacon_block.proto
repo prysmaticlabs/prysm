@@ -468,7 +468,7 @@ message SignedBeaconBlockDeneb {
 
 message BeaconBlockAndBlobsDeneb {
     BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
+    repeated DeprecatedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BeaconBlockDeneb {
