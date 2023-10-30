@@ -229,7 +229,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < len(req.Pubkeys); i++ {
 			sts[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusError,
-				Message: "Non duplicate keys that were existing were deleted, but could not export slashing protection history",
+				Message: "Could not export slashing protection history as existing non duplicate keys were deleted",
 			}
 		}
 		http2.WriteJson(w, &DeleteKeystoresResponse{Data: sts})
