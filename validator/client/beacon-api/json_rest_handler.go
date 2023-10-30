@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -88,14 +89,25 @@ func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddlewa
 	if resp.StatusCode != http.StatusOK {
 		errorJson := &apimiddleware.DefaultErrorJson{}
 		if err := decoder.Decode(errorJson); err != nil {
-			return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+			if resp.StatusCode == http.StatusNotFound {
+				errorJson = &apimiddleware.DefaultErrorJson{Code: http.StatusNotFound, Message: "Resource not found"}
+			} else {
+				remaining, readErr := io.ReadAll(decoder.Buffered())
+				if readErr == nil {
+					log.Debugf("Undecoded value: %s", string(remaining))
+				}
+				return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
+			}
 		}
-
 		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
 	}
 
 	if responseJson != nil {
 		if err := decoder.Decode(responseJson); err != nil {
+			remaining, readErr := io.ReadAll(decoder.Buffered())
+			if readErr == nil {
+				log.Debugf("Undecoded value: %s", string(remaining))
+			}
 			return nil, errors.Wrapf(err, "failed to decode response json for %s", resp.Request.URL)
 		}
 	}
