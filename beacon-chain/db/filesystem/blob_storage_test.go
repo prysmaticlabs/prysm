@@ -58,15 +58,30 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, len(testSidecars), len(files))
 
-		for _, file := range files {
-			content, err := os.ReadFile(path.Join(tempDir, file.Name()))
+		for _, f := range files {
+			content, err := os.ReadFile(path.Join(tempDir, f.Name()))
 			require.NoError(t, err)
 
 			// Find the corresponding test sidecar based on the file name.
-			sidecar := findTestSidecarsByFileName(t, file.Name())
+			sidecar := findTestSidecarsByFileName(t, f.Name())
 			require.NotNil(t, sidecar)
 			require.Equal(t, string(sidecar.Blob), string(content))
 		}
+	})
+	t.Run("OverwriteBlobWithDifferentContent", func(t *testing.T) {
+		tempDir := t.TempDir()
+		bs := &BlobStorage{baseDir: tempDir}
+		originalSidecar := []*ethpb.BlobSidecar{testSidecars[0]}
+		// Save the original sidecar
+		err := bs.SaveBlobData(originalSidecar)
+		require.NoError(t, err)
+
+		// Modify the blob data
+		modifiedSidecar := originalSidecar
+		modifiedSidecar[0].Blob = []byte("Modified Blob Data")
+
+		err = bs.SaveBlobData(modifiedSidecar)
+		require.ErrorContains(t, "data integrity check failed", err)
 	})
 }
 
