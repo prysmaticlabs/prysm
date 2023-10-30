@@ -10,8 +10,9 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -81,11 +82,11 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetB
 	return blockHeadersResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*apimiddleware.LivenessResponseJson, error) {
+func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*validator.GetLivenessResponse, error) {
 	const endpoint = "/eth/v1/validator/liveness/"
 	url := endpoint + strconv.FormatUint(uint64(epoch), 10)
 
-	livenessResponseJson := &apimiddleware.LivenessResponseJson{}
+	livenessResponseJson := &validator.GetLivenessResponse{}
 
 	marshalledJsonValidatorIndexes, err := json.Marshal(validatorIndexes)
 	if err != nil {
@@ -99,10 +100,10 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 	return livenessResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*apimiddleware.SyncingResponseJson, error) {
+func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncStatusResponse, error) {
 	const endpoint = "/eth/v1/node/syncing"
 
-	syncingResponseJson := &apimiddleware.SyncingResponseJson{}
+	syncingResponseJson := &node.SyncStatusResponse{}
 
 	if _, err := c.jsonRestHandler.GetRestJsonResponse(
 		ctx,

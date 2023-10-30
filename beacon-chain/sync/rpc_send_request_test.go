@@ -233,6 +233,7 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 					break
 				}
 				wsb, err := blocks.NewSignedBeaconBlock(knownBlocks[i])
+				require.NoError(t, err)
 				err = WriteBlockChunk(stream, startup.NewClock(time.Now(), [32]byte{}), p2.Encoding(), wsb)
 				if err != nil && err.Error() != network.ErrReset.Error() {
 					require.NoError(t, err)

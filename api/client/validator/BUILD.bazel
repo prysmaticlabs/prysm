@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//api/client:go_default_library",
+        "//validator/rpc:go_default_library",
         "//validator/rpc/apimiddleware:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],

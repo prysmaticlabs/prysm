@@ -11,19 +11,19 @@ type AggregateAttestationResponse struct {
 }
 
 type SubmitContributionAndProofsRequest struct {
-	Data []*shared.SignedContributionAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedContributionAndProof `json:"data"`
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data" validate:"required,dive"`
+	Data []*shared.SignedAggregateAttestationAndProof `json:"data"`
 }
 
 type SubmitSyncCommitteeSubscriptionsRequest struct {
-	Data []*shared.SyncCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.SyncCommitteeSubscription `json:"data"`
 }
 
 type SubmitBeaconCommitteeSubscriptionsRequest struct {
-	Data []*shared.BeaconCommitteeSubscription `json:"data" validate:"required,dive"`
+	Data []*shared.BeaconCommitteeSubscription `json:"data"`
 }
 
 type GetAttestationDataResponse struct {
@@ -32,10 +32,6 @@ type GetAttestationDataResponse struct {
 
 type ProduceSyncCommitteeContributionResponse struct {
 	Data *shared.SyncCommitteeContribution `json:"data"`
-}
-
-type GetAttesterDutiesRequest struct {
-	ValidatorIndices []string `json:"validator_indices"`
 }
 
 type GetAttesterDutiesResponse struct {
@@ -66,10 +62,6 @@ type ProposerDuty struct {
 	Slot           string `json:"slot"`
 }
 
-type GetSyncCommitteeDutiesRequest struct {
-	ValidatorIndices []string `json:"validator_indices"`
-}
-
 type GetSyncCommitteeDutiesResponse struct {
 	ExecutionOptimistic bool                 `json:"execution_optimistic"`
 	Data                []*SyncCommitteeDuty `json:"data"`
@@ -86,5 +78,15 @@ type ProduceBlockV3Response struct {
 	Version                 string          `json:"version"`
 	ExecutionPayloadBlinded bool            `json:"execution_payload_blinded"`
 	ExecutionPayloadValue   string          `json:"execution_payload_value"`
+	ConsensusBlockValue     string          `json:"consensus_block_value"`
 	Data                    json.RawMessage `json:"data"` // represents the block values based on the version
+}
+
+type GetLivenessResponse struct {
+	Data []*ValidatorLiveness `json:"data"`
+}
+
+type ValidatorLiveness struct {
+	Index  string `json:"index"`
+	IsLive bool   `json:"is_live"`
 }

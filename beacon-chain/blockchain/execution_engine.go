@@ -390,7 +390,7 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 			return err
 		}
 		// No op if the sidecar does not exist.
-		if err := s.cfg.BeaconDB.DeleteBlobSidecar(ctx, root); err != nil {
+		if err := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err != nil {
 			return err
 		}
 	}
@@ -405,8 +405,13 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
-		versionedHashes[i] = sha256.Sum256(commitment)
-		versionedHashes[i][0] = blobCommitmentVersionKZG
+		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
 	}
 	return versionedHashes, nil
+}
+
+func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
+	versionedHash := sha256.Sum256(commitment)
+	versionedHash[0] = blobCommitmentVersionKZG
+	return versionedHash
 }

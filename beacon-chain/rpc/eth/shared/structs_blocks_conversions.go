@@ -1256,7 +1256,7 @@ func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedB
 		}
 		signedBlindedBlobSidecars = make([]*eth.SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
 		for i := range b.SignedBlindedBlobSidecars {
-			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConensus(i)
+			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConsensus()
 			if err != nil {
 				return nil, NewDecodeError(err, fmt.Sprintf("SignedBlindedBlobSidecars[%d]", i))
 			}
@@ -1926,7 +1926,7 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 	}, nil
 }
 
-func (s *SignedBlindedBlobSidecar) ToConensus(i int) (*eth.SignedBlindedBlobSidecar, error) {
+func (s *SignedBlindedBlobSidecar) ToConsensus() (*eth.SignedBlindedBlobSidecar, error) {
 	if s == nil {
 		return nil, errNilValue
 	}
@@ -2047,6 +2047,17 @@ func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	}, nil
 }
 
+func SignedBeaconBlockFromConsensus(b *eth.SignedBeaconBlock) (*SignedBeaconBlock, error) {
+	block, err := BeaconBlockFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlock{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltair, error) {
 	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
@@ -2092,6 +2103,17 @@ func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltai
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
 		},
+	}, nil
+}
+
+func SignedBeaconBlockAltairFromConsensus(b *eth.SignedBeaconBlockAltair) (*SignedBeaconBlockAltair, error) {
+	block, err := BeaconBlockAltairFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockAltair{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2159,6 +2181,17 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 				TransactionsRoot: hexutil.Encode(b.Body.ExecutionPayloadHeader.TransactionsRoot),
 			},
 		},
+	}, nil
+}
+
+func SignedBlindedBeaconBlockBellatrixFromConsensus(b *eth.SignedBlindedBeaconBlockBellatrix) (*SignedBlindedBeaconBlockBellatrix, error) {
+	blindedBlock, err := BlindedBeaconBlockBellatrixFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockBellatrix{
+		Message:   blindedBlock,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2233,6 +2266,17 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 	}, nil
 }
 
+func SignedBeaconBlockBellatrixFromConsensus(b *eth.SignedBeaconBlockBellatrix) (*SignedBeaconBlockBellatrix, error) {
+	block, err := BeaconBlockBellatrixFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockBellatrix{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
+	}, nil
+}
+
 func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*BlindedBeaconBlockCapella, error) {
 	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	if err != nil {
@@ -2304,6 +2348,17 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 			},
 			BlsToExecutionChanges: blsChanges, // new in capella
 		},
+	}, nil
+}
+
+func SignedBlindedBeaconBlockCapellaFromConsensus(b *eth.SignedBlindedBeaconBlockCapella) (*SignedBlindedBeaconBlockCapella, error) {
+	blindedBlock, err := BlindedBeaconBlockCapellaFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBlindedBeaconBlockCapella{
+		Message:   blindedBlock,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 
@@ -2390,6 +2445,17 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 			},
 			BlsToExecutionChanges: blsChanges, // new in capella
 		},
+	}, nil
+}
+
+func SignedBeaconBlockCapellaFromConsensus(b *eth.SignedBeaconBlockCapella) (*SignedBeaconBlockCapella, error) {
+	block, err := BeaconBlockCapellaFromConsensus(b.Block)
+	if err != nil {
+		return nil, err
+	}
+	return &SignedBeaconBlockCapella{
+		Message:   block,
+		Signature: hexutil.Encode(b.Signature),
 	}, nil
 }
 

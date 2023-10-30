@@ -72,6 +72,7 @@ type ChainService struct {
 	OptimisticRoots             map[[32]byte]bool
 	BlockSlot                   primitives.Slot
 	SyncingRoot                 [32]byte
+	Blobs                       []*ethpb.BlobSidecar
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -606,10 +607,13 @@ func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return [32]byte{}
 }
 
-// SendNewBlobEvent mocks the same method in the chain service
-func (*ChainService) SendNewBlobEvent(_ [32]byte, _ uint64) {}
-
 // BlockBeingSynced mocks the same method in the chain service
 func (c *ChainService) BlockBeingSynced(root [32]byte) bool {
 	return root == c.SyncingRoot
+}
+
+// ReceiveBlob implements the same method in the chain service
+func (c *ChainService) ReceiveBlob(_ context.Context, b *ethpb.BlobSidecar) error {
+	c.Blobs = append(c.Blobs, b)
+	return nil
 }

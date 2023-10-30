@@ -13,6 +13,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
 	"github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
@@ -39,8 +40,8 @@ func getValidatorHappyPathTestServer(t *testing.T) *httptest.Server {
 				})
 				require.NoError(t, err)
 			} else if r.RequestURI == "/eth/v1/remotekeys" {
-				err := json.NewEncoder(w).Encode(&apimiddleware.ListRemoteKeysResponseJson{
-					Keystores: []*apimiddleware.RemoteKeysListJson{
+				err := json.NewEncoder(w).Encode(&rpc.ListRemoteKeysResponse{
+					Data: []*rpc.RemoteKey{
 						{
 							Pubkey: key1,
 						},

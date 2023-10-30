@@ -5,12 +5,14 @@ import (
 
 	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -43,6 +45,8 @@ const (
 	BLSToExecutionChangeTopic = "bls_to_execution_change"
 	// PayloadAttributesTopic represents a new payload attributes for execution payload building event topic.
 	PayloadAttributesTopic = "payload_attributes"
+	// BlobSidecarTopic represents a new blob sidecar event topic
+	BlobSidecarTopic = "blob_sidecar"
 )
 
 var casesHandled = map[string]bool{
@@ -55,6 +59,7 @@ var casesHandled = map[string]bool{
 	SyncCommitteeContributionTopic: true,
 	BLSToExecutionChangeTopic:      true,
 	PayloadAttributesTopic:         true,
+	BlobSidecarTopic:               true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -161,7 +166,26 @@ func handleBlockOperationEvents(
 		}
 		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
 		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
-
+	case operation.BlobSidecarReceived:
+		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
+			return nil
+		}
+		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
+		if !ok {
+			return nil
+		}
+		if blobData == nil || blobData.Blob == nil {
+			return nil
+		}
+		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
+		blobEvent := &ethpb.EventBlobSidecar{
+			BlockRoot:     bytesutil.SafeCopyBytes(blobData.Blob.Message.BlockRoot),
+			Index:         blobData.Blob.Message.Index,
+			Slot:          blobData.Blob.Message.Slot,
+			VersionedHash: bytesutil.SafeCopyBytes(versionedHash.Bytes()),
+			KzgCommitment: bytesutil.SafeCopyBytes(blobData.Blob.Message.KzgCommitment),
+		}
+		return streamData(stream, BlobSidecarTopic, blobEvent)
 	default:
 		return nil
 	}
