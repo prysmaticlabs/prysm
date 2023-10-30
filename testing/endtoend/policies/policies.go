@@ -34,3 +34,10 @@ func BetweenEpochs(fromEpoch, toEpoch primitives.Epoch) func(primitives.Epoch) b
 		return fromEpoch < currentEpoch && currentEpoch < toEpoch
 	}
 }
+
+// EveryNEpochs runs every N epochs, starting with the provided epoch.
+func EveryNEpochs(onwardsEpoch primitives.Epoch, n primitives.Epoch) func(epoch primitives.Epoch) bool {
+	return func(currentEpoch primitives.Epoch) bool {
+		return currentEpoch >= onwardsEpoch && ((currentEpoch-onwardsEpoch)%n == 0)
+	}
+}

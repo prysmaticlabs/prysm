@@ -106,10 +106,6 @@ func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, 
 	return nil, nil
 }
 
-func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.TransitionConfiguration) error {
-	return nil
-}
-
 func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
 	b, ok := m.powBlocks[bytesutil.ToBytes32(hash.Bytes())]
 	if !ok {

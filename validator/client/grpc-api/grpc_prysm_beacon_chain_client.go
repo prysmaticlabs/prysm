@@ -22,7 +22,7 @@ type grpcPrysmBeaconChainClient struct {
 	beaconChainClient iface.BeaconChainClient
 }
 
-func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ string, statuses []validator.ValidatorStatus) ([]iface.ValidatorCount, error) {
+func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ string, statuses []validator.Status) ([]iface.ValidatorCount, error) {
 	resp, err := g.beaconChainClient.ListValidators(ctx, &ethpb.ListValidatorsRequest{PageSize: 0})
 	if err != nil {
 		return nil, errors.Wrap(err, "list validators failed")
@@ -40,7 +40,7 @@ func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ str
 
 	if len(statuses) == 0 {
 		for _, val := range eth.ValidatorStatus_value {
-			statuses = append(statuses, validator.ValidatorStatus(val))
+			statuses = append(statuses, validator.Status(val))
 		}
 	}
 
@@ -53,8 +53,8 @@ func (g grpcPrysmBeaconChainClient) GetValidatorCount(ctx context.Context, _ str
 }
 
 // validatorCountByStatus returns a slice of validator count for each status in the given epoch.
-func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.ValidatorStatus, epoch primitives.Epoch) ([]iface.ValidatorCount, error) {
-	countByStatus := make(map[validator.ValidatorStatus]uint64)
+func validatorCountByStatus(validators []*ethpb.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]iface.ValidatorCount, error) {
+	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
 		if err != nil {

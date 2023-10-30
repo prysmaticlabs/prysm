@@ -226,7 +226,7 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -259,7 +259,7 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -292,7 +292,7 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -325,7 +325,7 @@ func TestBlockRewards(t *testing.T) {
 			}},
 			OptimisticModeFetcher: mockChainService,
 			FinalizationFetcher:   mockChainService,
-			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+			BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
 		}
 
 		url := "http://only.the.slot.number.at.the.end.is.important/2"
@@ -704,7 +704,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 		}},
 		OptimisticModeFetcher: mockChainService,
 		FinalizationFetcher:   mockChainService,
-		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewMockReplayerBuilder(mockstategen.WithMockState(st))},
+		BlockRewardFetcher:    &BlockRewardService{Replayer: mockstategen.NewReplayerBuilder(mockstategen.WithMockState(st))},
 	}
 
 	t.Run("ok - filtered vals", func(t *testing.T) {

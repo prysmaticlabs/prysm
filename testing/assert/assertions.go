@@ -46,7 +46,7 @@ func StringContains(tb assertions.AssertionTestingTB, expected, actual string, m
 	assertions.StringContains(tb.Errorf, expected, actual, true, msg...)
 }
 
-// StringContains asserts a string does not contain specified substring.
+// StringNotContains asserts a string does not contain specified substring.
 func StringNotContains(tb assertions.AssertionTestingTB, expected, actual string, msg ...interface{}) {
 	assertions.StringContains(tb.Errorf, expected, actual, false, msg...)
 }

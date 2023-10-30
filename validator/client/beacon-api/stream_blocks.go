@@ -79,7 +79,6 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 
 	// Once we know what the consensus version is, we can go ahead and unmarshal into the specific structs unique to each version
 	decoder := json.NewDecoder(bytes.NewReader(signedBlockResponseJson.Data))
-	decoder.DisallowUnknownFields()
 
 	response := &ethpb.StreamBlocksResponse{}
 	var slot primitives.Slot

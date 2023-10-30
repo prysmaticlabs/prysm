@@ -13,7 +13,7 @@ import (
 )
 
 // List pretty-prints accounts in the wallet.
-func (acm *AccountsCLIManager) List(ctx context.Context) error {
+func (acm *CLIManager) List(ctx context.Context) error {
 	if acm.listValidatorIndices {
 		client, _, err := acm.prepareBeaconClients(ctx)
 		if err != nil {
