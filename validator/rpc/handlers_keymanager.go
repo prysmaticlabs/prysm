@@ -119,7 +119,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 			k.Description = k.Name
 		}
 		if err != nil {
-			// we want to ignore unmarshal errors for now, proper status in importKeystore
+			// we want to ignore unmarshal errors for now, the proper status is updated in importer.ImportKeystores
 			k.Pubkey = "invalid format"
 		}
 		keystores[i] = k
@@ -146,8 +146,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 	// req.Passwords and req.Keystores are checked for 0 length in code above.
 	if len(req.Passwords) > len(req.Keystores) {
 		req.Passwords = req.Passwords[:len(req.Keystores)]
-	}
-	if len(req.Passwords) < len(req.Keystores) {
+	} else if len(req.Passwords) < len(req.Keystores) {
 		passwordList := make([]string, len(req.Keystores))
 		copy(passwordList, req.Passwords)
 		req.Passwords = passwordList
