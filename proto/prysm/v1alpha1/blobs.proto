@@ -28,6 +28,7 @@ message BlobSidecars {
     repeated BlobSidecar sidecars = 1;
 }
 
+// TODO: Replace `BlobSidecarNew` with `BlobSidecar` once `BlobSidecar` usage is fully removed.
 message BlobSidecar {
         bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
         uint64 index = 2;
