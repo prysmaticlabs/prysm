@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	apimiddleware2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -518,6 +517,8 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 
 	proto := test_helpers.GenerateProtoBlindedDenebBeaconBlock()
 	block := test_helpers.GenerateJsonBlindedDenebBeaconBlock()
+	blockBytes, err := json.Marshal(block)
+	require.NoError(t, err)
 
 	const slot = primitives.Slot(1)
 	randaoReveal := []byte{2}
@@ -537,12 +538,12 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&apimiddleware2.ProduceBlindedBlockResponseJson{},
+		&abstractProduceBlockResponseJson{},
 	).SetArg(
 		2,
-		apimiddleware2.ProduceBlindedBlockResponseJson{
+		abstractProduceBlockResponseJson{
 			Version: "deneb",
-			Data:    &apimiddleware2.BlindedBeaconBlockContainerJson{DenebContents: block},
+			Data:    blockBytes,
 		},
 	).Return(
 		nil,
@@ -569,6 +570,8 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 
 	proto := test_helpers.GenerateProtoDenebBeaconBlock()
 	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	blockBytes, err := json.Marshal(block)
+	require.NoError(t, err)
 
 	const slot = primitives.Slot(1)
 	randaoReveal := []byte{2}
@@ -588,7 +591,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&apimiddleware2.ProduceBlindedBlockResponseJson{},
+		&abstractProduceBlockResponseJson{},
 	).Return(
 		&apimiddleware.DefaultErrorJson{Code: http2.StatusInternalServerError},
 		errors.New("foo"),
@@ -596,12 +599,12 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		fmt.Sprintf("/eth/v2/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&apimiddleware2.ProduceBlockResponseV2Json{},
+		&abstractProduceBlockResponseJson{},
 	).SetArg(
 		2,
-		apimiddleware2.ProduceBlockResponseV2Json{
+		abstractProduceBlockResponseJson{
 			Version: "deneb",
-			Data:    &apimiddleware2.BeaconBlockContainerV2Json{DenebContents: block},
+			Data:    blockBytes,
 		},
 	).Return(
 		nil,
