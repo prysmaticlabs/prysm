@@ -37,7 +37,7 @@ func (bs *BlockingStore) IsDataAvailable(ctx context.Context, current primitives
 		if err == nil {
 			return nil
 		}
-		mie := &MissingIndicesError{}
+		mie := MissingIndicesError{}
 		if !errors.As(err, &mie) {
 			return err
 		}

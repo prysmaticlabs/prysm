@@ -127,7 +127,7 @@ func TestLazilyPersistent_Missing(t *testing.T) {
 	as.PersistOnceCommitted(ctx, 1, scs[2])
 	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
-	missingErr := &MissingIndicesError{}
+	missingErr := MissingIndicesError{}
 	require.Equal(t, true, errors.As(err, &missingErr))
 	require.DeepEqual(t, []uint64{0, 1}, missingErr.Missing())
 
@@ -161,14 +161,14 @@ func TestLazilyPersistent_Mismatch(t *testing.T) {
 	as.PersistOnceCommitted(ctx, 1, scs[0])
 	err := as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
-	mismatchErr := &CommitmentMismatchError{}
+	mismatchErr := CommitmentMismatchError{}
 	require.Equal(t, true, errors.As(err, &mismatchErr))
 	require.DeepEqual(t, []uint64{0}, mismatchErr.Mismatch())
 
 	// the next time we call the DA check, the mismatched commitment should be evicted
 	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
-	missingErr := &MissingIndicesError{}
+	missingErr := MissingIndicesError{}
 	require.Equal(t, true, errors.As(err, &missingErr))
 	require.DeepEqual(t, []uint64{0, 1, 2}, missingErr.Missing())
 }
@@ -261,7 +261,7 @@ func TestLazilyPersistent_DBFallback(t *testing.T) {
 	// but we should have pruned, so we'll get a missing error, not mismatch
 	err := as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
-	missingErr := &MissingIndicesError{}
+	missingErr := MissingIndicesError{}
 	require.Equal(t, true, errors.As(err, &missingErr))
 	require.DeepEqual(t, []uint64{0, 1, 2}, missingErr.Missing())
 
@@ -271,7 +271,7 @@ func TestLazilyPersistent_DBFallback(t *testing.T) {
 	// now we'll get a mismatch error
 	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
-	mismatchErr := &CommitmentMismatchError{}
+	mismatchErr := CommitmentMismatchError{}
 	require.Equal(t, true, errors.As(err, &mismatchErr))
 	require.DeepEqual(t, []uint64{0}, mismatchErr.Mismatch())
 }
