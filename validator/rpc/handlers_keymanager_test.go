@@ -574,7 +574,7 @@ func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
 	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 	require.Equal(t, 1, len(resp.Data))
 	require.Equal(t, keymanager.StatusError, resp.Data[0].Status)
-	require.Equal(t, "Non duplicate keys that were existing were deleted, but could not export slashing protection history",
+	require.Equal(t, "Could not export slashing protection history as existing non duplicate keys were deleted",
 		resp.Data[0].Message,
 	)
 }
