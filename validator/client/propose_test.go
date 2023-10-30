@@ -963,7 +963,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'b'},
+			want: bytesutil.PadTo([]byte{'b'}, 32),
 		},
 		{name: "use default file graffiti",
 			v: &validator{
@@ -972,7 +972,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'c'},
+			want: bytesutil.PadTo([]byte{'c'}, 32),
 		},
 		{name: "use random file graffiti",
 			v: &validator{
@@ -982,7 +982,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'d'},
+			want: bytesutil.PadTo([]byte{'d'}, 32),
 		},
 		{name: "use validator file graffiti, has validator",
 			v: &validator{
@@ -996,7 +996,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'g'},
+			want: bytesutil.PadTo([]byte{'g'}, 32),
 		},
 		{name: "use validator file graffiti, none specified",
 			v: &validator{
@@ -1041,7 +1041,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 			Default: "d",
 		},
 	}
-	for _, want := range [][]byte{{'a'}, {'b'}, {'c'}, {'d'}, {'d'}} {
+	for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
 		got, err := v.getGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
