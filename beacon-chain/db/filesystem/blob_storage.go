@@ -18,12 +18,19 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		return errors.New("no blob data to save")
 	}
 	for _, sidecar := range sidecars {
-		filepath, exists := blobExists(bs.baseDir, sidecar)
+		blobPath := path.Join(bs.baseDir, fmt.Sprintf(
+			"%d_%x_%d_%x.blob",
+			sidecar.Slot,
+			sidecar.BlockRoot,
+			sidecar.Index,
+			sidecar.KzgCommitment,
+		))
+		exists := blobExists(blobPath)
 		if exists {
 			continue // Blob already exists, move to the next one
 		}
 		// Create a partial file and write the blob data to it.
-		partialFilePath := filepath + ".partial"
+		partialFilePath := blobPath + ".partial"
 		partialFile, err := os.Create(partialFilePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to create partial file")
@@ -43,7 +50,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		}
 
 		// Atomically rename the partial file to its final name.
-		err = os.Rename(partialFilePath, filepath)
+		err = os.Rename(partialFilePath, blobPath)
 		if err != nil {
 			return errors.Wrap(err, "failed to rename partial file to final")
 		}
@@ -52,25 +59,15 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 }
 
 // blobExists checks that a blob file hasn't already been created and
-// returns the path and a bool representing whether it exists or not.
-func blobExists(baseDir string, sidecar *ethpb.BlobSidecar) (string, bool) {
-	blobPath := path.Join(baseDir, fmt.Sprintf(
-		"%d_%x_%d_%x.blob",
-		sidecar.Slot,
-		sidecar.BlockRoot,
-		sidecar.Index,
-		sidecar.KzgCommitment,
-	))
+// returns a bool representing whether it exists or not.
+func blobExists(blobPath string) bool {
 	// Check if the blob file already exists.
 	_, err := os.Stat(blobPath)
 	if err == nil {
 		// The file exists.
-		return blobPath, true
-	} else if os.IsNotExist(err) {
-		// The file does not exist.
-		return blobPath, false
+		return true
 	} else {
-		// An error occurred while checking the file.
-		return blobPath, false
+		// The file does not exist or an error occurred.
+		return false
 	}
 }
