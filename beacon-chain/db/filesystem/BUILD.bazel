@@ -17,6 +17,7 @@ go_test(
     srcs = ["blob_storage_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//io/file:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//testing/require:go_default_library",
     ],

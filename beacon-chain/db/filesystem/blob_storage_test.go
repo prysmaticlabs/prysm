@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -110,29 +111,9 @@ func TestCheckDataIntegrity(t *testing.T) {
 	err = os.WriteFile(tempfile.Name(), []byte(wrongChecksum), os.ModePerm)
 	require.NoError(t, err)
 
-	checksum, err := calculateChecksumOfFile(tempfile.Name())
+	checksum, err := file.HashFile(tempfile.Name())
 	require.NoError(t, err)
 	require.NotEqual(t, wrongChecksum, hex.EncodeToString(checksum))
-}
-
-func TestCalculateChecksumOfFile(t *testing.T) {
-	originalData := testSidecars[0].Blob
-	originalChecksum := sha256.Sum256(originalData)
-
-	tempDir := t.TempDir()
-	tempfile, err := os.CreateTemp(tempDir, "testfile")
-	require.NoError(t, err)
-	_, err = tempfile.Write(originalData)
-	require.NoError(t, err)
-	err = tempfile.Close()
-	require.NoError(t, err)
-
-	// Calculate the checksum of the temporary file
-	checksum, err := calculateChecksumOfFile(tempfile.Name())
-	require.NoError(t, err)
-
-	// Ensure the calculated checksum matches the original checksum
-	require.Equal(t, hex.EncodeToString(originalChecksum[:]), hex.EncodeToString(checksum))
 }
 
 var testSidecars = []*ethpb.BlobSidecar{
