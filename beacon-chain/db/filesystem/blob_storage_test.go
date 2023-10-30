@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -80,6 +81,58 @@ func findTestSidecarsByFileName(t *testing.T, fileName string) *ethpb.BlobSideca
 		}
 	}
 	return nil
+}
+
+func TestCheckDataIntegrity(t *testing.T) {
+	originalData := testSidecars[0].Blob
+	originalChecksum := sha256.Sum256(originalData)
+
+	tempDir := t.TempDir()
+	tempfile, err := os.CreateTemp(tempDir, "testfile")
+	require.NoError(t, err)
+	_, err = tempfile.Write(originalData)
+	require.NoError(t, err)
+
+	err = checkDataIntegrity(originalData, tempfile.Name())
+	require.NoError(t, err)
+
+	// Modify the data in the file to simulate data corruption
+	corruptedData := []byte("corrupted data")
+	err = os.WriteFile(tempfile.Name(), corruptedData, os.ModePerm)
+	require.NoError(t, err)
+
+	// Test data integrity check with corrupted data
+	err = checkDataIntegrity(originalData, tempfile.Name())
+	require.ErrorContains(t, "data integrity check failed", err)
+
+	// Modify the calculated checksum to be incorrect
+	wrongChecksum := hex.EncodeToString(originalChecksum[:]) + "12345"
+	err = os.WriteFile(tempfile.Name(), []byte(wrongChecksum), os.ModePerm)
+	require.NoError(t, err)
+
+	checksum, err := calculateChecksumOfFile(tempfile.Name())
+	require.NoError(t, err)
+	require.NotEqual(t, wrongChecksum, hex.EncodeToString(checksum))
+}
+
+func TestCalculateChecksumOfFile(t *testing.T) {
+	originalData := testSidecars[0].Blob
+	originalChecksum := sha256.Sum256(originalData)
+
+	tempDir := t.TempDir()
+	tempfile, err := os.CreateTemp(tempDir, "testfile")
+	require.NoError(t, err)
+	_, err = tempfile.Write(originalData)
+	require.NoError(t, err)
+	err = tempfile.Close()
+	require.NoError(t, err)
+
+	// Calculate the checksum of the temporary file
+	checksum, err := calculateChecksumOfFile(tempfile.Name())
+	require.NoError(t, err)
+
+	// Ensure the calculated checksum matches the original checksum
+	require.Equal(t, hex.EncodeToString(originalChecksum[:]), hex.EncodeToString(checksum))
 }
 
 var testSidecars = []*ethpb.BlobSidecar{

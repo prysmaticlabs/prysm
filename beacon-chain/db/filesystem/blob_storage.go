@@ -1,11 +1,15 @@
 package filesystem
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -25,7 +29,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 			sidecar.Index,
 			sidecar.KzgCommitment,
 		))
-		exists := blobExists(blobPath)
+		exists := file.Exists(blobPath)
 		if exists {
 			continue // Blob already exists, move to the next one
 		}
@@ -54,20 +58,40 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to rename partial file to final")
 		}
+
+		if err = checkDataIntegrity(sidecar.Blob, blobPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-// blobExists checks that a blob file hasn't already been created and
-// returns a bool representing whether it exists or not.
-func blobExists(blobPath string) bool {
-	// Check if the blob file already exists.
-	_, err := os.Stat(blobPath)
-	if err == nil {
-		// The file exists.
-		return true
-	} else {
-		// The file does not exist or an error occurred.
-		return false
+// checkDataIntegrity checks the data integrity by comparing SHA256 checksums.
+func checkDataIntegrity(originalData []byte, filePath string) error {
+	originalChecksum := sha256.Sum256(originalData)
+	savedFileChecksum, err := calculateChecksumOfFile(filePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to calculate saved file checksum")
 	}
+	if hex.EncodeToString(originalChecksum[:]) != hex.EncodeToString(savedFileChecksum) {
+		return errors.New("data integrity check failed")
+	}
+	return nil
+}
+
+// calculateChecksumOfFile calculates the SHA256 checksum of a file.
+func calculateChecksumOfFile(filePath string) ([]byte, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	hash := sha256.New()
+	if _, err := io.Copy(hash, f); err != nil {
+		return nil, err
+	}
+	err = f.Close()
+	if err != nil {
+		return nil, err
+	}
+	return hash.Sum(nil), nil
 }
