@@ -262,8 +262,9 @@ var (
 		Value: cmd.DefaultDataDir(),
 	}
 	BlobRetentionEpoch = &cli.Uint64Flag{
-		Name:  "extend-blob-retention-epoch",
-		Usage: "Extend blob retention epoch period to beyond default 4096 epochs (~18 days). The node will error at start if input value is less than 4096 epochs.",
-		Value: uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
+		Name:    "blob-retention-epochs",
+		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
+		Value:   uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
+		Aliases: []string{"extend-blob-retention-epoch"},
 	}
 )
