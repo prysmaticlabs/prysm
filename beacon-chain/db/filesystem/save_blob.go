@@ -1,3 +1,8 @@
+// The filesystem package provides a mechanism for managing and storing binary blob data.
+// It offers functionalities for saving and ensuring the integrity of blobs using SHA-256 checksums.
+// In order to maintain data integrity we first write to a temporary file and then atomically
+// rename the file to its final destination.
+
 package filesystem
 
 import (
