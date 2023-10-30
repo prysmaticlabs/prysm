@@ -31,6 +31,9 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		))
 		exists := file.Exists(blobPath)
 		if exists {
+			if err := checkDataIntegrity(sidecar.Blob, blobPath); err != nil {
+				return errors.Wrapf(err, "failed to save blob sidecar, tried to overwrite blob (%s) with different content", blobPath)
+			}
 			continue // Blob already exists, move to the next one
 		}
 		// Create a partial file and write the blob data to it.
