@@ -2,7 +2,7 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["blob_storage.go"],
+    srcs = ["save_blob.go"],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem",
     visibility = ["//visibility:private"],
     deps = [
@@ -14,7 +14,7 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["blob_storage_test.go"],
+    srcs = ["save_blob_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//io/file:go_default_library",
