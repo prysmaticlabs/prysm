@@ -1013,7 +1013,7 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 }
 
 func TestBlobRequest(t *testing.T) {
-	var nilReq *ethpb.BlobSidecarsByRangeRequest
+	var nilReq *ethpb.DeprecatedBlobSidecarsByRangeRequest
 	// no blocks
 	req := blobRequest([]blocks.BlockWithVerifiedBlobs{}, 0)
 	require.Equal(t, nilReq, req)
