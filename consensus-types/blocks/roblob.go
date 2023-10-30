@@ -8,18 +8,18 @@ import (
 var errNilBlockHeader = errors.New("received nil beacon block header")
 
 type ROBlob struct {
-	*ethpb.BlobSidecarNew
+	*ethpb.BlobSidecar
 	root [32]byte
 }
 
-func NewROBlobWithRoot(b *ethpb.BlobSidecarNew, root [32]byte) (ROBlob, error) {
+func NewROBlobWithRoot(b *ethpb.BlobSidecar, root [32]byte) (ROBlob, error) {
 	if b == nil {
 		return ROBlob{}, errNilBlock
 	}
-	return ROBlob{BlobSidecarNew: b, root: root}, nil
+	return ROBlob{BlobSidecar: b, root: root}, nil
 }
 
-func NewROBlob(b *ethpb.BlobSidecarNew) (ROBlob, error) {
+func NewROBlob(b *ethpb.BlobSidecar) (ROBlob, error) {
 	if b == nil {
 		return ROBlob{}, errNilBlock
 	}
@@ -30,5 +30,5 @@ func NewROBlob(b *ethpb.BlobSidecarNew) (ROBlob, error) {
 	if err != nil {
 		return ROBlob{}, err
 	}
-	return ROBlob{BlobSidecarNew: b, root: root}, nil
+	return ROBlob{BlobSidecar: b, root: root}, nil
 }

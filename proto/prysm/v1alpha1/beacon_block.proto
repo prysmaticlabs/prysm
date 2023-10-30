@@ -777,7 +777,7 @@ message SignedBuilderBidDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
-message BlobSidecarNew {
+message BlobSidecar {
     uint64 index = 1;
     bytes blob = 2 [(ethereum.eth.ext.ssz_size) = "blob.size"];
     bytes kzg_commitment = 3 [(ethereum.eth.ext.ssz_size) = "48"];
