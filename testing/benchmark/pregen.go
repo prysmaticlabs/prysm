@@ -30,7 +30,7 @@ var GenesisFileName = fmt.Sprintf("bStateGenesis-%dAtts-%dVals.ssz", Attestation
 var BState1EpochFileName = fmt.Sprintf("bState1Epoch-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // BstateEpochFileName is the generated beacon state after 2 full epochs file name.
-var BstateEpochFileName = fmt.Sprintf("bstateEpochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
+var BstateEpochFileName = fmt.Sprintf("bState2Epochs-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)
 
 // FullBlockFileName is the generated full block file name.
 var FullBlockFileName = fmt.Sprintf("fullBlock-%dAtts-%dVals.ssz", AttestationsPerEpoch, ValidatorCount)

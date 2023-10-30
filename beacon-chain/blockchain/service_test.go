@@ -446,11 +446,10 @@ func BenchmarkHasBlockForkChoiceStore_DoublyLinkedTree(b *testing.B) {
 	s := &Service{
 		cfg: &config{ForkChoiceStore: doublylinkedtree.New(), BeaconDB: beaconDB},
 	}
-	blk := &ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}}
+	blk := util.NewBeaconBlock()
 	r, err := blk.Block.HashTreeRoot()
 	require.NoError(b, err)
-	bs := &ethpb.BeaconState{FinalizedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}, CurrentJustifiedCheckpoint: &ethpb.Checkpoint{Root: make([]byte, 32)}}
-	beaconState, err := state_native.InitializeFromProtoPhase0(bs)
+	beaconState, err := util.NewBeaconState()
 	require.NoError(b, err)
 	require.NoError(b, s.cfg.ForkChoiceStore.InsertNode(ctx, beaconState, r))
 
