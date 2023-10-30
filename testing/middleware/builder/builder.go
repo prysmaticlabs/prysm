@@ -54,7 +54,6 @@ const (
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
-	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 )
 
 var (
