@@ -639,9 +639,12 @@ func BenchmarkCommitteeAssignment(b *testing.B) {
 		indices[i] = uint64(i)
 	}
 
+	chain := &mockChain.ChainService{State: bs, Root: genesisRoot[:]}
 	vs := &Server{
-		HeadFetcher: &mockChain.ChainService{State: bs, Root: genesisRoot[:]},
-		SyncChecker: &mockSync.Sync{IsSyncing: false},
+		HeadFetcher:            chain,
+		TimeFetcher:            chain,
+		SyncChecker:            &mockSync.Sync{IsSyncing: false},
+		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
 	}
 
 	// Create request for all validators in the system.
