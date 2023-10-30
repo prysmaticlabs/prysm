@@ -257,7 +257,7 @@ func (s *Server) transformDeletedKeysStatuses(
 ) ([]*keymanager.KeyStatus, error) {
 	pubKeysInDB, err := s.publicKeysInDB(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "Could not get public keys from DB")
+		return nil, errors.Wrap(err, "could not get public keys from DB")
 	}
 	if len(pubKeysInDB) > 0 {
 		for i := 0; i < len(pubKeys); i++ {
