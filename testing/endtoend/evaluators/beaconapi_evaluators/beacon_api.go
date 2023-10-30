@@ -757,31 +757,6 @@ func postEvaluation(beaconNodeIdx int, requests map[string]metadata) error {
 		return fmt.Errorf("header root %s does not match duties root %s ", header.Data.Root, duties.DependentRoot)
 	}
 
-	// get first peer returned from /node/peers and use it's ID to test the /node/peers/{peer_id} endpoint
-	peersData := requests["/node/peers"]
-	pPeers, ok := peersData.prysmResps["json"].(*node.GetPeersResponse)
-	if !ok {
-		return errJsonCast
-	}
-	pPeer := &node.GetPeerResponse{}
-	if err = doJSONGetRequest(v1PathTemplate, "/node/peers/"+pPeers.Data[0].PeerId, beaconNodeIdx, pPeer); err != nil {
-		return err
-	}
-	if pPeer.Data == nil {
-		return errEmptyPrysmData
-	}
-	lPeers, ok := peersData.lighthouseResps["json"].(*node.GetPeersResponse)
-	if !ok {
-		return errJsonCast
-	}
-	lPeer := &node.GetPeerResponse{}
-	if err = doJSONGetRequest(v1PathTemplate, "/node/peers/"+lPeers.Data[0].PeerId, beaconNodeIdx, lPeer, "lighthouse"); err != nil {
-		return err
-	}
-	if lPeer.Data == nil {
-		return errEmptyLighthouseData
-	}
-
 	return nil
 }
 

@@ -214,9 +214,12 @@ go_test(
     timeout = "moderate",
     srcs = [
         "attester_mainnet_test.go",
+        "proposer_utils_bench_test.go",
         "server_mainnet_test.go",
         "status_mainnet_test.go",
     ],
     embed = [":go_default_library"],
-    deps = common_deps,
+    deps = common_deps + [
+        "//proto/prysm/v1alpha1/attestation/aggregation/testing:go_default_library",
+    ],
 )

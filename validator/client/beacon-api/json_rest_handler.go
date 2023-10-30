@@ -84,7 +84,6 @@ func (c beaconApiJsonRestHandler) PostRestJson(ctx context.Context, apiEndpoint 
 
 func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
 	decoder := json.NewDecoder(resp.Body)
-	decoder.DisallowUnknownFields()
 
 	if resp.StatusCode != http.StatusOK {
 		errorJson := &apimiddleware.DefaultErrorJson{}

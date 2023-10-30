@@ -32,7 +32,6 @@ go_test(
     name = "go_default_test",
     srcs = [
         "aggregated_test.go",
-        "benchmark_test.go",
         "block_test.go",
         "forkchoice_test.go",
         "seen_bits_test.go",

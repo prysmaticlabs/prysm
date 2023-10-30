@@ -110,6 +110,7 @@ docker_push(
 go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
+    pgoprofile = "pprof.beacon-chain.samples.cpu.pb.gz",
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__pkg__",
