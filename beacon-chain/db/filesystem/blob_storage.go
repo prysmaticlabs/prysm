@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"os"
 	"path"
 
@@ -17,6 +16,7 @@ type BlobStorage struct {
 	baseDir string
 }
 
+// SaveBlobData saves blobs given a list of sidecars.
 func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 	if len(sidecars) == 0 {
 		return errors.New("no blob data to save")
@@ -69,7 +69,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 // checkDataIntegrity checks the data integrity by comparing SHA256 checksums.
 func checkDataIntegrity(originalData []byte, filePath string) error {
 	originalChecksum := sha256.Sum256(originalData)
-	savedFileChecksum, err := calculateChecksumOfFile(filePath)
+	savedFileChecksum, err := file.HashFile(filePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate saved file checksum")
 	}
@@ -77,21 +77,4 @@ func checkDataIntegrity(originalData []byte, filePath string) error {
 		return errors.New("data integrity check failed")
 	}
 	return nil
-}
-
-// calculateChecksumOfFile calculates the SHA256 checksum of a file.
-func calculateChecksumOfFile(filePath string) ([]byte, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	hash := sha256.New()
-	if _, err := io.Copy(hash, f); err != nil {
-		return nil, err
-	}
-	err = f.Close()
-	if err != nil {
-		return nil, err
-	}
-	return hash.Sum(nil), nil
 }
