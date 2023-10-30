@@ -777,3 +777,11 @@ message SignedBuilderBidDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message BlobSidecarNew {
+    uint64 index = 1;
+    bytes blob = 2 [(ethereum.eth.ext.ssz_size) = "blob.size"];
+    bytes kzg_commitment = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes kzg_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    SignedBeaconBlockHeader signed_block_header = 5;
+    repeated bytes commitment_inclusion_proof = 6  [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "kzg_commitment_inclusion_proof_depth.size"];
+}

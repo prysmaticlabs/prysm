@@ -135,6 +135,7 @@ ssz_gen_marshal(
         "BuilderBidCapella",
         "BuilderBidDeneb",
         "BlobSidecar",
+        "BlobSidecarNew",
         "SignedBlobSidecar",
         "BlobIdentifier",
     ],
