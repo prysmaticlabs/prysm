@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	depositEventSignature = hash.HashKeccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
+	depositEventSignature = hash.Keccak256([]byte("DepositEvent(bytes,bytes,bytes,bytes,bytes)"))
 )
 
 const eth1DataSavingInterval = 1000

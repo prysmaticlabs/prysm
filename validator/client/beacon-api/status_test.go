@@ -348,7 +348,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		node.GetVersionResponse{Data: &node.Version{Version: "prysm/v0.0.1"}},
 	).Times(1)
 
-	var validatorCountResponse validator2.ValidatorCountResponse
+	var validatorCountResponse validator2.CountResponse
 	jsonRestHandler.EXPECT().GetRestJsonResponse(
 		ctx,
 		"/eth/v1/beacon/states/head/validator_count?",
@@ -358,8 +358,8 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).SetArg(
 		2,
-		validator2.ValidatorCountResponse{
-			Data: []*validator2.ValidatorCount{
+		validator2.CountResponse{
+			Data: []*validator2.Count{
 				{
 					Status: "active",
 					Count:  "50001",

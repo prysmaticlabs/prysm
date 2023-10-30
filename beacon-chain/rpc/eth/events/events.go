@@ -291,7 +291,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 		return err
 	}
 
-	t, err := slots.ToTime(uint64(headState.GenesisTime()), headState.Slot())
+	t, err := slots.ToTime(headState.GenesisTime(), headState.Slot())
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package state_native
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
@@ -57,7 +58,7 @@ func (b *BeaconState) AppendCurrentParticipationBits(val byte) error {
 	participation := b.currentEpochParticipation
 	if b.sharedFieldReferences[types.CurrentEpochParticipationBits].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		participation = make([]byte, 0, len(b.currentEpochParticipation)+1)
+		participation = make([]byte, 0, len(b.currentEpochParticipation)+int(params.BeaconConfig().MaxDeposits))
 		participation = append(participation, b.currentEpochParticipation...)
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.CurrentEpochParticipationBits] = stateutil.NewRef(1)
@@ -81,7 +82,7 @@ func (b *BeaconState) AppendPreviousParticipationBits(val byte) error {
 
 	bits := b.previousEpochParticipation
 	if b.sharedFieldReferences[types.PreviousEpochParticipationBits].Refs() > 1 {
-		bits = make([]byte, 0, len(b.previousEpochParticipation)+1)
+		bits = make([]byte, 0, len(b.previousEpochParticipation)+int(params.BeaconConfig().MaxDeposits))
 		bits = append(bits, b.previousEpochParticipation...)
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochParticipationBits] = stateutil.NewRef(1)

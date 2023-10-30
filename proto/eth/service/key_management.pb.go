@@ -129,107 +129,6 @@ func (DeletedKeystoreStatus_Status) EnumDescriptor() ([]byte, []int) {
 	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{6, 0}
 }
 
-type ImportedRemoteKeysStatus_Status int32
-
-const (
-	ImportedRemoteKeysStatus_UNKNOWN   ImportedRemoteKeysStatus_Status = 0
-	ImportedRemoteKeysStatus_IMPORTED  ImportedRemoteKeysStatus_Status = 1
-	ImportedRemoteKeysStatus_DUPLICATE ImportedRemoteKeysStatus_Status = 2
-	ImportedRemoteKeysStatus_ERROR     ImportedRemoteKeysStatus_Status = 3
-)
-
-// Enum value maps for ImportedRemoteKeysStatus_Status.
-var (
-	ImportedRemoteKeysStatus_Status_name = map[int32]string{
-		0: "UNKNOWN",
-		1: "IMPORTED",
-		2: "DUPLICATE",
-		3: "ERROR",
-	}
-	ImportedRemoteKeysStatus_Status_value = map[string]int32{
-		"UNKNOWN":   0,
-		"IMPORTED":  1,
-		"DUPLICATE": 2,
-		"ERROR":     3,
-	}
-)
-
-func (x ImportedRemoteKeysStatus_Status) Enum() *ImportedRemoteKeysStatus_Status {
-	p := new(ImportedRemoteKeysStatus_Status)
-	*p = x
-	return p
-}
-
-func (x ImportedRemoteKeysStatus_Status) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (ImportedRemoteKeysStatus_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_eth_service_key_management_proto_enumTypes[2].Descriptor()
-}
-
-func (ImportedRemoteKeysStatus_Status) Type() protoreflect.EnumType {
-	return &file_proto_eth_service_key_management_proto_enumTypes[2]
-}
-
-func (x ImportedRemoteKeysStatus_Status) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use ImportedRemoteKeysStatus_Status.Descriptor instead.
-func (ImportedRemoteKeysStatus_Status) EnumDescriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{12, 0}
-}
-
-type DeletedRemoteKeysStatus_Status int32
-
-const (
-	DeletedRemoteKeysStatus_NOT_FOUND DeletedRemoteKeysStatus_Status = 0
-	DeletedRemoteKeysStatus_DELETED   DeletedRemoteKeysStatus_Status = 1
-	DeletedRemoteKeysStatus_ERROR     DeletedRemoteKeysStatus_Status = 3
-)
-
-// Enum value maps for DeletedRemoteKeysStatus_Status.
-var (
-	DeletedRemoteKeysStatus_Status_name = map[int32]string{
-		0: "NOT_FOUND",
-		1: "DELETED",
-		3: "ERROR",
-	}
-	DeletedRemoteKeysStatus_Status_value = map[string]int32{
-		"NOT_FOUND": 0,
-		"DELETED":   1,
-		"ERROR":     3,
-	}
-)
-
-func (x DeletedRemoteKeysStatus_Status) Enum() *DeletedRemoteKeysStatus_Status {
-	p := new(DeletedRemoteKeysStatus_Status)
-	*p = x
-	return p
-}
-
-func (x DeletedRemoteKeysStatus_Status) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (DeletedRemoteKeysStatus_Status) Descriptor() protoreflect.EnumDescriptor {
-	return file_proto_eth_service_key_management_proto_enumTypes[3].Descriptor()
-}
-
-func (DeletedRemoteKeysStatus_Status) Type() protoreflect.EnumType {
-	return &file_proto_eth_service_key_management_proto_enumTypes[3]
-}
-
-func (x DeletedRemoteKeysStatus_Status) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use DeletedRemoteKeysStatus_Status.Descriptor instead.
-func (DeletedRemoteKeysStatus_Status) EnumDescriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{13, 0}
-}
-
 type ListKeystoresResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -599,351 +498,6 @@ func (x *DeletedKeystoreStatus) GetMessage() string {
 	return ""
 }
 
-type ListRemoteKeysResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data []*ListRemoteKeysResponse_Keystore `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *ListRemoteKeysResponse) Reset() {
-	*x = ListRemoteKeysResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[7]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ListRemoteKeysResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRemoteKeysResponse) ProtoMessage() {}
-
-func (x *ListRemoteKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[7]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListRemoteKeysResponse.ProtoReflect.Descriptor instead.
-func (*ListRemoteKeysResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *ListRemoteKeysResponse) GetData() []*ListRemoteKeysResponse_Keystore {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type ImportRemoteKeysRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	RemoteKeys []*ImportRemoteKeysRequest_Keystore `protobuf:"bytes,1,rep,name=remote_keys,json=remoteKeys,proto3" json:"remote_keys,omitempty"`
-}
-
-func (x *ImportRemoteKeysRequest) Reset() {
-	*x = ImportRemoteKeysRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[8]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ImportRemoteKeysRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ImportRemoteKeysRequest) ProtoMessage() {}
-
-func (x *ImportRemoteKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[8]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ImportRemoteKeysRequest.ProtoReflect.Descriptor instead.
-func (*ImportRemoteKeysRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{8}
-}
-
-func (x *ImportRemoteKeysRequest) GetRemoteKeys() []*ImportRemoteKeysRequest_Keystore {
-	if x != nil {
-		return x.RemoteKeys
-	}
-	return nil
-}
-
-type ImportRemoteKeysResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data []*ImportedRemoteKeysStatus `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *ImportRemoteKeysResponse) Reset() {
-	*x = ImportRemoteKeysResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[9]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ImportRemoteKeysResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ImportRemoteKeysResponse) ProtoMessage() {}
-
-func (x *ImportRemoteKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[9]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ImportRemoteKeysResponse.ProtoReflect.Descriptor instead.
-func (*ImportRemoteKeysResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{9}
-}
-
-func (x *ImportRemoteKeysResponse) GetData() []*ImportedRemoteKeysStatus {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type DeleteRemoteKeysRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkeys [][]byte `protobuf:"bytes,1,rep,name=pubkeys,proto3" json:"pubkeys,omitempty"`
-}
-
-func (x *DeleteRemoteKeysRequest) Reset() {
-	*x = DeleteRemoteKeysRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[10]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *DeleteRemoteKeysRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRemoteKeysRequest) ProtoMessage() {}
-
-func (x *DeleteRemoteKeysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[10]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteRemoteKeysRequest.ProtoReflect.Descriptor instead.
-func (*DeleteRemoteKeysRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{10}
-}
-
-func (x *DeleteRemoteKeysRequest) GetPubkeys() [][]byte {
-	if x != nil {
-		return x.Pubkeys
-	}
-	return nil
-}
-
-type DeleteRemoteKeysResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data []*DeletedRemoteKeysStatus `protobuf:"bytes,1,rep,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *DeleteRemoteKeysResponse) Reset() {
-	*x = DeleteRemoteKeysResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[11]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *DeleteRemoteKeysResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteRemoteKeysResponse) ProtoMessage() {}
-
-func (x *DeleteRemoteKeysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[11]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteRemoteKeysResponse.ProtoReflect.Descriptor instead.
-func (*DeleteRemoteKeysResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *DeleteRemoteKeysResponse) GetData() []*DeletedRemoteKeysStatus {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type ImportedRemoteKeysStatus struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Status  ImportedRemoteKeysStatus_Status `protobuf:"varint,1,opt,name=status,proto3,enum=ethereum.eth.service.ImportedRemoteKeysStatus_Status" json:"status,omitempty"`
-	Message string                          `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-}
-
-func (x *ImportedRemoteKeysStatus) Reset() {
-	*x = ImportedRemoteKeysStatus{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[12]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ImportedRemoteKeysStatus) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ImportedRemoteKeysStatus) ProtoMessage() {}
-
-func (x *ImportedRemoteKeysStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[12]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ImportedRemoteKeysStatus.ProtoReflect.Descriptor instead.
-func (*ImportedRemoteKeysStatus) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *ImportedRemoteKeysStatus) GetStatus() ImportedRemoteKeysStatus_Status {
-	if x != nil {
-		return x.Status
-	}
-	return ImportedRemoteKeysStatus_UNKNOWN
-}
-
-func (x *ImportedRemoteKeysStatus) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-type DeletedRemoteKeysStatus struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Status  DeletedRemoteKeysStatus_Status `protobuf:"varint,1,opt,name=status,proto3,enum=ethereum.eth.service.DeletedRemoteKeysStatus_Status" json:"status,omitempty"`
-	Message string                         `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-}
-
-func (x *DeletedRemoteKeysStatus) Reset() {
-	*x = DeletedRemoteKeysStatus{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[13]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *DeletedRemoteKeysStatus) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeletedRemoteKeysStatus) ProtoMessage() {}
-
-func (x *DeletedRemoteKeysStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[13]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeletedRemoteKeysStatus.ProtoReflect.Descriptor instead.
-func (*DeletedRemoteKeysStatus) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *DeletedRemoteKeysStatus) GetStatus() DeletedRemoteKeysStatus_Status {
-	if x != nil {
-		return x.Status
-	}
-	return DeletedRemoteKeysStatus_NOT_FOUND
-}
-
-func (x *DeletedRemoteKeysStatus) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
 type PubkeyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -955,7 +509,7 @@ type PubkeyRequest struct {
 func (x *PubkeyRequest) Reset() {
 	*x = PubkeyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[14]
+		mi := &file_proto_eth_service_key_management_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -968,7 +522,7 @@ func (x *PubkeyRequest) String() string {
 func (*PubkeyRequest) ProtoMessage() {}
 
 func (x *PubkeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[14]
+	mi := &file_proto_eth_service_key_management_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -981,261 +535,10 @@ func (x *PubkeyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PubkeyRequest.ProtoReflect.Descriptor instead.
 func (*PubkeyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{14}
+	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PubkeyRequest) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-type GetFeeRecipientByPubkeyResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data *GetFeeRecipientByPubkeyResponse_FeeRecipient `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *GetFeeRecipientByPubkeyResponse) Reset() {
-	*x = GetFeeRecipientByPubkeyResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[15]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetFeeRecipientByPubkeyResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetFeeRecipientByPubkeyResponse) ProtoMessage() {}
-
-func (x *GetFeeRecipientByPubkeyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[15]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetFeeRecipientByPubkeyResponse.ProtoReflect.Descriptor instead.
-func (*GetFeeRecipientByPubkeyResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{15}
-}
-
-func (x *GetFeeRecipientByPubkeyResponse) GetData() *GetFeeRecipientByPubkeyResponse_FeeRecipient {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type SetFeeRecipientByPubkeyRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey     []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	Ethaddress []byte `protobuf:"bytes,2,opt,name=ethaddress,proto3" json:"ethaddress,omitempty"`
-}
-
-func (x *SetFeeRecipientByPubkeyRequest) Reset() {
-	*x = SetFeeRecipientByPubkeyRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[16]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SetFeeRecipientByPubkeyRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetFeeRecipientByPubkeyRequest) ProtoMessage() {}
-
-func (x *SetFeeRecipientByPubkeyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[16]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetFeeRecipientByPubkeyRequest.ProtoReflect.Descriptor instead.
-func (*SetFeeRecipientByPubkeyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{16}
-}
-
-func (x *SetFeeRecipientByPubkeyRequest) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *SetFeeRecipientByPubkeyRequest) GetEthaddress() []byte {
-	if x != nil {
-		return x.Ethaddress
-	}
-	return nil
-}
-
-type GetGasLimitResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Data *GetGasLimitResponse_GasLimit `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
-}
-
-func (x *GetGasLimitResponse) Reset() {
-	*x = GetGasLimitResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[17]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetGasLimitResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetGasLimitResponse) ProtoMessage() {}
-
-func (x *GetGasLimitResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[17]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetGasLimitResponse.ProtoReflect.Descriptor instead.
-func (*GetGasLimitResponse) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{17}
-}
-
-func (x *GetGasLimitResponse) GetData() *GetGasLimitResponse_GasLimit {
-	if x != nil {
-		return x.Data
-	}
-	return nil
-}
-
-type SetGasLimitRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey   []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	GasLimit uint64 `protobuf:"varint,2,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-}
-
-func (x *SetGasLimitRequest) Reset() {
-	*x = SetGasLimitRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[18]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *SetGasLimitRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetGasLimitRequest) ProtoMessage() {}
-
-func (x *SetGasLimitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[18]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetGasLimitRequest.ProtoReflect.Descriptor instead.
-func (*SetGasLimitRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{18}
-}
-
-func (x *SetGasLimitRequest) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *SetGasLimitRequest) GetGasLimit() uint64 {
-	if x != nil {
-		return x.GasLimit
-	}
-	return 0
-}
-
-type DeleteGasLimitRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-}
-
-func (x *DeleteGasLimitRequest) Reset() {
-	*x = DeleteGasLimitRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[19]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *DeleteGasLimitRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DeleteGasLimitRequest) ProtoMessage() {}
-
-func (x *DeleteGasLimitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[19]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DeleteGasLimitRequest.ProtoReflect.Descriptor instead.
-func (*DeleteGasLimitRequest) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{19}
-}
-
-func (x *DeleteGasLimitRequest) GetPubkey() []byte {
 	if x != nil {
 		return x.Pubkey
 	}
@@ -1254,7 +557,7 @@ type ListKeystoresResponse_Keystore struct {
 func (x *ListKeystoresResponse_Keystore) Reset() {
 	*x = ListKeystoresResponse_Keystore{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[20]
+		mi := &file_proto_eth_service_key_management_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1267,7 +570,7 @@ func (x *ListKeystoresResponse_Keystore) String() string {
 func (*ListKeystoresResponse_Keystore) ProtoMessage() {}
 
 func (x *ListKeystoresResponse_Keystore) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[20]
+	mi := &file_proto_eth_service_key_management_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1295,234 +598,6 @@ func (x *ListKeystoresResponse_Keystore) GetDerivationPath() string {
 		return x.DerivationPath
 	}
 	return ""
-}
-
-type ListRemoteKeysResponse_Keystore struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey   []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	Url      string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	Readonly bool   `protobuf:"varint,3,opt,name=readonly,proto3" json:"readonly,omitempty"`
-}
-
-func (x *ListRemoteKeysResponse_Keystore) Reset() {
-	*x = ListRemoteKeysResponse_Keystore{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[21]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ListRemoteKeysResponse_Keystore) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ListRemoteKeysResponse_Keystore) ProtoMessage() {}
-
-func (x *ListRemoteKeysResponse_Keystore) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[21]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ListRemoteKeysResponse_Keystore.ProtoReflect.Descriptor instead.
-func (*ListRemoteKeysResponse_Keystore) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{7, 0}
-}
-
-func (x *ListRemoteKeysResponse_Keystore) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *ListRemoteKeysResponse_Keystore) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-
-func (x *ListRemoteKeysResponse_Keystore) GetReadonly() bool {
-	if x != nil {
-		return x.Readonly
-	}
-	return false
-}
-
-type ImportRemoteKeysRequest_Keystore struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	Url    string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-}
-
-func (x *ImportRemoteKeysRequest_Keystore) Reset() {
-	*x = ImportRemoteKeysRequest_Keystore{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[22]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *ImportRemoteKeysRequest_Keystore) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ImportRemoteKeysRequest_Keystore) ProtoMessage() {}
-
-func (x *ImportRemoteKeysRequest_Keystore) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[22]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ImportRemoteKeysRequest_Keystore.ProtoReflect.Descriptor instead.
-func (*ImportRemoteKeysRequest_Keystore) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{8, 0}
-}
-
-func (x *ImportRemoteKeysRequest_Keystore) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *ImportRemoteKeysRequest_Keystore) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-
-type GetFeeRecipientByPubkeyResponse_FeeRecipient struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey     []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	Ethaddress []byte `protobuf:"bytes,2,opt,name=ethaddress,proto3" json:"ethaddress,omitempty"`
-}
-
-func (x *GetFeeRecipientByPubkeyResponse_FeeRecipient) Reset() {
-	*x = GetFeeRecipientByPubkeyResponse_FeeRecipient{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[23]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetFeeRecipientByPubkeyResponse_FeeRecipient) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetFeeRecipientByPubkeyResponse_FeeRecipient) ProtoMessage() {}
-
-func (x *GetFeeRecipientByPubkeyResponse_FeeRecipient) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[23]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetFeeRecipientByPubkeyResponse_FeeRecipient.ProtoReflect.Descriptor instead.
-func (*GetFeeRecipientByPubkeyResponse_FeeRecipient) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{15, 0}
-}
-
-func (x *GetFeeRecipientByPubkeyResponse_FeeRecipient) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *GetFeeRecipientByPubkeyResponse_FeeRecipient) GetEthaddress() []byte {
-	if x != nil {
-		return x.Ethaddress
-	}
-	return nil
-}
-
-type GetGasLimitResponse_GasLimit struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Pubkey   []byte `protobuf:"bytes,1,opt,name=pubkey,proto3" json:"pubkey,omitempty"`
-	GasLimit uint64 `protobuf:"varint,2,opt,name=gas_limit,json=gasLimit,proto3" json:"gas_limit,omitempty"`
-}
-
-func (x *GetGasLimitResponse_GasLimit) Reset() {
-	*x = GetGasLimitResponse_GasLimit{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_eth_service_key_management_proto_msgTypes[24]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *GetGasLimitResponse_GasLimit) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*GetGasLimitResponse_GasLimit) ProtoMessage() {}
-
-func (x *GetGasLimitResponse_GasLimit) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_eth_service_key_management_proto_msgTypes[24]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use GetGasLimitResponse_GasLimit.ProtoReflect.Descriptor instead.
-func (*GetGasLimitResponse_GasLimit) Descriptor() ([]byte, []int) {
-	return file_proto_eth_service_key_management_proto_rawDescGZIP(), []int{17, 0}
-}
-
-func (x *GetGasLimitResponse_GasLimit) GetPubkey() []byte {
-	if x != nil {
-		return x.Pubkey
-	}
-	return nil
-}
-
-func (x *GetGasLimitResponse_GasLimit) GetGasLimit() uint64 {
-	if x != nil {
-		return x.GasLimit
-	}
-	return 0
 }
 
 var File_proto_eth_service_key_management_proto protoreflect.FileDescriptor
@@ -1599,230 +674,48 @@ var file_proto_eth_service_key_management_proto_rawDesc = []byte{
 	0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45,
 	0x44, 0x10, 0x00, 0x12, 0x0d, 0x0a, 0x09, 0x4e, 0x4f, 0x54, 0x5f, 0x46, 0x4f, 0x55, 0x4e, 0x44,
 	0x10, 0x01, 0x12, 0x0e, 0x0a, 0x0a, 0x4e, 0x4f, 0x54, 0x5f, 0x41, 0x43, 0x54, 0x49, 0x56, 0x45,
-	0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x22, 0xb5, 0x01,
-	0x0a, 0x16, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x49, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x35, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4c, 0x69,
-	0x73, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x52, 0x04, 0x64,
-	0x61, 0x74, 0x61, 0x1a, 0x50, 0x0a, 0x08, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x12,
-	0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x65, 0x61,
-	0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x72, 0x65, 0x61,
-	0x64, 0x6f, 0x6e, 0x6c, 0x79, 0x22, 0xa8, 0x01, 0x0a, 0x17, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74,
-	0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x57, 0x0a, 0x0b, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x5f, 0x6b, 0x65, 0x79, 0x73,
-	0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x36, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d,
-	0x70, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x52, 0x0a,
-	0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x1a, 0x34, 0x0a, 0x08, 0x4b, 0x65,
-	0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x10,
-	0x0a, 0x03, 0x75, 0x72, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x75, 0x72, 0x6c,
-	0x22, 0x5e, 0x0a, 0x18, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x42, 0x0a, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x2e, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65, 0x64, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x4b, 0x65, 0x79, 0x73, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x22, 0x33, 0x0a, 0x17, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x18, 0x0a, 0x07, 0x70,
-	0x75, 0x62, 0x6b, 0x65, 0x79, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0c, 0x52, 0x07, 0x70, 0x75,
-	0x62, 0x6b, 0x65, 0x79, 0x73, 0x22, 0x5d, 0x0a, 0x18, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52,
-	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x41, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
-	0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x52, 0x65,
-	0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x04,
-	0x64, 0x61, 0x74, 0x61, 0x22, 0xc2, 0x01, 0x0a, 0x18, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65,
-	0x64, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x53, 0x74, 0x61, 0x74, 0x75,
-	0x73, 0x12, 0x4d, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0e, 0x32, 0x35, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x65,
-	0x64, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x53, 0x74, 0x61, 0x74, 0x75,
-	0x73, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x3d, 0x0a, 0x06, 0x53, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x12, 0x0b, 0x0a, 0x07, 0x55, 0x4e, 0x4b, 0x4e, 0x4f, 0x57, 0x4e, 0x10,
-	0x00, 0x12, 0x0c, 0x0a, 0x08, 0x49, 0x4d, 0x50, 0x4f, 0x52, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12,
-	0x0d, 0x0a, 0x09, 0x44, 0x55, 0x50, 0x4c, 0x49, 0x43, 0x41, 0x54, 0x45, 0x10, 0x02, 0x12, 0x09,
-	0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x22, 0xb2, 0x01, 0x0a, 0x17, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x64, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x53,
-	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x4c, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18,
-	0x01, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c,
-	0x65, 0x74, 0x65, 0x64, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x53, 0x74,
-	0x61, 0x74, 0x75, 0x73, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61,
-	0x74, 0x75, 0x73, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x22, 0x2f, 0x0a,
-	0x06, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x0d, 0x0a, 0x09, 0x4e, 0x4f, 0x54, 0x5f, 0x46,
-	0x4f, 0x55, 0x4e, 0x44, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x45, 0x4c, 0x45, 0x54, 0x45,
-	0x44, 0x10, 0x01, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x22, 0x27,
-	0x0a, 0x0d, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
-	0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x22, 0xc1, 0x01, 0x0a, 0x1f, 0x47, 0x65, 0x74, 0x46,
-	0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75, 0x62,
-	0x6b, 0x65, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x56, 0x0a, 0x04, 0x64,
-	0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x42, 0x2e, 0x65, 0x74, 0x68, 0x65,
-	0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x2e, 0x47, 0x65, 0x74, 0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74,
-	0x42, 0x79, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
-	0x2e, 0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x52, 0x04, 0x64,
-	0x61, 0x74, 0x61, 0x1a, 0x46, 0x0a, 0x0c, 0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69,
-	0x65, 0x6e, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x0c, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x1e, 0x0a, 0x0a, 0x65,
-	0x74, 0x68, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52,
-	0x0a, 0x65, 0x74, 0x68, 0x61, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73, 0x22, 0x58, 0x0a, 0x1e, 0x53,
-	0x65, 0x74, 0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79,
-	0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a,
-	0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70,
-	0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x1e, 0x0a, 0x0a, 0x65, 0x74, 0x68, 0x61, 0x64, 0x64, 0x72,
-	0x65, 0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x0a, 0x65, 0x74, 0x68, 0x61, 0x64,
-	0x64, 0x72, 0x65, 0x73, 0x73, 0x22, 0x9e, 0x01, 0x0a, 0x13, 0x47, 0x65, 0x74, 0x47, 0x61, 0x73,
-	0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x46, 0x0a,
-	0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x32, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x47, 0x65, 0x74, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52,
-	0x04, 0x64, 0x61, 0x74, 0x61, 0x1a, 0x3f, 0x0a, 0x08, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69,
-	0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0c, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x1b, 0x0a, 0x09, 0x67, 0x61, 0x73,
-	0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x67, 0x61,
-	0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x22, 0x49, 0x0a, 0x12, 0x53, 0x65, 0x74, 0x47, 0x61, 0x73,
-	0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06,
-	0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70, 0x75,
-	0x62, 0x6b, 0x65, 0x79, 0x12, 0x1b, 0x0a, 0x09, 0x67, 0x61, 0x73, 0x5f, 0x6c, 0x69, 0x6d, 0x69,
-	0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x04, 0x52, 0x08, 0x67, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69,
-	0x74, 0x22, 0x2f, 0x0a, 0x15, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x47, 0x61, 0x73, 0x4c, 0x69,
-	0x6d, 0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75,
-	0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6b,
-	0x65, 0x79, 0x32, 0x96, 0x0e, 0x0a, 0x0d, 0x4b, 0x65, 0x79, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65,
-	0x6d, 0x65, 0x6e, 0x74, 0x12, 0x78, 0x0a, 0x0d, 0x4c, 0x69, 0x73, 0x74, 0x4b, 0x65, 0x79, 0x73,
-	0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x2b, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
-	0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x22, 0x82, 0xd3, 0xe4, 0x93,
-	0x02, 0x1c, 0x12, 0x1a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
-	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x95,
-	0x01, 0x0a, 0x0f, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
-	0x65, 0x73, 0x12, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74,
-	0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65,
-	0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x25, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1f, 0x3a, 0x01, 0x2a, 0x22, 0x1a, 0x2f, 0x69, 0x6e, 0x74,
-	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x6b, 0x65, 0x79,
-	0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x95, 0x01, 0x0a, 0x0f, 0x44, 0x65, 0x6c, 0x65, 0x74,
-	0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x2c, 0x2e, 0x65, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65,
-	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x25, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1f, 0x3a,
-	0x01, 0x2a, 0x2a, 0x1a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74,
-	0x68, 0x2f, 0x76, 0x31, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x7b,
-	0x0a, 0x0e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73,
-	0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
-	0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
-	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x23, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1d, 0x12, 0x1b,
-	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
-	0x2f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x6b, 0x65, 0x79, 0x73, 0x12, 0x99, 0x01, 0x0a, 0x10,
-	0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73,
-	0x12, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x52, 0x65,
-	0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a,
-	0x2e, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x6d,
-	0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x26, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x20, 0x3a, 0x01, 0x2a, 0x22, 0x1b, 0x2f, 0x69, 0x6e, 0x74,
-	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x72, 0x65, 0x6d,
-	0x6f, 0x74, 0x65, 0x6b, 0x65, 0x79, 0x73, 0x12, 0x99, 0x01, 0x0a, 0x10, 0x44, 0x65, 0x6c, 0x65,
-	0x74, 0x65, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x12, 0x2d, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65,
-	0x4b, 0x65, 0x79, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2e, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x4b,
-	0x65, 0x79, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x26, 0x82, 0xd3, 0xe4,
-	0x93, 0x02, 0x20, 0x3a, 0x01, 0x2a, 0x2a, 0x1b, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
-	0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x6b,
-	0x65, 0x79, 0x73, 0x12, 0xb0, 0x01, 0x0a, 0x18, 0x4c, 0x69, 0x73, 0x74, 0x46, 0x65, 0x65, 0x52,
-	0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79,
-	0x12, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x35, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d,
-	0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x47, 0x65, 0x74,
-	0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75,
-	0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x38, 0x82, 0xd3,
-	0xe4, 0x93, 0x02, 0x32, 0x12, 0x30, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f,
-	0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
-	0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x7d, 0x2f, 0x66, 0x65, 0x65, 0x72, 0x65, 0x63,
-	0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x12, 0xa4, 0x01, 0x0a, 0x17, 0x53, 0x65, 0x74, 0x46, 0x65,
-	0x65, 0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75, 0x62, 0x6b,
-	0x65, 0x79, 0x12, 0x34, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74,
-	0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x53, 0x65, 0x74, 0x46, 0x65, 0x65,
-	0x52, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75, 0x62, 0x6b, 0x65,
-	0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c,
-	0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79,
-	0x22, 0x3b, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x35, 0x3a, 0x01, 0x2a, 0x22, 0x30, 0x2f, 0x69, 0x6e,
-	0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61,
-	0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x7d,
-	0x2f, 0x66, 0x65, 0x65, 0x72, 0x65, 0x63, 0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x12, 0x96, 0x01,
-	0x0a, 0x1a, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x46, 0x65, 0x65, 0x52, 0x65, 0x63, 0x69, 0x70,
-	0x69, 0x65, 0x6e, 0x74, 0x42, 0x79, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x12, 0x23, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22, 0x3b, 0x82, 0xd3, 0xe4, 0x93, 0x02,
-	0x35, 0x3a, 0x01, 0x2a, 0x2a, 0x30, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f,
-	0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72,
-	0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x7d, 0x2f, 0x66, 0x65, 0x65, 0x72, 0x65, 0x63,
-	0x69, 0x70, 0x69, 0x65, 0x6e, 0x74, 0x12, 0x94, 0x01, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x47, 0x61,
-	0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x23, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
-	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x75,
-	0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x29, 0x2e, 0x65, 0x74,
-	0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x47, 0x65, 0x74, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x35, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x2f, 0x12, 0x2d,
-	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
-	0x2f, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b,
-	0x65, 0x79, 0x7d, 0x2f, 0x67, 0x61, 0x73, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x89, 0x01,
-	0x0a, 0x0b, 0x53, 0x65, 0x74, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x28, 0x2e,
-	0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x53, 0x65, 0x74, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
-	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x22,
-	0x38, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x32, 0x3a, 0x01, 0x2a, 0x22, 0x2d, 0x2f, 0x69, 0x6e, 0x74,
-	0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76, 0x61, 0x6c,
-	0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x7d, 0x2f,
-	0x67, 0x61, 0x73, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x8f, 0x01, 0x0a, 0x0e, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d, 0x69, 0x74, 0x12, 0x2b, 0x2e, 0x65,
-	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x47, 0x61, 0x73, 0x4c, 0x69, 0x6d,
-	0x69, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
+	0x10, 0x02, 0x12, 0x09, 0x0a, 0x05, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x03, 0x22, 0x27, 0x0a,
+	0x0d, 0x50, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16,
+	0x0a, 0x06, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x06,
+	0x70, 0x75, 0x62, 0x6b, 0x65, 0x79, 0x32, 0xb9, 0x03, 0x0a, 0x0d, 0x4b, 0x65, 0x79, 0x4d, 0x61,
+	0x6e, 0x61, 0x67, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x78, 0x0a, 0x0d, 0x4c, 0x69, 0x73, 0x74,
+	0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
 	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74,
-	0x79, 0x22, 0x38, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x32, 0x3a, 0x01, 0x2a, 0x2a, 0x2d, 0x2f, 0x69,
-	0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x76,
-	0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x6f, 0x72, 0x2f, 0x7b, 0x70, 0x75, 0x62, 0x6b, 0x65, 0x79,
-	0x7d, 0x2f, 0x67, 0x61, 0x73, 0x5f, 0x6c, 0x69, 0x6d, 0x69, 0x74, 0x42, 0x9a, 0x01, 0x0a, 0x18,
-	0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
-	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x42, 0x19, 0x4b, 0x65, 0x79, 0x4d, 0x61, 0x6e,
-	0x61, 0x67, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72,
-	0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x33, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74, 0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f,
-	0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x34, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65,
-	0x74, 0x68, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0xaa, 0x02, 0x14, 0x45, 0x74, 0x68,
-	0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0xca, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68,
-	0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x79, 0x1a, 0x2b, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x4b, 0x65, 0x79,
+	0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x22,
+	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1c, 0x12, 0x1a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
+	0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
+	0x65, 0x73, 0x12, 0x95, 0x01, 0x0a, 0x0f, 0x49, 0x6d, 0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79,
+	0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x2c, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75,
+	0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d,
+	0x70, 0x6f, 0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x2d, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e,
+	0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x49, 0x6d, 0x70, 0x6f,
+	0x72, 0x74, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x25, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x1f, 0x3a, 0x01, 0x2a, 0x22, 0x1a,
+	0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61, 0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31,
+	0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x95, 0x01, 0x0a, 0x0f, 0x44,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72, 0x65, 0x73, 0x12, 0x2c,
+	0x2e, 0x65, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73,
+	0x74, 0x6f, 0x72, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2d, 0x2e, 0x65,
+	0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x74, 0x6f,
+	0x72, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x25, 0x82, 0xd3, 0xe4,
+	0x93, 0x02, 0x1f, 0x3a, 0x01, 0x2a, 0x2a, 0x1a, 0x2f, 0x69, 0x6e, 0x74, 0x65, 0x72, 0x6e, 0x61,
+	0x6c, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x76, 0x31, 0x2f, 0x6b, 0x65, 0x79, 0x73, 0x74, 0x6f, 0x72,
+	0x65, 0x73, 0x42, 0x9a, 0x01, 0x0a, 0x18, 0x6f, 0x72, 0x67, 0x2e, 0x65, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x2e, 0x65, 0x74, 0x68, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x42,
+	0x19, 0x4b, 0x65, 0x79, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x65, 0x6d, 0x65, 0x6e, 0x74, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x33, 0x67, 0x69,
+	0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x61, 0x74,
+	0x69, 0x63, 0x6c, 0x61, 0x62, 0x73, 0x2f, 0x70, 0x72, 0x79, 0x73, 0x6d, 0x2f, 0x76, 0x34, 0x2f,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x65, 0x74, 0x68, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0xaa, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x2e, 0x45, 0x74, 0x68,
+	0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0xca, 0x02, 0x14, 0x45, 0x74, 0x68, 0x65, 0x72,
+	0x65, 0x75, 0x6d, 0x5c, 0x45, 0x74, 0x68, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1837,83 +730,39 @@ func file_proto_eth_service_key_management_proto_rawDescGZIP() []byte {
 	return file_proto_eth_service_key_management_proto_rawDescData
 }
 
-var file_proto_eth_service_key_management_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_proto_eth_service_key_management_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_proto_eth_service_key_management_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_proto_eth_service_key_management_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_eth_service_key_management_proto_goTypes = []interface{}{
-	(ImportedKeystoreStatus_Status)(0),                   // 0: ethereum.eth.service.ImportedKeystoreStatus.Status
-	(DeletedKeystoreStatus_Status)(0),                    // 1: ethereum.eth.service.DeletedKeystoreStatus.Status
-	(ImportedRemoteKeysStatus_Status)(0),                 // 2: ethereum.eth.service.ImportedRemoteKeysStatus.Status
-	(DeletedRemoteKeysStatus_Status)(0),                  // 3: ethereum.eth.service.DeletedRemoteKeysStatus.Status
-	(*ListKeystoresResponse)(nil),                        // 4: ethereum.eth.service.ListKeystoresResponse
-	(*ImportKeystoresRequest)(nil),                       // 5: ethereum.eth.service.ImportKeystoresRequest
-	(*ImportKeystoresResponse)(nil),                      // 6: ethereum.eth.service.ImportKeystoresResponse
-	(*DeleteKeystoresRequest)(nil),                       // 7: ethereum.eth.service.DeleteKeystoresRequest
-	(*DeleteKeystoresResponse)(nil),                      // 8: ethereum.eth.service.DeleteKeystoresResponse
-	(*ImportedKeystoreStatus)(nil),                       // 9: ethereum.eth.service.ImportedKeystoreStatus
-	(*DeletedKeystoreStatus)(nil),                        // 10: ethereum.eth.service.DeletedKeystoreStatus
-	(*ListRemoteKeysResponse)(nil),                       // 11: ethereum.eth.service.ListRemoteKeysResponse
-	(*ImportRemoteKeysRequest)(nil),                      // 12: ethereum.eth.service.ImportRemoteKeysRequest
-	(*ImportRemoteKeysResponse)(nil),                     // 13: ethereum.eth.service.ImportRemoteKeysResponse
-	(*DeleteRemoteKeysRequest)(nil),                      // 14: ethereum.eth.service.DeleteRemoteKeysRequest
-	(*DeleteRemoteKeysResponse)(nil),                     // 15: ethereum.eth.service.DeleteRemoteKeysResponse
-	(*ImportedRemoteKeysStatus)(nil),                     // 16: ethereum.eth.service.ImportedRemoteKeysStatus
-	(*DeletedRemoteKeysStatus)(nil),                      // 17: ethereum.eth.service.DeletedRemoteKeysStatus
-	(*PubkeyRequest)(nil),                                // 18: ethereum.eth.service.PubkeyRequest
-	(*GetFeeRecipientByPubkeyResponse)(nil),              // 19: ethereum.eth.service.GetFeeRecipientByPubkeyResponse
-	(*SetFeeRecipientByPubkeyRequest)(nil),               // 20: ethereum.eth.service.SetFeeRecipientByPubkeyRequest
-	(*GetGasLimitResponse)(nil),                          // 21: ethereum.eth.service.GetGasLimitResponse
-	(*SetGasLimitRequest)(nil),                           // 22: ethereum.eth.service.SetGasLimitRequest
-	(*DeleteGasLimitRequest)(nil),                        // 23: ethereum.eth.service.DeleteGasLimitRequest
-	(*ListKeystoresResponse_Keystore)(nil),               // 24: ethereum.eth.service.ListKeystoresResponse.Keystore
-	(*ListRemoteKeysResponse_Keystore)(nil),              // 25: ethereum.eth.service.ListRemoteKeysResponse.Keystore
-	(*ImportRemoteKeysRequest_Keystore)(nil),             // 26: ethereum.eth.service.ImportRemoteKeysRequest.Keystore
-	(*GetFeeRecipientByPubkeyResponse_FeeRecipient)(nil), // 27: ethereum.eth.service.GetFeeRecipientByPubkeyResponse.FeeRecipient
-	(*GetGasLimitResponse_GasLimit)(nil),                 // 28: ethereum.eth.service.GetGasLimitResponse.GasLimit
-	(*emptypb.Empty)(nil),                                // 29: google.protobuf.Empty
+	(ImportedKeystoreStatus_Status)(0),     // 0: ethereum.eth.service.ImportedKeystoreStatus.Status
+	(DeletedKeystoreStatus_Status)(0),      // 1: ethereum.eth.service.DeletedKeystoreStatus.Status
+	(*ListKeystoresResponse)(nil),          // 2: ethereum.eth.service.ListKeystoresResponse
+	(*ImportKeystoresRequest)(nil),         // 3: ethereum.eth.service.ImportKeystoresRequest
+	(*ImportKeystoresResponse)(nil),        // 4: ethereum.eth.service.ImportKeystoresResponse
+	(*DeleteKeystoresRequest)(nil),         // 5: ethereum.eth.service.DeleteKeystoresRequest
+	(*DeleteKeystoresResponse)(nil),        // 6: ethereum.eth.service.DeleteKeystoresResponse
+	(*ImportedKeystoreStatus)(nil),         // 7: ethereum.eth.service.ImportedKeystoreStatus
+	(*DeletedKeystoreStatus)(nil),          // 8: ethereum.eth.service.DeletedKeystoreStatus
+	(*PubkeyRequest)(nil),                  // 9: ethereum.eth.service.PubkeyRequest
+	(*ListKeystoresResponse_Keystore)(nil), // 10: ethereum.eth.service.ListKeystoresResponse.Keystore
+	(*emptypb.Empty)(nil),                  // 11: google.protobuf.Empty
 }
 var file_proto_eth_service_key_management_proto_depIdxs = []int32{
-	24, // 0: ethereum.eth.service.ListKeystoresResponse.data:type_name -> ethereum.eth.service.ListKeystoresResponse.Keystore
-	9,  // 1: ethereum.eth.service.ImportKeystoresResponse.data:type_name -> ethereum.eth.service.ImportedKeystoreStatus
-	10, // 2: ethereum.eth.service.DeleteKeystoresResponse.data:type_name -> ethereum.eth.service.DeletedKeystoreStatus
+	10, // 0: ethereum.eth.service.ListKeystoresResponse.data:type_name -> ethereum.eth.service.ListKeystoresResponse.Keystore
+	7,  // 1: ethereum.eth.service.ImportKeystoresResponse.data:type_name -> ethereum.eth.service.ImportedKeystoreStatus
+	8,  // 2: ethereum.eth.service.DeleteKeystoresResponse.data:type_name -> ethereum.eth.service.DeletedKeystoreStatus
 	0,  // 3: ethereum.eth.service.ImportedKeystoreStatus.status:type_name -> ethereum.eth.service.ImportedKeystoreStatus.Status
 	1,  // 4: ethereum.eth.service.DeletedKeystoreStatus.status:type_name -> ethereum.eth.service.DeletedKeystoreStatus.Status
-	25, // 5: ethereum.eth.service.ListRemoteKeysResponse.data:type_name -> ethereum.eth.service.ListRemoteKeysResponse.Keystore
-	26, // 6: ethereum.eth.service.ImportRemoteKeysRequest.remote_keys:type_name -> ethereum.eth.service.ImportRemoteKeysRequest.Keystore
-	16, // 7: ethereum.eth.service.ImportRemoteKeysResponse.data:type_name -> ethereum.eth.service.ImportedRemoteKeysStatus
-	17, // 8: ethereum.eth.service.DeleteRemoteKeysResponse.data:type_name -> ethereum.eth.service.DeletedRemoteKeysStatus
-	2,  // 9: ethereum.eth.service.ImportedRemoteKeysStatus.status:type_name -> ethereum.eth.service.ImportedRemoteKeysStatus.Status
-	3,  // 10: ethereum.eth.service.DeletedRemoteKeysStatus.status:type_name -> ethereum.eth.service.DeletedRemoteKeysStatus.Status
-	27, // 11: ethereum.eth.service.GetFeeRecipientByPubkeyResponse.data:type_name -> ethereum.eth.service.GetFeeRecipientByPubkeyResponse.FeeRecipient
-	28, // 12: ethereum.eth.service.GetGasLimitResponse.data:type_name -> ethereum.eth.service.GetGasLimitResponse.GasLimit
-	29, // 13: ethereum.eth.service.KeyManagement.ListKeystores:input_type -> google.protobuf.Empty
-	5,  // 14: ethereum.eth.service.KeyManagement.ImportKeystores:input_type -> ethereum.eth.service.ImportKeystoresRequest
-	7,  // 15: ethereum.eth.service.KeyManagement.DeleteKeystores:input_type -> ethereum.eth.service.DeleteKeystoresRequest
-	29, // 16: ethereum.eth.service.KeyManagement.ListRemoteKeys:input_type -> google.protobuf.Empty
-	12, // 17: ethereum.eth.service.KeyManagement.ImportRemoteKeys:input_type -> ethereum.eth.service.ImportRemoteKeysRequest
-	14, // 18: ethereum.eth.service.KeyManagement.DeleteRemoteKeys:input_type -> ethereum.eth.service.DeleteRemoteKeysRequest
-	18, // 19: ethereum.eth.service.KeyManagement.ListFeeRecipientByPubkey:input_type -> ethereum.eth.service.PubkeyRequest
-	20, // 20: ethereum.eth.service.KeyManagement.SetFeeRecipientByPubkey:input_type -> ethereum.eth.service.SetFeeRecipientByPubkeyRequest
-	18, // 21: ethereum.eth.service.KeyManagement.DeleteFeeRecipientByPubkey:input_type -> ethereum.eth.service.PubkeyRequest
-	18, // 22: ethereum.eth.service.KeyManagement.GetGasLimit:input_type -> ethereum.eth.service.PubkeyRequest
-	22, // 23: ethereum.eth.service.KeyManagement.SetGasLimit:input_type -> ethereum.eth.service.SetGasLimitRequest
-	23, // 24: ethereum.eth.service.KeyManagement.DeleteGasLimit:input_type -> ethereum.eth.service.DeleteGasLimitRequest
-	4,  // 25: ethereum.eth.service.KeyManagement.ListKeystores:output_type -> ethereum.eth.service.ListKeystoresResponse
-	6,  // 26: ethereum.eth.service.KeyManagement.ImportKeystores:output_type -> ethereum.eth.service.ImportKeystoresResponse
-	8,  // 27: ethereum.eth.service.KeyManagement.DeleteKeystores:output_type -> ethereum.eth.service.DeleteKeystoresResponse
-	11, // 28: ethereum.eth.service.KeyManagement.ListRemoteKeys:output_type -> ethereum.eth.service.ListRemoteKeysResponse
-	13, // 29: ethereum.eth.service.KeyManagement.ImportRemoteKeys:output_type -> ethereum.eth.service.ImportRemoteKeysResponse
-	15, // 30: ethereum.eth.service.KeyManagement.DeleteRemoteKeys:output_type -> ethereum.eth.service.DeleteRemoteKeysResponse
-	19, // 31: ethereum.eth.service.KeyManagement.ListFeeRecipientByPubkey:output_type -> ethereum.eth.service.GetFeeRecipientByPubkeyResponse
-	29, // 32: ethereum.eth.service.KeyManagement.SetFeeRecipientByPubkey:output_type -> google.protobuf.Empty
-	29, // 33: ethereum.eth.service.KeyManagement.DeleteFeeRecipientByPubkey:output_type -> google.protobuf.Empty
-	21, // 34: ethereum.eth.service.KeyManagement.GetGasLimit:output_type -> ethereum.eth.service.GetGasLimitResponse
-	29, // 35: ethereum.eth.service.KeyManagement.SetGasLimit:output_type -> google.protobuf.Empty
-	29, // 36: ethereum.eth.service.KeyManagement.DeleteGasLimit:output_type -> google.protobuf.Empty
-	25, // [25:37] is the sub-list for method output_type
-	13, // [13:25] is the sub-list for method input_type
-	13, // [13:13] is the sub-list for extension type_name
-	13, // [13:13] is the sub-list for extension extendee
-	0,  // [0:13] is the sub-list for field type_name
+	11, // 5: ethereum.eth.service.KeyManagement.ListKeystores:input_type -> google.protobuf.Empty
+	3,  // 6: ethereum.eth.service.KeyManagement.ImportKeystores:input_type -> ethereum.eth.service.ImportKeystoresRequest
+	5,  // 7: ethereum.eth.service.KeyManagement.DeleteKeystores:input_type -> ethereum.eth.service.DeleteKeystoresRequest
+	2,  // 8: ethereum.eth.service.KeyManagement.ListKeystores:output_type -> ethereum.eth.service.ListKeystoresResponse
+	4,  // 9: ethereum.eth.service.KeyManagement.ImportKeystores:output_type -> ethereum.eth.service.ImportKeystoresResponse
+	6,  // 10: ethereum.eth.service.KeyManagement.DeleteKeystores:output_type -> ethereum.eth.service.DeleteKeystoresResponse
+	8,  // [8:11] is the sub-list for method output_type
+	5,  // [5:8] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_eth_service_key_management_proto_init() }
@@ -2007,90 +856,6 @@ func file_proto_eth_service_key_management_proto_init() {
 			}
 		}
 		file_proto_eth_service_key_management_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListRemoteKeysResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportRemoteKeysRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportRemoteKeysResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteRemoteKeysRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteRemoteKeysResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportedRemoteKeysStatus); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeletedRemoteKeysStatus); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PubkeyRequest); i {
 			case 0:
 				return &v.state
@@ -2102,116 +867,8 @@ func file_proto_eth_service_key_management_proto_init() {
 				return nil
 			}
 		}
-		file_proto_eth_service_key_management_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetFeeRecipientByPubkeyResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetFeeRecipientByPubkeyRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetGasLimitResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetGasLimitRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteGasLimitRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_eth_service_key_management_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ListKeystoresResponse_Keystore); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListRemoteKeysResponse_Keystore); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ImportRemoteKeysRequest_Keystore); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetFeeRecipientByPubkeyResponse_FeeRecipient); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_eth_service_key_management_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetGasLimitResponse_GasLimit); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2228,8 +885,8 @@ func file_proto_eth_service_key_management_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_eth_service_key_management_proto_rawDesc,
-			NumEnums:      4,
-			NumMessages:   25,
+			NumEnums:      2,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -2259,15 +916,6 @@ type KeyManagementClient interface {
 	ListKeystores(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListKeystoresResponse, error)
 	ImportKeystores(ctx context.Context, in *ImportKeystoresRequest, opts ...grpc.CallOption) (*ImportKeystoresResponse, error)
 	DeleteKeystores(ctx context.Context, in *DeleteKeystoresRequest, opts ...grpc.CallOption) (*DeleteKeystoresResponse, error)
-	ListRemoteKeys(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListRemoteKeysResponse, error)
-	ImportRemoteKeys(ctx context.Context, in *ImportRemoteKeysRequest, opts ...grpc.CallOption) (*ImportRemoteKeysResponse, error)
-	DeleteRemoteKeys(ctx context.Context, in *DeleteRemoteKeysRequest, opts ...grpc.CallOption) (*DeleteRemoteKeysResponse, error)
-	ListFeeRecipientByPubkey(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*GetFeeRecipientByPubkeyResponse, error)
-	SetFeeRecipientByPubkey(ctx context.Context, in *SetFeeRecipientByPubkeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteFeeRecipientByPubkey(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	GetGasLimit(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*GetGasLimitResponse, error)
-	SetGasLimit(ctx context.Context, in *SetGasLimitRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteGasLimit(ctx context.Context, in *DeleteGasLimitRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type keyManagementClient struct {
@@ -2305,101 +953,11 @@ func (c *keyManagementClient) DeleteKeystores(ctx context.Context, in *DeleteKey
 	return out, nil
 }
 
-func (c *keyManagementClient) ListRemoteKeys(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListRemoteKeysResponse, error) {
-	out := new(ListRemoteKeysResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/ListRemoteKeys", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) ImportRemoteKeys(ctx context.Context, in *ImportRemoteKeysRequest, opts ...grpc.CallOption) (*ImportRemoteKeysResponse, error) {
-	out := new(ImportRemoteKeysResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/ImportRemoteKeys", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) DeleteRemoteKeys(ctx context.Context, in *DeleteRemoteKeysRequest, opts ...grpc.CallOption) (*DeleteRemoteKeysResponse, error) {
-	out := new(DeleteRemoteKeysResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/DeleteRemoteKeys", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) ListFeeRecipientByPubkey(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*GetFeeRecipientByPubkeyResponse, error) {
-	out := new(GetFeeRecipientByPubkeyResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/ListFeeRecipientByPubkey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) SetFeeRecipientByPubkey(ctx context.Context, in *SetFeeRecipientByPubkeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/SetFeeRecipientByPubkey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) DeleteFeeRecipientByPubkey(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/DeleteFeeRecipientByPubkey", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) GetGasLimit(ctx context.Context, in *PubkeyRequest, opts ...grpc.CallOption) (*GetGasLimitResponse, error) {
-	out := new(GetGasLimitResponse)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/GetGasLimit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) SetGasLimit(ctx context.Context, in *SetGasLimitRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/SetGasLimit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *keyManagementClient) DeleteGasLimit(ctx context.Context, in *DeleteGasLimitRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/ethereum.eth.service.KeyManagement/DeleteGasLimit", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // KeyManagementServer is the server API for KeyManagement service.
 type KeyManagementServer interface {
 	ListKeystores(context.Context, *emptypb.Empty) (*ListKeystoresResponse, error)
 	ImportKeystores(context.Context, *ImportKeystoresRequest) (*ImportKeystoresResponse, error)
 	DeleteKeystores(context.Context, *DeleteKeystoresRequest) (*DeleteKeystoresResponse, error)
-	ListRemoteKeys(context.Context, *emptypb.Empty) (*ListRemoteKeysResponse, error)
-	ImportRemoteKeys(context.Context, *ImportRemoteKeysRequest) (*ImportRemoteKeysResponse, error)
-	DeleteRemoteKeys(context.Context, *DeleteRemoteKeysRequest) (*DeleteRemoteKeysResponse, error)
-	ListFeeRecipientByPubkey(context.Context, *PubkeyRequest) (*GetFeeRecipientByPubkeyResponse, error)
-	SetFeeRecipientByPubkey(context.Context, *SetFeeRecipientByPubkeyRequest) (*emptypb.Empty, error)
-	DeleteFeeRecipientByPubkey(context.Context, *PubkeyRequest) (*emptypb.Empty, error)
-	GetGasLimit(context.Context, *PubkeyRequest) (*GetGasLimitResponse, error)
-	SetGasLimit(context.Context, *SetGasLimitRequest) (*emptypb.Empty, error)
-	DeleteGasLimit(context.Context, *DeleteGasLimitRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedKeyManagementServer can be embedded to have forward compatible implementations.
@@ -2414,33 +972,6 @@ func (*UnimplementedKeyManagementServer) ImportKeystores(context.Context, *Impor
 }
 func (*UnimplementedKeyManagementServer) DeleteKeystores(context.Context, *DeleteKeystoresRequest) (*DeleteKeystoresResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteKeystores not implemented")
-}
-func (*UnimplementedKeyManagementServer) ListRemoteKeys(context.Context, *emptypb.Empty) (*ListRemoteKeysResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListRemoteKeys not implemented")
-}
-func (*UnimplementedKeyManagementServer) ImportRemoteKeys(context.Context, *ImportRemoteKeysRequest) (*ImportRemoteKeysResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ImportRemoteKeys not implemented")
-}
-func (*UnimplementedKeyManagementServer) DeleteRemoteKeys(context.Context, *DeleteRemoteKeysRequest) (*DeleteRemoteKeysResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteRemoteKeys not implemented")
-}
-func (*UnimplementedKeyManagementServer) ListFeeRecipientByPubkey(context.Context, *PubkeyRequest) (*GetFeeRecipientByPubkeyResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListFeeRecipientByPubkey not implemented")
-}
-func (*UnimplementedKeyManagementServer) SetFeeRecipientByPubkey(context.Context, *SetFeeRecipientByPubkeyRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetFeeRecipientByPubkey not implemented")
-}
-func (*UnimplementedKeyManagementServer) DeleteFeeRecipientByPubkey(context.Context, *PubkeyRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteFeeRecipientByPubkey not implemented")
-}
-func (*UnimplementedKeyManagementServer) GetGasLimit(context.Context, *PubkeyRequest) (*GetGasLimitResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetGasLimit not implemented")
-}
-func (*UnimplementedKeyManagementServer) SetGasLimit(context.Context, *SetGasLimitRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetGasLimit not implemented")
-}
-func (*UnimplementedKeyManagementServer) DeleteGasLimit(context.Context, *DeleteGasLimitRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteGasLimit not implemented")
 }
 
 func RegisterKeyManagementServer(s *grpc.Server, srv KeyManagementServer) {
@@ -2501,168 +1032,6 @@ func _KeyManagement_DeleteKeystores_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _KeyManagement_ListRemoteKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).ListRemoteKeys(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/ListRemoteKeys",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).ListRemoteKeys(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_ImportRemoteKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ImportRemoteKeysRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).ImportRemoteKeys(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/ImportRemoteKeys",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).ImportRemoteKeys(ctx, req.(*ImportRemoteKeysRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_DeleteRemoteKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteRemoteKeysRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).DeleteRemoteKeys(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/DeleteRemoteKeys",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).DeleteRemoteKeys(ctx, req.(*DeleteRemoteKeysRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_ListFeeRecipientByPubkey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PubkeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).ListFeeRecipientByPubkey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/ListFeeRecipientByPubkey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).ListFeeRecipientByPubkey(ctx, req.(*PubkeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_SetFeeRecipientByPubkey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetFeeRecipientByPubkeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).SetFeeRecipientByPubkey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/SetFeeRecipientByPubkey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).SetFeeRecipientByPubkey(ctx, req.(*SetFeeRecipientByPubkeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_DeleteFeeRecipientByPubkey_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PubkeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).DeleteFeeRecipientByPubkey(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/DeleteFeeRecipientByPubkey",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).DeleteFeeRecipientByPubkey(ctx, req.(*PubkeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_GetGasLimit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PubkeyRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).GetGasLimit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/GetGasLimit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).GetGasLimit(ctx, req.(*PubkeyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_SetGasLimit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetGasLimitRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).SetGasLimit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/SetGasLimit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).SetGasLimit(ctx, req.(*SetGasLimitRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _KeyManagement_DeleteGasLimit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteGasLimitRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(KeyManagementServer).DeleteGasLimit(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/ethereum.eth.service.KeyManagement/DeleteGasLimit",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(KeyManagementServer).DeleteGasLimit(ctx, req.(*DeleteGasLimitRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 var _KeyManagement_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "ethereum.eth.service.KeyManagement",
 	HandlerType: (*KeyManagementServer)(nil),
@@ -2678,42 +1047,6 @@ var _KeyManagement_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteKeystores",
 			Handler:    _KeyManagement_DeleteKeystores_Handler,
-		},
-		{
-			MethodName: "ListRemoteKeys",
-			Handler:    _KeyManagement_ListRemoteKeys_Handler,
-		},
-		{
-			MethodName: "ImportRemoteKeys",
-			Handler:    _KeyManagement_ImportRemoteKeys_Handler,
-		},
-		{
-			MethodName: "DeleteRemoteKeys",
-			Handler:    _KeyManagement_DeleteRemoteKeys_Handler,
-		},
-		{
-			MethodName: "ListFeeRecipientByPubkey",
-			Handler:    _KeyManagement_ListFeeRecipientByPubkey_Handler,
-		},
-		{
-			MethodName: "SetFeeRecipientByPubkey",
-			Handler:    _KeyManagement_SetFeeRecipientByPubkey_Handler,
-		},
-		{
-			MethodName: "DeleteFeeRecipientByPubkey",
-			Handler:    _KeyManagement_DeleteFeeRecipientByPubkey_Handler,
-		},
-		{
-			MethodName: "GetGasLimit",
-			Handler:    _KeyManagement_GetGasLimit_Handler,
-		},
-		{
-			MethodName: "SetGasLimit",
-			Handler:    _KeyManagement_SetGasLimit_Handler,
-		},
-		{
-			MethodName: "DeleteGasLimit",
-			Handler:    _KeyManagement_DeleteGasLimit_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -5,7 +5,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var Commands = []*cli.Command{}
+var Commands []*cli.Command
 
 func init() {
 	Commands = append(Commands, checkpoint.Commands...)

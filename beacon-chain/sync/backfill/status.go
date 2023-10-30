@@ -11,7 +11,7 @@ import (
 )
 
 // NewStatus correctly initializes a Status value with the required database value.
-func NewStatus(store BackfillDB) *Status {
+func NewStatus(store DB) *Status {
 	return &Status{
 		store: store,
 	}
@@ -25,7 +25,7 @@ func NewStatus(store BackfillDB) *Status {
 type Status struct {
 	start       primitives.Slot
 	end         primitives.Slot
-	store       BackfillDB
+	store       DB
 	genesisSync bool
 }
 
@@ -112,8 +112,8 @@ func (s *Status) Reload(ctx context.Context) error {
 	return nil
 }
 
-// BackfillDB describes the set of DB methods that the Status type needs to function.
-type BackfillDB interface {
+// DB describes the set of DB methods that the Status type needs to function.
+type DB interface {
 	SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	GenesisBlockRoot(ctx context.Context) ([32]byte, error)
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
