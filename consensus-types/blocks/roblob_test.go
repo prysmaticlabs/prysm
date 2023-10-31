@@ -38,15 +38,15 @@ func TestNewROBlob(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, blob)
 
-	blob, err = NewROBlob(nil)
+	_, err = NewROBlob(nil)
 	assert.Equal(t, errNilBlock, err)
 
 	sidecar.SignedBlockHeader = nil
-	blob, err = NewROBlob(sidecar)
+	_, err = NewROBlob(sidecar)
 	assert.Equal(t, errNilBlockHeader, err)
 
 	sidecar.SignedBlockHeader = &ethpb.SignedBeaconBlockHeader{}
-	blob, err = NewROBlob(sidecar)
+	_, err = NewROBlob(sidecar)
 	assert.Equal(t, errNilBlockHeader, err)
 }
 
