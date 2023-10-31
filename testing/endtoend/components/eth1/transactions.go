@@ -372,8 +372,10 @@ func kZGToVersionedHash(kzg kzg4844.Commitment) common.Hash {
 }
 
 func randomBlobData() ([]byte, error) {
+	// #nosec G404
 	size := mathRand.Intn(fieldparams.BlobSize)
 	data := make([]byte, size)
+	// #nosec G404
 	n, err := mathRand.Read(data)
 	if err != nil {
 		return nil, err
@@ -385,9 +387,11 @@ func randomBlobData() ([]byte, error) {
 }
 
 func randomAddress() common.Address {
+	// #nosec G404
 	switch mathRand.Int31n(5) {
 	case 0, 1, 2:
 		b := make([]byte, 20)
+		// #nosec G404
 		_, err := mathRand.Read(b)
 		if err != nil {
 			panic(err)
