@@ -134,11 +134,17 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
+			// Calculate the deadline time by adding three slots duration to the current time
+			secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+			threeSlotDuration := 3 * time.Duration(secondsPerSlot) * time.Second
+			ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, threeSlotDuration)
 			// Process and broadcast the block.
-			if err := s.processAndBroadcastBlock(ctx, b, blkRoot); err != nil {
-				s.handleBlockProcessingError(ctx, err, b, blkRoot)
+			if err := s.processAndBroadcastBlock(ctxWithTimeout, b, blkRoot); err != nil {
+				s.handleBlockProcessingError(ctxWithTimeout, err, b, blkRoot)
+				cancelFunction()
 				continue
 			}
+			cancelFunction()
 
 			// Remove the processed block from the queue.
 			if err := s.removeBlockFromQueue(b, blkRoot); err != nil {
@@ -205,12 +211,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	// Calculate the deadline time by adding two slots duration to the current time
-	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
-	twoSlotDuration := 2 * time.Duration(secondsPerSlot) * time.Second
-	ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, twoSlotDuration)
-	defer cancelFunction()
-	if err := s.cfg.chain.ReceiveBlock(ctxWithTimeout, b, blkRoot); err != nil {
+	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
 		return err
 	}
 
