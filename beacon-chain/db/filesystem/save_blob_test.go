@@ -205,7 +205,7 @@ var testSidecars = []*ethpb.BlobSidecar{
 	{
 		BlockRoot:       []byte{0x71, 0x72, 0x73},
 		Index:           8,
-		Slot:            11111,
+		Slot:            111111,
 		BlockParentRoot: []byte{0x74, 0x75, 0x76},
 		ProposerIndex:   99,
 		Blob:            []byte("Test Blob Data 8"),
@@ -215,7 +215,7 @@ var testSidecars = []*ethpb.BlobSidecar{
 	{
 		BlockRoot:       []byte{0x81, 0x82, 0x83},
 		Index:           9,
-		Slot:            22222,
+		Slot:            1222222,
 		BlockParentRoot: []byte{0x84, 0x85, 0x86},
 		ProposerIndex:   11,
 		Blob:            []byte("Test Blob Data 9"),
