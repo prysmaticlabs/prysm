@@ -5,10 +5,41 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
 
+// local keymanager api
+type ListKeystoresResponse struct {
+	Data []*Keystore `json:"data"`
+}
+
+type Keystore struct {
+	ValidatingPubkey string `json:"validating_pubkey"`
+	DerivationPath   string `json:"derivation_path"`
+}
+
+type ImportKeystoresRequest struct {
+	Keystores          []string `json:"keystores"`
+	Passwords          []string `json:"passwords"`
+	SlashingProtection string   `json:"slashing_protection"`
+}
+
+type ImportKeystoresResponse struct {
+	Data []*keymanager.KeyStatus `json:"data"`
+}
+
+type DeleteKeystoresRequest struct {
+	Pubkeys []string `json:"pubkeys"`
+}
+
+type DeleteKeystoresResponse struct {
+	Data               []*keymanager.KeyStatus `json:"data"`
+	SlashingProtection string                  `json:"slashing_protection"`
+}
+
+// voluntary exit keymanager api
 type SetVoluntaryExitResponse struct {
 	Data *shared.SignedVoluntaryExit `json:"data"`
 }
 
+// gas limit keymanager api
 type GasLimitMetaData struct {
 	Pubkey   string `json:"pubkey"`
 	GasLimit string `json:"gas_limit"`

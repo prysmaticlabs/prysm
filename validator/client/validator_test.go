@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	blsmock "github.com/prysmaticlabs/prysm/v4/crypto/bls/common/mock"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -172,7 +171,7 @@ func (*mockKeymanager) ListKeymanagerAccounts(
 }
 
 func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
-) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+) ([]*keymanager.KeyStatus, error) {
 	return nil, nil
 }
 

@@ -18,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	keystorev4 "github.com/wealdtech/go-eth2-wallet-encryptor-keystorev4"
@@ -157,11 +156,11 @@ func (acm *CLIManager) Import(ctx context.Context) error {
 	var successfullyImportedAccounts []string
 	for i, status := range statuses {
 		switch status.Status {
-		case ethpbservice.ImportedKeystoreStatus_IMPORTED:
+		case keymanager.StatusImported:
 			successfullyImportedAccounts = append(successfullyImportedAccounts, keystoresImported[i].Pubkey)
-		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
+		case keymanager.StatusDuplicate:
 			log.Warnf("Duplicate key %s found in import request, skipped", keystoresImported[i].Pubkey)
-		case ethpbservice.ImportedKeystoreStatus_ERROR:
+		case keymanager.StatusError:
 			log.Warnf("Could not import keystore for %s: %s", keystoresImported[i].Pubkey, status.Message)
 		}
 	}
@@ -179,12 +178,12 @@ func (acm *CLIManager) Import(ctx context.Context) error {
 
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
 // new accounts into the Prysm validator wallet.
-func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+func ImportAccounts(ctx context.Context, cfg *ImportAccountsConfig) ([]*keymanager.KeyStatus, error) {
 	if cfg.AccountPassword == "" {
-		statuses := make([]*ethpbservice.ImportedKeystoreStatus, len(cfg.Keystores))
+		statuses := make([]*keymanager.KeyStatus, len(cfg.Keystores))
 		for i, keystore := range cfg.Keystores {
-			statuses[i] = &ethpbservice.ImportedKeystoreStatus{
-				Status: ethpbservice.ImportedKeystoreStatus_ERROR,
+			statuses[i] = &keymanager.KeyStatus{
+				Status: keymanager.StatusError,
 				Message: fmt.Sprintf(
 					"account password is required to import keystore %s",
 					keystore.Pubkey,
@@ -249,15 +248,15 @@ func importPrivateKeyAsAccount(ctx context.Context, wallet *wallet.Wallet, impor
 	}
 	for _, status := range statuses {
 		switch status.Status {
-		case ethpbservice.ImportedKeystoreStatus_IMPORTED:
+		case keymanager.StatusImported:
 			fmt.Printf(
 				"Imported account with public key %#x, view all accounts by running `accounts list`\n",
 				au.BrightMagenta(bytesutil.Trunc(privKey.PublicKey().Marshal())),
 			)
 			return nil
-		case ethpbservice.ImportedKeystoreStatus_ERROR:
+		case keymanager.StatusError:
 			return fmt.Errorf("could not import keystore for %s: %s", keystore.Pubkey, status.Message)
-		case ethpbservice.ImportedKeystoreStatus_DUPLICATE:
+		case keymanager.StatusDuplicate:
 			return fmt.Errorf("duplicate key %s skipped", keystore.Pubkey)
 		}
 	}
