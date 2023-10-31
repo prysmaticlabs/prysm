@@ -93,7 +93,7 @@ func TestRateBLSChanges(t *testing.T) {
 		epoch := params.BeaconConfig().CapellaForkEpoch + 1
 		domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 		assert.NoError(t, err)
-		htr, err := signing.SigningData(message.HashTreeRoot, domain)
+		htr, err := signing.Data(message.HashTreeRoot, domain)
 		assert.NoError(t, err)
 		signed := &ethpb.SignedBLSToExecutionChange{
 			Message:   message,
@@ -103,17 +103,17 @@ func TestRateBLSChanges(t *testing.T) {
 		s.cfg.blsToExecPool.InsertBLSToExecChange(signed)
 	}
 
-	require.Equal(t, false, p1.BroadcastCalled)
+	require.Equal(t, false, p1.BroadcastCalled.Load())
 	slot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	require.NoError(t, err)
 	s.broadcastBLSChanges(slot)
 	time.Sleep(100 * time.Millisecond) // Need a sleep for the go routine to be ready
-	require.Equal(t, true, p1.BroadcastCalled)
+	require.Equal(t, true, p1.BroadcastCalled.Load())
 	require.LogsDoNotContain(t, logHook, "could not")
 
-	p1.BroadcastCalled = false
+	p1.BroadcastCalled.Store(false)
 	time.Sleep(500 * time.Millisecond) // Need a sleep for the second batch to be broadcast
-	require.Equal(t, true, p1.BroadcastCalled)
+	require.Equal(t, true, p1.BroadcastCalled.Load())
 	require.LogsDoNotContain(t, logHook, "could not")
 }
 

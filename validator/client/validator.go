@@ -78,6 +78,7 @@ type validator struct {
 	walletInitializedFeed              *event.Feed
 	attLogs                            map[[32]byte]*attSubmitted
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
+	dutiesLock                         sync.RWMutex
 	duties                             *ethpb.DutiesResponse
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
@@ -92,7 +93,6 @@ type validator struct {
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
 	node                               iface.NodeClient
-	slashingProtectionClient           iface.SlasherClient
 	db                                 vdb.Database
 	beaconClient                       iface.BeaconChainClient
 	keyManager                         keymanager.IKeymanager
@@ -104,6 +104,7 @@ type validator struct {
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
+	prysmBeaconClient                  iface.PrysmBeaconChainClient
 }
 
 type validatorStatus struct {
@@ -349,6 +350,8 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			blk, err = blocks.NewSignedBeaconBlock(b.BellatrixBlock)
 		case *ethpb.StreamBlocksResponse_CapellaBlock:
 			blk, err = blocks.NewSignedBeaconBlock(b.CapellaBlock)
+		case *ethpb.StreamBlocksResponse_DenebBlock:
+			blk, err = blocks.NewSignedBeaconBlock(b.DenebBlock)
 		}
 		if err != nil {
 			log.WithError(err).Error("Failed to wrap signed block")
@@ -367,10 +370,7 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 	}
 }
 
-func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount uint64) bool {
-	activationsPerEpoch :=
-		uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(activeValCount/params.BeaconConfig().ChurnLimitQuotient)))
-
+func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, activeValCount int64) bool {
 	nonexistentIndex := primitives.ValidatorIndex(^uint64(0))
 	var validatorActivated bool
 	for _, status := range statuses {
@@ -396,15 +396,17 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 				).Info("Deposit processed, entering activation queue after finalization")
 			}
 		case ethpb.ValidatorStatus_PENDING:
-			secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-			expectedWaitingTime :=
-				time.Duration((status.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
-			if status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+			if activeValCount >= 0 && status.status.ActivationEpoch == params.BeaconConfig().FarFutureEpoch {
+				activationsPerEpoch :=
+					uint64(math.Max(float64(params.BeaconConfig().MinPerEpochChurnLimit), float64(uint64(activeValCount)/params.BeaconConfig().ChurnLimitQuotient)))
+				secondsPerEpoch := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
+				expectedWaitingTime :=
+					time.Duration((status.status.PositionInActivationQueue+activationsPerEpoch)/activationsPerEpoch*secondsPerEpoch) * time.Second
 				log.WithFields(logrus.Fields{
 					"positionInActivationQueue": status.status.PositionInActivationQueue,
 					"expectedWaitingTime":       expectedWaitingTime.String(),
 				}).Info("Waiting to be assigned activation epoch")
-			} else {
+			} else if status.status.ActivationEpoch != params.BeaconConfig().FarFutureEpoch {
 				log.WithFields(logrus.Fields{
 					"activationEpoch": status.status.ActivationEpoch,
 				}).Info("Waiting for activation")
@@ -599,8 +601,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	// If duties is nil it means we have had no prior duties and just started up.
 	resp, err := v.validatorClient.GetDuties(ctx, req)
 	if err != nil {
+		v.dutiesLock.Lock()
 		v.duties = nil // Clear assignments so we know to retry the request.
-		log.Error(err)
+		v.dutiesLock.Unlock()
+		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
 
@@ -614,8 +618,10 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return ErrValidatorsAllExited
 	}
 
+	v.dutiesLock.Lock()
 	v.duties = resp
 	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
+	v.dutiesLock.Unlock()
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	// Make sure to copy metadata into a new context
@@ -711,6 +717,8 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 // validator is known to not have a roles at the slot. Returns UNKNOWN if the
 // validator assignments are unknown. Otherwise returns a valid ValidatorRole map.
 func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole, error) {
+	v.dutiesLock.RLock()
+	defer v.dutiesLock.RUnlock()
 	rolesAt := make(map[[fieldparams.BLSPubkeyLength]byte][]iface.ValidatorRole)
 	for validator, duty := range v.duties.Duties {
 		var roles []iface.ValidatorRole
@@ -1134,6 +1142,10 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
 	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
 
+	// if the timestamp is pre-genesis, don't create registrations
+	if v.genesisTime > uint64(time.Now().UTC().Unix()) {
+		return signedValRegRegs, nil
+	}
 	for i, k := range pubkeys {
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
 		gasLimit := params.BeaconConfig().DefaultBuilderGasLimit

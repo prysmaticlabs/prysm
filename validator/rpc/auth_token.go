@@ -38,7 +38,7 @@ func (s *Server) Initialize(_ context.Context, _ *emptypb.Empty) (*pb.Initialize
 	}
 	authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
 	return &pb.InitializeAuthResponse{
-		HasSignedUp: file.FileExists(authTokenPath),
+		HasSignedUp: file.Exists(authTokenPath),
 		HasWallet:   walletExists,
 	}, nil
 }
@@ -73,7 +73,7 @@ func CreateAuthToken(walletDirPath, validatorWebAddr string) error {
 // DEPRECATED: associated to Initialize Web UI API
 func (s *Server) initializeAuthToken(walletDir string) (string, error) {
 	authTokenFile := filepath.Join(walletDir, authTokenFileName)
-	if file.FileExists(authTokenFile) {
+	if file.Exists(authTokenFile) {
 		// #nosec G304
 		f, err := os.Open(authTokenFile)
 		if err != nil {

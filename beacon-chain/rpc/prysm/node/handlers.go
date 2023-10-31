@@ -86,7 +86,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		s.PeersFetcher.Peers().Add(nil, info.ID, info.Addrs[0], direction)
 	}
 
-	peers := []peer.ID{}
+	var peers []peer.ID
 	peers = append(peers, info.ID)
 	s.PeersFetcher.Peers().SetTrustedPeers(peers)
 	w.WriteHeader(http.StatusOK)
@@ -112,7 +112,7 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	peers := []peer.ID{}
+	var peers []peer.ID
 	peers = append(peers, peerId)
 	s.PeersFetcher.Peers().DeleteTrustedPeers(peers)
 	w.WriteHeader(http.StatusOK)

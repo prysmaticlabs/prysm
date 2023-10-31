@@ -26,27 +26,30 @@ const (
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20,      // 1 MiB
-	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
-	MaxChunkSize:                    1 << 20,      // 1 MiB
-	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
-	AttestationSubnetCount:          64,
-	AttestationPropagationSlotRange: 32,
-	MaxRequestBlocks:                1 << 10, // 1024
-	TtfbTimeout:                     5 * time.Second,
-	RespTimeout:                     10 * time.Second,
-	MaximumGossipClockDisparity:     500 * time.Millisecond,
-	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
-	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
-	ETH2Key:                         "eth2",
-	AttSubnetKey:                    "attnets",
-	SyncCommsSubnetKey:              "syncnets",
-	MinimumPeersInSubnetSearch:      20,
-	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	GossipMaxSize:                    1 << 20,      // 1 MiB
+	GossipMaxSizeBellatrix:           10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                     1 << 20,      // 1 MiB
+	MaxChunkSizeBellatrix:            10 * 1 << 20, // 10 MiB
+	AttestationSubnetCount:           64,
+	AttestationPropagationSlotRange:  32,
+	MaxRequestBlocks:                 1 << 10, // 1024
+	TtfbTimeout:                      5 * time.Second,
+	RespTimeout:                      10 * time.Second,
+	MaximumGossipClockDisparity:      500 * time.Millisecond,
+	MessageDomainInvalidSnappy:       [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:         [4]byte{01, 00, 00, 00},
+	ETH2Key:                          "eth2",
+	AttSubnetKey:                     "attnets",
+	SyncCommsSubnetKey:               "syncnets",
+	MinimumPeersInSubnetSearch:       20,
+	ContractDeploymentBlock:          11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	MinEpochsForBlobsSidecarsRequest: 4096,
+	MaxRequestBlobSidecars:           768,
+	MaxRequestBlocksDeneb:            128,
 	BootstrapNodes: []string{
 		// Teku team's bootnode
-		"enr:-KG4QOtcP9X1FbIMOe17QNMKqDxCpm14jcX5tiOE4_TyMrFqbmhPZHK_ZPG2Gxb1GE2xdtodOfx9-cgvNtxnRyHEmC0ghGV0aDKQ9aX9QgAAAAD__________4JpZIJ2NIJpcIQDE8KdiXNlY3AyNTZrMaEDhpehBDbZjM_L9ek699Y7vhUJ-eAdMyQW_Fil522Y0fODdGNwgiMog3VkcIIjKA",
-		"enr:-KG4QL-eqFoHy0cI31THvtZjpYUu_Jdw_MO7skQRJxY1g5HTN1A0epPCU6vi0gLGUgrzpU-ygeMSS8ewVxDpKfYmxMMGhGV0aDKQtTA_KgAAAAD__________4JpZIJ2NIJpcIQ2_DUbiXNlY3AyNTZrMaED8GJ2vzUqgL6-KD1xalo1CsmY4X1HaDnyl6Y_WayCo9GDdGNwgiMog3VkcIIjKA",
+		"enr:-KG4QMOEswP62yzDjSwWS4YEjtTZ5PO6r65CPqYBkgTTkrpaedQ8uEUo1uMALtJIvb2w_WWEVmg5yt1UAuK1ftxUU7QDhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQEnfA2iXNlY3AyNTZrMaEDfol8oLr6XJ7FsdAYE7lpJhKMls4G_v6qQOGKJUWGb_uDdGNwgiMog3VkcIIjKA",
+		"enr:-KG4QF4B5WrlFcRhUU6dZETwY5ZzAXnA0vGC__L1Kdw602nDZwXSTs5RFXFIFUnbQJmhNGVU6OIX7KVrCSTODsz1tK4DhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQExNYEiXNlY3AyNTZrMaECQmM9vp7KhaXhI-nqL_R0ovULLCFSFTa9CPPSdb1zPX6DdGNwgiMog3VkcIIjKA",
 		// Prylab team's bootnodes
 		"enr:-Ku4QImhMc1z8yCiNJ1TyUxdcfNucje3BGwEHzodEZUan8PherEo4sF7pPHPSIB1NNuSg5fZy7qFsjmUKs2ea1Whi0EBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQOVphkDqal4QzPMksc5wnpuC3gvSC8AfbFOnZY_On34wIN1ZHCCIyg",
 		"enr:-Ku4QP2xDnEtUXIjzJ_DhlCRN9SN99RYQPJL92TMlSv7U5C1YnYLjwOQHgZIUXw6c-BvRg2Yc2QsZxxoS_pPRVe0yK8Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpD1pf1CAAAAAP__________gmlkgnY0gmlwhBLf22SJc2VjcDI1NmsxoQMeFF5GrS7UZpAH2Ly84aLK-TyvH-dRo0JM1i8yygH50YN1ZHCCJxA",
@@ -174,6 +177,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	DomainApplicationMask:             bytesutil.Uint32ToBytes4(0x00000001),
 	DomainApplicationBuilder:          bytesutil.Uint32ToBytes4(0x00000001),
 	DomainBLSToExecutionChange:        bytesutil.Uint32ToBytes4(0x0A000000),
+	DomainBlobSidecar:                 bytesutil.Uint32ToBytes4(0x0B000000),
 
 	// Prysm constants.
 	GweiPerEth:                     1000000000,
@@ -194,6 +198,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BeaconStateAltairFieldCount:    24,
 	BeaconStateBellatrixFieldCount: 25,
 	BeaconStateCapellaFieldCount:   28,
+	BeaconStateDenebFieldCount:     28,
 
 	// Slasher related values.
 	WeakSubjectivityPeriod:          54000,
@@ -262,6 +267,11 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxBuilderEpochMissedSlots:       5,
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue: 8, // 8 seconds default based on: https://github.com/ethereum/execution-apis/blob/main/src/engine/specification.md#core
+
+	// Subnet value
+	BlobsidecarSubnetCount: 6,
+
+	MaxPerEpochActivationChurnLimit: 8,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

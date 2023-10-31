@@ -72,14 +72,12 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 
 	for {
-		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
 
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
 			span.End()
-			cancel()
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.

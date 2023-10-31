@@ -13,7 +13,8 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.MaxCommitteesPerSlot = 4
 	minimalConfig.TargetCommitteeSize = 4
 	minimalConfig.MaxValidatorsPerCommittee = 2048
-	minimalConfig.MinPerEpochChurnLimit = 4
+	minimalConfig.MinPerEpochChurnLimit = 2           // Changed in EIP7514
+	minimalConfig.MaxPerEpochActivationChurnLimit = 4 // New in EIP7514
 	minimalConfig.ChurnLimitQuotient = 32
 	minimalConfig.ShuffleRoundCount = 10
 	minimalConfig.MinGenesisActiveValidatorCount = 64
@@ -89,7 +90,6 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.CapellaForkVersion = []byte{3, 0, 0, 1}
 	minimalConfig.CapellaForkEpoch = math.MaxUint64
 	minimalConfig.DenebForkVersion = []byte{4, 0, 0, 1}
-	minimalConfig.DenebForkEpoch = math.MaxUint64
 
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4

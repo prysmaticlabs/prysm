@@ -57,6 +57,7 @@ done
 # --------------------------------------------------------
 iface_mocks=(
       "$iface_mock_path/beacon_chain_client_mock.go BeaconChainClient"
+      "$iface_mock_path/prysm_beacon_chain_client_mock.go PrysmBeaconChainClient"
       "$iface_mock_path/node_client_mock.go NodeClient"
       "$iface_mock_path/slasher_client_mock.go SlasherClient"
       "$iface_mock_path/validator_client_mock.go ValidatorClient"

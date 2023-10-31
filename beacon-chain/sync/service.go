@@ -13,7 +13,6 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
@@ -22,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -34,16 +34,20 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/trailofbits/go-mutexasserts"
 )
 
 var _ runtime.Service = (*Service)(nil)
 
 const rangeLimit uint64 = 1024
 const seenBlockSize = 1000
+const seenBlobSize = seenBlockSize * 4 // Each block can have max 4 blobs. Worst case 164kB for cache.
 const seenUnaggregatedAttSize = 20000
 const seenAggregatedAttSize = 1024
 const seenSyncMsgSize = 1000         // Maximum of 512 sync committee members, 1000 is a safe amount.
@@ -81,16 +85,18 @@ type config struct {
 	initialSync                   Checker
 	blockNotifier                 blockfeed.Notifier
 	operationNotifier             operation.Notifier
-	executionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	executionPayloadReconstructor execution.PayloadReconstructor
 	stateGen                      *stategen.State
 	slasherAttestationsFeed       *event.Feed
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
+	stateNotifier                 statefeed.Notifier
 }
 
 // This defines the interface for interacting with block chain service
 type blockchainService interface {
 	blockchain.BlockReceiver
+	blockchain.BlobReceiver
 	blockchain.HeadFetcher
 	blockchain.FinalizationFetcher
 	blockchain.ForkFetcher
@@ -120,6 +126,8 @@ type Service struct {
 	rateLimiter                      *limiter
 	seenBlockLock                    sync.RWMutex
 	seenBlockCache                   *lru.Cache
+	seenBlobLock                     sync.RWMutex
+	seenBlobCache                    *lru.Cache
 	seenAggregatedAttestationLock    sync.RWMutex
 	seenAggregatedAttestationCache   *lru.Cache
 	seenUnAggregatedAttestationLock  sync.RWMutex
@@ -141,11 +149,12 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	pendingBlobSidecars              *pendingBlobSidecars
 }
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
-	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	c := gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -156,12 +165,35 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
+		pendingBlobSidecars:  newPendingBlobSidecars(),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil
 		}
 	}
+	// Correctly remove it from our seen pending block map.
+	// The eviction method always assumes that the mutex is held.
+	r.slotToPendingBlocks.OnEvicted(func(s string, i interface{}) {
+		if !mutexasserts.RWMutexLocked(&r.pendingQueueLock) {
+			log.Errorf("Mutex is not locked during cache eviction of values")
+			// Continue on to allow elements to be properly removed.
+		}
+		blks, ok := i.([]interfaces.ReadOnlySignedBeaconBlock)
+		if !ok {
+			log.Errorf("Invalid type retrieved from the cache: %T", i)
+			return
+		}
+
+		for _, b := range blks {
+			root, err := b.Block().HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not calculate htr of block")
+				continue
+			}
+			delete(r.seenPendingBlocks, root)
+		}
+	})
 	r.subHandler = newSubTopicHandler()
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
@@ -182,6 +214,7 @@ func (s *Service) Start() {
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
+	s.processPendingBlobs()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 
@@ -198,7 +231,7 @@ func (s *Service) Stop() error {
 	}()
 	// Removing RPC Stream handlers.
 	for _, p := range s.cfg.p2p.Host().Mux().Protocols() {
-		s.cfg.p2p.Host().RemoveStreamHandler(protocol.ID(p))
+		s.cfg.p2p.Host().RemoveStreamHandler(p)
 	}
 	// Deregister Topic Subscribers.
 	for _, t := range s.cfg.p2p.PubSub().GetTopics() {
@@ -223,6 +256,7 @@ func (s *Service) Status() error {
 // and prevent DoS.
 func (s *Service) initCaches() {
 	s.seenBlockCache = lruwrpr.New(seenBlockSize)
+	s.seenBlobCache = lruwrpr.New(seenBlobSize)
 	s.seenAggregatedAttestationCache = lruwrpr.New(seenAggregatedAttSize)
 	s.seenUnAggregatedAttestationCache = lruwrpr.New(seenUnaggregatedAttSize)
 	s.seenSyncMessageCache = lruwrpr.New(seenSyncMsgSize)
@@ -275,6 +309,10 @@ func (s *Service) registerHandlers() {
 
 func (s *Service) writeErrorResponseToStream(responseCode byte, reason string, stream libp2pcore.Stream) {
 	writeErrorResponseToStream(responseCode, reason, stream, s.cfg.p2p)
+}
+
+func (s *Service) setRateCollector(topic string, c *leakybucket.Collector) {
+	s.rateLimiter.limiterMap[topic] = c
 }
 
 // marks the chain as having started.

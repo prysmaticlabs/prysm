@@ -22,6 +22,7 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -69,6 +70,9 @@ type ChainService struct {
 	OptimisticCheckRootReceived [32]byte
 	FinalizedRoots              map[[32]byte]bool
 	OptimisticRoots             map[[32]byte]bool
+	BlockSlot                   primitives.Slot
+	SyncingRoot                 [32]byte
+	Blobs                       []*ethpb.BlobSidecar
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -203,7 +207,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, _ [][32]byte) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBlock) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -387,6 +391,11 @@ func (s *ChainService) HasBlock(ctx context.Context, rt [32]byte) bool {
 		return false
 	}
 	return s.InitSyncBlockRoots[rt]
+}
+
+// RecentBlockSlot mocks the same method in the chain service.
+func (s *ChainService) RecentBlockSlot([32]byte) (primitives.Slot, error) {
+	return s.BlockSlot, nil
 }
 
 // HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
@@ -596,4 +605,15 @@ func (s *ChainService) FinalizedBlockHash() [32]byte {
 // UnrealizedJustifiedPayloadBlockHash mocks the same method in the chain service
 func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return [32]byte{}
+}
+
+// BlockBeingSynced mocks the same method in the chain service
+func (c *ChainService) BlockBeingSynced(root [32]byte) bool {
+	return root == c.SyncingRoot
+}
+
+// ReceiveBlob implements the same method in the chain service
+func (c *ChainService) ReceiveBlob(_ context.Context, b *ethpb.BlobSidecar) error {
+	c.Blobs = append(c.Blobs, b)
+	return nil
 }

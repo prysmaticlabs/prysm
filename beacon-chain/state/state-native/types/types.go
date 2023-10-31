@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/pkg/errors"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
 // DataType signifies the data type of the field.
@@ -146,7 +147,7 @@ func (f FieldIndex) RealPosition() int {
 		return 22
 	case NextSyncCommittee:
 		return 23
-	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella:
+	case LatestExecutionPayloadHeader, LatestExecutionPayloadHeaderCapella, LatestExecutionPayloadHeaderDeneb:
 		return 24
 	case NextWithdrawalIndex:
 		return 25
@@ -205,7 +206,11 @@ const (
 	NextSyncCommittee
 	LatestExecutionPayloadHeader
 	LatestExecutionPayloadHeaderCapella
+	LatestExecutionPayloadHeaderDeneb
 	NextWithdrawalIndex
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
 )
+
+// Enumerator keeps track of the number of states created since the node's start.
+var Enumerator = &consensus_types.ThreadSafeEnumerator{}

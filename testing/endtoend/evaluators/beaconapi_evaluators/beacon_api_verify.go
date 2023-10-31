@@ -6,28 +6,29 @@ import (
 	"google.golang.org/grpc"
 )
 
-// BeaconAPIMultiClientVerifyIntegrity tests our API Middleware responses to other beacon nodes such as lighthouse.
+// BeaconAPIMultiClientVerifyIntegrity tests Beacon API endpoints.
+// It compares responses from Prysm and other beacon nodes such as Lighthouse.
+// The evaluator is executed on every odd-numbered epoch.
 var BeaconAPIMultiClientVerifyIntegrity = e2etypes.Evaluator{
 	Name:       "beacon_api_multi-client_verify_integrity_epoch_%d",
-	Policy:     policies.AfterNthEpoch(0),
+	Policy:     policies.EveryNEpochs(1, 2),
 	Evaluation: beaconAPIVerify,
 }
 
 const (
-	v1MiddlewarePathTemplate = "http://localhost:%d/eth/v1"
-	v2MiddlewarePathTemplate = "http://localhost:%d/eth/v2"
+	v1PathTemplate = "http://localhost:%d/eth/v1"
+	v2PathTemplate = "http://localhost:%d/eth/v2"
 )
 
-type apiComparisonFunc func(beaconNodeIdx int, conn *grpc.ClientConn) error
+type apiComparisonFunc func(beaconNodeIdx int) error
 
 func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	beacon := []apiComparisonFunc{
 		withCompareBeaconAPIs,
 	}
-	for beaconNodeIdx, conn := range conns {
+	for beaconNodeIdx := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			conn,
 			beacon...,
 		); err != nil {
 			return err
@@ -36,9 +37,9 @@ func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) e
 	return nil
 }
 
-func runAPIComparisonFunctions(beaconNodeIdx int, conn *grpc.ClientConn, fs ...apiComparisonFunc) error {
+func runAPIComparisonFunctions(beaconNodeIdx int, fs ...apiComparisonFunc) error {
 	for _, f := range fs {
-		if err := f(beaconNodeIdx, conn); err != nil {
+		if err := f(beaconNodeIdx); err != nil {
 			return err
 		}
 	}

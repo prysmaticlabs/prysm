@@ -5,9 +5,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestBeaconBlockJsonHelpers_JsonifyTransactions(t *testing.T) {
@@ -44,9 +46,9 @@ func TestBeaconBlockJsonHelpers_JsonifyBlsToExecutionChanges(t *testing.T) {
 		},
 	}
 
-	expectedResult := []*apimiddleware.SignedBLSToExecutionChangeJson{
+	expectedResult := []*shared.SignedBLSToExecutionChange{
 		{
-			Message: &apimiddleware.BLSToExecutionChangeJson{
+			Message: &shared.BLSToExecutionChange{
 				ValidatorIndex:     "1",
 				FromBLSPubkey:      hexutil.Encode([]byte{2}),
 				ToExecutionAddress: hexutil.Encode([]byte{3}),
@@ -54,7 +56,7 @@ func TestBeaconBlockJsonHelpers_JsonifyBlsToExecutionChanges(t *testing.T) {
 			Signature: hexutil.Encode([]byte{7}),
 		},
 		{
-			Message: &apimiddleware.BLSToExecutionChangeJson{
+			Message: &shared.BLSToExecutionChange{
 				ValidatorIndex:     "4",
 				FromBLSPubkey:      hexutil.Encode([]byte{5}),
 				ToExecutionAddress: hexutil.Encode([]byte{6}),
@@ -63,7 +65,8 @@ func TestBeaconBlockJsonHelpers_JsonifyBlsToExecutionChanges(t *testing.T) {
 		},
 	}
 
-	result := jsonifyBlsToExecutionChanges(input)
+	result, err := shared.SignedBlsToExecutionChangesFromConsensus(input)
+	require.NoError(t, err)
 	assert.DeepEqual(t, expectedResult, result)
 }
 

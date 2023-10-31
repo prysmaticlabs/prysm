@@ -24,6 +24,7 @@ import (
 	gMux "github.com/gorilla/mux"
 	builderAPI "github.com/prysmaticlabs/prysm/v4/api/client/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -53,7 +54,6 @@ const (
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
-	// ExchangeTransitionConfigurationMethod v1 request string for JSON-RPC.
 )
 
 var (
@@ -124,7 +124,7 @@ func New(opts ...Option) (*Builder, error) {
 	endpoint := network.HttpEndpoint(p.cfg.destinationUrl.String())
 	endpoint.Auth.Method = authorization.Bearer
 	endpoint.Auth.Value = p.cfg.secret
-	execClient, err := network.NewExecutionRPCClient(context.Background(), endpoint)
+	execClient, err := network.NewExecutionRPCClient(context.Background(), endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -243,14 +243,18 @@ func (p *Builder) isBuilderCall(req *http.Request) bool {
 }
 
 func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
-	registrations := []builderAPI.SignedValidatorRegistration{}
+	var registrations []shared.SignedValidatorRegistration
 	if err := json.NewDecoder(req.Body).Decode(&registrations); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 	for _, r := range registrations {
-		msg := r.Message
-		p.validatorMap[string(r.Message.Pubkey)] = msg
+		msg, err := r.Message.ToConsensus()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		p.validatorMap[r.Message.Pubkey] = msg
 	}
 	// TODO: Verify Signatures from validators
 	w.WriteHeader(http.StatusOK)
@@ -276,7 +280,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	ax := types.Slot(slot)
 	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
 	if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
-		p.handleHeadeRequestCapella(w)
+		p.handleHeaderRequestCapella(w)
 		return
 	}
 
@@ -354,7 +358,7 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	w.WriteHeader(http.StatusOK)
 }
 
-func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
+func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	b, err := p.retrievePendingBlockCapella()
 	if err != nil {
 		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
@@ -369,9 +373,11 @@ func (p *Builder) handleHeadeRequestCapella(w http.ResponseWriter) {
 		return
 	}
 	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	v = v.Mul(v, big.NewInt(2))
 	// Is used as the helper modifies the big.Int
 	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
 	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
 	wObj, err := blocks.WrappedExecutionPayloadCapella(b.Payload, math.WeiToGwei(weiVal))
 	if err != nil {
@@ -607,7 +613,7 @@ func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int) (*
 	if err != nil {
 		return &engine.ExecutionPayloadEnvelope{}, err
 	}
-	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/, nil /*commitments*/, nil /*proofs*/), nil
+	return engine.BlockToExecutableData(modifiedBlock, fees, nil /*blobs*/), nil
 }
 
 // This modifies the provided payload to imprint the builder's extra data

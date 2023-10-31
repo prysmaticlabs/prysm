@@ -2,6 +2,7 @@
 package params
 
 import (
+	"math"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -140,6 +141,7 @@ type BeaconChainConfig struct {
 	BeaconStateAltairFieldCount    int             // BeaconStateAltairFieldCount defines how many fields are in the beacon state post upgrade to Altair.
 	BeaconStateBellatrixFieldCount int             // BeaconStateBellatrixFieldCount defines how many fields are in beacon state post upgrade to Bellatrix.
 	BeaconStateCapellaFieldCount   int             // BeaconStateCapellaFieldCount defines how many fields are in beacon state post upgrade to Capella.
+	BeaconStateDenebFieldCount     int             // BeaconStateDenebFieldCount defines how many fields are in beacon state post upgrade to Deneb.
 
 	// Slasher constants.
 	WeakSubjectivityPeriod    primitives.Epoch // WeakSubjectivityPeriod defines the time period expressed in number of epochs were proof of stake network should validate block headers and attestations for slashable events.
@@ -211,11 +213,17 @@ type BeaconChainConfig struct {
 
 	// Mev-boost circuit breaker
 	MaxBuilderConsecutiveMissedSlots primitives.Slot // MaxBuilderConsecutiveMissedSlots defines the number of consecutive skip slot to fallback from using relay/builder to local execution engine for block construction.
-	MaxBuilderEpochMissedSlots       primitives.Slot // MaxBuilderEpochMissedSlots is defines the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
+	MaxBuilderEpochMissedSlots       primitives.Slot // MaxBuilderEpochMissedSlots is defining the number of total skip slot (per epoch rolling windows) to fallback from using relay/builder to local execution engine for block construction.
 	LocalBlockValueBoost             uint64          // LocalBlockValueBoost is the value boost for local block construction. This is used to prioritize local block construction over relay/builder block construction.
 
 	// Execution engine timeout value
 	ExecutionEngineTimeoutValue uint64 // ExecutionEngineTimeoutValue defines the seconds to wait before timing out engine endpoints with execution payload execution semantics (newPayload, forkchoiceUpdated).
+
+	// Subnet value
+	BlobsidecarSubnetCount uint64 `yaml:"BLOB_SIDECAR_SUBNET_COUNT"` // BlobsidecarSubnetCount is the number of blobsidecar subnets used in the gossipsub protocol.
+
+	// Values introduced in Deneb hard fork
+	MaxPerEpochActivationChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" spec:"true"` // MaxPerEpochActivationChurnLimit is the maximum amount of churn allotted for validator activation.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
@@ -274,4 +282,16 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// DenebEnabled centralizes the check to determine if code paths
+// that are specific to deneb should be allowed to execute. This will make it easier to find call sites that do this
+// kind of check and remove them post-deneb.
+func DenebEnabled() bool {
+	return BeaconConfig().DenebForkEpoch < math.MaxUint64
+}
+
+// WithinDAPeriod checks if the block epoch is within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS of the given current epoch.
+func WithinDAPeriod(block, current primitives.Epoch) bool {
+	return block+BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest >= current
 }

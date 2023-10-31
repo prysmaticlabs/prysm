@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
@@ -42,8 +43,9 @@ type Server struct {
 	V1Alpha1ValidatorServer       eth.BeaconNodeValidatorServer
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.PayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
 	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
+	CoreService                   *core.Service
 }

@@ -92,10 +92,10 @@ type Store struct {
 	ctx                 context.Context
 }
 
-// KVStoreDatafilePath is the canonical construction of a full
+// StoreDatafilePath is the canonical construction of a full
 // database file path from the directory path, so that code outside
 // this package can find the full path in a consistent way.
-func KVStoreDatafilePath(dirPath string) string {
+func StoreDatafilePath(dirPath string) string {
 	return path.Join(dirPath, DatabaseFileName)
 }
 
@@ -129,6 +129,8 @@ var Buckets = [][]byte{
 
 	feeRecipientBucket,
 	registrationBucket,
+
+	blobsBucket,
 }
 
 // NewKVStore initializes a new boltDB key-value store at the directory
@@ -144,7 +146,7 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 			return nil, err
 		}
 	}
-	datafile := KVStoreDatafilePath(dirPath)
+	datafile := StoreDatafilePath(dirPath)
 	log.Infof("Opening Bolt DB at %s", datafile)
 	boltDB, err := bolt.Open(
 		datafile,
@@ -199,6 +201,11 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	if err := kv.setupBlockStorageType(ctx); err != nil {
 		return nil, err
 	}
+
+	if err := checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
+		return nil, errors.Wrap(err, "failed to check epochs for blob sidecars request bucket")
+	}
+
 	return kv, nil
 }
 

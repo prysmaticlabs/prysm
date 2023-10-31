@@ -2,10 +2,11 @@ package helpers
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -36,14 +37,15 @@ type SingleIndexedVerificationFailure struct {
 	Message string `json:"message"`
 }
 
-// PrepareStateFetchError returns an appropriate error based on the supplied argument.
-// The argument error should be a result of fetching state.
-func PrepareStateFetchError(err error) error {
-	if errors.Is(err, stategen.ErrNoDataForSlot) {
-		return errors.New("lacking historical data needed to fulfill request")
+func HandleGetBlockError(blk interfaces.ReadOnlySignedBeaconBlock, err error) error {
+	if invalidBlockIdErr, ok := err.(*lookup.BlockIdParseError); ok {
+		return status.Errorf(codes.InvalidArgument, "Invalid block ID: %v", invalidBlockIdErr)
 	}
-	if stateNotFoundErr, ok := err.(*lookup.StateNotFoundError); ok {
-		return fmt.Errorf("state not found: %v", stateNotFoundErr)
+	if err != nil {
+		return status.Errorf(codes.Internal, "Could not get block from block ID: %v", err)
 	}
-	return fmt.Errorf("could not fetch state: %v", err)
+	if err := blocks.BeaconBlockIsNil(blk); err != nil {
+		return status.Errorf(codes.NotFound, "Could not find requested block: %v", err)
+	}
+	return nil
 }

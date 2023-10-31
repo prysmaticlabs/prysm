@@ -15,7 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
+	depositCache "github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -36,7 +37,7 @@ import (
 type infostream struct {
 	ctx                 context.Context
 	headFetcher         blockchain.HeadFetcher
-	depositFetcher      depositcache.DepositFetcher
+	depositFetcher      depositCache.DepositFetcher
 	blockFetcher        execution.POWBlockFetcher
 	beaconDB            db.ReadOnlyDatabase
 	pubKeys             [][]byte
@@ -422,10 +423,11 @@ func (is *infostream) calculateActivationTimeForPendingValidators(res []*ethpb.V
 
 	// Loop over epochs, roughly simulating progression.
 	for curEpoch := epoch + 1; len(sortedIndices) > 0 && len(pendingValidators) > 0; curEpoch++ {
-		toProcess, err := helpers.ValidatorChurnLimit(numAttestingValidators)
-		if err != nil {
-			log.WithError(err).Error("Could not determine validator churn limit")
+		toProcess := helpers.ValidatorActivationChurnLimit(numAttestingValidators)
+		if headState.Version() >= version.Deneb {
+			toProcess = helpers.ValidatorActivationChurnLimitDeneb(numAttestingValidators)
 		}
+
 		if toProcess > uint64(len(sortedIndices)) {
 			toProcess = uint64(len(sortedIndices))
 		}

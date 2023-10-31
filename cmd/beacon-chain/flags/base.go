@@ -138,13 +138,11 @@ var (
 		Usage: "The percentage of freshly allocated data to live data on which the gc will be run again.",
 		Value: 100,
 	}
-	// SafeSlotsToImportOptimistically specifies the number of slots that a
-	// node should wait before being able to optimistically sync blocks
-	// across the merge boundary
+	// SafeSlotsToImportOptimistically is deprecated. It should be removed in the next major release.
 	SafeSlotsToImportOptimistically = &cli.IntFlag{
-		Name:  "safe-slots-to-import-optimistically",
-		Usage: "The number of slots to wait before optimistically syncing a block without enabled execution.",
-		Value: 128,
+		Name:   "safe-slots-to-import-optimistically",
+		Usage:  "DEPRECATED. DO NOT USE",
+		Hidden: true,
 	}
 	// SlotsPerArchivedPoint specifies the number of slots between the archived points, to save beacon state in the cold
 	// section of beaconDB.
@@ -163,6 +161,18 @@ var (
 	BlockBatchLimitBurstFactor = &cli.IntFlag{
 		Name:  "block-batch-limit-burst-factor",
 		Usage: "The factor by which block batch limit may increase on burst.",
+		Value: 2,
+	}
+	// BlobBatchLimit specifies the requested blob batch size.
+	BlobBatchLimit = &cli.IntFlag{
+		Name:  "blob-batch-limit",
+		Usage: "The amount of blobs the local peer is bounded to request and respond to in a batch.",
+		Value: 8,
+	}
+	// BlobBatchLimitBurstFactor specifies the factor by which blob batch size may increase.
+	BlobBatchLimitBurstFactor = &cli.IntFlag{
+		Name:  "blob-batch-limit-burst-factor",
+		Usage: "The factor by which blob batch limit may increase on burst.",
 		Value: 2,
 	}
 	// EnableDebugRPCEndpoints as /v1/beacon/state.
@@ -250,5 +260,11 @@ var (
 		Name:  "slasher-datadir",
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
+	}
+	BlobRetentionEpoch = &cli.Uint64Flag{
+		Name:    "blob-retention-epochs",
+		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
+		Value:   uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
+		Aliases: []string{"extend-blob-retention-epoch"},
 	}
 )

@@ -30,6 +30,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 //	/- b1 - b2
@@ -107,7 +108,7 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks1(t *testing.T) {
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
-	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
@@ -180,7 +181,7 @@ func TestRegularSyncBeaconBlockSubscriber_OptimisticStatus(t *testing.T) {
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
-	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
@@ -254,9 +255,9 @@ func TestRegularSyncBeaconBlockSubscriber_ExecutionEngineTimesOut(t *testing.T) 
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
-	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
 	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
-	require.Equal(t, 1, len(r.badBlockCache.Keys())) // Account for the bad block above
+	require.Equal(t, 0, len(r.badBlockCache.Keys())) // Account for the bad block above
 	require.Equal(t, 0, len(r.seenBlockCache.Keys()))
 }
 
@@ -463,8 +464,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
-	assert.Equal(t, 1, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 1, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 
 	// Add b2 to the cache
 	wsb, err = blocks.NewSignedBeaconBlock(b2)
@@ -476,8 +477,8 @@ func TestRegularSyncBeaconBlockSubscriber_ProcessPendingBlocks_2Chains(t *testin
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Marks a block as bad
 	require.NoError(t, r.processPendingBlocks(context.Background())) // Bad block removed on second run
 
-	assert.Equal(t, 0, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
-	assert.Equal(t, 0, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
+	assert.Equal(t, 2, len(r.slotToPendingBlocks.Items()), "Incorrect size for slot to pending blocks cache")
+	assert.Equal(t, 2, len(r.seenPendingBlocks), "Incorrect size for seen pending block")
 }
 
 func TestRegularSyncBeaconBlockSubscriber_PruneOldPendingBlocks(t *testing.T) {
@@ -845,4 +846,99 @@ func TestService_ProcessBadPendingBlocks(t *testing.T) {
 	assert.NoError(t, err)
 	// remove with a different block from the same slot.
 	require.NoError(t, r.deleteBlockFromPendingQueue(b.Block.Slot, bB, b1Root))
+}
+
+func TestAlreadySyncingBlock(t *testing.T) {
+	ctx := context.Background()
+	db := dbtest.SetupDB(t)
+	hook := logTest.NewGlobal()
+
+	mockChain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+
+	p1 := p2ptest.NewTestP2P(t)
+	r := &Service{
+		cfg: &config{
+			p2p:      p1,
+			beaconDB: db,
+			chain:    mockChain,
+			clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
+			stateGen: stategen.New(db, doublylinkedtree.New()),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	r.initCaches()
+
+	b := util.NewBeaconBlock()
+	b.Block.Slot = 2
+	bRoot, err := b.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := blocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(b.Block.Slot, wsb, bRoot))
+	mockChain.SyncingRoot = bRoot
+	require.NoError(t, r.processPendingBlocks(ctx))
+	require.LogsContain(t, hook, "Skipping pending block already being processed")
+}
+
+func TestExpirationCache_PruneOldBlocksCorrectly(t *testing.T) {
+	ctx := context.Background()
+	db := dbtest.SetupDB(t)
+
+	mockChain := &mock.ChainService{
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		},
+	}
+
+	p1 := p2ptest.NewTestP2P(t)
+	// Reset expiration time
+	currExpTime := pendingBlockExpTime
+	defer func() {
+		pendingBlockExpTime = currExpTime
+	}()
+	pendingBlockExpTime = 500 * time.Millisecond
+
+	r := NewService(ctx,
+		WithStateGen(stategen.New(db, doublylinkedtree.New())),
+		WithDatabase(db),
+		WithChainService(mockChain),
+		WithP2P(p1),
+	)
+	b1 := util.NewBeaconBlock()
+	b1.Block.Slot = 1
+	b1.Block.ProposerIndex = 10
+	b1Root, err := b1.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err := blocks.NewSignedBeaconBlock(b1)
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(1, wsb, b1Root))
+
+	// Add new block with the same slot.
+	b2 := util.NewBeaconBlock()
+	b2.Block.Slot = 1
+	b2.Block.ProposerIndex = 11
+	b2Root, err := b2.Block.HashTreeRoot()
+	require.NoError(t, err)
+	wsb, err = blocks.NewSignedBeaconBlock(b2)
+	require.NoError(t, err)
+	require.NoError(t, r.insertBlockToPendingQueue(1, wsb, b2Root))
+
+	require.Equal(t, true, r.seenPendingBlocks[b1Root])
+	require.Equal(t, true, r.seenPendingBlocks[b2Root])
+	require.Equal(t, 2, len(r.pendingBlocksInCache(1)))
+
+	// Wait for expiration cache to cleanup and remove old block.
+	time.Sleep(2 * pendingBlockExpTime)
+
+	// Run pending queue with expired blocks.
+	require.NoError(t, r.processPendingBlocks(ctx))
+
+	assert.Equal(t, false, r.seenPendingBlocks[b1Root])
+	assert.Equal(t, false, r.seenPendingBlocks[b2Root])
+	assert.Equal(t, 0, len(r.pendingBlocksInCache(1)))
 }

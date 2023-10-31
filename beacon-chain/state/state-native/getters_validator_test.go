@@ -44,9 +44,12 @@ func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Capella(t *testing
 	})
 }
 
-func TestValidatorIndexOutOfRangeError(t *testing.T) {
-	err := statenative.NewValidatorIndexOutOfRangeError(1)
-	require.Equal(t, err.Error(), "index 1 out of range")
+func TestBeaconState_ValidatorAtIndexReadOnly_HandlesNilSlice_Deneb(t *testing.T) {
+	testtmpl.VerifyBeaconStateValidatorAtIndexReadOnlyHandlesNilSlice(t, func() (state.BeaconState, error) {
+		return statenative.InitializeFromProtoUnsafeDeneb(&ethpb.BeaconStateDeneb{
+			Validators: nil,
+		})
+	})
 }
 
 func TestValidatorIndexes(t *testing.T) {

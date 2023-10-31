@@ -7,17 +7,18 @@ import (
 	"math"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	v2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
@@ -29,8 +30,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// churnLimit is normally 4 unless the validator set is extremely large.
-var churnLimit = 4
 var depositValCount = e2e.DepositCount
 var numOfExits = 2
 
@@ -39,7 +38,7 @@ var depositsInBlockStart = params.E2ETestConfig().EpochsPerEth1VotingPeriod * 2
 
 // deposits included + finalization + MaxSeedLookahead for activation.
 var depositActivationStartEpoch = depositsInBlockStart + 2 + params.E2ETestConfig().MaxSeedLookahead
-var depositEndEpoch = depositActivationStartEpoch + primitives.Epoch(math.Ceil(float64(depositValCount)/float64(churnLimit)))
+var depositEndEpoch = depositActivationStartEpoch + primitives.Epoch(math.Ceil(float64(depositValCount)/float64(params.E2ETestConfig().MinPerEpochChurnLimit)))
 var exitSubmissionEpoch = primitives.Epoch(7)
 
 // ProcessesDepositsInBlocks ensures the expected amount of deposits are accepted into blocks.
@@ -154,7 +153,7 @@ func processesDepositsInBlocks(ec *e2etypes.EvaluationContext, conns ...*grpc.Cl
 			observed[k] = v + d.Data.Amount
 		}
 	}
-	mismatches := []string{}
+	var mismatches []string
 	for k, ev := range expected {
 		ov := observed[k]
 		if ev != ov {
@@ -249,8 +248,8 @@ func activatesDepositedValidators(ec *e2etypes.EvaluationContext, conns ...*grpc
 		return fmt.Errorf("missing %d validators for post-genesis deposits", len(expected))
 	}
 
-	if deposits != churnLimit {
-		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", churnLimit, epoch, deposits)
+	if uint64(deposits) != params.BeaconConfig().MinPerEpochChurnLimit {
+		return fmt.Errorf("expected %d deposits to be processed in epoch %d, received %d", params.BeaconConfig().MinPerEpochChurnLimit, epoch, deposits)
 	}
 
 	if lowBalance > 0 {
@@ -362,7 +361,7 @@ func proposeVoluntaryExit(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientC
 	if err != nil {
 		return errors.Wrap(err, "could not get state")
 	}
-	execIndices := []int{}
+	var execIndices []int
 	err = st.ReadFromEveryValidator(func(idx int, val state.ReadOnlyValidator) error {
 		if val.WithdrawalCredentials()[0] == params.BeaconConfig().ETH1AddressWithdrawalPrefixByte {
 			execIndices = append(execIndices, idx)
@@ -502,6 +501,14 @@ func validatorsVoteWithTheMajority(ec *e2etypes.EvaluationContext, conns ...*grp
 			b := blk.GetBlindedCapellaBlock().Block
 			slot = b.Slot
 			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_DenebBlock:
+			b := blk.GetDenebBlock().Block
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
+		case *ethpb.BeaconBlockContainer_BlindedDenebBlock:
+			b := blk.GetBlindedDenebBlock().Message
+			slot = b.Slot
+			vote = b.Body.Eth1Data.BlockHash
 		default:
 			return errors.New("block neither phase0,altair or bellatrix")
 		}
@@ -543,7 +550,6 @@ func validatorsVoteWithTheMajority(ec *e2etypes.EvaluationContext, conns ...*grp
 
 func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
-	beaconAPIClient := ethpbservice.NewBeaconChainClient(conn)
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	debugClient := ethpb.NewDebugClient(conn)
 
@@ -578,7 +584,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	if err != nil {
 		return err
 	}
-	changes := make([]*v2.SignedBLSToExecutionChange, 0)
+	changes := make([]*shared.SignedBLSToExecutionChange, 0)
 	// Only send half the number of changes each time, to allow us to test
 	// at the fork boundary.
 	wantedChanges := numOfExits / 2
@@ -597,7 +603,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		if !bytes.Equal(val.PublicKey, privKeys[idx].PublicKey().Marshal()) {
 			return errors.Errorf("pubkey is not equal, wanted %#x but received %#x", val.PublicKey, privKeys[idx].PublicKey().Marshal())
 		}
-		message := &v2.BLSToExecutionChange{
+		message := &ethpb.BLSToExecutionChange{
 			ValidatorIndex:     idx,
 			FromBlsPubkey:      privKeys[idx].PublicKey().Marshal(),
 			ToExecutionAddress: bytesutil.ToBytes(uint64(idx), 20),
@@ -611,15 +617,23 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			return err
 		}
 		signature := privKeys[idx].Sign(sigRoot[:]).Marshal()
-		change := &v2.SignedBLSToExecutionChange{
-			Message:   message,
-			Signature: signature,
+		change, err := shared.BlsToExecutionChangeFromConsensus(message)
+		if err != nil {
+			return err
 		}
-		changes = append(changes, change)
-	}
-	_, err = beaconAPIClient.SubmitSignedBLSToExecutionChanges(ctx, &v2.SubmitBLSToExecutionChangesRequest{Changes: changes})
 
-	return err
+		changes = append(changes, &shared.SignedBLSToExecutionChange{
+			Message:   change,
+			Signature: hexutil.Encode(signature),
+		})
+	}
+
+	beaconAPIClient, err := beacon.NewClient(fmt.Sprintf("http://localhost:%d/eth/v1", e2e.TestParams.Ports.PrysmBeaconNodeGatewayPort)) // only uses the first node so no updates to port
+	if err != nil {
+		return err
+	}
+
+	return beaconAPIClient.SubmitChangeBLStoExecution(ctx, changes)
 }
 
 func validatorsAreWithdrawn(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {

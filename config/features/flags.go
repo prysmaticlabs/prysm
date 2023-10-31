@@ -33,14 +33,13 @@ var (
 		Name:  "dev",
 		Usage: "Enable experimental features still in development. These features may not be stable.",
 	}
+	enableExperimentalState = &cli.BoolFlag{
+		Name:  "enable-experimental-state",
+		Usage: "Turn on the latest and greatest (but potentially unstable) changes to the beacon state",
+	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
 		Usage: "Write ssz states to disk after attempted state transition",
-	}
-	enableExternalSlasherProtectionFlag = &cli.BoolFlag{
-		Name: "enable-external-slasher-protection",
-		Usage: "Enables the validator to connect to a beacon node using the --slasher flag" +
-			"for remote slashing protection",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
@@ -62,7 +61,7 @@ var (
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
 		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
-		Value:  6500 * time.Millisecond,
+		Value:  7000 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
@@ -137,17 +136,17 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
 	}
-	enableOptionalEngineMethods = &cli.BoolFlag{
-		Name:  "enable-optional-engine-methods",
-		Usage: "Enables the optional engine methods",
+	disableOptionalEngineMethods = &cli.BoolFlag{
+		Name:  "disable-optional-engine-methods",
+		Usage: "Disables the optional engine methods",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
 	}
-	disableBuildBlockParallel = &cli.BoolFlag{
-		Name:  "disable-build-block-parallel",
-		Usage: "Disables building a beacon block in parallel for consensus and execution",
+	EnableEIP4881 = &cli.BoolFlag{
+		Name:  "enable-eip-4881",
+		Usage: "Enables the deposit tree specified in EIP4881",
 	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
@@ -169,13 +168,13 @@ var (
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
+	EnableEIP4881,
+	enableExperimentalState,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
 var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	writeWalletPasswordOnWebOnboarding,
-	enableExternalSlasherProtectionFlag,
 	HoleskyTestnet,
 	PraterTestnet,
 	SepoliaTestnet,
@@ -195,6 +194,7 @@ var E2EValidatorFlags = []string{
 // BeaconChainFlags contains a list of all the feature flags that apply to the beacon-chain client.
 var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []cli.Flag{
 	devModeFlag,
+	enableExperimentalState,
 	writeSSZStateTransitionsFlag,
 	disableGRPCConnectionLogging,
 	HoleskyTestnet,
@@ -211,12 +211,12 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	enableOptionalEngineMethods,
+	disableOptionalEngineMethods,
 	prepareAllPayloads,
-	disableBuildBlockParallel,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
+	EnableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	disableAggregateParallel,

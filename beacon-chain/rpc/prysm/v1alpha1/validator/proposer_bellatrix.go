@@ -56,7 +56,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 	// Use local payload if builder payload is nil.
 	if builderPayload == nil {
-		return blk.SetExecution(localPayload)
+		return setLocalExecution(blk, localPayload)
 	}
 
 	switch {
@@ -69,14 +69,14 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		builderValueGwei, err := builderPayload.ValueInGwei()
 		if err != nil {
 			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		}
 
 		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 		if err != nil {
 			tracing.AnnotateError(span, err)
 			log.WithError(err).Warn("Proposer: failed to match withdrawals root")
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		}
 
 		// Use builder payload if the following in true:
@@ -87,10 +87,10 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
 			blk.SetBlinded(true)
-			if err := blk.SetExecution(builderPayload); err != nil {
+			if err := setBuilderExecution(blk, builderPayload); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
 				blk.SetBlinded(false)
-				return blk.SetExecution(localPayload)
+				return setLocalExecution(blk, localPayload)
 			} else {
 				return nil
 			}
@@ -108,13 +108,13 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
 			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
 		)
-		return blk.SetExecution(localPayload)
+		return setLocalExecution(blk, localPayload)
 	default: // Bellatrix case.
 		blk.SetBlinded(true)
-		if err := blk.SetExecution(builderPayload); err != nil {
+		if err := setBuilderExecution(blk, builderPayload); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
 			blk.SetBlinded(false)
-			return blk.SetExecution(localPayload)
+			return setLocalExecution(blk, localPayload)
 		} else {
 			return nil
 		}
@@ -208,6 +208,16 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
+	if bid.Version() >= version.Deneb {
+		blindBlobsBundle, err = bid.BlindedBlobsBundle()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not get blinded blobs bundle")
+		}
+		if blindBlobsBundle != nil {
+			log.WithField("blindBlobCount", len(blindBlobsBundle.BlobRoots))
+		}
+	}
+
 	log.WithFields(logrus.Fields{
 		"value":              v.String(),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
@@ -269,4 +279,60 @@ func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, err
 		return false, nil
 	}
 	return true, nil
+}
+
+// setLocalExecution sets the execution context for a local beacon block.
+// It delegates to setExecution for the actual work.
+func setLocalExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
+	var kzgCommitments [][]byte
+	if fullBlobsBundle != nil {
+		kzgCommitments = fullBlobsBundle.KzgCommitments
+	}
+	return setExecution(blk, execution, false, kzgCommitments)
+}
+
+// setBuilderExecution sets the execution context for a builder's beacon block.
+// It delegates to setExecution for the actual work.
+func setBuilderExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
+	var kzgCommitments [][]byte
+	if blindBlobsBundle != nil {
+		kzgCommitments = blindBlobsBundle.KzgCommitments
+	}
+	return setExecution(blk, execution, true, kzgCommitments)
+}
+
+// setExecution sets the execution context for a beacon block. It also sets KZG commitments based on the block version.
+// The function is designed to be flexible and handle both local and builder executions.
+func setExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData, isBlinded bool, kzgCommitments [][]byte) error {
+	if execution == nil {
+		return errors.New("execution is nil")
+	}
+
+	// Set the blinded status of the block
+	blk.SetBlinded(isBlinded)
+
+	// Set the execution data for the block
+	errMessage := "failed to set local execution"
+	if isBlinded {
+		errMessage = "failed to set builder execution"
+	}
+	if err := blk.SetExecution(execution); err != nil {
+		return errors.Wrap(err, errMessage)
+	}
+
+	// If the block version is below Deneb, no further actions are needed
+	if blk.Version() < version.Deneb {
+		return nil
+	}
+
+	// Set the KZG commitments for the block
+	errMessage = "failed to set local kzg commitments"
+	if isBlinded {
+		errMessage = "failed to set builder kzg commitments"
+	}
+	if err := blk.SetBlobKzgCommitments(kzgCommitments); err != nil {
+		return errors.Wrap(err, errMessage)
+	}
+
+	return nil
 }

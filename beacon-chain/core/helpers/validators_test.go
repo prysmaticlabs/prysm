@@ -367,9 +367,50 @@ func TestChurnLimit_OK(t *testing.T) {
 		require.NoError(t, err)
 		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 		require.NoError(t, err)
-		resultChurn, err := ValidatorChurnLimit(validatorCount)
+		resultChurn := ValidatorActivationChurnLimit(validatorCount)
+		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorActivationChurnLimit(%d)", test.validatorCount)
+	}
+}
+
+func TestChurnLimitDeneb_OK(t *testing.T) {
+	tests := []struct {
+		validatorCount int
+		wantedChurn    uint64
+	}{
+		{1000, 4},
+		{100000, 4},
+		{1000000, params.BeaconConfig().MaxPerEpochActivationChurnLimit},
+		{2000000, params.BeaconConfig().MaxPerEpochActivationChurnLimit},
+	}
+
+	defer ClearCache()
+
+	for _, test := range tests {
+		ClearCache()
+
+		// Create validators
+		validators := make([]*ethpb.Validator, test.validatorCount)
+		for i := range validators {
+			validators[i] = &ethpb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+
+		// Initialize beacon state
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+			Slot:        1,
+			Validators:  validators,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		})
 		require.NoError(t, err)
-		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorChurnLimit(%d)", test.validatorCount)
+
+		// Get active validator count
+		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+
+		// Test churn limit calculation
+		resultChurn := ValidatorActivationChurnLimitDeneb(validatorCount)
+		assert.Equal(t, test.wantedChurn, resultChurn)
 	}
 }
 
@@ -519,12 +560,24 @@ func TestActiveValidatorIndices(t *testing.T) {
 			},
 			want: []primitives.ValidatorIndex{0, 2, 3},
 		},
+		{
+			name: "impossible_zero_validators", // Regression test for issue #13051
+			args: args{
+				state: &ethpb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					Validators:  make([]*ethpb.Validator, 0),
+				},
+				epoch: 10,
+			},
+			wantedErr: "no active validator indices",
+		},
 	}
 	defer ClearCache()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := state_native.InitializeFromProtoPhase0(tt.args.state)
 			require.NoError(t, err)
+			require.NoError(t, s.SetValidators(tt.args.state.Validators))
 			got, err := ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
