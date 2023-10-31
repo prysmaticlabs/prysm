@@ -821,8 +821,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 
 	muxHandler := func(_ *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator gateway handler requires this special logic as it serves the web APIs and the web UI.
-		// The validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
-		// note: keymanager api endpoints are registered at server creation before this catch all call.
 		if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
 			// Else, we handle with the Prysm API gateway without a middleware.
@@ -845,7 +843,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	}
 	opts := []gateway.Option{
 		gateway.WithMuxHandler(muxHandler),
-		gateway.WithRouter(router),
+		gateway.WithRouter(router), // note some routes are registered in server.go
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
