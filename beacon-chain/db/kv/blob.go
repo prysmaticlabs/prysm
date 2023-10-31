@@ -207,6 +207,37 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices .
 	return filterForIndices(sc, indices...)
 }
 
+func (s *Store) BlobIndicesAvailable(ctx context.Context, root [32]byte) ([]uint64, error) {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BlobIndicesAvailable")
+	defer span.End()
+
+	var enc []byte
+	if err := s.db.View(func(tx *bolt.Tx) error {
+		c := tx.Bucket(blobsBucket).Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			if bytes.HasSuffix(k, root[:]) {
+				enc = v
+				break
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	if enc == nil {
+		return nil, ErrNotFound
+	}
+	scs := &ethpb.BlobSidecars{}
+	if err := decode(ctx, enc, scs); err != nil {
+		return nil, err
+	}
+	idxs := make([]uint64, len(scs.Sidecars))
+	for i := range scs.Sidecars {
+		idxs[i] = scs.Sidecars[i].Index
+	}
+	return idxs, nil
+}
+
 func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.BlobSidecar, error) {
 	if len(indices) == 0 {
 		return sc.Sidecars, nil

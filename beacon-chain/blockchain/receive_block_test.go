@@ -7,6 +7,7 @@ import (
 	"time"
 
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -240,7 +241,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			rwsb, err := blocks.NewROBlock(wsb)
 			require.NoError(t, err)
-			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb})
+			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb}, &das.MockAvailabilityStore{})
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

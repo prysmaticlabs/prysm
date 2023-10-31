@@ -8,6 +8,7 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
@@ -464,15 +465,15 @@ func TestService_processBlockBatch(t *testing.T) {
 			currBlockRoot = blk1Root
 		}
 
-		cbnormal := func(ctx context.Context, blks []blocks.ROBlock) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks))
+		cbnormal := func(ctx context.Context, blks []blocks.ROBlock, avs das.AvailabilityStore) error {
+			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, avs))
 			return nil
 		}
 		// Process block normally.
 		err = s.processBatchedBlocks(ctx, genesis, batch, cbnormal)
 		assert.NoError(t, err)
 
-		cbnil := func(ctx context.Context, blocks []blocks.ROBlock) error {
+		cbnil := func(ctx context.Context, blocks []blocks.ROBlock, avs das.AvailabilityStore) error {
 			return nil
 		}
 
