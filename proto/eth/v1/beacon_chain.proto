@@ -37,16 +37,6 @@ message StateRequest {
     bytes state_id = 1;
 }
 
-// Beacon Pool related API service.
-
-message AttesterSlashingsPoolResponse {
-    repeated AttesterSlashing data = 1;
-}
-
-message ProposerSlashingPoolResponse {
-    repeated ProposerSlashing data = 1;
-}
-
 // Beacon Config API related messages.
 
 message ForkScheduleResponse {

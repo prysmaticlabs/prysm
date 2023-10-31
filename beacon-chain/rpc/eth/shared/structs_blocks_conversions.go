@@ -2005,14 +2005,8 @@ func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader
 }
 
 func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2060,14 +2054,8 @@ func SignedBeaconBlockFromConsensus(b *eth.SignedBeaconBlock) (*SignedBeaconBloc
 }
 
 func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) (*BeaconBlockAltair, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2119,14 +2107,8 @@ func SignedBeaconBlockAltairFromConsensus(b *eth.SignedBeaconBlockAltair) (*Sign
 }
 
 func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix) (*BlindedBeaconBlockBellatrix, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2183,14 +2165,8 @@ func SignedBlindedBeaconBlockBellatrixFromConsensus(b *eth.SignedBlindedBeaconBl
 }
 
 func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBlockBellatrix, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2266,14 +2242,8 @@ func SignedBeaconBlockBellatrixFromConsensus(b *eth.SignedBeaconBlockBellatrix) 
 }
 
 func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*BlindedBeaconBlockCapella, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2335,14 +2305,8 @@ func SignedBlindedBeaconBlockCapellaFromConsensus(b *eth.SignedBlindedBeaconBloc
 }
 
 func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCapella, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2521,14 +2485,8 @@ func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockAndBlob
 }
 
 func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*BlindedBeaconBlockDeneb, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2595,14 +2553,8 @@ func SignedBlindedBeaconBlockDenebFromConsensus(b *eth.SignedBlindedBeaconBlockD
 }
 
 func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, error) {
-	proposerSlashings, err := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
-	if err != nil {
-		return nil, err
-	}
-	attesterSlashings, err := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
-	if err != nil {
-		return nil, err
-	}
+	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
+	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
 	atts, err := AttsFromConsensus(b.Body.Attestations)
 	if err != nil {
 		return nil, err
@@ -2847,7 +2799,7 @@ func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlash
 	return proposerSlashings, nil
 }
 
-func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) ([]*ProposerSlashing, error) {
+func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) []*ProposerSlashing {
 	proposerSlashings := make([]*ProposerSlashing, len(src))
 	for i, s := range src {
 		proposerSlashings[i] = &ProposerSlashing{
@@ -2873,7 +2825,7 @@ func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) ([]*ProposerSla
 			},
 		}
 	}
-	return proposerSlashings, nil
+	return proposerSlashings
 }
 
 func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlashing, error) {
@@ -2953,7 +2905,7 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlash
 	return attesterSlashings, nil
 }
 
-func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) ([]*AttesterSlashing, error) {
+func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) []*AttesterSlashing {
 	attesterSlashings := make([]*AttesterSlashing, len(src))
 	for i, s := range src {
 		a1AttestingIndices := make([]string, len(s.Attestation_1.AttestingIndices))
@@ -3001,7 +2953,7 @@ func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) ([]*AttesterSla
 			},
 		}
 	}
-	return attesterSlashings, nil
+	return attesterSlashings
 }
 
 func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {
