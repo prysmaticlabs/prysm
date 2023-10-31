@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,10 +21,288 @@ import (
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	remote_web3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
+	slashingprotection "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
+	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+// ListKeystores implements the standard validator key management API.
+func (s *Server) ListKeystores(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListKeystores")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	if !s.walletInitialized {
+		http2.HandleError(w, "Prysm Wallet not initialized. Please create a new wallet.", http.StatusServiceUnavailable)
+		return
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if s.wallet.KeymanagerKind() != keymanager.Derived && s.wallet.KeymanagerKind() != keymanager.Local {
+		http2.HandleError(w, errors.Wrap(err, "Prysm validator keys are not stored locally with this keymanager type").Error(), http.StatusInternalServerError)
+		return
+	}
+	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not retrieve keystores").Error(), http.StatusInternalServerError)
+		return
+	}
+	keystoreResponse := make([]*Keystore, len(pubKeys))
+	for i := 0; i < len(pubKeys); i++ {
+		keystoreResponse[i] = &Keystore{
+			ValidatingPubkey: hexutil.Encode(pubKeys[i][:]),
+		}
+		if s.wallet.KeymanagerKind() == keymanager.Derived {
+			keystoreResponse[i].DerivationPath = fmt.Sprintf(derived.ValidatingKeyDerivationPathTemplate, i)
+		}
+	}
+	response := &ListKeystoresResponse{
+		Data: keystoreResponse,
+	}
+	http2.WriteJson(w, response)
+}
+
+// ImportKeystores allows for importing keystores into Prysm with their slashing protection history.
+func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ImportKeystores")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	if !s.walletInitialized {
+		http2.HandleError(w, "Prysm Wallet not initialized. Please create a new wallet.", http.StatusServiceUnavailable)
+		return
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var req ImportKeystoresRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	importer, ok := km.(keymanager.Importer)
+	if !ok {
+		statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
+		for i := 0; i < len(req.Keystores); i++ {
+			statuses[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
+				Message: fmt.Sprintf("Keymanager kind %T cannot import local keys", km),
+			}
+		}
+		http2.WriteJson(w, &ImportKeystoresResponse{Data: statuses})
+		return
+	}
+	if len(req.Keystores) == 0 {
+		http2.WriteJson(w, &ImportKeystoresResponse{})
+		return
+	}
+	keystores := make([]*keymanager.Keystore, len(req.Keystores))
+	for i := 0; i < len(req.Keystores); i++ {
+		k := &keymanager.Keystore{}
+		err = json.Unmarshal([]byte(req.Keystores[i]), k)
+		if k.Description == "" && k.Name != "" {
+			k.Description = k.Name
+		}
+		if err != nil {
+			// we want to ignore unmarshal errors for now, the proper status is updated in importer.ImportKeystores
+			k.Pubkey = "invalid format"
+		}
+		keystores[i] = k
+	}
+	if req.SlashingProtection != "" {
+		if err := slashingprotection.ImportStandardProtectionJSON(
+			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
+		); err != nil {
+			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
+			for i := 0; i < len(req.Keystores); i++ {
+				statuses[i] = &keymanager.KeyStatus{
+					Status:  keymanager.StatusError,
+					Message: fmt.Sprintf("could not import slashing protection: %v", err),
+				}
+			}
+			http2.WriteJson(w, &ImportKeystoresResponse{Data: statuses})
+			return
+		}
+	}
+	if len(req.Passwords) == 0 {
+		req.Passwords = make([]string, len(req.Keystores))
+	}
+
+	// req.Passwords and req.Keystores are checked for 0 length in code above.
+	if len(req.Passwords) > len(req.Keystores) {
+		req.Passwords = req.Passwords[:len(req.Keystores)]
+	} else if len(req.Passwords) < len(req.Keystores) {
+		passwordList := make([]string, len(req.Keystores))
+		copy(passwordList, req.Passwords)
+		req.Passwords = passwordList
+	}
+
+	statuses, err := importer.ImportKeystores(ctx, keystores, req.Passwords)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not import keystores").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If any of the keys imported had a slashing protection history before, we
+	// stop marking them as deleted from our validator database.
+	http2.WriteJson(w, &ImportKeystoresResponse{Data: statuses})
+}
+
+// DeleteKeystores allows for deleting specified public keys from Prysm.
+func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteKeystores")
+	defer span.End()
+
+	if s.validatorService == nil {
+		http2.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	if !s.walletInitialized {
+		http2.HandleError(w, "Prysm Wallet not initialized. Please create a new wallet.", http.StatusServiceUnavailable)
+		return
+	}
+	km, err := s.validatorService.Keymanager()
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var req DeleteKeystoresRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(req.Pubkeys) == 0 {
+		http2.WriteJson(w, &DeleteKeystoresResponse{Data: make([]*keymanager.KeyStatus, 0)})
+		return
+	}
+	deleter, ok := km.(keymanager.Deleter)
+	if !ok {
+		sts := make([]*keymanager.KeyStatus, len(req.Pubkeys))
+		for i := 0; i < len(req.Pubkeys); i++ {
+			sts[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
+				Message: fmt.Sprintf("Keymanager kind %T cannot delete local keys", km),
+			}
+		}
+		http2.WriteJson(w, &DeleteKeystoresResponse{Data: sts})
+		return
+	}
+	bytePubKeys := make([][]byte, len(req.Pubkeys))
+	for i, pubkey := range req.Pubkeys {
+		key, ok := shared.ValidateHex(w, "Pubkey", pubkey, fieldparams.BLSPubkeyLength)
+		if !ok {
+			return
+		}
+		bytePubKeys[i] = key
+	}
+	statuses, err := deleter.DeleteKeystores(ctx, bytePubKeys)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not delete keys").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	statuses, err = s.transformDeletedKeysStatuses(ctx, bytePubKeys, statuses)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not transform deleted keys statuses").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	exportedHistory, err := s.slashingProtectionHistoryForDeletedKeys(ctx, bytePubKeys, statuses)
+	if err != nil {
+		log.WithError(err).Warn("Could not get slashing protection history for deleted keys")
+		sts := make([]*keymanager.KeyStatus, len(req.Pubkeys))
+		for i := 0; i < len(req.Pubkeys); i++ {
+			sts[i] = &keymanager.KeyStatus{
+				Status:  keymanager.StatusError,
+				Message: "Could not export slashing protection history as existing non duplicate keys were deleted",
+			}
+		}
+		http2.WriteJson(w, &DeleteKeystoresResponse{Data: sts})
+		return
+	}
+	jsonHist, err := json.Marshal(exportedHistory)
+	if err != nil {
+		http2.HandleError(w, errors.Wrap(err, "Could not JSON marshal slashing protection history").Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := &DeleteKeystoresResponse{
+		Data:               statuses,
+		SlashingProtection: string(jsonHist),
+	}
+	http2.WriteJson(w, response)
+}
+
+// For a list of deleted keystore statuses, we check if any NOT_FOUND status actually
+// has a corresponding public key in the database. In this case, we transform the status
+// to NOT_ACTIVE, as we do have slashing protection history for it and should not mark it
+// as NOT_FOUND when returning a response to the caller.
+func (s *Server) transformDeletedKeysStatuses(
+	ctx context.Context, pubKeys [][]byte, statuses []*keymanager.KeyStatus,
+) ([]*keymanager.KeyStatus, error) {
+	pubKeysInDB, err := s.publicKeysInDB(ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get public keys from DB")
+	}
+	if len(pubKeysInDB) > 0 {
+		for i := 0; i < len(pubKeys); i++ {
+			keyExistsInDB := pubKeysInDB[bytesutil.ToBytes48(pubKeys[i])]
+			if keyExistsInDB && statuses[i].Status == keymanager.StatusNotFound {
+				statuses[i].Status = keymanager.StatusNotActive
+			}
+		}
+	}
+	return statuses, nil
+}
+
+// Gets a map of all public keys in the database, useful for O(1) lookups.
+func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkeyLength]byte]bool, error) {
+	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
+	attestedPublicKeys, err := s.valDB.AttestedPublicKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
+	}
+	proposedPublicKeys, err := s.valDB.ProposedPublicKeys(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
+	}
+	for _, pk := range append(attestedPublicKeys, proposedPublicKeys...) {
+		pubKeysInDB[pk] = true
+	}
+	return pubKeysInDB, nil
+}
+
+// Exports slashing protection data for a list of DELETED or NOT_ACTIVE keys only to be used
+// as part of the DeleteKeystores endpoint.
+func (s *Server) slashingProtectionHistoryForDeletedKeys(
+	ctx context.Context, pubKeys [][]byte, statuses []*keymanager.KeyStatus,
+) (*format.EIPSlashingProtectionFormat, error) {
+	// We select the keys that were DELETED or NOT_ACTIVE from the previous action
+	// and use that to filter our slashing protection export.
+	filteredKeys := make([][]byte, 0, len(pubKeys))
+	for i, pk := range pubKeys {
+		if statuses[i].Status == keymanager.StatusDeleted ||
+			statuses[i].Status == keymanager.StatusNotActive {
+			filteredKeys = append(filteredKeys, pk)
+		}
+	}
+	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
+}
 
 // SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
 func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +456,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		statuses := make([]*keymanager.KeyStatus, len(req.RemoteKeys))
 		for i := 0; i < len(req.RemoteKeys); i++ {
 			statuses[i] = &keymanager.KeyStatus{
-				Status:  remote_web3signer.StatusError,
+				Status:  keymanager.StatusError,
 				Message: "Keymanager kind cannot import public keys for web3signer keymanager type.",
 			}
 		}
@@ -232,7 +512,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		statuses := make([]*keymanager.KeyStatus, len(req.Pubkeys))
 		for i := 0; i < len(req.Pubkeys); i++ {
 			statuses[i] = &keymanager.KeyStatus{
-				Status:  remote_web3signer.StatusError,
+				Status:  keymanager.StatusError,
 				Message: "Keymanager kind cannot delete public keys for web3signer keymanager type.",
 			}
 		}
