@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
@@ -58,7 +57,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
 	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
-	validatormiddleware "github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/validator/web"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -802,7 +800,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,
-		ethpbservice.RegisterKeyManagementHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -821,15 +818,10 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		),
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
-	muxHandler := func(apiMware *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
-		// The validator gateway handler requires this special logic as it serves two kinds of APIs, namely
-		// the standard validator keymanager API under the /eth namespace, and the Prysm internal
-		// validator API under the /api namespace. Finally, it also serves requests to host the validator web UI.
-		if strings.HasPrefix(req.URL.Path, "/api/eth/") {
-			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
-			// If the prefix has /eth/, we handle it with the standard API gateway middleware.
-			apiMware.ServeHTTP(w, req)
-		} else if strings.HasPrefix(req.URL.Path, "/api") {
+
+	muxHandler := func(_ *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+		// The validator gateway handler requires this special logic as it serves the web APIs and the web UI.
+		if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)
 			// Else, we handle with the Prysm API gateway without a middleware.
 			h(w, req)
@@ -846,19 +838,17 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		Patterns: []string{
 			"/accounts/",
 			"/v2/",
-			"/internal/eth/v1/",
 		},
 		Mux: gwmux,
 	}
 	opts := []gateway.Option{
-		gateway.WithRouter(router),
+		gateway.WithMuxHandler(muxHandler),
+		gateway.WithRouter(router), // note some routes are registered in server.go
 		gateway.WithRemoteAddr(rpcAddr),
 		gateway.WithGatewayAddr(gatewayAddress),
 		gateway.WithMaxCallRecvMsgSize(maxCallSize),
 		gateway.WithPbHandlers([]*gateway.PbMux{pbHandler}),
 		gateway.WithAllowedOrigins(allowedOrigins),
-		gateway.WithApiMiddleware(&validatormiddleware.ValidatorEndpointFactory{}),
-		gateway.WithMuxHandler(muxHandler),
 		gateway.WithTimeout(uint64(timeout)),
 	}
 	gw, err := gateway.New(c.cliCtx.Context, opts...)

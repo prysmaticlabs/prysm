@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/io/logs"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
@@ -103,7 +102,7 @@ type Server struct {
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Server{
+	server := &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
 		logsStreamer:             logs.NewStreamServer(),
@@ -133,6 +132,11 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
 		router:                   cfg.Router,
 	}
+	// immediately register routes to override any catchalls
+	if err := server.InitializeRoutes(); err != nil {
+		log.WithError(err).Fatal("Could not initialize routes")
+	}
+	return server
 }
 
 // Start the gRPC server.
@@ -184,12 +188,8 @@ func (s *Server) Start() {
 	validatorpb.RegisterHealthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
-	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
-	if err := s.InitializeRoutes(); err != nil {
-		log.WithError(err).Fatal("Could not initialize routes")
-	}
 	// routes needs to be set before the server calls the server function
 	go func() {
 		if s.listener != nil {
@@ -221,6 +221,9 @@ func (s *Server) InitializeRoutes() error {
 	}
 	// Register all services, HandleFunc calls, etc.
 	// ...
+	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/keystores", s.ImportKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/keystores", s.DeleteKeystores).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)

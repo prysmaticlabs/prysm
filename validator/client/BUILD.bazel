@@ -136,7 +136,6 @@ go_test(
         "//crypto/bls/common/mock:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//io/file:go_default_library",
-        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime:go_default_library",
