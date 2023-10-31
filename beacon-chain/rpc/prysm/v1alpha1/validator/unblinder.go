@@ -100,7 +100,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		return nil, nil, errors.Wrap(err, "could not get transactions from payload")
 	}
 
-	if wb.Version() >= version.Bellatrix && blobsBundle != nil {
+	if wb.Version() >= version.Deneb && blobsBundle != nil {
 		log.WithField("blobCount", len(blobsBundle.Blobs))
 	}
 
@@ -123,6 +123,9 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundle *enginev1.BlobsBundle) ([]*ethpb.SignedBlobSidecar, error) {
 	if bundle == nil {
 		return nil, nil
+	}
+	if len(blindSidecars) != len(bundle.Blobs) {
+		return nil, errors.Errorf("blob count mismatch: wanted %d but got %d", len(blindSidecars), len(bundle.Blobs))
 	}
 
 	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
