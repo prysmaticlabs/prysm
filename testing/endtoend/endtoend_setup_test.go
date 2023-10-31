@@ -14,9 +14,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
+func e2eMinimal(t *testing.T, cfg *params.BeaconChainConfig, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
-	require.NoError(t, params.SetActive(types.StartAt(v, params.E2ETestConfig())))
+	require.NoError(t, params.SetActive(cfg))
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
