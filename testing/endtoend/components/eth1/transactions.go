@@ -106,8 +106,7 @@ func (s *TransactionGenerator) Started() <-chan struct{} {
 	return s.started
 }
 
-func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int,
-	addr string, N uint64, backend *ethclient.Client, al bool) error {
+func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler, gasPrice *big.Int, addr string, N uint64, backend *ethclient.Client, al bool) error {
 
 	sender := common.HexToAddress(addr)
 	nonce, err := backend.PendingNonceAt(context.Background(), fundedAccount.Address)
