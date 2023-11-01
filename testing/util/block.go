@@ -79,7 +79,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 
 func NewBlobsidecar() *ethpb.SignedBlobSidecar {
 	return &ethpb.SignedBlobSidecar{
-		Message: &ethpb.BlobSidecar{
+		Message: &ethpb.DeprecatedBlobSidecar{
 			BlockRoot:       make([]byte, fieldparams.RootLength),
 			BlockParentRoot: make([]byte, fieldparams.RootLength),
 			Blob:            make([]byte, fieldparams.BlobLength),

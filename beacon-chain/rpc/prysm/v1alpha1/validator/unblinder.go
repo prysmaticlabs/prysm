@@ -131,7 +131,7 @@ func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundl
 	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
 	for i, b := range blindSidecars {
 		sidecars[i] = &ethpb.SignedBlobSidecar{
-			Message: &ethpb.BlobSidecar{
+			Message: &ethpb.DeprecatedBlobSidecar{
 				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlockRoot),
 				Index:           b.Message.Index,
 				Slot:            b.Message.Slot,
