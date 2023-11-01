@@ -2,6 +2,8 @@ package accounts
 
 import (
 	"context"
+	"io"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +23,7 @@ import (
 func NewCLIManager(opts ...Option) (*CLIManager, error) {
 	acc := &CLIManager{
 		mnemonicLanguage: derived.DefaultMnemonicLanguage,
+		inputReader:      os.Stdin,
 	}
 	for _, opt := range opts {
 		if err := opt(acc); err != nil {
@@ -64,6 +67,7 @@ type CLIManager struct {
 	mnemonic25thWord     string
 	beaconApiEndpoint    string
 	beaconApiTimeout     time.Duration
+	inputReader          io.Reader
 }
 
 func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.ValidatorClient, *iface.NodeClient, error) {

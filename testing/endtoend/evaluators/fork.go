@@ -211,7 +211,7 @@ func denebForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) erro
 		return errors.New("nil block returned by beacon node")
 	}
 	if res.GetDenebBlock() == nil {
-		return errors.Errorf("non-capella block returned after the fork with type %T", res.Block)
+		return errors.Errorf("non-deneb block returned after the fork with type %T", res.Block)
 	}
 	blk, err := blocks.NewSignedBeaconBlock(res.GetDenebBlock())
 	if err != nil {
