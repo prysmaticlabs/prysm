@@ -11,7 +11,7 @@ import (
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	consensus_blocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/common/ssz_static"
@@ -80,8 +80,8 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 
 				index := proof.LeafIndex
 				require.Equal(t, true, trie.VerifyMerkleProof(root[:], leaf, index, branch))
-				body, ok := sszObj.(interfaces.ReadOnlyBeaconBlockBody)
-				if !ok {
+				body, err := consensus_blocks.NewBeaconBlockBody(object)
+				if err != nil {
 					return
 				}
 				if index < kzgOffset || index > kzgOffset+field_params.MaxBlobsPerBlock {
@@ -90,6 +90,9 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				localProof, err := blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
 				require.NoError(t, err)
 				require.Equal(t, len(branch), len(localProof))
+				for _, root := range localProof {
+					t.Logf("%#x", root)
+				}
 				for i, root := range localProof {
 					require.DeepEqual(t, branch[i], root)
 				}

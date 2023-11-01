@@ -9,7 +9,7 @@ go_library(
     deps = [
         "//beacon-chain/core/blocks:go_default_library",
         "//config/fieldparams:go_default_library",
-        "//consensus-types/interfaces:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//container/trie:go_default_library",
         "//testing/require:go_default_library",
         "//testing/spectest/shared/common/ssz_static:go_default_library",

@@ -175,7 +175,7 @@ func MerkleizeListSSZ[T Hashable](elements []T, limit uint64) ([32]byte, error) 
 	}
 	chunks := make([][32]byte, 2)
 	chunks[0] = body
-	binary.LittleEndian.PutUint64(chunks[1][:], limit)
+	binary.LittleEndian.PutUint64(chunks[1][:], uint64(len(elements)))
 	if err := gohashtree.Hash(chunks, chunks); err != nil {
 		return [32]byte{}, err
 	}

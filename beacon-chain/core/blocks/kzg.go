@@ -1,8 +1,6 @@
 package blocks
 
 import (
-	"encoding/binary"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/gohashtree"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -38,23 +36,11 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 	if err != nil {
 		return nil, err
 	}
-	// kzgChunks is used to obtain the HTR of the KZG commitments
-	kzgChunks := make([][32]byte, 2)
-	copy(kzgChunks[0][:], proof[len(proof)-1])
 
-	// Commitments size
-	binary.LittleEndian.PutUint64(kzgChunks[1][:], uint64(len(commitments)))
-	proof = append(proof, kzgChunks[1][:])
-
-	err = gohashtree.Hash(kzgChunks, kzgChunks)
-	if err != nil {
-		return nil, err
-	}
 	membersRoots, err := topLevelRoots(body)
 	if err != nil {
 		return nil, err
 	}
-	copy(membersRoots[bodyLength-1], kzgChunks[0][:])
 
 	sparse, err := trie.GenerateTrieFromItems(membersRoots, logBodyLength)
 	if err != nil {
@@ -64,17 +50,19 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 	if err != nil {
 		return nil, err
 	}
-	proof = append(proof, topProof...)
+	proof = append(proof, topProof[:len(topProof)-1]...)
 	return proof, nil
 }
 
 func leavesFromCommitments(commitments [][]byte) [][]byte {
-	leaves := make([][]byte, 2*len(commitments))
+	leaves := make([][]byte, len(commitments))
 	for i, kzg := range commitments {
-		leaves[2*i] = make([]byte, field_params.RootLength)
-		leaves[2*i+1] = make([]byte, field_params.RootLength)
-		copy(leaves[2*i], kzg[:field_params.RootLength])
-		copy(leaves[2*i+1], kzg[field_params.RootLength:])
+		chunk := make([][32]byte, 2)
+		copy(chunk[0][:], kzg)
+		copy(chunk[1][:], kzg[field_params.RootLength:])
+		gohashtree.HashChunks(chunk, chunk)
+		leaves[i] = make([]byte, field_params.RootLength)
+		copy(leaves[i], chunk[0][:])
 	}
 	return leaves
 }
@@ -88,8 +76,11 @@ func bodyProof(commitments [][]byte, index int) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	proof, err := sparse.MerkleProof(2 * index)
-	return proof[1:], err
+	proof, err := sparse.MerkleProof(index)
+	if err != nil {
+		return nil, err
+	}
+	return proof, err
 }
 
 func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
@@ -190,5 +181,7 @@ func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
 		return nil, err
 	}
 	copy(layer[10], root[:])
+
+	// KZG commitments is not needed
 	return layer, nil
 }
