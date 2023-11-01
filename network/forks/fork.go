@@ -189,13 +189,13 @@ func LastForkEpoch() primitives.Epoch {
 	fSchedule := params.BeaconConfig().ForkVersionSchedule
 	sortedForkVersions := SortedForkVersions(fSchedule)
 	lastValidEpoch := primitives.Epoch(0)
-	for _, v := range sortedForkVersions {
+	numOfVersions := len(sortedForkVersions)
+	for i := numOfVersions - 1; i >= 0; i-- {
+		v := sortedForkVersions[i]
 		fEpoch := fSchedule[v]
-		if fEpoch == math.MaxUint64 {
-			break
-		}
-		if fEpoch > lastValidEpoch {
+		if fEpoch != math.MaxUint64 {
 			lastValidEpoch = fEpoch
+			break
 		}
 	}
 	return lastValidEpoch

@@ -395,6 +395,15 @@ func TestLastForkEpoch(t *testing.T) {
 		wantedEpoch primitives.Epoch
 	}{
 		{
+			name:        "no schedule",
+			wantedEpoch: 0,
+			setConfg: func() {
+				cfg = cfg.Copy()
+				cfg.ForkVersionSchedule = map[[4]byte]primitives.Epoch{}
+				params.OverrideBeaconConfig(cfg)
+			},
+		},
+		{
 			name:        "genesis fork",
 			wantedEpoch: 0,
 			setConfg: func() {
