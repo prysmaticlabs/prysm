@@ -6,19 +6,19 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"google.golang.org/protobuf/proto"
 )
 
 func (s *Service) blobSubscriber(ctx context.Context, msg proto.Message) error {
-	b, ok := msg.(*eth.SignedBlobSidecar)
+	b, ok := msg.(blocks.ROBlob)
 	if !ok {
-		return fmt.Errorf("message was not type *eth.SignedBlobSidecar, type=%T", msg)
+		return fmt.Errorf("message was not type ROBlob, type=%T", msg)
 	}
 
-	s.setSeenBlobIndex(b.Message.Blob, b.Message.Index)
+	s.setSeenBlobIndex(b.Slot(), b.ProposerIndex(), b.Index)
 
-	if err := s.cfg.chain.ReceiveBlob(ctx, b.Message); err != nil {
+	if err := s.cfg.chain.ReceiveBlob(ctx, b); err != nil {
 		return err
 	}
 

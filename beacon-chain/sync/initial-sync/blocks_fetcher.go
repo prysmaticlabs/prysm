@@ -382,12 +382,12 @@ func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []blocks2.BlockWith
 	return nil
 }
 
-func sortBlobs(blobs []*p2ppb.DeprecatedBlobSidecar) []*p2ppb.DeprecatedBlobSidecar {
+func sortBlobs(blobs []blocks2.ROBlob) []blocks2.ROBlob {
 	sort.Slice(blobs, func(i, j int) bool {
-		if blobs[i].Slot == blobs[j].Slot {
+		if blobs[i].Slot() == blobs[j].Slot() {
 			return blobs[i].Index < blobs[j].Index
 		}
-		return blobs[i].Slot < blobs[j].Slot
+		return blobs[i].Slot() < blobs[j].Slot()
 	})
 
 	return blobs
@@ -396,7 +396,7 @@ func sortBlobs(blobs []*p2ppb.DeprecatedBlobSidecar) []*p2ppb.DeprecatedBlobSide
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
 var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs unavailable for processing block with kzg commitments")
 
-func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.DeprecatedBlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
+func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []blocks2.ROBlob, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
 	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
 	blobs = sortBlobs(blobs)
 	blobi := 0
@@ -419,7 +419,7 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 			}
 			return nil, err
 		}
-		bb.Blobs = make([]*p2ppb.DeprecatedBlobSidecar, len(commits))
+		bb.Blobs = make([]blocks2.ROBlob, len(commits))
 		for ci := range commits {
 			// There are more expected commitments in this block, but we've run out of blobs from the response
 			// (out-of-bound error guard).
@@ -469,7 +469,15 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		return nil, errors.Wrap(err, "could not request blobs by range")
 	}
 	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
+	// Covert blob sidecars to ROBlobs.
+	roBlobs := make([]blocks2.ROBlob, len(blobs))
+	for i, b := range blobs {
+		roBlobs[i], err = blocks2.NewROBlob(b)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return verifyAndPopulateBlobs(bwb, roBlobs, blobWindowStart)
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.
@@ -502,7 +510,7 @@ func (f *blocksFetcher) requestBlocks(
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
-func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.DeprecatedBlobSidecar, error) {
+func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.BlobSidecar, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

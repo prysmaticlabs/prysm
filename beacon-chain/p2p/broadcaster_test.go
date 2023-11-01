@@ -469,18 +469,18 @@ func TestService_BroadcastBlob(t *testing.T) {
 		}),
 	}
 
-	blobSidecar := &ethpb.SignedBlobSidecar{
-		Message: &ethpb.DeprecatedBlobSidecar{
-			BlockRoot:       bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength),
-			Index:           1,
-			Slot:            2,
-			BlockParentRoot: bytesutil.PadTo([]byte{'B'}, fieldparams.RootLength),
-			ProposerIndex:   3,
-			Blob:            bytesutil.PadTo([]byte{'C'}, fieldparams.BlobLength),
-			KzgCommitment:   bytesutil.PadTo([]byte{'D'}, fieldparams.BLSPubkeyLength),
-			KzgProof:        bytesutil.PadTo([]byte{'E'}, fieldparams.BLSPubkeyLength),
-		},
-		Signature: bytesutil.PadTo([]byte{'F'}, fieldparams.BLSSignatureLength),
+	header := util.HydrateSignedBeaconHeader(&ethpb.SignedBeaconBlockHeader{})
+	commitmentInclusionProof := make([][]byte, 17)
+	for i := range commitmentInclusionProof {
+		commitmentInclusionProof[i] = bytesutil.PadTo([]byte{}, 32)
+	}
+	blobSidecar := &ethpb.BlobSidecar{
+		Index:                    1,
+		Blob:                     bytesutil.PadTo([]byte{'C'}, fieldparams.BlobLength),
+		KzgCommitment:            bytesutil.PadTo([]byte{'D'}, fieldparams.BLSPubkeyLength),
+		KzgProof:                 bytesutil.PadTo([]byte{'E'}, fieldparams.BLSPubkeyLength),
+		SignedBlockHeader:        header,
+		CommitmentInclusionProof: commitmentInclusionProof,
 	}
 	subnet := uint64(0)
 
@@ -508,7 +508,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 		incomingMessage, err := sub.Next(ctx)
 		require.NoError(t, err)
 
-		result := &ethpb.SignedBlobSidecar{}
+		result := &ethpb.BlobSidecar{}
 		require.NoError(t, p.Encoding().DecodeGossip(incomingMessage.Data, result))
 		require.DeepEqual(t, result, blobSidecar)
 	}(t)

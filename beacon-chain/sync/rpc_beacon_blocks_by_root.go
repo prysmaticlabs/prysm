@@ -164,13 +164,19 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 		return fmt.Errorf("received %d blob sidecars, expected %d for RPC", len(sidecars), len(request))
 	}
 	for _, sidecar := range sidecars {
-		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
+		RoBlob, err := blocks.NewROBlob(sidecar)
+		if err != nil {
 			return err
 		}
-		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar RPC")
+		if err := verify.BlobAlignsWithBlock(RoBlob, RoBlock); err != nil {
+			return err
+		}
+		log.WithFields(blobFields(RoBlob)).Debug("Received blob sidecar RPC")
 	}
 
-	return s.cfg.beaconDB.SaveBlobSidecar(ctx, sidecars)
+	// TODO: Fix DB to save the right blob sidecars
+	// return s.cfg.beaconDB.SaveBlobSidecar(ctx, sidecars)
+	return nil
 }
 
 // constructPendingBlobsRequest creates a request for BlobSidecars by root, considering blobs already in DB.

@@ -7,7 +7,6 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -28,15 +27,17 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	for _, b := range batch.canonical() {
-		root := b.Root()
-		scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, b.Root())
-		if errors.Is(err, db.ErrNotFound) {
-			continue
-		}
-		if err != nil {
-			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-			return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
-		}
+		_ = b.Root()
+		// TODO: Fix DB to return the right blob sidecars
+		//scs , err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, b.Root())
+		//if errors.Is(err, db.ErrNotFound) {
+		//	continue
+		//}
+		//if err != nil {
+		//	s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		//	return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
+		//}
+		scs := make([]*pb.BlobSidecar, 0)
 		for _, sc := range scs {
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {

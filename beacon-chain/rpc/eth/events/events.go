@@ -174,16 +174,17 @@ func handleBlockOperationEvents(
 		if !ok {
 			return nil
 		}
-		if blobData == nil || blobData.Blob == nil {
+		if blobData == nil {
 			return nil
 		}
-		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
+		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
+		r := blobData.Blob.BlockRoot()
 		blobEvent := &ethpb.EventBlobSidecar{
-			BlockRoot:     bytesutil.SafeCopyBytes(blobData.Blob.Message.BlockRoot),
-			Index:         blobData.Blob.Message.Index,
-			Slot:          blobData.Blob.Message.Slot,
+			BlockRoot:     r[:],
+			Index:         blobData.Blob.Index,
+			Slot:          blobData.Blob.Slot(),
 			VersionedHash: bytesutil.SafeCopyBytes(versionedHash.Bytes()),
-			KzgCommitment: bytesutil.SafeCopyBytes(blobData.Blob.Message.KzgCommitment),
+			KzgCommitment: bytesutil.SafeCopyBytes(blobData.Blob.KzgCommitment),
 		}
 		return streamData(stream, BlobSidecarTopic, blobEvent)
 	default:

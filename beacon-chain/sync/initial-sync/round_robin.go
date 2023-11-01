@@ -163,9 +163,10 @@ func (s *Service) processFetchedDataRegSync(
 	blksWithoutParentCount := 0
 	for _, b := range data.bwb {
 		if len(b.Blobs) > 0 {
-			if err := s.cfg.DB.SaveBlobSidecar(ctx, b.Blobs); err != nil {
-				log.WithError(err).Warn("Failed to save blob sidecar")
-			}
+			// TODO: Fix DB to enable saving of the new blob sidecar format
+			//if err := s.cfg.DB.SaveBlobSidecar(ctx, b.Blobs); err != nil {
+			//	log.WithError(err).Warn("Failed to save blob sidecar")
+			//}
 		}
 
 		if err := s.processBlock(ctx, genesis, b, blockReceiver); err != nil {
@@ -326,9 +327,10 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 		if len(bb.Blobs) == 0 {
 			continue
 		}
-		if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.Blobs); err != nil {
-			return errors.Wrapf(err, "failed to save blobs for block %#x", bb.Block.Root())
-		}
+		// TODO: Fix DB to enable saving of the new blob sidecar format
+		//if err := s.cfg.DB.SaveBlobSidecar(ctx, bb.Blobs); err != nil {
+		//	return errors.Wrapf(err, "failed to save blobs for block %#x", bb.Block.Root())
+		//}
 		blobCount += len(bb.Blobs)
 	}
 	if blobCount > 0 {
