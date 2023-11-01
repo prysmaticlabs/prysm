@@ -42,7 +42,6 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// Flush helper function to ensure data is sent to client
 	flusher, ok := w.(http.Flusher)
@@ -112,7 +111,6 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	recentLogs := s.logsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
