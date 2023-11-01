@@ -187,7 +187,7 @@ func (s *Service) constructPendingBlobsRequest(ctx context.Context, blockRoot [3
 }
 
 // Helper function to create a set of known indices.
-func indexSetFromBlobs(blobs []*eth.BlobSidecar) map[uint64]struct{} {
+func indexSetFromBlobs(blobs []*eth.DeprecatedBlobSidecar) map[uint64]struct{} {
 	indices := make(map[uint64]struct{})
 	for _, blob := range blobs {
 		indices[blob.Index] = struct{}{}

@@ -34,7 +34,7 @@ func TestBlobs(t *testing.T) {
 
 	db := testDB.SetupDB(t)
 	blockroot := bytesutil.PadTo([]byte("blockroot"), 32)
-	require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.BlobSidecar{
+	require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
 		{
 			BlockRoot:       blockroot,
 			Index:           0,
@@ -272,7 +272,7 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "could not parse block ID"))
 	})
 	t.Run("ssz", func(t *testing.T) {
-		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.BlobSidecar{
+		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
 			{
 				BlockRoot:       blockroot,
 				Index:           0,

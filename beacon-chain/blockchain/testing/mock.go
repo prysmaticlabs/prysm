@@ -72,7 +72,7 @@ type ChainService struct {
 	OptimisticRoots             map[[32]byte]bool
 	BlockSlot                   primitives.Slot
 	SyncingRoot                 [32]byte
-	Blobs                       []*ethpb.BlobSidecar
+	Blobs                       []*ethpb.DeprecatedBlobSidecar
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -613,7 +613,7 @@ func (c *ChainService) BlockBeingSynced(root [32]byte) bool {
 }
 
 // ReceiveBlob implements the same method in the chain service
-func (c *ChainService) ReceiveBlob(_ context.Context, b *ethpb.BlobSidecar) error {
+func (c *ChainService) ReceiveBlob(_ context.Context, b *ethpb.DeprecatedBlobSidecar) error {
 	c.Blobs = append(c.Blobs, b)
 	return nil
 }
