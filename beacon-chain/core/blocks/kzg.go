@@ -1,0 +1,194 @@
+package blocks
+
+import (
+	"encoding/binary"
+
+	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/gohashtree"
+	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+)
+
+const (
+	proofLength   = 17 // The length of a proof for a KZG commitment
+	bodyLength    = 12 // The number of elements in the BeaconBlockBody Container
+	logBodyLength = 4  // The log 2 of bodyLength
+	kzgPosition   = 11 // The index of the KZG commitment list in the Body
+)
+
+var (
+	errInvalidVersion = errors.New("BeaconBlockBody version not supported")
+	errInvalidIndex   = errors.New("index out of bounds")
+)
+
+func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int) ([][]byte, error) {
+	bodyVersion := body.Version()
+	if bodyVersion < version.Deneb {
+		return nil, errInvalidVersion
+	}
+	commitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return nil, err
+	}
+	proof, err := bodyProof(commitments, index)
+	if err != nil {
+		return nil, err
+	}
+	// kzgChunks is used to obtain the HTR of the KZG commitments
+	kzgChunks := make([][32]byte, 2)
+	copy(kzgChunks[0][:], proof[len(proof)-1])
+
+	// Commitments size
+	binary.LittleEndian.PutUint64(kzgChunks[1][:], uint64(len(commitments)))
+	proof = append(proof, kzgChunks[1][:])
+
+	err = gohashtree.Hash(kzgChunks, kzgChunks)
+	if err != nil {
+		return nil, err
+	}
+	membersRoots, err := topLevelRoots(body)
+	if err != nil {
+		return nil, err
+	}
+	copy(membersRoots[bodyLength-1], kzgChunks[0][:])
+
+	sparse, err := trie.GenerateTrieFromItems(membersRoots, logBodyLength)
+	if err != nil {
+		return nil, err
+	}
+	topProof, err := sparse.MerkleProof(kzgPosition)
+	if err != nil {
+		return nil, err
+	}
+	proof = append(proof, topProof...)
+	return proof, nil
+}
+
+func leavesFromCommitments(commitments [][]byte) [][]byte {
+	leaves := make([][]byte, 2*len(commitments))
+	for i, kzg := range commitments {
+		leaves[2*i] = make([]byte, field_params.RootLength)
+		leaves[2*i+1] = make([]byte, field_params.RootLength)
+		copy(leaves[2*i], kzg[:field_params.RootLength])
+		copy(leaves[2*i+1], kzg[field_params.RootLength:])
+	}
+	return leaves
+}
+
+func bodyProof(commitments [][]byte, index int) ([][]byte, error) {
+	if index < 0 || index >= len(commitments) {
+		return nil, errInvalidIndex
+	}
+	leaves := leavesFromCommitments(commitments)
+	sparse, err := trie.GenerateTrieFromItems(leaves, field_params.LogMaxBlobCommitments)
+	if err != nil {
+		return nil, err
+	}
+	proof, err := sparse.MerkleProof(2 * index)
+	return proof[1:], err
+}
+
+func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
+	layer := make([][]byte, bodyLength)
+	for i := range layer {
+		layer[i] = make([]byte, 32)
+	}
+
+	// Randao Reveal
+	randao := body.RandaoReveal()
+	root, err := ssz.MerkleizeByteSliceSSZ(randao[:])
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[0], root[:])
+
+	// eth1_data
+	eth1 := body.Eth1Data()
+	root, err = eth1.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[1], root[:])
+
+	// graffiti
+	root = body.Graffiti()
+	copy(layer[2], root[:])
+
+	// Proposer slashings
+	ps := body.ProposerSlashings()
+	root, err = ssz.MerkleizeListSSZ(ps, params.BeaconConfig().MaxProposerSlashings)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[3], root[:])
+
+	// Attester slashings
+	as := body.ProposerSlashings()
+	root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashings)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[4], root[:])
+
+	// Attestations
+	att := body.Attestations()
+	root, err = ssz.MerkleizeListSSZ(att, params.BeaconConfig().MaxAttestations)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[5], root[:])
+
+	// Deposits
+	dep := body.Deposits()
+	root, err = ssz.MerkleizeListSSZ(dep, params.BeaconConfig().MaxDeposits)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[6], root[:])
+
+	// Voluntary Exits
+	ve := body.VoluntaryExits()
+	root, err = ssz.MerkleizeListSSZ(ve, params.BeaconConfig().MaxVoluntaryExits)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[7], root[:])
+
+	// Sync Aggregate
+	sa, err := body.SyncAggregate()
+	if err != nil {
+		return nil, err
+	}
+	root, err = sa.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[8], root[:])
+
+	// Execution Payload
+	ep, err := body.Execution()
+	if err != nil {
+		return nil, err
+	}
+	root, err = ep.HashTreeRoot()
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[9], root[:])
+
+	// BLS Changes
+	bls, err := body.BLSToExecutionChanges()
+	if err != nil {
+		return nil, err
+	}
+	root, err = ssz.MerkleizeListSSZ(bls, params.BeaconConfig().MaxBlsToExecutionChanges)
+	if err != nil {
+		return nil, err
+	}
+	copy(layer[10], root[:])
+	return layer, nil
+}
