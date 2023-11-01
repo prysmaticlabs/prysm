@@ -24,7 +24,7 @@ func (c *blobsTestCase) defaultOldestSlotByRange(t *testing.T) types.Slot {
 	return oldestSlot
 }
 
-func blobRangeRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
+func blobRangeRequestFromSidecars(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 	maxBlobs := fieldparams.MaxBlobsPerBlock
 	count := uint64(len(scs) / maxBlobs)
 	return &ethpb.BlobSidecarsByRangeRequest{
@@ -33,7 +33,7 @@ func blobRangeRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
 	}
 }
 
-func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.DeprecatedBlobSidecar, req interface{}) []*expectedBlobChunk {
 	var expect []*expectedBlobChunk
 	blockOffset := 0
 	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
@@ -107,7 +107,7 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "10 slots before window, 10 slots after, count = 20",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
 					StartSlot: scs[0].Slot - 10,
 					Count:     20,
@@ -117,7 +117,7 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "request before window, empty response",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
 					StartSlot: scs[0].Slot - 10,
 					Count:     10,
@@ -128,7 +128,7 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "10 blocks * 4 blobs = 40",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
 					StartSlot: scs[0].Slot - 10,
 					Count:     20,
@@ -139,7 +139,7 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "when request count > MAX_REQUEST_BLOCKS_DENEB, MAX_REQUEST_BLOBS_SIDECARS sidecars in response",
 			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlocksDeneb) + 10,
-			requestFromSidecars: func(scs []*ethpb.BlobSidecar) interface{} {
+			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
 					StartSlot: scs[0].Slot,
 					Count:     params.BeaconNetworkConfig().MaxRequestBlocksDeneb + 1,

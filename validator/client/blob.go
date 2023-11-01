@@ -12,7 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func (v *validator) signBlob(ctx context.Context, blob *ethpb.BlobSidecar, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (v *validator) signBlob(ctx context.Context, blob *ethpb.DeprecatedBlobSidecar, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	epoch := slots.ToEpoch(blob.Slot)
 	domain, err := v.domainData(ctx, epoch, params.BeaconConfig().DomainBlobSidecar[:])
 	if err != nil {
@@ -73,7 +73,7 @@ func (v *validator) signBlindBlob(ctx context.Context, blob *ethpb.BlindedBlobSi
 }
 
 // signDenebBlobs signs an array of Deneb blobs using the provided public key.
-func (v *validator) signDenebBlobs(ctx context.Context, blobs []*ethpb.BlobSidecar, pubKey [48]byte) ([]*ethpb.SignedBlobSidecar, error) {
+func (v *validator) signDenebBlobs(ctx context.Context, blobs []*ethpb.DeprecatedBlobSidecar, pubKey [48]byte) ([]*ethpb.SignedBlobSidecar, error) {
 	signedBlobs := make([]*ethpb.SignedBlobSidecar, len(blobs))
 	for i, blob := range blobs {
 		blobSig, err := v.signBlob(ctx, blob, pubKey)

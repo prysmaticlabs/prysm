@@ -962,7 +962,7 @@ func TestTimeToWait(t *testing.T) {
 
 func TestSortBlobs(t *testing.T) {
 	_, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
-	shuffled := make([]*ethpb.BlobSidecar, len(blobs))
+	shuffled := make([]*ethpb.DeprecatedBlobSidecar, len(blobs))
 	for i := range blobs {
 		shuffled[i] = blobs[i]
 	}
@@ -1047,7 +1047,7 @@ func TestBlobRequest(t *testing.T) {
 	require.Equal(t, len(allAfter), int(req.Count))
 }
 
-func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []*ethpb.BlobSidecar) {
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []*ethpb.DeprecatedBlobSidecar) {
 	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {

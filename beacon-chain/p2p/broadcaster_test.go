@@ -470,7 +470,7 @@ func TestService_BroadcastBlob(t *testing.T) {
 	}
 
 	blobSidecar := &ethpb.SignedBlobSidecar{
-		Message: &ethpb.BlobSidecar{
+		Message: &ethpb.DeprecatedBlobSidecar{
 			BlockRoot:       bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength),
 			Index:           1,
 			Slot:            2,

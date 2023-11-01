@@ -139,7 +139,7 @@ func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlobSidecar) []*
 	result := make([]*ethpbalpha.SignedBlobSidecar, len(sidecars))
 	for i, sc := range sidecars {
 		result[i] = &ethpbalpha.SignedBlobSidecar{
-			Message: &ethpbalpha.BlobSidecar{
+			Message: &ethpbalpha.DeprecatedBlobSidecar{
 				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
 				Index:           sc.Message.Index,
 				Slot:            sc.Message.Slot,

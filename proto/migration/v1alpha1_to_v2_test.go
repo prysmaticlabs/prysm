@@ -159,8 +159,8 @@ func Test_V1Alpha1BeaconBlockCapellaToV2Blinded(t *testing.T) {
 }
 
 func Test_V1Alpha1BlobSidecarsToV2(t *testing.T) {
-	sidecar := util.HydrateBlobSidecar(&ethpbalpha.BlobSidecar{})
-	blobs := []*ethpbalpha.BlobSidecar{
+	sidecar := util.HydrateBlobSidecar(&ethpbalpha.DeprecatedBlobSidecar{})
+	blobs := []*ethpbalpha.DeprecatedBlobSidecar{
 		sidecar,
 	}
 	sidecars, err := V1Alpha1BlobSidecarsToV2(blobs)

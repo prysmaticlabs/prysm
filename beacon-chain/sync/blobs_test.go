@@ -48,12 +48,12 @@ type blobsTestCase struct {
 }
 
 type testHandler func(s *Service) rpcHandler
-type expectedDefiner func(t *testing.T, scs []*ethpb.BlobSidecar, req interface{}) []*expectedBlobChunk
-type requestFromSidecars func([]*ethpb.BlobSidecar) interface{}
+type expectedDefiner func(t *testing.T, scs []*ethpb.DeprecatedBlobSidecar, req interface{}) []*expectedBlobChunk
+type requestFromSidecars func([]*ethpb.DeprecatedBlobSidecar) interface{}
 type oldestSlotCallback func(t *testing.T) types.Slot
 type expectedRequirer func(*testing.T, *Service, []*expectedBlobChunk) func(network.Stream)
 
-func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slot, nblobs int) (*ethpb.SignedBeaconBlockDeneb, []*ethpb.BlobSidecar) {
+func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slot, nblobs int) (*ethpb.SignedBeaconBlockDeneb, []*ethpb.DeprecatedBlobSidecar) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
@@ -103,17 +103,17 @@ func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slo
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	sidecars := make([]*ethpb.BlobSidecar, len(commitments))
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(commitments))
 	for i, c := range block.Block.Body.BlobKzgCommitments {
 		sidecars[i] = generateTestSidecar(root, block, i, c)
 	}
 	return block, sidecars
 }
 
-func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.BlobSidecar {
+func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.DeprecatedBlobSidecar {
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
-	sc := &ethpb.BlobSidecar{
+	sc := &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       root[:],
 		Index:           uint64(index),
 		Slot:            block.Block.Slot,
@@ -128,7 +128,7 @@ func generateTestSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, ind
 
 type expectedBlobChunk struct {
 	code    uint8
-	sidecar *ethpb.BlobSidecar
+	sidecar *ethpb.DeprecatedBlobSidecar
 	message string
 }
 
@@ -150,13 +150,13 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 	require.NoError(t, err)
 	require.Equal(t, ctxBytes, bytesutil.ToBytes4(c))
 
-	sc := &ethpb.BlobSidecar{}
+	sc := &ethpb.DeprecatedBlobSidecar{}
 	require.NoError(t, encoding.DecodeWithMaxLength(stream, sc))
 	require.Equal(t, bytesutil.ToBytes32(sc.BlockRoot), bytesutil.ToBytes32(r.sidecar.BlockRoot))
 	require.Equal(t, sc.Index, r.sidecar.Index)
 }
 
-func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, func()) {
+func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.DeprecatedBlobSidecar, func()) {
 	cfg := params.BeaconConfig()
 	repositionFutureEpochs(cfg)
 	undo, err := params.SetActiveWithUndo(cfg)
@@ -174,7 +174,7 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []*ethpb.BlobSidecar, fun
 	}
 	d := db.SetupDB(t)
 
-	sidecars := make([]*ethpb.BlobSidecar, 0)
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, 0)
 	oldest := c.oldestSlot(t)
 	var parentRoot [32]byte
 	for i := 0; i < c.nblocks; i++ {
@@ -223,7 +223,7 @@ func (c *blobsTestCase) run(t *testing.T) {
 	defer cleanup()
 	req := c.requestFromSidecars(sidecars)
 	expect := c.defineExpected(t, sidecars, req)
-	m := map[types.Slot][]*ethpb.BlobSidecar{}
+	m := map[types.Slot][]*ethpb.DeprecatedBlobSidecar{}
 	for _, sc := range expect {
 		// If define expected omits a sidecar from an expected result, we don't need to save it.
 		// This can happen in particular when there are no expected results, because the nth part of the

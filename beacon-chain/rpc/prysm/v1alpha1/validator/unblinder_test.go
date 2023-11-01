@@ -361,7 +361,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				blobs := make([]*eth.SignedBlobSidecar, fieldparams.MaxBlobsPerBlock)
 				for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 					blobs[i] = &eth.SignedBlobSidecar{
-						Message: &eth.BlobSidecar{
+						Message: &eth.DeprecatedBlobSidecar{
 							BlockRoot:       []byte{'a'},
 							Index:           uint64(i),
 							Slot:            1,

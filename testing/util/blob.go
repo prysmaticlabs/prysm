@@ -7,7 +7,7 @@ import (
 
 // HydrateBlobSidecar hydrates a blob sidecar with correct field length sizes
 // to comply with SSZ marshalling and unmarshalling rules.
-func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
+func HydrateBlobSidecar(b *ethpb.DeprecatedBlobSidecar) *ethpb.DeprecatedBlobSidecar {
 	if b.BlockRoot == nil {
 		b.BlockRoot = make([]byte, fieldparams.RootLength)
 	}
