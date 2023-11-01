@@ -96,7 +96,7 @@ func V1Alpha1SignedBeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBl
 }
 
 // V1Alpha1BlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
-func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
+func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.DeprecatedBlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
 	v2Blobs := make([]*ethpbv2.BlobSidecar, len(v1alpha1Blobs))
 	for index, v1Blob := range v1alpha1Blobs {
 		marshaledBlob, err := proto.Marshal(v1Blob)

@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []*ethpb.BlobSidecar) {
+func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []*ethpb.DeprecatedBlobSidecar) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
@@ -67,7 +67,7 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	sidecars := make([]*ethpb.BlobSidecar, len(commitments))
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(commitments))
 	for i, c := range block.Block.Body.BlobKzgCommitments {
 		sidecars[i] = GenerateTestDenebBlobSidecar(root, block, i, c)
 	}
@@ -79,10 +79,10 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	return rob, sidecars
 }
 
-func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.BlobSidecar {
+func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.DeprecatedBlobSidecar {
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
-	sc := &ethpb.BlobSidecar{
+	sc := &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       root[:],
 		Index:           uint64(index),
 		Slot:            block.Block.Slot,
@@ -95,8 +95,8 @@ func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockD
 	return sc
 }
 
-func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blocks.ROBlock, []*ethpb.BlobSidecar) {
-	blobs := make([]*ethpb.BlobSidecar, 0)
+func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blocks.ROBlock, []*ethpb.DeprecatedBlobSidecar) {
+	blobs := make([]*ethpb.DeprecatedBlobSidecar, 0)
 	if len(blks) == 0 {
 		blk, blb := GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 6)
 		blobs = append(blobs, blb...)

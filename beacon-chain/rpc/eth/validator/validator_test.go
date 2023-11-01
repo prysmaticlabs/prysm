@@ -124,7 +124,7 @@ func TestProduceBlockV2(t *testing.T) {
 			Block: &ethpbalpha.GenericBeaconBlock_Deneb{
 				Deneb: &ethpbalpha.BeaconBlockAndBlobsDeneb{
 					Block: &ethpbalpha.BeaconBlockDeneb{Slot: 123},
-					Blobs: []*ethpbalpha.BlobSidecar{{Slot: 123}},
+					Blobs: []*ethpbalpha.DeprecatedBlobSidecar{{Slot: 123}},
 				}}}
 		v1alpha1Server := mock.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(blk, nil)
@@ -296,7 +296,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
 		require.NoError(t, err)
 		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
-		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		blobs := make([]*ethpbalpha.DeprecatedBlobSidecar, len(signedBlobs))
 		v2blobs := make([]*ethpbv2.BlobSidecar, len(signedBlobs))
 		for i := range signedBlobs {
 			blobs[i] = signedBlobs[i].Message
@@ -536,7 +536,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
 		require.NoError(t, err)
 		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
-		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		blobs := make([]*ethpbalpha.DeprecatedBlobSidecar, len(signedBlobs))
 		for i := range signedBlobs {
 			blobs[i] = signedBlobs[i].Message
 		}
@@ -747,7 +747,7 @@ func TestProduceBlindedBlockSSZ(t *testing.T) {
 		blk, err := migration.V2BeaconBlockDenebToV1Alpha1(b.SignedBlock.Message)
 		require.NoError(t, err)
 		signedBlobs := migration.SignedBlobsToV1Alpha1SignedBlobs(b.SignedBlobSidecars)
-		blobs := make([]*ethpbalpha.BlobSidecar, len(signedBlobs))
+		blobs := make([]*ethpbalpha.DeprecatedBlobSidecar, len(signedBlobs))
 		for i := range signedBlobs {
 			blobs[i] = signedBlobs[i].Message
 		}

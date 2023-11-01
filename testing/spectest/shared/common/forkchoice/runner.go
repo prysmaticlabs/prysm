@@ -318,7 +318,7 @@ func runBlobStep(t *testing.T,
 			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			sidecar := &ethpb.BlobSidecar{
+			sidecar := &ethpb.DeprecatedBlobSidecar{
 				BlockRoot:       root[:],
 				Index:           index,
 				Slot:            block.Slot(),

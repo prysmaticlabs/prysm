@@ -236,7 +236,7 @@ func (s *Service) setSeenBlobIndex(root []byte, index uint64) {
 	s.seenBlobCache.Add(string(b), true)
 }
 
-func blobFields(b *eth.BlobSidecar) logrus.Fields {
+func blobFields(b *eth.DeprecatedBlobSidecar) logrus.Fields {
 	return logrus.Fields{
 		"slot":          b.Slot,
 		"proposerIndex": b.ProposerIndex,

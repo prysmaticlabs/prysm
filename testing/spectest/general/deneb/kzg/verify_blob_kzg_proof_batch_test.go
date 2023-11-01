@@ -36,7 +36,7 @@ func TestVerifyBlobKZGProofBatch(t *testing.T) {
 			require.NoError(t, err)
 			test := &KZGTestData{}
 			require.NoError(t, yaml.Unmarshal(file, test))
-			var sidecars []*ethpb.BlobSidecar
+			var sidecars []*ethpb.DeprecatedBlobSidecar
 			blobs := test.Input.Blobs
 			commitments := test.Input.Commitments
 			proofs := test.Input.Proofs
@@ -52,7 +52,7 @@ func TestVerifyBlobKZGProofBatch(t *testing.T) {
 				require.NoError(t, err)
 				proofBytes, err := hex.DecodeString(proofs[i][2:])
 				require.NoError(t, err)
-				sidecar := &ethpb.BlobSidecar{
+				sidecar := &ethpb.DeprecatedBlobSidecar{
 					Blob:     blobBytes,
 					KzgProof: proofBytes,
 				}
