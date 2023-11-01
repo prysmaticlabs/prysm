@@ -38,6 +38,11 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	// this method properly to the beacon node server.
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.health.StreamBeaconLogs")
 	defer span.End()
+	// Set up SSE response headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	// Flush helper function to ensure data is sent to client
 	flusher, ok := w.(http.Flusher)
@@ -71,10 +76,6 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 				http2.HandleError(w, "could not encode long response", http.StatusInternalServerError)
 				return
 			}
-			// Set up SSE response headers
-			w.Header().Set("Content-Type", "text/event-stream")
-			w.Header().Set("Cache-Control", "no-cache")
-			w.Header().Set("Connection", "keep-alive")
 
 			// Send the response as an SSE event
 			// Assuming resp has a String() method for simplicity
@@ -111,6 +112,8 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
 	recentLogs := s.logsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
 	for i, l := range recentLogs {
