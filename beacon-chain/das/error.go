@@ -10,6 +10,7 @@ import (
 var (
 	errDAIncomplete  = errors.New("some BlobSidecars are not available at this time")
 	errDAEquivocated = errors.New("cache contains BlobSidecars that do not match block commitments")
+	errMixedRoots    = errors.New("BlobSidecars must all be for the same block")
 )
 
 func NewMissingIndicesError(missing []uint64) MissingIndicesError {

@@ -16,12 +16,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type kzgVerifier func([][]byte, []*ethpb.BlobSidecar) error
+type kzgBatch func([][]byte, []*ethpb.BlobSidecar) error
 
 type LazilyPersistentStore struct {
 	db        BlobsDB
 	cache     *cache
-	verifyKZG kzgVerifier
+	verifyKZG kzgBatch
 }
 
 var _ AvailabilityStore = &LazilyPersistentStore{}
@@ -38,7 +38,13 @@ func NewLazilyPersistentStore(db BlobsDB) *LazilyPersistentStore {
 // detail). Blobs stored in this cache will be persisted for at least as long as the node is
 // running. Once IsDataAvailable succeeds, all blobs referenced by the given block are guaranteed
 // to be persisted for the remainder of the retention period.
-func (s *LazilyPersistentStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {
+func (s *LazilyPersistentStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
+	if len(sc) == 0 {
+		return nil, nil
+	}
+	if len(sc) == 1 {
+
+	}
 	var key cacheKey
 	var entry *cacheEntry
 	persisted := make([]*ethpb.BlobSidecar, 0, len(sc))
@@ -59,7 +65,7 @@ func (s *LazilyPersistentStore) PersistOnceCommitted(ctx context.Context, curren
 			persisted = append(persisted, sc[i])
 		}
 	}
-	return persisted
+	return persisted, nil
 }
 
 // IsDataAvailable returns nil if all the commitments in the given block are persisted to the db and have been verified.

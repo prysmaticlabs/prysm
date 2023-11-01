@@ -11,26 +11,29 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-// BlockingStore wraps NewCachingDBVerifiedStore and blocks until IsDataAvailable is ready.
+// AsyncStore wraps NewCachingDBVerifiedStore and blocks until IsDataAvailable is ready.
 // If the context given to IsDataAvailable is cancelled, the result of IsDataAvailable will be ctx.Error().
-type BlockingStore struct {
+type AsyncStore struct {
 	notif *idxNotifiers
 	s     AvailabilityStore
 }
 
-func (bs *BlockingStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {
+func (bs *AsyncStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
 	if len(sc) < 1 {
-		return nil
+		return nil, nil
 	}
 	seen := bs.notif.ensure(keyFromSidecar(sc[0]))
-	persisted := bs.s.PersistOnceCommitted(ctx, current, sc...)
+	persisted, err := bs.s.PersistOnceCommitted(ctx, current, sc...)
+	if err != nil {
+		return nil, err
+	}
 	for i := range persisted {
 		seen <- persisted[i].Index
 	}
-	return persisted
+	return persisted, nil
 }
 
-func (bs *BlockingStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
+func (bs *AsyncStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
 	key := keyFromBlock(b)
 	for {
 		err := bs.s.IsDataAvailable(ctx, current, b)
