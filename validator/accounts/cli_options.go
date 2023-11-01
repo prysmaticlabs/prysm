@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"io"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -248,6 +249,14 @@ func WithMnemonic25thWord(mnemonic25thWord string) Option {
 func WithNumAccounts(numAccounts int) Option {
 	return func(acc *CLIManager) error {
 		acc.numAccounts = numAccounts
+		return nil
+	}
+}
+
+// WithCustomReader changes the default reader
+func WithCustomReader(reader io.Reader) Option {
+	return func(acc *CLIManager) error {
+		acc.inputReader = reader
 		return nil
 	}
 }

@@ -19,6 +19,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	wantRouteList := map[string][]string{
+		"/eth/v1/keystores":                         {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/eth/v1/remotekeys":                        {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/eth/v1/validator/{pubkey}/gas_limit":      {http.MethodGet, http.MethodPost, http.MethodDelete},
 		"/eth/v1/validator/{pubkey}/feerecipient":   {http.MethodGet, http.MethodPost, http.MethodDelete},
