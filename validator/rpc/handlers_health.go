@@ -45,7 +45,7 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
-
+	// TODO: StreamBeaconLogs grpc will need to be replaced in the future
 	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(ctx, &emptypb.Empty{})
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
