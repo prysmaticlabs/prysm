@@ -38,17 +38,17 @@ type Dump struct {
 }
 
 type Node struct {
+	Validity                 NodeValidity
+	ExecutionOptimistic      bool
 	Slot                     primitives.Slot
-	BlockRoot                []byte
-	ParentRoot               []byte
 	JustifiedEpoch           primitives.Epoch
 	FinalizedEpoch           primitives.Epoch
 	UnrealizedJustifiedEpoch primitives.Epoch
 	UnrealizedFinalizedEpoch primitives.Epoch
 	Balance                  uint64
 	Weight                   uint64
-	ExecutionOptimistic      bool
-	ExecutionBlockHash       []byte
 	Timestamp                uint64
-	Validity                 NodeValidity
+	BlockRoot                []byte
+	ParentRoot               []byte
+	ExecutionBlockHash       []byte
 }
