@@ -152,10 +152,13 @@ func MerkleizeVector(elements [][32]byte, length uint64) [32]byte {
 	return elements[0]
 }
 
+// Hashable is an interface representing objects that implement HashTreeRoot()
 type Hashable interface {
 	HashTreeRoot() ([32]byte, error)
 }
 
+// MerkleizeVectorSSZ hashes each element in the list and then returns the HTR
+// of the corresponding list of roots
 func MerkleizeVectorSSZ[T Hashable](elements []T, length uint64) ([32]byte, error) {
 	roots := make([][32]byte, len(elements))
 	var err error
@@ -168,6 +171,8 @@ func MerkleizeVectorSSZ[T Hashable](elements []T, length uint64) ([32]byte, erro
 	return MerkleizeVector(roots, length), nil
 }
 
+// MerkleizeListSSZ hashes each element in the list and then returns the HTR of
+// the list of corresponding roots, with the length mixed in.
 func MerkleizeListSSZ[T Hashable](elements []T, limit uint64) ([32]byte, error) {
 	body, err := MerkleizeVectorSSZ(elements, limit)
 	if err != nil {
@@ -182,6 +187,8 @@ func MerkleizeListSSZ[T Hashable](elements []T, limit uint64) ([32]byte, error) 
 	return chunks[0], err
 }
 
+// MerkleizeByteSliceSSZ hashes a byteslice by chunkifying it and returning the
+// corresponding HTR as it it were a fixed vector of bytes of the given length.
 func MerkleizeByteSliceSSZ(input []byte) ([32]byte, error) {
 	numChunks := (len(input) + 31) / 32
 	if numChunks == 0 {
