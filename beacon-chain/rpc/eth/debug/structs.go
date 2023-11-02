@@ -963,3 +963,40 @@ func HistoricalSummaryFromConsensus(summary *eth.HistoricalSummary) (*Historical
 		StateSummaryRoot: hexutil.Encode(summary.StateSummaryRoot),
 	}, nil
 }
+
+type GetForkChoiceHeadsV2Response struct {
+	Data []*ForkChoiceHead `json:"data"`
+}
+
+type ForkChoiceHead struct {
+	Root                string `json:"root"`
+	Slot                string `json:"slot"`
+	ExecutionOptimistic bool   `json:"execution_optimistic"`
+}
+
+type ForkChoiceDumpResponse struct {
+	JustifiedCheckpoint           *shared.Checkpoint `json:"justified_checkpoint"`
+	FinalizedCheckpoint           *shared.Checkpoint `json:"finalized_checkpoint"`
+	UnrealizedJustifiedCheckpoint *shared.Checkpoint `json:"unrealized_justified_checkpoint"`
+	UnrealizedFinalizedCheckpoint *shared.Checkpoint `json:"unrealized_finalized_checkpoint"`
+	ProposerBoostRoot             string             `json:"proposer_boost_root"`
+	PreviousProposerBoostRoot     string             `json:"previous_proposer_boost_root"`
+	HeadRoot                      string             `json:"head_root"`
+	ForkChoiceNodes               []*ForkChoiceNode  `json:"fork_choice_nodes"`
+}
+
+type ForkChoiceNode struct {
+	Slot                     string `json:"slot"`
+	BlockRoot                string `json:"block_root"`
+	ParentRoot               string `json:"parent_root"`
+	JustifiedEpoch           string `json:"justified_epoch"`
+	FinalizedEpoch           string `json:"finalized_epoch"`
+	UnrealizedJustifiedEpoch string `json:"unrealized_justified_epoch"`
+	UnrealizedFinalizedEpoch string `json:"unrealized_finalized_epoch"`
+	Balance                  string `json:"balance"`
+	Weight                   string `json:"weight"`
+	ExecutionOptimistic      bool   `json:"execution_optimistic"`
+	ExecutionBlockHash       string `json:"execution_block_hash"`
+	TimeStamp                string `json:"timestamp"`
+	Validity                 string `json:"validity"`
+}

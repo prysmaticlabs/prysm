@@ -8,7 +8,6 @@ proto_library(
     name = "proto",
     srcs = [
         "beacon_chain_service.proto",
-        "beacon_debug_service.proto",
         "events_service.proto",
         "validator_service.proto",
     ],
