@@ -43,15 +43,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
-	case "/eth/v1/debug/beacon/heads":
-		endpoint.GetResponse = &ForkChoiceHeadsResponseJson{}
-	case "/eth/v2/debug/beacon/heads":
-		endpoint.GetResponse = &V2ForkChoiceHeadsResponseJson{}
-	case "/eth/v1/debug/fork_choice":
-		endpoint.GetResponse = &ForkChoiceDumpJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: prepareForkChoiceResponse,
-		}
 	case "/eth/v1/config/fork_schedule":
 		endpoint.GetResponse = &ForkScheduleResponseJson{}
 	case "/eth/v1/config/spec":

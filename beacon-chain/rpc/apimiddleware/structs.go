@@ -34,14 +34,6 @@ type ProposerSlashingsPoolResponseJson struct {
 	Data []*ProposerSlashingJson `json:"data"`
 }
 
-type ForkChoiceHeadsResponseJson struct {
-	Data []*ForkChoiceHeadJson `json:"data"`
-}
-
-type V2ForkChoiceHeadsResponseJson struct {
-	Data []*V2ForkChoiceHeadJson `json:"data"`
-}
-
 type ForkScheduleResponseJson struct {
 	Data []*ForkJson `json:"data"`
 }
@@ -645,17 +637,6 @@ type PendingAttestationJson struct {
 	ProposerIndex   string               `json:"proposer_index"`
 }
 
-type ForkChoiceHeadJson struct {
-	Root string `json:"root" hex:"true"`
-	Slot string `json:"slot"`
-}
-
-type V2ForkChoiceHeadJson struct {
-	Root                string `json:"root" hex:"true"`
-	Slot                string `json:"slot"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-}
-
 type DepositContractJson struct {
 	ChainId string `json:"chain_id"`
 	Address string `json:"address"`
@@ -689,34 +670,6 @@ type SyncCommitteeContributionJson struct {
 	SubcommitteeIndex string `json:"subcommittee_index"`
 	AggregationBits   string `json:"aggregation_bits" hex:"true"`
 	Signature         string `json:"signature" hex:"true"`
-}
-
-type ForkChoiceNodeJson struct {
-	Slot                     string `json:"slot"`
-	BlockRoot                string `json:"block_root" hex:"true"`
-	ParentRoot               string `json:"parent_root" hex:"true"`
-	JustifiedEpoch           string `json:"justified_epoch"`
-	FinalizedEpoch           string `json:"finalized_epoch"`
-	UnrealizedJustifiedEpoch string `json:"unrealized_justified_epoch"`
-	UnrealizedFinalizedEpoch string `json:"unrealized_finalized_epoch"`
-	Balance                  string `json:"balance"`
-	Weight                   string `json:"weight"`
-	ExecutionOptimistic      bool   `json:"execution_optimistic"`
-	ExecutionBlockHash       string `json:"execution_block_hash" hex:"true"`
-	TimeStamp                string `json:"timestamp"`
-	Validity                 string `json:"validity" enum:"true"`
-}
-
-type ForkChoiceDumpJson struct {
-	JustifiedCheckpoint           *CheckpointJson       `json:"justified_checkpoint"`
-	FinalizedCheckpoint           *CheckpointJson       `json:"finalized_checkpoint"`
-	BestJustifiedCheckpoint       *CheckpointJson       `json:"best_justified_checkpoint"`
-	UnrealizedJustifiedCheckpoint *CheckpointJson       `json:"unrealized_justified_checkpoint"`
-	UnrealizedFinalizedCheckpoint *CheckpointJson       `json:"unrealized_finalized_checkpoint"`
-	ProposerBoostRoot             string                `json:"proposer_boost_root" hex:"true"`
-	PreviousProposerBoostRoot     string                `json:"previous_proposer_boost_root" hex:"true"`
-	HeadRoot                      string                `json:"head_root" hex:"true"`
-	ForkChoiceNodes               []*ForkChoiceNodeJson `json:"fork_choice_nodes"`
 }
 
 type HistoricalSummaryJson struct {

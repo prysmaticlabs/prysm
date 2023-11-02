@@ -189,30 +189,34 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 	nodes := make([]*ForkChoiceNode, len(dump.ForkChoiceNodes))
 	for i, n := range dump.ForkChoiceNodes {
 		nodes[i] = &ForkChoiceNode{
-			Slot:                     fmt.Sprintf("%d", n.Slot),
-			BlockRoot:                hexutil.Encode(n.BlockRoot),
-			ParentRoot:               hexutil.Encode(n.ParentRoot),
-			JustifiedEpoch:           fmt.Sprintf("%d", n.JustifiedEpoch),
-			FinalizedEpoch:           fmt.Sprintf("%d", n.FinalizedEpoch),
-			UnrealizedJustifiedEpoch: fmt.Sprintf("%d", n.UnrealizedJustifiedEpoch),
-			UnrealizedFinalizedEpoch: fmt.Sprintf("%d", n.UnrealizedFinalizedEpoch),
-			Balance:                  fmt.Sprintf("%d", n.Balance),
-			Weight:                   fmt.Sprintf("%d", n.Weight),
-			ExecutionOptimistic:      n.ExecutionOptimistic,
-			ExecutionBlockHash:       hexutil.Encode(n.ExecutionBlockHash),
-			TimeStamp:                fmt.Sprintf("%d", n.Timestamp),
-			Validity:                 n.Validity.String(),
+			Slot:               fmt.Sprintf("%d", n.Slot),
+			BlockRoot:          hexutil.Encode(n.BlockRoot),
+			ParentRoot:         hexutil.Encode(n.ParentRoot),
+			JustifiedEpoch:     fmt.Sprintf("%d", n.JustifiedEpoch),
+			FinalizedEpoch:     fmt.Sprintf("%d", n.FinalizedEpoch),
+			Weight:             fmt.Sprintf("%d", n.Weight),
+			ExecutionBlockHash: hexutil.Encode(n.ExecutionBlockHash),
+			Validity:           n.Validity.String(),
+			ExtraData: &ForkChoiceNodeExtraData{
+				UnrealizedJustifiedEpoch: fmt.Sprintf("%d", n.UnrealizedJustifiedEpoch),
+				UnrealizedFinalizedEpoch: fmt.Sprintf("%d", n.UnrealizedFinalizedEpoch),
+				Balance:                  fmt.Sprintf("%d", n.Balance),
+				ExecutionOptimistic:      n.ExecutionOptimistic,
+				TimeStamp:                fmt.Sprintf("%d", n.Timestamp),
+			},
 		}
 	}
 	resp := &ForkChoiceDumpResponse{
-		JustifiedCheckpoint:           shared.CheckpointFromConsensus(dump.JustifiedCheckpoint),
-		FinalizedCheckpoint:           shared.CheckpointFromConsensus(dump.FinalizedCheckpoint),
-		UnrealizedJustifiedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
-		UnrealizedFinalizedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
-		ProposerBoostRoot:             hexutil.Encode(dump.ProposerBoostRoot),
-		PreviousProposerBoostRoot:     hexutil.Encode(dump.PreviousProposerBoostRoot),
-		HeadRoot:                      hexutil.Encode(dump.HeadRoot),
-		ForkChoiceNodes:               nodes,
+		JustifiedCheckpoint: shared.CheckpointFromConsensus(dump.JustifiedCheckpoint),
+		FinalizedCheckpoint: shared.CheckpointFromConsensus(dump.FinalizedCheckpoint),
+		ForkChoiceNodes:     nodes,
+		ExtraData: &ForkChoiceDumpExtraData{
+			UnrealizedJustifiedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
+			UnrealizedFinalizedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
+			ProposerBoostRoot:             hexutil.Encode(dump.ProposerBoostRoot),
+			PreviousProposerBoostRoot:     hexutil.Encode(dump.PreviousProposerBoostRoot),
+			HeadRoot:                      hexutil.Encode(dump.HeadRoot),
+		},
 	}
 	http2.WriteJson(w, resp)
 }
