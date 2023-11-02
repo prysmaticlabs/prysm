@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"bytes"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,22 +11,30 @@ import (
 	"strings"
 	"testing"
 
+	ssz "github.com/prysmaticlabs/fastssz"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
+
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestBlobStorage_SaveBlobData(t *testing.T) {
+	testSidecars := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 	t.Run("NoBlobData", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
 		err := bs.SaveBlobData([]*ethpb.BlobSidecar{})
 		require.ErrorContains(t, "no blob data to save", err)
 	})
+
 	t.Run("BlobExists", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
 		existingSidecar := testSidecars[0]
+
+		// Create a test BlobSidecar
 		blobPath := path.Join(tempDir, fmt.Sprintf(
 			"%d_%x_%d_%x.blob",
 			existingSidecar.Slot,
@@ -34,19 +43,33 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 			existingSidecar.KzgCommitment,
 		))
 
-		err := os.MkdirAll(path.Dir(blobPath), os.ModePerm)
+		// Serialize the existing BlobSidecar to binary data.
+		existingSidecarData, err := ssz.MarshalSSZ(existingSidecar)
 		require.NoError(t, err)
-		err = os.WriteFile(blobPath, []byte("Test Blob Data 1"), os.ModePerm)
+
+		err = os.MkdirAll(path.Dir(blobPath), os.ModePerm)
+		require.NoError(t, err)
+
+		// Write the serialized data to the blob file.
+		err = os.WriteFile(blobPath, existingSidecarData, os.ModePerm)
 		require.NoError(t, err)
 
 		err = bs.SaveBlobData([]*ethpb.BlobSidecar{existingSidecar})
 		require.NoError(t, err)
 
-		// Ensure that the blob data was not modified.
 		content, err := os.ReadFile(blobPath)
 		require.NoError(t, err)
-		require.Equal(t, "Test Blob Data 1", string(content))
+
+		// Deserialize the BlobSidecar from the saved file data.
+		var savedSidecar ssz.Unmarshaler
+		savedSidecar = &ethpb.BlobSidecar{}
+		err = savedSidecar.UnmarshalSSZ(content)
+		require.NoError(t, err)
+
+		// Compare the original Sidecar and the saved Sidecar.
+		require.DeepSSZEqual(t, existingSidecar, savedSidecar)
 	})
+
 	t.Run("SaveBlobDataNoErrors", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
@@ -62,12 +85,20 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 			content, err := os.ReadFile(path.Join(tempDir, f.Name()))
 			require.NoError(t, err)
 
+			// Deserialize the BlobSidecar from the saved file data.
+			var savedSidecar ssz.Unmarshaler
+			savedSidecar = &ethpb.BlobSidecar{}
+			err = savedSidecar.UnmarshalSSZ(content)
+			require.NoError(t, err)
+
 			// Find the corresponding test sidecar based on the file name.
-			sidecar := findTestSidecarsByFileName(t, f.Name())
+			sidecar := findTestSidecarsByFileName(t, testSidecars, f.Name())
 			require.NotNil(t, sidecar)
-			require.Equal(t, string(sidecar.Blob), string(content))
+			// Compare the original Sidecar and the saved Sidecar.
+			require.DeepEqual(t, sidecar, savedSidecar)
 		}
 	})
+
 	t.Run("OverwriteBlobWithDifferentContent", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
@@ -81,17 +112,22 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		modifiedSidecar[0].Blob = []byte("Modified Blob Data")
 
 		err = bs.SaveBlobData(modifiedSidecar)
-		require.ErrorContains(t, "data integrity check failed", err)
+		require.ErrorContains(t, "failed to save blob sidecar, tried to overwrite blob", err)
 	})
 }
 
-func findTestSidecarsByFileName(t *testing.T, fileName string) *ethpb.BlobSidecar {
-	components := strings.Split(fileName, "_")
+func findTestSidecarsByFileName(t *testing.T, testSidecars []*ethpb.BlobSidecar, fileName string) *ethpb.BlobSidecar {
+	parts := strings.SplitN(fileName, ".", 2)
+	require.Equal(t, 2, len(parts))
+	// parts[0] contains the substring before the first period
+	components := strings.Split(parts[0], "_")
 	if len(components) == 4 {
 		blockRoot, err := hex.DecodeString(components[1])
 		require.NoError(t, err)
+		kzgCommitment, err := hex.DecodeString(components[3])
+		require.NoError(t, err)
 		for _, sidecar := range testSidecars {
-			if bytes.Equal(sidecar.BlockRoot, blockRoot) {
+			if bytes.Equal(sidecar.BlockRoot, blockRoot) && bytes.Equal(sidecar.KzgCommitment, kzgCommitment) {
 				return sidecar
 			}
 		}
@@ -100,7 +136,9 @@ func findTestSidecarsByFileName(t *testing.T, fileName string) *ethpb.BlobSideca
 }
 
 func TestCheckDataIntegrity(t *testing.T) {
-	originalData := testSidecars[0].Blob
+	testSidecars := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+	originalData, err := ssz.MarshalSSZ(testSidecars[0])
+	require.NoError(t, err)
 	originalChecksum := sha256.Sum256(originalData)
 
 	tempDir := t.TempDir()
@@ -109,7 +147,7 @@ func TestCheckDataIntegrity(t *testing.T) {
 	_, err = tempfile.Write(originalData)
 	require.NoError(t, err)
 
-	err = checkDataIntegrity(originalData, tempfile.Name())
+	err = checkDataIntegrity(testSidecars[0], tempfile.Name())
 	require.NoError(t, err)
 
 	// Modify the data in the file to simulate data corruption
@@ -118,7 +156,7 @@ func TestCheckDataIntegrity(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test data integrity check with corrupted data
-	err = checkDataIntegrity(originalData, tempfile.Name())
+	err = checkDataIntegrity(testSidecars[0], tempfile.Name())
 	require.ErrorContains(t, "data integrity check failed", err)
 
 	// Modify the calculated checksum to be incorrect
@@ -131,105 +169,32 @@ func TestCheckDataIntegrity(t *testing.T) {
 	require.NotEqual(t, wrongChecksum, hex.EncodeToString(checksum))
 }
 
-var testSidecars = []*ethpb.BlobSidecar{
-	{
-		BlockRoot:       []byte{0x01, 0x02, 0x03},
-		Index:           1,
-		Slot:            12345,
-		BlockParentRoot: []byte{0x04, 0x05, 0x06},
-		ProposerIndex:   42,
-		Blob:            []byte("Test Blob Data 1"),
-		KzgCommitment:   []byte{0x0A, 0x0B, 0x0C},
-		KzgProof:        []byte("Test Proof 1"),
-	},
-	{
-		BlockRoot:       []byte{0x11, 0x12, 0x13},
-		Index:           2,
-		Slot:            54321,
-		BlockParentRoot: []byte{0x14, 0x15, 0x16},
-		ProposerIndex:   58,
-		Blob:            []byte("Test Blob Data 2"),
-		KzgCommitment:   []byte{0x1A, 0x1B, 0x1C},
-		KzgProof:        []byte("Test Proof 2"),
-	},
-	{
-		BlockRoot:       []byte{0x21, 0x22, 0x23},
-		Index:           3,
-		Slot:            9876,
-		BlockParentRoot: []byte{0x24, 0x25, 0x26},
-		ProposerIndex:   33,
-		Blob:            []byte("Test Blob Data 3"),
-		KzgCommitment:   []byte{0x2A, 0x2B, 0x2C},
-		KzgProof:        []byte("Test Proof 3"),
-	},
-	{
-		BlockRoot:       []byte{0x31, 0x32, 0x33},
-		Index:           4,
-		Slot:            13579,
-		BlockParentRoot: []byte{0x34, 0x35, 0x36},
-		ProposerIndex:   27,
-		Blob:            []byte("Test Blob Data 4"),
-		KzgCommitment:   []byte{0x3A, 0x3B, 0x3C},
-		KzgProof:        []byte("Test Proof 4"),
-	},
-	{
-		BlockRoot:       []byte{0x41, 0x42, 0x43},
-		Index:           5,
-		Slot:            24680,
-		BlockParentRoot: []byte{0x44, 0x45, 0x46},
-		ProposerIndex:   77,
-		Blob:            []byte("Test Blob Data 5"),
-		KzgCommitment:   []byte{0x4A, 0x4B, 0x4C},
-		KzgProof:        []byte("Test Proof 5"),
-	},
-	{
-		BlockRoot:       []byte{0x51, 0x52, 0x53},
-		Index:           6,
-		Slot:            86420,
-		BlockParentRoot: []byte{0x54, 0x55, 0x56},
-		ProposerIndex:   62,
-		Blob:            []byte("Test Blob Data 6"),
-		KzgCommitment:   []byte{0x5A, 0x5B, 0x5C},
-		KzgProof:        []byte("Test Proof 6"),
-	},
-	{
-		BlockRoot:       []byte{0x61, 0x62, 0x63},
-		Index:           7,
-		Slot:            19876,
-		BlockParentRoot: []byte{0x64, 0x65, 0x66},
-		ProposerIndex:   81,
-		Blob:            []byte("Test Blob Data 7"),
-		KzgCommitment:   []byte{0x6A, 0x6B, 0x6C},
-		KzgProof:        []byte("Test Proof 7"),
-	},
-	{
-		BlockRoot:       []byte{0x71, 0x72, 0x73},
-		Index:           8,
-		Slot:            11111,
-		BlockParentRoot: []byte{0x74, 0x75, 0x76},
-		ProposerIndex:   99,
-		Blob:            []byte("Test Blob Data 8"),
-		KzgCommitment:   []byte{0x7A, 0x7B, 0x7C},
-		KzgProof:        []byte("Test Proof 8"),
-	},
-	{
-		BlockRoot:       []byte{0x81, 0x82, 0x83},
-		Index:           9,
-		Slot:            22222,
-		BlockParentRoot: []byte{0x84, 0x85, 0x86},
-		ProposerIndex:   11,
-		Blob:            []byte("Test Blob Data 9"),
-		KzgCommitment:   []byte{0x8A, 0x8B, 0x8C},
-		KzgProof:        []byte("Test Proof 9"),
-	},
-	{
-		BlockRoot:       []byte{0x91, 0x92, 0x93},
-		Index:           10,
-		Slot:            33333,
-		BlockParentRoot: []byte{0x94, 0x95, 0x96},
-		ProposerIndex:   21,
-		Blob:            []byte("Test Blob Data 10"),
-		KzgCommitment:   []byte{0x9A, 0x9B, 0x9C},
-		KzgProof:        []byte("Test Proof 10"),
-	},
+func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
+	blobSidecars := make([]*ethpb.BlobSidecar, n)
+	for i := uint64(0); i < n; i++ {
+		blobSidecars[i] = generateBlobSidecar(t, i)
+	}
+	return blobSidecars
+}
+
+func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
+	blob := make([]byte, 131072)
+	_, err := rand.Read(blob)
+	require.NoError(t, err)
+	kzgCommitment := make([]byte, 48)
+	_, err = rand.Read(kzgCommitment)
+	require.NoError(t, err)
+	kzgProof := make([]byte, 48)
+	_, err = rand.Read(kzgProof)
+	require.NoError(t, err)
+	return &ethpb.BlobSidecar{
+		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
+		Index:           index,
+		Slot:            100,
+		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
+		ProposerIndex:   101,
+		Blob:            blob,
+		KzgCommitment:   kzgCommitment,
+		KzgProof:        kzgProof,
+	}
 }
