@@ -485,7 +485,7 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 	return hdr, err
 }
 
-// EthSyncing returns an object with data about the sync status or false.
+// EthSyncing returns an map with data about the sync status or error.
 func (s *Service) EthSyncing(ctx context.Context) (map[string]interface{}, error) {
 	var result interface{}
 	err := s.rpcClient.CallContext(ctx, &result, EthSyncingMethod)
