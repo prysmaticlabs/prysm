@@ -188,7 +188,7 @@ func MerkleizeListSSZ[T Hashable](elements []T, limit uint64) ([32]byte, error) 
 }
 
 // MerkleizeByteSliceSSZ hashes a byteslice by chunkifying it and returning the
-// corresponding HTR as it it were a fixed vector of bytes of the given length.
+// corresponding HTR as if it were a fixed vector of bytes of the given length.
 func MerkleizeByteSliceSSZ(input []byte) ([32]byte, error) {
 	numChunks := (len(input) + 31) / 32
 	if numChunks == 0 {
