@@ -206,7 +206,7 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	}
-	resp := &ForkChoiceDumpResponse{
+	resp := &GetForkChoiceDumpResponse{
 		JustifiedCheckpoint: shared.CheckpointFromConsensus(dump.JustifiedCheckpoint),
 		FinalizedCheckpoint: shared.CheckpointFromConsensus(dump.FinalizedCheckpoint),
 		ForkChoiceNodes:     nodes,

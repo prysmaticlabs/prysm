@@ -974,7 +974,7 @@ type ForkChoiceHead struct {
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
-type ForkChoiceDumpResponse struct {
+type GetForkChoiceDumpResponse struct {
 	JustifiedCheckpoint *shared.Checkpoint       `json:"justified_checkpoint"`
 	FinalizedCheckpoint *shared.Checkpoint       `json:"finalized_checkpoint"`
 	ForkChoiceNodes     []*ForkChoiceNode        `json:"fork_choice_nodes"`
