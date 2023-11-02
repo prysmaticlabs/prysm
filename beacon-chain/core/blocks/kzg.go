@@ -126,7 +126,7 @@ func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
 	copy(layer[3], root[:])
 
 	// Attester slashings
-	as := body.ProposerSlashings()
+	as := body.AttesterSlashings()
 	root, err = ssz.MerkleizeListSSZ(as, params.BeaconConfig().MaxAttesterSlashings)
 	if err != nil {
 		return nil, err
