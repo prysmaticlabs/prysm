@@ -23,6 +23,8 @@ var (
 	errInvalidIndex   = errors.New("index out of bounds")
 )
 
+// MerkleProofKZGCommitment constructs a Merkle proof of inclusion of the KZG
+// commitment of index `index` into the Beacon Block with the given `body`
 func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int) ([][]byte, error) {
 	bodyVersion := body.Version()
 	if bodyVersion < version.Deneb {
@@ -36,12 +38,10 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 	if err != nil {
 		return nil, err
 	}
-
 	membersRoots, err := topLevelRoots(body)
 	if err != nil {
 		return nil, err
 	}
-
 	sparse, err := trie.GenerateTrieFromItems(membersRoots, logBodyLength)
 	if err != nil {
 		return nil, err
@@ -50,10 +50,13 @@ func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int
 	if err != nil {
 		return nil, err
 	}
+	// sparse.MerkleProof always includes the length of the slice this is
+	// why we remove the last element that is not needed in topProof
 	proof = append(proof, topProof[:len(topProof)-1]...)
 	return proof, nil
 }
 
+// leavesFromCommitments hashes each commitment to construct a slice of roots
 func leavesFromCommitments(commitments [][]byte) [][]byte {
 	leaves := make([][]byte, len(commitments))
 	for i, kzg := range commitments {
@@ -67,6 +70,8 @@ func leavesFromCommitments(commitments [][]byte) [][]byte {
 	return leaves
 }
 
+// bodyProof returns the Merkle proof of the subtree up to the root of the KZG
+// commitment list.
 func bodyProof(commitments [][]byte, index int) ([][]byte, error) {
 	if index < 0 || index >= len(commitments) {
 		return nil, errInvalidIndex
@@ -83,6 +88,9 @@ func bodyProof(commitments [][]byte, index int) ([][]byte, error) {
 	return proof, err
 }
 
+// topLevelRoots computes the slice with the roots of each element in the
+// BeaconBlockBody. Notice that the KZG commitments root is not needed for the
+// proof computation thus it's omitted
 func topLevelRoots(body interfaces.ReadOnlyBeaconBlockBody) ([][]byte, error) {
 	layer := make([][]byte, bodyLength)
 	for i := range layer {
