@@ -141,12 +141,12 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonLogs, err = json.Marshal(ls)
 			if err != nil {
-				http.Error(w, "Failed to marshal logs", http.StatusInternalServerError)
+				http2.HandleError(w, "Failed to marshal logs", http.StatusInternalServerError)
 				return
 			}
 			_, err = fmt.Fprintf(w, "%s\n", jsonLogs)
 			if err != nil {
-				http.Error(w, "Error sending data", http.StatusInternalServerError)
+				http2.HandleError(w, "Error sending data", http.StatusInternalServerError)
 				return
 			}
 
@@ -154,7 +154,7 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 		case <-s.ctx.Done():
 			return
 		case err := <-sub.Err():
-			http.Error(w, fmt.Sprintf("Subscriber error: %v", err), http.StatusInternalServerError)
+			http2.HandleError(w, fmt.Sprintf("Subscriber error: %v", err), http.StatusInternalServerError)
 			return
 		case <-ctx.Done():
 			return
