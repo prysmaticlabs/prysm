@@ -18,10 +18,10 @@ rules_pkg_dependencies()
 
 http_archive(
     name = "hermetic_cc_toolchain",
-    sha256 = "973ab22945b921ef45b8e1d6ce01ca7ce1b8a462167449a36e297438c4ec2755",
-    strip_prefix = "hermetic_cc_toolchain-5098046bccc15d2962f3cc8e7e53d6a2a26072dc",
+    sha256 = "ff33e57a2de66f44b5daf7dff645a78eb7e3e320a5f0cda23f0ef49c222073c5",
+    strip_prefix = "hermetic_cc_toolchain-3a0b2fe448d23195abeccae533eac798dc333b09",
     urls = [
-        "https://github.com/uber/hermetic_cc_toolchain/archive/5098046bccc15d2962f3cc8e7e53d6a2a26072dc.tar.gz",  # 2023-06-28
+        "https://github.com/uber/hermetic_cc_toolchain/archive/3a0b2fe448d23195abeccae533eac798dc333b09.tar.gz",  # 2023-10-16
     ],
 )
 
