@@ -14,7 +14,7 @@ import (
 
 // GetVersion returns the beacon node and validator client versions
 func (s *Server) GetVersion(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.web.GetVersion")
+	ctx, span := trace.StartSpan(r.Context(), "validator.web.health.GetVersion")
 	defer span.End()
 
 	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
