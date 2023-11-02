@@ -72,7 +72,7 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonResp, err := json.Marshal(logResp)
 			if err != nil {
-				http2.HandleError(w, "could not encode long response", http.StatusInternalServerError)
+				http2.HandleError(w, "could not encode log response into JSON", http.StatusInternalServerError)
 				return
 			}
 
