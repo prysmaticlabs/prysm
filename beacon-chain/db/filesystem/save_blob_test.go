@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"os"
 	"path"
 	"strings"
@@ -34,15 +33,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		bs := &BlobStorage{baseDir: tempDir}
 		existingSidecar := testSidecars[0]
 
-		// Create a test BlobSidecar
-		blobPath := path.Join(tempDir, fmt.Sprintf(
-			"%d_%x_%d_%x.blob",
-			existingSidecar.Slot,
-			existingSidecar.BlockRoot,
-			existingSidecar.Index,
-			existingSidecar.KzgCommitment,
-		))
-
+		blobPath := bs.sidecarFileKey(existingSidecar)
 		// Serialize the existing BlobSidecar to binary data.
 		existingSidecarData, err := ssz.MarshalSSZ(existingSidecar)
 		require.NoError(t, err)
