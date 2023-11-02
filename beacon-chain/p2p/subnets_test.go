@@ -488,3 +488,18 @@ func Test_SyncSubnets(t *testing.T) {
 		})
 	}
 }
+
+func TestSubnetComputation(t *testing.T) {
+	db, err := enode.OpenDB("")
+	assert.NoError(t, err)
+	defer db.Close()
+	priv, _, err := crypto.GenerateSecp256k1Key(rand.Reader)
+	assert.NoError(t, err)
+	convertedKey, err := ecdsaprysm.ConvertFromInterfacePrivKey(priv)
+	assert.NoError(t, err)
+	localNode := enode.NewLocalNode(db, convertedKey)
+
+	retrievedSubnets, err := computeSubscribedSubnets(localNode.ID(), 1000)
+	assert.NoError(t, err)
+	assert.Equal(t, retrievedSubnets[0]+1, retrievedSubnets[1])
+}
