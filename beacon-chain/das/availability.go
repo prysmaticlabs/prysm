@@ -38,7 +38,7 @@ func NewLazilyPersistentStore(db BlobsDB) *LazilyPersistentStore {
 // detail). Blobs stored in this cache will be persisted for at least as long as the node is
 // running. Once IsDataAvailable succeeds, all blobs referenced by the given block are guaranteed
 // to be persisted for the remainder of the retention period.
-func (s *LazilyPersistentStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
+func (s *LazilyPersistentStore) Persist(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
 	if len(sc) == 0 {
 		return nil, nil
 	}

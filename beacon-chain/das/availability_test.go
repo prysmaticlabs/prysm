@@ -124,7 +124,8 @@ func TestLazilyPersistent_Missing(t *testing.T) {
 	as.verifyKZG = vf.expectedArguments
 
 	// Only one commitment persisted, should return error with other indices
-	as.PersistOnceCommitted(ctx, 1, scs[2])
+	_, err = as.Persist(ctx, 1, scs[2])
+	require.NoError(t, err)
 	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
 	missingErr := MissingIndicesError{}
@@ -132,14 +133,17 @@ func TestLazilyPersistent_Missing(t *testing.T) {
 	require.DeepEqual(t, []uint64{0, 1}, missingErr.Missing())
 
 	// All but one persisted, return missing idx
-	as.PersistOnceCommitted(ctx, 1, scs[0])
+	_, err = as.Persist(ctx, 1, scs[0])
+	require.NoError(t, err)
 	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
 	require.Equal(t, true, errors.As(err, &missingErr))
 	require.DeepEqual(t, []uint64{1}, missingErr.Missing())
 
 	// All persisted, return nil
-	as.PersistOnceCommitted(ctx, 1, scs[1])
+	_, err = as.Persist(ctx, 1, scs[1])
+	require.NoError(t, err)
+
 	require.NoError(t, as.IsDataAvailable(ctx, 1, blk))
 }
 
@@ -158,8 +162,9 @@ func TestLazilyPersistent_Mismatch(t *testing.T) {
 	scs[0].KzgCommitment = bytesutil.PadTo([]byte("nope"), 48)
 
 	// Only one commitment persisted, should return error with other indices
-	as.PersistOnceCommitted(ctx, 1, scs[0])
-	err := as.IsDataAvailable(ctx, 1, blk)
+	_, err := as.Persist(ctx, 1, scs[0])
+	require.NoError(t, err)
+	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
 	mismatchErr := CommitmentMismatchError{}
 	require.Equal(t, true, errors.As(err, &mismatchErr))
@@ -251,7 +256,9 @@ func TestLazilyPersistent_DBFallback(t *testing.T) {
 	// the db contains the sidecars.
 	scscp[0].BlockRoot = scs[0].BlockRoot
 	scscp[0].KzgCommitment = bytesutil.PadTo([]byte("nope"), 48)
-	as.PersistOnceCommitted(ctx, 1, scscp[0])
+	_, err := as.Persist(ctx, 1, scscp[0])
+	require.NoError(t, err)
+
 	// This should pass since the db is giving us all the right sidecars
 	require.NoError(t, as.IsDataAvailable(ctx, 1, blk))
 
@@ -259,14 +266,15 @@ func TestLazilyPersistent_DBFallback(t *testing.T) {
 	as.db = &mockBlobsDB{}
 
 	// but we should have pruned, so we'll get a missing error, not mismatch
-	err := as.IsDataAvailable(ctx, 1, blk)
+	err = as.IsDataAvailable(ctx, 1, blk)
 	require.NotNil(t, err)
 	missingErr := MissingIndicesError{}
 	require.Equal(t, true, errors.As(err, &missingErr))
 	require.DeepEqual(t, []uint64{0, 1, 2}, missingErr.Missing())
 
 	// put the bad value back in the cache
-	persisted := as.PersistOnceCommitted(ctx, 1, scscp[0])
+	persisted, err := as.Persist(ctx, 1, scscp[0])
+	require.NoError(t, err)
 	require.Equal(t, 1, len(persisted))
 	// now we'll get a mismatch error
 	err = as.IsDataAvailable(ctx, 1, blk)
@@ -281,20 +289,30 @@ func TestLazyPersistOnceCommitted(t *testing.T) {
 	_, scs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 6)
 	as := NewLazilyPersistentStore(&mockBlobsDB{})
 	// stashes as expected
-	require.Equal(t, 6, len(as.PersistOnceCommitted(ctx, 1, scs...)))
+	p, err := as.Persist(ctx, 1, scs...)
+	require.NoError(t, err)
+	require.Equal(t, 6, len(p))
 	// ignores duplicates
-	require.Equal(t, 0, len(as.PersistOnceCommitted(ctx, 1, scs...)))
+	p, err = as.Persist(ctx, 1, scs...)
+	require.NoError(t, err)
+	require.Equal(t, 0, len(p))
 
 	// ignores index out of bound
 	scs[0].Index = 6
-	require.Equal(t, 0, len(as.PersistOnceCommitted(ctx, 1, scs[0])))
+	p, err = as.Persist(ctx, 1, scs[0])
+	require.NoError(t, err)
+	require.Equal(t, 0, len(p))
 
 	_, more := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 4)
 	// ignores sidecars before the retention period
 	slotOOB, err := slots.EpochStart(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
 	require.NoError(t, err)
-	require.Equal(t, 0, len(as.PersistOnceCommitted(ctx, 32+slotOOB, more[0])))
+	p, err = as.Persist(ctx, 32+slotOOB, more[0])
+	require.NoError(t, err)
+	require.Equal(t, 0, len(p))
 
 	// doesn't ignore new sidecars with a different block root
-	require.Equal(t, 4, len(as.PersistOnceCommitted(ctx, 1, more...)))
+	p, err = as.Persist(ctx, 1, more...)
+	require.NoError(t, err)
+	require.Equal(t, 4, len(p))
 }

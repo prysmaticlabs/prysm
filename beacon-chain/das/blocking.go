@@ -23,7 +23,7 @@ func (bs *AsyncStore) PersistOnceCommitted(ctx context.Context, current primitiv
 		return nil, nil
 	}
 	seen := bs.notif.ensure(keyFromSidecar(sc[0]))
-	persisted, err := bs.s.PersistOnceCommitted(ctx, current, sc...)
+	persisted, err := bs.s.Persist(ctx, current, sc...)
 	if err != nil {
 		return nil, err
 	}

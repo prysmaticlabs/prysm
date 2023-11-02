@@ -10,7 +10,7 @@ import (
 
 type MockAvailabilityStore struct {
 	VerifyAvailabilityCallback func(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error
-	PersistBlobsCallback       func(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar
+	PersistBlobsCallback       func(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 }
 
 var _ AvailabilityStore = &MockAvailabilityStore{}
@@ -22,11 +22,11 @@ func (m *MockAvailabilityStore) IsDataAvailable(ctx context.Context, current pri
 	return nil
 }
 
-func (m *MockAvailabilityStore) PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) []*ethpb.BlobSidecar {
+func (m *MockAvailabilityStore) Persist(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error) {
 	if m.PersistBlobsCallback != nil {
 		return m.PersistBlobsCallback(ctx, current, sc...)
 	}
-	return sc
+	return sc, nil
 }
 
 type mockBlobsDB struct {

@@ -18,5 +18,5 @@ type BlobsDB interface {
 // verified and saved sidecars.
 type AvailabilityStore interface {
 	IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error
-	PersistOnceCommitted(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
+	Persist(ctx context.Context, current primitives.Slot, sc ...*ethpb.BlobSidecar) ([]*ethpb.BlobSidecar, error)
 }

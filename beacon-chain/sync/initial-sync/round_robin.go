@@ -324,7 +324,10 @@ func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,
 	s.logBatchSyncStatus(genesis, first, len(bwb))
 	avs := das.NewLazilyPersistentStore(s.cfg.DB)
 	for _, bb := range bwb {
-		avs.PersistOnceCommitted(ctx, bb.Block.Block().Slot(), bb.Blobs...)
+		_, err = avs.Persist(ctx, bb.Block.Block().Slot(), bb.Blobs...)
+		if err != nil {
+			return errors.Wrap(err, "error verifying or persisting BlobSidecars")
+		}
 	}
 
 	return bFunc(ctx, blocks.BlockWithVerifiedBlobsSlice(bwb).ROBlocks(), avs)
