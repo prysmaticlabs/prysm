@@ -19,11 +19,14 @@ func TestServer_InitializeRoutes(t *testing.T) {
 	require.NoError(t, err)
 
 	wantRouteList := map[string][]string{
-		"/eth/v1/keystores":                         {http.MethodGet, http.MethodPost, http.MethodDelete},
-		"/eth/v1/remotekeys":                        {http.MethodGet, http.MethodPost, http.MethodDelete},
-		"/eth/v1/validator/{pubkey}/gas_limit":      {http.MethodGet, http.MethodPost, http.MethodDelete},
-		"/eth/v1/validator/{pubkey}/feerecipient":   {http.MethodGet, http.MethodPost, http.MethodDelete},
-		"/eth/v1/validator/{pubkey}/voluntary_exit": {http.MethodPost},
+		"/eth/v1/keystores":                          {http.MethodGet, http.MethodPost, http.MethodDelete},
+		"/eth/v1/remotekeys":                         {http.MethodGet, http.MethodPost, http.MethodDelete},
+		"/eth/v1/validator/{pubkey}/gas_limit":       {http.MethodGet, http.MethodPost, http.MethodDelete},
+		"/eth/v1/validator/{pubkey}/feerecipient":    {http.MethodGet, http.MethodPost, http.MethodDelete},
+		"/eth/v1/validator/{pubkey}/voluntary_exit":  {http.MethodPost},
+		"/v2/validator/health/version":               {http.MethodGet},
+		"/v2/validator/health/logs/validator/stream": {http.MethodGet},
+		"/v2/validator/health/logs/beacon/stream":    {http.MethodGet},
 	}
 	gotRouteList := make(map[string][]string)
 	err = s.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
