@@ -484,18 +484,18 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 	cases := []struct {
 		name     string
 		ids      []*ethpb.BlobIdentifier
-		response []*ethpb.BlobSidecar
+		response []*ethpb.DeprecatedBlobSidecar
 		err      error
 	}{
 		{
 			name:     "valid",
 			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.BlobSidecar{{BlockRoot: validRoot}},
+			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: validRoot}},
 		},
 		{
 			name:     "invalid",
 			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.BlobSidecar{{BlockRoot: invalidRoot}},
+			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: invalidRoot}},
 			err:      errUnrequestedRoot,
 		},
 	}
@@ -519,7 +519,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 	cases := []struct {
 		name     string
 		req      *ethpb.BlobSidecarsByRangeRequest
-		response []*ethpb.BlobSidecar
+		response []*ethpb.DeprecatedBlobSidecar
 		err      error
 	}{
 		{
@@ -528,7 +528,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 14}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 14}},
 		},
 		{
 			name: "valid - count 1",
@@ -536,7 +536,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 10}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 10}},
 		},
 		{
 			name: "invalid - before",
@@ -544,7 +544,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 9}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 9}},
 			err:      errBlobResponseOutOfBounds,
 		},
 		{
@@ -553,7 +553,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 11}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 11}},
 			err:      errBlobResponseOutOfBounds,
 		},
 		{
@@ -562,7 +562,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 23}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 23}},
 			err:      errBlobResponseOutOfBounds,
 		},
 		{
@@ -571,7 +571,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.BlobSidecar{{Slot: 20}},
+			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 20}},
 			err:      errBlobResponseOutOfBounds,
 		},
 	}

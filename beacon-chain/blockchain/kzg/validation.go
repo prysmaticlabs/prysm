@@ -12,7 +12,7 @@ import (
 // - Expected KZG commitments match the number of blobs in the block
 // - That the number of proofs match the number of blobs
 // - That the proofs are verified against the KZG commitments
-func IsDataAvailable(commitments [][]byte, sidecars []*ethpb.BlobSidecar) error {
+func IsDataAvailable(commitments [][]byte, sidecars []*ethpb.DeprecatedBlobSidecar) error {
 	if len(commitments) != len(sidecars) {
 		return fmt.Errorf("could not check data availability, expected %d commitments, obtained %d",
 			len(commitments), len(sidecars))

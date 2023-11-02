@@ -159,7 +159,7 @@ func extractBlockDataType(digest []byte, tor blockchain.TemporalOracle) (interfa
 
 // WriteBlobSidecarChunk writes blob chunk object to stream.
 // response_chunk  ::= <result> | <context-bytes> | <encoding-dependent-header> | <encoded-payload>
-func WriteBlobSidecarChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, encoding encoder.NetworkEncoding, sidecar *ethpb.BlobSidecar) error {
+func WriteBlobSidecarChunk(stream libp2pcore.Stream, tor blockchain.TemporalOracle, encoding encoder.NetworkEncoding, sidecar *ethpb.DeprecatedBlobSidecar) error {
 	if _, err := stream.Write([]byte{responseCodeSuccess}); err != nil {
 		return err
 	}

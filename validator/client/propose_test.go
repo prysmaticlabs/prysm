@@ -592,7 +592,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 						blk.Block.Body.Graffiti = graffiti
 						return &ethpb.BeaconBlockAndBlobsDeneb{
 							Block: blk.Block,
-							Blobs: []*ethpb.BlobSidecar{
+							Blobs: []*ethpb.DeprecatedBlobSidecar{
 								{
 									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
 									Index:           1,

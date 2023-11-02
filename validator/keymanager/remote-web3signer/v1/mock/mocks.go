@@ -470,7 +470,7 @@ func GetMockSignRequest(t string) *validatorpb.SignRequest {
 			SigningRoot:     make([]byte, fieldparams.RootLength),
 			SignatureDomain: make([]byte, 4),
 			Object: &validatorpb.SignRequest_Blob{
-				Blob: &eth.BlobSidecar{
+				Blob: &eth.DeprecatedBlobSidecar{
 					BlockRoot:       make([]byte, fieldparams.RootLength),
 					Index:           uint64(0),
 					Slot:            0,

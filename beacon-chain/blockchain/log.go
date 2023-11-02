@@ -148,7 +148,7 @@ func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
 	return nil
 }
 
-func logBlobSidecar(scs []*ethpb.BlobSidecar, startTime time.Time) {
+func logBlobSidecar(scs []*ethpb.DeprecatedBlobSidecar, startTime time.Time) {
 	if len(scs) == 0 {
 		return
 	}
