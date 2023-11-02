@@ -62,7 +62,7 @@ func (s *Service) roundRobinSync(genesis time.Time) error {
 
 // syncToFinalizedEpoch sync from head to best known finalized epoch.
 func (s *Service) syncToFinalizedEpoch(ctx context.Context, genesis time.Time) error {
-	highestFinalizedSlot, err := slots.EpochStart(s.highestFinalizedEpoch() + 1)
+	highestFinalizedSlot, err := slots.EpochStart(s.highestFinalizedEpoch())
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,8 @@ func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithVerifiedBlobs, 
 	for i := range bwb {
 		b := bwb[i].Block
 		if headSlot >= b.Block().Slot() && isProc(ctx, b) {
-			processed = &i
+			val := i
+			processed = &val
 			continue
 		}
 		if i > 0 {
@@ -295,7 +296,8 @@ func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithVerifiedBlobs, 
 		maxRoot := maxIncoming.Root()
 		return nil, fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
 	}
-	return bwb[*processed:], nil
+	nonProcessedIdx := *processed + 1
+	return bwb[nonProcessedIdx:], nil
 }
 
 func (s *Service) processBatchedBlocks(ctx context.Context, genesis time.Time,

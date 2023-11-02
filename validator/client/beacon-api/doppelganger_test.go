@@ -9,8 +9,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -49,12 +49,12 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		name                        string
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingOutput            *node.SyncStatusResponse
 		getForkOutput               *beacon.GetStateForkResponse
 		getHeadersOutput            *beacon.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *beacon.GetValidatorsResponse
 		}
 		getLivelinessInterfaces []struct {
 			inputUrl           string
@@ -109,8 +109,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -144,8 +144,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -190,8 +190,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false}, // not recent - not duplicate
 				},
 			},
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
@@ -215,7 +215,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			},
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 			}{
 				input: []string{
 					// no stringPubKey1 since recent
@@ -225,14 +225,14 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					stringPubKey5, // non existing validator
 					stringPubKey6, // not recent - not duplicate
 				},
-				output: &apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				output: &beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						// No "11111" since corresponding validator is recent
-						{Index: "22222", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey2}}, // not recent - duplicate on previous epoch
-						{Index: "33333", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey3}}, // not recent - duplicate on current epoch
-						{Index: "44444", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
+						{Index: "22222", Validator: &beacon.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
+						{Index: "33333", Validator: &beacon.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
+						{Index: "44444", Validator: &beacon.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
 						// No "55555" sicee corresponding validator does not exist
-						{Index: "66666", Validator: &apimiddleware.ValidatorJson{PublicKey: stringPubKey6}}, // not recent - not duplicate
+						{Index: "66666", Validator: &beacon.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
 					},
 				},
 			},
@@ -252,7 +252,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -273,7 +273,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -297,7 +297,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := node.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,
@@ -409,8 +409,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetSyncingOutput := &apimiddleware.SyncingResponseJson{
-		Data: &shared.SyncDetails{
+	standardGetSyncingOutput := &node.SyncStatusResponse{
+		Data: &node.SyncStatusResponseData{
 			IsSyncing: false,
 		},
 	}
@@ -435,16 +435,16 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 	standardGetStateValidatorsInterface := &struct {
 		input  []string
-		output *apimiddleware.StateValidatorsResponseJson
+		output *beacon.GetValidatorsResponse
 		err    error
 	}{
 		input: []string{stringPubKey},
-		output: &apimiddleware.StateValidatorsResponseJson{
-			Data: []*apimiddleware.ValidatorContainerJson{
+		output: &beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index: "42",
-					Validator: &apimiddleware.ValidatorJson{
-						PublicKey: stringPubKey,
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKey,
 					},
 				},
 			},
@@ -455,7 +455,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		name                        string
 		expectedErrorMessage        string
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
-		getSyncingOutput            *apimiddleware.SyncingResponseJson
+		getSyncingOutput            *node.SyncStatusResponse
 		getSyncingError             error
 		getForkOutput               *beacon.GetStateForkResponse
 		getForkError                error
@@ -463,7 +463,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *apimiddleware.StateValidatorsResponseJson
+			output *beacon.GetValidatorsResponse
 			err    error
 		}
 		getLivenessInterfaces []struct {
@@ -489,8 +489,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "beacon node not synced",
 			expectedErrorMessage:   "beacon node not synced",
 			inputValidatorRequests: standardInputValidatorRequests,
-			getSyncingOutput: &apimiddleware.SyncingResponseJson{
-				Data: &shared.SyncDetails{
+			getSyncingOutput: &node.SyncStatusResponse{
+				Data: &node.SyncStatusResponseData{
 					IsSyncing: true,
 				},
 			},
@@ -548,7 +548,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input: []string{stringPubKey},
@@ -564,11 +564,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{nil}},
+				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{nil}},
 			},
 		},
 		{
@@ -580,11 +580,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *apimiddleware.StateValidatorsResponseJson
+				output *beacon.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &apimiddleware.StateValidatorsResponseJson{Data: []*apimiddleware.ValidatorContainerJson{{Validator: nil}}},
+				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{{Validator: nil}}},
 			},
 		},
 		{
@@ -627,7 +627,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{nil},
+						Data: []*validator.Liveness{nil},
 					},
 				},
 			},
@@ -650,7 +650,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
@@ -679,14 +679,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},
@@ -709,7 +709,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							{
 								Index: "42",
 							},
@@ -720,7 +720,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},
@@ -737,7 +737,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := apimiddleware.SyncingResponseJson{}
+				syncingResponseJson := node.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().GetRestJsonResponse(
 					ctx,

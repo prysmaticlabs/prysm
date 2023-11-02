@@ -11,7 +11,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -160,11 +161,11 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				syncingEndpoint,
-				&apimiddleware.SyncingResponseJson{},
+				&node.SyncStatusResponse{},
 			).SetArg(
 				2,
-				apimiddleware.SyncingResponseJson{
-					Data: &shared.SyncDetails{
+				node.SyncStatusResponse{
+					Data: &node.SyncStatusResponseData{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
@@ -177,16 +178,16 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().GetRestJsonResponse(
 				ctx,
 				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
-				&apimiddleware.StateValidatorsResponseJson{},
+				&beacon.GetValidatorsResponse{},
 			).SetArg(
 				2,
-				apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						{
 							Index:  validatorIndex,
 							Status: "active_ongoing",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey: pubkeyStr,
+							Validator: &beacon.Validator{
+								Pubkey: pubkeyStr,
 							},
 						},
 					},

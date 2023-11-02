@@ -1,6 +1,7 @@
 package state_native
 
 import (
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -54,10 +55,17 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 	withdrawalIndex := b.nextWithdrawalIndex
 	epoch := slots.ToEpoch(b.slot)
 
-	bound := mathutil.Min(uint64(len(b.validators)), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
+	validatorsLen := b.validatorsLen()
+	bound := mathutil.Min(uint64(validatorsLen), params.BeaconConfig().MaxValidatorsPerWithdrawalsSweep)
 	for i := uint64(0); i < bound; i++ {
-		val := b.validators[validatorIndex]
-		balance := b.balances[validatorIndex]
+		val, err := b.validatorAtIndex(validatorIndex)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not retrieve validator at index %d", validatorIndex)
+		}
+		balance, err := b.balanceAtIndex(validatorIndex)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not retrieve balance at index %d", validatorIndex)
+		}
 		if balance > 0 && isFullyWithdrawableValidator(val, epoch) {
 			withdrawals = append(withdrawals, &enginev1.Withdrawal{
 				Index:          withdrawalIndex,
@@ -79,7 +87,7 @@ func (b *BeaconState) ExpectedWithdrawals() ([]*enginev1.Withdrawal, error) {
 			break
 		}
 		validatorIndex += 1
-		if uint64(validatorIndex) == uint64(len(b.validators)) {
+		if uint64(validatorIndex) == uint64(validatorsLen) {
 			validatorIndex = 0
 		}
 	}

@@ -17,10 +17,6 @@ func TestInitFeatureConfig(t *testing.T) {
 	Init(cfg)
 	c := Get()
 	assert.Equal(t, true, c.EnableSlasher)
-
-	// Reset back to false for the follow up tests.
-	cfg = &Flags{RemoteSlasherProtection: false}
-	Init(cfg)
 }
 
 func TestInitWithReset(t *testing.T) {

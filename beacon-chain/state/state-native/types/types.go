@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/pkg/errors"
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 )
 
 // DataType signifies the data type of the field.
@@ -210,3 +211,6 @@ const (
 	NextWithdrawalValidatorIndex
 	HistoricalSummaries
 )
+
+// Enumerator keeps track of the number of states created since the node's start.
+var Enumerator = &consensus_types.ThreadSafeEnumerator{}

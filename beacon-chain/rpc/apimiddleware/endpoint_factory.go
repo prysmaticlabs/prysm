@@ -16,31 +16,9 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 // Paths is a collection of all valid beacon chain API paths.
 func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
-		"/eth/v1/beacon/states/{state_id}/root",
-		"/eth/v1/beacon/states/{state_id}/validators",
-		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}",
-		"/eth/v1/beacon/states/{state_id}/validator_balances",
-		"/eth/v1/beacon/states/{state_id}/sync_committees",
-		"/eth/v1/beacon/states/{state_id}/randao",
-		"/eth/v1/beacon/blocks",
-		"/eth/v1/beacon/blinded_blocks",
-		"/eth/v1/beacon/blocks/{block_id}",
-		"/eth/v2/beacon/blocks/{block_id}",
-		"/eth/v1/beacon/blocks/{block_id}/attestations",
-		"/eth/v1/beacon/blinded_blocks/{block_id}",
 		"/eth/v1/beacon/pool/attester_slashings",
 		"/eth/v1/beacon/pool/proposer_slashings",
-		"/eth/v1/beacon/pool/bls_to_execution_changes",
-		"/eth/v1/beacon/pool/bls_to_execution_changes",
 		"/eth/v1/beacon/weak_subjectivity",
-		"/eth/v1/node/identity",
-		"/eth/v1/node/peers",
-		"/eth/v1/node/peers/{peer_id}",
-		"/eth/v1/node/peer_count",
-		"/eth/v1/node/version",
-		"/eth/v1/node/health",
-		"/eth/v1/debug/beacon/states/{state_id}",
-		"/eth/v2/debug/beacon/states/{state_id}",
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
@@ -57,92 +35,14 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
-	case "/eth/v1/beacon/states/{state_id}/root":
-		endpoint.GetResponse = &StateRootResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validators":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}, {Name: "status", Enum: true}}
-		endpoint.GetResponse = &StateValidatorsResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validators/{validator_id}":
-		endpoint.GetResponse = &StateValidatorResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/validator_balances":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "id", Hex: true}}
-		endpoint.GetResponse = &ValidatorBalancesResponseJson{}
-	case "/eth/v1/beacon/states/{state_id}/sync_committees":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
-		endpoint.GetResponse = &SyncCommitteesResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeGrpcResponseBodyIntoContainer: prepareValidatorAggregates,
-		}
-	case "/eth/v1/beacon/states/{state_id}/randao":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "epoch"}}
-		endpoint.GetResponse = &RandaoResponseJson{}
-	case "/eth/v1/beacon/blocks":
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlockPostRequest,
-			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlock,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlockSSZ}
-	case "/eth/v1/beacon/blinded_blocks":
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer:  setInitialPublishBlindedBlockPostRequest,
-			OnPostDeserializeRequestBodyIntoContainer: preparePublishedBlindedBlock,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleSubmitBlindedBlockSSZ}
-	case "/eth/v1/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &BlockResponseJson{}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZ}
-	case "/eth/v2/beacon/blocks/{block_id}":
-		endpoint.GetResponse = &BlockV2ResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeV2Block,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconBlockSSZV2}
-	case "/eth/v1/beacon/blocks/{block_id}/attestations":
-		endpoint.GetResponse = &BlockAttestationsResponseJson{}
-	case "/eth/v1/beacon/blinded_blocks/{block_id}":
-		endpoint.GetResponse = &BlindedBlockResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeBlindedBlock,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBlindedBeaconBlockSSZ}
 	case "/eth/v1/beacon/pool/attester_slashings":
 		endpoint.PostRequest = &AttesterSlashingJson{}
 		endpoint.GetResponse = &AttesterSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/pool/proposer_slashings":
 		endpoint.PostRequest = &ProposerSlashingJson{}
 		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
-	case "/eth/v1/beacon/pool/bls_to_execution_changes":
-		endpoint.PostRequest = &SubmitBLSToExecutionChangesRequest{}
-		endpoint.GetResponse = &BLSToExecutionChangesPoolResponseJson{}
-		endpoint.Err = &IndexedVerificationFailureErrorJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreDeserializeRequestBodyIntoContainer: wrapBLSChangesArray,
-		}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
-	case "/eth/v1/node/identity":
-		endpoint.GetResponse = &IdentityResponseJson{}
-	case "/eth/v1/node/peers":
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "state", Enum: true}, {Name: "direction", Enum: true}}
-		endpoint.GetResponse = &PeersResponseJson{}
-	case "/eth/v1/node/peers/{peer_id}":
-		endpoint.RequestURLLiterals = []string{"peer_id"}
-		endpoint.GetResponse = &PeerResponseJson{}
-	case "/eth/v1/node/peer_count":
-		endpoint.GetResponse = &PeerCountResponseJson{}
-	case "/eth/v1/node/version":
-		endpoint.GetResponse = &VersionResponseJson{}
-	case "/eth/v1/node/health":
-		// Use default endpoint
-	case "/eth/v1/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &BeaconStateResponseJson{}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZ}
-	case "/eth/v2/debug/beacon/states/{state_id}":
-		endpoint.GetResponse = &BeaconStateV2ResponseJson{}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeV2State,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleGetBeaconStateSSZV2}
 	case "/eth/v1/debug/beacon/heads":
 		endpoint.GetResponse = &ForkChoiceHeadsResponseJson{}
 	case "/eth/v2/debug/beacon/heads":

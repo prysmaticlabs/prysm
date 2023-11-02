@@ -162,3 +162,12 @@ message EventPayloadAttributeV2 {
         engine.v1.PayloadAttributesV2 payload_attributes = 8;
   }
 }
+
+message EventBlobSidecar {
+  bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  uint64 index = 2;
+  uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+  // calculated from the kzg commitment
+  bytes versioned_hash = 4 [(ethereum.eth.ext.ssz_size) = "32"];
+  bytes kzg_commitment = 5 [(ethereum.eth.ext.ssz_size) = "48"];
+}

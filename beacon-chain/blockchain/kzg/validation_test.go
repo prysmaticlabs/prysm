@@ -9,7 +9,7 @@ import (
 )
 
 func TestIsDataAvailable(t *testing.T) {
-	sidecars := make([]*ethpb.BlobSidecar, 0)
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, 0)
 	commitments := make([][]byte, 0)
 	require.NoError(t, IsDataAvailable(commitments, sidecars))
 }

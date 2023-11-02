@@ -112,7 +112,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		if isActive && belowEjectionBalance {
 			// Here is fine to do a quadratic loop since this should
 			// barely happen
-			maxExitEpoch, churn := validators.ValidatorsMaxExitEpochAndChurn(state)
+			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state)
 			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
 			if err != nil && !errors.Is(err, validators.ValidatorAlreadyExitedErr) {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
@@ -137,9 +137,10 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 		return nil, errors.Wrap(err, "could not get active validator count")
 	}
 
-	churnLimit, err := helpers.ValidatorChurnLimit(activeValidatorCount)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not get churn limit")
+	churnLimit := helpers.ValidatorActivationChurnLimit(activeValidatorCount)
+
+	if state.Version() >= version.Deneb {
+		churnLimit = helpers.ValidatorActivationChurnLimitDeneb(activeValidatorCount)
 	}
 
 	// Prevent churn limit cause index out of bound.
@@ -348,7 +349,7 @@ func ProcessRandaoMixesReset(state state.BeaconState) (state.BeaconState, error)
 	if err != nil {
 		return nil, err
 	}
-	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), mix); err != nil {
+	if err := state.UpdateRandaoMixesAtIndex(uint64(nextEpoch%randaoMixLength), [32]byte(mix)); err != nil {
 		return nil, err
 	}
 

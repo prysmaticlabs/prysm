@@ -40,7 +40,7 @@ var (
 		Usage:   "overrides withdrawal command to only verify whether requests are in the pool and does not submit withdrawal requests",
 	}
 
-	ValidatorHostFlag = &cli.StringFlag{
+	HostFlag = &cli.StringFlag{
 		Name:    "validator-host",
 		Aliases: []string{"vch"},
 		Usage:   "host:port for validator client.",
@@ -125,13 +125,13 @@ var Commands = []*cli.Command{
 			},
 			{
 				Name:    "proposer-settings",
-				Aliases: []string{"w"},
+				Aliases: []string{"ps"},
 				Usage:   "Display or recreate currently used proposer settings.",
 				Flags: []cli.Flag{
 					cmd.ConfigFileFlag,
 					DefaultFeeRecipientFlag,
 					TokenFlag,
-					ValidatorHostFlag,
+					HostFlag,
 					ProposerSettingsOutputFlag,
 				},
 				Before: func(cliCtx *cli.Context) error {
@@ -182,7 +182,7 @@ var Commands = []*cli.Command{
 					return features.ConfigureValidator(cliCtx)
 				},
 				Action: func(cliCtx *cli.Context) error {
-					if err := accounts.AccountsExit(cliCtx, os.Stdin); err != nil {
+					if err := accounts.Exit(cliCtx, os.Stdin); err != nil {
 						log.WithError(err).Fatal("Could not perform voluntary exit")
 					}
 					return nil

@@ -14,6 +14,8 @@ import (
 	"text/template"
 
 	"github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 
@@ -148,14 +150,14 @@ func (c *Client) GetFork(ctx context.Context, stateId StateOrBlockId) (*ethpb.Fo
 	if err != nil {
 		return nil, errors.Wrapf(err, "error requesting fork by state id = %s", stateId)
 	}
-	fr := &forkResponse{}
-	dataWrapper := &struct{ Data *forkResponse }{Data: fr}
+	fr := &shared.Fork{}
+	dataWrapper := &struct{ Data *shared.Fork }{Data: fr}
 	err = json.Unmarshal(body, dataWrapper)
 	if err != nil {
 		return nil, errors.Wrap(err, "error decoding json response in GetFork")
 	}
 
-	return fr.Fork()
+	return fr.ToConsensus()
 }
 
 // GetForkSchedule retrieve all forks, past present and future, of which this node is aware.
@@ -283,7 +285,7 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 
 // SubmitChangeBLStoExecution calls a beacon API endpoint to set the withdrawal addresses based on the given signed messages.
 // If the API responds with something other than OK there will be failure messages associated to the corresponding request message.
-func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apimiddleware.SignedBLSToExecutionChangeJson) error {
+func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*shared.SignedBLSToExecutionChange) error {
 	u := c.BaseURL().ResolveReference(&url.URL{Path: changeBLStoExecutionPath})
 	body, err := json.Marshal(request)
 	if err != nil {
@@ -322,12 +324,12 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*apim
 
 // GetBLStoExecutionChanges gets all the set withdrawal messages in the node's operation pool.
 // Returns a struct representation of json response.
-func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.BLSToExecutionChangesPoolResponseJson, error) {
+func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*beacon.BLSToExecutionChangesPoolResponse, error) {
 	body, err := c.Get(ctx, changeBLStoExecutionPath)
 	if err != nil {
 		return nil, err
 	}
-	poolResponse := &apimiddleware.BLSToExecutionChangesPoolResponseJson{}
+	poolResponse := &beacon.BLSToExecutionChangesPoolResponse{}
 	err = json.Unmarshal(body, poolResponse)
 	if err != nil {
 		return nil, err
@@ -335,40 +337,8 @@ func (c *Client) GetBLStoExecutionChanges(ctx context.Context) (*apimiddleware.B
 	return poolResponse, nil
 }
 
-type forkResponse struct {
-	PreviousVersion string `json:"previous_version"`
-	CurrentVersion  string `json:"current_version"`
-	Epoch           string `json:"epoch"`
-}
-
-func (f *forkResponse) Fork() (*ethpb.Fork, error) {
-	epoch, err := strconv.ParseUint(f.Epoch, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	cSlice, err := hexutil.Decode(f.CurrentVersion)
-	if err != nil {
-		return nil, err
-	}
-	if len(cSlice) != 4 {
-		return nil, fmt.Errorf("got %d byte version for CurrentVersion, expected 4 bytes. hex=%s", len(cSlice), f.CurrentVersion)
-	}
-	pSlice, err := hexutil.Decode(f.PreviousVersion)
-	if err != nil {
-		return nil, err
-	}
-	if len(pSlice) != 4 {
-		return nil, fmt.Errorf("got %d byte version, expected 4 bytes. version hex=%s", len(pSlice), f.PreviousVersion)
-	}
-	return &ethpb.Fork{
-		CurrentVersion:  cSlice,
-		PreviousVersion: pSlice,
-		Epoch:           primitives.Epoch(epoch),
-	}, nil
-}
-
 type forkScheduleResponse struct {
-	Data []forkResponse
+	Data []shared.Fork
 }
 
 func (fsr *forkScheduleResponse) OrderedForkSchedule() (forks.OrderedSchedule, error) {

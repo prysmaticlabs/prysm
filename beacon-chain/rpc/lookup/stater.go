@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -94,6 +95,7 @@ type BeaconDbStater struct {
 //   - "justified"
 //   - <slot>
 //   - <hex encoded state root with '0x' prefix>
+//   - <state root>
 func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.BeaconState, error) {
 	var (
 		s   state.BeaconState
@@ -141,7 +143,15 @@ func (p *BeaconDbStater) State(ctx context.Context, stateId []byte) (state.Beaco
 			return nil, errors.Wrap(err, "could not get justified state")
 		}
 	default:
-		if len(stateId) == 32 {
+		stringId := strings.ToLower(string(stateId))
+		if len(stringId) >= 2 && stringId[:2] == "0x" {
+			decoded, parseErr := hexutil.Decode(string(stateId))
+			if parseErr != nil {
+				e := NewStateIdParseError(parseErr)
+				return nil, &e
+			}
+			s, err = p.stateByRoot(ctx, decoded)
+		} else if len(stateId) == 32 {
 			s, err = p.stateByRoot(ctx, stateId)
 		} else {
 			slotNumber, parseErr := strconv.ParseUint(stateIdString, 10, 64)

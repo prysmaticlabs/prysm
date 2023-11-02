@@ -157,6 +157,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
+		log.WithFields(logrus.Fields{
+			"blockRoot": fmt.Sprintf("%#x", bytesutil.Trunc(arg.headRoot[:])),
+			"headSlot":  headBlk.Slot(),
+			"payloadID": fmt.Sprintf("%#x", bytesutil.Trunc(payloadID[:])),
+		}).Info("Forkchoice updated with payload attributes for proposal")
 		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
 	} else if hasAttr && payloadID == nil && !features.Get().PrepareAllPayloads {
 		log.WithFields(logrus.Fields{
@@ -390,7 +395,7 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 			return err
 		}
 		// No op if the sidecar does not exist.
-		if err := s.cfg.BeaconDB.DeleteBlobSidecar(ctx, root); err != nil {
+		if err := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err != nil {
 			return err
 		}
 	}
@@ -405,8 +410,13 @@ func kzgCommitmentsToVersionedHashes(body interfaces.ReadOnlyBeaconBlockBody) ([
 
 	versionedHashes := make([]common.Hash, len(commitments))
 	for i, commitment := range commitments {
-		versionedHashes[i] = sha256.Sum256(commitment)
-		versionedHashes[i][0] = blobCommitmentVersionKZG
+		versionedHashes[i] = ConvertKzgCommitmentToVersionedHash(commitment)
 	}
 	return versionedHashes, nil
+}
+
+func ConvertKzgCommitmentToVersionedHash(commitment []byte) common.Hash {
+	versionedHash := sha256.Sum256(commitment)
+	versionedHash[0] = blobCommitmentVersionKZG
+	return versionedHash
 }

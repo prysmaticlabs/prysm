@@ -79,7 +79,7 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 
 func NewBlobsidecar() *ethpb.SignedBlobSidecar {
 	return &ethpb.SignedBlobSidecar{
-		Message: &ethpb.BlobSidecar{
+		Message: &ethpb.DeprecatedBlobSidecar{
 			BlockRoot:       make([]byte, fieldparams.RootLength),
 			BlockParentRoot: make([]byte, fieldparams.RootLength),
 			Blob:            make([]byte, fieldparams.BlobLength),
@@ -398,10 +398,16 @@ func generateVoluntaryExits(
 	currentEpoch := time.CurrentEpoch(bState)
 
 	voluntaryExits := make([]*ethpb.SignedVoluntaryExit, numExits)
+	valMap := map[primitives.ValidatorIndex]bool{}
 	for i := 0; i < len(voluntaryExits); i++ {
 		valIndex, err := randValIndex(bState)
 		if err != nil {
 			return nil, err
+		}
+		// Retry if validator exit already exists.
+		if valMap[valIndex] {
+			i--
+			continue
 		}
 		exit := &ethpb.SignedVoluntaryExit{
 			Exit: &ethpb.VoluntaryExit{
@@ -414,6 +420,7 @@ func generateVoluntaryExits(
 			return nil, err
 		}
 		voluntaryExits[i] = exit
+		valMap[valIndex] = true
 	}
 	return voluntaryExits, nil
 }

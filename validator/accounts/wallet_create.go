@@ -13,7 +13,7 @@ import (
 )
 
 // WalletCreate creates wallet specified by configuration options.
-func (acm *AccountsCLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error) {
+func (acm *CLIManager) WalletCreate(ctx context.Context) (*wallet.Wallet, error) {
 	w := wallet.New(&wallet.Config{
 		WalletDir:      acm.walletDir,
 		KeymanagerKind: acm.keymanagerKind,

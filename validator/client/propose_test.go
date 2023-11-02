@@ -33,7 +33,6 @@ import (
 type mocks struct {
 	validatorClient *validatormock.MockValidatorClient
 	nodeClient      *validatormock.MockNodeClient
-	slasherClient   *validatormock.MockSlasherClient
 	signfunc        func(context.Context, *validatorpb.SignRequest) (bls.Signature, error)
 }
 
@@ -78,7 +77,6 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 	m := &mocks{
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 		nodeClient:      validatormock.NewMockNodeClient(ctrl),
-		slasherClient:   validatormock.NewMockSlasherClient(ctrl),
 		signfunc: func(ctx context.Context, req *validatorpb.SignRequest) (bls.Signature, error) {
 			return mockSignature{}, nil
 		},
@@ -89,7 +87,6 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		db:                             valDB,
 		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
 		validatorClient:                m.validatorClient,
-		slashingProtectionClient:       m.slasherClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
@@ -595,7 +592,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 						blk.Block.Body.Graffiti = graffiti
 						return &ethpb.BeaconBlockAndBlobsDeneb{
 							Block: blk.Block,
-							Blobs: []*ethpb.BlobSidecar{
+							Blobs: []*ethpb.DeprecatedBlobSidecar{
 								{
 									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
 									Index:           1,
@@ -966,7 +963,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'b'},
+			want: bytesutil.PadTo([]byte{'b'}, 32),
 		},
 		{name: "use default file graffiti",
 			v: &validator{
@@ -975,7 +972,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'c'},
+			want: bytesutil.PadTo([]byte{'c'}, 32),
 		},
 		{name: "use random file graffiti",
 			v: &validator{
@@ -985,7 +982,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					Default: "c",
 				},
 			},
-			want: []byte{'d'},
+			want: bytesutil.PadTo([]byte{'d'}, 32),
 		},
 		{name: "use validator file graffiti, has validator",
 			v: &validator{
@@ -999,7 +996,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					},
 				},
 			},
-			want: []byte{'g'},
+			want: bytesutil.PadTo([]byte{'g'}, 32),
 		},
 		{name: "use validator file graffiti, none specified",
 			v: &validator{
@@ -1044,7 +1041,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 			Default: "d",
 		},
 	}
-	for _, want := range [][]byte{{'a'}, {'b'}, {'c'}, {'d'}, {'d'}} {
+	for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
 		got, err := v.getGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)

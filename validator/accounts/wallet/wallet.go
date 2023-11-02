@@ -378,7 +378,7 @@ func (w *Wallet) FileNameAtPath(_ context.Context, filePath, fileName string) (s
 // for reading if it exists at the wallet path.
 func (w *Wallet) ReadKeymanagerConfigFromDisk(_ context.Context) (io.ReadCloser, error) {
 	configFilePath := filepath.Join(w.accountsPath, KeymanagerConfigFileName)
-	if !file.FileExists(configFilePath) {
+	if !file.Exists(configFilePath) {
 		return nil, fmt.Errorf("no keymanager config file found at path: %s", w.accountsPath)
 	}
 	w.configFilePath = configFilePath

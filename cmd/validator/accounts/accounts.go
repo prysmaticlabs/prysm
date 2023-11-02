@@ -188,7 +188,7 @@ var Commands = &cli.Command{
 			},
 			Action: func(cliCtx *cli.Context) error {
 				log.Info("This command will be deprecated in the future in favor of `prysmctl validator exit`")
-				if err := AccountsExit(cliCtx, os.Stdin); err != nil {
+				if err := Exit(cliCtx, os.Stdin); err != nil {
 					log.WithError(err).Fatal("Could not perform voluntary exit")
 				}
 				return nil

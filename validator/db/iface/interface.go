@@ -19,7 +19,7 @@ var _ = ValidatorDB(&kv.Store{})
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
 type ValidatorDB interface {
 	io.Closer
-	backup.BackupExporter
+	backup.Exporter
 	DatabasePath() string
 	ClearDB() error
 	RunUpMigrations(ctx context.Context) error
