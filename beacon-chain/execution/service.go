@@ -466,7 +466,17 @@ func (s *Service) handleETH1FollowDistance() {
 	fiveMinutesTimeout := prysmTime.Now().Add(-5 * time.Minute)
 	// check that web3 client is syncing
 	if time.Unix(int64(s.latestEth1Data.BlockTime), 0).Before(fiveMinutesTimeout) {
-		log.Warn("Execution client is not syncing")
+		// get info from execution client
+		syncStatus, err := s.EthSyncing(ctx)
+		if err != nil {
+			log.Warn(err)
+		} else {
+			fields := logrus.Fields{}
+			for k, v := range syncStatus {
+				fields[k] = v
+			}
+			log.WithFields(fields).Info("the latest eht1 data if 5 minutes ago, please check execution client")
+		}
 	}
 	if !s.chainStartData.Chainstarted {
 		if err := s.processChainStartFromBlockNum(ctx, big.NewInt(int64(s.latestEth1Data.LastRequestedBlock))); err != nil {

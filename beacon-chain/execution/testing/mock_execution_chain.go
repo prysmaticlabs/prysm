@@ -226,6 +226,29 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 			Number: h.Number,
 			Time:   h.Time,
 		}
+	case "eth_syncing":
+		result := map[string]interface{}{
+			"currentBlock":        "0x3cf522",
+			"healedBytecodeBytes": "0x0",
+			"healedBytecodes":     "0x0",
+			"healedTrienodes":     "0x0",
+			"healingBytecode":     "0x0",
+			"healingTrienodes":    "0x0",
+			"highestBlock":        "0x3e0e41",
+			"startingBlock":       "0x3cbed5",
+			"syncedAccountBytes":  "0x0",
+			"syncedAccounts":      "0x0",
+			"syncedBytecodeBytes": "0x0",
+			"syncedBytecodes":     "0x0",
+			"syncedStorage":       "0x0",
+			"syncedStorageBytes":  "0x0",
+		}
+		assertedObj, ok := obj.(*interface{})
+		if !ok {
+			return errors.Errorf("wrong argument type provided: %T", obj)
+		}
+		*assertedObj = result
+		return nil
 	}
 	return nil
 }

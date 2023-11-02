@@ -65,6 +65,8 @@ const (
 	BlockByHashMethod = "eth_getBlockByHash"
 	// BlockByNumberMethod request string for JSON-RPC.
 	BlockByNumberMethod = "eth_getBlockByNumber"
+	// EthSyncingMethod request string for JSON-RPC.
+	EthSyncingMethod = "eth_syncing"
 	// GetPayloadBodiesByHashV1 v1 request string for JSON-RPC.
 	GetPayloadBodiesByHashV1 = "engine_getPayloadBodiesByHashV1"
 	// GetPayloadBodiesByRangeV1 v1 request string for JSON-RPC.
@@ -481,6 +483,24 @@ func (s *Service) HeaderByNumber(ctx context.Context, number *big.Int) (*types.H
 		err = ethereum.NotFound
 	}
 	return hdr, err
+}
+
+// EthSyncing returns an object with data about the sync status or false.
+func (s *Service) EthSyncing(ctx context.Context) (map[string]interface{}, error) {
+	var result interface{}
+	err := s.rpcClient.CallContext(ctx, &result, EthSyncingMethod)
+	if err != nil {
+		return nil, err
+	}
+	if r, ok := result.(bool); ok && r == false {
+		return nil, errors.New("execution client is not syncing, please check")
+	}
+	// sync status
+	if r, ok := result.(map[string]interface{}); ok {
+		return r, nil
+	}
+	// unknown response
+	return nil, errors.Errorf("execution client responses unknown result:%+v", result)
 }
 
 // GetPayloadBodiesByHash returns the relevant payload bodies for the provided block hash.
