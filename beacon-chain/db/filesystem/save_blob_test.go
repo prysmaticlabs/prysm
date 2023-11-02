@@ -86,7 +86,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 			sidecar := findTestSidecarsByFileName(t, testSidecars, f.Name())
 			require.NotNil(t, sidecar)
 			// Compare the original Sidecar and the saved Sidecar.
-			require.DeepEqual(t, sidecar, savedSidecar)
+			require.DeepSSZEqual(t, sidecar, savedSidecar)
 		}
 	})
 
