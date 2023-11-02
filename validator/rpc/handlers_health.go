@@ -89,7 +89,7 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// StreamValidatorLogs from the validator client via a gRPC server-side stream.
+// StreamValidatorLogs from the validator client via server-side events.
 func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.health.StreamValidatorLogs")
 	defer span.End()
