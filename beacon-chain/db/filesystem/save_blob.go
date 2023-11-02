@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 type BlobStorage struct {
@@ -18,7 +18,7 @@ type BlobStorage struct {
 }
 
 // SaveBlobData saves blobs given a list of sidecars.
-func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
+func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 	if len(sidecars) == 0 {
 		return errors.New("no blob data to save")
 	}
@@ -69,7 +69,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 	return nil
 }
 
-func (bs *BlobStorage) sidecarFileKey(sidecar *ethpb.BlobSidecar) string {
+func (bs *BlobStorage) sidecarFileKey(sidecar *eth.BlobSidecar) string {
 	return path.Join(bs.baseDir, fmt.Sprintf(
 		"%d_%x_%d_%x.blob",
 		sidecar.Slot,
@@ -80,7 +80,7 @@ func (bs *BlobStorage) sidecarFileKey(sidecar *ethpb.BlobSidecar) string {
 }
 
 // checkDataIntegrity checks the data integrity by comparing the original ethpb.BlobSidecar.
-func checkDataIntegrity(sidecar *ethpb.BlobSidecar, filePath string) error {
+func checkDataIntegrity(sidecar *eth.BlobSidecar, filePath string) error {
 	sidecarData, err := ssz.MarshalSSZ(sidecar)
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize sidecar data")

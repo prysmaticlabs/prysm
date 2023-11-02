@@ -14,8 +14,8 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
@@ -24,7 +24,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	t.Run("NoBlobData", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
-		err := bs.SaveBlobData([]*ethpb.BlobSidecar{})
+		err := bs.SaveBlobData([]*eth.BlobSidecar{})
 		require.ErrorContains(t, "no blob data to save", err)
 	})
 
@@ -45,7 +45,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		err = os.WriteFile(blobPath, existingSidecarData, os.ModePerm)
 		require.NoError(t, err)
 
-		err = bs.SaveBlobData([]*ethpb.BlobSidecar{existingSidecar})
+		err = bs.SaveBlobData([]*eth.BlobSidecar{existingSidecar})
 		require.NoError(t, err)
 
 		content, err := os.ReadFile(blobPath)
@@ -53,7 +53,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 
 		// Deserialize the BlobSidecar from the saved file data.
 		var savedSidecar ssz.Unmarshaler
-		savedSidecar = &ethpb.BlobSidecar{}
+		savedSidecar = &eth.BlobSidecar{}
 		err = savedSidecar.UnmarshalSSZ(content)
 		require.NoError(t, err)
 
@@ -78,7 +78,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 
 			// Deserialize the BlobSidecar from the saved file data.
 			var savedSidecar ssz.Unmarshaler
-			savedSidecar = &ethpb.BlobSidecar{}
+			savedSidecar = &eth.BlobSidecar{}
 			err = savedSidecar.UnmarshalSSZ(content)
 			require.NoError(t, err)
 
@@ -93,7 +93,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	t.Run("OverwriteBlobWithDifferentContent", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
-		originalSidecar := []*ethpb.BlobSidecar{testSidecars[0]}
+		originalSidecar := []*eth.BlobSidecar{testSidecars[0]}
 		// Save the original sidecar
 		err := bs.SaveBlobData(originalSidecar)
 		require.NoError(t, err)
@@ -107,7 +107,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	})
 }
 
-func findTestSidecarsByFileName(t *testing.T, testSidecars []*ethpb.BlobSidecar, fileName string) *ethpb.BlobSidecar {
+func findTestSidecarsByFileName(t *testing.T, testSidecars []*eth.BlobSidecar, fileName string) *eth.BlobSidecar {
 	parts := strings.SplitN(fileName, ".", 2)
 	require.Equal(t, 2, len(parts))
 	// parts[0] contains the substring before the first period
@@ -160,15 +160,15 @@ func TestCheckDataIntegrity(t *testing.T) {
 	require.NotEqual(t, wrongChecksum, hex.EncodeToString(checksum))
 }
 
-func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
-	blobSidecars := make([]*ethpb.BlobSidecar, n)
+func generateBlobSidecars(t *testing.T, n uint64) []*eth.BlobSidecar {
+	blobSidecars := make([]*eth.BlobSidecar, n)
 	for i := uint64(0); i < n; i++ {
 		blobSidecars[i] = generateBlobSidecar(t, i)
 	}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
+func generateBlobSidecar(t *testing.T, index uint64) *eth.BlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	kzgProof := make([]byte, 48)
 	_, err = rand.Read(kzgProof)
 	require.NoError(t, err)
-	return &ethpb.BlobSidecar{
+	return &eth.BlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
 		Index:           index,
 		Slot:            100,
