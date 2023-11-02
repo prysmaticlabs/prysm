@@ -68,7 +68,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 
 	buff := struct {
 		root [32]byte
-		scs  []*eth.BlobSidecar
+		scs  []*eth.DeprecatedBlobSidecar
 	}{}
 	for i := range blobIdents {
 		if err := ctx.Err(); err != nil {

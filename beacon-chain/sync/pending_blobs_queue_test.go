@@ -70,7 +70,7 @@ func TestPendingBlobSidecars(t *testing.T) {
 
 	// Test Add
 	parentRoot := [32]byte{1, 2, 3}
-	blob := &eth.SignedBlobSidecar{Message: &eth.BlobSidecar{}}
+	blob := &eth.SignedBlobSidecar{Message: &eth.DeprecatedBlobSidecar{}}
 	blob.Message.BlockParentRoot = parentRoot[:]
 	cache.add(blob)
 	_, exists := cache.blobSidecars[parentRoot]

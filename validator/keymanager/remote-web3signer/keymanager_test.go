@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/internal"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1/mock"
 	"github.com/stretchr/testify/assert"
@@ -300,11 +301,11 @@ func TestKeymanager_AddPublicKeys(t *testing.T) {
 	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
 	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, StatusImported, status.Status)
+		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
 	statuses = km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, StatusDuplicate, status.Status)
+		require.Equal(t, keymanager.StatusDuplicate, status.Status)
 	}
 }
 
@@ -325,16 +326,16 @@ func TestKeymanager_DeletePublicKeys(t *testing.T) {
 	publicKeys := []string{"0xa2b5aaad9c6efefe7bb9b1243a043404f3362937cfb6b31833929833173f476630ea2cfeb0d9ddf15f97ca8685948820"}
 	statuses := km.AddPublicKeys(publicKeys)
 	for _, status := range statuses {
-		require.Equal(t, StatusImported, status.Status)
+		require.Equal(t, keymanager.StatusImported, status.Status)
 	}
 
 	s := km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, StatusDeleted, status.Status)
+		require.Equal(t, keymanager.StatusDeleted, status.Status)
 	}
 
 	s = km.DeletePublicKeys(publicKeys)
 	for _, status := range s {
-		require.Equal(t, StatusNotFound, status.Status)
+		require.Equal(t, keymanager.StatusNotFound, status.Status)
 	}
 }

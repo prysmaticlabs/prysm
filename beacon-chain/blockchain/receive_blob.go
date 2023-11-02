@@ -13,8 +13,8 @@ func (s *Service) sendNewBlobEvent(root [32]byte, index uint64) {
 }
 
 // ReceiveBlob saves the blob to database and sends the new event
-func (s *Service) ReceiveBlob(ctx context.Context, b *ethpb.BlobSidecar) error {
-	if err := s.cfg.BeaconDB.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{b}); err != nil {
+func (s *Service) ReceiveBlob(ctx context.Context, b *ethpb.DeprecatedBlobSidecar) error {
+	if err := s.cfg.BeaconDB.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{b}); err != nil {
 		return err
 	}
 

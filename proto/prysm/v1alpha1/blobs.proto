@@ -25,10 +25,10 @@ option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
 message BlobSidecars {
-    repeated BlobSidecar sidecars = 1;
+    repeated DeprecatedBlobSidecar sidecars = 1;
 }
 
-message BlobSidecar {
+message DeprecatedBlobSidecar {
         bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
         uint64 index = 2;
         uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
@@ -40,7 +40,7 @@ message BlobSidecar {
 }
 
 message SignedBlobSidecar {
-        BlobSidecar message = 1;
+        DeprecatedBlobSidecar message = 1;
         bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
