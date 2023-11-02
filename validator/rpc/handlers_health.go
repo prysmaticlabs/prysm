@@ -67,12 +67,12 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 		default:
 			logResp, err := client.Recv()
 			if err != nil {
-				http2.HandleError(w, "could not receive beacon logs from stream", http.StatusInternalServerError)
+				http2.HandleError(w, "could not receive beacon logs from stream: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			jsonResp, err := json.Marshal(logResp)
 			if err != nil {
-				http2.HandleError(w, "could not encode log response into JSON", http.StatusInternalServerError)
+				http2.HandleError(w, "could not encode log response into JSON: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -122,12 +122,12 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonLogs, err := json.Marshal(ls)
 	if err != nil {
-		http2.HandleError(w, "Failed to marshal logs", http.StatusInternalServerError)
+		http2.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = fmt.Fprintf(w, "%s\n", jsonLogs)
 	if err != nil {
-		http2.HandleError(w, "Error sending data", http.StatusInternalServerError)
+		http2.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	flusher.Flush()
@@ -141,12 +141,12 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonLogs, err = json.Marshal(ls)
 			if err != nil {
-				http2.HandleError(w, "Failed to marshal logs", http.StatusInternalServerError)
+				http2.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			_, err = fmt.Fprintf(w, "%s\n", jsonLogs)
 			if err != nil {
-				http2.HandleError(w, "Error sending data", http.StatusInternalServerError)
+				http2.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -154,7 +154,7 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 		case <-s.ctx.Done():
 			return
 		case err := <-sub.Err():
-			http2.HandleError(w, fmt.Sprintf("Subscriber error: %v", err), http.StatusInternalServerError)
+			http2.HandleError(w, "Subscriber error: "+err.Error(), http.StatusInternalServerError)
 			return
 		case <-ctx.Done():
 			return
