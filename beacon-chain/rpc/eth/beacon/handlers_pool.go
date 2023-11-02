@@ -464,7 +464,7 @@ func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &GetAttesterSlashingsResponse{Data: slashings})
 }
 
-// SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
+// SubmitAttesterSlashing submits an attester slashing object to node's pool and
 // if passes validation node MUST broadcast it to network.
 func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
@@ -531,7 +531,7 @@ func (s *Server) GetProposerSlashings(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &GetProposerSlashingsResponse{Data: slashings})
 }
 
-// SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
+// SubmitProposerSlashing submits a proposer slashing object to node's pool and if
 // passes validation node MUST broadcast it to network.
 func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitProposerSlashing")
