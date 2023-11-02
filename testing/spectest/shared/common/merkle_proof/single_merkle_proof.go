@@ -90,9 +90,6 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				localProof, err := blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
 				require.NoError(t, err)
 				require.Equal(t, len(branch), len(localProof))
-				for _, root := range localProof {
-					t.Logf("%#x", root)
-				}
 				for i, root := range localProof {
 					require.DeepEqual(t, branch[i], root)
 				}

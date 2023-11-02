@@ -13,6 +13,25 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
+func Test_MerkleProofKZGCommitment_Altair(t *testing.T) {
+	kzgs := make([][]byte, 3)
+	kzgs[0] = make([]byte, 48)
+	_, err := rand.Read(kzgs[0])
+	require.NoError(t, err)
+	kzgs[1] = make([]byte, 48)
+	_, err = rand.Read(kzgs[1])
+	require.NoError(t, err)
+	kzgs[2] = make([]byte, 48)
+	_, err = rand.Read(kzgs[2])
+	require.NoError(t, err)
+	pbBody := &ethpb.BeaconBlockBodyAltair{}
+
+	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
+	require.NoError(t, err)
+	_, err = MerkleProofKZGCommitment(body, 0)
+	require.ErrorIs(t, errInvalidVersion, err)
+}
+
 func Test_MerkleProofKZGCommitment(t *testing.T) {
 	kzgs := make([][]byte, 3)
 	kzgs[0] = make([]byte, 48)
@@ -51,6 +70,8 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
 	require.NoError(t, err)
 	index := 1
+	_, err = MerkleProofKZGCommitment(body, 10)
+	require.ErrorIs(t, errInvalidIndex, err)
 	proof, err := MerkleProofKZGCommitment(body, index)
 	require.NoError(t, err)
 

@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	proofLength   = 17 // The length of a proof for a KZG commitment
 	bodyLength    = 12 // The number of elements in the BeaconBlockBody Container
 	logBodyLength = 4  // The log 2 of bodyLength
 	kzgPosition   = 11 // The index of the KZG commitment list in the Body
@@ -64,8 +63,7 @@ func leavesFromCommitments(commitments [][]byte) [][]byte {
 		copy(chunk[0][:], kzg)
 		copy(chunk[1][:], kzg[field_params.RootLength:])
 		gohashtree.HashChunks(chunk, chunk)
-		leaves[i] = make([]byte, field_params.RootLength)
-		copy(leaves[i], chunk[0][:])
+		leaves[i] = chunk[0][:]
 	}
 	return leaves
 }
