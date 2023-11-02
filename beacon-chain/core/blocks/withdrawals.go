@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -236,7 +235,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not convert bytes to public key")
 		}
 		batch.PublicKeys[i] = publicKey
-		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		htr, err := signing.Data(change.Message.HashTreeRoot, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}
@@ -251,7 +250,7 @@ func BLSChangesSignatureBatch(
 // is from a previous fork.
 func VerifyBLSChangeSignature(
 	st state.ReadOnlyBeaconState,
-	change *ethpbv2.SignedBLSToExecutionChange,
+	change *ethpb.SignedBLSToExecutionChange,
 ) error {
 	c := params.BeaconConfig()
 	domain, err := signing.ComputeDomain(c.DomainBLSToExecutionChange, c.GenesisForkVersion, st.GenesisValidatorsRoot())

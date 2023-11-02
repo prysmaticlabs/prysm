@@ -8,14 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
-func TestBlockRoots_Casting(t *testing.T) {
-	var b [fieldparams.BlockRootsLength][32]byte
-	d := BlockRoots(b)
-	if !reflect.DeepEqual([fieldparams.BlockRootsLength][32]byte(d), b) {
-		t.Errorf("Unequal: %v = %v", d, b)
-	}
-}
-
 func TestBlockRoots_UnmarshalSSZ(t *testing.T) {
 	t.Run("Ok", func(t *testing.T) {
 		d := BlockRoots{}
@@ -70,7 +62,7 @@ func TestBlockRoots_MarshalSSZTo(t *testing.T) {
 }
 
 func TestBlockRoots_MarshalSSZ(t *testing.T) {
-	d := BlockRoots{}
+	d := BlockRoots(make([][32]byte, fieldparams.BlockRootsLength))
 	d[0] = [32]byte{'f', 'o', 'o'}
 	d[1] = [32]byte{'b', 'a', 'r'}
 	b, err := d.MarshalSSZ()
@@ -94,7 +86,7 @@ func TestBlockRoots_SizeSSZ(t *testing.T) {
 
 func TestBlockRoots_Slice(t *testing.T) {
 	a, b, c := [32]byte{'a'}, [32]byte{'b'}, [32]byte{'c'}
-	roots := BlockRoots{}
+	roots := BlockRoots(make([][32]byte, fieldparams.BlockRootsLength))
 	roots[1] = a
 	roots[10] = b
 	roots[100] = c

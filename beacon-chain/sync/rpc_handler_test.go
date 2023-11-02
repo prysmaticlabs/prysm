@@ -41,8 +41,8 @@ func (rt *rpcHandlerTest) testHandler(nh network.StreamHandler, rh rpcHandler, r
 		defer w.Done()
 		nh(stream)
 	}
-	server.BHost.SetStreamHandler(protocol.ID(rt.topic), h)
-	stream, err := client.BHost.NewStream(ctx, server.BHost.ID(), protocol.ID(rt.topic))
+	server.BHost.SetStreamHandler(rt.topic, h)
+	stream, err := client.BHost.NewStream(ctx, server.BHost.ID(), rt.topic)
 	require.NoError(rt.t, err)
 
 	err = rh(ctx, rhi, stream)

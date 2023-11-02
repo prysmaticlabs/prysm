@@ -18,7 +18,7 @@ func RootsArrayHashTreeRoot(vals [][]byte, length uint64) ([32]byte, error) {
 }
 
 func EpochAttestationsRoot(atts []*ethpb.PendingAttestation) ([32]byte, error) {
-	max := uint64(params.BeaconConfig().CurrentEpochAttestationsLength())
+	max := params.BeaconConfig().CurrentEpochAttestationsLength()
 	if uint64(len(atts)) > max {
 		return [32]byte{}, fmt.Errorf("epoch attestation exceeds max length %d", max)
 	}

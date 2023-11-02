@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
@@ -45,6 +46,10 @@ func (s *Store) SaveGenesisData(ctx context.Context, genesisState state.BeaconSt
 
 // LoadGenesis loads a genesis state from a ssz-serialized byte slice, if no genesis exists already.
 func (s *Store) LoadGenesis(ctx context.Context, sb []byte) error {
+	if len(sb) < (1 << 10) {
+		log.WithField("size", fmt.Sprintf("%d bytes", len(sb))).
+			Warn("Genesis state is smaller than one 1Kb. This could be an empty file, git lfs metadata file, or corrupt genesis state.")
+	}
 	vu, err := detect.FromState(sb)
 	if err != nil {
 		return err

@@ -26,7 +26,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	blsmock "github.com/prysmaticlabs/prysm/v4/crypto/bls/common/mock"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -172,7 +171,7 @@ func (*mockKeymanager) ListKeymanagerAccounts(
 }
 
 func (*mockKeymanager) DeleteKeystores(context.Context, [][]byte,
-) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+) ([]*keymanager.KeyStatus, error) {
 	return nil, nil
 }
 
@@ -358,12 +357,14 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
@@ -379,7 +380,11 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 		resp,
 		nil,
 	)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+	prysmBeaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validatorType.Status{validatorType.Active},
+	).Return([]iface.ValidatorCount{}, nil)
 	require.NoError(t, v.WaitForActivation(ctx, nil), "Could not wait for activation")
 	require.LogsContain(t, hook, "Validator activated")
 }
@@ -389,12 +394,14 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	defer ctrl.Finish()
 	validatorClient := validatormock.NewMockValidatorClient(ctrl)
 	beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+	prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 
 	kp := randKeypair(t)
 	v := validator{
-		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
-		beaconClient:    beaconClient,
+		validatorClient:   validatorClient,
+		keyManager:        newMockKeymanager(t, kp),
+		beaconClient:      beaconClient,
+		prysmBeaconClient: prysmBeaconClient,
 	}
 	resp := generateMockStatusResponse([][]byte{kp.pub[:]})
 	resp.Statuses[0].Status.Status = ethpb.ValidatorStatus_ACTIVE
@@ -403,7 +410,11 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(clientStream, nil)
-	beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil).Times(2)
+	prysmBeaconClient.EXPECT().GetValidatorCount(
+		gomock.Any(),
+		"head",
+		[]validatorType.Status{validatorType.Active},
+	).Return([]iface.ValidatorCount{}, nil).Times(2)
 	clientStream.EXPECT().Recv().Return(
 		&ethpb.ValidatorActivationResponse{},
 		nil,
@@ -2199,7 +2210,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewMockSignature(ctrl)
+	signature := blsmock.NewSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{})
 
 	v := validator{
@@ -2285,7 +2296,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewMockSignature(ctrl)
+	signature := blsmock.NewSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{}).Times(2)
 
 	v := validator{
@@ -2410,7 +2421,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewMockSignature(ctrl)
+	signature := blsmock.NewSignature(ctrl)
 
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},

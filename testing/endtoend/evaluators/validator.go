@@ -2,18 +2,22 @@ package evaluators
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
-	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2eparams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
@@ -109,7 +113,6 @@ func validatorsAreActive(ec *types.EvaluationContext, conns ...*grpc.ClientConn)
 func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	conn := conns[0]
 	client := ethpb.NewBeaconChainClient(conn)
-	debugClient := ethpbservice.NewBeaconDebugClient(conn)
 	validatorRequest := &ethpb.GetValidatorParticipationRequest{}
 	participation, err := client.GetValidatorParticipation(context.Background(), validatorRequest)
 	if err != nil {
@@ -128,34 +131,62 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		expected = 0.95
 	}
 	if partRate < expected {
-		st, err := debugClient.GetBeaconStateV2(context.Background(), &eth.BeaconStateRequestV2{StateId: []byte("head")})
+		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeGatewayPort)
+		resp := debug.GetBeaconStateV2Response{}
+		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param
 		if err != nil {
-			return errors.Wrap(err, "failed to get beacon state")
+			return err
 		}
-		var missSrcVals []uint64
-		var missTgtVals []uint64
-		var missHeadVals []uint64
-		switch obj := st.Data.State.(type) {
-		case *eth.BeaconStateContainer_Phase0State:
+		if httpResp.StatusCode != http.StatusOK {
+			e := http2.DefaultErrorJson{}
+			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
+				return err
+			}
+			return fmt.Errorf("%s (status code %d)", e.Message, e.Code)
+		}
+		if err = json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
+			return err
+		}
+
+		var respPrevEpochParticipation []string
+		switch resp.Version {
+		case version.String(version.Phase0):
 		// Do Nothing
-		case *eth.BeaconStateContainer_AltairState:
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.AltairState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
+		case version.String(version.Altair):
+			st := &debug.BeaconStateAltair{}
+			if err = json.Unmarshal(resp.Data, st); err != nil {
+				return err
 			}
-		case *eth.BeaconStateContainer_BellatrixState:
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.BellatrixState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
+			respPrevEpochParticipation = st.PreviousEpochParticipation
+		case version.String(version.Bellatrix):
+			st := &debug.BeaconStateBellatrix{}
+			if err = json.Unmarshal(resp.Data, st); err != nil {
+				return err
 			}
-		case *eth.BeaconStateContainer_CapellaState:
-			missSrcVals, missTgtVals, missHeadVals, err = findMissingValidators(obj.CapellaState.PreviousEpochParticipation)
-			if err != nil {
-				return errors.Wrap(err, "failed to get missing validators")
+			respPrevEpochParticipation = st.PreviousEpochParticipation
+		case version.String(version.Capella):
+			st := &debug.BeaconStateCapella{}
+			if err = json.Unmarshal(resp.Data, st); err != nil {
+				return err
 			}
+			respPrevEpochParticipation = st.PreviousEpochParticipation
 		default:
-			return fmt.Errorf("unrecognized version: %v", st.Version)
+			return fmt.Errorf("unrecognized version %s", resp.Version)
 		}
+
+		prevEpochParticipation := make([]byte, len(respPrevEpochParticipation))
+		for i, p := range respPrevEpochParticipation {
+			n, err := strconv.ParseUint(p, 10, 64)
+			if err != nil {
+				return err
+			}
+			prevEpochParticipation[i] = byte(n)
+		}
+		missSrcVals, missTgtVals, missHeadVals, err := findMissingValidators(prevEpochParticipation)
+		if err != nil {
+			return errors.Wrap(err, "failed to get missing validators")
+		}
+
 		return fmt.Errorf(
 			"validator participation was below for epoch %d, expected %f, received: %f."+
 				" Missing Source,Target and Head validators are %v, %v, %v",

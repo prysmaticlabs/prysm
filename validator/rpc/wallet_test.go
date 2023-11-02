@@ -1,9 +1,12 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 
@@ -14,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -48,7 +50,7 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 	require.NoError(t, err)
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -58,31 +60,16 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		walletDir:             defaultWalletPath,
 		validatorService:      vs,
 	}
-	req := &pb.CreateWalletRequest{
+
+	_, err = s.CreateWallet(ctx, &pb.CreateWalletRequest{
 		Keymanager:     pb.KeymanagerKind_IMPORTED,
 		WalletPassword: strongPass,
-	}
-	_, err = s.CreateWallet(ctx, req)
+	})
 	require.NoError(t, err)
-
-	numKeystores := 5
-	password := "12345678"
-	encodedKeystores := make([]string, numKeystores)
-	passwords := make([]string, numKeystores)
-	for i := 0; i < numKeystores; i++ {
-		enc, err := json.Marshal(createRandomKeystore(t, password))
-		encodedKeystores[i] = string(enc)
-		require.NoError(t, err)
-		passwords[i] = password
-	}
-
-	importReq := &ethpbservice.ImportKeystoresRequest{
-		Keystores: encodedKeystores,
-		Passwords: passwords,
-	}
 
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
+	passwords := make([]string, 3)
 	for i := 0; i < len(keystores); i++ {
 		privKey, err := bls.RandKey()
 		require.NoError(t, err)
@@ -101,10 +88,33 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		encodedFile, err := json.MarshalIndent(item, "", "\t")
 		require.NoError(t, err)
 		keystores[i] = string(encodedFile)
+		if i < len(passwords) {
+			passwords[i] = strongPass
+		}
 	}
-	importReq.Keystores = keystores
-	_, err = s.ImportKeystores(ctx, importReq)
+
+	importReq := &ImportKeystoresRequest{
+		Keystores: keystores,
+		Passwords: passwords,
+	}
+
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(importReq)
 	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/keystores"), &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ImportKeystores(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &ImportKeystoresResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+	for _, status := range resp.Data {
+		require.Equal(t, keymanager.StatusImported, status.Status)
+	}
+	keys, err := km.FetchValidatingPublicKeys(ctx)
+	require.NoError(t, err)
+	require.Equal(t, len(keys), len(keystores))
 }
 
 func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
@@ -198,7 +208,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 
 	// Password File should have been written.
 	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, true, file.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.Exists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(localWalletDir, "somepassword")
@@ -325,7 +335,7 @@ func TestServer_WalletConfig(t *testing.T) {
 	s.wallet = w
 	vs, err := client.NewValidatorService(ctx, &client.Config{
 		Wallet: w,
-		Validator: &mock.MockValidator{
+		Validator: &mock.Validator{
 			Km: km,
 		},
 	})
@@ -351,7 +361,7 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 
 	// Expected a silent failure if the feature flag is not enabled.
 	passwordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	assert.Equal(t, false, file.FileExists(passwordFilePath))
+	assert.Equal(t, false, file.Exists(passwordFilePath))
 	resetCfg = features.InitWithReset(&features.Flags{
 		WriteWalletPasswordOnWebOnboarding: true,
 	})
@@ -360,9 +370,27 @@ func Test_writeWalletPasswordToDisk(t *testing.T) {
 	require.NoError(t, err)
 
 	// File should have been written.
-	assert.Equal(t, true, file.FileExists(passwordFilePath))
+	assert.Equal(t, true, file.Exists(passwordFilePath))
 
 	// Attempting to write again should trigger an error.
 	err = writeWalletPasswordToDisk(walletDir, "somepassword")
 	require.NotNil(t, err)
+}
+
+func createRandomKeystore(t testing.TB, password string) *keymanager.Keystore {
+	encryptor := keystorev4.New()
+	id, err := uuid.NewRandom()
+	require.NoError(t, err)
+	validatingKey, err := bls.RandKey()
+	require.NoError(t, err)
+	pubKey := validatingKey.PublicKey().Marshal()
+	cryptoFields, err := encryptor.Encrypt(validatingKey.Marshal(), password)
+	require.NoError(t, err)
+	return &keymanager.Keystore{
+		Crypto:      cryptoFields,
+		Pubkey:      fmt.Sprintf("%x", pubKey),
+		ID:          id.String(),
+		Version:     encryptor.Version(),
+		Description: encryptor.Name(),
+	}
 }

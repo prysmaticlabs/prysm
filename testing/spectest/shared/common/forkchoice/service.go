@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
@@ -33,8 +34,8 @@ func startChainService(t testing.TB,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
 ) *blockchain.Service {
-	db := testDB.SetupDB(t)
 	ctx := context.Background()
+	db := testDB.SetupDB(t)
 	require.NoError(t, db.SaveBlock(ctx, block))
 	r, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -71,6 +72,8 @@ func startChainService(t testing.TB,
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
+	// force start kzg context here until Deneb fork epoch is decided
+	require.NoError(t, kzg.Start())
 	require.NoError(t, service.StartFromSavedState(st))
 	return service
 }
@@ -101,10 +104,6 @@ func (m *engineMock) ForkchoiceUpdatedV2(context.Context, *pb.ForkchoiceState, p
 
 func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
 	return nil, nil
-}
-
-func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.TransitionConfiguration) error {
-	return nil
 }
 
 func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {

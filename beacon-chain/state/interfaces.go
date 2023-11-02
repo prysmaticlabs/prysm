@@ -23,7 +23,7 @@ type BeaconState interface {
 	Copy() BeaconState
 	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	StateProver
+	Prover
 	json.Marshaler
 }
 
@@ -35,7 +35,7 @@ type SpecParametersProvider interface {
 }
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
-type StateProver interface {
+type Prover interface {
 	FinalizedRootProof(ctx context.Context) ([][]byte, error)
 	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
@@ -237,7 +237,7 @@ type WriteOnlyBalances interface {
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
 	SetRandaoMixes(val [][]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.

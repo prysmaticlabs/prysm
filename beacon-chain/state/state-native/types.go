@@ -11,6 +11,7 @@ import (
 // Ensure type BeaconState below implements BeaconState interface.
 var _ state.BeaconState = (*BeaconState)(nil)
 
+// initialization for tests
 func init() {
 	fieldMap = make(map[types.FieldIndex]types.DataType)
 	// Initialize the fixed sized arrays.

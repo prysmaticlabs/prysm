@@ -2,12 +2,15 @@ package sync
 
 import (
 	"context"
+	"fmt"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -43,7 +46,7 @@ func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots 
 		if err != nil {
 			return err
 		}
-		if err := s.requestPendingBlobs(ctx, blk.Block(), blkRoot[:], id); err != nil {
+		if err := s.requestPendingBlobs(ctx, blk, blkRoot, id); err != nil {
 			return err
 		}
 	}
@@ -114,41 +117,92 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 	return nil
 }
 
-func (s *Service) requestPendingBlobs(ctx context.Context, b interfaces.ReadOnlyBeaconBlock, br []byte, id peer.ID) error {
-	// Block before deneb has no blob.
-	if b.Version() < version.Deneb {
+// requestPendingBlobs handles the request for pending blobs based on the given beacon block.
+func (s *Service) requestPendingBlobs(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, peerID peer.ID) error {
+	if block.Version() < version.Deneb {
+		return nil // Block before deneb has no blob.
+	}
+
+	commitments, err := block.Block().Body().BlobKzgCommitments()
+	if err != nil {
+		return err
+	}
+
+	if len(commitments) == 0 {
+		return nil // No operation if the block has no blob commitments.
+	}
+
+	contextByte, err := ContextByteVersionsForValRoot(s.cfg.chain.GenesisValidatorsRoot())
+	if err != nil {
+		return err
+	}
+
+	request, err := s.constructPendingBlobsRequest(ctx, blockRoot, len(commitments))
+	if err != nil {
+		return err
+	}
+
+	return s.sendAndSaveBlobSidecars(ctx, request, contextByte, peerID, block)
+}
+
+// sendAndSaveBlobSidecars sends the blob request and saves received sidecars.
+func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.BlobSidecarsByRootReq, contextByte ContextByteVersions, peerID peer.ID, block interfaces.ReadOnlySignedBeaconBlock) error {
+	if len(request) == 0 {
 		return nil
 	}
-	c, err := b.Body().BlobKzgCommitments()
-	if err != nil {
-		return err
-	}
-	// No op if the block has no blob commitments.
-	if len(c) == 0 {
-		return nil
-	}
 
-	// Build request for blob sidecars.
-	blobId := make([]*eth.BlobIdentifier, len(c))
-	for i := range c {
-		blobId[i] = &eth.BlobIdentifier{Index: uint64(i), BlockRoot: br}
-	}
-
-	ctxByte, err := ContextByteVersionsForValRoot(s.cfg.chain.GenesisValidatorsRoot())
-	if err != nil {
-		return err
-	}
-	req := types.BlobSidecarsByRootReq(blobId)
-
-	// Send request to a random peer.
-	blobSidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, id, ctxByte, &req)
+	sidecars, err := SendBlobSidecarByRoot(ctx, s.cfg.clock, s.cfg.p2p, peerID, contextByte, &request)
 	if err != nil {
 		return err
 	}
 
-	for _, sidecar := range blobSidecars {
-		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar gossip RPC")
+	RoBlock, err := blocks.NewROBlock(block)
+	if err != nil {
+		return err
+	}
+	if len(sidecars) != len(request) {
+		return fmt.Errorf("received %d blob sidecars, expected %d for RPC", len(sidecars), len(request))
+	}
+	for _, sidecar := range sidecars {
+		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
+			return err
+		}
+		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar RPC")
 	}
 
-	return s.cfg.beaconDB.SaveBlobSidecar(ctx, blobSidecars)
+	return s.cfg.beaconDB.SaveBlobSidecar(ctx, sidecars)
+}
+
+// constructPendingBlobsRequest creates a request for BlobSidecars by root, considering blobs already in DB.
+func (s *Service) constructPendingBlobsRequest(ctx context.Context, blockRoot [32]byte, count int) (types.BlobSidecarsByRootReq, error) {
+	knownBlobs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, blockRoot)
+	if err != nil && !errors.Is(err, db.ErrNotFound) {
+		return nil, err
+	}
+
+	knownIndices := indexSetFromBlobs(knownBlobs)
+	requestedIndices := filterUnknownIndices(knownIndices, count, blockRoot)
+
+	return requestedIndices, nil
+}
+
+// Helper function to create a set of known indices.
+func indexSetFromBlobs(blobs []*eth.DeprecatedBlobSidecar) map[uint64]struct{} {
+	indices := make(map[uint64]struct{})
+	for _, blob := range blobs {
+		indices[blob.Index] = struct{}{}
+	}
+	return indices
+}
+
+// Helper function to filter out known indices.
+func filterUnknownIndices(knownIndices map[uint64]struct{}, count int, blockRoot [32]byte) []*eth.BlobIdentifier {
+	var ids []*eth.BlobIdentifier
+	for i := uint64(0); i < uint64(count); i++ {
+		if _, exists := knownIndices[i]; exists {
+			continue
+		}
+		ids = append(ids, &eth.BlobIdentifier{Index: i, BlockRoot: blockRoot[:]})
+	}
+	return ids
 }

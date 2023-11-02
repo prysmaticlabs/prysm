@@ -15,6 +15,7 @@ import (
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	prysmsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/verify"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
@@ -23,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
 	p2ppb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -382,7 +382,7 @@ func lowestSlotNeedsBlob(retentionStart primitives.Slot, bwb []blocks2.BlockWith
 	return nil
 }
 
-func sortBlobs(blobs []*p2ppb.BlobSidecar) []*p2ppb.BlobSidecar {
+func sortBlobs(blobs []*p2ppb.DeprecatedBlobSidecar) []*p2ppb.DeprecatedBlobSidecar {
 	sort.Slice(blobs, func(i, j int) bool {
 		if blobs[i].Slot == blobs[j].Slot {
 			return blobs[i].Index < blobs[j].Index
@@ -395,11 +395,8 @@ func sortBlobs(blobs []*p2ppb.BlobSidecar) []*p2ppb.BlobSidecar {
 
 var errBlobVerification = errors.New("peer unable to serve aligned BlobSidecarsByRange and BeaconBlockSidecarsByRange responses")
 var errMissingBlobsForBlockCommitments = errors.Wrap(errBlobVerification, "blobs unavailable for processing block with kzg commitments")
-var errMismatchedBlobBlockRoot = errors.Wrap(errBlobVerification, "BlockRoot in BlobSidecar does not match the expected root")
-var errMissingBlobIndex = errors.Wrap(errBlobVerification, "missing expected blob index")
-var errMismatchedBlobCommitments = errors.Wrap(errBlobVerification, "commitments at given slot, root and index do not match")
 
-func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.BlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
+func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb.DeprecatedBlobSidecar, blobWindowStart primitives.Slot) ([]blocks2.BlockWithVerifiedBlobs, error) {
 	// Assumes bwb has already been sorted by sortedBlockWithVerifiedBlobSlice.
 	blobs = sortBlobs(blobs)
 	blobi := 0
@@ -422,7 +419,7 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 			}
 			return nil, err
 		}
-		bb.Blobs = make([]*p2ppb.BlobSidecar, len(commits))
+		bb.Blobs = make([]*p2ppb.DeprecatedBlobSidecar, len(commits))
 		for ci := range commits {
 			// There are more expected commitments in this block, but we've run out of blobs from the response
 			// (out-of-bound error guard).
@@ -430,23 +427,8 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []*p2ppb
 				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
 			}
 			bl := blobs[blobi]
-			if bl.Slot != block.Slot() {
-				return nil, missingCommitError(bb.Block.Root(), bb.Block.Block().Slot(), commits[ci:])
-			}
-			if bytesutil.ToBytes32(bl.BlockRoot) != bb.Block.Root() {
-				return nil, errors.Wrapf(errMismatchedBlobBlockRoot,
-					"block root %#x != BlobSidecar.BlockRoot %#x at slot %d", bb.Block.Root(), bl.BlockRoot, block.Slot())
-			}
-			if ci != int(bl.Index) {
-				return nil, errors.Wrapf(errMissingBlobIndex,
-					"did not receive blob index %d for block root %#x at slot %d", ci, bb.Block.Root(), block.Slot())
-			}
-			ec := bytesutil.ToBytes48(commits[ci])
-			ac := bytesutil.ToBytes48(bl.KzgCommitment)
-			if ec != ac {
-				return nil, errors.Wrapf(errMismatchedBlobCommitments,
-					"commitment %#x != block commitment %#x, at index %d for block root %#x at slot %d ",
-					ac, ec, bl.Index, bb.Block.Root(), block.Slot())
+			if err := verify.BlobAlignsWithBlock(bl, bb.Block); err != nil {
+				return nil, err
 			}
 			bb.Blobs[ci] = bl
 			blobi += 1
@@ -520,7 +502,7 @@ func (f *blocksFetcher) requestBlocks(
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
 
-func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.BlobSidecar, error) {
+func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecarsByRangeRequest, pid peer.ID) ([]*p2ppb.DeprecatedBlobSidecar, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}

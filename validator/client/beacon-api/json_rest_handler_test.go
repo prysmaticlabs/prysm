@@ -138,6 +138,17 @@ func TestGetRestJsonResponse_Error(t *testing.T) {
 			timeout:              1,
 			responseJson:         &beacon.GetGenesisResponse{},
 		},
+		{
+			name:                 "resource not found",
+			funcHandler:          resourceNotFoundHandler,
+			expectedErrorMessage: "error 404: Resource not found",
+			expectedErrorJson: &apimiddleware.DefaultErrorJson{
+				Code:    404,
+				Message: "Resource not found",
+			},
+			timeout:      time.Second * 5,
+			responseJson: &beacon.GetGenesisResponse{},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -420,8 +431,12 @@ func httpErrorJsonHandler(statusCode int, errorMessage string) func(w http.Respo
 	}
 }
 
-func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
+func resourceNotFoundHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)
+}
+
+func invalidJsonErrHandler(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusInternalServerError)
 	_, err := w.Write([]byte("foo"))
 	if err != nil {
 		panic(err)

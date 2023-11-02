@@ -162,7 +162,7 @@ const (
 }`
 	AltairBlock = `{
   "message": {
-    "slot": "1",
+    "slot": "2",
     "proposer_index": "1",
     "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
     "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
@@ -204,7 +204,7 @@ const (
             "attesting_indices": [
               "1"
             ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+            "signature": "0xabb0124c7574f281a293f4185cad3cb22681d520917ce46665243eacb051000d8bacf75e1451870ca6b3b9e6c9d41a7b02ead2685a84188a4fafd3825daf6a989625d719ccd2d83a40101f4a453fca62878c890eca622363f9ddb8f367a91e84",
             "data": {
               "slot": "1",
               "index": "1",
@@ -223,18 +223,18 @@ const (
             "attesting_indices": [
               "1"
             ],
-            "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+            "signature": "0xabb0124c7574f281a293f4185cad3cb22681d520917ce46665243eacb051000d8bacf75e1451870ca6b3b9e6c9d41a7b02ead2685a84188a4fafd3825daf6a989625d719ccd2d83a40101f4a453fca62878c890eca622363f9ddb8f367a91e84",
             "data": {
               "slot": "1",
               "index": "1",
               "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
               "source": {
                 "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f3"
               },
               "target": {
                 "epoch": "1",
-                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+                "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f3"
               }
             }
           }
@@ -242,18 +242,18 @@ const (
       ],
       "attestations": [
         {
-          "aggregation_bits": "0xffffffffffffffffffffffffffffffffff3f",
-          "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+          "aggregation_bits": "0x07",
+          "signature": "0xabb0124c7574f281a293f4185cad3cb22681d520917ce46665243eacb051000d8bacf75e1451870ca6b3b9e6c9d41a7b02ead2685a84188a4fafd3825daf6a989625d719ccd2d83a40101f4a453fca62878c890eca622363f9ddb8f367a91e84",
           "data": {
-            "slot": "1",
-            "index": "1",
+            "slot": "0",
+            "index": "0",
             "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
             "source": {
               "epoch": "1",
               "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
             },
             "target": {
-              "epoch": "1",
+              "epoch": "0",
               "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
             }
           }

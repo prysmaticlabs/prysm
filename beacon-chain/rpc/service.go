@@ -81,7 +81,7 @@ type Service struct {
 
 // Config options for the beacon node RPC server.
 type Config struct {
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.PayloadReconstructor
 	Host                          string
 	Port                          string
 	CertFlag                      string
@@ -211,15 +211,15 @@ func (s *Service) Start() {
 		BeaconDB:         s.cfg.BeaconDB,
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 	}
-
+	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 	rewardsServer := &rewards.Server{
 		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-		ReplayerBuilder:       ch,
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
 		Stater:                stater,
 		HeadFetcher:           s.cfg.HeadFetcher,
+		BlockRewardFetcher:    rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
@@ -304,6 +304,7 @@ func (s *Service) Start() {
 		BlockBuilder:           s.cfg.BlockBuilder,
 		OperationNotifier:      s.cfg.OperationNotifier,
 		CoreService:            coreService,
+		BlockRewardFetcher:     rewardFetcher,
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServerV1.GetAggregateAttestation).Methods(http.MethodGet)
@@ -350,6 +351,12 @@ func (s *Service) Start() {
 	}
 
 	s.cfg.Router.HandleFunc("/eth/v1/node/syncing", nodeServerEth.GetSyncStatus).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/identity", nodeServerEth.GetIdentity).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers/{peer_id}", nodeServerEth.GetPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peers", nodeServerEth.GetPeers).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/peer_count", nodeServerEth.GetPeerCount).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/version", nodeServerEth.GetVersion).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/node/health", nodeServerEth.GetHealth).Methods(http.MethodGet)
 
 	nodeServerPrysm := &nodeprysm.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
@@ -432,22 +439,35 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", httpServer.GetValidatorCount).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/committees", beaconChainServerV1.GetCommittees).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/fork", beaconChainServerV1.GetStateFork).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/root", beaconChainServerV1.GetStateRoot).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/sync_committees", beaconChainServerV1.GetSyncCommittees).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/randao", beaconChainServerV1.GetRandao).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks", beaconChainServerV1.PublishBlock).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlock).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks", beaconChainServerV1.PublishBlockV2).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/beacon/blinded_blocks", beaconChainServerV1.PublishBlindedBlockV2).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}", beaconChainServerV1.GetBlock).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v2/beacon/blocks/{block_id}", beaconChainServerV1.GetBlockV2).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/attestations", beaconChainServerV1.GetBlockAttestations).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/blinded_blocks/{block_id}", beaconChainServerV1.GetBlindedBlock).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blocks/{block_id}/root", beaconChainServerV1.GetBlockRoot).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconChainServerV1.ListAttestations).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/attestations", beaconChainServerV1.SubmitAttestations).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.ListVoluntaryExits).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/voluntary_exits", beaconChainServerV1.SubmitVoluntaryExit).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/sync_committees", beaconChainServerV1.SubmitSyncCommitteeSignatures).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.ListBLSToExecutionChanges).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/pool/bls_to_execution_changes", beaconChainServerV1.SubmitBLSToExecutionChanges).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers", beaconChainServerV1.GetBlockHeaders).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers/{block_id}", beaconChainServerV1.GetBlockHeader).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", beaconChainServerV1.GetDepositContract).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/genesis", beaconChainServerV1.GetGenesis).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/finality_checkpoints", beaconChainServerV1.GetFinalityCheckpoints).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators", beaconChainServerV1.GetValidators).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators/{validator_id}", beaconChainServerV1.GetValidator).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
-	ethpbservice.RegisterBeaconNodeServer(s.grpcServer, nodeServerEth)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
@@ -479,6 +499,8 @@ func (s *Service) Start() {
 			FinalizationFetcher:   s.cfg.FinalizationFetcher,
 			ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
 		}
+		s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateSSZ).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateV2).Methods(http.MethodGet)
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
 		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}

@@ -60,7 +60,7 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		// Contains all keys in targetPubKeys but not in retrievedPubKeys
 		var missingPubKeys [][]byte
 
-		statuses := []*ethpb.ValidatorActivationResponse_Status{}
+		var statuses []*ethpb.ValidatorActivationResponse_Status
 
 		for index, publicKey := range c.ValidatorActivationRequest.PublicKeys {
 			stringPubKey := hexutil.Encode(publicKey)
@@ -74,12 +74,12 @@ func (c *waitForActivationClient) Recv() (*ethpb.ValidatorActivationResponse, er
 		}
 
 		for _, data := range stateValidators.Data {
-			pubkey, err := hexutil.Decode(data.Validator.PublicKey)
+			pubkey, err := hexutil.Decode(data.Validator.Pubkey)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse validator public key")
 			}
 
-			stringRetrievedPubKeys[data.Validator.PublicKey] = struct{}{}
+			stringRetrievedPubKeys[data.Validator.Pubkey] = struct{}{}
 
 			index, err := strconv.ParseUint(data.Index, 10, 64)
 			if err != nil {
