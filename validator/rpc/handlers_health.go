@@ -32,7 +32,7 @@ func (s *Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// StreamBeaconLogs from the beacon node via a gRPC server-side stream.
+// StreamBeaconLogs from the beacon node via server-side events.
 func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	// Wrap service context with a cancel in order to propagate the exiting of
 	// this method properly to the beacon node server.
