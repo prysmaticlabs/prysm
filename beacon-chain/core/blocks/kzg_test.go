@@ -63,3 +63,48 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 	kzgOffset := 54 * fieldparams.MaxBlobCommitmentsPerBlock
 	require.Equal(t, true, trie.VerifyMerkleProof(root[:], chunk[0][:], uint64(index+kzgOffset), proof))
 }
+
+func Benchmark_MerkleProofKZGCommitment(b *testing.B) {
+	kzgs := make([][]byte, 3)
+	kzgs[0] = make([]byte, 48)
+	_, err := rand.Read(kzgs[0])
+	require.NoError(b, err)
+	kzgs[1] = make([]byte, 48)
+	_, err = rand.Read(kzgs[1])
+	require.NoError(b, err)
+	kzgs[2] = make([]byte, 48)
+	_, err = rand.Read(kzgs[2])
+	require.NoError(b, err)
+	pbBody := &ethpb.BeaconBlockBodyDeneb{
+		SyncAggregate: &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+		},
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		BlobKzgCommitments: kzgs,
+	}
+
+	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
+	require.NoError(b, err)
+	index := 1
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, err := MerkleProofKZGCommitment(body, index)
+		require.NoError(b, err)
+	}
+}
