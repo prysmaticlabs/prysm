@@ -72,11 +72,15 @@ func GetSpec(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "config.GetSpec")
 	defer span.End()
 
-	data := prepareConfigSpec()
+	data, err := prepareConfigSpec()
+	if err != nil {
+		http2.HandleError(w, "Could not prepare config spec: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	http2.WriteJson(w, &GetSpecResponse{Data: data})
 }
 
-func prepareConfigSpec() map[string]string {
+func prepareConfigSpec() (map[string]string, error) {
 	data := make(map[string]string)
 	config := *params.BeaconConfig()
 	t := reflect.TypeOf(config)
@@ -106,9 +110,9 @@ func prepareConfigSpec() map[string]string {
 		case reflect.Uint8:
 			data[tagValue] = hexutil.Encode([]byte{uint8(vField.Uint())})
 		default:
-			continue
+			return nil, fmt.Errorf("unsupported config field type: %s", vField.Kind().String())
 		}
 	}
 
-	return data
+	return data, nil
 }
