@@ -9,12 +9,17 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	fssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	consensus_blocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/spectest/shared/common/ssz_static"
 	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
+
+const kzgOffset = 54 * field_params.MaxBlobCommitmentsPerBlock
 
 // SingleMerkleProof is the format used to read spectest Merkle Proof test data.
 type SingleMerkleProof struct {
@@ -73,7 +78,21 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				leaf, err := hex.DecodeString(proof.Leaf[2:])
 				require.NoError(t, err)
 
-				require.Equal(t, true, trie.VerifyMerkleProof(root[:], leaf, proof.LeafIndex, branch))
+				index := proof.LeafIndex
+				require.Equal(t, true, trie.VerifyMerkleProof(root[:], leaf, index, branch))
+				body, err := consensus_blocks.NewBeaconBlockBody(object)
+				if err != nil {
+					return
+				}
+				if index < kzgOffset || index > kzgOffset+field_params.MaxBlobsPerBlock {
+					return
+				}
+				localProof, err := blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
+				require.NoError(t, err)
+				require.Equal(t, len(branch), len(localProof))
+				for i, root := range localProof {
+					require.DeepEqual(t, branch[i], root)
+				}
 			})
 		}
 	}
