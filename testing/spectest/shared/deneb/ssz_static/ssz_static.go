@@ -15,7 +15,7 @@ import (
 
 // RunSSZStaticTests executes "ssz_static" tests.
 func RunSSZStaticTests(t *testing.T, config string) {
-	common.RunSSZStaticTests(t, config, "deneb", unmarshalledSSZ, customHtr)
+	common.RunSSZStaticTests(t, config, "deneb", UnmarshalledSSZ, customHtr)
 }
 
 func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR {
@@ -32,8 +32,8 @@ func customHtr(t *testing.T, htrs []common.HTR, object interface{}) []common.HTR
 	return htrs
 }
 
-// unmarshalledSSZ unmarshalls serialized input.
-func unmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
+// UnmarshalledSSZ unmarshalls serialized input.
+func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (interface{}, error) {
 	var obj interface{}
 	switch folderName {
 	case "ExecutionPayload":
