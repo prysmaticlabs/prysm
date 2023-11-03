@@ -42,16 +42,8 @@ type V2ForkChoiceHeadsResponseJson struct {
 	Data []*V2ForkChoiceHeadJson `json:"data"`
 }
 
-type ForkScheduleResponseJson struct {
-	Data []*ForkJson `json:"data"`
-}
-
 type DepositContractResponseJson struct {
 	Data *DepositContractJson `json:"data"`
-}
-
-type SpecResponseJson struct {
-	Data interface{} `json:"data"`
 }
 
 type ProduceBlockResponseJson struct {

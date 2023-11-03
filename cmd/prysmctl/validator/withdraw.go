@@ -97,7 +97,8 @@ func callWithdrawalEndpoints(ctx context.Context, host string, request []*shared
 	if err != nil {
 		return err
 	}
-	forkEpoch, ok := spec.Data["CAPELLA_FORK_EPOCH"]
+	data := spec.Data.(map[string]interface{})
+	forkEpoch, ok := data["CAPELLA_FORK_EPOCH"].(string)
 	if !ok {
 		return errors.New("Configs used on beacon node do not contain CAPELLA_FORK_EPOCH")
 	}

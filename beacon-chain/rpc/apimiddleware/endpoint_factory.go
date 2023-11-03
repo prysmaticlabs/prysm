@@ -22,8 +22,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/debug/beacon/heads",
 		"/eth/v2/debug/beacon/heads",
 		"/eth/v1/debug/fork_choice",
-		"/eth/v1/config/fork_schedule",
-		"/eth/v1/config/spec",
 		"/eth/v1/events",
 		"/eth/v1/validator/blocks/{slot}",
 		"/eth/v2/validator/blocks/{slot}",
@@ -52,10 +50,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.Hooks = apimiddleware.HookCollection{
 			OnPreSerializeMiddlewareResponseIntoJson: prepareForkChoiceResponse,
 		}
-	case "/eth/v1/config/fork_schedule":
-		endpoint.GetResponse = &ForkScheduleResponseJson{}
-	case "/eth/v1/config/spec":
-		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
 	case "/eth/v1/validator/blocks/{slot}":
