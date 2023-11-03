@@ -10,11 +10,9 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1",
     visibility = ["//visibility:public"],
     deps = [
-        "//config/fieldparams:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//encoding/ssz:go_default_library",
         "//network/forks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
