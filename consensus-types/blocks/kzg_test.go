@@ -28,7 +28,7 @@ func Test_MerkleProofKZGCommitment_Altair(t *testing.T) {
 	body, err := NewBeaconBlockBody(pbBody)
 	require.NoError(t, err)
 	_, err = MerkleProofKZGCommitment(body, 0)
-	require.ErrorIs(t, errInvalidVersion, err)
+	require.ErrorIs(t, errUnsupportedBeaconBlockBody, err)
 }
 
 func Test_MerkleProofKZGCommitment(t *testing.T) {

@@ -18,8 +18,7 @@ const (
 )
 
 var (
-	errInvalidVersion = errors.New("BeaconBlockBody version not supported")
-	errInvalidIndex   = errors.New("index out of bounds")
+	errInvalidIndex = errors.New("index out of bounds")
 )
 
 // MerkleProofKZGCommitment constructs a Merkle proof of inclusion of the KZG
@@ -27,7 +26,7 @@ var (
 func MerkleProofKZGCommitment(body interfaces.ReadOnlyBeaconBlockBody, index int) ([][]byte, error) {
 	bodyVersion := body.Version()
 	if bodyVersion < version.Deneb {
-		return nil, errInvalidVersion
+		return nil, errUnsupportedBeaconBlockBody
 	}
 	commitments, err := body.BlobKzgCommitments()
 	if err != nil {
