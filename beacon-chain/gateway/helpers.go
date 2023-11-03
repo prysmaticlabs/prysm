@@ -56,9 +56,6 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 			ethpbservice.RegisterBeaconValidatorHandler,
 			ethpbservice.RegisterEventsHandler,
 		}
-		if enableDebugRPCEndpoints {
-			ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
-		}
 		ethMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 				Marshaler: &gwruntime.JSONPb{
