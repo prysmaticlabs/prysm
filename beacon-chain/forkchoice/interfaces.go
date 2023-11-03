@@ -6,8 +6,8 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 // BalancesByRooter is a handler to obtain the effective balances of the state
@@ -62,7 +62,7 @@ type Getter interface {
 	NodeCount() int
 	HighestReceivedBlockSlot() primitives.Slot
 	ReceivedBlocksLastEpoch() (uint64, error)
-	ForkChoiceDump(context.Context) (*v1.ForkChoiceDump, error)
+	ForkChoiceDump(context.Context) (*forkchoice2.Dump, error)
 	Weight(root [32]byte) (uint64, error)
 	Tips() ([][32]byte, []primitives.Slot)
 	IsOptimistic(root [32]byte) (bool, error)
