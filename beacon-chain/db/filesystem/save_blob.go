@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -42,7 +43,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 
 		// Create a partial file and write the serialized data to it.
 		partialFilePath := blobPath + ".partial"
-		partialFile, err := os.Create(partialFilePath)
+		partialFile, err := os.Create(filepath.Clean(partialFilePath))
 		if err != nil {
 			return errors.Wrap(err, "failed to create partial file")
 		}
