@@ -583,7 +583,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			},
 		},
 		{
-			name:    "deneb block and blobs",
+			name:    "deneb block",
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Deneb{
@@ -592,35 +592,13 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 						blk.Block.Body.Graffiti = graffiti
 						return &ethpb.BeaconBlockAndBlobsDeneb{
 							Block: blk.Block,
-							Blobs: []*ethpb.DeprecatedBlobSidecar{
-								{
-									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
-									Index:           1,
-									Slot:            2,
-									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot"), 32),
-									ProposerIndex:   3,
-									Blob:            bytesutil.PadTo([]byte("blob"), fieldparams.BlobLength),
-									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment"), 48),
-									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof"), 48),
-								},
-								{
-									BlockRoot:       bytesutil.PadTo([]byte("blockRoot1"), 32),
-									Index:           4,
-									Slot:            5,
-									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot1"), 32),
-									ProposerIndex:   6,
-									Blob:            bytesutil.PadTo([]byte("blob1"), fieldparams.BlobLength),
-									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment1"), 48),
-									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof1"), 48),
-								},
-							},
 						}
 					}(),
 				},
 			},
 		},
 		{
-			name:    "deneb blind block and blobs",
+			name:    "deneb blind block",
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
@@ -629,28 +607,6 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 						blk.Message.Body.Graffiti = graffiti
 						return &ethpb.BlindedBeaconBlockAndBlobsDeneb{
 							Block: blk.Message,
-							Blobs: []*ethpb.BlindedBlobSidecar{
-								{
-									BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
-									Index:           1,
-									Slot:            2,
-									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot"), 32),
-									ProposerIndex:   3,
-									BlobRoot:        bytesutil.PadTo([]byte("blobRoot"), 32),
-									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment"), 48),
-									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof"), 48),
-								},
-								{
-									BlockRoot:       bytesutil.PadTo([]byte("blockRoot1"), 32),
-									Index:           4,
-									Slot:            5,
-									BlockParentRoot: bytesutil.PadTo([]byte("blockParentRoot1"), 32),
-									ProposerIndex:   6,
-									BlobRoot:        bytesutil.PadTo([]byte("blobRoot1"), 32),
-									KzgCommitment:   bytesutil.PadTo([]byte("kzgCommitment1"), 48),
-									KzgProof:        bytesutil.PadTo([]byte("kzgPRoof1"), 48),
-								},
-							},
 						}
 					}(),
 				},
@@ -690,31 +646,12 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			var sentBlock interfaces.ReadOnlySignedBeaconBlock
 			var err error
 
-			if tt.version == version.Deneb {
-				m.validatorClient.EXPECT().DomainData(
-					gomock.Any(), // ctx
-					gomock.Any(), // epoch
-				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-				m.validatorClient.EXPECT().DomainData(
-					gomock.Any(), // ctx
-					gomock.Any(), // epoch
-				).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)
-			}
-
 			m.validatorClient.EXPECT().ProposeBeaconBlock(
 				gomock.Any(), // ctx
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
 				assert.NoError(t, err, "Unexpected error unwrapping block")
-				if tt.version == version.Deneb {
-					switch {
-					case tt.name == "deneb block and blobs":
-						require.Equal(t, 2, len(block.GetDeneb().Blobs))
-					case tt.name == "deneb blind block and blobs":
-						require.Equal(t, 2, len(block.GetBlindedDeneb().SignedBlindedBlobSidecars))
-					}
-				}
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})
 
