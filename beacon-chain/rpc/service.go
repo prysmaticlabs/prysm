@@ -501,8 +501,9 @@ func (s *Service) Start() {
 		}
 		s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateSSZ).Methods(http.MethodGet)
 		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateV2).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/heads", debugServerV1.GetForkChoiceHeadsV2).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/fork_choice", debugServerV1.GetForkChoice).Methods(http.MethodGet)
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
-		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
 	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)

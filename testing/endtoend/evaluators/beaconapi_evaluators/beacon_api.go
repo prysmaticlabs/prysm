@@ -433,10 +433,10 @@ var requests = map[string]metadata{
 	"/debug/beacon/heads": {
 		basepath: v2PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.V2ForkChoiceHeadsResponseJson{},
+			"json": &debug.GetForkChoiceHeadsV2Response{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.V2ForkChoiceHeadsResponseJson{},
+			"json": &debug.GetForkChoiceHeadsV2Response{},
 		},
 	},
 	"/node/identity": {
