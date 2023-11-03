@@ -77,7 +77,7 @@ func (s ROBlockSlice) Len() int {
 
 type BlockWithVerifiedBlobs struct {
 	Block ROBlock
-	Blobs []*eth.BlobSidecar
+	Blobs []*eth.DeprecatedBlobSidecar
 }
 
 type BlockWithVerifiedBlobsSlice []BlockWithVerifiedBlobs

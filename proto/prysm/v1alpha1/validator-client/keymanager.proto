@@ -90,7 +90,7 @@ message SignRequest {
         // Deneb objects.
         ethereum.eth.v1alpha1.BeaconBlockDeneb block_deneb = 116;
         ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb blinded_block_deneb = 117;
-        ethereum.eth.v1alpha1.BlobSidecar blob = 118;
+        ethereum.eth.v1alpha1.DeprecatedBlobSidecar blob = 118;
         ethereum.eth.v1alpha1.BlindedBlobSidecar blinded_blob = 119;
     }
     reserved 4, 5; // Reserving old, deleted fields.

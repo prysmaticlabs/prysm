@@ -353,7 +353,7 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	}
 
 	// Has indices.
-	blobSidecars := []*ethpb.BlobSidecar{
+	blobSidecars := []*ethpb.DeprecatedBlobSidecar{
 		{Index: 0, BlockRoot: root[:]},
 		{Index: 2, BlockRoot: root[:]},
 	}
@@ -369,7 +369,7 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 }
 
 func TestIndexSetFromBlobs(t *testing.T) {
-	blobs := []*ethpb.BlobSidecar{
+	blobs := []*ethpb.DeprecatedBlobSidecar{
 		{Index: 0},
 		{Index: 1},
 		{Index: 2},

@@ -15,7 +15,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 	tests := []struct {
 		name        string
 		block       interfaces.ReadOnlySignedBeaconBlock
-		blob        *ethpb.BlobSidecar
+		blob        *ethpb.DeprecatedBlobSidecar
 		expectedErr string
 	}{
 		{
@@ -26,7 +26,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{},
+			blob: &ethpb.DeprecatedBlobSidecar{},
 		},
 		{
 			name: "No commitments in block",
@@ -36,7 +36,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{},
+			blob: &ethpb.DeprecatedBlobSidecar{},
 		},
 		{
 			name: "Blob index exceeds max blobs per block",
@@ -47,7 +47,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob:        &ethpb.BlobSidecar{Index: fieldparams.MaxBlobsPerBlock},
+			blob:        &ethpb.DeprecatedBlobSidecar{Index: fieldparams.MaxBlobsPerBlock},
 			expectedErr: "blob index 6 >= max blobs per block 6: incorrect blob index",
 		},
 		{
@@ -60,7 +60,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob:        &ethpb.BlobSidecar{Slot: 1},
+			blob:        &ethpb.DeprecatedBlobSidecar{Slot: 1},
 			expectedErr: "slot 2 != BlobSidecar.Slot 1: BlockSlot in BlobSidecar does not match the expected slot",
 		},
 		{
@@ -72,7 +72,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{BlockRoot: []byte{1}},
+			blob: &ethpb.DeprecatedBlobSidecar{BlockRoot: []byte{1}},
 			expectedErr: "block root 0x0200000000000000000000000000000000000000000000000000000000000000 != " +
 				"BlobSidecar.BlockRoot 0x0100000000000000000000000000000000000000000000000000000000000000 at slot 0",
 		},
@@ -85,7 +85,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{BlockRoot: []byte{2}, BlockParentRoot: []byte{1}},
+			blob: &ethpb.DeprecatedBlobSidecar{BlockRoot: []byte{2}, BlockParentRoot: []byte{1}},
 			expectedErr: "block parent root 0x0000000000000000000000000000000000000000000000000000000000000000 != " +
 				"BlobSidecar.BlockParentRoot 0x0100000000000000000000000000000000000000000000000000000000000000 at slot 0",
 		},
@@ -98,7 +98,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob:        &ethpb.BlobSidecar{BlockRoot: []byte{2}, ProposerIndex: 1},
+			blob:        &ethpb.DeprecatedBlobSidecar{BlockRoot: []byte{2}, ProposerIndex: 1},
 			expectedErr: "proposer index 0 != BlobSidecar.ProposerIndex 1 at slot ",
 		},
 		{
@@ -110,7 +110,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{BlockRoot: []byte{2}, KzgCommitment: []byte{1}},
+			blob: &ethpb.DeprecatedBlobSidecar{BlockRoot: []byte{2}, KzgCommitment: []byte{1}},
 			expectedErr: "commitment 0x010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 != " +
 				"block commitment 0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
 		},
@@ -123,7 +123,7 @@ func TestBlobAlignsWithBlock(t *testing.T) {
 				require.NoError(t, err)
 				return sb
 			}(),
-			blob: &ethpb.BlobSidecar{BlockRoot: []byte{2}},
+			blob: &ethpb.DeprecatedBlobSidecar{BlockRoot: []byte{2}},
 		},
 	}
 

@@ -8,7 +8,7 @@ import (
 )
 
 // coverts a blobs bundle to a sidecar format.
-func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	if blk.Version() < version.Deneb {
 		return nil, nil
 	}
@@ -21,9 +21,9 @@ func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnly
 	}
 	pr := blk.ParentRoot()
 
-	sidecars := make([]*ethpb.BlobSidecar, len(bundle.Blobs))
+	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(bundle.Blobs))
 	for i := 0; i < len(bundle.Blobs); i++ {
-		sidecars[i] = &ethpb.BlobSidecar{
+		sidecars[i] = &ethpb.DeprecatedBlobSidecar{
 			BlockRoot:       r[:],
 			Index:           uint64(i),
 			Slot:            blk.Slot(),

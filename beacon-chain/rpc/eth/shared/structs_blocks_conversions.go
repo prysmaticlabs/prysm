@@ -1218,13 +1218,13 @@ func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb,
 		return nil, errNilValue
 	}
 
-	var blobSidecars []*eth.BlobSidecar
+	var blobSidecars []*eth.DeprecatedBlobSidecar
 	if len(b.BlobSidecars) != 0 {
 		err := VerifyMaxLength(b.BlobSidecars, fieldparams.MaxBlobsPerBlock)
 		if err != nil {
 			return nil, NewDecodeError(err, "BlobSidecars")
 		}
-		blobSidecars = make([]*eth.BlobSidecar, len(b.BlobSidecars))
+		blobSidecars = make([]*eth.DeprecatedBlobSidecar, len(b.BlobSidecars))
 		for i := range b.BlobSidecars {
 			blob, err := b.BlobSidecars[i].ToConsensus()
 			if err != nil {
@@ -1564,7 +1564,7 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	}, nil
 }
 
-func (s *BlobSidecar) ToConsensus() (*eth.BlobSidecar, error) {
+func (s *BlobSidecar) ToConsensus() (*eth.DeprecatedBlobSidecar, error) {
 	if s == nil {
 		return nil, errNilValue
 	}
@@ -1600,7 +1600,7 @@ func (s *BlobSidecar) ToConsensus() (*eth.BlobSidecar, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "KzgProof")
 	}
-	bsc := &eth.BlobSidecar{
+	bsc := &eth.DeprecatedBlobSidecar{
 		BlockRoot:       blockRoot,
 		Index:           index,
 		Slot:            primitives.Slot(slot),
@@ -1676,7 +1676,7 @@ func (s *SignedBlobSidecar) ToConsensus() (*eth.SignedBlobSidecar, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Message.KzgProof")
 	}
-	bsc := &eth.BlobSidecar{
+	bsc := &eth.DeprecatedBlobSidecar{
 		BlockRoot:       blockRoot,
 		Index:           index,
 		Slot:            primitives.Slot(slot),
@@ -2723,7 +2723,7 @@ func SignedBlindedBlobSidecarFromConsensus(b *eth.SignedBlindedBlobSidecar) (*Si
 	}, nil
 }
 
-func BlobSidecarFromConsensus(b *eth.BlobSidecar) (*BlobSidecar, error) {
+func BlobSidecarFromConsensus(b *eth.DeprecatedBlobSidecar) (*BlobSidecar, error) {
 	return &BlobSidecar{
 		BlockRoot:       hexutil.Encode(b.BlockRoot),
 		Index:           fmt.Sprintf("%d", b.Index),

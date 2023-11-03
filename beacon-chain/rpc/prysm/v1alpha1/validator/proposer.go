@@ -255,7 +255,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 				return nil, errors.Wrap(err, "could not extract blobs")
 			}
 		}
-		sidecars := make([]*ethpb.BlobSidecar, len(scs))
+		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
 		for i, sc := range scs {
 			log.WithFields(logrus.Fields{
 				"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),

@@ -27,7 +27,7 @@ func Test_validator_signBlob(t *testing.T) {
 			SignatureDomain: bytesutil.PadTo([]byte("signatureDomain"), 32),
 		}, nil)
 
-	blob := &ethpb.BlobSidecar{
+	blob := &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte("blockRoot"), 32),
 		Index:           1,
 		Slot:            2,
@@ -112,7 +112,7 @@ func Test_validator_signDenebBlobs(t *testing.T) {
 		}, nil).AnyTimes() // Expecting this call multiple times since we're signing multiple blobs
 
 	// Creating a list of Deneb blobs
-	blobs := []*ethpb.BlobSidecar{
+	blobs := []*ethpb.DeprecatedBlobSidecar{
 		{
 			BlockRoot:       bytesutil.PadTo([]byte("blockRoot1"), 32),
 			Index:           1,

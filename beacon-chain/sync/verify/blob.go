@@ -19,7 +19,7 @@ var (
 )
 
 // BlobAlignsWithBlock verifies if the blob aligns with the block.
-func BlobAlignsWithBlock(blob *ethpb.BlobSidecar, block blocks.ROBlock) error {
+func BlobAlignsWithBlock(blob *ethpb.DeprecatedBlobSidecar, block blocks.ROBlock) error {
 	if block.Version() < version.Deneb {
 		return nil
 	}

@@ -26,7 +26,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.Blobs")
 	defer span.End()
 
-	var sidecars []*eth.BlobSidecar
+	var sidecars []*eth.DeprecatedBlobSidecar
 	var root []byte
 
 	indices := parseIndices(r.URL)
@@ -142,7 +142,7 @@ loop:
 	return indices
 }
 
-func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
+func buildSidecarsResponse(sidecars []*eth.DeprecatedBlobSidecar) *SidecarsResponse {
 	resp := &SidecarsResponse{Data: make([]*Sidecar, len(sidecars))}
 	for i, sc := range sidecars {
 		resp.Data[i] = &Sidecar{
