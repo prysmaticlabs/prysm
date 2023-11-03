@@ -14,7 +14,7 @@ func TestDefaultConfig(t *testing.T) {
 		assert.NotNil(t, cfg.EthPbMux.Mux)
 		require.Equal(t, 2, len(cfg.EthPbMux.Patterns))
 		assert.Equal(t, "/internal/eth/v1/", cfg.EthPbMux.Patterns[0])
-		assert.Equal(t, 3, len(cfg.EthPbMux.Registrations))
+		assert.Equal(t, 2, len(cfg.EthPbMux.Registrations))
 		assert.Equal(t, (*gateway.PbMux)(nil), cfg.V1AlphaPbMux)
 	})
 	t.Run("Without Eth API", func(t *testing.T) {
