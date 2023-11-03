@@ -18,6 +18,8 @@ package file_test
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -242,6 +244,26 @@ func TestHashDir(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
 	})
+}
+
+func TestHashFile(t *testing.T) {
+	originalData := []byte("test data")
+	originalChecksum := sha256.Sum256(originalData)
+
+	tempDir := t.TempDir()
+	tempfile, err := os.CreateTemp(tempDir, "testfile")
+	require.NoError(t, err)
+	_, err = tempfile.Write(originalData)
+	require.NoError(t, err)
+	err = tempfile.Close()
+	require.NoError(t, err)
+
+	// Calculate the checksum of the temporary file
+	checksum, err := file.HashFile(tempfile.Name())
+	require.NoError(t, err)
+
+	// Ensure the calculated checksum matches the original checksum
+	require.Equal(t, hex.EncodeToString(originalChecksum[:]), hex.EncodeToString(checksum))
 }
 
 func TestDirFiles(t *testing.T) {

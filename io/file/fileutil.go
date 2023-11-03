@@ -276,23 +276,32 @@ func HashDir(dir string) (string, error) {
 	files = append([]string(nil), files...)
 	sort.Strings(files)
 	for _, file := range files {
-		fd, err := os.Open(filepath.Join(dir, file)) // #nosec G304
+		hf, err := HashFile(filepath.Join(dir, file))
 		if err != nil {
 			return "", err
 		}
-		hf := sha256.New()
-		_, err = io.Copy(hf, fd)
-		if err != nil {
-			return "", err
-		}
-		if err := fd.Close(); err != nil {
-			return "", err
-		}
-		if _, err := fmt.Fprintf(h, "%x  %s\n", hf.Sum(nil), file); err != nil {
+		if _, err := fmt.Fprintf(h, "%x  %s\n", hf, file); err != nil {
 			return "", err
 		}
 	}
 	return "hashdir:" + base64.StdEncoding.EncodeToString(h.Sum(nil)), nil
+}
+
+// HashFile calculates and returns the hash of a file.
+func HashFile(filePath string) ([]byte, error) {
+	f, err := os.Open(filepath.Clean(filePath))
+	if err != nil {
+		return nil, err
+	}
+	hf := sha256.New()
+	if _, err := io.Copy(hf, f); err != nil {
+		return nil, err
+	}
+	err = f.Close()
+	if err != nil {
+		return nil, err
+	}
+	return hf.Sum(nil), nil
 }
 
 // DirFiles returns list of files found within a given directory and its sub-directories.
