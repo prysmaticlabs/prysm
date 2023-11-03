@@ -9,7 +9,6 @@ import (
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
 	"github.com/golang/snappy"
 	fssz "github.com/prysmaticlabs/fastssz"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	consensus_blocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
@@ -87,7 +86,7 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				if index < kzgOffset || index > kzgOffset+field_params.MaxBlobsPerBlock {
 					return
 				}
-				localProof, err := blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
+				localProof, err := consensus_blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
 				require.NoError(t, err)
 				require.Equal(t, len(branch), len(localProof))
 				for i, root := range localProof {

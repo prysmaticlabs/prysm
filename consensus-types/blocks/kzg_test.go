@@ -6,7 +6,6 @@ import (
 
 	"github.com/prysmaticlabs/gohashtree"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	consensus_blocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/container/trie"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -26,7 +25,7 @@ func Test_MerkleProofKZGCommitment_Altair(t *testing.T) {
 	require.NoError(t, err)
 	pbBody := &ethpb.BeaconBlockBodyAltair{}
 
-	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
+	body, err := NewBeaconBlockBody(pbBody)
 	require.NoError(t, err)
 	_, err = MerkleProofKZGCommitment(body, 0)
 	require.ErrorIs(t, errInvalidVersion, err)
@@ -67,7 +66,7 @@ func Test_MerkleProofKZGCommitment(t *testing.T) {
 		BlobKzgCommitments: kzgs,
 	}
 
-	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
+	body, err := NewBeaconBlockBody(pbBody)
 	require.NoError(t, err)
 	index := 1
 	_, err = MerkleProofKZGCommitment(body, 10)
@@ -120,7 +119,7 @@ func Benchmark_MerkleProofKZGCommitment(b *testing.B) {
 		BlobKzgCommitments: kzgs,
 	}
 
-	body, err := consensus_blocks.NewBeaconBlockBody(pbBody)
+	body, err := NewBeaconBlockBody(pbBody)
 	require.NoError(b, err)
 	index := 1
 	b.ResetTimer()
