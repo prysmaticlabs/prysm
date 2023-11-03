@@ -58,7 +58,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "unable to decode randao reveal").Error(), http.StatusBadRequest)
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
 		}
 		randaoReveal = rr
@@ -67,7 +67,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 	if rawGraffiti != "" {
 		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "unable to decode graffiti").Error(), http.StatusBadRequest)
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
 		}
 		graffiti = g

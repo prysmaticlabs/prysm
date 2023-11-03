@@ -2,95 +2,16 @@ package apimiddleware
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"strconv"
-	"strings"
 
-	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	"github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/r3labs/sse/v2"
 )
-
-func prepareSSZRequestForProxying(m *apimiddleware.ApiProxyMiddleware, endpoint apimiddleware.Endpoint, req *http.Request) apimiddleware.ErrorJson {
-	req.URL.Scheme = "http"
-	req.URL.Host = m.GatewayAddress
-	req.RequestURI = ""
-	if errJson := apimiddleware.HandleURLParameters(endpoint.Path, req, endpoint.RequestURLLiterals); errJson != nil {
-		return errJson
-	}
-	if errJson := apimiddleware.HandleQueryParameters(req, endpoint.RequestQueryParams); errJson != nil {
-		return errJson
-	}
-	// We have to add new segments after handling parameters because it changes URL segment indexing.
-	req.URL.Path = "/internal" + req.URL.Path + "/ssz"
-	return nil
-}
-
-func preparePostedSSZData(req *http.Request) apimiddleware.ErrorJson {
-	buf, err := io.ReadAll(req.Body)
-	if err != nil {
-		return apimiddleware.InternalServerErrorWithMessage(err, "could not read body")
-	}
-	j := SszRequestJson{Data: base64.StdEncoding.EncodeToString(buf)}
-	data, err := json.Marshal(j)
-	if err != nil {
-		return apimiddleware.InternalServerErrorWithMessage(err, "could not prepare POST data")
-	}
-	req.Body = io.NopCloser(bytes.NewBuffer(data))
-	req.ContentLength = int64(len(data))
-	req.Header.Set("Content-Type", api.JsonMediaType)
-	return nil
-}
-
-func serializeMiddlewareResponseIntoSSZ(respJson SszResponse) (version string, ssz []byte, errJson apimiddleware.ErrorJson) {
-	// Serialize the SSZ part of the deserialized value.
-	data, err := base64.StdEncoding.DecodeString(respJson.SSZData())
-	if err != nil {
-		return "", nil, apimiddleware.InternalServerErrorWithMessage(err, "could not decode response body into base64")
-	}
-	return strings.ToLower(respJson.SSZVersion()), data, nil
-}
-
-func writeSSZResponseHeaderAndBody(grpcResp *http.Response, w http.ResponseWriter, respSsz []byte, respVersion, fileName string) apimiddleware.ErrorJson {
-	var statusCodeHeader string
-	for h, vs := range grpcResp.Header {
-		// We don't want to expose any gRPC metadata in the HTTP response, so we skip forwarding metadata headers.
-		if strings.HasPrefix(h, "Grpc-Metadata") {
-			if h == "Grpc-Metadata-"+grpc.HttpCodeMetadataKey {
-				statusCodeHeader = vs[0]
-			}
-		} else {
-			for _, v := range vs {
-				w.Header().Set(h, v)
-			}
-		}
-	}
-	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
-	w.Header().Set("Content-Type", api.OctetStreamMediaType)
-	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
-	w.Header().Set(api.VersionHeader, respVersion)
-	if statusCodeHeader != "" {
-		code, err := strconv.Atoi(statusCodeHeader)
-		if err != nil {
-			return apimiddleware.InternalServerErrorWithMessage(err, "could not parse status code")
-		}
-		w.WriteHeader(code)
-	} else {
-		w.WriteHeader(grpcResp.StatusCode)
-	}
-	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(respSsz))); err != nil {
-		return apimiddleware.InternalServerErrorWithMessage(err, "could not write response message")
-	}
-	return nil
-}
 
 func handleEvents(m *apimiddleware.ApiProxyMiddleware, _ apimiddleware.Endpoint, w http.ResponseWriter, req *http.Request) (handled bool) {
 	sseClient := sse.NewClient("http://" + m.GatewayAddress + "/internal" + req.URL.RequestURI())
