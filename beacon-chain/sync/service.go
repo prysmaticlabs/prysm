@@ -149,7 +149,6 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
-	pendingBlobSidecars              *pendingBlobSidecars
 }
 
 // NewService initializes new regular sync service.
@@ -165,7 +164,6 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
-		pendingBlobSidecars:  newPendingBlobSidecars(),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -214,7 +212,6 @@ func (s *Service) Start() {
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
-	s.processPendingBlobs()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 
