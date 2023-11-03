@@ -105,7 +105,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()
-		s.pendingBlobSidecars.add(sBlob)
+		missingParentBlobSidecarCount.Inc()
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
 		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
