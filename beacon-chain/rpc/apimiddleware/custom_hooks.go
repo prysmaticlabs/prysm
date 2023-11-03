@@ -3,17 +3,14 @@ package apimiddleware
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -277,132 +274,4 @@ func preparePublishedBlindedBlock(endpoint *apimiddleware.Endpoint, _ http.Respo
 		return nil
 	}
 	return apimiddleware.InternalServerError(errors.New("unsupported block type"))
-}
-
-type phase0ProduceBlockResponseJson struct {
-	Version string           `json:"version" enum:"true"`
-	Data    *BeaconBlockJson `json:"data"`
-}
-
-type altairProduceBlockResponseJson struct {
-	Version string                 `json:"version" enum:"true"`
-	Data    *BeaconBlockAltairJson `json:"data"`
-}
-
-type bellatrixProduceBlockResponseJson struct {
-	Version string                    `json:"version" enum:"true"`
-	Data    *BeaconBlockBellatrixJson `json:"data"`
-}
-
-type capellaProduceBlockResponseJson struct {
-	Version string                  `json:"version" enum:"true"`
-	Data    *BeaconBlockCapellaJson `json:"data"`
-}
-
-type denebProduceBlockResponseJson struct {
-	Version string                        `json:"version" enum:"true"`
-	Data    *BeaconBlockContentsDenebJson `json:"data"`
-}
-
-type bellatrixProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockBellatrixJson `json:"data"`
-}
-
-type capellaProduceBlindedBlockResponseJson struct {
-	Version string                         `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockCapellaJson `json:"data"`
-}
-
-type denebProduceBlindedBlockResponseJson struct {
-	Version string                               `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockContentsDenebJson `json:"data"`
-}
-
-func serializeProducedV2Block(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*ProduceBlockResponseV2Json)
-	if !ok {
-		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
-	}
-
-	var actualRespContainer interface{}
-	switch {
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
-		actualRespContainer = &phase0ProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.Phase0Block,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
-		actualRespContainer = &altairProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.AltairBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
-		actualRespContainer = &bellatrixProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.BellatrixBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
-		actualRespContainer = &capellaProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.CapellaBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
-		actualRespContainer = &denebProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.DenebContents,
-		}
-	default:
-		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
-	}
-
-	j, err := json.Marshal(actualRespContainer)
-	if err != nil {
-		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
-	}
-	return false, j, nil
-}
-
-func serializeProducedBlindedBlock(response interface{}) (apimiddleware.RunDefault, []byte, apimiddleware.ErrorJson) {
-	respContainer, ok := response.(*ProduceBlindedBlockResponseJson)
-	if !ok {
-		return false, nil, apimiddleware.InternalServerError(errors.New("container is not of the correct type"))
-	}
-
-	var actualRespContainer interface{}
-	switch {
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_PHASE0.String())):
-		actualRespContainer = &phase0ProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.Phase0Block,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_ALTAIR.String())):
-		actualRespContainer = &altairProduceBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.AltairBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_BELLATRIX.String())):
-		actualRespContainer = &bellatrixProduceBlindedBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.BellatrixBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_CAPELLA.String())):
-		actualRespContainer = &capellaProduceBlindedBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.CapellaBlock,
-		}
-	case strings.EqualFold(respContainer.Version, strings.ToLower(ethpbv2.Version_DENEB.String())):
-		actualRespContainer = &denebProduceBlindedBlockResponseJson{
-			Version: respContainer.Version,
-			Data:    respContainer.Data.DenebContents,
-		}
-	default:
-		return false, nil, apimiddleware.InternalServerError(fmt.Errorf("unsupported block version '%s'", respContainer.Version))
-	}
-
-	j, err := json.Marshal(actualRespContainer)
-	if err != nil {
-		return false, nil, apimiddleware.InternalServerErrorWithMessage(err, "could not marshal response")
-	}
-	return false, j, nil
 }

@@ -1,10 +1,7 @@
 package apimiddleware
 
 import (
-	"strings"
-
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 //----------------
@@ -44,20 +41,6 @@ type DepositContractResponseJson struct {
 
 type SpecResponseJson struct {
 	Data interface{} `json:"data"`
-}
-
-type ProduceBlockResponseJson struct {
-	Data *BeaconBlockJson `json:"data"`
-}
-
-type ProduceBlockResponseV2Json struct {
-	Version string                      `json:"version" enum:"true"`
-	Data    *BeaconBlockContainerV2Json `json:"data"`
-}
-
-type ProduceBlindedBlockResponseJson struct {
-	Version string                           `json:"version" enum:"true"`
-	Data    *BlindedBeaconBlockContainerJson `json:"data"`
 }
 
 type AggregateAttestationResponseJson struct {
@@ -691,49 +674,6 @@ type SszResponse interface {
 	SSZOptimistic() bool
 	SSZData() string
 	SSZFinalized() bool
-}
-
-type SszResponseJson struct {
-	Data string `json:"data"`
-}
-
-func (ssz *SszResponseJson) SSZData() string {
-	return ssz.Data
-}
-
-func (*SszResponseJson) SSZVersion() string {
-	return strings.ToLower(ethpbv2.Version_PHASE0.String())
-}
-
-func (*SszResponseJson) SSZOptimistic() bool {
-	return false
-}
-
-func (*SszResponseJson) SSZFinalized() bool {
-	return true
-}
-
-type VersionedSSZResponseJson struct {
-	Version             string `json:"version" enum:"true"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-	Finalized           bool   `json:"finalized"`
-	Data                string `json:"data"`
-}
-
-func (ssz *VersionedSSZResponseJson) SSZData() string {
-	return ssz.Data
-}
-
-func (ssz *VersionedSSZResponseJson) SSZVersion() string {
-	return ssz.Version
-}
-
-func (ssz *VersionedSSZResponseJson) SSZOptimistic() bool {
-	return ssz.ExecutionOptimistic
-}
-
-func (ssz *VersionedSSZResponseJson) SSZFinalized() bool {
-	return ssz.Finalized
 }
 
 // ---------------

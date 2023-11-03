@@ -22,9 +22,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/spec",
 		"/eth/v1/events",
-		"/eth/v1/validator/blocks/{slot}",
-		"/eth/v2/validator/blocks/{slot}",
-		"/eth/v1/validator/blinded_blocks/{slot}",
 	}
 }
 
@@ -46,26 +43,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 		endpoint.GetResponse = &SpecResponseJson{}
 	case "/eth/v1/events":
 		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
-	case "/eth/v1/validator/blocks/{slot}":
-		endpoint.GetResponse = &ProduceBlockResponseJson{}
-		endpoint.RequestURLLiterals = []string{"slot"}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
-	case "/eth/v2/validator/blocks/{slot}":
-		endpoint.GetResponse = &ProduceBlockResponseV2Json{}
-		endpoint.RequestURLLiterals = []string{"slot"}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedV2Block,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlockSSZ}
-	case "/eth/v1/validator/blinded_blocks/{slot}":
-		endpoint.GetResponse = &ProduceBlindedBlockResponseJson{}
-		endpoint.RequestURLLiterals = []string{"slot"}
-		endpoint.RequestQueryParams = []apimiddleware.QueryParam{{Name: "randao_reveal", Hex: true}, {Name: "graffiti", Hex: true}}
-		endpoint.Hooks = apimiddleware.HookCollection{
-			OnPreSerializeMiddlewareResponseIntoJson: serializeProducedBlindedBlock,
-		}
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleProduceBlindedBlockSSZ}
 	default:
 		return nil, errors.New("invalid path")
 	}

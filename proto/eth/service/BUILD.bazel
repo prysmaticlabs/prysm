@@ -9,7 +9,6 @@ proto_library(
     srcs = [
         "beacon_chain_service.proto",
         "events_service.proto",
-        "validator_service.proto",
     ],
     visibility = ["//visibility:public"],
     deps = [
