@@ -184,7 +184,6 @@ func (s *Server) Start() {
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
-	validatorpb.RegisterWalletServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
 	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)

@@ -117,10 +117,10 @@ func (s *Server) BackupAccounts(
 	case *derived.Keymanager:
 		keystoresToBackup, err = km.ExtractKeystores(ctx, pubKeys, req.BackupPassword)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derived keymanager: %v", err)
+			return nil, status.Errorf(codes.Internal, "Could not backup accounts for derivedKeymanagerKind keymanager: %v", err)
 		}
 	default:
-		return nil, status.Error(codes.FailedPrecondition, "Only HD or imported wallets can backup accounts")
+		return nil, status.Error(codes.FailedPrecondition, "Only HD or importedKeymanagerKind wallets can backup accounts")
 	}
 	if len(keystoresToBackup) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "No keystores to backup")

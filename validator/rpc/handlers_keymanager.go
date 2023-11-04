@@ -158,7 +158,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If any of the keys imported had a slashing protection history before, we
+	// If any of the keys importedKeymanagerKind had a slashing protection history before, we
 	// stop marking them as deleted from our validator database.
 	http2.WriteJson(w, &ImportKeystoresResponse{Data: statuses})
 }
@@ -381,7 +381,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, response)
 }
 
-// ListRemoteKeys returns a list of all public keys defined for web3signer keymanager type.
+// ListRemoteKeys returns a list of all public keys defined for web3signerKeymanagerKind keymanager type.
 func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListRemoteKeys")
 	defer span.End()
@@ -400,7 +400,7 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signerKeymanagerKind flags.", http.StatusInternalServerError)
 		return
 	}
 	pubKeys, err := km.FetchValidatingPublicKeys(ctx)
@@ -423,7 +423,7 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, response)
 }
 
-// ImportRemoteKeys imports a list of public keys defined for web3signer keymanager type.
+// ImportRemoteKeys imports a list of public keys defined for web3signerKeymanagerKind keymanager type.
 func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ImportRemoteKeys")
 	defer span.End()
@@ -442,7 +442,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signerKeymanagerKind flags.", http.StatusInternalServerError)
 		return
 	}
 
@@ -457,7 +457,7 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < len(req.RemoteKeys); i++ {
 			statuses[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusError,
-				Message: "Keymanager kind cannot import public keys for web3signer keymanager type.",
+				Message: "Keymanager kind cannot import public keys for web3signerKeymanagerKind keymanager type.",
 			}
 		}
 		http2.WriteJson(w, &RemoteKeysResponse{Data: statuses})
@@ -473,13 +473,13 @@ func (s *Server) ImportRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if isUrlUsed {
-		log.Warnf("Setting web3signer base url for imported keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signer.")
+		log.Warnf("Setting web3signerKeymanagerKind base url for importedKeymanagerKind keys is not supported. Prysm only uses the url from --validators-external-signer-url flag for web3signerKeymanagerKind.")
 	}
 
 	http2.WriteJson(w, &RemoteKeysResponse{Data: adder.AddPublicKeys(remoteKeys)})
 }
 
-// DeleteRemoteKeys deletes a list of public keys defined for web3signer keymanager type.
+// DeleteRemoteKeys deletes a list of public keys defined for web3signerKeymanagerKind keymanager type.
 func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteRemoteKeys")
 	defer span.End()
@@ -498,7 +498,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.wallet.KeymanagerKind() != keymanager.Web3Signer {
-		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signer flags.", http.StatusInternalServerError)
+		http2.HandleError(w, "Prysm Wallet is not of type Web3Signer. Please execute validator client with web3signerKeymanagerKind flags.", http.StatusInternalServerError)
 		return
 	}
 	var req DeleteRemoteKeysRequest
@@ -513,7 +513,7 @@ func (s *Server) DeleteRemoteKeys(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < len(req.Pubkeys); i++ {
 			statuses[i] = &keymanager.KeyStatus{
 				Status:  keymanager.StatusError,
-				Message: "Keymanager kind cannot delete public keys for web3signer keymanager type.",
+				Message: "Keymanager kind cannot delete public keys for web3signerKeymanagerKind keymanager type.",
 			}
 		}
 		http2.WriteJson(w, &RemoteKeysResponse{Data: statuses})

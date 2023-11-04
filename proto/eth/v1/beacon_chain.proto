@@ -17,7 +17,6 @@ package ethereum.eth.v1;
 
 import "google/protobuf/descriptor.proto";
 
-import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_state.proto";
