@@ -5,6 +5,7 @@ import (
 	"time"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 )
 
@@ -23,7 +24,15 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Bellatrix Fork Epoch for mainnet config.
 	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
+	mainnetDenebForkEpoch     = math.MaxUint64
 )
+
+func MaxRequestBlock(e primitives.Epoch) uint64 {
+	if e >= mainnetDenebForkEpoch {
+		return mainnetNetworkConfig.MaxRequestBlocksDeneb
+	}
+	return mainnetNetworkConfig.MaxRequestBlocks
+}
 
 var mainnetNetworkConfig = &NetworkConfig{
 	GossipMaxSize:                    1 << 20,      // 1 MiB
