@@ -148,66 +148,9 @@ type RPCClient struct {
 func (*RPCClient) Close() {}
 
 func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName string, args ...interface{}) error {
-	if r.BlockNumMap != nil && methodName == "eth_getBlockByNumber" {
-		val, ok := args[0].(string)
-		if !ok {
-			return errors.Errorf("wrong argument type provided: %T", args[0])
-		}
-		num, err := hexutil.DecodeBig(val)
-		if err != nil {
-			return err
-		}
-		b := r.BlockNumMap[num.Uint64()]
-		assertedObj, ok := obj.(**types.HeaderInfo)
-		if !ok {
-			return errors.Errorf("wrong argument type provided: %T", obj)
-		}
-		*assertedObj = b
-		return nil
-	}
-	if r.Backend == nil && methodName == "eth_getBlockByNumber" {
-		h := &gethTypes.Header{
-			Number: big.NewInt(15),
-			Time:   150,
-		}
-		assertedObj, ok := obj.(**types.HeaderInfo)
-		if !ok {
-			return errors.Errorf("wrong argument type provided: %T", obj)
-		}
-		*assertedObj = &types.HeaderInfo{
-			Hash:   h.Hash(),
-			Number: h.Number,
-			Time:   h.Time,
-		}
-		return nil
-	}
 	switch methodName {
 	case "eth_getBlockByNumber":
-		val, ok := args[0].(string)
-		if !ok {
-			return errors.Errorf("wrong argument type provided: %T", args[0])
-		}
-		var num *big.Int
-		var err error
-		if val != "latest" {
-			num, err = hexutil.DecodeBig(val)
-			if err != nil {
-				return err
-			}
-		}
-		h, err := r.Backend.HeaderByNumber(ctx, num)
-		if err != nil {
-			return err
-		}
-		assertedObj, ok := obj.(**types.HeaderInfo)
-		if !ok {
-			return errors.Errorf("wrong argument type provided: %T", obj)
-		}
-		*assertedObj = &types.HeaderInfo{
-			Hash:   h.Hash(),
-			Number: h.Number,
-			Time:   h.Time,
-		}
+		return r.getBlockByNumber(ctx, args)
 	case "eth_getBlockByHash":
 		val, ok := args[0].(common.Hash)
 		if !ok {
@@ -249,6 +192,69 @@ func (r *RPCClient) CallContext(ctx context.Context, obj interface{}, methodName
 		}
 		*assertedObj = result
 		return nil
+	}
+	return nil
+}
+
+func (r *RPCClient) getBlockByNumber(ctx context.Context, obj interface{}, args ...interface{}) error {
+	if r.BlockNumMap != nil {
+		val, ok := args[0].(string)
+		if !ok {
+			return errors.Errorf("wrong argument type provided: %T", args[0])
+		}
+		num, err := hexutil.DecodeBig(val)
+		if err != nil {
+			return err
+		}
+		b := r.BlockNumMap[num.Uint64()]
+		assertedObj, ok := obj.(**types.HeaderInfo)
+		if !ok {
+			return errors.Errorf("wrong argument type provided: %T", obj)
+		}
+		*assertedObj = b
+		return nil
+	}
+	if r.Backend == nil {
+		h := &gethTypes.Header{
+			Number: big.NewInt(15),
+			Time:   150,
+		}
+		assertedObj, ok := obj.(**types.HeaderInfo)
+		if !ok {
+			return errors.Errorf("wrong argument type provided: %T", obj)
+		}
+		*assertedObj = &types.HeaderInfo{
+			Hash:   h.Hash(),
+			Number: h.Number,
+			Time:   h.Time,
+		}
+		return nil
+	}
+
+	val, ok := args[0].(string)
+	if !ok {
+		return errors.Errorf("wrong argument type provided: %T", args[0])
+	}
+	var num *big.Int
+	var err error
+	if val != "latest" {
+		num, err = hexutil.DecodeBig(val)
+		if err != nil {
+			return err
+		}
+	}
+	h, err := r.Backend.HeaderByNumber(ctx, num)
+	if err != nil {
+		return err
+	}
+	assertedObj, ok := obj.(**types.HeaderInfo)
+	if !ok {
+		return errors.Errorf("wrong argument type provided: %T", obj)
+	}
+	*assertedObj = &types.HeaderInfo{
+		Hash:   h.Hash(),
+		Number: h.Number,
+		Time:   h.Time,
 	}
 	return nil
 }

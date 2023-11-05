@@ -50,7 +50,7 @@ func (RPCClientBad) BatchCall([]gethRPC.BatchElem) error {
 	return errors.New("rpc client is not initialized")
 }
 
-func (RPCClientBad) CallContext(ctx context.Context, result interface{}, method string, args ...interface{}) error {
+func (RPCClientBad) CallContext(_ context.Context, result interface{}, method string, _ ...interface{}) error {
 	if method == EthSyncingMethod {
 		assertResult, ok := result.(*interface{})
 		if !ok {
