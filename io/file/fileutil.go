@@ -288,8 +288,8 @@ func HashDir(dir string) (string, error) {
 }
 
 // HashFile calculates and returns the hash of a file.
-func HashFile(filepath string) ([]byte, error) {
-	f, err := os.Open(filepath)
+func HashFile(filePath string) ([]byte, error) {
+	f, err := os.Open(filepath.Clean(filePath))
 	if err != nil {
 		return nil, err
 	}

@@ -274,7 +274,7 @@ func GenerateProtoDenebBeaconBlock() *ethpb.BeaconBlockAndBlobsDeneb {
 				BlobKzgCommitments: [][]byte{FillByteSlice(48, 145), FillByteSlice(48, 146)},
 			},
 		},
-		Blobs: []*ethpb.BlobSidecar{
+		Blobs: []*ethpb.DeprecatedBlobSidecar{
 			{
 				BlockRoot:       FillByteSlice(32, 147),
 				Index:           148,

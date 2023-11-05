@@ -1,8 +1,3 @@
-// The filesystem package provides a mechanism for managing and storing binary blob data.
-// It offers functionalities for saving and ensuring the integrity of blobs using SHA-256 checksums.
-// In order to maintain data integrity we first write to a temporary file and then atomically
-// rename the file to its final destination.
-
 package filesystem
 
 import (
@@ -11,46 +6,49 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 type BlobStorage struct {
-	baseDir        string
-	retentionEpoch primitives.Epoch
+	baseDir string
 }
 
 // SaveBlobData saves blobs given a list of sidecars.
-func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
+func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 	if len(sidecars) == 0 {
 		return errors.New("no blob data to save")
 	}
 	for _, sidecar := range sidecars {
-		blobPath := path.Join(bs.baseDir, fmt.Sprintf(
-			"%d_%x_%d_%x.blob",
-			sidecar.Slot,
-			sidecar.BlockRoot,
-			sidecar.Index,
-			sidecar.KzgCommitment,
-		))
+		blobPath := bs.sidecarFileKey(sidecar)
 		exists := file.Exists(blobPath)
 		if exists {
-			if err := checkDataIntegrity(sidecar.Blob, blobPath); err != nil {
+			if err := checkDataIntegrity(sidecar, blobPath); err != nil {
+				// This error should never happen, if it does then the
+				// file has most likely been tampered with.
 				return errors.Wrapf(err, "failed to save blob sidecar, tried to overwrite blob (%s) with different content", blobPath)
 			}
 			continue // Blob already exists, move to the next one
 		}
-		// Create a partial file and write the blob data to it.
+
+		// Serialize the ethpb.BlobSidecar to binary data using SSZ.
+		sidecarData, err := ssz.MarshalSSZ(sidecar)
+		if err != nil {
+			return errors.Wrap(err, "failed to serialize sidecar data")
+		}
+
+		// Create a partial file and write the serialized data to it.
 		partialFilePath := blobPath + ".partial"
-		partialFile, err := os.Create(partialFilePath)
+		partialFile, err := os.Create(filepath.Clean(partialFilePath))
 		if err != nil {
 			return errors.Wrap(err, "failed to create partial file")
 		}
 
-		_, err = partialFile.Write(sidecar.Blob)
+		_, err = partialFile.Write(sidecarData)
 		if err != nil {
 			closeErr := partialFile.Close()
 			if closeErr != nil {
@@ -66,19 +64,29 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*ethpb.BlobSidecar) error {
 		// Atomically rename the partial file to its final name.
 		err = os.Rename(partialFilePath, blobPath)
 		if err != nil {
-			return errors.Wrap(err, "failed to rename partial file to final")
-		}
-
-		if err = checkDataIntegrity(sidecar.Blob, blobPath); err != nil {
-			return err
+			return errors.Wrap(err, "failed to rename partial file to final name")
 		}
 	}
 	return nil
 }
 
-// checkDataIntegrity checks the data integrity by comparing SHA256 checksums.
-func checkDataIntegrity(originalData []byte, filePath string) error {
-	originalChecksum := sha256.Sum256(originalData)
+func (bs *BlobStorage) sidecarFileKey(sidecar *eth.BlobSidecar) string {
+	return path.Join(bs.baseDir, fmt.Sprintf(
+		"%d_%x_%d_%x.blob",
+		sidecar.Slot,
+		sidecar.BlockRoot,
+		sidecar.Index,
+		sidecar.KzgCommitment,
+	))
+}
+
+// checkDataIntegrity checks the data integrity by comparing the original ethpb.BlobSidecar.
+func checkDataIntegrity(sidecar *eth.BlobSidecar, filePath string) error {
+	sidecarData, err := ssz.MarshalSSZ(sidecar)
+	if err != nil {
+		return errors.Wrap(err, "failed to serialize sidecar data")
+	}
+	originalChecksum := sha256.Sum256(sidecarData)
 	savedFileChecksum, err := file.HashFile(filePath)
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate saved file checksum")

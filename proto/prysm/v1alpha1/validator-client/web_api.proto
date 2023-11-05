@@ -147,41 +147,6 @@ service SlashingProtection {
     }
 }
 
-// Health endpoints and log streaming will no longer be available, please use grafana and local log setups for reivew.
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-service Health {
-    rpc GetBeaconNodeConnection(google.protobuf.Empty) returns (NodeConnectionResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/health/node_connection"
-        };
-    }
-    rpc GetLogsEndpoints(google.protobuf.Empty) returns (LogsEndpointResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/health/logs/endpoints"
-        };
-    }
-    rpc GetVersion(google.protobuf.Empty) returns (VersionResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/health/version"
-        };
-    }
-    rpc StreamBeaconLogs(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.LogsResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/health/logs/beacon/stream"
-        };
-    }
-    rpc StreamValidatorLogs(google.protobuf.Empty) returns (stream ethereum.eth.v1alpha1.LogsResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/health/logs/validator/stream"
-        };
-    }
-}
-
 // Web APIs such as the Keymanager APIs will no longer validate JWTs on the endpoint. Users should no longer expose the validator APIs to the public.
 // option deprecated = true; can't be added yet as it's used for keymanager API
 // DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
@@ -328,36 +293,6 @@ message AccountRequest {
     repeated bytes public_keys = 1;
     // A list of validator indices.
     repeated uint64 indices = 2;
-}
-
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-message NodeConnectionResponse {
-    option deprecated = true;
-    // The host address of the beacon node the validator
-    // client is connected to.
-    string beacon_node_endpoint = 1;
-    // Whether the connection is active.
-    bool connected = 2;
-    // Whether the beacon node is currently synchronizing to chain head.
-    bool syncing = 3;
-    // The chain genesis time.
-    uint64 genesis_time = 4;
-    // Address of the validator deposit contract in the eth1 chain.
-    bytes deposit_contract_address = 5;
-}
-
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-message LogsEndpointResponse {
-    option deprecated = true;
-	string validator_logs_endpoint = 1;
-	string beacon_logs_endpoint = 2;
-}
-
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-message VersionResponse {
-    option deprecated = true;
-	string beacon = 1;
-	string validator = 2;
 }
 
 // DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.

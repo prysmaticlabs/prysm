@@ -56,8 +56,8 @@ type ReadOnlyDatabase interface {
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
 
 	// Blob operations.
-	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte, indices ...uint64) ([]*ethpb.BlobSidecar, error)
-	BlobSidecarsBySlot(ctx context.Context, slot primitives.Slot, indices ...uint64) ([]*ethpb.BlobSidecar, error)
+	BlobSidecarsByRoot(ctx context.Context, beaconBlockRoot [32]byte, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error)
+	BlobSidecarsBySlot(ctx context.Context, slot primitives.Slot, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error)
 
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
@@ -95,7 +95,7 @@ type NoHeadAccessDatabase interface {
 	SaveRegistrationsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, regs []*ethpb.ValidatorRegistrationV1) error
 
 	// Blob operations.
-	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.BlobSidecar) error
+	SaveBlobSidecar(ctx context.Context, sidecars []*ethpb.DeprecatedBlobSidecar) error
 	DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte) error
 
 	CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error

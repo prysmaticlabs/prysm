@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 )
 
 // CachedHeadRoot returns the corresponding value from Forkchoice
@@ -51,7 +51,7 @@ func (s *Service) InsertNode(ctx context.Context, st state.BeaconState, root [32
 }
 
 // ForkChoiceDump returns the corresponding value from forkchoice
-func (s *Service) ForkChoiceDump(ctx context.Context) (*ethpbv1.ForkChoiceDump, error) {
+func (s *Service) ForkChoiceDump(ctx context.Context) (*forkchoice.Dump, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.ForkChoiceDump(ctx)

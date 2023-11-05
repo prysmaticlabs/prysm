@@ -105,7 +105,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()
-		s.pendingBlobSidecars.add(sBlob)
+		missingParentBlobSidecarCount.Inc()
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
 		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
@@ -236,7 +236,7 @@ func (s *Service) setSeenBlobIndex(root []byte, index uint64) {
 	s.seenBlobCache.Add(string(b), true)
 }
 
-func blobFields(b *eth.BlobSidecar) logrus.Fields {
+func blobFields(b *eth.DeprecatedBlobSidecar) logrus.Fields {
 	return logrus.Fields{
 		"slot":          b.Slot,
 		"proposerIndex": b.ProposerIndex,

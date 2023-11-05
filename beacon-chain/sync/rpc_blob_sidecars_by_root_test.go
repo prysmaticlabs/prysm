@@ -23,7 +23,7 @@ func (c *blobsTestCase) defaultOldestSlotByRoot(t *testing.T) types.Slot {
 	return oldest
 }
 
-func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
+func blobRootRequestFromSidecars(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
 	req := make(p2pTypes.BlobSidecarsByRootReq, 0)
 	for _, sc := range scs {
 		req = append(req, &ethpb.BlobIdentifier{BlockRoot: sc.BlockRoot, Index: sc.Index})
@@ -31,7 +31,7 @@ func blobRootRequestFromSidecars(scs []*ethpb.BlobSidecar) interface{} {
 	return &req
 }
 
-func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSidecar, r interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.DeprecatedBlobSidecar, r interface{}) []*expectedBlobChunk {
 	rp, ok := r.(*p2pTypes.BlobSidecarsByRootReq)
 	if !ok {
 		panic("unexpected request type in filterExpectedByRoot")
@@ -52,7 +52,7 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
 	rootToOffset := make(map[[32]byte]int)
 	rootToOffset[lastRoot] = 0
-	scMap := make(map[[32]byte]map[uint64]*ethpb.BlobSidecar)
+	scMap := make(map[[32]byte]map[uint64]*ethpb.DeprecatedBlobSidecar)
 	for _, sc := range scs {
 		root := bytesutil.ToBytes32(sc.BlockRoot)
 		if root != lastRoot {
@@ -62,7 +62,7 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []*ethpb.BlobSide
 		lastRoot = root
 		_, ok := scMap[root]
 		if !ok {
-			scMap[root] = make(map[uint64]*ethpb.BlobSidecar)
+			scMap[root] = make(map[uint64]*ethpb.DeprecatedBlobSidecar)
 		}
 		scMap[root][sc.Index] = sc
 	}
@@ -148,7 +148,7 @@ func readChunkEncodedBlobsLowMax(t *testing.T, s *Service, expect []*expectedBlo
 	encoding := s.cfg.p2p.Encoding()
 	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
 	require.NoError(t, err)
-	vf := func(sidecar *ethpb.BlobSidecar) error {
+	vf := func(sidecar *ethpb.DeprecatedBlobSidecar) error {
 		return nil
 	}
 	return func(stream network.Stream) {
@@ -161,7 +161,7 @@ func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*exp
 	encoding := s.cfg.p2p.Encoding()
 	ctxMap, err := ContextByteVersionsForValRoot(s.cfg.clock.GenesisValidatorsRoot())
 	require.NoError(t, err)
-	vf := func(sidecar *ethpb.BlobSidecar) error {
+	vf := func(sidecar *ethpb.DeprecatedBlobSidecar) error {
 		return nil
 	}
 	return func(stream network.Stream) {

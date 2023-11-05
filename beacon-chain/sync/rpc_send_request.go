@@ -142,7 +142,7 @@ func SendBeaconBlocksByRootRequest(
 	return blocks, nil
 }
 
-func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest) ([]*pb.BlobSidecar, error) {
+func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest) ([]*pb.DeprecatedBlobSidecar, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRangeName, slots.ToEpoch(tor.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle,
 func SendBlobSidecarByRoot(
 	ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.P2P, pid peer.ID,
 	ctxMap ContextByteVersions, req *p2ptypes.BlobSidecarsByRootReq,
-) ([]*pb.BlobSidecar, error) {
+) ([]*pb.DeprecatedBlobSidecar, error) {
 	if uint64(len(*req)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
 		return nil, errors.Wrapf(p2ptypes.ErrMaxBlobReqExceeded, "length=%d", len(*req))
 	}
@@ -187,14 +187,14 @@ func SendBlobSidecarByRoot(
 	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRootReq(req), max)
 }
 
-type blobResponseValidation func(*pb.BlobSidecar) error
+type blobResponseValidation func(*pb.DeprecatedBlobSidecar) error
 
 func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseValidation {
 	roots := make(map[[32]byte]bool)
 	for _, sc := range *req {
 		roots[bytesutil.ToBytes32(sc.BlockRoot)] = true
 	}
-	return func(sc *pb.BlobSidecar) error {
+	return func(sc *pb.DeprecatedBlobSidecar) error {
 		if requested := roots[bytesutil.ToBytes32(sc.BlockRoot)]; !requested {
 			return errors.Wrapf(errUnrequestedRoot, "root=%#x", sc.BlockRoot)
 		}
@@ -204,7 +204,7 @@ func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseV
 
 func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) blobResponseValidation {
 	end := req.StartSlot + primitives.Slot(req.Count)
-	return func(sc *pb.BlobSidecar) error {
+	return func(sc *pb.DeprecatedBlobSidecar) error {
 		if sc.Slot < req.StartSlot || sc.Slot >= end {
 			return errors.Wrapf(errBlobResponseOutOfBounds, "req start,end:%d,%d, resp:%d", req.StartSlot, end, sc.Slot)
 		}
@@ -212,8 +212,8 @@ func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) blobResponseV
 	}
 }
 
-func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation, max uint64) ([]*pb.BlobSidecar, error) {
-	sidecars := make([]*pb.BlobSidecar, 0)
+func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation, max uint64) ([]*pb.DeprecatedBlobSidecar, error) {
+	sidecars := make([]*pb.DeprecatedBlobSidecar, 0)
 	// Attempt an extra read beyond max to check if the peer is violating the spec by
 	// sending more than MAX_REQUEST_BLOB_SIDECARS, or more blobs than requested.
 	for i := uint64(0); i < max+1; i++ {
@@ -236,7 +236,7 @@ func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncodi
 	return sidecars, nil
 }
 
-func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation) (*pb.BlobSidecar, error) {
+func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation) (*pb.DeprecatedBlobSidecar, error) {
 	decode := encoding.DecodeWithMaxLength
 	var (
 		code uint8
@@ -262,7 +262,7 @@ func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncod
 	if v != version.Deneb {
 		return nil, fmt.Errorf("unexpected context bytes for deneb BlobSidecar, ctx=%#x, v=%s", ctxb, version.String(v))
 	}
-	sc := &pb.BlobSidecar{}
+	sc := &pb.DeprecatedBlobSidecar{}
 	if err := decode(stream, sc); err != nil {
 		return nil, errors.Wrap(err, "failed to decode the protobuf-encoded BlobSidecar message from RPC chunk stream")
 	}
