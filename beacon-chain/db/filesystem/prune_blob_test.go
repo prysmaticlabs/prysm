@@ -51,7 +51,7 @@ func TestBlobStorage_PruneBlob(t *testing.T) {
 
 	remainingFiles, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
-	// Expecting 2 blobs from testSidecars to remain.
+	// Expecting 6 blobs from testSidecars to remain.
 	require.Equal(t, 6, len(remainingFiles))
 }
 

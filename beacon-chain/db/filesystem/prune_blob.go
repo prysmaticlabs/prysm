@@ -29,7 +29,6 @@ func (bs *BlobStorage) PruneBlob(currentSlot primitives.Slot) error {
 		if err != nil {
 			return err
 		}
-		// global
 		retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
 		if err != nil {
 			return err
