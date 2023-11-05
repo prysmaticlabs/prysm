@@ -10,12 +10,14 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 )
 
 type BlobStorage struct {
-	baseDir string
+	baseDir        string
+	retentionEpoch primitives.Epoch
 }
 
 // SaveBlobData saves blobs given a list of sidecars.

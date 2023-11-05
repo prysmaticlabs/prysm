@@ -12,6 +12,7 @@ import (
 
 	ssz "github.com/prysmaticlabs/fastssz"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
@@ -20,7 +21,7 @@ import (
 )
 
 func TestBlobStorage_SaveBlobData(t *testing.T) {
-	testSidecars := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+	testSidecars := generateBlobSidecars(t, []primitives.Slot{100}, fieldparams.MaxBlobsPerBlock)
 	t.Run("NoBlobData", func(t *testing.T) {
 		tempDir := t.TempDir()
 		bs := &BlobStorage{baseDir: tempDir}
@@ -127,7 +128,7 @@ func findTestSidecarsByFileName(t *testing.T, testSidecars []*eth.BlobSidecar, f
 }
 
 func TestCheckDataIntegrity(t *testing.T) {
-	testSidecars := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
+	testSidecars := generateBlobSidecars(t, []primitives.Slot{100}, fieldparams.MaxBlobsPerBlock)
 	originalData, err := ssz.MarshalSSZ(testSidecars[0])
 	require.NoError(t, err)
 	originalChecksum := sha256.Sum256(originalData)
@@ -160,15 +161,20 @@ func TestCheckDataIntegrity(t *testing.T) {
 	require.NotEqual(t, wrongChecksum, hex.EncodeToString(checksum))
 }
 
-func generateBlobSidecars(t *testing.T, n uint64) []*eth.BlobSidecar {
-	blobSidecars := make([]*eth.BlobSidecar, n)
-	for i := uint64(0); i < n; i++ {
-		blobSidecars[i] = generateBlobSidecar(t, i)
+func generateBlobSidecars(t *testing.T, slots []primitives.Slot, n uint64) []*eth.BlobSidecar {
+	length := n * uint64(len(slots))
+	blobSidecars := make([]*eth.BlobSidecar, length)
+	index := uint64(0)
+	for _, slot := range slots {
+		for i := 0; i < int(n); i++ {
+			blobSidecars[index] = generateBlobSidecar(t, slot, uint64(index))
+			index++
+		}
 	}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T, index uint64) *eth.BlobSidecar {
+func generateBlobSidecar(t *testing.T, slot primitives.Slot, index uint64) *eth.BlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)
@@ -181,7 +187,7 @@ func generateBlobSidecar(t *testing.T, index uint64) *eth.BlobSidecar {
 	return &eth.BlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
 		Index:           index,
-		Slot:            100,
+		Slot:            slot,
 		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
 		ProposerIndex:   101,
 		Blob:            blob,

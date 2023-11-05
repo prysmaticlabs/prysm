@@ -5,12 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
 func TestBlobStorage_PruneBlob(t *testing.T) {
 	currentSlot := primitives.Slot(225519)
+	testSidecars := generateBlobSidecars(t, []primitives.Slot{225519, 100}, fieldparams.MaxBlobsPerBlock)
 	tempDir := t.TempDir()
 	bs := &BlobStorage{
 		baseDir:        tempDir,
@@ -50,11 +52,12 @@ func TestBlobStorage_PruneBlob(t *testing.T) {
 	remainingFiles, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
 	// Expecting 2 blobs from testSidecars to remain.
-	require.Equal(t, 2, len(remainingFiles))
+	require.Equal(t, 6, len(remainingFiles))
 }
 
 func TestExtractSlotFromFileName(t *testing.T) {
 	tempDir := t.TempDir()
+	testSidecars := generateBlobSidecars(t, []primitives.Slot{225519, 100}, fieldparams.MaxBlobsPerBlock)
 	bs := &BlobStorage{baseDir: tempDir}
 	err := bs.SaveBlobData(testSidecars)
 	require.NoError(t, err)
@@ -65,7 +68,7 @@ func TestExtractSlotFromFileName(t *testing.T) {
 	for _, f := range files {
 		slot, err := extractSlotFromFileName(f.Name())
 		require.NoError(t, err)
-		sidecar := findTestSidecarsByFileName(t, f.Name())
+		sidecar := findTestSidecarsByFileName(t, testSidecars, f.Name())
 		require.Equal(t, sidecar.Slot, slot)
 	}
 }
