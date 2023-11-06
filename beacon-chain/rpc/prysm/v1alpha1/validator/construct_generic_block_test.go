@@ -26,12 +26,12 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		r1, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
 		scs := []*ethpb.DeprecatedBlobSidecar{
-			util.GenerateTestDenebBlobSidecar(r1, eb, 0, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 1, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 2, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 3, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 4, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 5, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 0, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 1, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 2, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 3, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 4, []byte{}),
+			util.GenerateTestDeprecatedBlobSidecar(r1, eb, 5, []byte{}),
 		}
 		result, err := vs.constructGenericBeaconBlock(b, nil, scs)
 		require.NoError(t, err)

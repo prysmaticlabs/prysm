@@ -62,3 +62,31 @@ func (b *ROBlob) BodyRoot() [32]byte {
 func (b *ROBlob) ProposerIndex() primitives.ValidatorIndex {
 	return b.SignedBlockHeader.Header.ProposerIndex
 }
+
+// BlockRootSlice returns the block root as a byte slice. This is often more conveninent/concise
+// than setting a tmp var to BlockRoot(), just so that it can be sliced.
+func (b *ROBlob) BlockRootSlice() []byte {
+	return b.root[:]
+}
+
+// ROBlobSlice is a custom type for a []ROBlob, allowing methods to be defined that act on a slice of ROBlob.
+type ROBlobSlice []ROBlob
+
+// Protos is a helper to make a more concise conversion from []ROBlob->[]*ethpb.BlobSidecar.
+func (s ROBlobSlice) Protos() []*ethpb.BlobSidecar {
+	pb := make([]*ethpb.BlobSidecar, len(s))
+	for i := range s {
+		pb[i] = s[i].BlobSidecar
+	}
+	return pb
+}
+
+// VerifiedROBlob represents an ROBlob that has undergone full verification (eg block sig, inclusion proof, commitment check).
+type VerifiedROBlob struct {
+	ROBlob
+}
+
+// NewVerifiedROBlob "upgrades" an ROBlob to a VerifiedROBlob. This method should only be used by the verification package.
+func NewVerifiedROBlob(rob ROBlob) VerifiedROBlob {
+	return VerifiedROBlob{ROBlob: rob}
+}
