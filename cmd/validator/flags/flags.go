@@ -346,7 +346,7 @@ var (
 		Name: "suggested-fee-recipient",
 		Usage: "Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block." +
 			" note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds." +
-			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " Flags. ",
+			" For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " flags. ",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 
