@@ -295,13 +295,14 @@ func runBlobStep(t *testing.T,
 		block := beaconBlock.Block()
 		root, err := block.HashTreeRoot()
 		require.NoError(t, err)
-		parentRoot := block.ParentRoot()
 		kzgs, err := block.Body().BlobKzgCommitments()
 		require.NoError(t, err)
 
 		blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*blobs, ".ssz_snappy"))
 		require.NoError(t, err)
 		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
+		require.NoError(t, err)
+		sh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(beaconBlock)
 		require.NoError(t, err)
 		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
 			var proof []byte
@@ -318,17 +319,16 @@ func runBlobStep(t *testing.T,
 			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			sidecar := &ethpb.DeprecatedBlobSidecar{
-				BlockRoot:       root[:],
-				Index:           index,
-				Slot:            block.Slot(),
-				BlockParentRoot: parentRoot[:],
-				ProposerIndex:   block.ProposerIndex(),
-				Blob:            blob[:],
-				KzgCommitment:   kzg,
-				KzgProof:        proof,
+			pb := &ethpb.BlobSidecar{
+				Index:             index,
+				Blob:              blob[:],
+				KzgCommitment:     kzg,
+				KzgProof:          proof,
+				SignedBlockHeader: sh,
 			}
-			require.NoError(t, builder.service.ReceiveBlob(context.Background(), sidecar))
+			vsc, err := blocks.NewVerifiedBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
 		}
 	}
 }

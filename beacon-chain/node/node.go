@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/v4/beacon-chain/deterministic-genesis"
@@ -112,6 +113,8 @@ type BeaconNode struct {
 	forkChoicer             forkchoice.ForkChoicer
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
+	BlobStoragePath         string
+	BlobStorage             *filesystem.BlobStorage
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -200,6 +203,14 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Debugln("Starting Blob Storage")
+	blobStorage, err := filesystem.NewBlobStorage(ctx, beacon.BlobStoragePath)
+	if err != nil {
+		return nil, err
+	}
+	beacon.BlobStorage = blobStorage
+
 	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
@@ -639,6 +650,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
+		blockchain.WithBlobStorage(b.BlobStorage),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -717,6 +729,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
+		regularsync.WithBlobStorage(b.BlobStorage),
 	)
 	return b.services.RegisterService(rs)
 }

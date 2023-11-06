@@ -5,6 +5,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -175,6 +176,13 @@ func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
 func WithSyncComplete(c chan struct{}) Option {
 	return func(s *Service) error {
 		s.syncComplete = c
+		return nil
+	}
+}
+
+func WithBlobStorage(b *filesystem.BlobStorage) Option {
+	return func(s *Service) error {
+		s.blobStorage = b
 		return nil
 	}
 }
