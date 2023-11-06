@@ -58,3 +58,13 @@ func (c *NetworkConfig) Copy() *NetworkConfig {
 	}
 	return &config
 }
+
+// MaxRequestBlock determines the maximum number of blocks that can be requested in a single
+// request for a given epoch. If the epoch is at or beyond the mainnetDenebForkEpoch,
+// a special limit defined for Deneb is used.
+func MaxRequestBlock(e primitives.Epoch) uint64 {
+	if e >= mainnetDenebForkEpoch {
+		return networkConfig.MaxRequestBlocksDeneb
+	}
+	return networkConfig.MaxRequestBlocks
+}
