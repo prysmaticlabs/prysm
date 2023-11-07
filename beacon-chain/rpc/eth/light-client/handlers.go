@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -55,7 +54,7 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 	}
 
 	response := &LightClientBootstrapResponse{
-		Version: strings.ToUpper(version.String(blk.Version())),
+		Version: version.String(blk.Version()),
 		Data:    bootstrap,
 	}
 
@@ -206,7 +205,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 
 		if err == nil {
 			updates = append(updates, &LightClientUpdateWithVersion{
-				Version: strings.ToUpper(version.String(attestedState.Version())),
+				Version: version.String(attestedState.Version()),
 				Data:    update,
 			})
 		}
@@ -284,7 +283,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 	}
 
 	response := &LightClientUpdateWithVersion{
-		Version: strings.ToUpper(version.String(attestedState.Version())),
+		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
 
@@ -341,7 +340,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 	}
 
 	response := &LightClientUpdateWithVersion{
-		Version: strings.ToUpper(version.String(attestedState.Version())),
+		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
 
