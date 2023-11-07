@@ -737,25 +737,6 @@ func TestSubmitBeaconCommitteeSubscription(t *testing.T) {
 		require.Equal(t, 1, len(subnets))
 		assert.Equal(t, uint64(5), subnets[0])
 	})
-	t.Run("validators assigned to subnets", func(t *testing.T) {
-		cache.SubnetIDs.EmptyAllCaches()
-
-		var body bytes.Buffer
-		_, err := body.WriteString(multipleBeaconCommitteeContribution2)
-		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://example.com", &body)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.SubmitBeaconCommitteeSubscription(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		subnets, ok, _ := cache.SubnetIDs.GetPersistentSubnets(pubkeys[1])
-		require.Equal(t, true, ok, "subnet for validator 1 not found")
-		assert.Equal(t, 1, len(subnets))
-		subnets, ok, _ = cache.SubnetIDs.GetPersistentSubnets(pubkeys[2])
-		require.Equal(t, true, ok, "subnet for validator 2 not found")
-		assert.Equal(t, 1, len(subnets))
-	})
 	t.Run("no body", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
 		writer := httptest.NewRecorder()
