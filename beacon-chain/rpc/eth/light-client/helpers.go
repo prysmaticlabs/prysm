@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -42,17 +43,16 @@ const (
 func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
-		return nil, fmt.Errorf("invalid state slot %d", state.Slot())
+		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
 	}
 
 	// assert state.slot == state.latest_block_header.slot
-	if state.Slot() != state.LatestBlockHeader().Slot {
-		return nil, fmt.Errorf("invalid state slot %d", state.Slot())
+	latestBlockHeader := state.LatestBlockHeader()
+	if state.Slot() != latestBlockHeader.Slot {
+		return nil, fmt.Errorf("state slot %d not equal to latest block header slot %d", state.Slot(), latestBlockHeader.Slot)
 	}
 
 	// Prepare data
-	latestBlockHeader := state.LatestBlockHeader()
-
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
 		return nil, fmt.Errorf("could not get current sync committee %v", err)
