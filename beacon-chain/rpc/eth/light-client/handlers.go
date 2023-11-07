@@ -9,6 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/wealdtech/go-bytesutil"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -16,8 +19,6 @@ import (
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	"github.com/wealdtech/go-bytesutil"
-	"go.opencensus.io/trace"
 )
 
 // GetLightClientBootstrap - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/bootstrap.yaml
@@ -29,7 +30,7 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 	// Get the block
 	blockRootParam, err := hexutil.Decode(mux.Vars(req)["block_root"])
 	if err != nil {
-		http2.HandleError(w, "invalid block root "+err.Error(), http.StatusBadRequest)
+		http2.HandleError(w, "invalid block root: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -43,13 +44,13 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 	// Get the state
 	state, err := bs.Stater.StateBySlot(ctx, blk.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	bootstrap, err := CreateLightClientBootstrap(ctx, state)
 	if err != nil {
-		http2.HandleError(w, "could not get light client bootstrap "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -75,7 +76,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 	countParam := req.URL.Query().Get("count")
 	count, err := strconv.ParseUint(countParam, 10, 64)
 	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%s', err %v", countParam, err),
+		http2.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%s': %s", countParam, err.Error()),
 			http.StatusInternalServerError)
 		return
 	}
@@ -84,7 +85,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 	startPeriodParam := req.URL.Query().Get("start_period")
 	startPeriod, err := strconv.ParseUint(startPeriodParam, 10, 64)
 	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("got invalid 'start_period' query variable '%s', err %v", startPeriodParam, err),
+		http2.HandleError(w, fmt.Sprintf("got invalid 'start_period' query variable '%s': %s", startPeriodParam, err.Error()),
 			http.StatusInternalServerError)
 		return
 	}
@@ -240,7 +241,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 
 	state, err := bs.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -248,14 +249,14 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
 	if err != nil || attestedBlock == nil {
-		http2.HandleError(w, "could not get attested block "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := bs.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		http2.HandleError(w, "could not get attested state "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -278,7 +279,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 		finalizedBlock,
 	)
 	if err != nil {
-		http2.HandleError(w, "could not get light client finality update "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -305,7 +306,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 
 	state, err := bs.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -313,7 +314,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
 	if err != nil {
-		http2.HandleError(w, "could not get attested block "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if attestedBlock == nil {
@@ -324,7 +325,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := bs.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		http2.HandleError(w, "could not get attested state "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -335,7 +336,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 		attestedState,
 	)
 	if err != nil {
-		http2.HandleError(w, "could not get light client optimistic update "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
