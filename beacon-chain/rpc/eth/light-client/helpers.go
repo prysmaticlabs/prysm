@@ -55,7 +55,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	// Prepare data
 	currentSyncCommittee, err := state.CurrentSyncCommittee()
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee %v", err)
+		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
 	}
 
 	currentSyncCommitteePubkeys := currentSyncCommittee.GetPubkeys()
@@ -68,7 +68,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	}
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get current sync committee proof %v", err)
+		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
 	}
 
 	branch := make([]string, len(currentSyncCommitteeProof))
@@ -78,7 +78,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 
 	stateRoot, err := state.HashTreeRoot(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("could not get state root %v", err)
+		return nil, fmt.Errorf("could not get state root: %s", err.Error())
 	}
 
 	// Return result
@@ -180,7 +180,7 @@ func CreateLightClientUpdate(
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
 		if err != nil {
-			return nil, fmt.Errorf("could not get next sync committee %v", err)
+			return nil, fmt.Errorf("could not get next sync committee: %s", err.Error())
 		}
 
 		nextSyncCommittee = &v2.SyncCommittee{
@@ -190,7 +190,7 @@ func CreateLightClientUpdate(
 
 		nextSyncCommitteeBranch, err = attestedState.NextSyncCommitteeProof(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("could not get next sync committee proof %v", err)
+			return nil, fmt.Errorf("could not get next sync committee proof: %s", err.Error())
 		}
 	} else {
 		syncCommitteeSize := params.BeaconConfig().SyncCommitteeSize
