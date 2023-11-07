@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -18,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // GetLightClientBootstrap - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/bootstrap.yaml
@@ -54,7 +55,7 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 	}
 
 	response := &LightClientBootstrapResponse{
-		Version: ethpbv2.Version(blk.Version()).String(),
+		Version: strings.ToUpper(version.String(blk.Version())),
 		Data:    bootstrap,
 	}
 
@@ -205,7 +206,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 
 		if err == nil {
 			updates = append(updates, &LightClientUpdateWithVersion{
-				Version: ethpbv2.Version(attestedState.Version()).String(),
+				Version: strings.ToUpper(version.String(attestedState.Version())),
 				Data:    update,
 			})
 		}
@@ -283,7 +284,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 	}
 
 	response := &LightClientUpdateWithVersion{
-		Version: ethpbv2.Version(attestedState.Version()).String(),
+		Version: strings.ToUpper(version.String(attestedState.Version())),
 		Data:    update,
 	}
 
@@ -340,7 +341,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 	}
 
 	response := &LightClientUpdateWithVersion{
-		Version: ethpbv2.Version(attestedState.Version()).String(),
+		Version: strings.ToUpper(version.String(attestedState.Version())),
 		Data:    update,
 	}
 
