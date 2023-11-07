@@ -475,7 +475,7 @@ func (s *Service) handleETH1FollowDistance() {
 			for k, v := range syncStatus {
 				fields[k] = v
 			}
-			log.WithFields(fields).Info("the latest eht1 data if 5 minutes ago, please check execution client")
+			log.WithFields(fields).Warn("execution client is not syncing, please check the status of execution client")
 		}
 	}
 	if !s.chainStartData.Chainstarted {
