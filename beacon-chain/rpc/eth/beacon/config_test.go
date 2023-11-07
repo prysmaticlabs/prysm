@@ -141,7 +141,7 @@ func TestGetSpec(t *testing.T) {
 	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
 	require.NoError(t, err)
 
-	assert.Equal(t, 112, len(resp.Data))
+	assert.Equal(t, 117, len(resp.Data))
 	for k, v := range resp.Data {
 		switch k {
 		case "CONFIG_NAME":
@@ -383,6 +383,16 @@ func TestGetSpec(t *testing.T) {
 		case "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT":
 			assert.Equal(t, "8", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
+		case "NODE_ID_BITS":
+			assert.Equal(t, "256", v)
+		case "ATTESTATION_SUBNET_EXTRA_BITS":
+			assert.Equal(t, "0", v)
+		case "ATTESTATION_SUBNET_PREFIX_BITS":
+			assert.Equal(t, "6", v)
+		case "SUBNETS_PER_NODE":
+			assert.Equal(t, "2", v)
+		case "EPOCHS_PER_SUBNET_SUBSCRIPTION":
+			assert.Equal(t, "256", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}
