@@ -34,8 +34,7 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 		return
 	}
 
-	var blockRoot [32]byte
-	copy(blockRoot[:], blockRootParam)
+	blockRoot := bytesutil.ToBytes32(blockRootParam)
 	blk, err := bs.BeaconDB.Block(ctx, blockRoot)
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
