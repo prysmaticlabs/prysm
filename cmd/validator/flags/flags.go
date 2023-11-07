@@ -364,6 +364,13 @@ var (
 		Usage: "Sets gas limit for the builder to use for constructing a payload for all the validators",
 		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
+
+	// ValidatorRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
+	ValidatorRegistrationBatchSizeFlag = &cli.IntFlag{
+		Name:  "validator-registration-batch-size",
+		Usage: "Sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.",
+		Value: 0,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

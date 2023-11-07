@@ -16,11 +16,13 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// SubmitValidatorRegistrations signs validator registration objects and submits it to the beacon node.
+// SubmitValidatorRegistrations signs validator registration objects and submits it to the beacon node by batch of validatorRegsBatchSize size maximum.
+// If at least one error occurs during a registration call to the beacon node, the last error is returned.
 func SubmitValidatorRegistrations(
 	ctx context.Context,
 	validatorClient iface.ValidatorClient,
 	signedRegs []*ethpb.SignedValidatorRegistrationV1,
+	validatorRegsBatchSize int,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.SubmitValidatorRegistrations")
 	defer span.End()
@@ -29,17 +31,27 @@ func SubmitValidatorRegistrations(
 		return nil
 	}
 
-	if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &ethpb.SignedValidatorRegistrationsV1{
-		Messages: signedRegs,
-	}); err != nil {
-		if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
-			log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
-			return nil
+	chunks := chunkSignedValidatorRegistrationV1(signedRegs, validatorRegsBatchSize)
+	var lastErr error
+
+	for _, chunk := range chunks {
+		innerSignerRegs := ethpb.SignedValidatorRegistrationsV1{
+			Messages: chunk,
 		}
-		return errors.Wrap(err, "could not submit signed registrations to beacon node")
+
+		if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &innerSignerRegs); err != nil {
+			if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
+				log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
+			}
+
+			log.WithError(err).Warn("Could not submit signed registrations to beacon node")
+			lastErr = errors.Wrap(err, "could not submit signed registrations to beacon node")
+		}
+
+		log.Infoln("Submitted builder validator registration settings for custom builders")
 	}
-	log.Infoln("Submitted builder validator registration settings for custom builders")
-	return nil
+
+	return lastErr
 }
 
 // Sings validator registration obj with the proposer domain and private key.
@@ -99,4 +111,35 @@ func isValidatorRegistrationSame(cachedVR *ethpb.ValidatorRegistrationV1, newVR 
 		isSame = false
 	}
 	return isSame
+}
+
+// chunkSignedValidatorRegistrationV1 chunks regs into chunks of size chunkSize (the last chunk may be smaller). If chunkSize is non-positive, returns only one chunk.
+func chunkSignedValidatorRegistrationV1(regs []*ethpb.SignedValidatorRegistrationV1, chunkSize int) [][]*ethpb.SignedValidatorRegistrationV1 {
+	if chunkSize <= 0 {
+		chunkSize = len(regs)
+	}
+
+	regsCount := len(regs)
+	carry := regsCount % chunkSize
+
+	chunksCount, lastChunkSize := regsCount/chunkSize, chunkSize
+	if carry != 0 {
+		chunksCount, lastChunkSize = regsCount/chunkSize+1, carry
+	}
+
+	chunks := make([][]*ethpb.SignedValidatorRegistrationV1, chunksCount)
+
+	for i := 0; i < chunksCount-1; i++ {
+		chunks[i] = make([]*ethpb.SignedValidatorRegistrationV1, chunkSize)
+	}
+
+	chunks[chunksCount-1] = make([]*ethpb.SignedValidatorRegistrationV1, lastChunkSize)
+
+	for i, reg := range regs {
+		chunkIndex := i / chunkSize
+		chunkOffset := i % chunkSize
+		chunks[chunkIndex][chunkOffset] = reg
+	}
+
+	return chunks
 }
