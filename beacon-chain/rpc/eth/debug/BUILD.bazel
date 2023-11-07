@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "debug.go",
         "handlers.go",
         "server.go",
         "structs.go",
@@ -20,26 +19,18 @@ go_library(
         "//beacon-chain/state:go_default_library",
         "//network/http:go_default_library",
         "//proto/engine/v1:go_default_library",
-        "//proto/eth/v1:go_default_library",
-        "//proto/eth/v2:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
-        "@org_golang_google_grpc//codes:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
-        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
-    srcs = [
-        "debug_test.go",
-        "handlers_test.go",
-    ],
+    srcs = ["handlers_test.go"],
     embed = [":go_default_library"],
     deps = [
         "//api:go_default_library",
@@ -48,14 +39,12 @@ go_test(
         "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
         "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/rpc/testutil:go_default_library",
-        "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
         "//runtime/version:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//testing/util:go_default_library",
-        "@com_github_golang_protobuf//ptypes/empty",
+        "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@com_github_gorilla_mux//:go_default_library",
-        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

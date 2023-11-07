@@ -796,7 +796,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		validatorpb.RegisterAuthHandler,
 		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
-		validatorpb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
 		validatorpb.RegisterSlashingProtectionHandler,

@@ -321,6 +321,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/prepare_beacon_proposer", validatorServerV1.PrepareBeaconProposer).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/liveness/{epoch}", validatorServerV1.GetLiveness).Methods(http.MethodPost)
 
+	s.cfg.Router.HandleFunc("/eth/v2/validator/blocks/{slot}", validatorServerV1.ProduceBlockV2).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/validator/blinded_blocks/{slot}", validatorServerV1.ProduceBlindedBlock).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServerV1.ProduceBlockV3).Methods(http.MethodGet)
 
 	nodeServer := &nodev1alpha1.Server{
@@ -501,11 +503,11 @@ func (s *Service) Start() {
 		}
 		s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateSSZ).Methods(http.MethodGet)
 		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServerV1.GetBeaconStateV2).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/heads", debugServerV1.GetForkChoiceHeadsV2).Methods(http.MethodGet)
+		s.cfg.Router.HandleFunc("/eth/v2/debug/fork_choice", debugServerV1.GetForkChoice).Methods(http.MethodGet)
 		ethpbv1alpha1.RegisterDebugServer(s.grpcServer, debugServer)
-		ethpbservice.RegisterBeaconDebugServer(s.grpcServer, debugServerV1)
 	}
 	ethpbv1alpha1.RegisterBeaconNodeValidatorServer(s.grpcServer, validatorServer)
-	ethpbservice.RegisterBeaconValidatorServer(s.grpcServer, validatorServerV1)
 	// Register reflection service on gRPC server.
 	reflection.Register(s.grpcServer)
 
