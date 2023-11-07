@@ -382,7 +382,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
-				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
+				cache.SubnetIDs.AddPersistentCommittee([]uint64{1, 2, 3, 23}, 0)
 				return s
 			},
 			postValidation: func(t *testing.T, s *Service) {
@@ -411,7 +411,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01})
-				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
+				cache.SubnetIDs.AddPersistentCommittee([]uint64{1, 2, 3, 23}, 0)
 				return s
 			},
 			postValidation: func(t *testing.T, s *Service) {
@@ -472,7 +472,7 @@ func TestRefreshENR_ForkBoundaries(t *testing.T) {
 				s.dv5Listener = listener
 				s.metaData = wrapper.WrappedMetadataV0(new(ethpb.MetaDataV0))
 				s.updateSubnetRecordWithMetadata([]byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-				cache.SubnetIDs.AddPersistentCommittee([]byte{'A'}, []uint64{1, 2, 3, 23}, 0)
+				cache.SubnetIDs.AddPersistentCommittee([]uint64{1, 2, 3, 23}, 0)
 				cache.SyncSubnetIDs.AddSyncCommitteeSubnets([]byte{'A'}, 0, []uint64{0, 1}, 0)
 				return s
 			},
