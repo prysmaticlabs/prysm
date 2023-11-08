@@ -15,11 +15,38 @@ const (
 	bodyLength    = 12 // The number of elements in the BeaconBlockBody Container
 	logBodyLength = 4  // The log 2 of bodyLength
 	kzgPosition   = 11 // The index of the KZG commitment list in the Body
+	KZGOffset     = 54 * field_params.MaxBlobCommitmentsPerBlock
 )
 
 var (
-	errInvalidIndex = errors.New("index out of bounds")
+	errInvalidIndex          = errors.New("index out of bounds")
+	errInvalidBodyRoot       = errors.New("invalid Beacon Block Body root")
+	errInvalidInclusionProof = errors.New("invalid KZG commitment inclusion proof")
 )
+
+// VerifyKZGIncusionProof verifies the Merkle proof in a Blob sidecar against
+// the beacon block body root.
+func VerifyKZGInclusionProof(blob ROBlob) error {
+	if blob.SignedBlockHeader == nil {
+		return errNilBlockHeader
+	}
+	if blob.SignedBlockHeader.Header == nil {
+		return errNilBlockHeader
+	}
+	root := blob.SignedBlockHeader.Header.BodyRoot
+	if len(root) != field_params.RootLength {
+		return errInvalidBodyRoot
+	}
+	chunks := make([][32]byte, 2)
+	copy(chunks[0][:], blob.KzgCommitment)
+	copy(chunks[1][:], blob.KzgCommitment[field_params.RootLength:])
+	gohashtree.HashChunks(chunks, chunks)
+	verified := trie.VerifyMerkleProof(root, chunks[0][:], blob.Index+KZGOffset, blob.CommitmentInclusionProof)
+	if !verified {
+		return errInvalidInclusionProof
+	}
+	return nil
+}
 
 // MerkleProofKZGCommitment constructs a Merkle proof of inclusion of the KZG
 // commitment of index `index` into the Beacon Block with the given `body`
