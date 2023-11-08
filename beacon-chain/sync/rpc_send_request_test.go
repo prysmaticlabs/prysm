@@ -479,8 +479,8 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 }
 
 func TestBlobValidatorFromRootReq(t *testing.T) {
-	validRoot := bytesutil.PadTo([]byte("valid"), 32)
-	invalidRoot := bytesutil.PadTo([]byte("invalid"), 32)
+	aRoot := bytesutil.PadTo([]byte("valid"), 32)
+	bRoot := bytesutil.PadTo([]byte("invalid"), 32)
 	cases := []struct {
 		name     string
 		ids      []*ethpb.BlobIdentifier
@@ -489,14 +489,20 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 	}{
 		{
 			name:     "valid",
-			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: validRoot}},
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: aRoot, Index: 0}},
+			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: aRoot, Index: 0}},
 		},
 		{
-			name:     "invalid",
-			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: invalidRoot}},
-			err:      errUnrequestedRoot,
+			name:     "wrong root",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: aRoot, Index: 0}},
+			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: bRoot, Index: 0}},
+			err:      errUnrequested,
+		},
+		{
+			name:     "wrong index",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: aRoot, Index: 1}},
+			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: aRoot, Index: 2}},
+			err:      errUnrequested,
 		},
 	}
 	for _, c := range cases {
