@@ -23,11 +23,11 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
 )
@@ -574,7 +574,7 @@ func (s *ChainService) InsertNode(ctx context.Context, st state.BeaconState, roo
 }
 
 // ForkChoiceDump mocks the same method in the chain service
-func (s *ChainService) ForkChoiceDump(ctx context.Context) (*ethpbv1.ForkChoiceDump, error) {
+func (s *ChainService) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, error) {
 	if s.ForkChoiceStore != nil {
 		return s.ForkChoiceStore.ForkChoiceDump(ctx)
 	}

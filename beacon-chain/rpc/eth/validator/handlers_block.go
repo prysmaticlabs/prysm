@@ -21,21 +21,26 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// ProduceBlockV3 Requests a beacon node to produce a valid block, which can then be signed by a validator. The
-// returned block may be blinded or unblinded, depending on the current state of the network as
-// decided by the execution and beacon nodes.
-// The beacon node must return an unblinded block if it obtains the execution payload from its
-// paired execution node. It must only return a blinded block if it obtains the execution payload
-// header from an MEV relay.
-// Metadata in the response indicates the type of block produced, and the supported types of block
-// will be added to as forks progress.
-func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlockV3")
+type blockType uint8
+
+const (
+	any blockType = iota
+	full
+	blinded
+)
+
+// DEPRECATED: Please use ProduceBlockV3 instead.
+//
+// ProduceBlockV2 requests the beacon node to produce a valid unsigned beacon block,
+// which can then be signed by a proposer and submitted.
+func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlockV2")
 	defer span.End()
 
-	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
+
 	segments := strings.Split(r.URL.Path, "/")
 	rawSlot := segments[len(segments)-1]
 	rawRandaoReveal := r.URL.Query().Get("randao_reveal")
@@ -53,7 +58,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	} else {
 		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "unable to decode randao reveal").Error(), http.StatusBadRequest)
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
 		}
 		randaoReveal = rr
@@ -62,7 +67,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	if rawGraffiti != "" {
 		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
-			http2.HandleError(w, errors.Wrap(err, "unable to decode graffiti").Error(), http.StatusBadRequest)
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
 		}
 		graffiti = g
@@ -73,14 +78,130 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti,
 		SkipMevBoost: false,
-	})
+	}, full)
 }
 
-func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest) {
+// DEPRECATED: Please use ProduceBlockV3 instead.
+//
+// ProduceBlindedBlock requests the beacon node to produce a valid unsigned blinded beacon block,
+// which can then be signed by a proposer and submitted.
+func (s *Server) ProduceBlindedBlock(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlindedBlock")
+	defer span.End()
+
+	if shared.IsSyncing(ctx, w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	segments := strings.Split(r.URL.Path, "/")
+	rawSlot := segments[len(segments)-1]
+	rawRandaoReveal := r.URL.Query().Get("randao_reveal")
+	rawGraffiti := r.URL.Query().Get("graffiti")
+	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
+
+	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
+	if !valid {
+		return
+	}
+
+	var randaoReveal []byte
+	if rawSkipRandaoVerification == "true" {
+		randaoReveal = primitives.PointAtInfinity
+	} else {
+		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		if err != nil {
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
+			return
+		}
+		randaoReveal = rr
+	}
+	var graffiti []byte
+	if rawGraffiti != "" {
+		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		if err != nil {
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
+			return
+		}
+		graffiti = g
+	}
+
+	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
+		Slot:         primitives.Slot(slot),
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti,
+		SkipMevBoost: false,
+	}, blinded)
+}
+
+// ProduceBlockV3 requests a beacon node to produce a valid block, which can then be signed by a validator. The
+// returned block may be blinded or unblinded, depending on the current state of the network as
+// decided by the execution and beacon nodes.
+// The beacon node must return an unblinded block if it obtains the execution payload from its
+// paired execution node. It must only return a blinded block if it obtains the execution payload
+// header from an MEV relay.
+// Metadata in the response indicates the type of block produced, and the supported types of block
+// will be added to as forks progress.
+func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceBlockV3")
+	defer span.End()
+
+	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
+		return
+	}
+
+	segments := strings.Split(r.URL.Path, "/")
+	rawSlot := segments[len(segments)-1]
+	rawRandaoReveal := r.URL.Query().Get("randao_reveal")
+	rawGraffiti := r.URL.Query().Get("graffiti")
+	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
+
+	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
+	if !valid {
+		return
+	}
+
+	var randaoReveal []byte
+	if rawSkipRandaoVerification == "true" {
+		randaoReveal = primitives.PointAtInfinity
+	} else {
+		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		if err != nil {
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
+			return
+		}
+		randaoReveal = rr
+	}
+	var graffiti []byte
+	if rawGraffiti != "" {
+		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		if err != nil {
+			http2.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
+			return
+		}
+		graffiti = g
+	}
+
+	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
+		Slot:         primitives.Slot(slot),
+		RandaoReveal: randaoReveal,
+		Graffiti:     graffiti,
+		SkipMevBoost: false,
+	}, any)
+}
+
+func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest, requiredType blockType) {
 	isSSZ := http2.SszRequested(r)
 	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if requiredType == blinded && !v1alpha1resp.IsBlinded {
+		http2.HandleError(w, "Prepared block is not blinded", http.StatusInternalServerError)
+		return
+	} else if requiredType == full && v1alpha1resp.IsBlinded {
+		http2.HandleError(w, "Prepared block is blinded", http.StatusInternalServerError)
 		return
 	}
 
@@ -98,13 +219,13 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Phase0))
 		// rewards aren't used in phase 0
-		handleProducePhase0V3(ctx, w, isSSZ, phase0Block, v1alpha1resp.PayloadValue)
+		handleProducePhase0V3(w, isSSZ, phase0Block, v1alpha1resp.PayloadValue)
 		return
 	}
 	altairBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Altair)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Altair))
-		handleProduceAltairV3(ctx, w, isSSZ, altairBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceAltairV3(w, isSSZ, altairBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	optimistic, err := s.OptimisticModeFetcher.IsOptimistic(ctx)
@@ -119,37 +240,37 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	blindedBellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedBellatrix)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
-		handleProduceBlindedBellatrixV3(ctx, w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceBlindedBellatrixV3(w, isSSZ, blindedBellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	bellatrixBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Bellatrix)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Bellatrix))
-		handleProduceBellatrixV3(ctx, w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceBellatrixV3(w, isSSZ, bellatrixBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedCapellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedCapella)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Capella))
-		handleProduceBlindedCapellaV3(ctx, w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceBlindedCapellaV3(w, isSSZ, blindedCapellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	capellaBlock, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Capella)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Capella))
-		handleProduceCapellaV3(ctx, w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceCapellaV3(w, isSSZ, capellaBlock, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	blindedDenebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-		handleProduceBlindedDenebV3(ctx, w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceBlindedDenebV3(w, isSSZ, blindedDenebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 	denebBlockContents, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Deneb)
 	if ok {
 		w.Header().Set(api.VersionHeader, version.String(version.Deneb))
-		handleProduceDenebV3(ctx, w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
+		handleProduceDenebV3(w, isSSZ, denebBlockContents, v1alpha1resp.PayloadValue, consensusBlockValue)
 		return
 	}
 }
@@ -201,14 +322,11 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 }
 
 func handleProducePhase0V3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Phase0,
 	payloadValue uint64,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProducePhase0V3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.Phase0.MarshalSSZ()
 		if err != nil {
@@ -238,16 +356,12 @@ func handleProducePhase0V3(
 }
 
 func handleProduceAltairV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Altair,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceAltairV3")
-	defer span.End()
-
 	if isSSZ {
 		sszResp, err := blk.Altair.MarshalSSZ()
 		if err != nil {
@@ -277,15 +391,12 @@ func handleProduceAltairV3(
 }
 
 func handleProduceBellatrixV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Bellatrix,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBellatrixV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.Bellatrix.MarshalSSZ()
 		if err != nil {
@@ -315,15 +426,12 @@ func handleProduceBellatrixV3(
 }
 
 func handleProduceBlindedBellatrixV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedBellatrix,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedBellatrixV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.BlindedBellatrix.MarshalSSZ()
 		if err != nil {
@@ -353,15 +461,12 @@ func handleProduceBlindedBellatrixV3(
 }
 
 func handleProduceBlindedCapellaV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedCapella,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedCapellaV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.BlindedCapella.MarshalSSZ()
 		if err != nil {
@@ -391,15 +496,12 @@ func handleProduceBlindedCapellaV3(
 }
 
 func handleProduceCapellaV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Capella,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceCapellaV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.Capella.MarshalSSZ()
 		if err != nil {
@@ -429,15 +531,12 @@ func handleProduceCapellaV3(
 }
 
 func handleProduceBlindedDenebV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedDeneb,
 	executionPayloadValue uint64,
 	consensusPayloadValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceBlindedDenebV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.BlindedDeneb.MarshalSSZ()
 		if err != nil {
@@ -467,15 +566,12 @@ func handleProduceBlindedDenebV3(
 }
 
 func handleProduceDenebV3(
-	ctx context.Context,
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Deneb,
 	executionPayloadValue uint64,
 	consensusBlockValue string,
 ) {
-	_, span := trace.StartSpan(ctx, "validator.ProduceBlockV3.internal.handleProduceDenebV3")
-	defer span.End()
 	if isSSZ {
 		sszResp, err := blk.Deneb.MarshalSSZ()
 		if err != nil {

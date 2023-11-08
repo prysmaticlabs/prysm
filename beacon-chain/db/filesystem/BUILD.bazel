@@ -1,0 +1,28 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["save_blob.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//io/file:go_default_library",
+        "//proto/eth/v2:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["save_blob_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//config/fieldparams:go_default_library",
+        "//encoding/bytesutil:go_default_library",
+        "//io/file:go_default_library",
+        "//proto/eth/v2:go_default_library",
+        "//testing/require:go_default_library",
+        "@com_github_prysmaticlabs_fastssz//:go_default_library",
+    ],
+)
