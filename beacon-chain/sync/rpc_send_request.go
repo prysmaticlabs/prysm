@@ -196,9 +196,7 @@ func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseV
 		if blobIds[blockRoot] == nil {
 			blobIds[blockRoot] = make(map[uint64]bool)
 		}
-		if sc.Index < fieldparams.MaxBlobsPerBlock {
-			blobIds[blockRoot][sc.Index] = true
-		}
+		blobIds[blockRoot][sc.Index] = true
 	}
 	return func(sc *pb.DeprecatedBlobSidecar) error {
 		blobIndices := blobIds[bytesutil.ToBytes32(sc.BlockRoot)]
