@@ -267,6 +267,8 @@ func (node *BeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--%s=%s", cmdshared.BootstrapNode.Name, enr),
 		fmt.Sprintf("--%s=%s", cmdshared.VerbosityFlag.Name, "debug"),
 		fmt.Sprintf("--%s=%d", flags.BlockBatchLimitBurstFactor.Name, 8),
+		fmt.Sprintf("--%s=%d", flags.BlobBatchLimitBurstFactor.Name, 8),
+		fmt.Sprintf("--%s=%d", flags.BlobBatchLimit.Name, 32),
 		fmt.Sprintf("--%s=%s", cmdshared.ChainConfigFileFlag.Name, cfgPath),
 		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=1",
 		"--" + cmdshared.ValidatorMonitorIndicesFlag.Name + "=2",

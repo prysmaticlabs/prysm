@@ -44,46 +44,9 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		if err = json.NewDecoder(httpResp.Body).Decode(&resp); err != nil {
 			return err
 		}
-		headSlot := uint64(0)
-		switch resp.Version {
-		case version.String(version.Phase0):
-			b := &shared.BeaconBlock{}
-			if err := json.Unmarshal(resp.Data.Message, b); err != nil {
-				return err
-			}
-			headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
-			if err != nil {
-				return err
-			}
-		case version.String(version.Altair):
-			b := &shared.BeaconBlockAltair{}
-			if err := json.Unmarshal(resp.Data.Message, b); err != nil {
-				return err
-			}
-			headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
-			if err != nil {
-				return err
-			}
-		case version.String(version.Bellatrix):
-			b := &shared.BeaconBlockBellatrix{}
-			if err := json.Unmarshal(resp.Data.Message, b); err != nil {
-				return err
-			}
-			headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
-			if err != nil {
-				return err
-			}
-		case version.String(version.Capella):
-			b := &shared.BeaconBlockCapella{}
-			if err := json.Unmarshal(resp.Data.Message, b); err != nil {
-				return err
-			}
-			headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
-			if err != nil {
-				return err
-			}
-		default:
-			return errors.New("no valid block type retrieved")
+		headSlot, err := retrieveHeadSlot(&resp)
+		if err != nil {
+			return err
 		}
 		currEpoch := slots.ToEpoch(primitives.Slot(headSlot))
 		startSlot, err := slots.EpochStart(currEpoch)
@@ -122,4 +85,59 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		}
 	}
 	return nil
+}
+
+func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
+	headSlot := uint64(0)
+	var err error
+	switch resp.Version {
+	case version.String(version.Phase0):
+		b := &shared.BeaconBlock{}
+		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+			return 0, err
+		}
+		headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	case version.String(version.Altair):
+		b := &shared.BeaconBlockAltair{}
+		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+			return 0, err
+		}
+		headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	case version.String(version.Bellatrix):
+		b := &shared.BeaconBlockBellatrix{}
+		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+			return 0, err
+		}
+		headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	case version.String(version.Capella):
+		b := &shared.BeaconBlockCapella{}
+		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+			return 0, err
+		}
+		headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	case version.String(version.Deneb):
+		b := &shared.BeaconBlockDeneb{}
+		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
+			return 0, err
+		}
+		headSlot, err = strconv.ParseUint(b.Slot, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	default:
+		return 0, errors.New("no valid block type retrieved")
+	}
+	return headSlot, nil
 }

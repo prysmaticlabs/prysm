@@ -14,14 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
+func e2eMinimal(t *testing.T, cfg *params.BeaconChainConfig, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
-	require.NoError(t, params.SetActive(types.StartAt(v, params.E2ETestConfig())))
+	require.NoError(t, params.SetActive(cfg))
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 14
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -56,7 +56,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -103,7 +103,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 14
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -132,7 +132,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -188,7 +188,7 @@ func scenarioEvals() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -209,7 +209,7 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		// ev.DenebForkTransition, // TODO(12750): Enable this when geth main branch's engine API support.
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
