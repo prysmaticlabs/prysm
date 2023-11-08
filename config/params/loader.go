@@ -209,6 +209,11 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("DEPOSIT_CONTRACT_ADDRESS: %s", cfg.DepositContractAddress),
 		fmt.Sprintf("DENEB_FORK_EPOCH: %d", cfg.DenebForkEpoch),
 		fmt.Sprintf("DENEB_FORK_VERSION: %#x", cfg.DenebForkVersion),
+		fmt.Sprintf("EPOCHS_PER_SUBNET_SUBSCRIPTION: %d", cfg.EpochsPerSubnetSubscription),
+		fmt.Sprintf("ATTESTATION_SUBNET_EXTRA_BITS: %d", cfg.AttestationSubnetExtraBits),
+		fmt.Sprintf("ATTESTATION_SUBNET_PREFIX_BITS: %d", cfg.AttestationSubnetPrefixBits),
+		fmt.Sprintf("SUBNETS_PER_NODE: %d", cfg.SubnetsPerNode),
+		fmt.Sprintf("NODE_ID_BITS: %d", cfg.NodeIdBits),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))
