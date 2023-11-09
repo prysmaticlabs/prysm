@@ -97,7 +97,7 @@ var ValidatorsHaveWithdrawn = e2etypes.Evaluator{
 		// Determine the withdrawal epoch by using the max seed lookahead. This value
 		// differs for our minimal and mainnet config which is why we calculate it
 		// each time the policy is executed.
-		validWithdrawnEpoch := exitSubmissionEpoch + 1 + params.BeaconConfig().MaxSeedLookahead
+		validWithdrawnEpoch := exitSubmissionEpoch + 1 + params.BeaconConfig().MaxSeedLookahead + params.BeaconConfig().MinValidatorWithdrawabilityDelay
 		// Only run this for minimal setups after capella
 		if params.BeaconConfig().ConfigName == params.EndToEndName {
 			validWithdrawnEpoch = helpers.CapellaE2EForkEpoch + 1
