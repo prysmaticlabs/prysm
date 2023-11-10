@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -55,10 +54,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
 	}
 
-	committee, err := shared.SyncCommitteeFromConsensus(currentSyncCommittee)
-	if err != nil {
-		return nil, fmt.Errorf("could not get sync committee: %s", err.Error())
-	}
+	committee := shared.SyncCommitteeFromConsensus(currentSyncCommittee)
 
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
@@ -282,49 +278,26 @@ func branchToJSON(branchBytes [][]byte) []string {
 	return branch
 }
 
-func headerToJSON(input *v1.BeaconBlockHeader) *apimiddleware.BeaconBlockHeaderJson {
+func syncAggregateToJSON(input *v1.SyncAggregate) *shared.SyncAggregate {
 	if input == nil {
 		return nil
 	}
-	return &apimiddleware.BeaconBlockHeaderJson{
-		Slot:          strconv.FormatUint(uint64(input.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(input.ProposerIndex), 10),
-		ParentRoot:    hexutil.Encode(input.ParentRoot),
-		StateRoot:     hexutil.Encode(input.StateRoot),
-		BodyRoot:      hexutil.Encode(input.BodyRoot),
-	}
-}
-
-func syncCommitteeToJSON(input *v2.SyncCommittee) *apimiddleware.SyncCommitteeJson {
-	if input == nil {
-		return nil
-	}
-	syncCommittee := &apimiddleware.SyncCommitteeJson{
-		AggregatePubkey: hexutil.Encode(input.AggregatePubkey),
-		Pubkeys:         make([]string, len(input.Pubkeys)),
-	}
-	for i, pubKey := range input.Pubkeys {
-		syncCommittee.Pubkeys[i] = hexutil.Encode(pubKey)
-	}
-	return syncCommittee
-}
-
-func syncAggregateToJSON(input *v1.SyncAggregate) *apimiddleware.SyncAggregateJson {
-	if input == nil {
-		return nil
-	}
-	return &apimiddleware.SyncAggregateJson{
+	return &shared.SyncAggregate{
 		SyncCommitteeBits:      hexutil.Encode(input.SyncCommitteeBits),
 		SyncCommitteeSignature: hexutil.Encode(input.SyncCommitteeSignature),
 	}
 }
 
 func NewLightClientUpdateToJSON(input *v2.LightClientUpdate) *LightClientUpdate {
+	if input == nil {
+		return nil
+	}
+
 	return &LightClientUpdate{
-		AttestedHeader:          headerToJSON(input.AttestedHeader),
-		NextSyncCommittee:       syncCommitteeToJSON(input.NextSyncCommittee),
+		AttestedHeader:          shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
+		NextSyncCommittee:       shared.SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(input.NextSyncCommittee)),
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
-		FinalizedHeader:         headerToJSON(input.FinalizedHeader),
+		FinalizedHeader:         shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader)),
 		FinalityBranch:          branchToJSON(input.FinalityBranch),
 		SyncAggregate:           syncAggregateToJSON(input.SyncAggregate),
 		SignatureSlot:           strconv.FormatUint(uint64(input.SignatureSlot), 10),

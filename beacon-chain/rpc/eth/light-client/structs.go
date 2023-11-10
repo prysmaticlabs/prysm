@@ -1,7 +1,6 @@
 package lightclient
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
@@ -17,13 +16,13 @@ type LightClientBootstrap struct {
 }
 
 type LightClientUpdate struct {
-	AttestedHeader          *apimiddleware.BeaconBlockHeaderJson `json:"attested_header"`
-	NextSyncCommittee       *apimiddleware.SyncCommitteeJson     `json:"next_sync_committee"`
-	FinalizedHeader         *apimiddleware.BeaconBlockHeaderJson `json:"finalized_header"`
-	SyncAggregate           *apimiddleware.SyncAggregateJson     `json:"sync_aggregate"`
-	NextSyncCommitteeBranch []string                             `json:"next_sync_committee_branch"`
-	FinalityBranch          []string                             `json:"finality_branch"`
-	SignatureSlot           string                               `json:"signature_slot"`
+	AttestedHeader          *shared.BeaconBlockHeader `json:"attested_header"`
+	NextSyncCommittee       *shared.SyncCommittee     `json:"next_sync_committee"`
+	FinalizedHeader         *shared.BeaconBlockHeader `json:"finalized_header"`
+	SyncAggregate           *shared.SyncAggregate     `json:"sync_aggregate"`
+	NextSyncCommitteeBranch []string                  `json:"next_sync_committee_branch"`
+	FinalityBranch          []string                  `json:"finality_branch"`
+	SignatureSlot           string                    `json:"signature_slot"`
 }
 
 type LightClientUpdateWithVersion struct {

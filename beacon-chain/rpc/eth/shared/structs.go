@@ -630,9 +630,9 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 	}, nil
 }
 
-func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) (*SyncCommittee, error) {
+func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
 	if sc == nil {
-		return nil, errors.New("syncCommittee is empty")
+		return nil
 	}
 
 	var sPubKeys []string
@@ -643,7 +643,7 @@ func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) (*SyncCommittee, error) {
 	return &SyncCommittee{
 		Pubkeys:         sPubKeys,
 		AggregatePubkey: hexutil.Encode(sc.AggregatePubkey),
-	}, nil
+	}
 }
 
 func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
