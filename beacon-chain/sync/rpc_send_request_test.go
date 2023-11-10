@@ -360,6 +360,45 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		}
 	}
 
+	badBlockProvider := func(p2pProvider p2p.P2P, processor BeaconBlockProcessor) func(stream network.Stream) {
+		return func(stream network.Stream) {
+			defer func() {
+				assert.NoError(t, stream.Close())
+			}()
+
+			req := new(p2pTypes.BeaconBlockByRootsReq)
+			assert.NoError(t, p2pProvider.Encoding().DecodeWithMaxLength(stream, req))
+			if len(*req) == 0 {
+				return
+			}
+			for _, root := range *req {
+				if blk, ok := knownBlocks[root]; ok {
+					if processor != nil {
+						wsb, err := blocks.NewSignedBeaconBlock(blk)
+						require.NoError(t, err)
+						if processorErr := processor(wsb); processorErr != nil {
+							if errors.Is(processorErr, io.EOF) {
+								// Close stream, w/o any errors written.
+								return
+							}
+							_, err := stream.Write([]byte{0x01})
+							assert.NoError(t, err)
+							msg := p2pTypes.ErrorMessage(processorErr.Error())
+							_, err = p2pProvider.Encoding().EncodeWithMaxLength(stream, &msg)
+							assert.NoError(t, err)
+							return
+						}
+					}
+					_, err := stream.Write([]byte{0x00})
+					assert.NoError(t, err, "Could not write to stream")
+					blk.Block.Slot = 100 // Set a bad block slot
+					_, err = p2pProvider.Encoding().EncodeWithMaxLength(stream, blk)
+					assert.NoError(t, err, "Could not send response back")
+				}
+			}
+		}
+	}
+
 	t.Run("no block processor", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
@@ -389,7 +428,6 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.Equal(t, 2, len(blocks))
 		assert.DeepEqual(t, blocks, blocksFromProcessor)
 	})
-
 	t.Run("has block processor - throw error", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
@@ -404,7 +442,6 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		})
 		assert.ErrorContains(t, errFromProcessor.Error(), err)
 	})
-
 	t.Run("max request blocks", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
@@ -436,7 +473,6 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(blocks))
 	})
-
 	t.Run("process custom error", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
@@ -456,7 +492,6 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.ErrorContains(t, expectedErr.Error(), err)
 		assert.Equal(t, 0, len(blocks))
 	})
-
 	t.Run("process io.EOF error", func(t *testing.T) {
 		p1 := p2ptest.NewTestP2P(t)
 		p2 := p2ptest.NewTestP2P(t)
@@ -475,6 +510,22 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		blocks, err := SendBeaconBlocksByRootRequest(ctx, startup.NewClock(time.Now(), [32]byte{}), p1, p2.PeerID(), req, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(blocks))
+	})
+	t.Run("bad block should not be included", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		p2.SetStreamHandler(pcl, badBlockProvider(p2, nil))
+		p1.Connect(p2)
+
+		// No error from block processor.
+		req := &p2pTypes.BeaconBlockByRootsReq{knownRoots[0], knownRoots[1]}
+		blocksFromProcessor := make([]interfaces.ReadOnlySignedBeaconBlock, 0)
+		requestedBlks, err := SendBeaconBlocksByRootRequest(ctx, startup.NewClock(time.Now(), [32]byte{}), p1, p2.PeerID(), req, func(block interfaces.ReadOnlySignedBeaconBlock) error {
+			blocksFromProcessor = append(blocksFromProcessor, block)
+			return nil
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, 0, len(requestedBlks))
 	})
 }
 
