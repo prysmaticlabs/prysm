@@ -20,10 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-const (
-	nextSyncCommitteeBranchNumOfLeaves = 5
-)
-
 // CreateLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
 //
@@ -69,7 +65,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		return nil, fmt.Errorf("could not get current sync committee proof: %s", err.Error())
 	}
 
-	branch := make([]string, len(currentSyncCommitteeProof))
+	branch := make([]string, fieldparams.NextSyncCommitteeBranchDepth)
 	for i, proof := range currentSyncCommitteeProof {
 		branch[i] = hexutil.Encode(proof)
 	}
@@ -202,8 +198,8 @@ func CreateLightClientUpdate(
 			AggregatePubkey: make([]byte, fieldparams.BLSPubkeyLength),
 		}
 
-		nextSyncCommitteeBranch = make([][]byte, nextSyncCommitteeBranchNumOfLeaves)
-		for i := 0; i < 5; i++ {
+		nextSyncCommitteeBranch = make([][]byte, fieldparams.NextSyncCommitteeBranchDepth)
+		for i := 0; i < fieldparams.NextSyncCommitteeBranchDepth; i++ {
 			nextSyncCommitteeBranch[i] = make([]byte, fieldparams.RootLength)
 		}
 	}
