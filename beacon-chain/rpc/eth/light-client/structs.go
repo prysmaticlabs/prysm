@@ -2,6 +2,7 @@ package lightclient
 
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
 type LightClientBootstrapResponse struct {
@@ -10,9 +11,9 @@ type LightClientBootstrapResponse struct {
 }
 
 type LightClientBootstrap struct {
-	Header                     *apimiddleware.BeaconBlockHeaderJson `json:"header"`
-	CurrentSyncCommittee       *apimiddleware.SyncCommitteeJson     `json:"current_sync_committee"`
-	CurrentSyncCommitteeBranch []string                             `json:"current_sync_committee_branch"`
+	Header                     *shared.BeaconBlockHeader `json:"header"`
+	CurrentSyncCommittee       *shared.SyncCommittee     `json:"current_sync_committee"`
+	CurrentSyncCommitteeBranch []string                  `json:"current_sync_committee_branch"`
 }
 
 type LightClientUpdate struct {
