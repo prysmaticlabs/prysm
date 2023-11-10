@@ -181,6 +181,7 @@ func V1Alpha1HeaderToV1(v1alpha1Hdr *ethpbalpha.BeaconBlockHeader) *ethpbv1.Beac
 	if v1alpha1Hdr == nil {
 		return &ethpbv1.BeaconBlockHeader{}
 	}
+
 	return &ethpbv1.BeaconBlockHeader{
 		Slot:          v1alpha1Hdr.Slot,
 		ProposerIndex: v1alpha1Hdr.ProposerIndex,
@@ -204,6 +205,20 @@ func V1SignedHeaderToV1Alpha1(v1Header *ethpbv1.SignedBeaconBlockHeader) *ethpba
 			BodyRoot:      v1Header.Message.BodyRoot,
 		},
 		Signature: v1Header.Signature,
+	}
+}
+
+// V1HeaderToV1Alpha1 converts a v1 beacon block header to v1alpha1.
+func V1HeaderToV1Alpha1(v1Header *ethpbv1.BeaconBlockHeader) *ethpbalpha.BeaconBlockHeader {
+	if v1Header == nil {
+		return &ethpbalpha.BeaconBlockHeader{}
+	}
+	return &ethpbalpha.BeaconBlockHeader{
+		Slot:          v1Header.Slot,
+		ProposerIndex: v1Header.ProposerIndex,
+		ParentRoot:    v1Header.ParentRoot,
+		StateRoot:     v1Header.StateRoot,
+		BodyRoot:      v1Header.BodyRoot,
 	}
 }
 
