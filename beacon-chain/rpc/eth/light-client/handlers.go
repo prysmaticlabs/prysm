@@ -35,7 +35,7 @@ func (bs *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reque
 	}
 
 	blockRoot := bytesutil.ToBytes32(blockRootParam)
-	blk, err := bs.BeaconDB.Block(ctx, blockRoot)
+	blk, err := bs.Blocker.Block(ctx, blockRoot[:])
 	if !shared.WriteBlockFetchError(w, blk, err) {
 		return
 	}
@@ -147,7 +147,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 				continue
 			}
 
-			block, err = bs.BeaconDB.Block(ctx, blockRoot)
+			block, err = bs.Blocker.Block(ctx, blockRoot[:])
 			if err != nil || block == nil {
 				continue
 			}
@@ -172,7 +172,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 
 		// Get attested state
 		attestedRoot := block.Block().ParentRoot()
-		attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
+		attestedBlock, err := bs.Blocker.Block(ctx, attestedRoot[:])
 		if err != nil || attestedBlock == nil {
 			continue
 		}
@@ -188,7 +188,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 		finalizedCheckPoint := attestedState.FinalizedCheckpoint()
 		if finalizedCheckPoint != nil {
 			finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-			finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+			finalizedBlock, err = bs.Blocker.Block(ctx, finalizedRoot[:])
 			if err != nil {
 				finalizedBlock = nil
 			}
@@ -246,7 +246,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
-	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
+	attestedBlock, err := bs.Blocker.Block(ctx, attestedRoot[:])
 	if err != nil || attestedBlock == nil {
 		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -264,7 +264,7 @@ func (bs *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.
 	finalizedCheckPoint := attestedState.FinalizedCheckpoint()
 	if finalizedCheckPoint != nil {
 		finalizedRoot := bytesutil.ToBytes32(finalizedCheckPoint.Root)
-		finalizedBlock, err = bs.BeaconDB.Block(ctx, finalizedRoot)
+		finalizedBlock, err = bs.Blocker.Block(ctx, finalizedRoot[:])
 		if err != nil {
 			finalizedBlock = nil
 		}
@@ -311,7 +311,7 @@ func (bs *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *htt
 
 	// Get attested state
 	attestedRoot := block.Block().ParentRoot()
-	attestedBlock, err := bs.BeaconDB.Block(ctx, attestedRoot)
+	attestedBlock, err := bs.Blocker.Block(ctx, attestedRoot[:])
 	if err != nil {
 		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -367,7 +367,7 @@ func (bs *Server) getLightClientEventBlock(ctx context.Context, minSignaturesReq
 		return nil, fmt.Errorf("could not get latest block header root %v", err)
 	}
 
-	block, err := bs.BeaconDB.Block(ctx, latestBlockHeaderRoot)
+	block, err := bs.Blocker.Block(ctx, latestBlockHeaderRoot[:])
 	if err != nil {
 		return nil, fmt.Errorf("could not get latest block %v", err)
 	}
@@ -383,7 +383,7 @@ func (bs *Server) getLightClientEventBlock(ctx context.Context, minSignaturesReq
 	for numOfSyncCommitteeSignatures < minSignaturesRequired {
 		// Get the parent block
 		parentRoot := block.Block().ParentRoot()
-		block, err = bs.BeaconDB.Block(ctx, parentRoot)
+		block, err = bs.Blocker.Block(ctx, parentRoot[:])
 		if err != nil {
 			return nil, fmt.Errorf("could not get parent block %v", err)
 		}

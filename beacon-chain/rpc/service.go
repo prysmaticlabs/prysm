@@ -480,7 +480,7 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/config/spec", config.GetSpec).Methods(http.MethodGet)
 
 	lightClientServer := &lightclient.Server{
-		BeaconDB:    s.cfg.BeaconDB,
+		Blocker:     blocker,
 		Stater:      stater,
 		HeadFetcher: s.cfg.HeadFetcher,
 	}
