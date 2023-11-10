@@ -244,33 +244,16 @@ func NewLightClientBootstrapFromJSON(bootstrapJSON *LightClientBootstrap) (*v2.L
 	}
 	bootstrap.Header = migration.V1Alpha1HeaderToV1(v1Alpha1Header)
 
-	if bootstrap.CurrentSyncCommittee, err = syncCommitteeFromJSON(bootstrapJSON.CurrentSyncCommittee); err != nil {
+	currentSyncCommittee, err := bootstrapJSON.CurrentSyncCommittee.ToConsensus()
+	if err != nil {
 		return nil, err
 	}
+	bootstrap.CurrentSyncCommittee = migration.V1Alpha1SyncCommitteeToV2(currentSyncCommittee)
+
 	if bootstrap.CurrentSyncCommitteeBranch, err = branchFromJSON(bootstrapJSON.CurrentSyncCommitteeBranch); err != nil {
 		return nil, err
 	}
 	return bootstrap, nil
-}
-
-func syncCommitteeFromJSON(syncCommitteeJSON *apimiddleware.SyncCommitteeJson) (*v2.SyncCommittee, error) {
-	if syncCommitteeJSON == nil {
-		return nil, nil
-	}
-	syncCommittee := &v2.SyncCommittee{
-		Pubkeys: make([][]byte, len(syncCommitteeJSON.Pubkeys)),
-	}
-	for i, pubKey := range syncCommitteeJSON.Pubkeys {
-		var err error
-		if syncCommittee.Pubkeys[i], err = hexutil.Decode(pubKey); err != nil {
-			return nil, err
-		}
-	}
-	var err error
-	if syncCommittee.AggregatePubkey, err = hexutil.Decode(syncCommitteeJSON.AggregatePubkey); err != nil {
-		return nil, err
-	}
-	return syncCommittee, nil
 }
 
 func branchFromJSON(branch []string) ([][]byte, error) {

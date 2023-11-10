@@ -646,6 +646,25 @@ func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) (*SyncCommittee, error) {
 	}, nil
 }
 
+func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
+	var pubKeys [][]byte
+	for _, p := range sc.Pubkeys {
+		pubKey, err := hexutil.Decode(p)
+		if err != nil {
+			return nil, NewDecodeError(err, "Pubkeys")
+		}
+		pubKeys = append(pubKeys, pubKey)
+	}
+	aggPubKey, err := hexutil.Decode(sc.AggregatePubkey)
+	if err != nil {
+		return nil, NewDecodeError(err, "AggregatePubkey")
+	}
+	return &eth.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: aggPubKey,
+	}, nil
+}
+
 // SyncDetails contains information about node sync status.
 type SyncDetails struct {
 	HeadSlot     string `json:"head_slot"`
