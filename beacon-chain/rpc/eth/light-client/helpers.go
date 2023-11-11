@@ -68,7 +68,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 
 	header := shared.BeaconBlockHeaderFromConsensus(latestBlockHeader)
 	if header == nil {
-		return nil, fmt.Errorf("could not get beacon block header: %s", err.Error())
+		return nil, fmt.Errorf("could not get beacon block header")
 	}
 
 	// Above shared util function won't calculate state root, so we need to do it manually
