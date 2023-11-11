@@ -74,6 +74,7 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.BodyRoot)
+	require.NotNil(t, resp.Data)
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
@@ -175,6 +176,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	require.Equal(t, 1, len(resp.Updates))
 	require.Equal(t, "capella", resp.Updates[0].Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp.Updates)
 }
 
 func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
@@ -280,6 +282,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp.Data)
 }
 
 func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
@@ -385,4 +388,5 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp.Data)
 }
