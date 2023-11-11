@@ -11,13 +11,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -27,20 +28,18 @@ import (
 
 func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	helpers.ClearCache()
-	ctx := context.Background()
 	slot := primitives.Slot(params.BeaconConfig().AltairForkEpoch * primitives.Epoch(params.BeaconConfig().SlotsPerEpoch)).Add(1)
 
-	db := testDB.SetupDB(t)
 	b := util.NewBeaconBlockCapella()
 	b.Block.StateRoot = bytesutil.PadTo([]byte("foo"), 32)
 	b.Block.Slot = slot
 
 	signedBlock, err := blocks.NewSignedBeaconBlock(b)
+
 	require.NoError(t, err)
 	header, err := signedBlock.Header()
 	require.NoError(t, err)
 
-	util.SaveBlock(t, ctx, db, b)
 	r, err := b.Block.HashTreeRoot()
 	require.NoError(t, err)
 
@@ -53,16 +52,13 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	require.NoError(t, bs.SetSlot(slot))
 	require.NoError(t, bs.SetLatestBlockHeader(header.Header))
 
-	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: r[:]}))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, r))
-	require.NoError(t, db.SaveState(ctx, bs, r))
-
+	mockBlocker := &testutil.MockBlocker{BlockToReturn: signedBlock}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 			slot: bs,
 		}},
-		BeaconDB:    db,
+		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
 	muxVars := make(map[string]string)
@@ -76,7 +72,7 @@ func TestLightClientHandler_GetLightClientBootstrap(t *testing.T) {
 	require.Equal(t, http.StatusOK, writer.Code)
 	resp := &LightClientBootstrapResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "CAPELLA", resp.Version)
+	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(header.Header.BodyRoot), resp.Data.Header.BodyRoot)
 }
 
@@ -143,24 +139,26 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	signedBlock, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 
-	db := testDB.SetupDB(t)
-
-	util.SaveBlock(t, ctx, db, block)
-	util.SaveBlock(t, ctx, db, parent)
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	require.NoError(t, db.SaveState(ctx, st, root))
-
+	mockBlocker := &testutil.MockBlocker{
+		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
+			parentRoot: signedParent,
+			root:       signedBlock,
+		},
+		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+			slot.Sub(1): signedParent,
+			slot:        signedBlock,
+		},
+	}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st}
 	s := &Server{
 		Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 			slot.Sub(1): attestedState,
 			slot:        st,
 		}},
-		BeaconDB:    db,
+		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
 	startPeriod := slot.Div(uint64(config.EpochsPerSyncCommitteePeriod)).Div(uint64(config.SlotsPerEpoch))
@@ -175,7 +173,7 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	resp := &LightClientUpdatesByRangeResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, 1, len(resp.Updates))
-	require.Equal(t, "CAPELLA", resp.Updates[0].Version)
+	require.Equal(t, "capella", resp.Updates[0].Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
 }
 
@@ -247,17 +245,19 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	signedBlock, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 
-	db := testDB.SetupDB(t)
-
-	util.SaveBlock(t, ctx, db, block)
-	util.SaveBlock(t, ctx, db, parent)
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	require.NoError(t, db.SaveState(ctx, st, root))
-
+	mockBlocker := &testutil.MockBlocker{
+		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
+			parentRoot: signedParent,
+			root:       signedBlock,
+		},
+		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+			slot.Sub(1): signedParent,
+			slot:        signedBlock,
+		},
+	}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st, FinalizedRoots: map[[32]byte]bool{
 		root: true,
 	}}
@@ -266,7 +266,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 			slot.Sub(1): attestedState,
 			slot:        st,
 		}},
-		BeaconDB:    db,
+		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
@@ -278,7 +278,7 @@ func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
 	require.Equal(t, http.StatusOK, writer.Code)
 	resp := &LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "CAPELLA", resp.Version)
+	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
 }
 
@@ -350,17 +350,19 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	signedBlock, err = blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
 
-	db := testDB.SetupDB(t)
-
-	util.SaveBlock(t, ctx, db, block)
-	util.SaveBlock(t, ctx, db, parent)
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: root[:]}))
-	require.NoError(t, db.SaveGenesisBlockRoot(ctx, root))
-	require.NoError(t, db.SaveState(ctx, st, root))
-
+	mockBlocker := &testutil.MockBlocker{
+		RootBlockMap: map[[32]byte]interfaces.ReadOnlySignedBeaconBlock{
+			parentRoot: signedParent,
+			root:       signedBlock,
+		},
+		SlotBlockMap: map[primitives.Slot]interfaces.ReadOnlySignedBeaconBlock{
+			slot.Sub(1): signedParent,
+			slot:        signedBlock,
+		},
+	}
 	mockChainService := &mock.ChainService{Optimistic: true, Slot: &slot, State: st, FinalizedRoots: map[[32]byte]bool{
 		root: true,
 	}}
@@ -369,7 +371,7 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 			slot.Sub(1): attestedState,
 			slot:        st,
 		}},
-		BeaconDB:    db,
+		Blocker:     mockBlocker,
 		HeadFetcher: mockChainService,
 	}
 	request := httptest.NewRequest("GET", "http://foo.com", nil)
@@ -381,6 +383,6 @@ func TestLightClientHandler_GetLightClientOptimisticUpdate(t *testing.T) {
 	require.Equal(t, http.StatusOK, writer.Code)
 	resp := &LightClientUpdateWithVersion{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, "CAPELLA", resp.Version)
+	require.Equal(t, "capella", resp.Version)
 	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Data.AttestedHeader.BodyRoot)
 }
