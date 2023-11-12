@@ -196,7 +196,6 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 
 		update, err := CreateLightClientUpdate(
 			ctx,
-			slotsPerPeriod,
 			state,
 			block,
 			attestedState,

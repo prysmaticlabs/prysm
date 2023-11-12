@@ -148,7 +148,6 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 //	)
 func CreateLightClientUpdate(
 	ctx context.Context,
-	slotsPerPeriod uint64,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
@@ -163,10 +162,10 @@ func CreateLightClientUpdate(
 	var nextSyncCommitteeBranch [][]byte
 
 	// update_signature_period = compute_sync_committee_period(compute_epoch_at_slot(block.message.slot))
-	updateSignaturePeriod := uint64(block.Block().Slot()) / slotsPerPeriod
+	updateSignaturePeriod := slots.ToEpoch(block.Block().Slot())
 
 	// update_attested_period = compute_sync_committee_period(compute_epoch_at_slot(attested_header.slot))
-	updateAttestedPeriod := uint64(result.AttestedHeader.Slot) / slotsPerPeriod
+	updateAttestedPeriod := slots.ToEpoch(result.AttestedHeader.Slot)
 
 	if updateAttestedPeriod == updateSignaturePeriod {
 		tempNextSyncCommittee, err := attestedState.NextSyncCommittee()
