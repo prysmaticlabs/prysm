@@ -132,7 +132,7 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 			}
 
 			// Get the block
-			latestBlockHeader := *state.LatestBlockHeader()
+			latestBlockHeader := state.LatestBlockHeader()
 			latestStateRoot, err := state.HashTreeRoot(ctx)
 			if err != nil {
 				continue
