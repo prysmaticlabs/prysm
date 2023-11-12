@@ -72,11 +72,11 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
 
 	// Adjust count based on configuration
-	countParam := req.URL.Query().Get("count")
-	count, err := strconv.ParseUint(countParam, 10, 64)
-	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%s': %s", countParam, err.Error()),
-			http.StatusInternalServerError)
+	gotCount, _, count := shared.UintFromQuery(w, req, "count")
+	if !gotCount {
+		return
+	} else if count == 0 {
+		http2.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%d': count must be greater than 0", count), http.StatusInternalServerError)
 		return
 	}
 
