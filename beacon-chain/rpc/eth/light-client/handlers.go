@@ -369,7 +369,8 @@ func (bs *Server) getLightClientEventBlock(ctx context.Context, minSignaturesReq
 	if block == nil {
 		return nil, fmt.Errorf("latest block is nil")
 	}
-	// Loop through the blocks until we find a block that has super majority of sync committee signatures (2/3)
+
+	// Loop through the blocks until we find a block that satisfies minSignaturesRequired requirement
 	var numOfSyncCommitteeSignatures uint64
 	if syncAggregate, err := block.Block().Body().SyncAggregate(); err == nil && syncAggregate != nil {
 		numOfSyncCommitteeSignatures = syncAggregate.SyncCommitteeBits.Count()
