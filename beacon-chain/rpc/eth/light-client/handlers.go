@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math"
 	"net/http"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -81,11 +80,8 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 	}
 
 	// Determine the start and end periods
-	startPeriodParam := req.URL.Query().Get("start_period")
-	startPeriod, err := strconv.ParseUint(startPeriodParam, 10, 64)
-	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("got invalid 'start_period' query variable '%s': %s", startPeriodParam, err.Error()),
-			http.StatusInternalServerError)
+	gotStartPeriod, _, startPeriod := shared.UintFromQuery(w, req, "start_period")
+	if !gotStartPeriod {
 		return
 	}
 
