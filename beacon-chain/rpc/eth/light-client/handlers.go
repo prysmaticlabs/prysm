@@ -102,8 +102,8 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 		return
 	}
 
-	lHeadSlot := uint64(headState.Slot())
-	headPeriod := lHeadSlot / slotsPerPeriod
+	headSlot := uint64(headState.Slot())
+	headPeriod := headSlot / slotsPerPeriod
 	if headPeriod < endPeriod {
 		endPeriod = headPeriod
 	}
@@ -114,19 +114,19 @@ func (bs *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.
 		// Get the last known state of the period,
 		//    1. We wish the block has a parent in the same period if possible
 		//	  2. We wish the block has a state in the same period
-		lLastSlotInPeriod := period*slotsPerPeriod + slotsPerPeriod - 1
-		if lLastSlotInPeriod > lHeadSlot {
-			lLastSlotInPeriod = lHeadSlot
+		lastSlotInPeriod := period*slotsPerPeriod + slotsPerPeriod - 1
+		if lastSlotInPeriod > headSlot {
+			lastSlotInPeriod = headSlot
 		}
-		lFirstSlotInPeriod := period * slotsPerPeriod
+		firstSlotInPeriod := period * slotsPerPeriod
 
 		// Let's not use the first slot in the period, otherwise the attested header will be in previous period
-		lFirstSlotInPeriod++
+		firstSlotInPeriod++
 
 		var state state.BeaconState
 		var block interfaces.ReadOnlySignedBeaconBlock
-		for lSlot := lLastSlotInPeriod; lSlot >= lFirstSlotInPeriod; lSlot-- {
-			state, err = bs.Stater.StateBySlot(ctx, types.Slot(lSlot))
+		for s := lastSlotInPeriod; s >= firstSlotInPeriod; s-- {
+			state, err = bs.Stater.StateBySlot(ctx, types.Slot(s))
 			if err != nil {
 				continue
 			}
