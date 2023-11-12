@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// CreateLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
+// createLightClientBootstrap - implements https://github.com/ethereum/consensus-specs/blob/3d235740e5f1e641d3b160c8688f26e7dc5a1894/specs/altair/light-client/full-node.md#create_light_client_bootstrap
 // def create_light_client_bootstrap(state: BeaconState) -> LightClientBootstrap:
 //
 //	assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
@@ -36,7 +36,7 @@ import (
 //	    current_sync_committee=state.current_sync_committee,
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
-func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*LightClientBootstrap, error) {
+func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
@@ -88,7 +88,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	return result, nil
 }
 
-// CreateLightClientUpdate - implements https://github.
+// createLightClientUpdate - implements https://github.
 // com/ethereum/consensus-specs/blob/d70dcd9926a4bbe987f1b4e65c3e05bd029fcfb8/specs/altair/light-client/full-node.md#create_light_client_update
 // def create_light_client_update(state: BeaconState,
 //
@@ -146,7 +146,7 @@ func CreateLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 //	    sync_aggregate=block.message.body.sync_aggregate,
 //	    signature_slot=block.message.slot,
 //	)
-func CreateLightClientUpdate(
+func createLightClientUpdate(
 	ctx context.Context,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
@@ -201,10 +201,10 @@ func CreateLightClientUpdate(
 
 	result.NextSyncCommittee = nextSyncCommittee
 	result.NextSyncCommitteeBranch = nextSyncCommitteeBranch
-	return NewLightClientUpdateToJSON(result), nil
+	return newLightClientUpdateToJSON(result), nil
 }
 
-func NewLightClientFinalityUpdateFromBeaconState(
+func newLightClientFinalityUpdateFromBeaconState(
 	ctx context.Context,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
@@ -215,10 +215,10 @@ func NewLightClientFinalityUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return NewLightClientUpdateToJSON(result), nil
+	return newLightClientUpdateToJSON(result), nil
 }
 
-func NewLightClientOptimisticUpdateFromBeaconState(
+func newLightClientOptimisticUpdateFromBeaconState(
 	ctx context.Context,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
@@ -228,7 +228,7 @@ func NewLightClientOptimisticUpdateFromBeaconState(
 		return nil, err
 	}
 
-	return NewLightClientUpdateToJSON(result), nil
+	return newLightClientUpdateToJSON(result), nil
 }
 
 func NewLightClientBootstrapFromJSON(bootstrapJSON *LightClientBootstrap) (*v2.LightClientBootstrap, error) {
@@ -287,7 +287,7 @@ func syncAggregateToJSON(input *v1.SyncAggregate) *shared.SyncAggregate {
 	}
 }
 
-func NewLightClientUpdateToJSON(input *v2.LightClientUpdate) *LightClientUpdate {
+func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *LightClientUpdate {
 	if input == nil {
 		return nil
 	}
