@@ -63,7 +63,7 @@ func (c *NetworkConfig) Copy() *NetworkConfig {
 // request for a given epoch. If the epoch is at or beyond the mainnetDenebForkEpoch,
 // a special limit defined for Deneb is used.
 func MaxRequestBlock(e primitives.Epoch) uint64 {
-	if e >= mainnetDenebForkEpoch {
+	if e >= BeaconConfig().DenebForkEpoch {
 		return networkConfig.MaxRequestBlocksDeneb
 	}
 	return networkConfig.MaxRequestBlocks
