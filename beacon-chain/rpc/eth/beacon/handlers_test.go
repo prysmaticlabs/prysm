@@ -2670,6 +2670,7 @@ func TestGetBlockHeaders(t *testing.T) {
 				writer.Body = &bytes.Buffer{}
 
 				bs.GetBlockHeaders(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
 				resp := &GetBlockHeadersResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
@@ -2721,6 +2722,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		bs.GetBlockHeaders(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetBlockHeadersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
@@ -2764,6 +2766,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
@@ -2777,6 +2780,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
@@ -2789,9 +2793,24 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
+		})
+		t.Run("no blocks found", func(t *testing.T) {
+			urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(bytes.Repeat([]byte{1}, 32)))
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusNotFound, writer.Code)
+			e := &http2.DefaultErrorJson{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusNotFound, e.Code)
+			assert.StringContains(t, "No blocks found", e.Message)
 		})
 	})
 }
