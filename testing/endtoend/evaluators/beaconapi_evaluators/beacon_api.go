@@ -277,17 +277,17 @@ var requests = map[string]metadata{
 	"/beacon/pool/attester_slashings": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterSlashingsPoolResponseJson{},
+			"json": &beacon.GetAttesterSlashingsResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterSlashingsPoolResponseJson{},
+			"json": &beacon.GetAttesterSlashingsResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
-			pResp, ok := p.(*apimiddleware.AttesterSlashingsPoolResponseJson)
+			pResp, ok := p.(*beacon.GetAttesterSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
-			lResp, ok := l.(*apimiddleware.AttesterSlashingsPoolResponseJson)
+			lResp, ok := l.(*beacon.GetAttesterSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -303,17 +303,17 @@ var requests = map[string]metadata{
 	"/beacon/pool/proposer_slashings": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerSlashingsPoolResponseJson{},
+			"json": &beacon.GetProposerSlashingsResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerSlashingsPoolResponseJson{},
+			"json": &beacon.GetProposerSlashingsResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
-			pResp, ok := p.(*apimiddleware.ProposerSlashingsPoolResponseJson)
+			pResp, ok := p.(*beacon.GetProposerSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
-			lResp, ok := l.(*apimiddleware.ProposerSlashingsPoolResponseJson)
+			lResp, ok := l.(*beacon.GetProposerSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -731,12 +731,21 @@ func postEvaluation(beaconNodeIdx int, requests map[string]metadata) error {
 		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
-	} else {
+	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockCapella{}
+		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+			return errors.Wrap(err, "failed to unmarshal ssz")
+		}
+	} else {
+		b := &ethpb.SignedBeaconBlockDeneb{}
+		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+			return errors.Wrap(err, "failed to unmarshal ssz")
+		}
+		bb := &ethpb.SignedBlindedBeaconBlockDeneb{}
 		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}

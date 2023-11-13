@@ -1097,6 +1097,11 @@ func (b *BeaconBlockBody) BlobKzgCommitments() ([][]byte, error) {
 	}
 }
 
+// Version returns the version of the beacon block body
+func (b *BeaconBlockBody) Version() int {
+	return b.version
+}
+
 // HashTreeRoot returns the ssz root of the block body.
 func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) {
 	pb, err := b.Proto()

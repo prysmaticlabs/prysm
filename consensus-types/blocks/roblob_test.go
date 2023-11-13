@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
@@ -56,4 +57,60 @@ func TestBlockRoot(t *testing.T) {
 		root: root,
 	}
 	assert.Equal(t, root, blob.BlockRoot())
+}
+
+func TestSlot(t *testing.T) {
+	slot := primitives.Slot(1)
+	blob := &ROBlob{
+		BlobSidecar: &ethpb.BlobSidecar{
+			SignedBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					Slot: slot,
+				},
+			},
+		},
+	}
+	assert.Equal(t, slot, blob.Slot())
+}
+
+func TestParentRoot(t *testing.T) {
+	root := [32]byte{1}
+	blob := &ROBlob{
+		BlobSidecar: &ethpb.BlobSidecar{
+			SignedBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					ParentRoot: root[:],
+				},
+			},
+		},
+	}
+	assert.Equal(t, root, blob.ParentRoot())
+}
+
+func TestBodyRoot(t *testing.T) {
+	root := [32]byte{1}
+	blob := &ROBlob{
+		BlobSidecar: &ethpb.BlobSidecar{
+			SignedBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					BodyRoot: root[:],
+				},
+			},
+		},
+	}
+	assert.Equal(t, root, blob.BodyRoot())
+}
+
+func TestProposeIndex(t *testing.T) {
+	index := primitives.ValidatorIndex(1)
+	blob := &ROBlob{
+		BlobSidecar: &ethpb.BlobSidecar{
+			SignedBlockHeader: &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{
+					ProposerIndex: index,
+				},
+			},
+		},
+	}
+	assert.Equal(t, index, blob.ProposerIndex())
 }

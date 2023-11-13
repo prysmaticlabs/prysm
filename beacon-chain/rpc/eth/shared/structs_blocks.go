@@ -2,9 +2,12 @@ package shared
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -314,9 +317,37 @@ type ProposerSlashing struct {
 	SignedHeader2 *SignedBeaconBlockHeader `json:"signed_header_2" validate:"required"`
 }
 
+func (s *ProposerSlashing) ToConsensus() (*eth.ProposerSlashing, error) {
+	h1, err := s.SignedHeader1.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "SignedHeader1")
+	}
+	h2, err := s.SignedHeader2.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "SignedHeader2")
+	}
+
+	return &eth.ProposerSlashing{
+		Header_1: h1,
+		Header_2: h2,
+	}, nil
+}
+
 type AttesterSlashing struct {
 	Attestation1 *IndexedAttestation `json:"attestation_1" validate:"required"`
 	Attestation2 *IndexedAttestation `json:"attestation_2" validate:"required"`
+}
+
+func (s *AttesterSlashing) ToConsensus() (*eth.AttesterSlashing, error) {
+	att1, err := s.Attestation1.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Attestation1")
+	}
+	att2, err := s.Attestation2.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Attestation2")
+	}
+	return &eth.AttesterSlashing{Attestation_1: att1, Attestation_2: att2}, nil
 }
 
 type Deposit struct {
@@ -342,6 +373,22 @@ type SignedBeaconBlockHeader struct {
 	Signature string             `json:"signature" validate:"required"`
 }
 
+func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, error) {
+	msg, err := h.Message.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Message")
+	}
+	sig, err := DecodeHexWithLength(h.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+
+	return &eth.SignedBeaconBlockHeader{
+		Header:    msg,
+		Signature: sig,
+	}, nil
+}
+
 type BeaconBlockHeader struct {
 	Slot          string `json:"slot" validate:"required"`
 	ProposerIndex string `json:"proposer_index" validate:"required"`
@@ -350,10 +397,66 @@ type BeaconBlockHeader struct {
 	BodyRoot      string `json:"body_root" validate:"required"`
 }
 
+func (h *BeaconBlockHeader) ToConsensus() (*eth.BeaconBlockHeader, error) {
+	s, err := strconv.ParseUint(h.Slot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "Slot")
+	}
+	pi, err := strconv.ParseUint(h.ProposerIndex, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "ProposerIndex")
+	}
+	pr, err := DecodeHexWithLength(h.ParentRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "ParentRoot")
+	}
+	sr, err := DecodeHexWithLength(h.StateRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "StateRoot")
+	}
+	br, err := DecodeHexWithLength(h.BodyRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "BodyRoot")
+	}
+
+	return &eth.BeaconBlockHeader{
+		Slot:          primitives.Slot(s),
+		ProposerIndex: primitives.ValidatorIndex(pi),
+		ParentRoot:    pr,
+		StateRoot:     sr,
+		BodyRoot:      br,
+	}, nil
+}
+
 type IndexedAttestation struct {
 	AttestingIndices []string         `json:"attesting_indices" validate:"required,dive"`
 	Data             *AttestationData `json:"data" validate:"required"`
 	Signature        string           `json:"signature" validate:"required"`
+}
+
+func (a *IndexedAttestation) ToConsensus() (*eth.IndexedAttestation, error) {
+	indices := make([]uint64, len(a.AttestingIndices))
+	var err error
+	for i, ix := range a.AttestingIndices {
+		indices[i], err = strconv.ParseUint(ix, 10, 64)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("AttestingIndices[%d]", i))
+		}
+	}
+	data, err := a.Data.ToConsensus()
+	if err != nil {
+		return nil, NewDecodeError(err, "Data")
+	}
+	sig, err := DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+
+	return &eth.IndexedAttestation{
+		AttestingIndices: indices,
+		Data:             data,
+		Signature:        sig,
+	}, nil
 }
 
 type SyncAggregate struct {

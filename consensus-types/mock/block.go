@@ -316,6 +316,10 @@ func (b *BeaconBlockBody) Attestations() []*eth.Attestation {
 	panic("implement me")
 }
 
+func (b *BeaconBlockBody) Version() int {
+	panic("implement me")
+}
+
 var _ interfaces.ReadOnlySignedBeaconBlock = &SignedBeaconBlock{}
 var _ interfaces.ReadOnlyBeaconBlock = &BeaconBlock{}
 var _ interfaces.ReadOnlyBeaconBlockBody = &BeaconBlockBody{}
