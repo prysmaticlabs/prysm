@@ -101,11 +101,6 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	// min possible slot is Altair fork period
 	minSlot := uint64(config.AltairForkEpoch) * uint64(config.SlotsPerEpoch)
 
-	if maxSlot < minSlot {
-		http2.HandleError(w, "max slot is less than min slot, looks like Altair fork not happen yet", http.StatusInternalServerError)
-		return
-	}
-
 	// Adjust startPeriod, the end of start period must be later than Altair fork epoch, otherwise, can not get the sync committee votes
 	startPeriodEndSlot := (startPeriod+1)*slotsPerPeriod - 1
 	if startPeriodEndSlot < minSlot {
@@ -119,12 +114,6 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	endPeriodEndSlot := (endPeriod+1)*slotsPerPeriod - 1
 	if endPeriodEndSlot > maxSlot {
 		endPeriod = maxSlot / slotsPerPeriod
-	}
-
-	// Final check
-	if endPeriod < startPeriod {
-		http2.HandleError(w, "end period is less than start period", http.StatusInternalServerError)
-		return
 	}
 
 	// Populate updates
