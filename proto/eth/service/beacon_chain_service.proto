@@ -46,50 +46,6 @@ service BeaconChain {
     option (google.api.http) = {get: "/internal/eth/v1/beacon/weak_subjectivity"};
   }
 
-  // Beacon pools API related endpoints.
-
-  // ListPoolAttesterSlashings retrieves attester slashings known by the node but
-  // not necessarily incorporated into any block.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getPoolAttesterSlashings
-  rpc ListPoolAttesterSlashings(google.protobuf.Empty) returns (v1.AttesterSlashingsPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/attester_slashings"
-    };
-  }
-
-  // SubmitAttesterSlashing submits AttesterSlashing object to node's pool and
-  // if passes validation node MUST broadcast it to network.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolAttesterSlashings
-  rpc SubmitAttesterSlashing(v1.AttesterSlashing) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/attester_slashings"
-      body: "*"
-    };
-  }
-
-  // ListPoolProposerSlashings retrieves proposer slashings known by the node
-  // but not necessarily incorporated into any block.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/getPoolProposerSlashings
-  rpc ListPoolProposerSlashings(google.protobuf.Empty) returns (v1.ProposerSlashingPoolResponse) {
-    option (google.api.http) = {
-      get: "/internal/eth/v1/beacon/pool/proposer_slashings"
-    };
-  }
-
-  // SubmitProposerSlashing submits AttesterSlashing object to node's pool and if
-  // passes validation node MUST broadcast it to network.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Beacon/submitPoolProposerSlashings
-  rpc SubmitProposerSlashing(v1.ProposerSlashing) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      post: "/internal/eth/v1/beacon/pool/proposer_slashings"
-      body: "*"
-    };
-  }
-
   // Beacon config API related endpoints.
 
   // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.

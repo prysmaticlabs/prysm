@@ -16,8 +16,6 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 // Paths is a collection of all valid beacon chain API paths.
 func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
-		"/eth/v1/beacon/pool/attester_slashings",
-		"/eth/v1/beacon/pool/proposer_slashings",
 		"/eth/v1/beacon/weak_subjectivity",
 		"/eth/v1/config/fork_schedule",
 		"/eth/v1/config/spec",
@@ -29,12 +27,6 @@ func (_ *BeaconEndpointFactory) Paths() []string {
 func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
 	switch path {
-	case "/eth/v1/beacon/pool/attester_slashings":
-		endpoint.PostRequest = &AttesterSlashingJson{}
-		endpoint.GetResponse = &AttesterSlashingsPoolResponseJson{}
-	case "/eth/v1/beacon/pool/proposer_slashings":
-		endpoint.PostRequest = &ProposerSlashingJson{}
-		endpoint.GetResponse = &ProposerSlashingsPoolResponseJson{}
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
 	case "/eth/v1/config/fork_schedule":
