@@ -6,7 +6,6 @@ go_library(
         "accounts.go",
         "auth_token.go",
         "beacon.go",
-        "handle_slashing.go",
         "handler_wallet.go",
         "handlers_health.go",
         "handlers_keymanager.go",
