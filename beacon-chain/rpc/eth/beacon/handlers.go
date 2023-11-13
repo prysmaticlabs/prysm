@@ -1747,6 +1747,11 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if len(blks) == 0 {
+		http2.HandleError(w, "No blocks found", http.StatusNotFound)
+		return
+	}
+
 	isOptimistic := false
 	isFinalized := true
 	blkHdrs := make([]*shared.SignedBeaconBlockHeaderContainer, len(blks))
