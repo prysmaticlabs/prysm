@@ -9,7 +9,6 @@ go_library(
         "handlers_state.go",
         "handlers_validator.go",
         "log.go",
-        "pool.go",
         "server.go",
         "structs.go",
     ],
@@ -53,7 +52,6 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//network/http:go_default_library",
         "//proto/eth/v1:go_default_library",
-        "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
@@ -65,7 +63,6 @@ go_library(
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
-        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
 
@@ -79,7 +76,6 @@ go_test(
         "handlers_test.go",
         "handlers_validators_test.go",
         "init_test.go",
-        "pool_test.go",
         "server_test.go",
     ],
     embed = [":go_default_library"],
@@ -120,7 +116,6 @@ go_test(
         "//encoding/ssz:go_default_library",
         "//network/http:go_default_library",
         "//proto/eth/service:go_default_library",
-        "//proto/eth/v1:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
@@ -135,6 +130,5 @@ go_test(
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_prysmaticlabs_go_bitfield//:go_default_library",
         "@com_github_stretchr_testify//mock:go_default_library",
-        "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )

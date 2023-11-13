@@ -2,6 +2,8 @@ package blocks
 
 import (
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -39,4 +41,24 @@ func NewROBlob(b *ethpb.BlobSidecar) (ROBlob, error) {
 // BlockRoot returns the root of the block.
 func (b *ROBlob) BlockRoot() [32]byte {
 	return b.root
+}
+
+// Slot returns the slot of the blob sidecar.
+func (b *ROBlob) Slot() primitives.Slot {
+	return b.SignedBlockHeader.Header.Slot
+}
+
+// ParentRoot returns the parent root of the blob sidecar.
+func (b *ROBlob) ParentRoot() [32]byte {
+	return bytesutil.ToBytes32(b.SignedBlockHeader.Header.ParentRoot)
+}
+
+// BodyRoot returns the body root of the blob sidecar.
+func (b *ROBlob) BodyRoot() [32]byte {
+	return bytesutil.ToBytes32(b.SignedBlockHeader.Header.BodyRoot)
+}
+
+// ProposerIndex returns the proposer index of the blob sidecar.
+func (b *ROBlob) ProposerIndex() primitives.ValidatorIndex {
+	return b.SignedBlockHeader.Header.ProposerIndex
 }

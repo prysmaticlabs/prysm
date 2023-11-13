@@ -3,8 +3,10 @@ package debug
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
@@ -146,4 +148,75 @@ func (s *Server) getBeaconStateSSZV2(ctx context.Context, w http.ResponseWriter,
 	}
 	w.Header().Set(api.VersionHeader, version.String(st.Version()))
 	http2.WriteSsz(w, sszState, "beacon_state.ssz")
+}
+
+// GetForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
+func (s *Server) GetForkChoiceHeadsV2(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "debug.GetForkChoiceHeadsV2")
+	defer span.End()
+
+	headRoots, headSlots := s.HeadFetcher.ChainHeads()
+	resp := &GetForkChoiceHeadsV2Response{
+		Data: make([]*ForkChoiceHead, len(headRoots)),
+	}
+	for i := range headRoots {
+		isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, headRoots[i])
+		if err != nil {
+			http2.HandleError(w, "Could not check if head is optimistic: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		resp.Data[i] = &ForkChoiceHead{
+			Root:                hexutil.Encode(headRoots[i][:]),
+			Slot:                fmt.Sprintf("%d", headSlots[i]),
+			ExecutionOptimistic: isOptimistic,
+		}
+	}
+
+	http2.WriteJson(w, resp)
+}
+
+// GetForkChoice returns a dump fork choice store.
+func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "debug.GetForkChoice")
+	defer span.End()
+
+	dump, err := s.ForkchoiceFetcher.ForkChoiceDump(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	nodes := make([]*ForkChoiceNode, len(dump.ForkChoiceNodes))
+	for i, n := range dump.ForkChoiceNodes {
+		nodes[i] = &ForkChoiceNode{
+			Slot:               fmt.Sprintf("%d", n.Slot),
+			BlockRoot:          hexutil.Encode(n.BlockRoot),
+			ParentRoot:         hexutil.Encode(n.ParentRoot),
+			JustifiedEpoch:     fmt.Sprintf("%d", n.JustifiedEpoch),
+			FinalizedEpoch:     fmt.Sprintf("%d", n.FinalizedEpoch),
+			Weight:             fmt.Sprintf("%d", n.Weight),
+			ExecutionBlockHash: hexutil.Encode(n.ExecutionBlockHash),
+			Validity:           n.Validity.String(),
+			ExtraData: &ForkChoiceNodeExtraData{
+				UnrealizedJustifiedEpoch: fmt.Sprintf("%d", n.UnrealizedJustifiedEpoch),
+				UnrealizedFinalizedEpoch: fmt.Sprintf("%d", n.UnrealizedFinalizedEpoch),
+				Balance:                  fmt.Sprintf("%d", n.Balance),
+				ExecutionOptimistic:      n.ExecutionOptimistic,
+				TimeStamp:                fmt.Sprintf("%d", n.Timestamp),
+			},
+		}
+	}
+	resp := &GetForkChoiceDumpResponse{
+		JustifiedCheckpoint: shared.CheckpointFromConsensus(dump.JustifiedCheckpoint),
+		FinalizedCheckpoint: shared.CheckpointFromConsensus(dump.FinalizedCheckpoint),
+		ForkChoiceNodes:     nodes,
+		ExtraData: &ForkChoiceDumpExtraData{
+			UnrealizedJustifiedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
+			UnrealizedFinalizedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
+			ProposerBoostRoot:             hexutil.Encode(dump.ProposerBoostRoot),
+			PreviousProposerBoostRoot:     hexutil.Encode(dump.PreviousProposerBoostRoot),
+			HeadRoot:                      hexutil.Encode(dump.HeadRoot),
+		},
+	}
+	http2.WriteJson(w, resp)
 }

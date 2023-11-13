@@ -53,11 +53,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 	if flags.EnableHTTPEthAPI(httpModules) {
 		ethRegistrations := []gateway.PbHandlerRegistration{
 			ethpbservice.RegisterBeaconChainHandler,
-			ethpbservice.RegisterBeaconValidatorHandler,
 			ethpbservice.RegisterEventsHandler,
-		}
-		if enableDebugRPCEndpoints {
-			ethRegistrations = append(ethRegistrations, ethpbservice.RegisterBeaconDebugHandler)
 		}
 		ethMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

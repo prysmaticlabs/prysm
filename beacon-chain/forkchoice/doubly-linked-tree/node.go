@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -151,7 +151,7 @@ func (n *Node) arrivedAfterOrphanCheck(genesisTime uint64) (bool, error) {
 }
 
 // nodeTreeDump appends to the given list all the nodes descending from this one
-func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]*v1.ForkChoiceNode, error) {
+func (n *Node) nodeTreeDump(ctx context.Context, nodes []*forkchoice2.Node) ([]*forkchoice2.Node, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
@@ -159,7 +159,7 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 	if n.parent != nil {
 		parentRoot = n.parent.root
 	}
-	thisNode := &v1.ForkChoiceNode{
+	thisNode := &forkchoice2.Node{
 		Slot:                     n.slot,
 		BlockRoot:                n.root[:],
 		ParentRoot:               parentRoot[:],
@@ -174,9 +174,9 @@ func (n *Node) nodeTreeDump(ctx context.Context, nodes []*v1.ForkChoiceNode) ([]
 		Timestamp:                n.timestamp,
 	}
 	if n.optimistic {
-		thisNode.Validity = v1.ForkChoiceNodeValidity_OPTIMISTIC
+		thisNode.Validity = forkchoice2.Optimistic
 	} else {
-		thisNode.Validity = v1.ForkChoiceNodeValidity_VALID
+		thisNode.Validity = forkchoice2.Valid
 	}
 
 	nodes = append(nodes, thisNode)

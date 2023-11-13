@@ -6,7 +6,6 @@ import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/beacon_state.proto";
 import "proto/prysm/v1alpha1/sync_committee.proto";
-import "proto/prysm/v1alpha1/blobs.proto";
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 
@@ -90,8 +89,6 @@ message SignRequest {
         // Deneb objects.
         ethereum.eth.v1alpha1.BeaconBlockDeneb block_deneb = 116;
         ethereum.eth.v1alpha1.BlindedBeaconBlockDeneb blinded_block_deneb = 117;
-        ethereum.eth.v1alpha1.DeprecatedBlobSidecar blob = 118;
-        ethereum.eth.v1alpha1.BlindedBlobSidecar blinded_blob = 119;
     }
     reserved 4, 5; // Reserving old, deleted fields.
     uint64 signing_slot = 6 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];

@@ -152,10 +152,6 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		return handleContributionAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Registration:
 		return handleRegistration(ctx, validator, request)
-	case *validatorpb.SignRequest_Blob:
-		return handleBlob(ctx, validator, request, genesisValidatorsRoot)
-	case *validatorpb.SignRequest_BlindedBlob:
-		return handleBlindedBlob(ctx, validator, request, genesisValidatorsRoot)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
@@ -363,30 +359,6 @@ func handleRegistration(ctx context.Context, validator *validator.Validate, requ
 	}
 	validatorRegistrationSignRequestsTotal.Inc()
 	return json.Marshal(validatorRegistrationRequest)
-}
-
-func handleBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
-	if err != nil {
-		return nil, err
-	}
-	if err = validator.StructCtx(ctx, blobRequest); err != nil {
-		return nil, err
-	}
-	blobSignRequestsTotal.Inc()
-	return json.Marshal(blobRequest)
-}
-
-func handleBlindedBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
-	if err != nil {
-		return nil, err
-	}
-	if err = validator.StructCtx(ctx, blindedBlobRequest); err != nil {
-		return nil, err
-	}
-	blindedBlobSignRequestsTotal.Inc()
-	return json.Marshal(blindedBlobRequest)
 }
 
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
