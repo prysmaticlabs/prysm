@@ -45,23 +45,4 @@ service BeaconChain {
     option deprecated = true;
     option (google.api.http) = {get: "/internal/eth/v1/beacon/weak_subjectivity"};
   }
-
-  // Beacon config API related endpoints.
-
-  // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Config/getForkSchedule
-  rpc GetForkSchedule(google.protobuf.Empty) returns (v1.ForkScheduleResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/config/fork_schedule"};
-  }
-
-  // Spec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
-  // Values are returned with following format:
-  // - any value starting with 0x in the spec is returned as a hex string
-  // - all other values are returned as number
-  //
-  // Spec: https://ethereum.github.io/beacon-APIs/?urls.primaryName=v2.3.0#/Config/getSpec
-  rpc GetSpec(google.protobuf.Empty) returns (v1.SpecResponse) {
-    option (google.api.http) = {get: "/internal/eth/v1/config/spec"};
-  }
 }
