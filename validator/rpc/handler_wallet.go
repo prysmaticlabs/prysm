@@ -139,7 +139,7 @@ func (s *Server) WalletConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !valid {
-		http2.HandleError(w, wallet.InvalidWalletErrMsg+": "+err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, wallet.InvalidWalletErrMsg, http.StatusInternalServerError)
 		return
 	}
 
