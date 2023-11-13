@@ -89,24 +89,42 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		count = config.MaxRequestLightClientUpdates
 	}
 
-	// The end of start period must be later than Altair fork epoch, otherwise, can not get the sync committee votes
-	startPeriodEndSlot := (startPeriod+1)*slotsPerPeriod - 1
-	if startPeriodEndSlot < uint64(config.AltairForkEpoch)*uint64(config.SlotsPerEpoch) {
-		startPeriod = uint64(config.AltairForkEpoch) * uint64(config.SlotsPerEpoch) / slotsPerPeriod
-	}
-
-	endPeriod := startPeriod + count - 1
-
+	// max possible slot is current head
 	headState, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		http2.HandleError(w, "could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	headSlot := uint64(headState.Slot())
-	headPeriod := headSlot / slotsPerPeriod
-	if headPeriod < endPeriod {
-		endPeriod = headPeriod
+	maxSlot := uint64(headState.Slot())
+
+	// min possible slot is Altair fork period
+	minSlot := uint64(config.AltairForkEpoch) * uint64(config.SlotsPerEpoch)
+
+	if maxSlot < minSlot {
+		http2.HandleError(w, "max slot is less than min slot, looks like Altair fork not happen yet", http.StatusInternalServerError)
+		return
+	}
+
+	// Adjust startPeriod, the end of start period must be later than Altair fork epoch, otherwise, can not get the sync committee votes
+	startPeriodEndSlot := (startPeriod+1)*slotsPerPeriod - 1
+	if startPeriodEndSlot < minSlot {
+		startPeriod = minSlot / slotsPerPeriod
+	}
+
+	// Get the initial endPeriod, then we will adjust
+	endPeriod := startPeriod + count - 1
+
+	// Adjust endPeriod, the end of end period must be earlier than current head slot
+	endPeriodEndSlot := (endPeriod+1)*slotsPerPeriod - 1
+	if endPeriodEndSlot > maxSlot {
+		endPeriod = maxSlot / slotsPerPeriod
+	}
+
+	// Final check
+	if endPeriod < startPeriod {
+		http2.HandleError(w, "end period is less than start period", http.StatusInternalServerError)
+		return
 	}
 
 	// Populate updates
@@ -116,8 +134,8 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		//    1. We wish the block has a parent in the same period if possible
 		//	  2. We wish the block has a state in the same period
 		lastSlotInPeriod := period*slotsPerPeriod + slotsPerPeriod - 1
-		if lastSlotInPeriod > headSlot {
-			lastSlotInPeriod = headSlot
+		if lastSlotInPeriod > maxSlot {
+			lastSlotInPeriod = maxSlot
 		}
 		firstSlotInPeriod := period * slotsPerPeriod
 
