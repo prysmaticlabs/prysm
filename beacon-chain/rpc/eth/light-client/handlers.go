@@ -88,13 +88,14 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	if count > config.MaxRequestLightClientUpdates {
 		count = config.MaxRequestLightClientUpdates
 	}
-	endPeriod := startPeriod + count - 1
 
 	// The end of start period must be later than Altair fork epoch, otherwise, can not get the sync committee votes
 	startPeriodEndSlot := (startPeriod+1)*slotsPerPeriod - 1
 	if startPeriodEndSlot < uint64(config.AltairForkEpoch)*uint64(config.SlotsPerEpoch) {
 		startPeriod = uint64(config.AltairForkEpoch) * uint64(config.SlotsPerEpoch) / slotsPerPeriod
 	}
+
+	endPeriod := startPeriod + count - 1
 
 	headState, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
