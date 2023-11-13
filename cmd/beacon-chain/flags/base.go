@@ -23,7 +23,6 @@ var (
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
 		Name:  "max-builder-epoch-missed-slots",
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
-		Value: 8,
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
