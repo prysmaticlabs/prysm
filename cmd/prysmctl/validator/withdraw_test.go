@@ -325,7 +325,7 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	err = setWithdrawalAddresses(cliCtx)
-	require.ErrorContains(t, "setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.", err)
+	require.ErrorContains(t, "setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork", err)
 }
 
 func TestVerifyWithdrawal_Multiple(t *testing.T) {
