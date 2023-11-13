@@ -1,36 +1,48 @@
-package beacon
+package config
 
 import (
-	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// GetDepositContract retrieves deposit contract address and genesis fork version.
+func GetDepositContract(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "config.GetDepositContract")
+	defer span.End()
+
+	http2.WriteJson(w, &GetDepositContractResponse{
+		Data: &DepositContractData{
+			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
+			Address: params.BeaconConfig().DepositContractAddress,
+		},
+	})
+}
+
 // GetForkSchedule retrieve all scheduled upcoming forks this node is aware of.
-func (_ *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.ForkScheduleResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetForkSchedule")
+func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "config.GetForkSchedule")
 	defer span.End()
 
 	schedule := params.BeaconConfig().ForkVersionSchedule
 	if len(schedule) == 0 {
-		return &ethpb.ForkScheduleResponse{
-			Data: make([]*ethpb.Fork, 0),
-		}, nil
+		http2.WriteJson(w, &GetForkScheduleResponse{
+			Data: make([]*shared.Fork, 0),
+		})
+		return
 	}
 
 	versions := forks.SortedForkVersions(schedule)
-	chainForks := make([]*ethpb.Fork, len(schedule))
+	chainForks := make([]*shared.Fork, len(schedule))
 	var previous, current []byte
 	for i, v := range versions {
 		if i == 0 {
@@ -40,31 +52,32 @@ func (_ *Server) GetForkSchedule(ctx context.Context, _ *emptypb.Empty) (*ethpb.
 		}
 		copyV := v
 		current = copyV[:]
-		chainForks[i] = &ethpb.Fork{
-			PreviousVersion: previous,
-			CurrentVersion:  current,
-			Epoch:           schedule[v],
+		chainForks[i] = &shared.Fork{
+			PreviousVersion: hexutil.Encode(previous),
+			CurrentVersion:  hexutil.Encode(current),
+			Epoch:           fmt.Sprintf("%d", schedule[v]),
 		}
 	}
 
-	return &ethpb.ForkScheduleResponse{
+	http2.WriteJson(w, &GetForkScheduleResponse{
 		Data: chainForks,
-	}, nil
+	})
 }
 
 // GetSpec retrieves specification configuration (without Phase 1 params) used on this node. Specification params list
 // Values are returned with following format:
 // - any value starting with 0x in the spec is returned as a hex string.
 // - all other values are returned as number.
-func (_ *Server) GetSpec(ctx context.Context, _ *emptypb.Empty) (*ethpb.SpecResponse, error) {
-	ctx, span := trace.StartSpan(ctx, "beacon.GetSpec")
+func GetSpec(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "config.GetSpec")
 	defer span.End()
 
 	data, err := prepareConfigSpec()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Failed to prepare spec data: %v", err)
+		http2.HandleError(w, "Could not prepare config spec: "+err.Error(), http.StatusInternalServerError)
+		return
 	}
-	return &ethpb.SpecResponse{Data: data}, nil
+	http2.WriteJson(w, &GetSpecResponse{Data: data})
 }
 
 func prepareConfigSpec() (map[string]string, error) {

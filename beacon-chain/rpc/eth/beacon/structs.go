@@ -20,13 +20,6 @@ type GetCommitteesResponse struct {
 	Finalized           bool                `json:"finalized"`
 }
 
-type DepositContractResponse struct {
-	Data *struct {
-		ChainId string `json:"chain_id"`
-		Address string `json:"address"`
-	} `json:"data"`
-}
-
 type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }

@@ -20,7 +20,6 @@ import "google/protobuf/descriptor.proto";
 import "proto/eth/ext/options.proto";
 import "proto/eth/v1/attestation.proto";
 import "proto/eth/v1/beacon_block.proto";
-import "proto/eth/v1/beacon_state.proto";
 
 option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/v1";
@@ -35,33 +34,6 @@ message StateRequest {
     // The state id which can be any of: "head" (canonical head in node's view),
     // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
     bytes state_id = 1;
-}
-
-// Beacon Config API related messages.
-
-message ForkScheduleResponse {
-    // The fork data used for beacon chain versioning.
-    repeated Fork data = 1;
-}
-
-// Spec response is a generic flat map of key values.
-// Values are returned with following format:
-// - any value starting with 0x in the spec is returned as a hex string
-// - all other values are returned as string-number
-message SpecResponse {
-    map<string, string> data = 1;
-}
-
-message DepositContractResponse {
-    DepositContract data = 1;
-}
-
-message DepositContract {
-    // The chain_id of the network.
-    uint64 chain_id = 1;
-
-    // The address of the deployed deposit contract in use.
-    string address = 2;
 }
 
 // DEPRECATED: GetWeakSubjectivity endpoint is no longer be supported
