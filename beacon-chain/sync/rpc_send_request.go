@@ -121,7 +121,7 @@ func SendBeaconBlocksByRootRequest(
 		}
 		return nil
 	}
-	for i, reqBlockRoot := range *req {
+	for i := 0; i < len(*req); i++ {
 		// Exit if peer sends more than max request blocks.
 		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
 			break
@@ -134,20 +134,11 @@ func SendBeaconBlocksByRootRequest(
 		if err != nil {
 			return nil, err
 		}
-		blkRoot, err := blk.Block().HashTreeRoot()
-		if err != nil {
-			log.WithError(err).Error("Failed to hash tree root of block from peer")
-			continue
-		}
-		if blkRoot != reqBlockRoot {
-			log.WithField("blockRoot", blkRoot).WithField("reqBlockRoot", reqBlockRoot).Error("Block root mismatch")
-			continue
-		}
+
 		if err := process(blk); err != nil {
 			return nil, err
 		}
 	}
-
 	return blocks, nil
 }
 
