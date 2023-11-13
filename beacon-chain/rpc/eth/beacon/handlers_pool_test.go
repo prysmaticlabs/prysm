@@ -2,6 +2,7 @@ package beacon
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
 	blstoexecmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec/mock"
+	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -997,6 +999,563 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	}
 }
 
+func TestGetAttesterSlashings(t *testing.T) {
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+	slashing1 := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{1, 10},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		},
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{2, 20},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            2,
+				CommitteeIndex:  2,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 2,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 20,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		},
+	}
+	slashing2 := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{3, 30},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            3,
+				CommitteeIndex:  3,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot3"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 3,
+					Root:  bytesutil.PadTo([]byte("sourceroot3"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 30,
+					Root:  bytesutil.PadTo([]byte("targetroot3"), 32),
+				},
+			},
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+		},
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{4, 40},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            4,
+				CommitteeIndex:  4,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot4"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 4,
+					Root:  bytesutil.PadTo([]byte("sourceroot4"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 40,
+					Root:  bytesutil.PadTo([]byte("targetroot4"), 32),
+				},
+			},
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+		},
+	}
+
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingAttSlashings: []*ethpbv1alpha1.AttesterSlashing{slashing1, slashing2}},
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/beacon/pool/attester_slashings", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetAttesterSlashings(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp := &GetAttesterSlashingsResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	assert.Equal(t, 2, len(resp.Data))
+}
+
+func TestGetProposerSlashings(t *testing.T) {
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+	slashing1 := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          1,
+				ProposerIndex: 1,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature1"), 96),
+		},
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          2,
+				ProposerIndex: 2,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature2"), 96),
+		},
+	}
+	slashing2 := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          3,
+				ProposerIndex: 3,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot3"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot3"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot3"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature3"), 96),
+		},
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          4,
+				ProposerIndex: 4,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot4"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot4"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot4"), 32),
+			},
+			Signature: bytesutil.PadTo([]byte("signature4"), 96),
+		},
+	}
+
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{PendingPropSlashings: []*ethpbv1alpha1.ProposerSlashing{slashing1, slashing2}},
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/beacon/pool/attester_slashings", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetProposerSlashings(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp := &GetProposerSlashingsResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	assert.Equal(t, 2, len(resp.Data))
+}
+
+func TestSubmitAttesterSlashing_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		PublicKey: keys[0].PublicKey().Marshal(),
+	}
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		return nil
+	})
+	require.NoError(t, err)
+
+	slashing := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            1,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+		sb, err := signing.ComputeDomainAndSign(bs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+	b, err := json.Marshal(toSubmit[0])
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.Write(b)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitAttesterSlashing(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, slashing, pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
+}
+
+func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+
+	slashing := &ethpbv1alpha1.AttesterSlashing{
+		Attestation_1: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            params.BeaconConfig().SlotsPerEpoch,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot1"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot1"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot1"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+		Attestation_2: &ethpbv1alpha1.IndexedAttestation{
+			AttestingIndices: []uint64{0},
+			Data: &ethpbv1alpha1.AttestationData{
+				Slot:            params.BeaconConfig().SlotsPerEpoch,
+				CommitteeIndex:  1,
+				BeaconBlockRoot: bytesutil.PadTo([]byte("blockroot2"), 32),
+				Source: &ethpbv1alpha1.Checkpoint{
+					Epoch: 1,
+					Root:  bytesutil.PadTo([]byte("sourceroot2"), 32),
+				},
+				Target: &ethpbv1alpha1.Checkpoint{
+					Epoch: 10,
+					Root:  bytesutil.PadTo([]byte("targetroot2"), 32),
+				},
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+
+	for _, att := range []*ethpbv1alpha1.IndexedAttestation{slashing.Attestation_1, slashing.Attestation_2} {
+		sb, err := signing.ComputeDomainAndSign(newBs, att.Data.Target.Epoch, att.Data, params.BeaconConfig().DomainBeaconAttester, keys[0])
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		att.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
+	b, err := json.Marshal(toSubmit[0])
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.Write(b)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitAttesterSlashing(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	pendingSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, slashing, pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.AttesterSlashing)
+	assert.Equal(t, true, ok)
+}
+
+func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	var body bytes.Buffer
+	_, err = body.WriteString(invalidAttesterSlashing)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/attester_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitAttesterSlashing(writer, request)
+	require.Equal(t, http.StatusBadRequest, writer.Code)
+	e := &http2.DefaultErrorJson{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+	assert.Equal(t, http.StatusBadRequest, e.Code)
+	assert.StringContains(t, "Invalid attester slashing", e.Message)
+}
+
+func TestSubmitProposerSlashing_Ok(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	_, keys, err := util.DeterministicDepositsAndKeys(1)
+	require.NoError(t, err)
+	validator := &ethpbv1alpha1.Validator{
+		PublicKey:         keys[0].PublicKey().Marshal(),
+		WithdrawableEpoch: primitives.Epoch(1),
+	}
+	bs, err := util.NewBeaconState(func(state *ethpbv1alpha1.BeaconState) error {
+		state.Validators = []*ethpbv1alpha1.Validator{validator}
+		return nil
+	})
+	require.NoError(t, err)
+
+	slashing := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          1,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          1,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	for _, h := range []*ethpbv1alpha1.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2} {
+		sb, err := signing.ComputeDomainAndSign(
+			bs,
+			slots.ToEpoch(h.Header.Slot),
+			h.Header,
+			params.BeaconConfig().DomainBeaconProposer,
+			keys[0],
+		)
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		h.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
+	b, err := json.Marshal(toSubmit[0])
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.Write(b)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/proposer_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitProposerSlashing(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, slashing, pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
+}
+
+func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
+	ctx := context.Background()
+
+	transition.SkipSlotCache.Disable()
+	defer transition.SkipSlotCache.Enable()
+
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig()
+	config.AltairForkEpoch = 1
+	params.OverrideBeaconConfig(config)
+
+	bs, keys := util.DeterministicGenesisState(t, 1)
+
+	slashing := &ethpbv1alpha1.ProposerSlashing{
+		Header_1: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          params.BeaconConfig().SlotsPerEpoch,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot1"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot1"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot1"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+		Header_2: &ethpbv1alpha1.SignedBeaconBlockHeader{
+			Header: &ethpbv1alpha1.BeaconBlockHeader{
+				Slot:          params.BeaconConfig().SlotsPerEpoch,
+				ProposerIndex: 0,
+				ParentRoot:    bytesutil.PadTo([]byte("parentroot2"), 32),
+				StateRoot:     bytesutil.PadTo([]byte("stateroot2"), 32),
+				BodyRoot:      bytesutil.PadTo([]byte("bodyroot2"), 32),
+			},
+			Signature: make([]byte, 96),
+		},
+	}
+
+	newBs := bs.Copy()
+	newBs, err := transition.ProcessSlots(ctx, newBs, params.BeaconConfig().SlotsPerEpoch)
+	require.NoError(t, err)
+
+	for _, h := range []*ethpbv1alpha1.SignedBeaconBlockHeader{slashing.Header_1, slashing.Header_2} {
+		sb, err := signing.ComputeDomainAndSign(
+			newBs,
+			slots.ToEpoch(h.Header.Slot),
+			h.Header,
+			params.BeaconConfig().DomainBeaconProposer,
+			keys[0],
+		)
+		require.NoError(t, err)
+		sig, err := bls.SignatureFromBytes(sb)
+		require.NoError(t, err)
+		h.Signature = sig.Marshal()
+	}
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
+	b, err := json.Marshal(toSubmit[0])
+	require.NoError(t, err)
+	var body bytes.Buffer
+	_, err = body.Write(b)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/proposer_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitProposerSlashing(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	pendingSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, bs, true)
+	require.Equal(t, 1, len(pendingSlashings))
+	assert.DeepEqual(t, slashing, pendingSlashings[0])
+	assert.Equal(t, true, broadcaster.BroadcastCalled.Load())
+	require.Equal(t, 1, broadcaster.NumMessages())
+	_, ok := broadcaster.BroadcastMessages[0].(*ethpbv1alpha1.ProposerSlashing)
+	assert.Equal(t, true, ok)
+}
+
+func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
+	bs, err := util.NewBeaconState()
+	require.NoError(t, err)
+
+	broadcaster := &p2pMock.MockBroadcaster{}
+	s := &Server{
+		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
+		SlashingsPool:    &slashingsmock.PoolMock{},
+		Broadcaster:      broadcaster,
+	}
+
+	var body bytes.Buffer
+	_, err = body.WriteString(invalidProposerSlashing)
+	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodPost, "http://example.com/beacon/pool/proposer_slashings", &body)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.SubmitProposerSlashing(writer, request)
+	require.Equal(t, http.StatusBadRequest, writer.Code)
+	e := &http2.DefaultErrorJson{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+	assert.Equal(t, http.StatusBadRequest, e.Code)
+	assert.StringContains(t, "Invalid proposer slashing", e.Message)
+}
+
 var (
 	singleAtt = `[
   {
@@ -1142,4 +1701,68 @@ var (
     "signature": "foo"
   }
 ]`
+	// signatures are invalid
+	invalidAttesterSlashing = `{
+  "attestation_1": {
+    "attesting_indices": [
+      "1"
+    ],
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    "data": {
+      "slot": "1",
+      "index": "1",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "1",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "target": {
+        "epoch": "1",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      }
+    }
+  },
+  "attestation_2": {
+    "attesting_indices": [
+      "1"
+    ],
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505",
+    "data": {
+      "slot": "1",
+      "index": "1",
+      "beacon_block_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "source": {
+        "epoch": "1",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      },
+      "target": {
+        "epoch": "1",
+        "root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+      }
+    }
+  }
+}`
+	// signatures are invalid
+	invalidProposerSlashing = `{
+  "signed_header_1": {
+    "message": {
+      "slot": "1",
+      "proposer_index": "1",
+      "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  },
+  "signed_header_2": {
+    "message": {
+      "slot": "1",
+      "proposer_index": "1",
+      "parent_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+      "body_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+}`
 )
