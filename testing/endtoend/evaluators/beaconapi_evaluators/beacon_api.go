@@ -433,10 +433,10 @@ var requests = map[string]metadata{
 	"/debug/beacon/heads": {
 		basepath: v2PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.V2ForkChoiceHeadsResponseJson{},
+			"json": &debug.GetForkChoiceHeadsV2Response{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.V2ForkChoiceHeadsResponseJson{},
+			"json": &debug.GetForkChoiceHeadsV2Response{},
 		},
 	},
 	"/node/identity": {
@@ -731,12 +731,21 @@ func postEvaluation(beaconNodeIdx int, requests map[string]metadata) error {
 		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
-	} else {
+	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockCapella{}
+		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+			return errors.Wrap(err, "failed to unmarshal ssz")
+		}
+	} else {
+		b := &ethpb.SignedBeaconBlockDeneb{}
+		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+			return errors.Wrap(err, "failed to unmarshal ssz")
+		}
+		bb := &ethpb.SignedBlindedBeaconBlockDeneb{}
 		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}

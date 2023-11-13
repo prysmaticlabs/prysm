@@ -144,6 +144,11 @@ config_setting(
     values = {"define": "coverage_enabled=1"},
 )
 
+config_setting(
+    name = "pgo_enabled",
+    values = {"define": "pgo_enabled=1"},
+)
+
 common_files = {
     "//:LICENSE.md": "LICENSE.md",
     "//:README.md": "README.md",

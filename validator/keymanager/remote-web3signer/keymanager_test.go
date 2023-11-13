@@ -170,14 +170,6 @@ func TestKeymanager_Sign(t *testing.T) {
 			want:    desiredSig,
 			wantErr: false,
 		},
-		{
-			name: "BLOB_SIDECAR",
-			args: args{
-				request: mock.GetMockSignRequest("BLOB_SIDECAR"),
-			},
-			want:    desiredSig,
-			wantErr: false,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
