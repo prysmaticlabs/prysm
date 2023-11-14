@@ -2,7 +2,6 @@
 SSZ proto templating rules.
 
 These rules allow for variable substitution for hardcoded tag values like ssz-size and ssz-max.
-
 """
 
 ####### Configuration #######
