@@ -258,6 +258,77 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	}
 }
 
+func TestRecentBeaconBlocks_RPCRequestSent_IncorrectRoot(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
+
+	blockA := util.NewBeaconBlock()
+	blockA.Block.Slot = 111
+	blockB := util.NewBeaconBlock()
+	blockB.Block.Slot = 40
+	// Set up a head state with data we expect.
+	blockARoot, err := blockA.Block.HashTreeRoot()
+	require.NoError(t, err)
+	blockBRoot, err := blockB.Block.HashTreeRoot()
+	require.NoError(t, err)
+	genesisState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), blockARoot))
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 5,
+		Root:  blockBRoot[:],
+	}
+
+	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockBRoot, blockARoot}
+
+	chain := &mock.ChainService{
+		State:               genesisState,
+		FinalizedCheckPoint: finalizedCheckpt,
+		Root:                blockARoot[:],
+		Genesis:             time.Now(),
+		ValidatorsRoot:      [32]byte{},
+	}
+	r := &Service{
+		cfg: &config{
+			p2p:   p1,
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
+		rateLimiter:         newRateLimiter(p1),
+	}
+
+	// Setup streams
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, out))
+		assert.DeepEqual(t, &expectedRoots, out, "Did not receive expected message")
+		blockB.Block.Slot = 123123 // Give it a bad slot
+		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
+		for _, blk := range response {
+			_, err := stream.Write([]byte{responseCodeSuccess})
+			assert.NoError(t, err, "Could not write to stream")
+			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
+			assert.NoError(t, err, "Could not send response back")
+		}
+		assert.NoError(t, stream.Close())
+	})
+
+	p1.Connect(p2)
+	require.ErrorContains(t, "received unexpected block with root", r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
+}
+
 func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
