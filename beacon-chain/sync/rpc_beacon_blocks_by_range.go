@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -95,7 +96,7 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 		start: r.StartSlot,
 		size:  r.Count,
 	}
-	maxRequest := params.BeaconNetworkConfig().MaxRequestBlocks
+	maxRequest := params.MaxRequestBlock(slots.ToEpoch(current))
 	// Ensure all request params are within appropriate bounds
 	if rp.size == 0 || rp.size > maxRequest {
 		return rangeParams{}, p2ptypes.ErrInvalidRequest

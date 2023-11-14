@@ -71,7 +71,8 @@ func SendBeaconBlocksByRangeRequest(
 		}
 		// The response MUST contain no more than `count` blocks, and no more than
 		// MAX_REQUEST_BLOCKS blocks.
-		if i >= req.Count || i >= params.BeaconNetworkConfig().MaxRequestBlocks {
+		currentEpoch := slots.ToEpoch(tor.CurrentSlot())
+		if i >= req.Count || i >= params.MaxRequestBlock(currentEpoch) {
 			return nil, ErrInvalidFetchedData
 		}
 		// Returned blocks MUST be in the slot range [start_slot, start_slot + count * step).
@@ -121,9 +122,10 @@ func SendBeaconBlocksByRootRequest(
 		}
 		return nil
 	}
+	currentEpoch := slots.ToEpoch(clock.CurrentSlot())
 	for i := 0; i < len(*req); i++ {
 		// Exit if peer sends more than max request blocks.
-		if uint64(i) >= params.BeaconNetworkConfig().MaxRequestBlocks {
+		if uint64(i) >= params.MaxRequestBlock(currentEpoch) {
 			break
 		}
 		isFirstChunk := i == 0
