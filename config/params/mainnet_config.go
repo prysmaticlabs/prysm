@@ -23,6 +23,7 @@ const (
 	mainnetAltairForkEpoch = 74240 // Oct 27, 2021, 10:56:23am UTC
 	// Bellatrix Fork Epoch for mainnet config.
 	mainnetBellatrixForkEpoch = 144896 // Sept 6, 2022, 11:34:47am UTC
+	mainnetDenebForkEpoch     = math.MaxUint64
 )
 
 var mainnetNetworkConfig = &NetworkConfig{

@@ -23,24 +23,8 @@ type BlockRootResponseJson struct {
 	Finalized           bool                    `json:"finalized"`
 }
 
-type AttesterSlashingsPoolResponseJson struct {
-	Data []*AttesterSlashingJson `json:"data"`
-}
-
-type ProposerSlashingsPoolResponseJson struct {
-	Data []*ProposerSlashingJson `json:"data"`
-}
-
-type ForkScheduleResponseJson struct {
-	Data []*ForkJson `json:"data"`
-}
-
 type DepositContractResponseJson struct {
 	Data *DepositContractJson `json:"data"`
-}
-
-type SpecResponseJson struct {
-	Data interface{} `json:"data"`
 }
 
 type AggregateAttestationResponseJson struct {

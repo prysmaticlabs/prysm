@@ -13,17 +13,16 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/prysmaticlabs/prysm/v4/api/client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
@@ -179,12 +178,12 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 }
 
 // GetConfigSpec retrieve the current configs of the network used by the beacon node.
-func (c *Client) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
+func (c *Client) GetConfigSpec(ctx context.Context) (*config.GetSpecResponse, error) {
 	body, err := c.Get(ctx, getConfigSpecPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting configSpecPath")
 	}
-	fsr := &v1.SpecResponse{}
+	fsr := &config.GetSpecResponse{}
 	err = json.Unmarshal(body, fsr)
 	if err != nil {
 		return nil, err
