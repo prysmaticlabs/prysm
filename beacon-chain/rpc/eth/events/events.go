@@ -1,9 +1,10 @@
 package events
 
 import (
-	"strings"
+	"fmt"
+	"net/http"
 
-	gwpb "github.com/grpc-ecosystem/grpc-gateway/v2/proto/gateway"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
@@ -12,7 +13,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
@@ -20,10 +22,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 const (
@@ -49,6 +50,8 @@ const (
 	BlobSidecarTopic = "blob_sidecar"
 )
 
+const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
+
 var casesHandled = map[string]bool{
 	HeadTopic:                      true,
 	BlockTopic:                     true,
@@ -62,46 +65,56 @@ var casesHandled = map[string]bool{
 	BlobSidecarTopic:               true,
 }
 
-// StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
-// The topics supported include block events, attestations, chain reorgs, voluntary exits,
-// chain finality, and more.
-func (s *Server) StreamEvents(
-	req *ethpb.StreamEventsRequest, stream ethpbservice.Events_StreamEventsServer,
-) error {
-	if req == nil || len(req.Topics) == 0 {
-		return status.Error(codes.InvalidArgument, "No topics specified to subscribe to")
+// StreamEvents provides endpoint to subscribe to beacon node Server-Sent-Events stream.
+// Consumers should use eventsource implementation to listen on those events.
+// Servers may send SSE comments beginning with ':' for any purpose,
+// including to keep the event stream connection alive in the presence of proxy servers.
+func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "events.StreamEvents")
+	defer span.End()
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		return
 	}
-	// Check if the topics in the request are valid.
-	requestedTopics := make(map[string]bool)
-	for _, rawTopic := range req.Topics {
-		splitTopic := strings.Split(rawTopic, ",")
-		for _, topic := range splitTopic {
-			if _, ok := casesHandled[topic]; !ok {
-				return status.Errorf(codes.InvalidArgument, "Topic %s not allowed for event subscriptions", topic)
-			}
-			requestedTopics[topic] = true
+
+	topics := r.URL.Query()["topics"]
+	if len(topics) == 0 {
+		http2.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
+		return
+	}
+	topicsMap := make(map[string]bool)
+	for _, topic := range topics {
+		if _, ok := casesHandled[topic]; !ok {
+			http2.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
+			return
 		}
+		topicsMap[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
 	opsChan := make(chan *feed.Event, 1)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
-
 	stateChan := make(chan *feed.Event, 1)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
-
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
 
-	// Handle each event received and context cancelation.
+	// Set up SSE response headers
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	// Handle each event received and context cancellation.
 	for {
 		select {
 		case event := <-opsChan:
-			if err := handleBlockOperationEvents(stream, requestedTopics, event); err != nil {
+			if err := handleBlockOperationEvents(w, flusher, topicsMap, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
 			}
 		case event := <-stateChan:
-			if err := s.handleStateEvents(stream, requestedTopics, event); err != nil {
+			if err := s.handleStateEvents(w, flusher, topicsMap, event); err != nil {
 				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
 			}
 		case <-s.Ctx.Done():
@@ -112,82 +125,87 @@ func (s *Server) StreamEvents(
 	}
 }
 
-func handleBlockOperationEvents(
-	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
-) error {
+func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
-			return nil
+			return true
 		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, AttestationTopic), http.StatusInternalServerError)
+			return false
 		}
-		v1Data := migration.V1Alpha1AggregateAttAndProofToV1(attData.Attestation)
-		return streamData(stream, AttestationTopic, v1Data)
+		att := shared.AttestationFromConsensus(attData.Attestation.Aggregate)
+		return send(w, flusher, AttestationTopic, att)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
-			return nil
+			return true
 		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, AttestationTopic), http.StatusInternalServerError)
+			return false
 		}
-		v1Data := migration.V1Alpha1AttestationToV1(attData.Attestation)
-		return streamData(stream, AttestationTopic, v1Data)
+		att := shared.AttestationFromConsensus(attData.Attestation)
+		return send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
-			return nil
+			return true
 		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, VoluntaryExitTopic), http.StatusInternalServerError)
+			return false
 		}
-		v1Data := migration.V1Alpha1ExitToV1(exitData.Exit)
-		return streamData(stream, VoluntaryExitTopic, v1Data)
+		exit := shared.SignedVoluntaryExitFromConsensus(exitData.Exit)
+		return send(w, flusher, VoluntaryExitTopic, exit)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
-			return nil
+			return true
 		}
 		contributionData, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, SyncCommitteeContributionTopic), http.StatusInternalServerError)
+			return false
 		}
-		v2Data := migration.V1Alpha1SignedContributionAndProofToV2(contributionData.Contribution)
-		return streamData(stream, SyncCommitteeContributionTopic, v2Data)
+		contribution := shared.SignedContributionAndProofFromConsensus(contributionData.Contribution)
+		return send(w, flusher, SyncCommitteeContributionTopic, contribution)
 	case operation.BLSToExecutionChangeReceived:
 		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
-			return nil
+			return true
 		}
 		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BLSToExecutionChangeTopic), http.StatusInternalServerError)
+			return false
 		}
-		v2Change := migration.V1Alpha1SignedBLSToExecChangeToV2(changeData.Change)
-		return streamData(stream, BLSToExecutionChangeTopic, v2Change)
+		change, err := shared.SignedBlsToExecutionChangeFromConsensus(changeData.Change)
+		if err != nil {
+			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			return false
+		}
+		return send(w, flusher, BLSToExecutionChangeTopic, change)
 	case operation.BlobSidecarReceived:
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
-			return nil
+			return true
 		}
 		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
 		if !ok {
-			return nil
-		}
-		if blobData == nil || blobData.Blob == nil {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BlobSidecarTopic), http.StatusInternalServerError)
+			return false
 		}
 		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
-		blobEvent := &ethpb.EventBlobSidecar{
-			BlockRoot:     bytesutil.SafeCopyBytes(blobData.Blob.Message.BlockRoot),
-			Index:         blobData.Blob.Message.Index,
-			Slot:          blobData.Blob.Message.Slot,
-			VersionedHash: bytesutil.SafeCopyBytes(versionedHash.Bytes()),
-			KzgCommitment: bytesutil.SafeCopyBytes(blobData.Blob.Message.KzgCommitment),
+		blobEvent := &BlobSidecarEvent{
+			BlockRoot:     hexutil.Encode(blobData.Blob.Message.BlockRoot),
+			Index:         fmt.Sprintf("%d", blobData.Blob.Message.Index),
+			Slot:          fmt.Sprintf("%d", blobData.Blob.Message.Slot),
+			VersionedHash: versionedHash.String(),
+			KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
 		}
-		return streamData(stream, BlobSidecarTopic, blobEvent)
+		return send(w, flusher, BlobSidecarTopic, blobEvent)
 	default:
-		return nil
+		return true
 	}
 }
 
@@ -201,7 +219,7 @@ func (s *Server) handleStateEvents(
 			if !ok {
 				return nil
 			}
-			return streamData(stream, HeadTopic, head)
+			return send(stream, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
 			if err := s.streamPayloadAttributes(stream); err != nil {
@@ -226,7 +244,7 @@ func (s *Server) handleStateEvents(
 		if !ok {
 			return nil
 		}
-		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+		return send(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
@@ -235,7 +253,7 @@ func (s *Server) handleStateEvents(
 		if !ok {
 			return nil
 		}
-		return streamData(stream, ChainReorgTopic, reorg)
+		return send(stream, ChainReorgTopic, reorg)
 	case statefeed.BlockProcessed:
 		if _, ok := requestedTopics[BlockTopic]; !ok {
 			return nil
@@ -257,7 +275,7 @@ func (s *Server) handleStateEvents(
 			Block:               item[:],
 			ExecutionOptimistic: blkData.Optimistic,
 		}
-		return streamData(stream, BlockTopic, eventBlock)
+		return send(stream, BlockTopic, eventBlock)
 	default:
 		return nil
 	}
@@ -308,7 +326,7 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 
 	switch headState.Version() {
 	case version.Bellatrix:
-		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
+		return send(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
 				ProposerIndex:     proposerIndex,
@@ -323,12 +341,12 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 				},
 			},
 		})
-	case version.Capella, version.Deneb:
+	case version.Capella:
 		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
 			return err
 		}
-		return streamData(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
+		return send(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
 			Version: version.String(headState.Version()),
 			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
 				ProposerIndex:     proposerIndex,
@@ -344,18 +362,19 @@ func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEvents
 				},
 			},
 		})
+	case version.Deneb:
+		blargh
 	default:
 		return errors.New("payload version is not supported")
 	}
 }
 
-func streamData(stream ethpbservice.Events_StreamEventsServer, name string, data proto.Message) error {
-	returnData, err := anypb.New(data)
+func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) bool {
+	_, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, data)
 	if err != nil {
-		return err
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return false
 	}
-	return stream.Send(&gwpb.EventSource{
-		Event: name,
-		Data:  returnData,
-	})
+	flusher.Flush()
+	return true
 }
