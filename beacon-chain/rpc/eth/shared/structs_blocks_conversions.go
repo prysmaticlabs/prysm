@@ -1184,11 +1184,7 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 	if err != nil {
 		return nil, NewDecodeError(err, "SignedBlock")
 	}
-	block := &eth.SignedBeaconBlockAndBlobsDeneb{
-		Block: signedDenebBlock,
-		Blobs: signedBlobSidecars,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: block}}, nil
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
 }
 
 func (b *SignedBeaconBlockContentsDeneb) ToUnsigned() *BeaconBlockContentsDeneb {
@@ -1213,34 +1209,16 @@ func (b *BeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) 
 	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block}}, nil
 }
 
-func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb, error) {
+func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
 
-	var blobSidecars []*eth.DeprecatedBlobSidecar
-	if len(b.BlobSidecars) != 0 {
-		err := VerifyMaxLength(b.BlobSidecars, fieldparams.MaxBlobsPerBlock)
-		if err != nil {
-			return nil, NewDecodeError(err, "BlobSidecars")
-		}
-		blobSidecars = make([]*eth.DeprecatedBlobSidecar, len(b.BlobSidecars))
-		for i := range b.BlobSidecars {
-			blob, err := b.BlobSidecars[i].ToConsensus()
-			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("BlobSidecars[%d]", i))
-			}
-			blobSidecars[i] = blob
-		}
-	}
 	denebBlock, err := b.Block.ToConsensus()
 	if err != nil {
 		return nil, NewDecodeError(err, "Block")
 	}
-	return &eth.BeaconBlockAndBlobsDeneb{
-		Block: denebBlock,
-		Blobs: blobSidecars,
-	}, nil
+	return denebBlock, nil
 }
 
 func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
@@ -2440,19 +2418,9 @@ func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeac
 	}, nil
 }
 
-func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
+func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockContentsDeneb, error) {
 	var blobSidecars []*BlobSidecar
-	if len(b.Blobs) != 0 {
-		blobSidecars = make([]*BlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
-			blob, err := BlobSidecarFromConsensus(s)
-			if err != nil {
-				return nil, err
-			}
-			blobSidecars[i] = blob
-		}
-	}
-	block, err := BeaconBlockDenebFromConsensus(b.Block)
+	block, err := BeaconBlockDenebFromConsensus(b)
 	if err != nil {
 		return nil, err
 	}
@@ -2462,19 +2430,9 @@ func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*Be
 	}, nil
 }
 
-func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockAndBlobsDeneb) (*SignedBeaconBlockContentsDeneb, error) {
+func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*SignedBeaconBlockContentsDeneb, error) {
 	var blobSidecars []*SignedBlobSidecar
-	if len(b.Blobs) != 0 {
-		blobSidecars = make([]*SignedBlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
-			blob, err := SignedBlobSidecarFromConsensus(s)
-			if err != nil {
-				return nil, err
-			}
-			blobSidecars[i] = blob
-		}
-	}
-	block, err := SignedBeaconBlockDenebFromConsensus(b.Block)
+	block, err := SignedBeaconBlockDenebFromConsensus(b)
 	if err != nil {
 		return nil, err
 	}

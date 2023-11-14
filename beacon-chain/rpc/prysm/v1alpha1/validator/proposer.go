@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -122,12 +121,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(fullBlobsBundle, sBlk.Block())
-	fullBlobsBundle = nil // Reset full blobs bundle after use.
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
-	}
-
 	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
 	blindBlobsBundle = nil // Reset blind blobs bundle after use.
 	if err != nil {
@@ -140,7 +133,35 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
+	return vs.constructGenericBeaconBlock(sBlk, blindBlobs)
+}
+
+// buildBlobSidecars given a block, builds the blob sidecars for the block.
+func buildBlobSidecars(blk interfaces.SignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
+	if blk.Version() < version.Deneb {
+		return nil, nil // No blobs before deneb.
+	}
+	blobSidecars := make([]*ethpb.BlobSidecar, len(fullBlobsBundle.KzgCommitments))
+	header, err := blk.Header()
+	if err != nil {
+		return nil, err
+	}
+	body := blk.Block().Body()
+	for i := range blobSidecars {
+		proof, err := blocks.MerkleProofKZGCommitment(body, i)
+		if err != nil {
+			return nil, err
+		}
+		blobSidecars[i] = &ethpb.BlobSidecar{
+			Index:                    uint64(i),
+			Blob:                     fullBlobsBundle.Blobs[i],
+			KzgCommitment:            fullBlobsBundle.KzgCommitments[i],
+			KzgProof:                 fullBlobsBundle.Proofs[i],
+			SignedBlockHeader:        header,
+			CommitmentInclusionProof: proof,
+		}
+	}
+	return blobSidecars, nil
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
@@ -249,11 +270,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if blk.Version() >= version.Deneb {
 		if blinded {
 			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
-		} else {
-			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
-			if err != nil {
-				return nil, errors.Wrap(err, "could not extract blobs")
-			}
 		}
 		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
 		for i, sc := range scs {
@@ -266,11 +282,8 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 			}
 			sidecars[i] = sc.Message
 		}
-		if len(scs) > 0 {
-			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecars); err != nil {
-				return nil, err
-			}
-		}
+		// TODO: Broadcast the new object
+		// TODO: Save blob sidecars to the DB
 	}
 
 	root, err := blk.Block().HashTreeRoot()
@@ -295,19 +308,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-// extraSidecars extracts the sidecars from the request.
-// return error if there are too many sidecars.
-func extraSidecars(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
-	b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
-	if !ok {
-		return nil, errors.New("Could not cast block to Deneb")
-	}
-	if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("too many blobs in block: %d", len(b.Deneb.Blobs))
-	}
-	return b.Deneb.Blobs, nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
