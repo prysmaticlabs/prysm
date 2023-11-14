@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
@@ -77,7 +78,8 @@ func (s *Service) beaconBlocksRootRPCHandler(ctx context.Context, msg interface{
 		return errors.New("no block roots provided")
 	}
 
-	if uint64(len(blockRoots)) > params.BeaconNetworkConfig().MaxRequestBlocks {
+	currentEpoch := slots.ToEpoch(s.cfg.clock.CurrentSlot())
+	if uint64(len(blockRoots)) > params.MaxRequestBlock(currentEpoch) {
 		s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 		s.writeErrorResponseToStream(responseCodeInvalidRequest, "requested more than the max block limit", stream)
 		return errors.New("requested more than the max block limit")

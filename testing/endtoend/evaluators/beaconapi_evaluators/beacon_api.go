@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -381,14 +382,14 @@ var requests = map[string]metadata{
 	"/config/fork_schedule": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.ForkScheduleResponseJson{},
+			"json": &config.GetForkScheduleResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.ForkScheduleResponseJson{},
+			"json": &config.GetForkScheduleResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
 			// remove all forks with far-future epoch
-			pSchedule, ok := p.(*apimiddleware.ForkScheduleResponseJson)
+			pSchedule, ok := p.(*config.GetForkScheduleResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -397,7 +398,7 @@ var requests = map[string]metadata{
 					pSchedule.Data = append(pSchedule.Data[:i], pSchedule.Data[i+1:]...)
 				}
 			}
-			lSchedule, ok := l.(*apimiddleware.ForkScheduleResponseJson)
+			lSchedule, ok := l.(*config.GetForkScheduleResponse)
 			if !ok {
 				return errJsonCast
 			}
