@@ -39,7 +39,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	// No validator DB provided.
 	s.ImportSlashingProtection(wr, req)
 	require.Equal(t, http.StatusInternalServerError, wr.Code)
-	require.StringContains(t, "err finding validator database at path", wr.Body.String())
+	require.StringContains(t, "could not find validator database", wr.Body.String())
 
 	// Create Wallet and add to server for more realistic testing.
 	opts := []accounts.Option{
@@ -76,7 +76,7 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	wr.Body = &bytes.Buffer{}
 	s.ImportSlashingProtection(wr, req)
 	require.Equal(t, http.StatusBadRequest, wr.Code)
-	require.StringContains(t, "empty slashing_protection json specified", wr.Body.String())
+	require.StringContains(t, "empty slashing_protection_json specified", wr.Body.String())
 
 	// Generate mock slashing history.
 	attestingHistory := make([][]*kv.AttestationRecord, 0)
@@ -115,7 +115,7 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	// No validator DB provided.
 	s.ExportSlashingProtection(wr, req)
 	require.Equal(t, http.StatusInternalServerError, wr.Code)
-	require.StringContains(t, "err finding validator database at path", wr.Body.String())
+	require.StringContains(t, "could not find validator database", wr.Body.String())
 
 	numValidators := 10
 	// Create public keys for the mock validator DB.
