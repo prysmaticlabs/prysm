@@ -82,12 +82,12 @@ func (s *Server) CreateWallet(w http.ResponseWriter, r *http.Request) {
 		}
 		acc, err := accounts.NewCLIManager(opts...)
 		if err != nil {
-			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not create CLI Manager: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		_, err = acc.WalletCreate(ctx)
 		if err != nil {
-			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not create wallet: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if err := s.initializeWallet(ctx, &wallet.Config{
@@ -163,7 +163,7 @@ func (s *Server) WalletConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// RecoverWallet via an API request, allowing a user to recover a derived.
+// RecoverWallet via an API request, allowing a user to recover a derived wallet.
 // Generate the seed from the mnemonic + language + 25th passphrase(optional).
 // Create N validator keystores from the seed specified by req.NumAccounts.
 // Set the wallet password to req.WalletPassword, then create the wallet from
@@ -240,7 +240,7 @@ func (s *Server) RecoverWallet(w http.ResponseWriter, r *http.Request) {
 	}
 	acc, err := accounts.NewCLIManager(opts...)
 	if err != nil {
-		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not create CLI Manager: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if _, err := acc.WalletRecover(ctx); err != nil {
