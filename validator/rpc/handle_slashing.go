@@ -55,7 +55,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	defer span.End()
 
 	if s.valDB == nil {
-		http2.HandleError(w, "err finding validator database at path", http.StatusInternalServerError)
+		http2.HandleError(w, "could not find validator database", http.StatusInternalServerError)
 		return
 	}
 
