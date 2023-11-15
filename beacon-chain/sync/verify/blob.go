@@ -20,7 +20,7 @@ func BlobAlignsWithBlock(blob blocks.ROBlob, block blocks.ROBlock) error {
 	if block.Version() < version.Deneb {
 		return nil
 	}
-	if blob.Index > fieldparams.MaxBlobsPerBlock {
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
 		return errors.Wrapf(ErrIncorrectBlobIndex, "index %d exceeds MAX_BLOBS_PER_BLOCK %d", blob.Index, fieldparams.MaxBlobsPerBlock)
 	}
 
