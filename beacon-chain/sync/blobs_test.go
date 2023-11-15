@@ -217,7 +217,7 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) 
 
 	client := p2ptest.NewTestP2P(t)
 	s := &Service{
-		cfg:         &config{p2p: client, chain: c.chain, clock: clock, beaconDB: d, blobStorage: filesystem.NewEphemeralBlobStorage()},
+		cfg:         &config{p2p: client, chain: c.chain, clock: clock, beaconDB: d, blobStorage: filesystem.NewEphemeralBlobStorage(t)},
 		rateLimiter: newRateLimiter(client),
 	}
 

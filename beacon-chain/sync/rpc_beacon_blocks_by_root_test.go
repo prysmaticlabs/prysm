@@ -366,7 +366,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 }
 
 func TestRequestPendingBlobs(t *testing.T) {
-	s := &Service{cfg: &config{blobStorage: filesystem.NewEphemeralBlobStorage()}}
+	s := &Service{cfg: &config{blobStorage: filesystem.NewEphemeralBlobStorage(t)}}
 	t.Run("old block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -399,7 +399,7 @@ func TestRequestPendingBlobs(t *testing.T) {
 				chain:       chain,
 				clock:       startup.NewClock(time.Unix(0, 0), [32]byte{}),
 				beaconDB:    db.SetupDB(t),
-				blobStorage: filesystem.NewEphemeralBlobStorage(),
+				blobStorage: filesystem.NewEphemeralBlobStorage(t),
 			},
 		}
 		b := util.NewBeaconBlockDeneb()
@@ -412,7 +412,7 @@ func TestRequestPendingBlobs(t *testing.T) {
 
 func TestConstructPendingBlobsRequest(t *testing.T) {
 	d := db.SetupDB(t)
-	bs := filesystem.NewEphemeralBlobStorage()
+	bs := filesystem.NewEphemeralBlobStorage(t)
 	s := &Service{cfg: &config{beaconDB: d, blobStorage: bs}}
 	ctx := context.Background()
 

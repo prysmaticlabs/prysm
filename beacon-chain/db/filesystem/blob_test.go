@@ -46,7 +46,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 
 	})
 	t.Run("indices", func(t *testing.T) {
-		bs := NewEphemeralBlobStorage()
+		bs := NewEphemeralBlobStorage(t)
 		sc := testSidecars[2]
 		require.NoError(t, bs.Save(sc))
 		actualSc, err := bs.Get(sc.BlockRoot(), sc.Index)
@@ -58,7 +58,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	})
 
 	t.Run("round trip write then read", func(t *testing.T) {
-		bs := NewEphemeralBlobStorage()
+		bs := NewEphemeralBlobStorage(t)
 		err := bs.Save(testSidecars[0])
 		require.NoError(t, err)
 

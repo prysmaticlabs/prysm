@@ -383,7 +383,7 @@ func TestService_Resync(t *testing.T) {
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
-				BlobStorage:   filesystem.NewEphemeralBlobStorage(),
+				BlobStorage:   filesystem.NewEphemeralBlobStorage(t),
 			})
 			assert.NotNil(t, s)
 			assert.Equal(t, primitives.Slot(0), s.cfg.Chain.HeadSlot())
