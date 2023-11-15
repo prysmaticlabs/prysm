@@ -214,7 +214,7 @@ func (s *Server) RecoverWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check it is not null and not an empty string.
+	// Check it is not whitespace-only (empty is valid)
 	if req.Mnemonic25ThWord != "" && strings.TrimSpace(req.Mnemonic25ThWord) == "" {
 		httputil.HandleError(w, "mnemonic 25th word cannot be empty", http.StatusBadRequest)
 		return
