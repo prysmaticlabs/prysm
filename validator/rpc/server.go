@@ -184,7 +184,6 @@ func (s *Server) Start() {
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
-	validatorpb.RegisterWalletServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
 
@@ -236,6 +235,11 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/v2/validator/health/version", s.GetVersion).Methods(http.MethodGet)
 	s.router.HandleFunc("/v2/validator/health/logs/validator/stream", s.StreamValidatorLogs).Methods(http.MethodGet)
 	s.router.HandleFunc("/v2/validator/health/logs/beacon/stream", s.StreamBeaconLogs).Methods(http.MethodGet)
+	// web wallet endpoints
+	s.router.HandleFunc("/v2/validator/wallet", s.WalletConfig).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/wallet/create", s.CreateWallet).Methods(http.MethodPost)
+	s.router.HandleFunc("/v2/validator/wallet/keystores/validate", s.ValidateKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc("/v2/validator/wallet/recover", s.RecoverWallet).Methods(http.MethodPost)
 	// slashing protection endpoints
 	s.router.HandleFunc("/v2/validator/slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
 	s.router.HandleFunc("/v2/validator/slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
