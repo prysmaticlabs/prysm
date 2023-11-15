@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -16,7 +17,6 @@ import (
 )
 
 var (
-	ErrBlobRetrieval    = errors.New("error while trying to read BlobSidecar from filesystem")
 	errIndexOutOfBounds = errors.New("blob index in file name > MaxBlobsPerBlock")
 )
 
@@ -26,12 +26,16 @@ const (
 	blobLockPath = "blob.lock"
 )
 
+// NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
+// attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
+// initialized once per beacon node.
 func NewBlobStorage(base string) (*BlobStorage, error) {
 	base = path.Clean(base)
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	return &BlobStorage{fs: fs}, nil
 }
 
+// BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
 	fs afero.Fs
 }
@@ -82,6 +86,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	return nil
 }
 
+// Get retrieves a single BlobSidecar by its root and index.
+// Since BlobStorage only writes blobs that have undergone full verification, the return
+// value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.ssz())
@@ -93,9 +100,16 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	if err := s.UnmarshalSSZ(encoded); err != nil {
 		return v, err
 	}
-	return blocks.NewVerifiedBlobWithRoot(s, root)
+	ro, err := blocks.NewROBlobWithRoot(s, root)
+	if err != nil {
+		return blocks.VerifiedROBlob{}, err
+	}
+	return verification.BlobSidecarNoop(ro)
 }
 
+// Indices generates a bitmap representing which BlobSidecar.Index values are present on disk for a given root.
+// This value can be compared to the commitments observed in a block to determine which indices need to be found
+// on the network to confirm data availability.
 func (bs *BlobStorage) Indices(root [32]byte) ([fieldparams.MaxBlobsPerBlock]bool, error) {
 	var mask [fieldparams.MaxBlobsPerBlock]bool
 	rootDir := blobNamer{root: root}.dir()

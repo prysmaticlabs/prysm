@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	// StatePath defines a flag to start the beacon chain from a give genesis state file.
+	// BlobStoragePath defines a flag to start the beacon chain from a give genesis state file.
 	BlobStoragePath = &cli.PathFlag{
 		Name:  "blob-path",
 		Usage: "Location for blob storage. Default location will be a 'blobs' directory next to the beacon db.",

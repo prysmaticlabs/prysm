@@ -63,12 +63,16 @@ func (b *ROBlob) ProposerIndex() primitives.ValidatorIndex {
 	return b.SignedBlockHeader.Header.ProposerIndex
 }
 
+// BlockRootSlice returns the block root as a byte slice. This is often more conveninent/concise
+// than setting a tmp var to BlockRoot(), just so that it can be sliced.
 func (b *ROBlob) BlockRootSlice() []byte {
 	return b.root[:]
 }
 
+// ROBlobSlice is a custom type for a []ROBlob, allowing methods to be defined that act on a slice of ROBlob.
 type ROBlobSlice []ROBlob
 
+// Protos is a helper to make a more concise conversion from []ROBlob->[]*ethpb.BlobSidecar.
 func (s ROBlobSlice) Protos() []*ethpb.BlobSidecar {
 	pb := make([]*ethpb.BlobSidecar, len(s))
 	for i := range s {
@@ -77,44 +81,12 @@ func (s ROBlobSlice) Protos() []*ethpb.BlobSidecar {
 	return pb
 }
 
+// VerifiedROBlob represents an ROBlob that has undergone full verification (eg block sig, inclusion proof, commitment check).
 type VerifiedROBlob struct {
 	ROBlob
 }
 
-func NewVerifiedBlobSlice(pbs []*ethpb.BlobSidecar, root [32]byte) ([]VerifiedROBlob, error) {
-	vs := make([]VerifiedROBlob, len(pbs))
-	var err error
-	for i := range pbs {
-		vs[i], err = NewVerifiedBlobWithRoot(pbs[i], root)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return vs, nil
-}
-
-func NewVerifiedBlobWithRoot(pb *ethpb.BlobSidecar, root [32]byte) (VerifiedROBlob, error) {
-	r, err := NewROBlobWithRoot(pb, root)
-	if err != nil {
-		return VerifiedROBlob{}, err
-	}
-	return VerifiedROBlob{ROBlob: r}, nil
-}
-
-type VerifiedROBlobSlice []VerifiedROBlob
-
-func (s VerifiedROBlobSlice) ROBlobs() []ROBlob {
-	robs := make([]ROBlob, len(s))
-	for i := range s {
-		robs[i] = s[i].ROBlob
-	}
-	return robs
-}
-
-func (s VerifiedROBlobSlice) Protos() []*ethpb.BlobSidecar {
-	pbs := make([]*ethpb.BlobSidecar, len(s))
-	for i := range s {
-		pbs[i] = s[i].BlobSidecar
-	}
-	return pbs
+// NewVerifiedROBlob "upgrades" an ROBlob to a VerifiedROBlob. This method should only be used by the verification package.
+func NewVerifiedROBlob(rob ROBlob) VerifiedROBlob {
+	return VerifiedROBlob{ROBlob: rob}
 }

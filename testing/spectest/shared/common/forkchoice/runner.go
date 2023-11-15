@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -326,7 +327,9 @@ func runBlobStep(t *testing.T,
 				KzgProof:          proof,
 				SignedBlockHeader: sh,
 			}
-			vsc, err := blocks.NewVerifiedBlobWithRoot(pb, root)
+			ro, err := blocks.NewROBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			vsc, err := verification.BlobSidecarNoop(ro)
 			require.NoError(t, err)
 			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
 		}
