@@ -21,7 +21,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -238,7 +237,7 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, r))
 
 	//_, scs := util.GenerateTestDenebBlockWithSidecar(t, r, chainService.CurrentSlot()+1, 1)
-	header, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(signedBb)
+	header, err := signedBb.Header()
 	require.NoError(t, err)
 	sc := util.GenerateTestDenebBlobSidecar(t, r, header, 0, make([]byte, 48))
 	b := sc.BlobSidecar

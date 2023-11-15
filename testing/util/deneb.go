@@ -9,7 +9,6 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -71,7 +70,7 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	sidecars := make([]blocks.ROBlob, len(commitments))
 	sbb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
-	sh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(sbb)
+	sh, err := sbb.Header()
 	require.NoError(t, err)
 	for i, c := range block.Block.Body.BlobKzgCommitments {
 		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sh, i, c)

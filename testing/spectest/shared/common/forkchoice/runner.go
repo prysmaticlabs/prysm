@@ -303,7 +303,7 @@ func runBlobStep(t *testing.T,
 		require.NoError(t, err)
 		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
 		require.NoError(t, err)
-		sh, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(beaconBlock)
+		sh, err := beaconBlock.Header()
 		require.NoError(t, err)
 		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
 			var proof []byte

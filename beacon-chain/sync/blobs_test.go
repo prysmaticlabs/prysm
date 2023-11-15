@@ -117,7 +117,7 @@ func generateTestBlockWithSidecars(t *testing.T, parent [32]byte, slot types.Slo
 }
 
 func generateTestSidecar(t *testing.T, root [32]byte, block interfaces.ReadOnlySignedBeaconBlock, index int, commitment []byte) blocks.ROBlob {
-	header, err := interfaces.SignedBeaconBlockHeaderFromBlockInterface(block)
+	header, err := block.Header()
 	require.NoError(t, err)
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
