@@ -132,3 +132,11 @@ type RecoverWalletRequest struct {
 	Language         string `json:"language"`
 	Mnemonic25ThWord string `json:"mnemonic25th_word"`
 }
+
+type ImportSlashingProtectionRequest struct {
+	SlashingProtectionJson string `json:"slashing_protection_json"`
+}
+
+type ExportSlashingProtectionResponse struct {
+	File string `json:"file"`
+}

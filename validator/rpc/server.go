@@ -186,7 +186,6 @@ func (s *Server) Start() {
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
-	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
 
 	// routes needs to be set before the server calls the server function
 	go func() {
@@ -241,6 +240,9 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/v2/validator/wallet/create", s.CreateWallet).Methods(http.MethodPost)
 	s.router.HandleFunc("/v2/validator/wallet/keystores/validate", s.ValidateKeystores).Methods(http.MethodPost)
 	s.router.HandleFunc("/v2/validator/wallet/recover", s.RecoverWallet).Methods(http.MethodPost)
+	// slashing protection endpoints
+	s.router.HandleFunc("/v2/validator/slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
 	log.Info("Initialized REST API routes")
 	return nil
 }

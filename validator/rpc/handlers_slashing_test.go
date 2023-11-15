@@ -1,12 +1,13 @@
 package rpc
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/empty"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
@@ -21,16 +22,24 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	defaultWalletPath = localWalletDir
 
 	// Empty JSON.
-	req := &pb.ImportSlashingProtectionRequest{
-		SlashingProtectionJson: "",
-	}
 	s := &Server{
 		walletDir: defaultWalletPath,
 	}
 
+	request := &ImportSlashingProtectionRequest{
+		SlashingProtectionJson: "",
+	}
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
 	// No validator DB provided.
-	_, err := s.ImportSlashingProtection(ctx, req)
-	require.ErrorContains(t, "err finding validator database at path", err)
+	s.ImportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusInternalServerError, wr.Code)
+	require.StringContains(t, "could not find validator database", wr.Body.String())
 
 	// Create Wallet and add to server for more realistic testing.
 	opts := []accounts.Option{
@@ -63,8 +72,11 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	}()
 
 	// Test empty JSON.
-	_, err = s.ImportSlashingProtection(ctx, req)
-	require.ErrorContains(t, "empty slashing_protection json specified", err)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ImportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusBadRequest, wr.Code)
+	require.StringContains(t, "empty slashing_protection_json specified", wr.Body.String())
 
 	// Generate mock slashing history.
 	attestingHistory := make([][]*kv.AttestationRecord, 0)
@@ -78,10 +90,15 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 	// JSON encode the protection JSON and save it in rpc req.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
-	req.SlashingProtectionJson = string(encoded)
-
-	_, err = s.ImportSlashingProtection(ctx, req)
+	request.SlashingProtectionJson = string(encoded)
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
+
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ImportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
 }
 
 func TestExportSlashingProtection_Preconditions(t *testing.T) {
@@ -92,9 +109,13 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	s := &Server{
 		walletDir: defaultWalletPath,
 	}
+	req := httptest.NewRequest(http.MethodGet, "/v2/validator/slashing-protection/export", nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
 	// No validator DB provided.
-	_, err := s.ExportSlashingProtection(ctx, &empty.Empty{})
-	require.ErrorContains(t, "err finding validator database at path", err)
+	s.ExportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusInternalServerError, wr.Code)
+	require.StringContains(t, "could not find validator database", wr.Body.String())
 
 	numValidators := 10
 	// Create public keys for the mock validator DB.
@@ -115,9 +136,10 @@ func TestExportSlashingProtection_Preconditions(t *testing.T) {
 	genesisValidatorsRoot := [32]byte{1}
 	err = validatorDB.SaveGenesisValidatorsRoot(ctx, genesisValidatorsRoot[:])
 	require.NoError(t, err)
-
-	_, err = s.ExportSlashingProtection(ctx, &empty.Empty{})
-	require.NoError(t, err)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ExportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
 }
 
 func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
@@ -158,18 +180,25 @@ func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
 	// JSON encode the protection JSON and save it in rpc req.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
-	req := &pb.ImportSlashingProtectionRequest{
+	request := &ImportSlashingProtectionRequest{
 		SlashingProtectionJson: string(encoded),
 	}
-
-	_, err = s.ImportSlashingProtection(ctx, req)
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
 
-	reqE, err := s.ExportSlashingProtection(ctx, &empty.Empty{})
-	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
+	wr := httptest.NewRecorder()
+	s.ImportSlashingProtection(wr, req)
 
+	req = httptest.NewRequest(http.MethodGet, "/v2/validator/slashing-protection/export", nil)
+	wr = httptest.NewRecorder()
+	s.ExportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &ExportSlashingProtectionResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 	// Attempt to read the exported data and convert from string to EIP-3076.
-	enc := []byte(reqE.File)
+	enc := []byte(resp.File)
 
 	receivedJSON := &format.EIPSlashingProtectionFormat{}
 	err = json.Unmarshal(enc, receivedJSON)

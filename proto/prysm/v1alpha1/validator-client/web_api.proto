@@ -95,24 +95,6 @@ service Beacon {
     }
 }
 
-// Slashing Protection imports and exports can be provided through validator CLI command as well as Keymanager API https://ethereum.github.io/keymanager-APIs/ import and delete.
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-service SlashingProtection {
-    rpc ExportSlashingProtection(google.protobuf.Empty) returns (ExportSlashingProtectionResponse) {
-        option deprecated = true;
-        option (google.api.http) = {
-            get: "/v2/validator/slashing-protection/export"
-        };
-    }
-    rpc ImportSlashingProtection(ImportSlashingProtectionRequest) returns (google.protobuf.Empty) {
-        option deprecated = true;
-        option (google.api.http) = {
-            post: "/v2/validator/slashing-protection/import"
-            body: "*"
-        };
-    }
-}
-
 // Web APIs such as the Keymanager APIs will no longer validate JWTs on the endpoint. Users should no longer expose the validator APIs to the public.
 // option deprecated = true; can't be added yet as it's used for keymanager API
 // DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
@@ -268,18 +250,4 @@ message DeleteAccountsResponse {
     option deprecated = true;
     // List of public keys successfully deleted.
     repeated bytes deleted_keys = 1;
-}
-
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-message ExportSlashingProtectionResponse {
-    option deprecated = true;
-    // JSON representation of the slash protection
-    string file = 1;
-}
-
-// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
-message ImportSlashingProtectionRequest {
-    option deprecated = true;
-    // JSON representation of the slash protection
-    string slashing_protection_json = 1;
 }
