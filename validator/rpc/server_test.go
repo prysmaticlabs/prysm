@@ -26,6 +26,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/eth/v1/validator/{pubkey}/voluntary_exit":  {http.MethodPost},
 		"/v2/validator/health/version":               {http.MethodGet},
 		"/v2/validator/health/logs/validator/stream": {http.MethodGet},
+		"/v2/validator/health/logs/beacon/stream":    {http.MethodGet},
 		"/v2/validator/wallet":                       {http.MethodGet},
 		"/v2/validator/wallet/create":                {http.MethodPost},
 		"/v2/validator/wallet/keystores/validate":    {http.MethodPost},
