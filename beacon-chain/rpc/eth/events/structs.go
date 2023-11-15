@@ -8,17 +8,17 @@ import (
 
 type HeadEvent struct {
 	Slot                      string `json:"slot"`
-	Block                     string `json:"block" hex:"true"`
-	State                     string `json:"state" hex:"true"`
+	Block                     string `json:"block"`
+	State                     string `json:"state"`
 	EpochTransition           bool   `json:"epoch_transition"`
 	ExecutionOptimistic       bool   `json:"execution_optimistic"`
-	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
-	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
+	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root"`
+	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root"`
 }
 
 type BlockEvent struct {
 	Slot                string `json:"slot"`
-	Block               string `json:"block" hex:"true"`
+	Block               string `json:"block"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
 
@@ -27,14 +27,14 @@ type AggregatedAttEventSource struct {
 }
 
 type UnaggregatedAttEventSource struct {
-	AggregationBits string                  `json:"aggregation_bits" hex:"true"`
+	AggregationBits string                  `json:"aggregation_bits"`
 	Data            *shared.AttestationData `json:"data"`
-	Signature       string                  `json:"signature" hex:"true"`
+	Signature       string                  `json:"signature"`
 }
 
 type FinalizedCheckpointEvent struct {
-	Block               string `json:"block" hex:"true"`
-	State               string `json:"state" hex:"true"`
+	Block               string `json:"block"`
+	State               string `json:"state"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
@@ -42,10 +42,10 @@ type FinalizedCheckpointEvent struct {
 type ChainReorgEvent struct {
 	Slot                string `json:"slot"`
 	Depth               string `json:"depth"`
-	OldHeadBlock        string `json:"old_head_block" hex:"true"`
-	NewHeadBlock        string `json:"old_head_state" hex:"true"`
-	OldHeadState        string `json:"new_head_block" hex:"true"`
-	NewHeadState        string `json:"new_head_state" hex:"true"`
+	OldHeadBlock        string `json:"old_head_block"`
+	NewHeadBlock        string `json:"old_head_state"`
+	OldHeadState        string `json:"new_head_block"`
+	NewHeadState        string `json:"new_head_state"`
 	Epoch               string `json:"epoch"`
 	ExecutionOptimistic bool   `json:"execution_optimistic"`
 }
@@ -59,30 +59,30 @@ type PayloadAttributesEventData struct {
 	ProposerIndex     string          `json:"proposer_index"`
 	ProposalSlot      string          `json:"proposal_slot"`
 	ParentBlockNumber string          `json:"parent_block_number"`
-	ParentBlockRoot   string          `json:"parent_block_root" hex:"true"`
-	ParentBlockHash   string          `json:"parent_block_hash" hex:"true"`
+	ParentBlockRoot   string          `json:"parent_block_root"`
+	ParentBlockHash   string          `json:"parent_block_hash"`
 	PayloadAttributes json.RawMessage `json:"payload_attributes"`
 }
 
 type PayloadAttributesV1 struct {
 	Timestamp             string `json:"timestamp"`
-	Random                string `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string `json:"suggested_fee_recipient" hex:"true"`
+	PrevRandao            string `json:"prev_randao"`
+	SuggestedFeeRecipient string `json:"suggested_fee_recipient"`
 }
 
 type PayloadAttributesV2 struct {
 	Timestamp             string               `json:"timestamp"`
-	Random                string               `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string               `json:"suggested_fee_recipient" hex:"true"`
+	PrevRandao            string               `json:"prev_randao"`
+	SuggestedFeeRecipient string               `json:"suggested_fee_recipient"`
 	Withdrawals           []*shared.Withdrawal `json:"withdrawals"`
 }
 
 type PayloadAttributesV3 struct {
 	Timestamp             string               `json:"timestamp"`
-	Random                string               `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string               `json:"suggested_fee_recipient" hex:"true"`
+	PrevRandao            string               `json:"prev_randao"`
+	SuggestedFeeRecipient string               `json:"suggested_fee_recipient"`
 	Withdrawals           []*shared.Withdrawal `json:"withdrawals"`
-	ParentBeaconBlockRoot string               `json:"parent_beacon_block_root" hex:"true"`
+	ParentBeaconBlockRoot string               `json:"parent_beacon_block_root"`
 }
 
 type BlobSidecarEvent struct {

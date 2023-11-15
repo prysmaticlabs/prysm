@@ -17,7 +17,6 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 func (_ *BeaconEndpointFactory) Paths() []string {
 	return []string{
 		"/eth/v1/beacon/weak_subjectivity",
-		"/eth/v1/events",
 	}
 }
 
@@ -27,8 +26,6 @@ func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, er
 	switch path {
 	case "/eth/v1/beacon/weak_subjectivity":
 		endpoint.GetResponse = &WeakSubjectivityResponse{}
-	case "/eth/v1/events":
-		endpoint.CustomHandlers = []apimiddleware.CustomHandler{handleEvents}
 	default:
 		return nil, errors.New("invalid path")
 	}

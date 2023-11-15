@@ -1,11 +1,11 @@
 package events
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
@@ -15,16 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -70,7 +64,7 @@ var casesHandled = map[string]bool{
 // Servers may send SSE comments beginning with ':' for any purpose,
 // including to keep the event stream connection alive in the presence of proxy servers.
 func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "events.StreamEvents")
+	ctx, span := trace.StartSpan(r.Context(), "events.StreamEvents")
 	defer span.End()
 
 	flusher, ok := w.(http.Flusher)
@@ -110,17 +104,17 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case event := <-opsChan:
-			if err := handleBlockOperationEvents(w, flusher, topicsMap, event); err != nil {
-				return status.Errorf(codes.Internal, "Could not handle block operations event: %v", err)
+			if ok = handleBlockOperationEvents(w, flusher, topicsMap, event); !ok {
+				return
 			}
 		case event := <-stateChan:
-			if err := s.handleStateEvents(w, flusher, topicsMap, event); err != nil {
-				return status.Errorf(codes.Internal, "Could not handle state event: %v", err)
+			if ok = s.handleStateEvents(w, flusher, topicsMap, event); !ok {
+				return
 			}
 		case <-s.Ctx.Done():
-			return status.Errorf(codes.Canceled, "Context canceled")
-		case <-stream.Context().Done():
-			return status.Errorf(codes.Canceled, "Context canceled")
+			return
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -209,164 +203,215 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 	}
 }
 
-func (s *Server) handleStateEvents(
-	stream ethpbservice.Events_StreamEventsServer, requestedTopics map[string]bool, event *feed.Event,
-) error {
+func (s *Server) handleStateEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
 	switch event.Type {
 	case statefeed.NewHead:
 		if _, ok := requestedTopics[HeadTopic]; ok {
-			head, ok := event.Data.(*ethpb.EventHead)
+			headData, ok := event.Data.(*ethpb.EventHead)
 			if !ok {
-				return nil
+				http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, HeadTopic), http.StatusInternalServerError)
+				return false
 			}
-			return send(stream, HeadTopic, head)
+			head := &HeadEvent{
+				Slot:                      fmt.Sprintf("%d", headData.Slot),
+				Block:                     hexutil.Encode(headData.Block),
+				State:                     hexutil.Encode(headData.State),
+				EpochTransition:           headData.EpochTransition,
+				ExecutionOptimistic:       headData.ExecutionOptimistic,
+				PreviousDutyDependentRoot: hexutil.Encode(headData.PreviousDutyDependentRoot),
+				CurrentDutyDependentRoot:  hexutil.Encode(headData.CurrentDutyDependentRoot),
+			}
+			return send(w, flusher, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
-				log.WithError(err).Error("Unable to obtain stream payload attributes")
+			if ok = s.sendPayloadAttributes(w, flusher); !ok {
+				return false
 			}
-			return nil
 		}
-		return nil
+		return true
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if err := s.streamPayloadAttributes(stream); err != nil {
-				log.WithError(err).Error("Unable to obtain stream payload attributes")
+			if ok = s.sendPayloadAttributes(w, flusher); !ok {
+				return false
 			}
-			return nil
 		}
-		return nil
+		return true
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
-			return nil
+			return true
 		}
-		finalizedCheckpoint, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
+		checkpointData, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, FinalizedCheckpointTopic), http.StatusInternalServerError)
+			return false
 		}
-		return send(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+		checkpoint := &FinalizedCheckpointEvent{
+			Block:               hexutil.Encode(checkpointData.Block),
+			State:               hexutil.Encode(checkpointData.State),
+			Epoch:               fmt.Sprintf("%d", checkpointData.Epoch),
+			ExecutionOptimistic: checkpointData.ExecutionOptimistic,
+		}
+		return send(w, flusher, FinalizedCheckpointTopic, checkpoint)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
-			return nil
+			return true
 		}
-		reorg, ok := event.Data.(*ethpb.EventChainReorg)
+		reorgData, ok := event.Data.(*ethpb.EventChainReorg)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, ChainReorgTopic), http.StatusInternalServerError)
+			return false
 		}
-		return send(stream, ChainReorgTopic, reorg)
+		reorg := &ChainReorgEvent{
+			Slot:                fmt.Sprintf("%d", reorgData.Slot),
+			Depth:               fmt.Sprintf("%d", reorgData.Depth),
+			OldHeadBlock:        hexutil.Encode(reorgData.OldHeadBlock),
+			NewHeadBlock:        hexutil.Encode(reorgData.NewHeadBlock),
+			OldHeadState:        hexutil.Encode(reorgData.OldHeadState),
+			NewHeadState:        hexutil.Encode(reorgData.NewHeadState),
+			Epoch:               fmt.Sprintf("%d", reorgData.Epoch),
+			ExecutionOptimistic: reorgData.ExecutionOptimistic,
+		}
+		return send(w, flusher, ChainReorgTopic, reorg)
 	case statefeed.BlockProcessed:
 		if _, ok := requestedTopics[BlockTopic]; !ok {
-			return nil
+			return true
 		}
 		blkData, ok := event.Data.(*statefeed.BlockProcessedData)
 		if !ok {
-			return nil
+			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BlockTopic), http.StatusInternalServerError)
+			return false
 		}
-		v1Data, err := migration.BlockIfaceToV1BlockHeader(blkData.SignedBlock)
+		blockRoot, err := blkData.SignedBlock.Block().HashTreeRoot()
 		if err != nil {
-			return err
+			http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
+			return false
 		}
-		item, err := v1Data.Message.HashTreeRoot()
-		if err != nil {
-			return errors.Wrap(err, "could not hash tree root block")
-		}
-		eventBlock := &ethpb.EventBlock{
-			Slot:                blkData.Slot,
-			Block:               item[:],
+		blk := &BlockEvent{
+			Slot:                fmt.Sprintf("%d", blkData.Slot),
+			Block:               hexutil.Encode(blockRoot[:]),
 			ExecutionOptimistic: blkData.Optimistic,
 		}
-		return send(stream, BlockTopic, eventBlock)
+		return send(w, flusher, BlockTopic, blk)
 	default:
-		return nil
+		return true
 	}
 }
 
-// streamPayloadAttributes on new head event.
 // This event stream is intended to be used by builders and relays.
-// parent_ fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
-func (s *Server) streamPayloadAttributes(stream ethpbservice.Events_StreamEventsServer) error {
+// Parent fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
+func (s *Server) sendPayloadAttributes(w http.ResponseWriter, flusher http.Flusher) bool {
 	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head root")
+		http2.HandleError(w, "Could not get head root: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 	st, err := s.HeadFetcher.HeadState(s.Ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not get head state")
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
-	// advance the headstate
+	// advance the head state
 	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not advance head state: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not get head block: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
 	headPayload, err := headBlock.Block().Body().Execution()
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not get execution payload: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
 	t, err := slots.ToTime(headState.GenesisTime(), headState.Slot())
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not get head state slot time: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
 	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not get head state randao mix: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
 	proposerIndex, err := helpers.BeaconProposerIndex(s.Ctx, headState)
 	if err != nil {
-		return err
+		http2.HandleError(w, "Could not get head state proposer index: "+err.Error(), http.StatusInternalServerError)
+		return false
 	}
 
+	var attributes interface{}
 	switch headState.Version() {
 	case version.Bellatrix:
-		return send(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV1{
-			Version: version.String(headState.Version()),
-			Data: &ethpb.EventPayloadAttributeV1_BasePayloadAttribute{
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      headState.Slot(),
-				ParentBlockNumber: headPayload.BlockNumber(),
-				ParentBlockRoot:   headRoot,
-				ParentBlockHash:   headPayload.BlockHash(),
-				PayloadAttributes: &enginev1.PayloadAttributes{
-					Timestamp:             uint64(t.Unix()),
-					PrevRandao:            prevRando,
-					SuggestedFeeRecipient: headPayload.FeeRecipient(),
-				},
-			},
-		})
+		attributes = &PayloadAttributesV1{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+		}
 	case version.Capella:
 		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
-			return err
+			http2.HandleError(w, "Could not get head state expected withdrawals: "+err.Error(), http.StatusInternalServerError)
+			return false
 		}
-		return send(stream, PayloadAttributesTopic, &ethpb.EventPayloadAttributeV2{
-			Version: version.String(headState.Version()),
-			Data: &ethpb.EventPayloadAttributeV2_BasePayloadAttribute{
-				ProposerIndex:     proposerIndex,
-				ProposalSlot:      headState.Slot(),
-				ParentBlockNumber: headPayload.BlockNumber(),
-				ParentBlockRoot:   headRoot,
-				ParentBlockHash:   headPayload.BlockHash(),
-				PayloadAttributes: &enginev1.PayloadAttributesV2{
-					Timestamp:             uint64(t.Unix()),
-					PrevRandao:            prevRando,
-					SuggestedFeeRecipient: headPayload.FeeRecipient(),
-					Withdrawals:           withdrawals,
-				},
-			},
-		})
+		attributes = &PayloadAttributesV2{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			Withdrawals:           shared.WithdrawalsFromConsensus(withdrawals),
+		}
 	case version.Deneb:
-		blargh
+		withdrawals, err := headState.ExpectedWithdrawals()
+		if err != nil {
+			http2.HandleError(w, "Could not get head state expected withdrawals: "+err.Error(), http.StatusInternalServerError)
+			return false
+		}
+		parentRoot, err := headBlock.Block().HashTreeRoot()
+		if err != nil {
+			http2.HandleError(w, "Could not get head block root: "+err.Error(), http.StatusInternalServerError)
+			return false
+		}
+		attributes = &PayloadAttributesV3{
+			Timestamp:             fmt.Sprintf("%d", t.Unix()),
+			PrevRandao:            hexutil.Encode(prevRando),
+			SuggestedFeeRecipient: hexutil.Encode(headPayload.FeeRecipient()),
+			Withdrawals:           shared.WithdrawalsFromConsensus(withdrawals),
+			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
+		}
 	default:
-		return errors.New("payload version is not supported")
+		http2.HandleError(w, fmt.Sprintf("Payload version %s is not supported", version.String(headState.Version())), http.StatusInternalServerError)
+		return false
 	}
+
+	attributesBytes, err := json.Marshal(attributes)
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return false
+	}
+	eventData := PayloadAttributesEventData{
+		ProposerIndex:     fmt.Sprintf("%d", proposerIndex),
+		ProposalSlot:      fmt.Sprintf("%d", headState.Slot()),
+		ParentBlockNumber: fmt.Sprintf("%d", headPayload.BlockNumber()),
+		ParentBlockRoot:   hexutil.Encode(headRoot),
+		ParentBlockHash:   hexutil.Encode(headPayload.BlockHash()),
+		PayloadAttributes: attributesBytes,
+	}
+	eventDataBytes, err := json.Marshal(eventData)
+	if err != nil {
+		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return false
+	}
+	return send(w, flusher, PayloadAttributesTopic, &PayloadAttributesEvent{
+		Version: version.String(headState.Version()),
+		Data:    eventDataBytes,
+	})
 }
 
 func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) bool {

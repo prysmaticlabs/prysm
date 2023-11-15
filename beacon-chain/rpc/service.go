@@ -36,7 +36,6 @@ import (
 	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -481,13 +480,6 @@ func (s *Service) Start() {
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
 	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
-	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
-		Ctx:               s.ctx,
-		StateNotifier:     s.cfg.StateNotifier,
-		OperationNotifier: s.cfg.OperationNotifier,
-		HeadFetcher:       s.cfg.HeadFetcher,
-		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
-	})
 	if s.cfg.EnableDebugRPCEndpoints {
 		log.Info("Enabled debug gRPC endpoints")
 		debugServer := &debugv1alpha1.Server{
