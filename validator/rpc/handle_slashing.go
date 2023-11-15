@@ -77,7 +77,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	enc := []byte(req.SlashingProtectionJson)
 	buf := bytes.NewBuffer(enc)
 	if err := slashing.ImportStandardProtectionJSON(ctx, s.valDB, buf); err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, errors.Wrap(err, "could not import slashing protection history").Error(), http.StatusInternalServerError)
 		return
 	}
 	log.Info("Slashing protection JSON successfully imported")
