@@ -1688,22 +1688,6 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 	http2.WriteJson(w, &GetCommitteesResponse{Data: committees, ExecutionOptimistic: isOptimistic, Finalized: isFinalized})
 }
 
-// GetDepositContract retrieves deposit contract address and genesis fork version.
-func (*Server) GetDepositContract(w http.ResponseWriter, r *http.Request) {
-	_, span := trace.StartSpan(r.Context(), "beacon.GetDepositContract")
-	defer span.End()
-
-	http2.WriteJson(w, &DepositContractResponse{
-		Data: &struct {
-			ChainId string `json:"chain_id"`
-			Address string `json:"address"`
-		}{
-			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
-			Address: params.BeaconConfig().DepositContractAddress,
-		},
-	})
-}
-
 // GetBlockHeaders retrieves block headers matching given query. By default it will fetch current head slot blocks.
 func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
@@ -1745,6 +1729,11 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 			http2.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for slot %d", slot).Error(), http.StatusInternalServerError)
 			return
 		}
+	}
+
+	if len(blks) == 0 {
+		http2.HandleError(w, "No blocks found", http.StatusNotFound)
+		return
 	}
 
 	isOptimistic := false

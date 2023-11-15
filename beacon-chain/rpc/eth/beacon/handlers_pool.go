@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -26,6 +27,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
+
+const broadcastBLSChangesRateLimit = 128
 
 // ListAttestations retrieves attestations known by the node but
 // not necessarily incorporated into any block. Allows filtering by committee index or slot.
@@ -442,4 +445,139 @@ func (s *Server) ListBLSToExecutionChanges(w http.ResponseWriter, r *http.Reques
 	http2.WriteJson(w, &BLSToExecutionChangesPoolResponse{
 		Data: changes,
 	})
+}
+
+// GetAttesterSlashings retrieves attester slashings known by the node but
+// not necessarily incorporated into any block.
+func (s *Server) GetAttesterSlashings(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetAttesterSlashings")
+	defer span.End()
+
+	headState, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sourceSlashings := s.SlashingsPool.PendingAttesterSlashings(ctx, headState, true /* return unlimited slashings */)
+	slashings := shared.AttesterSlashingsFromConsensus(sourceSlashings)
+
+	http2.WriteJson(w, &GetAttesterSlashingsResponse{Data: slashings})
+}
+
+// SubmitAttesterSlashing submits an attester slashing object to node's pool and
+// if passes validation node MUST broadcast it to network.
+func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitAttesterSlashing")
+	defer span.End()
+
+	var req shared.AttesterSlashing
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	slashing, err := req.ToConsensus()
+	if err != nil {
+		http2.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	headState, err := s.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.Attestation_1.Data.Slot)
+	if err != nil {
+		http2.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = blocks.VerifyAttesterSlashing(ctx, headState, slashing)
+	if err != nil {
+		http2.HandleError(w, "Invalid attester slashing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = s.SlashingsPool.InsertAttesterSlashing(ctx, headState, slashing)
+	if err != nil {
+		http2.HandleError(w, "Could not insert attester slashing into pool: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !features.Get().DisableBroadcastSlashings {
+		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
+			http2.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+}
+
+// GetProposerSlashings retrieves proposer slashings known by the node
+// but not necessarily incorporated into any block.
+func (s *Server) GetProposerSlashings(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetProposerSlashings")
+	defer span.End()
+
+	headState, err := s.ChainInfoFetcher.HeadStateReadOnly(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sourceSlashings := s.SlashingsPool.PendingProposerSlashings(ctx, headState, true /* return unlimited slashings */)
+	slashings := shared.ProposerSlashingsFromConsensus(sourceSlashings)
+
+	http2.WriteJson(w, &GetProposerSlashingsResponse{Data: slashings})
+}
+
+// SubmitProposerSlashing submits a proposer slashing object to node's pool and if
+// passes validation node MUST broadcast it to network.
+func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.SubmitProposerSlashing")
+	defer span.End()
+
+	var req shared.ProposerSlashing
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	slashing, err := req.ToConsensus()
+	if err != nil {
+		http2.HandleError(w, "Could not convert request slashing to consensus slashing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	headState, err := s.ChainInfoFetcher.HeadState(ctx)
+	if err != nil {
+		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	headState, err = transition.ProcessSlotsIfPossible(ctx, headState, slashing.Header_1.Header.Slot)
+	if err != nil {
+		http2.HandleError(w, "Could not process slots: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = blocks.VerifyProposerSlashing(headState, slashing)
+	if err != nil {
+		http2.HandleError(w, "Invalid proposer slashing: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	err = s.SlashingsPool.InsertProposerSlashing(ctx, headState, slashing)
+	if err != nil {
+		http2.HandleError(w, "Could not insert proposer slashing into pool: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !features.Get().DisableBroadcastSlashings {
+		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
+			http2.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 }

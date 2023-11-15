@@ -182,3 +182,21 @@ func SortedForkVersions(forkSchedule map[[4]byte]primitives.Epoch) [][4]byte {
 	})
 	return sortedVersions
 }
+
+// LastForkEpoch returns the last valid fork epoch that exists in our
+// fork schedule.
+func LastForkEpoch() primitives.Epoch {
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	sortedForkVersions := SortedForkVersions(fSchedule)
+	lastValidEpoch := primitives.Epoch(0)
+	numOfVersions := len(sortedForkVersions)
+	for i := numOfVersions - 1; i >= 0; i-- {
+		v := sortedForkVersions[i]
+		fEpoch := fSchedule[v]
+		if fEpoch != math.MaxUint64 {
+			lastValidEpoch = fEpoch
+			break
+		}
+	}
+	return lastValidEpoch
+}

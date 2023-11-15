@@ -59,6 +59,7 @@ type ReadOnlyBeaconBlock interface {
 // ReadOnlyBeaconBlockBody describes the method set employed by an object
 // that is a beacon block body.
 type ReadOnlyBeaconBlockBody interface {
+	Version() int
 	RandaoReveal() [field_params.BLSSignatureLength]byte
 	Eth1Data() *ethpb.Eth1Data
 	Graffiti() [field_params.RootLength]byte

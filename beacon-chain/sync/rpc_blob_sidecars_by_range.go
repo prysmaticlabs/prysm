@@ -152,7 +152,7 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow start + count -1")
 	}
 
-	maxRequest := params.BeaconNetworkConfig().MaxRequestBlocksDeneb
+	maxRequest := params.MaxRequestBlock(slots.ToEpoch(current))
 	// Allow some wiggle room, up to double the MaxRequestBlocks past the current slot,
 	// to give nodes syncing close to the head of the chain some margin for error.
 	maxStart, err := current.SafeAdd(maxRequest * 2)
