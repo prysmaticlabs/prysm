@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path"
@@ -27,7 +26,7 @@ const (
 	blobLockPath = "blob.lock"
 )
 
-func NewBlobStorage(ctx context.Context, base string) (*BlobStorage, error) {
+func NewBlobStorage(base string) (*BlobStorage, error) {
 	base = path.Clean(base)
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	return &BlobStorage{fs: fs}, nil

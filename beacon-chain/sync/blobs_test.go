@@ -135,7 +135,7 @@ func generateTestSidecar(t *testing.T, root [32]byte, block interfaces.ReadOnlyS
 	return sc
 }
 
-func fakeEmptyProof(t *testing.T, block interfaces.ReadOnlySignedBeaconBlock, sc *ethpb.BlobSidecar) [][]byte {
+func fakeEmptyProof(_ *testing.T, _ interfaces.ReadOnlySignedBeaconBlock, _ *ethpb.BlobSidecar) [][]byte {
 	r := make([][]byte, 17)
 	for i := range r {
 		r[i] = make([]byte, 32)

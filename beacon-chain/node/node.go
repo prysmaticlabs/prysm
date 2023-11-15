@@ -205,7 +205,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Starting Blob Storage")
-	blobStorage, err := filesystem.NewBlobStorage(ctx, beacon.BlobStoragePath)
+	blobStorage, err := filesystem.NewBlobStorage(beacon.BlobStoragePath)
 	if err != nil {
 		return nil, err
 	}

@@ -98,7 +98,7 @@ func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.Sig
 	return r
 }
 
-func fakeEmptyProof(t *testing.T, sc *ethpb.BlobSidecar) [][]byte {
+func fakeEmptyProof(_ *testing.T, _ *ethpb.BlobSidecar) [][]byte {
 	r := make([][]byte, 17)
 	for i := range r {
 		r[i] = make([]byte, 32)
