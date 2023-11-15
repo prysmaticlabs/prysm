@@ -318,14 +318,25 @@ func runBlobStep(t *testing.T,
 			if uint64(len(kzgs)) < index {
 				kzg = kzgs[index]
 			}
+			if len(kzg) == 0 {
+				kzg = make([]byte, 48)
+			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
+			fakeProof := make([][]byte, 17)
+			for i := range fakeProof {
+				fakeProof[i] = make([]byte, 32)
+			}
+			if len(proof) == 0 {
+				proof = make([]byte, 48)
+			}
 			pb := &ethpb.BlobSidecar{
-				Index:             index,
-				Blob:              blob[:],
-				KzgCommitment:     kzg,
-				KzgProof:          proof,
-				SignedBlockHeader: sh,
+				Index:                    index,
+				Blob:                     blob[:],
+				KzgCommitment:            kzg,
+				KzgProof:                 proof,
+				SignedBlockHeader:        sh,
+				CommitmentInclusionProof: fakeProof,
 			}
 			ro, err := blocks.NewROBlobWithRoot(pb, root)
 			require.NoError(t, err)
