@@ -167,6 +167,7 @@ func (s *Service) processFetchedDataRegSync(
 			verified, err := verification.BlobSidecarSliceNoop(b.Blobs)
 			if err != nil {
 				log.WithField("root", b.Block.Root()).WithError(err).Error("blobs failed verification")
+				continue
 			}
 			for i := range verified {
 				if err := s.cfg.BlobStorage.Save(verified[i]); err != nil {
