@@ -19,7 +19,6 @@ import "google/api/annotations.proto";
 import "google/protobuf/descriptor.proto";
 import "google/protobuf/empty.proto";
 
-import "proto/eth/v1/beacon_block.proto";
 import "proto/eth/v1/beacon_chain.proto";
 
 option csharp_namespace = "Ethereum.Eth.Service";
