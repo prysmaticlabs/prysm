@@ -89,3 +89,10 @@ type GetFeeRecipientByPubkeyResponse struct {
 type SetFeeRecipientByPubkeyRequest struct {
 	Ethaddress string `json:"ethaddress"`
 }
+
+type ImportSlashingProtectionRequest struct {
+	SlashingProtectionJson string `json:"slashing_protection_json"`
+}
+type ExportSlashingProtectionResponse struct {
+	File string `json:"file"`
+}
