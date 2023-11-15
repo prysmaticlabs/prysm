@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -18,6 +17,7 @@ import (
 type BlobStorage struct {
 	baseDir        string
 	retentionEpoch primitives.Epoch
+	lastPrunedSlot primitives.Slot
 }
 
 // SaveBlobData saves blobs given a list of sidecars.
@@ -43,9 +43,33 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 			return errors.Wrap(err, "failed to serialize sidecar data")
 		}
 
+		// Create the block root directory if it doesn't exist.
+		blockRootDir := filepath.Join(bs.baseDir, fmt.Sprintf("%x", sidecar.BlockRoot))
+		if _, err := os.Stat(blockRootDir); os.IsNotExist(err) {
+			// Create the block root directory.
+			err := os.MkdirAll(blockRootDir, os.ModePerm)
+			if err != nil {
+				return errors.Wrapf(err, "failed to create block root directory: %s", blockRootDir)
+			}
+
+			// Create and save the slot file if it doesn't exist.
+			slotFilePath := filepath.Join(blockRootDir, fmt.Sprintf("%d.slot", sidecar.Slot))
+			if _, err := os.Stat(slotFilePath); os.IsNotExist(err) {
+				// Create the slot file.
+				slotFile, err := os.Create(slotFilePath)
+				if err != nil {
+					return errors.Wrapf(err, "failed to create slot file: %s", slotFilePath)
+				}
+				err = slotFile.Close()
+				if err != nil {
+					return errors.Wrap(err, "failed to close slot file")
+				}
+			}
+		}
+
 		// Create a partial file and write the serialized data to it.
-		partialFilePath := blobPath + ".partial"
-		partialFile, err := os.Create(filepath.Clean(partialFilePath))
+		partialFilePath := filepath.Join(blockRootDir, fmt.Sprintf("%d.blob", sidecar.Index))
+		partialFile, err := os.Create(filepath.Clean(partialFilePath + ".partial"))
 		if err != nil {
 			return errors.Wrap(err, "failed to create partial file")
 		}
@@ -64,7 +88,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 		}
 
 		// Atomically rename the partial file to its final name.
-		err = os.Rename(partialFilePath, blobPath)
+		err = os.Rename(partialFilePath+".partial", partialFilePath)
 		if err != nil {
 			return errors.Wrap(err, "failed to rename partial file to final name")
 		}
@@ -73,13 +97,8 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 }
 
 func (bs *BlobStorage) sidecarFileKey(sidecar *eth.BlobSidecar) string {
-	return path.Join(bs.baseDir, fmt.Sprintf(
-		"%d_%x_%d_%x.blob",
-		sidecar.Slot,
-		sidecar.BlockRoot,
-		sidecar.Index,
-		sidecar.KzgCommitment,
-	))
+	return filepath.Join(bs.baseDir, fmt.Sprintf("%x", sidecar.BlockRoot),
+		fmt.Sprintf("%d.blob", sidecar.Index))
 }
 
 // checkDataIntegrity checks the data integrity by comparing the original ethpb.BlobSidecar.

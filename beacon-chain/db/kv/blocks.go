@@ -607,6 +607,7 @@ func blockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter
 		filtersMap[filters.StartEpoch],
 		filtersMap[filters.EndEpoch],
 		filtersMap[filters.SlotStep],
+		filtersMap[filters.BlockRoots],
 	)
 	if err != nil {
 		return nil, err
@@ -642,7 +643,7 @@ func blockRootsByFilter(ctx context.Context, tx *bolt.Tx, f *filters.QueryFilter
 func blockRootsBySlotRange(
 	ctx context.Context,
 	bkt *bolt.Bucket,
-	startSlotEncoded, endSlotEncoded, startEpochEncoded, endEpochEncoded, slotStepEncoded interface{},
+	startSlotEncoded, endSlotEncoded, startEpochEncoded, endEpochEncoded, slotStepEncoded, blockRootsEncoded interface{},
 ) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlotRange")
 	defer span.End()
@@ -654,6 +655,7 @@ func blockRootsBySlotRange(
 
 	var startSlot, endSlot primitives.Slot
 	var step uint64
+	var blockRoots [][]byte
 	var ok bool
 	if startSlot, ok = startSlotEncoded.(primitives.Slot); !ok {
 		startSlot = 0
@@ -663,6 +665,9 @@ func blockRootsBySlotRange(
 	}
 	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
 		step = 1
+	}
+	if blockRoots, ok = blockRootsEncoded.([][]byte); !ok {
+		blockRoots = [][]byte{}
 	}
 	startEpoch, startEpochOk := startEpochEncoded.(primitives.Epoch)
 	endEpoch, endEpochOk := endEpochEncoded.(primitives.Epoch)
@@ -701,6 +706,18 @@ func blockRootsBySlotRange(
 		splitRoots := make([][]byte, 0, numOfRoots)
 		for i := 0; i < len(v); i += 32 {
 			splitRoots = append(splitRoots, v[i:i+32])
+			// If we add a list of block roots to filter from.
+			if len(blockRoots) > 0 {
+				var rootsToDelete [][]byte
+				for _, sr := range splitRoots {
+					for _, r := range blockRoots {
+						if bytes.Equal(sr, r) {
+							rootsToDelete = append(rootsToDelete, r)
+						}
+					}
+				}
+				return rootsToDelete, nil
+			}
 		}
 		roots = append(roots, splitRoots...)
 	}
