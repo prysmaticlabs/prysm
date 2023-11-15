@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
 	slashing "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"go.opencensus.io/trace"
 )
@@ -25,22 +25,22 @@ func (s *Server) ExportSlashingProtection(w http.ResponseWriter, r *http.Request
 	defer span.End()
 
 	if s.valDB == nil {
-		http2.HandleError(w, "could not find validator database", http.StatusInternalServerError)
+		httputil.HandleError(w, "could not find validator database", http.StatusInternalServerError)
 		return
 	}
 
 	eipJSON, err := slashing.ExportStandardProtectionJSON(ctx, s.valDB)
 	if err != nil {
-		http2.HandleError(w, errors.Wrap(err, "could not export slashing protection history").Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, errors.Wrap(err, "could not export slashing protection history").Error(), http.StatusInternalServerError)
 		return
 	}
 
 	encoded, err := json.MarshalIndent(eipJSON, "", "\t")
 	if err != nil {
-		http2.HandleError(w, errors.Wrap(err, "could not JSON marshal slashing protection history").Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, errors.Wrap(err, "could not JSON marshal slashing protection history").Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &ExportSlashingProtectionResponse{
+	httputil.WriteJson(w, &ExportSlashingProtectionResponse{
 		File: string(encoded),
 	})
 }
@@ -55,7 +55,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	defer span.End()
 
 	if s.valDB == nil {
-		http2.HandleError(w, "could not find validator database", http.StatusInternalServerError)
+		httputil.HandleError(w, "could not find validator database", http.StatusInternalServerError)
 		return
 	}
 
@@ -63,21 +63,21 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	err := json.NewDecoder(r.Body).Decode(&req)
 	switch {
 	case err == io.EOF:
-		http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
 		return
 	case err != nil:
-		http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if req.SlashingProtectionJson == "" {
-		http2.HandleError(w, "empty slashing_protection_json specified", http.StatusBadRequest)
+		httputil.HandleError(w, "empty slashing_protection_json specified", http.StatusBadRequest)
 		return
 	}
 	enc := []byte(req.SlashingProtectionJson)
 	buf := bytes.NewBuffer(enc)
 	if err := slashing.ImportStandardProtectionJSON(ctx, s.valDB, buf); err != nil {
-		http2.HandleError(w, errors.Wrap(err, "could not import slashing protection history").Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, errors.Wrap(err, "could not import slashing protection history").Error(), http.StatusInternalServerError)
 		return
 	}
 	log.Info("Slashing protection JSON successfully imported")
