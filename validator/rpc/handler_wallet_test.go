@@ -230,7 +230,7 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	require.StringContains(t, "password did not pass validation", wr.Body.String())
 
 	request.WalletPassword = strongPass
-	// Create(derivedKeymanagerKind) should fail then test recover.
+	// Create(derived) should fail then test recover.
 	reqCreate := &CreateWalletRequest{
 		Keymanager:     derivedKeymanagerKind,
 		WalletPassword: strongPass,

@@ -90,7 +90,7 @@ type SetFeeRecipientByPubkeyRequest struct {
 	Ethaddress string `json:"ethaddress"`
 }
 
-// Type of key manager for the wallet, either derivedKeymanagerKind, importedKeymanagerKind, or remote.
+// Type of key manager for the wallet, either derived, imported, or remote.
 type KeymanagerKind string
 
 const (
