@@ -71,7 +71,7 @@ func (s *Server) ImportSlashingProtection(w http.ResponseWriter, r *http.Request
 	}
 
 	if req.SlashingProtectionJson == "" {
-		http2.HandleError(w, "empty slashing_protection json specified", http.StatusBadRequest)
+		http2.HandleError(w, "empty slashing_protection_json specified", http.StatusBadRequest)
 		return
 	}
 	enc := []byte(req.SlashingProtectionJson)
