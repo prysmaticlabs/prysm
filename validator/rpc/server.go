@@ -185,7 +185,6 @@ func (s *Server) Start() {
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
-	validatorpb.RegisterAccountsServer(s.grpcServer, s)
 
 	// routes needs to be set before the server calls the server function
 	go func() {
@@ -233,6 +232,10 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	// accounts endpoints
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts", s.ListAccounts).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts/backup", s.BackupAccounts).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts/voluntary-exit", s.VoluntaryExit).Methods(http.MethodPost)
 	// web health endpoints
 	s.router.HandleFunc(api.WebUrlPrefix+"health/version", s.GetVersion).Methods(http.MethodGet)
 	s.router.HandleFunc(api.WebUrlPrefix+"health/logs/validator/stream", s.StreamValidatorLogs).Methods(http.MethodGet)

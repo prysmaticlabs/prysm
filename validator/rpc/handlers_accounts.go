@@ -3,6 +3,7 @@ package rpc
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,10 +41,14 @@ func (s *Server) ListAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pageSize := r.URL.Query().Get("page_size")
-	ps, err := strconv.ParseInt(pageSize, 10, 32)
-	if err != nil {
-		httputil.HandleError(w, errors.Wrap(err, "Failed to parse page_size").Error(), http.StatusBadRequest)
-		return
+	var ps int64
+	if pageSize != "" {
+		psi, err := strconv.ParseInt(pageSize, 10, 32)
+		if err != nil {
+			httputil.HandleError(w, errors.Wrap(err, "Failed to parse page_size").Error(), http.StatusBadRequest)
+			return
+		}
+		ps = psi
 	}
 	pageToken := r.URL.Query().Get("page_token")
 	publicKeys := r.URL.Query()["public_keys"]
@@ -207,8 +212,8 @@ func (s *Server) BackupAccounts(w http.ResponseWriter, r *http.Request) {
 	if err := writer.Close(); err != nil {
 		log.WithError(err).Error("Could not close zip file after writing")
 	}
-	httputil.WriteJson(w, BackupAccountsResponse{
-		ZipFile: string(buf.Bytes()),
+	httputil.WriteJson(w, &BackupAccountsResponse{
+		ZipFile: base64.StdEncoding.EncodeToString(buf.Bytes()), // convert to base64 string for processing
 	})
 }
 

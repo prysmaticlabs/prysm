@@ -108,10 +108,14 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.beacon.GetValidatorBalances")
 	defer span.End()
 	pageSize := r.URL.Query().Get("page_size")
-	ps, err := strconv.ParseInt(pageSize, 10, 32)
-	if err != nil {
-		http2.HandleError(w, errors.Wrap(err, "Failed to parse page_size").Error(), http.StatusBadRequest)
-		return
+	var ps int64
+	if pageSize != "" {
+		psi, err := strconv.ParseInt(pageSize, 10, 32)
+		if err != nil {
+			http2.HandleError(w, errors.Wrap(err, "Failed to parse page_size").Error(), http.StatusBadRequest)
+			return
+		}
+		ps = psi
 	}
 	pageToken := r.URL.Query().Get("page_token")
 	publicKeys := r.URL.Query()["public_keys"]

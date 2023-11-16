@@ -4,17 +4,21 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
@@ -66,42 +70,74 @@ func TestServer_ListAccounts(t *testing.T) {
 	require.Equal(t, true, ok)
 	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
-	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
-		PageSize: int32(numAccounts),
-	})
-	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf(api.WebUrlPrefix+"accounts?page_size=%d", int32(numAccounts)), nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ListAccounts(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &ListAccountsResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 	require.Equal(t, len(resp.Accounts), numAccounts)
 
 	tests := []struct {
-		req *pb.ListAccountsRequest
-		res *pb.ListAccountsResponse
+		PageSize  int
+		PageToken string
+		All       bool
+		res       *ListAccountsResponse
 	}{
 		{
-			req: &pb.ListAccountsRequest{
-				PageSize: 5,
-			},
-			res: &pb.ListAccountsResponse{
+
+			PageSize: 5,
+			res: &ListAccountsResponse{
 				Accounts:      resp.Accounts[0:5],
 				NextPageToken: "1",
 				TotalSize:     int32(numAccounts),
 			},
 		},
 		{
-			req: &pb.ListAccountsRequest{
-				PageSize:  5,
-				PageToken: "1",
-			},
-			res: &pb.ListAccountsResponse{
+
+			PageSize:  5,
+			PageToken: "1",
+			res: &ListAccountsResponse{
 				Accounts:      resp.Accounts[5:10],
 				NextPageToken: "2",
 				TotalSize:     int32(numAccounts),
 			},
 		},
+		{
+
+			All: true,
+			res: &ListAccountsResponse{
+				Accounts:      resp.Accounts,
+				NextPageToken: "",
+				TotalSize:     int32(numAccounts),
+			},
+		},
 	}
 	for _, test := range tests {
-		res, err := s.ListAccounts(context.Background(), test.req)
-		require.NoError(t, err)
-		assert.DeepEqual(t, res, test.res)
+		url := api.WebUrlPrefix + "accounts"
+		if test.PageSize != 0 || test.PageToken != "" || test.All {
+			url = url + "?"
+		}
+		if test.All {
+			url = url + "all=true"
+		} else {
+			if test.PageSize != 0 {
+				url = url + fmt.Sprintf("page_size=%d", test.PageSize)
+			}
+			if test.PageToken != "" {
+				url = url + fmt.Sprintf("&page_token=%s", test.PageToken)
+			}
+		}
+
+		req = httptest.NewRequest(http.MethodGet, url, nil)
+		wr = httptest.NewRecorder()
+		wr.Body = &bytes.Buffer{}
+		s.ListAccounts(wr, req)
+		require.Equal(t, http.StatusOK, wr.Code)
+		resp = &ListAccountsResponse{}
+		require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+		assert.DeepEqual(t, resp, test.res)
 	}
 }
 
@@ -139,32 +175,44 @@ func TestServer_BackupAccounts(t *testing.T) {
 	require.Equal(t, true, ok)
 	err = dr.RecoverAccountsFromMnemonic(ctx, constant.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
 	require.NoError(t, err)
-	resp, err := s.ListAccounts(ctx, &pb.ListAccountsRequest{
-		PageSize: int32(numAccounts),
-	})
-	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/accounts?page_size=%d", int32(numAccounts)), nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.ListAccounts(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &ListAccountsResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
 	require.Equal(t, len(resp.Accounts), numAccounts)
 
-	pubKeys := make([][]byte, numAccounts)
+	pubKeys := make([]string, numAccounts)
 	for i, aa := range resp.Accounts {
 		pubKeys[i] = aa.ValidatingPublicKey
 	}
-	// We now attempt to backup all public keys from the wallet.
-	res, err := s.BackupAccounts(context.Background(), &pb.BackupAccountsRequest{
+	request := &BackupAccountsRequest{
 		PublicKeys:     pubKeys,
 		BackupPassword: s.wallet.Password(),
-	})
+	}
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
-	require.NotNil(t, res.ZipFile)
-
+	req = httptest.NewRequest(http.MethodPost, api.WebUrlPrefix+"accounts/backup", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	// We now attempt to backup all public keys from the wallet.
+	s.BackupAccounts(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	res := &BackupAccountsResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), res))
+	// decode the base64 string
+	decodedBytes, err := base64.StdEncoding.DecodeString(res.ZipFile)
 	// Open a zip archive for reading.
-	buf := bytes.NewReader(res.ZipFile)
-	r, err := zip.NewReader(buf, int64(len(res.ZipFile)))
+	bu := bytes.NewReader(decodedBytes)
+	r, err := zip.NewReader(bu, int64(len(decodedBytes)))
 	require.NoError(t, err)
 	require.Equal(t, len(pubKeys), len(r.File))
 
 	// Iterate through the files in the archive, checking they
-	// match the keystores we wanted to backup.
+	// match the keystores we wanted to back up.
 	for i, f := range r.File {
 		keystoreFile, err := f.Open()
 		require.NoError(t, err)
@@ -178,7 +226,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 			require.NoError(t, keystoreFile.Close())
 			t.Fatal(err)
 		}
-		assert.Equal(t, keystore.Pubkey, fmt.Sprintf("%x", pubKeys[i]))
+		assert.Equal(t, "0x"+keystore.Pubkey, pubKeys[i])
 		require.NoError(t, keystoreFile.Close())
 	}
 }
@@ -255,13 +303,25 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
-	rawPubKeys := make([][]byte, len(pubKeys))
+	rawPubKeys := make([]string, len(pubKeys))
 	for i, key := range pubKeys {
-		rawPubKeys[i] = key[:]
+		rawPubKeys[i] = hexutil.Encode(key[:])
 	}
-	res, err := s.VoluntaryExit(ctx, &pb.VoluntaryExitRequest{
+	request := &VoluntaryExitRequest{
 		PublicKeys: rawPubKeys,
-	})
+	}
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
-	require.DeepEqual(t, rawPubKeys, res.ExitedKeys)
+	req := httptest.NewRequest(http.MethodPost, api.WebUrlPrefix+"accounts/voluntary-exit", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.VoluntaryExit(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	res := &VoluntaryExitResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), res))
+	for i := range res.ExitedKeys {
+		require.Equal(t, rawPubKeys[i], hexutil.Encode(res.ExitedKeys[i]))
+	}
+
 }

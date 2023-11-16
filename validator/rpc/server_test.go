@@ -33,6 +33,14 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/v2/validator/wallet/recover":               {http.MethodPost},
 		"/v2/validator/slashing-protection/export":   {http.MethodGet},
 		"/v2/validator/slashing-protection/import":   {http.MethodPost},
+		"/v2/validator/accounts":                     {http.MethodGet},
+		"/v2/validator/accounts/backup":              {http.MethodPost},
+		"/v2/validator/accounts/voluntary-exit":      {http.MethodPost},
+		"/v2/validator/beacon/balances":              {http.MethodGet},
+		"/v2/validator/beacon/peers":                 {http.MethodGet},
+		"/v2/validator/beacon/status":                {http.MethodGet},
+		"/v2/validator/beacon/summary":               {http.MethodGet},
+		"/v2/validator/beacon/validators":            {http.MethodGet},
 	}
 	gotRouteList := make(map[string][]string)
 	err = s.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {

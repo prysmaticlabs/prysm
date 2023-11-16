@@ -1,15 +1,18 @@
 package rpc
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
@@ -26,10 +29,14 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 	srv := &Server{
 		beaconNodeClient: nodeClient,
 	}
-	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &empty.Empty{})
-	require.NoError(t, err)
-	want := &pb.BeaconStatusResponse{
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	srv.GetBeaconStatus(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &BeaconStatusResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+	want := &BeaconStatusResponse{
 		BeaconNodeEndpoint: "",
 		Connected:          false,
 		Syncing:            false,
@@ -63,17 +70,35 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		beaconNodeClient:  nodeClient,
 		beaconChainClient: beaconChainClient,
 	}
-	ctx := context.Background()
-	resp, err := srv.GetBeaconStatus(ctx, &empty.Empty{})
-	require.NoError(t, err)
-	want := &pb.BeaconStatusResponse{
+
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	srv.GetBeaconStatus(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	resp := &BeaconStatusResponse{}
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+
+	want := &BeaconStatusResponse{
 		BeaconNodeEndpoint:     "",
 		Connected:              true,
 		Syncing:                true,
-		GenesisTime:            uint64(time.Unix(0, 0).Unix()),
-		DepositContractAddress: []byte("hello"),
-		ChainHead: &ethpb.ChainHead{
-			HeadEpoch: 1,
+		GenesisTime:            fmt.Sprintf("%d", time.Unix(0, 0).Unix()),
+		DepositContractAddress: "0x68656c6c6f",
+		ChainHead: &shared.ChainHead{
+			HeadSlot:                   "0",
+			HeadEpoch:                  "1",
+			HeadBlockRoot:              "0x",
+			FinalizedSlot:              "0",
+			FinalizedEpoch:             "0",
+			FinalizedBlockRoot:         "0x",
+			JustifiedSlot:              "0",
+			JustifiedEpoch:             "0",
+			JustifiedBlockRoot:         "0x",
+			PreviousJustifiedSlot:      "0",
+			PreviousJustifiedEpoch:     "0",
+			PreviousJustifiedBlockRoot: "0x",
+			OptimisticStatus:           false,
 		},
 	}
 	assert.DeepEqual(t, want, resp)
