@@ -3,9 +3,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "accounts.go",
         "auth_token.go",
         "beacon.go",
+        "handlers_accounts.go",
+        "handlers_beacon.go",
         "handler_wallet.go",
         "handlers_health.go",
         "handlers_keymanager.go",
@@ -20,6 +21,7 @@ go_library(
         "//visibility:public",
     ],
     deps = [
+        "//api:go_default_library",
         "//api/grpc:go_default_library",
         "//api/pagination:go_default_library",
         "//async/event:go_default_library",
@@ -81,6 +83,7 @@ go_library(
         "@org_golang_google_grpc//metadata:go_default_library",
         "@org_golang_google_grpc//reflection:go_default_library",
         "@org_golang_google_grpc//status:go_default_library",
+        "@org_golang_google_protobuf//runtime/protoimpl:go_default_library",
         "@org_golang_google_protobuf//types/known/emptypb:go_default_library",
     ],
 )
@@ -88,9 +91,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "accounts_test.go",
         "auth_token_test.go",
         "beacon_test.go",
+        "handlers_accounts_test.go",
+        "handlers_beacon_test.go",
         "handler_wallet_test.go",
         "handlers_health_test.go",
         "handlers_keymanager_test.go",
