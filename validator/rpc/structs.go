@@ -3,7 +3,6 @@ package rpc
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
-	"google.golang.org/protobuf/runtime/protoimpl"
 )
 
 // local keymanager api
@@ -151,44 +150,30 @@ type ExportSlashingProtectionResponse struct {
 	File string `json:"file"`
 }
 
-type ListAccountsRequest struct {
-	GetDepositTxData bool   `protobuf:"varint,1,opt,name=get_deposit_tx_data,json=getDepositTxData,proto3" json:"get_deposit_tx_data,omitempty"`
-	PageSize         int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken        string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	All              bool   `protobuf:"varint,4,opt,name=all,proto3" json:"all,omitempty"`
-}
-
-// Deprecated: Marked as deprecated in proto/prysm/v1alpha1/validator-client/web_api.proto.
 type BackupAccountsRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	PublicKeys     [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
-	BackupPassword string   `protobuf:"bytes,2,opt,name=backup_password,json=backupPassword,proto3" json:"backup_password,omitempty"`
+	PublicKeys     []string `json:"public_keys"`
+	BackupPassword string   `json:"backup_password"`
 }
 
-// Deprecated: Marked as deprecated in proto/prysm/v1alpha1/validator-client/web_api.proto.
 type VoluntaryExitRequest struct {
-	PublicKeys [][]byte `protobuf:"bytes,1,rep,name=public_keys,json=publicKeys,proto3" json:"public_keys,omitempty"`
+	PublicKeys []string `json:"public_keys"`
 }
 
-// Deprecated: Marked as deprecated in proto/prysm/v1alpha1/validator-client/web_api.proto.
 type BackupAccountsResponse struct {
-	ZipFile []byte `protobuf:"bytes,1,opt,name=zip_file,json=zipFile,proto3" json:"zip_file,omitempty"`
+	ZipFile string `json:"zip_file"`
 }
 
 type ListAccountsResponse struct {
-	Accounts      []*Account `protobuf:"bytes,1,rep,name=accounts,proto3" json:"accounts,omitempty"`
-	NextPageToken string     `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalSize     int32      `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	Accounts      []*Account `json:"accounts"`
+	NextPageToken string     `json:"next_page_token"`
+	TotalSize     int32      `json:"total_size"`
 }
 
 type Account struct {
-	ValidatingPublicKey []byte `protobuf:"bytes,1,opt,name=validating_public_key,json=validatingPublicKey,proto3" json:"validating_public_key,omitempty"`
-	AccountName         string `protobuf:"bytes,2,opt,name=account_name,json=accountName,proto3" json:"account_name,omitempty"`
-	DepositTxData       []byte `protobuf:"bytes,3,opt,name=deposit_tx_data,json=depositTxData,proto3" json:"deposit_tx_data,omitempty"`
-	DerivationPath      string `protobuf:"bytes,4,opt,name=derivation_path,json=derivationPath,proto3" json:"derivation_path,omitempty"`
+	ValidatingPublicKey string `json:"validating_public_key"`
+	AccountName         string `json:"account_name"`
+	DepositTxData       string `json:"deposit_tx_data"`
+	DerivationPath      string `json:"derivation_path"`
 }
 
 type VoluntaryExitResponse struct {
