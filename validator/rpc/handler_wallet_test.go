@@ -10,14 +10,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
@@ -60,12 +58,19 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		walletDir:             defaultWalletPath,
 		validatorService:      vs,
 	}
-
-	_, err = s.CreateWallet(ctx, &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+	request := &CreateWalletRequest{
+		Keymanager:     importedKeymanagerKind,
 		WalletPassword: strongPass,
-	})
+	}
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/create", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.CreateWallet(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
 
 	encryptor := keystorev4.New()
 	keystores := make([]string, 3)
@@ -98,12 +103,11 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 		Passwords: passwords,
 	}
 
-	var buf bytes.Buffer
 	err = json.NewEncoder(&buf).Encode(importReq)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/keystores"), &buf)
-	wr := httptest.NewRecorder()
+	req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/keystores"), &buf)
+	wr = httptest.NewRecorder()
 	wr.Body = &bytes.Buffer{}
 	s.ImportKeystores(wr, req)
 	require.Equal(t, http.StatusOK, wr.Code)
@@ -120,76 +124,128 @@ func TestServer_CreateWallet_Local(t *testing.T) {
 func TestServer_CreateWallet_Local_PasswordTooWeak(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
 	defaultWalletPath = localWalletDir
-	ctx := context.Background()
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             defaultWalletPath,
 	}
-	req := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+	request := &CreateWalletRequest{
+		Keymanager:     importedKeymanagerKind,
 		WalletPassword: "", // Weak password, empty string
 	}
-	_, err := s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "Password too weak", err)
 
-	req = &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_IMPORTED,
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/create", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.CreateWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "Password too weak", wr.Body.String())
+
+	request = &CreateWalletRequest{
+		Keymanager:     importedKeymanagerKind,
 		WalletPassword: "a", // Weak password, too short
 	}
-	_, err = s.CreateWallet(ctx, req)
-	require.ErrorContains(t, "Password too weak", err)
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/create", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.CreateWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "Password too weak", wr.Body.String())
 }
 
 func TestServer_RecoverWallet_Derived(t *testing.T) {
 	localWalletDir := setupWalletDir(t)
-	ctx := context.Background()
 	s := &Server{
 		walletInitializedFeed: new(event.Feed),
 		walletDir:             localWalletDir,
 	}
-	req := &pb.RecoverWalletRequest{
+	request := &RecoverWalletRequest{
 		WalletPassword: strongPass,
 		NumAccounts:    0,
 	}
-	_, err := s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "Must create at least 1 validator account", err)
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "Must create at least 1 validator account", wr.Body.String())
 
-	req.NumAccounts = 2
-	req.Language = "Swahili"
-	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "input not in the list of supported languages", err)
+	request.NumAccounts = 2
+	request.Language = "Swahili"
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "input not in the list of supported languages", wr.Body.String())
 
-	req.Language = "ENglish"
-	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "invalid mnemonic in request", err)
+	request.Language = "ENglish"
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "invalid mnemonic in request", wr.Body.String())
 
 	mnemonicRandomness := make([]byte, 32)
 	_, err = rand.NewGenerator().Read(mnemonicRandomness)
 	require.NoError(t, err)
 	mnemonic, err := bip39.NewMnemonic(mnemonicRandomness)
 	require.NoError(t, err)
-	req.Mnemonic = mnemonic
+	request.Mnemonic = mnemonic
+	request.Mnemonic25ThWord = " "
 
-	req.Mnemonic25ThWord = " "
-	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "mnemonic 25th word cannot be empty", err)
-	req.Mnemonic25ThWord = "outer"
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "mnemonic 25th word cannot be empty", wr.Body.String())
 
+	request.Mnemonic25ThWord = "outer"
 	// Test weak password.
-	req.WalletPassword = "123qwe"
-	_, err = s.RecoverWallet(ctx, req)
-	require.ErrorContains(t, "password did not pass validation", err)
+	request.WalletPassword = "123qwe"
 
-	req.WalletPassword = strongPass
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "password did not pass validation", wr.Body.String())
+
+	request.WalletPassword = strongPass
 	// Create(derived) should fail then test recover.
-	reqCreate := &pb.CreateWalletRequest{
-		Keymanager:     pb.KeymanagerKind_DERIVED,
+	reqCreate := &CreateWalletRequest{
+		Keymanager:     derivedKeymanagerKind,
 		WalletPassword: strongPass,
 		NumAccounts:    2,
 		Mnemonic:       mnemonic,
 	}
-	_, err = s.CreateWallet(ctx, reqCreate)
-	require.ErrorContains(t, "create wallet not supported through web", err, "Create wallet for DERIVED or REMOTE types not supported through web, either import keystore or recover")
+	var buff bytes.Buffer
+	err = json.NewEncoder(&buff).Encode(reqCreate)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/create", &buff)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.CreateWallet(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "create wallet not supported through web", wr.Body.String())
 
 	// This defer will be the last to execute in this func.
 	resetCfgFalse := features.InitWithReset(&features.Flags{
@@ -203,8 +259,12 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 	defer resetCfgTrue()
 
 	// Finally test recover.
-	_, err = s.RecoverWallet(ctx, req)
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.RecoverWallet(wr, req)
 
 	// Password File should have been written.
 	passwordFilePath := filepath.Join(localWalletDir, wallet.DefaultWalletPasswordFile)
@@ -217,24 +277,46 @@ func TestServer_RecoverWallet_Derived(t *testing.T) {
 }
 
 func TestServer_ValidateKeystores_FailedPreconditions(t *testing.T) {
-	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	ss := &Server{}
-	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{})
-	assert.ErrorContains(t, "Password required for keystores", err)
-	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+	request := &ValidateKeystoresRequest{}
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	assert.StringContains(t, "Password required for keystores", wr.Body.String())
+
+	request = &ValidateKeystoresRequest{
 		KeystoresPassword: strongPass,
-	})
-	assert.ErrorContains(t, "No keystores included in request", err)
-	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+	}
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	assert.StringContains(t, "No keystores included in request", wr.Body.String())
+
+	request = &ValidateKeystoresRequest{
 		KeystoresPassword: strongPass,
 		Keystores:         []string{"badjson"},
-	})
-	assert.ErrorContains(t, "Not a valid EIP-2335 keystore", err)
+	}
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	assert.StringContains(t, "Not a valid EIP-2335 keystore", wr.Body.String())
 }
 
 func TestServer_ValidateKeystores_OK(t *testing.T) {
-	ctx := context.Background()
 	strongPass := "29384283xasjasd32%%&*@*#*"
 	ss := &Server{}
 
@@ -264,18 +346,32 @@ func TestServer_ValidateKeystores_OK(t *testing.T) {
 	}
 
 	// Validate the keystores and ensure no error.
-	_, err := ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+	request := &ValidateKeystoresRequest{
 		KeystoresPassword: strongPass,
 		Keystores:         keystores,
-	})
+	}
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
 
 	// Check that using a different password will return an error.
-	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+	request = &ValidateKeystoresRequest{
 		KeystoresPassword: "badpassword",
 		Keystores:         keystores,
-	})
-	require.ErrorContains(t, "is incorrect", err)
+	}
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "is incorrect", wr.Body.String())
 
 	// Add a new keystore that was encrypted with a different password and expect
 	// a failure from the function.
@@ -297,18 +393,30 @@ func TestServer_ValidateKeystores_OK(t *testing.T) {
 	encodedFile, err := json.MarshalIndent(item, "", "\t")
 	keystores = append(keystores, string(encodedFile))
 	require.NoError(t, err)
-	_, err = ss.ValidateKeystores(ctx, &pb.ValidateKeystoresRequest{
+	request = &ValidateKeystoresRequest{
 		KeystoresPassword: strongPass,
 		Keystores:         keystores,
-	})
-	require.ErrorContains(t, "Password for keystore with public key somepubkey is incorrect", err)
+	}
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req = httptest.NewRequest(http.MethodPost, "/v2/validator/wallet/recover", &buf)
+	wr = httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	ss.ValidateKeystores(wr, req)
+	require.NotEqual(t, http.StatusOK, wr.Code)
+	require.StringContains(t, "Password for keystore with public key somepubkey is incorrect", wr.Body.String())
 }
 
 func TestServer_WalletConfig_NoWalletFound(t *testing.T) {
 	s := &Server{}
-	resp, err := s.WalletConfig(context.Background(), &empty.Empty{})
-	require.NoError(t, err)
-	assert.DeepEqual(t, resp, &pb.WalletResponse{})
+	req := httptest.NewRequest(http.MethodGet, "/v2/validator/wallet/keystores/validate", nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.WalletConfig(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	var resp WalletResponse
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), &resp))
+	require.DeepEqual(t, resp, WalletResponse{})
 }
 
 func TestServer_WalletConfig(t *testing.T) {
@@ -341,12 +449,17 @@ func TestServer_WalletConfig(t *testing.T) {
 	})
 	require.NoError(t, err)
 	s.validatorService = vs
-	resp, err := s.WalletConfig(ctx, &empty.Empty{})
-	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodGet, "/v2/validator/wallet/keystores/validate", nil)
+	wr := httptest.NewRecorder()
+	wr.Body = &bytes.Buffer{}
+	s.WalletConfig(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
+	var resp WalletResponse
+	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), &resp))
 
-	assert.DeepEqual(t, resp, &pb.WalletResponse{
+	assert.DeepEqual(t, resp, WalletResponse{
 		WalletPath:     localWalletDir,
-		KeymanagerKind: pb.KeymanagerKind_IMPORTED,
+		KeymanagerKind: importedKeymanagerKind,
 	})
 }
 

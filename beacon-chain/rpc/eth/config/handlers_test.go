@@ -1,19 +1,42 @@
-package beacon
+package config
 
 import (
-	"context"
+	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
+
+func TestGetDepositContract(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	config := params.BeaconConfig().Copy()
+	config.DepositChainID = uint64(10)
+	config.DepositContractAddress = "0x4242424242424242424242424242424242424242"
+	params.OverrideBeaconConfig(config)
+
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/deposit_contract", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	GetDepositContract(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	response := GetDepositContractResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
+	assert.Equal(t, "10", response.Data.ChainId)
+	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
+}
 
 func TestGetSpec(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
@@ -137,12 +160,19 @@ func TestGetSpec(t *testing.T) {
 
 	params.OverrideBeaconConfig(config)
 
-	server := &Server{}
-	resp, err := server.GetSpec(context.Background(), &emptypb.Empty{})
-	require.NoError(t, err)
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/spec", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
 
-	assert.Equal(t, 112, len(resp.Data))
-	for k, v := range resp.Data {
+	GetSpec(writer, request)
+	require.Equal(t, http.StatusOK, writer.Code)
+	resp := GetSpecResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+	data, ok := resp.Data.(map[string]interface{})
+	require.Equal(t, true, ok)
+
+	assert.Equal(t, 112, len(data))
+	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":
 			assert.Equal(t, "ConfigName", v)
@@ -353,7 +383,9 @@ func TestGetSpec(t *testing.T) {
 		case "TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH":
 			assert.Equal(t, "72", v)
 		case "TERMINAL_BLOCK_HASH":
-			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(v))
+			s, ok := v.(string)
+			require.Equal(t, true, ok)
+			assert.Equal(t, common.HexToHash("TerminalBlockHash"), common.HexToHash(s))
 		case "TERMINAL_TOTAL_DIFFICULTY":
 			assert.Equal(t, "73", v)
 		case "DefaultFeeRecipient":
@@ -390,44 +422,55 @@ func TestGetSpec(t *testing.T) {
 }
 
 func TestForkSchedule_Ok(t *testing.T) {
-	genesisForkVersion := []byte("Genesis")
-	firstForkVersion, firstForkEpoch := []byte("Firs"), primitives.Epoch(100)
-	secondForkVersion, secondForkEpoch := []byte("Seco"), primitives.Epoch(200)
-	thirdForkVersion, thirdForkEpoch := []byte("Thir"), primitives.Epoch(300)
+	t.Run("ok", func(t *testing.T) {
+		genesisForkVersion := []byte("Genesis")
+		firstForkVersion, firstForkEpoch := []byte("Firs"), primitives.Epoch(100)
+		secondForkVersion, secondForkEpoch := []byte("Seco"), primitives.Epoch(200)
+		thirdForkVersion, thirdForkEpoch := []byte("Thir"), primitives.Epoch(300)
 
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig().Copy()
-	config.GenesisForkVersion = genesisForkVersion
-	// Create fork schedule adding keys in non-sorted order.
-	schedule := make(map[[4]byte]primitives.Epoch, 3)
-	schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
-	schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
-	schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
-	config.ForkVersionSchedule = schedule
-	params.OverrideBeaconConfig(config)
+		params.SetupTestConfigCleanup(t)
+		config := params.BeaconConfig().Copy()
+		config.GenesisForkVersion = genesisForkVersion
+		// Create fork schedule adding keys in non-sorted order.
+		schedule := make(map[[4]byte]primitives.Epoch, 3)
+		schedule[bytesutil.ToBytes4(secondForkVersion)] = secondForkEpoch
+		schedule[bytesutil.ToBytes4(firstForkVersion)] = firstForkEpoch
+		schedule[bytesutil.ToBytes4(thirdForkVersion)] = thirdForkEpoch
+		config.ForkVersionSchedule = schedule
+		params.OverrideBeaconConfig(config)
 
-	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
-	require.NoError(t, err)
-	require.Equal(t, 3, len(resp.Data))
-	fork := resp.Data[0]
-	assert.DeepEqual(t, genesisForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, string(firstForkVersion), string(fork.CurrentVersion))
-	assert.Equal(t, firstForkEpoch, fork.Epoch)
-	fork = resp.Data[1]
-	assert.DeepEqual(t, firstForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, secondForkVersion, fork.CurrentVersion)
-	assert.Equal(t, secondForkEpoch, fork.Epoch)
-	fork = resp.Data[2]
-	assert.DeepEqual(t, secondForkVersion, fork.PreviousVersion)
-	assert.DeepEqual(t, thirdForkVersion, fork.CurrentVersion)
-	assert.Equal(t, thirdForkEpoch, fork.Epoch)
-}
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/fork_schedule", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
 
-func TestForkSchedule_CorrectNumberOfForks(t *testing.T) {
-	s := &Server{}
-	resp, err := s.GetForkSchedule(context.Background(), &emptypb.Empty{})
-	require.NoError(t, err)
-	os := forks.NewOrderedSchedule(params.BeaconConfig())
-	assert.Equal(t, os.Len(), len(resp.Data))
+		GetForkSchedule(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetForkScheduleResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 3, len(resp.Data))
+		fork := resp.Data[0]
+		assert.DeepEqual(t, hexutil.Encode(genesisForkVersion), fork.PreviousVersion)
+		assert.DeepEqual(t, hexutil.Encode(firstForkVersion), fork.CurrentVersion)
+		assert.Equal(t, fmt.Sprintf("%d", firstForkEpoch), fork.Epoch)
+		fork = resp.Data[1]
+		assert.DeepEqual(t, hexutil.Encode(firstForkVersion), fork.PreviousVersion)
+		assert.DeepEqual(t, hexutil.Encode(secondForkVersion), fork.CurrentVersion)
+		assert.Equal(t, fmt.Sprintf("%d", secondForkEpoch), fork.Epoch)
+		fork = resp.Data[2]
+		assert.DeepEqual(t, hexutil.Encode(secondForkVersion), fork.PreviousVersion)
+		assert.DeepEqual(t, hexutil.Encode(thirdForkVersion), fork.CurrentVersion)
+		assert.Equal(t, fmt.Sprintf("%d", thirdForkEpoch), fork.Epoch)
+	})
+	t.Run("correct number of forks", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/config/fork_schedule", nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		GetForkSchedule(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetForkScheduleResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		os := forks.NewOrderedSchedule(params.BeaconConfig())
+		assert.Equal(t, os.Len(), len(resp.Data))
+	})
 }

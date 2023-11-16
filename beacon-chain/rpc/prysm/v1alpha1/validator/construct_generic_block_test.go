@@ -5,8 +5,8 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConstructGenericBeaconBlock(t *testing.T) {
@@ -15,7 +15,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	// Test when sBlk or sBlk.Block() is nil
 	t.Run("NilBlock", func(t *testing.T) {
 		_, err := vs.constructGenericBeaconBlock(nil, nil, nil)
-		require.ErrorContains(t, err, "block cannot be nil")
+		require.ErrorContains(t, "block cannot be nil", err)
 	})
 
 	// Test for Deneb version
