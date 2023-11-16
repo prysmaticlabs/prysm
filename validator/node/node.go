@@ -793,10 +793,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 	maxCallSize := c.cliCtx.Uint64(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 
 	registrations := []gateway.PbHandlerRegistration{
-		validatorpb.RegisterAuthHandler,
 		pb.RegisterHealthHandler,
-		validatorpb.RegisterAccountsHandler,
-		validatorpb.RegisterBeaconHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
@@ -811,7 +808,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 			},
 		}),
 		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{},
+			"text/event-stream", &gwruntime.EventSourceJSONPb{}, // TODO: remove this
 		),
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
@@ -829,14 +826,9 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		}
 	}
 
-	// remove "/accounts/", "/v2/" after WebUI DEPRECATED
 	pbHandler := &gateway.PbMux{
 		Registrations: registrations,
-		Patterns: []string{
-			"/accounts/",
-			"/v2/",
-		},
-		Mux: gwmux,
+		Mux:           gwmux,
 	}
 	opts := []gateway.Option{
 		gateway.WithMuxHandler(muxHandler),
