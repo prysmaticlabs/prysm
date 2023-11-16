@@ -5,11 +5,8 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
-	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
-
-var _ pb.AuthServer = (*Server)(nil)
 
 func TestServer_InitializeRoutes(t *testing.T) {
 	s := Server{
@@ -41,6 +38,7 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/v2/validator/beacon/status":                {http.MethodGet},
 		"/v2/validator/beacon/summary":               {http.MethodGet},
 		"/v2/validator/beacon/validators":            {http.MethodGet},
+		"/v2/validator/initialize":                   {http.MethodGet},
 	}
 	gotRouteList := make(map[string][]string)
 	err = s.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {

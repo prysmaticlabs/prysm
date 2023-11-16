@@ -179,3 +179,8 @@ type Account struct {
 type VoluntaryExitResponse struct {
 	ExitedKeys [][]byte `protobuf:"bytes,1,rep,name=exited_keys,json=exitedKeys,proto3" json:"exited_keys,omitempty"`
 }
+
+type InitializeAuthResponse struct {
+	HasSignedUp bool `json:"has_signed_up"`
+	HasWallet   bool `json:"has_wallet"`
+}
