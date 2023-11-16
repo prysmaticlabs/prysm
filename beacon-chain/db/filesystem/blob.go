@@ -31,6 +31,9 @@ const (
 // initialized once per beacon node.
 func NewBlobStorage(base string) (*BlobStorage, error) {
 	base = path.Clean(base)
+	if err := os.MkdirAll(base, 0755); err != nil {
+		return nil, err
+	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	return &BlobStorage{fs: fs}, nil
 }

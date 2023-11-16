@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"path"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/node"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/urfave/cli/v2"
@@ -21,7 +23,8 @@ var (
 func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 	blobsPath := c.Path(BlobStoragePath.Name)
 	if blobsPath == "" {
-		blobsPath = c.String(cmd.DataDirFlag.Name)
+		// append a "blobs" subdir to the end of the data dir path
+		blobsPath = path.Join(path.Clean(c.String(c.Path(cmd.DataDirFlag.Name))), "blobs")
 	}
 	return func(node *node.BeaconNode) (err error) {
 		node.BlobStoragePath = blobsPath
