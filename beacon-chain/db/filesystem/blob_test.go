@@ -20,7 +20,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
-		fs, bs := NewEphemeralBlobStorageWithFs()
+		fs, bs := NewEphemeralBlobStorageWithFs(t)
 		existingSidecar := testSidecars[0]
 
 		blobPath := namerForSidecar(existingSidecar).ssz()
