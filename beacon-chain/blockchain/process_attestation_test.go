@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -143,6 +144,61 @@ func TestStore_OnAttestation_Ok_DoublyLinkedTree(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, state, blkRoot))
 	require.NoError(t, service.OnAttestation(ctx, att[0], 0))
+}
+
+func TestService_GetAttPreState_Concurrency(t *testing.T) {
+	service, _ := minimalTestService(t)
+	ctx := context.Background()
+
+	s, err := util.NewBeaconState()
+	require.NoError(t, err)
+	ckRoot := bytesutil.PadTo([]byte{'A'}, fieldparams.RootLength)
+	err = s.SetFinalizedCheckpoint(&ethpb.Checkpoint{Root: ckRoot})
+	require.NoError(t, err)
+	val := &ethpb.Validator{PublicKey: bytesutil.PadTo([]byte("foo"), 48), WithdrawalCredentials: bytesutil.PadTo([]byte("bar"), fieldparams.RootLength)}
+	err = s.SetValidators([]*ethpb.Validator{val})
+	require.NoError(t, err)
+	err = s.SetBalances([]uint64{0})
+	require.NoError(t, err)
+	r := [32]byte{'g'}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, r))
+
+	cp1 := &ethpb.Checkpoint{Epoch: 1, Root: ckRoot}
+	require.NoError(t, service.cfg.BeaconDB.SaveState(ctx, s, bytesutil.ToBytes32([]byte{'A'})))
+	require.NoError(t, service.cfg.BeaconDB.SaveStateSummary(ctx, &ethpb.StateSummary{Root: ckRoot}))
+
+	st, root, err := prepareForkchoiceState(ctx, 100, [32]byte(cp1.Root), [32]byte{}, [32]byte{'R'}, cp1, cp1)
+	require.NoError(t, err)
+	require.NoError(t, service.cfg.ForkChoiceStore.InsertNode(ctx, st, root))
+
+	var wg sync.WaitGroup
+	errChan := make(chan error, 1000)
+
+	for i := 0; i < 1000; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cp1 := &ethpb.Checkpoint{Epoch: 1, Root: ckRoot}
+			_, err := service.getAttPreState(ctx, cp1)
+			if err != nil {
+				errChan <- err
+			}
+		}()
+	}
+
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	select {
+	case <-time.After(10 * time.Second):
+		t.Fatal("Test timed out")
+	case err, ok := <-errChan:
+		if ok && err != nil {
+			require.ErrorContains(t, "not a checkpoint in forkchoice", err)
+		}
+	}
 }
 
 func TestStore_SaveCheckpointState(t *testing.T) {
