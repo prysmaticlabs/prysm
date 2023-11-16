@@ -1,7 +1,9 @@
 package beacon
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -49,7 +51,21 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	rawIds := r.URL.Query()["id"]
+	var rawIds []string
+	if r.Method == http.MethodGet {
+		rawIds = r.URL.Query()["id"]
+	} else {
+		err = json.NewDecoder(r.Body).Decode(&rawIds)
+		switch {
+		case err == io.EOF:
+			http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
 	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
 	if !ok {
 		return
@@ -234,7 +250,21 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	rawIds := r.URL.Query()["id"]
+	var rawIds []string
+	if r.Method == http.MethodGet {
+		rawIds = r.URL.Query()["id"]
+	} else {
+		err = json.NewDecoder(r.Body).Decode(&rawIds)
+		switch {
+		case err == io.EOF:
+			http2.HandleError(w, "No data submitted", http.StatusBadRequest)
+			return
+		case err != nil:
+			http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+
 	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
 	if !ok {
 		return

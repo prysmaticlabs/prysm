@@ -275,9 +275,44 @@ func TestGetValidators(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
+	t.Run("POST", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(66))
+		hexPubkey1 := hexutil.Encode(pubkey1[:])
+		hexPubkey2 := hexutil.Encode(pubkey2[:])
+		var body bytes.Buffer
+		_, err := body.WriteString(fmt.Sprintf("[\"%s\",\"%s\"]", hexPubkey1, hexPubkey2))
+		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validators",
+			&body,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "20", resp.Data[0].Index)
+		assert.Equal(t, "66", resp.Data[1].Index)
+	})
 }
 
-func TestListValidators_FilterByStatus(t *testing.T) {
+func TestGetValidators_FilterByStatus(t *testing.T) {
 	var st state.BeaconState
 	st, _ = util.DeterministicGenesisState(t, 8192)
 
@@ -950,5 +985,40 @@ func TestGetValidatorBalances(t *testing.T) {
 		resp := &GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
+	})
+	t.Run("POST", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		pubkey1 := st.PubkeyAtIndex(primitives.ValidatorIndex(20))
+		pubkey2 := st.PubkeyAtIndex(primitives.ValidatorIndex(66))
+		hexPubkey1 := hexutil.Encode(pubkey1[:])
+		hexPubkey2 := hexutil.Encode(pubkey2[:])
+		var body bytes.Buffer
+		_, err := body.WriteString(fmt.Sprintf("[\"%s\",\"%s\"]", hexPubkey1, hexPubkey2))
+		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances",
+			&body,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetValidatorBalancesResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 2, len(resp.Data))
+		assert.Equal(t, "20", resp.Data[0].Index)
+		assert.Equal(t, "66", resp.Data[1].Index)
 	})
 }
