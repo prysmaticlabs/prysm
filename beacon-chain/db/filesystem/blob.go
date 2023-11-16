@@ -61,6 +61,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize sidecar data")
 	}
+	if err := bs.fs.Mkdir(fname.dir(), 0755); err != nil {
+		return err
+	}
 	partPath := fname.partial()
 	// Create a partial file and write the serialized data to it.
 	partialFile, err := bs.fs.Create(partPath)
