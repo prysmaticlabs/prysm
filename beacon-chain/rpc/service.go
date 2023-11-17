@@ -428,7 +428,6 @@ func (s *Service) Start() {
 		CoreService:                   coreService,
 	}
 	eventsServer := &events.Server{
-		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
 		OperationNotifier: s.cfg.OperationNotifier,
 		HeadFetcher:       s.cfg.HeadFetcher,

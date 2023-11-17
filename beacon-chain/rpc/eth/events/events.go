@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -97,7 +98,6 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Set up SSE response headers
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
 	// Handle each event received and context cancellation.
@@ -108,11 +108,9 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case event := <-stateChan:
-			if ok = s.handleStateEvents(w, flusher, topicsMap, event); !ok {
+			if ok = s.handleStateEvents(ctx, w, flusher, topicsMap, event); !ok {
 				return
 			}
-		case <-s.Ctx.Done():
-			return
 		case <-ctx.Done():
 			return
 		}
@@ -203,7 +201,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 	}
 }
 
-func (s *Server) handleStateEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
+func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
 	switch event.Type {
 	case statefeed.NewHead:
 		if _, ok := requestedTopics[HeadTopic]; ok {
@@ -226,14 +224,14 @@ func (s *Server) handleStateEvents(w http.ResponseWriter, flusher http.Flusher, 
 			}
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if ok = s.sendPayloadAttributes(w, flusher); !ok {
+			if ok = s.sendPayloadAttributes(ctx, w, flusher); !ok {
 				return false
 			}
 		}
 		return true
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if ok = s.sendPayloadAttributes(w, flusher); !ok {
+			if ok = s.sendPayloadAttributes(ctx, w, flusher); !ok {
 				return false
 			}
 		}
@@ -301,25 +299,25 @@ func (s *Server) handleStateEvents(w http.ResponseWriter, flusher http.Flusher, 
 
 // This event stream is intended to be used by builders and relays.
 // Parent fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
-func (s *Server) sendPayloadAttributes(w http.ResponseWriter, flusher http.Flusher) bool {
-	headRoot, err := s.HeadFetcher.HeadRoot(s.Ctx)
+func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWriter, flusher http.Flusher) bool {
+	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not get head root: "+err.Error(), http.StatusInternalServerError)
 		return false
 	}
-	st, err := s.HeadFetcher.HeadState(s.Ctx)
+	st, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return false
 	}
 	// advance the head state
-	headState, err := transition.ProcessSlotsIfPossible(s.Ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
+	headState, err := transition.ProcessSlotsIfPossible(ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
 		http2.HandleError(w, "Could not advance head state: "+err.Error(), http.StatusInternalServerError)
 		return false
 	}
 
-	headBlock, err := s.HeadFetcher.HeadBlock(s.Ctx)
+	headBlock, err := s.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
 		http2.HandleError(w, "Could not get head block: "+err.Error(), http.StatusInternalServerError)
 		return false
@@ -343,7 +341,7 @@ func (s *Server) sendPayloadAttributes(w http.ResponseWriter, flusher http.Flush
 		return false
 	}
 
-	proposerIndex, err := helpers.BeaconProposerIndex(s.Ctx, headState)
+	proposerIndex, err := helpers.BeaconProposerIndex(ctx, headState)
 	if err != nil {
 		http2.HandleError(w, "Could not get head state proposer index: "+err.Error(), http.StatusInternalServerError)
 		return false
