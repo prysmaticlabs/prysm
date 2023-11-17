@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -177,24 +175,6 @@ func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
 		AllowedHeaders:   []string{"*"},
 	})
 	return c.Handler(h)
-}
-
-const swaggerDir = "proto/prysm/v1alpha1/"
-
-// SwaggerServer returns swagger specification files located under "/swagger/"
-func SwaggerServer() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.HasSuffix(r.URL.Path, ".swagger.json") {
-			log.Debugf("Not found: %s", r.URL.Path)
-			http.NotFound(w, r)
-			return
-		}
-
-		log.Debugf("Serving %s\n", r.URL.Path)
-		p := strings.TrimPrefix(r.URL.Path, "/swagger/")
-		p = path.Join(swaggerDir, p)
-		http.ServeFile(w, r, p)
-	}
 }
 
 // dial the gRPC server.

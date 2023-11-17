@@ -9,7 +9,7 @@ def prysm_image_deps():
             "http://http.us.debian.org/debian/pool/main/b/bash/bash_5.1-2+deb11u1_amd64.deb",
             "http://ftp.uk.debian.org/debian/pool/main/b/bash/bash_5.1-2+deb11u1_amd64.deb",
             "http://ftp.au.debian.org/debian/pool/main/b/bash/bash_5.1-2+deb11u1_amd64.deb",
-            "https://prysmaticlabs.com/uploads/bash_5.1-2+deb11u1_amd64.deb", 
+            "https://prysmaticlabs.com/uploads/bash_5.1-2+deb11u1_amd64.deb",
         ],
     )
 
