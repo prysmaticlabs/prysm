@@ -205,6 +205,7 @@ func TestServer_BackupAccounts(t *testing.T) {
 	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), res))
 	// decode the base64 string
 	decodedBytes, err := base64.StdEncoding.DecodeString(res.ZipFile)
+	require.NoError(t, err)
 	// Open a zip archive for reading.
 	bu := bytes.NewReader(decodedBytes)
 	r, err := zip.NewReader(bu, int64(len(decodedBytes)))
