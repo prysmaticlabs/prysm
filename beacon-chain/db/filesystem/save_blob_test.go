@@ -169,17 +169,17 @@ func TestCheckDataIntegrity(t *testing.T) {
 func generateBlobSidecars(t *testing.T, slots []primitives.Slot, n uint64) []*eth.BlobSidecar {
 	length := n * uint64(len(slots))
 	blobSidecars := make([]*eth.BlobSidecar, length)
-	//index := uint64(0)
-	//for _, slot := range slots {
-	//	for i := 0; i < int(n); i++ {
-	//		//blobSidecars[index] = generateBlobSidecar(t, slot, index, nil)
-	//		index++
-	//	}
-	//}
+	index := uint64(0)
+	for _, slot := range slots {
+		for i := 0; i < int(n); i++ {
+			blobSidecars[index] = generateBlobSidecar(t, slot, index, nil)
+			index++
+		}
+	}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.B, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
+func generateBlobSidecar(t *testing.T, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)

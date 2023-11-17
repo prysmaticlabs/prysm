@@ -2,7 +2,8 @@ package filesystem
 
 import (
 	"context"
-	"testing"
+	"crypto/rand"
+	testing "testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -16,14 +17,65 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-type pruneBenchmark struct {
-	ctx     context.Context
-	db      *kv.Store
-	baseDir string
-	bs      *BlobStorage
+func convertToReadOnlySignedBeaconBlock(b *ethpb.SignedBeaconBlockDeneb) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	return blocks.NewSignedBeaconBlock(b)
 }
 
-func (p *pruneBenchmark) addBlocks(t *testing.B, slot primitives.Slot, root []byte) {
+func BenchmarkPruning_DB(b *testing.B) {
+	blockQty := 1000
+	currentSlot := primitives.Slot(10000)
+	slot := primitives.Slot(0)
+	p := setupDBBench(b)
+	for i := 0; i < blockQty; i++ {
+		p.addBlocksBench(b, slot, bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32))
+		slot += 100
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := p.bs.PruneBlobWithDB(p.ctx, currentSlot, p.db)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkPruning_Slot(b *testing.B) {
+	blockQty := 1000
+	currentSlot := primitives.Slot(10000)
+	slot := primitives.Slot(0)
+	p := setupDBBench(b)
+	for i := 0; i < blockQty; i++ {
+		p.addBlocksBench(b, slot, bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32))
+		slot += 100
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := p.bs.PruneBlobViaSlotFile(currentSlot)
+		require.NoError(b, err)
+	}
+}
+
+func setupDBBench(t *testing.B) *blobTest {
+	ctx := context.Background()
+	tempDir := t.TempDir()
+	db, err := kv.NewKVStore(ctx, tempDir)
+	require.NoError(t, err, "Failed to instantiate DB")
+	t.Cleanup(func() {
+		require.NoError(t, db.Close(), "Failed to close database")
+	})
+	return &blobTest{
+		ctx:     ctx,
+		db:      db,
+		baseDir: tempDir,
+		bs: &BlobStorage{
+			baseDir:        tempDir,
+			retentionEpoch: 4096,
+			lastPrunedSlot: 0,
+		},
+	}
+}
+
+func (p *blobTest) addBlocksBench(t *testing.B, slot primitives.Slot, root []byte) {
 	b := util.NewBeaconBlockDeneb()
 	b.Block.Slot = slot
 	if root != nil {
@@ -40,7 +92,7 @@ func (p *pruneBenchmark) addBlocks(t *testing.B, slot primitives.Slot, root []by
 	blockRoot, err := b.HashTreeRoot()
 	require.NoError(t, err)
 	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
-		blobSidecars[index] = generateBlobSidecar(t, slot, index, blockRoot[:])
+		blobSidecars[index] = generateBlobSidecarBench(t, slot, index, blockRoot[:])
 		index++
 	}
 
@@ -54,60 +106,27 @@ func (p *pruneBenchmark) addBlocks(t *testing.B, slot primitives.Slot, root []by
 	require.NoError(t, p.db.SaveBlock(p.ctx, sb))
 }
 
-func setupBench(t *testing.B) *pruneBenchmark {
-	ctx := context.Background()
-	tempDir := t.TempDir()
-	db, err := kv.NewKVStore(ctx, tempDir)
-	require.NoError(t, err, "Failed to instantiate DB")
-	t.Cleanup(func() {
-		require.NoError(t, db.Close(), "Failed to close database")
-	})
-	return &pruneBenchmark{
-		ctx:     ctx,
-		db:      db,
-		baseDir: tempDir,
-		bs: &BlobStorage{
-			baseDir:        tempDir,
-			retentionEpoch: 4096,
-			lastPrunedSlot: 0,
-		},
+func generateBlobSidecarBench(t *testing.B, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
+	blob := make([]byte, 131072)
+	_, err := rand.Read(blob)
+	require.NoError(t, err)
+	kzgCommitment := make([]byte, 48)
+	_, err = rand.Read(kzgCommitment)
+	require.NoError(t, err)
+	kzgProof := make([]byte, 48)
+	_, err = rand.Read(kzgProof)
+	require.NoError(t, err)
+	if len(root) == 0 {
+		root = bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32)
 	}
-}
-
-func convertToReadOnlySignedBeaconBlock(b *ethpb.SignedBeaconBlockDeneb) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	return blocks.NewSignedBeaconBlock(b)
-}
-
-func BenchmarkPruning_DB(b *testing.B) {
-	blockNum := 1000
-	currentSlot := primitives.Slot(10000)
-	slot := primitives.Slot(0)
-	p := setupBench(b)
-	for i := 0; i < blockNum; i++ {
-		p.addBlocks(b, slot, bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32))
-		slot += 100
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := p.bs.PruneBlobWithDB(p.ctx, currentSlot, p.db)
-		require.NoError(b, err)
-	}
-}
-
-func BenchmarkPruning_Slot(b *testing.B) {
-	blockNum := 1000
-	currentSlot := primitives.Slot(10000)
-	slot := primitives.Slot(0)
-	p := setupBench(b)
-	for i := 0; i < blockNum; i++ {
-		p.addBlocks(b, slot, bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32))
-		slot += 100
-	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err := p.bs.PruneBlobViaSlotFile(currentSlot)
-		require.NoError(b, err)
+	return &eth.BlobSidecar{
+		BlockRoot:       root,
+		Index:           index,
+		Slot:            slot,
+		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),
+		ProposerIndex:   101,
+		Blob:            blob,
+		KzgCommitment:   kzgCommitment,
+		KzgProof:        kzgProof,
 	}
 }

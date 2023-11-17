@@ -28,14 +28,6 @@ func (bs *BlobStorage) PruneBlobWithDB(ctx context.Context, currentSlot primitiv
 	}
 	blockList := make(map[[32]byte]interface{})
 	var pruneSlot primitives.Slot
-	filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
-	dbRoots, err := s.BlockRoots(ctx, filter)
-	if err != nil {
-		return err
-	}
-	if len(dbRoots) == 0 {
-		return nil
-	}
 	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
 	if err != nil {
 		return err
@@ -44,6 +36,14 @@ func (bs *BlobStorage) PruneBlobWithDB(ctx context.Context, currentSlot primitiv
 		return nil // Overflow would occur
 	}
 	pruneSlot = currentSlot - retentionSlot
+	filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
+	dbRoots, err := s.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if len(dbRoots) == 0 {
+		return nil
+	}
 
 	for _, folder := range folders {
 		if folder.IsDir() {
@@ -79,6 +79,9 @@ func (bs *BlobStorage) PruneBlobViaSlotFile(currentSlot primitives.Slot) error {
 	if err != nil {
 		return err
 	}
+	if currentSlot < retentionSlot {
+		return nil // Overflow would occur
+	}
 
 	for _, folder := range folders {
 		if folder.IsDir() {
@@ -91,9 +94,7 @@ func (bs *BlobStorage) PruneBlobViaSlotFile(currentSlot primitives.Slot) error {
 				if !ok {
 					continue
 				}
-				if currentSlot < retentionSlot {
-					continue // Overflow would occur
-				}
+
 				rawSlot := strings.Trim(file.Name(), ".slot")
 				slot, err = strconv.ParseUint(rawSlot, 10, 64)
 				if err != nil {
