@@ -250,11 +250,12 @@ func newMockHistory(t *testing.T, hist []mockHistorySpec, current primitives.Slo
 		b, err = blocktest.SetBlockParentRoot(b, pr)
 		require.NoError(t, err)
 
-		// now do process_block only if it's greater than state slot
-		if b.Block().Slot() > s.Slot() {
+		// now do process_block only if block slot is greater than latest header slot
+		if b.Block().Slot() > s.LatestBlockHeader().Slot {
 			s, err = transition.ProcessBlockForStateRoot(ctx, s, b)
 			require.NoError(t, err)
 		}
+
 		sr, err := s.HashTreeRoot(ctx)
 		require.NoError(t, err)
 		b, err = blocktest.SetBlockStateRoot(b, sr)
