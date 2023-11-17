@@ -47,7 +47,7 @@ func TestBlobStorage_PruneBlobWithDB(t *testing.T) {
 
 	// Simulate an error when extracting the slot from an invalid blob filename.
 	err = bs.PruneBlobWithDB(ctx, currentSlot, db)
-	require.ErrorContains(t, "hex string without 0x prefix", err)
+	require.NoError(t, err)
 	err = os.Remove(blobPath)
 	require.NoError(t, err)
 

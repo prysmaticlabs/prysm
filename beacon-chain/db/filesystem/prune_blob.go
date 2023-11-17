@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	log "github.com/sirupsen/logrus"
 )
 
 const bufferEpochs = 2
@@ -23,22 +22,19 @@ const bufferEpochs = 2
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) PruneBlobWithDB(ctx context.Context, currentSlot primitives.Slot, s *kv.Store) error {
-	files, err := os.ReadDir(bs.baseDir)
+	folders, err := os.ReadDir(bs.baseDir)
 	if err != nil {
 		return err
 	}
 	blockList := make(map[[32]byte]interface{})
 	var pruneSlot primitives.Slot
-	for _, file := range files {
-		ok := strings.Contains(file.Name(), ".slot")
-		if !ok {
-			continue
-		}
-		root, err := hexutil.Decode(file.Name())
-		if err != nil {
-			return err
-		}
-		blockList[bytesutil.ToBytes32(root)] = nil
+	filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
+	dbRoots, err := s.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+	if len(dbRoots) == 0 {
+		return nil
 	}
 	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
 	if err != nil {
@@ -48,26 +44,21 @@ func (bs *BlobStorage) PruneBlobWithDB(ctx context.Context, currentSlot primitiv
 		return nil // Overflow would occur
 	}
 	pruneSlot = currentSlot - retentionSlot
-	filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
-	dbRoots, err := s.BlockRoots(ctx, filter)
-	if err != nil {
-		return err
-	}
 
-	for _, file := range files {
-		if file.IsDir() {
-			fileRoot, err := hexutil.Decode(file.Name())
+	for _, folder := range folders {
+		if folder.IsDir() {
+			root, err := hexutil.Decode(folder.Name())
 			if err != nil {
 				return err
 			}
+			blockList[bytesutil.ToBytes32(root)] = nil
+		}
+	}
 
-			for _, root := range dbRoots {
-				if root == [32]byte(fileRoot) {
-					log.Printf("Pruning file: %s", path.Join(bs.baseDir, file.Name()))
-					if err = os.RemoveAll(path.Join(bs.baseDir, file.Name())); err != nil {
-						return errors.Wrapf(err, "failed to delete blob %s", file.Name())
-					}
-				}
+	for _, root := range dbRoots {
+		if _, exists := blockList[root]; exists {
+			if err = os.RemoveAll(path.Join(bs.baseDir, hexutil.Encode(root[:]))); err != nil {
+				return err
 			}
 		}
 	}
@@ -84,6 +75,11 @@ func (bs *BlobStorage) PruneBlobViaSlotFile(currentSlot primitives.Slot) error {
 		return err
 	}
 	var slot uint64
+	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+	if err != nil {
+		return err
+	}
+
 	for _, folder := range folders {
 		if folder.IsDir() {
 			files, err := os.ReadDir(path.Join(bs.baseDir, folder.Name()))
@@ -94,10 +90,6 @@ func (bs *BlobStorage) PruneBlobViaSlotFile(currentSlot primitives.Slot) error {
 				ok := strings.Contains(file.Name(), ".slot")
 				if !ok {
 					continue
-				}
-				retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
-				if err != nil {
-					return err
 				}
 				if currentSlot < retentionSlot {
 					continue // Overflow would occur
