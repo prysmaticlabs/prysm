@@ -15,8 +15,8 @@ import (
 )
 
 func BenchmarkPruning_DB(b *testing.B) {
-	blockQty := 1000
-	currentSlot := primitives.Slot(10000)
+	blockQty := 10000
+	currentSlot := primitives.Slot(150000)
 	slot := primitives.Slot(0)
 	p := setupDBBench(b)
 	for i := 0; i < blockQty; i++ {
@@ -32,8 +32,8 @@ func BenchmarkPruning_DB(b *testing.B) {
 }
 
 func BenchmarkPruning_Slot(b *testing.B) {
-	blockQty := 1000
-	currentSlot := primitives.Slot(10000)
+	blockQty := 10000
+	currentSlot := primitives.Slot(150000)
 	slot := primitives.Slot(0)
 	p := setupDBBench(b)
 	for i := 0; i < blockQty; i++ {
@@ -44,6 +44,23 @@ func BenchmarkPruning_Slot(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		err := p.bs.PruneBlobViaSlotFile(currentSlot)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkPruning_Read(b *testing.B) {
+	blockQty := 10000
+	currentSlot := primitives.Slot(150000)
+	slot := primitives.Slot(0)
+	p := setupDBBench(b)
+	for i := 0; i < blockQty; i++ {
+		p.addBlocksBench(b, slot, bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32))
+		slot += 100
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := p.bs.PruneBlobViaRead(currentSlot)
 		require.NoError(b, err)
 	}
 }

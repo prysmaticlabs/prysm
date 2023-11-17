@@ -107,6 +107,38 @@ func TestBlobStorage_PruneBlobViaSlotFile(t *testing.T) {
 	}
 }
 
+func TestBlobStorage_PruneBlobViaRead(t *testing.T) {
+	currentSlot := primitives.Slot(225519)
+	testSidecars := generateBlobSidecars(t, []primitives.Slot{225519, 100}, fieldparams.MaxBlobsPerBlock)
+	tempDir := t.TempDir()
+	bs := &BlobStorage{
+		baseDir:        tempDir,
+		retentionEpoch: 4096,
+	}
+
+	// Prune blobs successfully.
+	err := bs.SaveBlobData(testSidecars)
+	require.NoError(t, err)
+
+	err = bs.PruneBlobViaRead(currentSlot)
+	require.NoError(t, err)
+
+	remainingFolders, err := os.ReadDir(tempDir)
+	require.NoError(t, err)
+	// Expecting 6 blobs from testSidecars to remain.
+	require.Equal(t, 1, len(remainingFolders))
+
+	// Ensure that the slot files are still present.
+	for _, folder := range remainingFolders {
+		if folder.IsDir() {
+			files, err := os.ReadDir(path.Join(tempDir, folder.Name()))
+			require.NoError(t, err)
+			// Should have 6 blob files and 1 slot file.
+			require.Equal(t, 7, len(files))
+		}
+	}
+}
+
 func TestExtractSlotFromFileName(t *testing.T) {
 	tempDir := t.TempDir()
 	testSidecars := generateBlobSidecars(t, []primitives.Slot{225519, 100}, fieldparams.MaxBlobsPerBlock)
