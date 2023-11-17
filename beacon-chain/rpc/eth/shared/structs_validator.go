@@ -41,6 +41,27 @@ func ValidatorPerformanceResponseFromConsensus(e *eth.ValidatorPerformanceRespon
 	for i, key := range e.PublicKeys {
 		publicKeys[i] = hexutil.Encode(key)
 	}
+	if len(e.CurrentEffectiveBalances) == 0 {
+		e.CurrentEffectiveBalances = make([]uint64, 0)
+	}
+	if len(e.BalancesBeforeEpochTransition) == 0 {
+		e.BalancesBeforeEpochTransition = make([]uint64, 0)
+	}
+	if len(e.BalancesAfterEpochTransition) == 0 {
+		e.BalancesAfterEpochTransition = make([]uint64, 0)
+	}
+	if len(e.CorrectlyVotedSource) == 0 {
+		e.CorrectlyVotedSource = make([]bool, 0)
+	}
+	if len(e.CorrectlyVotedTarget) == 0 {
+		e.CorrectlyVotedTarget = make([]bool, 0)
+	}
+	if len(e.CorrectlyVotedHead) == 0 {
+		e.CorrectlyVotedHead = make([]bool, 0)
+	}
+	if len(e.InactivityScores) == 0 {
+		e.InactivityScores = make([]uint64, 0)
+	}
 	return &ValidatorPerformanceResponse{
 		CurrentEffectiveBalances:      e.CurrentEffectiveBalances,
 		InclusionSlots:                inclusionSlots,
