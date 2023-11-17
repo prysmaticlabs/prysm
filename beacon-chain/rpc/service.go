@@ -36,6 +36,7 @@ import (
 	rpcBuilder "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -426,6 +427,13 @@ func (s *Service) Start() {
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 		CoreService:                   coreService,
 	}
+	eventsServer := &events.Server{
+		Ctx:               s.ctx,
+		StateNotifier:     s.cfg.StateNotifier,
+		OperationNotifier: s.cfg.OperationNotifier,
+		HeadFetcher:       s.cfg.HeadFetcher,
+		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
+	}
 	httpServer := &httpserver.Server{
 		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
 		HeadFetcher:           s.cfg.HeadFetcher,
@@ -475,6 +483,8 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", config.GetDepositContract).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/fork_schedule", config.GetForkSchedule).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/spec", config.GetSpec).Methods(http.MethodGet)
+
+	s.cfg.Router.HandleFunc("/eth/v1/events", eventsServer.StreamEvents).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)

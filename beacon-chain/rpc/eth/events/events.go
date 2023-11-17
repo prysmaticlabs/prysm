@@ -221,7 +221,9 @@ func (s *Server) handleStateEvents(w http.ResponseWriter, flusher http.Flusher, 
 				PreviousDutyDependentRoot: hexutil.Encode(headData.PreviousDutyDependentRoot),
 				CurrentDutyDependentRoot:  hexutil.Encode(headData.CurrentDutyDependentRoot),
 			}
-			return send(w, flusher, HeadTopic, head)
+			if ok = send(w, flusher, HeadTopic, head); !ok {
+				return false
+			}
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
 			if ok = s.sendPayloadAttributes(w, flusher); !ok {
@@ -415,9 +417,14 @@ func (s *Server) sendPayloadAttributes(w http.ResponseWriter, flusher http.Flush
 }
 
 func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) bool {
-	_, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, data)
+	j, err := json.Marshal(data)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		http2.HandleError(w, "Could not marshal event to JSON: "+err.Error(), http.StatusInternalServerError)
+		return false
+	}
+	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, string(j))
+	if err != nil {
+		http2.HandleError(w, "Could not write event: "+err.Error(), http.StatusInternalServerError)
 		return false
 	}
 	flusher.Flush()
