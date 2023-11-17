@@ -11,9 +11,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
@@ -44,7 +47,7 @@ func TestBlobStorage_PruneBlobWithDB(t *testing.T) {
 
 	remainingFolders, err := os.ReadDir(b.baseDir)
 	require.NoError(t, err)
-	// Expecting 6 blobs from testSidecars to remain.
+	// 1 folder and 1 database file
 	require.Equal(t, 2, len(remainingFolders))
 
 	// Ensure that the slot files are still present.
@@ -163,7 +166,9 @@ func (p *blobTest) addBlocks(t *testing.T, slot primitives.Slot, root []byte) {
 	}
 	blobSidecars := make([]*eth.BlobSidecar, fieldparams.MaxBlobsPerBlock)
 	index := uint64(0)
-	blockRoot, err := b.HashTreeRoot()
+	sb, err := convertToReadOnlySignedBeaconBlock(b)
+	require.NoError(t, err)
+	blockRoot, err := sb.Block().HashTreeRoot()
 	require.NoError(t, err)
 	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 		blobSidecars[index] = generateBlobSidecar(t, slot, index, blockRoot[:])
@@ -174,7 +179,9 @@ func (p *blobTest) addBlocks(t *testing.T, slot primitives.Slot, root []byte) {
 	err = bs.SaveBlobData(blobSidecars)
 	require.NoError(t, err)
 
-	sb, err := convertToReadOnlySignedBeaconBlock(b)
-	require.NoError(t, err)
 	require.NoError(t, p.db.SaveBlock(p.ctx, sb))
+}
+
+func convertToReadOnlySignedBeaconBlock(b *ethpb.SignedBeaconBlockDeneb) (interfaces.ReadOnlySignedBeaconBlock, error) {
+	return blocks.NewSignedBeaconBlock(b)
 }

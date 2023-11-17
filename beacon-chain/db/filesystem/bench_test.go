@@ -3,23 +3,16 @@ package filesystem
 import (
 	"context"
 	"crypto/rand"
-	testing "testing"
+	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
-
-func convertToReadOnlySignedBeaconBlock(b *ethpb.SignedBeaconBlockDeneb) (interfaces.ReadOnlySignedBeaconBlock, error) {
-	return blocks.NewSignedBeaconBlock(b)
-}
 
 func BenchmarkPruning_DB(b *testing.B) {
 	blockQty := 1000
@@ -89,7 +82,9 @@ func (p *blobTest) addBlocksBench(t *testing.B, slot primitives.Slot, root []byt
 	}
 	blobSidecars := make([]*eth.BlobSidecar, fieldparams.MaxBlobsPerBlock)
 	index := uint64(0)
-	blockRoot, err := b.HashTreeRoot()
+	sb, err := convertToReadOnlySignedBeaconBlock(b)
+	require.NoError(t, err)
+	blockRoot, err := sb.Block().HashTreeRoot()
 	require.NoError(t, err)
 	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 		blobSidecars[index] = generateBlobSidecarBench(t, slot, index, blockRoot[:])
@@ -98,9 +93,6 @@ func (p *blobTest) addBlocksBench(t *testing.B, slot primitives.Slot, root []byt
 
 	bs := &BlobStorage{baseDir: p.baseDir}
 	err = bs.SaveBlobData(blobSidecars)
-	require.NoError(t, err)
-
-	sb, err := convertToReadOnlySignedBeaconBlock(b)
 	require.NoError(t, err)
 
 	require.NoError(t, p.db.SaveBlock(p.ctx, sb))
