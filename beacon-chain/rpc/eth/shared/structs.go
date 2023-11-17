@@ -631,10 +631,6 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 }
 
 func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
-	if sc == nil {
-		return nil
-	}
-
 	var sPubKeys []string
 	for _, p := range sc.Pubkeys {
 		sPubKeys = append(sPubKeys, hexutil.Encode(p))
