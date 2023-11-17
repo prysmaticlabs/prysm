@@ -821,7 +821,6 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 			h(w, req)
 		} else {
 			// Finally, we handle with the web server.
-			// DEPRECATED: Prysm Web UI and associated endpoints will be fully removed in a future hard fork.
 			web.Handler(w, req)
 		}
 	}

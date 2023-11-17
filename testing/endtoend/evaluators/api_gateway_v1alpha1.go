@@ -9,7 +9,6 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
@@ -364,13 +363,28 @@ func withCompareValidators(beaconNodeIdx int, conn *grpc.ClientConn) error {
 
 // Compares a regular beacon chain head GET request with no arguments gRPC and gRPC gateway.
 func withCompareChainHead(beaconNodeIdx int, conn *grpc.ClientConn) error {
+	// used for gateway, if using pure HTTP use shared.ChainHead
+	type chainHeadResponseJSON struct {
+		HeadSlot                   string `json:"headSlot"`
+		HeadEpoch                  string `json:"headEpoch"`
+		HeadBlockRoot              string `json:"headBlockRoot"`
+		FinalizedSlot              string `json:"finalizedSlot"`
+		FinalizedEpoch             string `json:"finalizedEpoch"`
+		FinalizedBlockRoot         string `json:"finalizedBlockRoot"`
+		JustifiedSlot              string `json:"justifiedSlot"`
+		JustifiedEpoch             string `json:"justifiedEpoch"`
+		JustifiedBlockRoot         string `json:"justifiedBlockRoot"`
+		PreviousJustifiedSlot      string `json:"previousJustifiedSlot"`
+		PreviousJustifiedEpoch     string `json:"previousJustifiedEpoch"`
+		PreviousJustifiedBlockRoot string `json:"previousJustifiedBlockRoot"`
+	}
 	beaconClient := ethpb.NewBeaconChainClient(conn)
 	ctx := context.Background()
 	resp, err := beaconClient.GetChainHead(ctx, &empty.Empty{})
 	if err != nil {
 		return err
 	}
-	respJSON := &shared.ChainHead{}
+	respJSON := &chainHeadResponseJSON{}
 	if err := doGatewayJSONRequest(
 		"/beacon/chainhead",
 		beaconNodeIdx,
