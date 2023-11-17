@@ -2,7 +2,6 @@
 SSZ proto templating rules.
 
 These rules allow for variable substitution for hardcoded tag values like ssz-size and ssz-max.
-
 """
 
 ####### Configuration #######
@@ -15,7 +14,7 @@ mainnet = {
     "previous_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "current_epoch_attestations.max": "4096",  # MAX_ATTESTATIONS * SLOTS_PER_EPOCH
     "slashings.size": "8192",  # EPOCHS_PER_SLASHINGS_VECTOR
-    "sync_committee_bits.size": "512", # SYNC_COMMITTEE_SIZE
+    "sync_committee_bits.size": "512",  # SYNC_COMMITTEE_SIZE
     "sync_committee_bytes.size": "64",
     "sync_committee_bits.type": "github.com/prysmaticlabs/go-bitfield.Bitvector512",
     "sync_committee_aggregate_bytes.size": "16",
@@ -25,7 +24,7 @@ mainnet = {
     "logs_bloom.size": "256",
     "extra_data.size": "32",
     "max_blobs_per_block.size": "6",
-    "max_blob_commitments.size":"4096",
+    "max_blob_commitments.size": "4096",
     "kzg_commitment_inclusion_proof_depth.size": "17",
 }
 
@@ -47,7 +46,7 @@ minimal = {
     "logs_bloom.size": "256",
     "extra_data.size": "32",
     "max_blobs_per_block.size": "6",
-    "max_blob_commitments.size":"16",
+    "max_blob_commitments.size": "16",
     "kzg_commitment_inclusion_proof_depth.size": "9",
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func headerFromBlock(b interfaces.ReadOnlySignedBeaconBlock) (*ethpb.BeaconBlockHeader, error) {
@@ -25,6 +26,17 @@ func headerFromBlock(b interfaces.ReadOnlySignedBeaconBlock) (*ethpb.BeaconBlock
 		BodyRoot:      bodyRoot[:],
 		ParentRoot:    parentRoot[:],
 	}, nil
+}
+
+func TestReplayBlocks_ZeroDiff(t *testing.T) {
+	logHook := logTest.NewGlobal()
+	ctx := context.Background()
+	specs := []mockHistorySpec{{slot: 0}}
+	hist := newMockHistory(t, specs, 0)
+	ch := NewCanonicalHistory(hist, hist, hist)
+	_, err := ch.ReplayerForSlot(0).ReplayBlocks(ctx)
+	require.NoError(t, err)
+	require.LogsDoNotContain(t, logHook, "Replaying canonical blocks from most recent state")
 }
 
 func TestReplayBlocks(t *testing.T) {
