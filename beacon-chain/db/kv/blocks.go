@@ -655,7 +655,7 @@ func blockRootsBySlotRange(
 
 	var startSlot, endSlot primitives.Slot
 	var step uint64
-	var blockRoots [][]byte
+	var filteredBlockRoots map[[32]byte]interface{}
 	var ok bool
 	if startSlot, ok = startSlotEncoded.(primitives.Slot); !ok {
 		startSlot = 0
@@ -666,8 +666,8 @@ func blockRootsBySlotRange(
 	if step, ok = slotStepEncoded.(uint64); !ok || step == 0 {
 		step = 1
 	}
-	if blockRoots, ok = blockRootsEncoded.([][]byte); !ok {
-		blockRoots = [][]byte{}
+	if filteredBlockRoots, ok = blockRootsEncoded.(map[[32]byte]interface{}); !ok {
+		filteredBlockRoots = make(map[[32]byte]interface{})
 	}
 	startEpoch, startEpochOk := startEpochEncoded.(primitives.Epoch)
 	endEpoch, endEpochOk := endEpochEncoded.(primitives.Epoch)
@@ -706,20 +706,17 @@ func blockRootsBySlotRange(
 		splitRoots := make([][]byte, 0, numOfRoots)
 		for i := 0; i < len(v); i += 32 {
 			splitRoots = append(splitRoots, v[i:i+32])
-			// If we add a list of block roots to filter from.
-			if len(blockRoots) > 0 {
-				var rootsToDelete [][]byte
-				for _, sr := range splitRoots {
-					for _, r := range blockRoots {
-						if bytes.Equal(sr, r) {
-							rootsToDelete = append(rootsToDelete, r)
-						}
-					}
-				}
-				return rootsToDelete, nil
-			}
 		}
-		roots = append(roots, splitRoots...)
+		// If we add a list of block roots to filter from.
+		if len(filteredBlockRoots) > 0 {
+			for _, sr := range splitRoots {
+				if _, ok := filteredBlockRoots[bytesutil.ToBytes32(sr)]; ok {
+					roots = append(roots, sr)
+				}
+			}
+		} else {
+			roots = append(roots, splitRoots...)
+		}
 	}
 	return roots, nil
 }
@@ -793,6 +790,7 @@ func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) 
 		case filters.StartEpoch:
 		case filters.EndEpoch:
 		case filters.SlotStep:
+		case filters.BlockRoots:
 		default:
 			return nil, fmt.Errorf("filter criterion %v not supported for blocks", k)
 		}

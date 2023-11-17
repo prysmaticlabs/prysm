@@ -136,7 +136,7 @@ func (q *QueryFilter) SetSlotStep(val uint64) *QueryFilter {
 }
 
 // SetBlockRoots enables filtering by block roots.
-func (q *QueryFilter) SetBlockRoots(val [][]byte) *QueryFilter {
+func (q *QueryFilter) SetBlockRoots(val map[[32]byte]interface{}) *QueryFilter {
 	q.queries[BlockRoots] = val
 	return q
 }

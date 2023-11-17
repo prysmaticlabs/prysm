@@ -47,7 +47,7 @@ func TestBlobStorage_PruneBlobWithDB(t *testing.T) {
 
 	// Simulate an error when extracting the slot from an invalid blob filename.
 	err = bs.PruneBlobWithDB(ctx, currentSlot, db)
-	require.ErrorContains(t, "invalid hex string", err)
+	require.ErrorContains(t, "hex string without 0x prefix", err)
 	err = os.Remove(blobPath)
 	require.NoError(t, err)
 
@@ -64,7 +64,7 @@ func TestBlobStorage_PruneBlobWithDB(t *testing.T) {
 
 	for _, p := range partialBlobPaths {
 		root := strings.TrimPrefix(hexutil.Encode(testSidecars[0].BlockRoot), "0x")
-		partialBlobPath := filepath.Join(tempDir, root, p)
+		partialBlobPath := filepath.Join(tempDir, "0x"+root, p)
 		err = os.WriteFile(partialBlobPath, []byte("Partial Blob Data"), 0644)
 		require.NoError(t, err)
 	}
@@ -72,10 +72,20 @@ func TestBlobStorage_PruneBlobWithDB(t *testing.T) {
 	err = bs.PruneBlobWithDB(ctx, currentSlot, db)
 	require.NoError(t, err)
 
-	remainingFiles, err := os.ReadDir(tempDir)
+	remainingFolders, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
 	// Expecting 6 blobs from testSidecars to remain.
-	require.Equal(t, 6, len(remainingFiles))
+	require.Equal(t, 2, len(remainingFolders))
+
+	// Ensure that the slot files are still present.
+	for _, folder := range remainingFolders {
+		if folder.IsDir() {
+			files, err := os.ReadDir(path.Join(tempDir, folder.Name()))
+			require.NoError(t, err)
+			// Should have 6 blob files and 1 slot file.
+			require.Equal(t, 10, len(files))
+		}
+	}
 }
 
 func TestBlobStorage_PruneBlobViaSlotFile(t *testing.T) {

@@ -12,7 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 )
 
 const bufferEpochs = 2
@@ -25,39 +27,43 @@ func (bs *BlobStorage) PruneBlobWithDB(ctx context.Context, currentSlot primitiv
 	if err != nil {
 		return err
 	}
-	var blockList [][]byte
+	blockList := make(map[[32]byte]interface{})
 	var pruneSlot primitives.Slot
 	for _, file := range files {
-		root, err := hexutil.Decode("0x" + file.Name())
+		ok := strings.Contains(file.Name(), ".slot")
+		if !ok {
+			continue
+		}
+		root, err := hexutil.Decode(file.Name())
 		if err != nil {
 			return err
 		}
-		blockList = append(blockList, root)
+		blockList[bytesutil.ToBytes32(root)] = nil
 	}
+	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+	if err != nil {
+		return err
+	}
+	if currentSlot < retentionSlot {
+		return nil // Overflow would occur
+	}
+	pruneSlot = currentSlot - retentionSlot
+	filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
+	dbRoots, err := s.BlockRoots(ctx, filter)
+	if err != nil {
+		return err
+	}
+
 	for _, file := range files {
 		if file.IsDir() {
-			retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
-			if err != nil {
-				return err
-			}
-			if currentSlot < retentionSlot {
-				continue // Overflow would occur
-			}
-
-			pruneSlot = currentSlot - retentionSlot
-			filter := filters.NewFilter().SetStartSlot(bs.lastPrunedSlot).SetEndSlot(pruneSlot).SetBlockRoots(blockList)
-			roots, err := s.BlockRoots(ctx, filter)
-			if err != nil {
-				return err
-			}
-
 			fileRoot, err := hexutil.Decode(file.Name())
 			if err != nil {
 				return err
 			}
 
-			for _, root := range roots {
+			for _, root := range dbRoots {
 				if root == [32]byte(fileRoot) {
+					log.Printf("Pruning file: %s", path.Join(bs.baseDir, file.Name()))
 					if err = os.RemoveAll(path.Join(bs.baseDir, file.Name())); err != nil {
 						return errors.Wrapf(err, "failed to delete blob %s", file.Name())
 					}

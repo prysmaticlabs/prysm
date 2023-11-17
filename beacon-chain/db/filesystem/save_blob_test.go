@@ -169,17 +169,17 @@ func TestCheckDataIntegrity(t *testing.T) {
 func generateBlobSidecars(t *testing.T, slots []primitives.Slot, n uint64) []*eth.BlobSidecar {
 	length := n * uint64(len(slots))
 	blobSidecars := make([]*eth.BlobSidecar, length)
-	index := uint64(0)
-	for _, slot := range slots {
-		for i := 0; i < int(n); i++ {
-			blobSidecars[index] = generateBlobSidecar(t, slot, index)
-			index++
-		}
-	}
+	//index := uint64(0)
+	//for _, slot := range slots {
+	//	for i := 0; i < int(n); i++ {
+	//		//blobSidecars[index] = generateBlobSidecar(t, slot, index, nil)
+	//		index++
+	//	}
+	//}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T, slot primitives.Slot, index uint64) *eth.BlobSidecar {
+func generateBlobSidecar(t *testing.B, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)
@@ -189,8 +189,11 @@ func generateBlobSidecar(t *testing.T, slot primitives.Slot, index uint64) *eth.
 	kzgProof := make([]byte, 48)
 	_, err = rand.Read(kzgProof)
 	require.NoError(t, err)
+	if len(root) == 0 {
+		root = bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32)
+	}
 	return &eth.BlobSidecar{
-		BlockRoot:       bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32),
+		BlockRoot:       root,
 		Index:           index,
 		Slot:            slot,
 		BlockParentRoot: bytesutil.PadTo([]byte{'b'}, 32),

@@ -44,7 +44,7 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 		}
 
 		// Create the block root directory if it doesn't exist.
-		blockRootDir := filepath.Join(bs.baseDir, fmt.Sprintf("%x", sidecar.BlockRoot))
+		blockRootDir := filepath.Join(bs.baseDir, fmt.Sprintf("0x%x", sidecar.BlockRoot))
 		if _, err := os.Stat(blockRootDir); os.IsNotExist(err) {
 			// Create the block root directory.
 			err := os.MkdirAll(blockRootDir, os.ModePerm)
