@@ -292,9 +292,14 @@ func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *LightClientUpdate 
 		return nil
 	}
 
+	var nextSyncCommittee *shared.SyncCommittee
+	if input.NextSyncCommittee != nil {
+		nextSyncCommittee = shared.SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(input.NextSyncCommittee))
+	}
+
 	return &LightClientUpdate{
 		AttestedHeader:          shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
-		NextSyncCommittee:       shared.SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(input.NextSyncCommittee)),
+		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
 		FinalizedHeader:         shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader)),
 		FinalityBranch:          branchToJSON(input.FinalityBranch),

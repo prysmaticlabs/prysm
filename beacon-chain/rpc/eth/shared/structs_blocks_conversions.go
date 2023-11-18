@@ -2005,40 +2005,6 @@ func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader
 	}
 }
 
-func (header *BeaconBlockHeader) ToConsensus() (*eth.BeaconBlockHeader, error) {
-	if header == nil {
-		return nil, errNilValue
-	}
-
-	slot, err := strconv.ParseUint(header.Slot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
-	}
-	proposerIndex, err := strconv.ParseUint(header.ProposerIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
-	}
-	parentRoot, err := DecodeHexWithLength(header.ParentRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
-	}
-	stateRoot, err := DecodeHexWithLength(header.StateRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
-	}
-	bodyRoot, err := DecodeHexWithLength(header.BodyRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "BodyRoot")
-	}
-	return &eth.BeaconBlockHeader{
-		Slot:          primitives.Slot(slot),
-		ProposerIndex: primitives.ValidatorIndex(proposerIndex),
-		ParentRoot:    parentRoot,
-		StateRoot:     stateRoot,
-		BodyRoot:      bodyRoot,
-	}, nil
-}
-
 func BeaconBlockFromConsensus(b *eth.BeaconBlock) (*BeaconBlock, error) {
 	proposerSlashings := ProposerSlashingsFromConsensus(b.Body.ProposerSlashings)
 	attesterSlashings := AttesterSlashingsFromConsensus(b.Body.AttesterSlashings)
