@@ -44,8 +44,8 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		submitSignedContributionAndProofTestEndpoint,
 		nil,
@@ -108,7 +108,7 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 				},
 			},
 			httpRequestExpected:  true,
-			expectedErrorMessage: "failed to send POST data to REST endpoint: foo error",
+			expectedErrorMessage: "foo error",
 		},
 	}
 
@@ -119,9 +119,9 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 
 			ctx := context.Background()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			if testCase.httpRequestExpected {
-				jsonRestHandler.EXPECT().PostRestJson(
+				jsonRestHandler.EXPECT().Post(
 					ctx,
 					submitSignedContributionAndProofTestEndpoint,
 					gomock.Any(),
