@@ -288,7 +288,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), capellaTransitionState)
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), localPayload.BlockNumber())
-		require.DeepEqual(t, fullBlobsBundle, blobsBundle)
+		cachedBundle := bundleCache.get(blk.Block().Slot())
+		require.DeepEqual(t, cachedBundle, blobsBundle)
 	})
 	t.Run("Can get builder payload and blobs in Deneb", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
