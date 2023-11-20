@@ -18,7 +18,7 @@ func (c *beaconApiValidatorClient) submitSignedAggregateSelectionProof(ctx conte
 
 	errJson, err := c.jsonRestHandler.Post(ctx, "/eth/v1/validator/aggregate_and_proofs", nil, bytes.NewBuffer(body), nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

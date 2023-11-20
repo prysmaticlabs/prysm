@@ -57,7 +57,7 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStat
 
 	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, stateForkResponseJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -73,7 +73,7 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetB
 
 	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, blockHeadersResponseJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -95,7 +95,7 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 
 	errJson, err := c.jsonRestHandler.Post(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -111,7 +111,7 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncSt
 
 	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, syncingResponseJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

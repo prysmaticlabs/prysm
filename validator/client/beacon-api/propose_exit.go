@@ -42,7 +42,7 @@ func (c beaconApiValidatorClient) proposeExit(ctx context.Context, signedVolunta
 		nil,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

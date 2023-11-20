@@ -75,7 +75,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 	signedBlockResponseJson := abstractSignedBlockResponseJson{}
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

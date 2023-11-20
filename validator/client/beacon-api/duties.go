@@ -209,7 +209,7 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 	var stateCommittees beacon.GetCommitteesResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, committeesRequest, &stateCommittees)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -249,7 +249,7 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 		attesterDuties,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -269,7 +269,7 @@ func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch pr
 	proposerDuties := validator.GetProposerDutiesResponse{}
 	errJson, err := c.jsonRestHandler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -309,7 +309,7 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primit
 		&syncDuties,
 	)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

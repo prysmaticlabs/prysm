@@ -98,7 +98,7 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 
 	errJson, err := c.jsonRestHandler.Get(ctx, url, stateValidatorsJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

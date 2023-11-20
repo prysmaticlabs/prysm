@@ -54,7 +54,7 @@ func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID s
 	var validatorCountResponse validator.CountResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

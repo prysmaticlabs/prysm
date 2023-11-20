@@ -32,7 +32,7 @@ func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*b
 	blockHeader := beacon.GetBlockHeaderResponse{}
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
 	if err != nil {
-		return nil, errors.Wrap(err, msgUnexpected)
+		return nil, errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -55,7 +55,7 @@ func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.E
 	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
 	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -340,7 +340,7 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 	resp := &validator.PerformanceResponse{}
 	errJson, err := c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

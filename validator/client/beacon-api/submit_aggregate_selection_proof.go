@@ -93,7 +93,7 @@ func (c *beaconApiValidatorClient) getAggregateAttestation(ctx context.Context, 
 	var aggregateAttestationResponse apimiddleware.AggregateAttestationResponseJson
 	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

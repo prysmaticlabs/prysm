@@ -81,7 +81,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 		nil,
 	)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpected)
+		return errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return errors.Wrap(errJson, msgRequestFailed)

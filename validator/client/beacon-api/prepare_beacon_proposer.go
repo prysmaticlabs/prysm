@@ -34,7 +34,7 @@ func (c *beaconApiValidatorClient) prepareBeaconProposer(ctx context.Context, re
 		nil,
 	)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpected)
+		return errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return errors.Wrap(errJson, msgRequestFailed)

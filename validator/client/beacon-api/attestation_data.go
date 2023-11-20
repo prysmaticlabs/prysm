@@ -26,7 +26,7 @@ func (c beaconApiValidatorClient) getAttestationData(
 
 	errJson, err := c.jsonRestHandler.Get(ctx, query, &produceAttestationDataResponseJson)
 	if err != nil {
-		return nil, errors.Wrap(err, msgUnexpected)
+		return nil, errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

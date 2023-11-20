@@ -21,7 +21,7 @@ func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attest
 
 	errJson, err := c.jsonRestHandler.Post(ctx, "/eth/v1/beacon/pool/attestations", nil, bytes.NewBuffer(marshalledAttestation), nil)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

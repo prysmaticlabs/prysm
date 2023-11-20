@@ -26,7 +26,7 @@ func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty)
 	syncingResponse := node.SyncStatusResponse{}
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/syncing", &syncingResponse)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -63,7 +63,7 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 	depositContractJson := apimiddleware.DepositContractResponseJson{}
 	errJson, err = c.jsonRestHandler.Get(ctx, "/eth/v1/config/deposit_contract", &depositContractJson)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -91,7 +91,7 @@ func (c *beaconApiNodeClient) GetVersion(ctx context.Context, _ *empty.Empty) (*
 	var versionResponse node.GetVersionResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/version", &versionResponse)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson

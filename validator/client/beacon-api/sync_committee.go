@@ -33,7 +33,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 
 	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpected)
+		return errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return errors.Wrap(errJson, msgRequestFailed)
@@ -47,7 +47,7 @@ func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) 
 	var resp apimiddleware.BlockRootResponseJson
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
@@ -98,7 +98,7 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	var resp apimiddleware.ProduceSyncCommitteeContributionResponseJson
 	errJson, err := c.jsonRestHandler.Get(ctx, url, &resp)
 	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpected)
+		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
 	if errJson != nil {
 		return nil, errJson
