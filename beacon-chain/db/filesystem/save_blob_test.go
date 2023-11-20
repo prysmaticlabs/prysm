@@ -179,16 +179,16 @@ func generateBlobSidecars(t *testing.T, slots []primitives.Slot, n uint64) []*et
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
+func generateBlobSidecar(tb testing.TB, slot primitives.Slot, index uint64, root []byte) *eth.BlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	kzgCommitment := make([]byte, 48)
 	_, err = rand.Read(kzgCommitment)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	kzgProof := make([]byte, 48)
 	_, err = rand.Read(kzgProof)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 	if len(root) == 0 {
 		root = bytesutil.PadTo(bytesutil.ToBytes(uint64(slot), 32), 32)
 	}

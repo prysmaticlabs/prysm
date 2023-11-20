@@ -17,7 +17,6 @@ import (
 type BlobStorage struct {
 	baseDir        string
 	retentionEpoch primitives.Epoch
-	lastPrunedSlot primitives.Slot
 }
 
 // SaveBlobData saves blobs given a list of sidecars.
@@ -50,20 +49,6 @@ func (bs *BlobStorage) SaveBlobData(sidecars []*eth.BlobSidecar) error {
 			err := os.MkdirAll(blockRootDir, os.ModePerm)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create block root directory: %s", blockRootDir)
-			}
-
-			// Create and save the slot file if it doesn't exist.
-			slotFilePath := filepath.Join(blockRootDir, fmt.Sprintf("%d.slot", sidecar.Slot))
-			if _, err := os.Stat(slotFilePath); os.IsNotExist(err) {
-				// Create the slot file.
-				slotFile, err := os.Create(slotFilePath)
-				if err != nil {
-					return errors.Wrapf(err, "failed to create slot file: %s", slotFilePath)
-				}
-				err = slotFile.Close()
-				if err != nil {
-					return errors.Wrap(err, "failed to close slot file")
-				}
 			}
 		}
 
