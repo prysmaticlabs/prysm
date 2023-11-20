@@ -45,7 +45,7 @@ func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 		}
 	}()
 
-	return decodeJsonResp(httpResp, resp)
+	return decodeResp(httpResp, resp)
 }
 
 // Post sends a POST request and decodes the response body as a JSON object into the passed in object.
@@ -85,10 +85,10 @@ func (c beaconApiJsonRestHandler) Post(
 		}
 	}()
 
-	return decodeJsonResp(httpResp, resp)
+	return decodeResp(httpResp, resp)
 }
 
-func decodeJsonResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJson, error) {
+func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJson, error) {
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
