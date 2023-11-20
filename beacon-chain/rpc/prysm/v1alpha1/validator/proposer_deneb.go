@@ -1,11 +1,54 @@
 package validator
 
 import (
+	"sync"
+
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
+
+var bundleCache = &blobsBundleCache{
+	blobs: make(map[primitives.Slot]*enginev1.BlobsBundle),
+}
+
+// BlobsBundleCache holds the KZG commitments and other relevant sidecar data for a local beacon block.
+type blobsBundleCache struct {
+	blobs map[primitives.Slot]*enginev1.BlobsBundle
+	sync.Mutex
+}
+
+// add adds a blobs bundle to the cache.
+func (c *blobsBundleCache) add(slot primitives.Slot, bundle *enginev1.BlobsBundle) {
+	c.Lock()
+	defer c.Unlock()
+	c.blobs[slot] = bundle
+}
+
+// get gets a blobs bundle from the cache.
+func (c *blobsBundleCache) get(slot primitives.Slot) *enginev1.BlobsBundle {
+	c.Lock()
+	blobs := c.blobs[slot]
+	c.Unlock()
+
+	// Trigger pruning in the background
+	go c.prune(slot)
+
+	return blobs
+}
+
+// prune removes blobs bundles from the cache that are equal or older than the given slot.
+func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
+	c.Lock()
+	defer c.Unlock()
+	for s := range c.blobs {
+		if s < minSlot {
+			delete(c.blobs, s)
+		}
+	}
+}
 
 // coverts a blobs bundle to a sidecar format.
 func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.DeprecatedBlobSidecar, error) {

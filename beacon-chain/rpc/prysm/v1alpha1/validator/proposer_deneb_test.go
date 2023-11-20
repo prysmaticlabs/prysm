@@ -2,8 +2,10 @@ package validator
 
 import (
 	"testing"
+	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -71,5 +73,49 @@ func Test_blindBlobsBundleToSidecars(t *testing.T) {
 		require.DeepEqual(t, sidecars[i].BlobRoot, blobRoots[i])
 		require.DeepEqual(t, sidecars[i].KzgProof, proofs[i])
 		require.DeepEqual(t, sidecars[i].KzgCommitment, kcs[i])
+	}
+}
+
+func TestAdd(t *testing.T) {
+	slot := primitives.Slot(1)
+	bundle := &enginev1.BlobsBundle{KzgCommitments: [][]byte{{'a'}}}
+
+	bundleCache.add(slot, bundle)
+
+	if bundleCache.blobs[slot] != bundle {
+		t.Errorf("Add did not correctly add the bundle to the cache")
+	}
+}
+
+func TestGet(t *testing.T) {
+	slot := primitives.Slot(1)
+	bundle := &enginev1.BlobsBundle{KzgCommitments: [][]byte{{'a'}}}
+
+	bundleCache.add(slot, bundle)
+
+	if got := bundleCache.get(slot); got != bundle {
+		t.Errorf("Get did not return the correct bundle")
+	}
+}
+
+func TestPrune(t *testing.T) {
+	slot1 := primitives.Slot(1)
+	slot2 := primitives.Slot(2)
+	bundle1 := &enginev1.BlobsBundle{KzgCommitments: [][]byte{{'a'}}}
+	bundle2 := &enginev1.BlobsBundle{KzgCommitments: [][]byte{{'b'}}}
+
+	bundleCache.add(slot1, bundle1)
+	bundleCache.add(slot2, bundle2)
+
+	bundleCache.prune(slot2)
+
+	time.Sleep(time.Millisecond * 100) // Wait for the pruning to complete
+
+	if _, exists := bundleCache.blobs[slot1]; exists {
+		t.Errorf("Prune did not remove the bundle at slot1")
+	}
+
+	if _, exists := bundleCache.blobs[slot2]; !exists {
+		t.Errorf("Prune incorrectly removed the bundle at slot2")
 	}
 }
