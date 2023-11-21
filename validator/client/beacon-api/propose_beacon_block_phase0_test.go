@@ -19,7 +19,7 @@ import (
 func TestProposeBeaconBlock_Phase0(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	phase0Block := generateSignedPhase0Block()
 
@@ -53,7 +53,7 @@ func TestProposeBeaconBlock_Phase0(t *testing.T) {
 
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "phase0"}
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/beacon/blocks",
 		headers,

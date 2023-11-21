@@ -29,8 +29,12 @@ func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Cont
 		return errors.Wrap(err, "failed to marshal registration")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonRegistration), nil); err != nil {
-		return errors.Wrapf(err, "failed to send POST data to `%s` REST endpoint", endpoint)
+	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonRegistration), nil)
+	if err != nil {
+		return errors.Wrap(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return errJson
 	}
 
 	return nil

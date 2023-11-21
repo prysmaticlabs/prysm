@@ -47,8 +47,8 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		subscribeCommitteeSubnetsTestEndpoint,
 		nil,
@@ -248,7 +248,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 			},
 			expectGetDutiesQuery:    true,
 			expectSubscribeRestCall: true,
-			expectedErrorMessage:    "failed to send POST data to REST endpoint: foo error",
+			expectedErrorMessage:    "foo error",
 		},
 	}
 
@@ -271,9 +271,9 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				).Times(1)
 			}
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			if testCase.expectSubscribeRestCall {
-				jsonRestHandler.EXPECT().PostRestJson(
+				jsonRestHandler.EXPECT().Post(
 					ctx,
 					subscribeCommitteeSubnetsTestEndpoint,
 					gomock.Any(),

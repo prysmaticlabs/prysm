@@ -18,7 +18,7 @@ type stateValidatorsProvider interface {
 }
 
 type beaconApiStateValidatorsProvider struct {
-	jsonRestHandler jsonRestHandler
+	jsonRestHandler JsonRestHandler
 }
 
 func (c beaconApiStateValidatorsProvider) GetStateValidators(
@@ -96,8 +96,12 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	url := buildURL(endpoint, params)
 	stateValidatorsJson := &beacon.GetValidatorsResponse{}
 
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, stateValidatorsJson); err != nil {
-		return &beacon.GetValidatorsResponse{}, errors.Wrap(err, "failed to get json response")
+	errJson, err := c.jsonRestHandler.Get(ctx, url, stateValidatorsJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if stateValidatorsJson.Data == nil {

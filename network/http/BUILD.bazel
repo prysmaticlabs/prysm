@@ -19,5 +19,8 @@ go_test(
     name = "go_default_test",
     srcs = ["reader_test.go"],
     embed = [":go_default_library"],
-    deps = ["//testing/assert:go_default_library"],
+    deps = [
+        "//api:go_default_library",
+        "//testing/assert:go_default_library",
+    ],
 )
