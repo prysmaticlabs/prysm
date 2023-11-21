@@ -21,14 +21,22 @@ import (
 
 // sendRecentBeaconBlocksRequest sends a recent beacon blocks request to a peer to get
 // those corresponding blocks from that peer.
-func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, blockRoots *types.BeaconBlockByRootsReq, id peer.ID) error {
+func (s *Service) sendRecentBeaconBlocksRequest(ctx context.Context, requests *types.BeaconBlockByRootsReq, id peer.ID) error {
 	ctx, cancel := context.WithTimeout(ctx, respTimeout)
 	defer cancel()
 
-	blks, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, blockRoots, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
+	requestedRoots := make(map[[32]byte]struct{})
+	for _, root := range *requests {
+		requestedRoots[root] = struct{}{}
+	}
+
+	blks, err := SendBeaconBlocksByRootRequest(ctx, s.cfg.clock, s.cfg.p2p, id, requests, func(blk interfaces.ReadOnlySignedBeaconBlock) error {
 		blkRoot, err := blk.Block().HashTreeRoot()
 		if err != nil {
 			return err
+		}
+		if _, ok := requestedRoots[blkRoot]; !ok {
+			return fmt.Errorf("received unexpected block with root %x", blkRoot)
 		}
 		s.pendingQueueLock.Lock()
 		defer s.pendingQueueLock.Unlock()

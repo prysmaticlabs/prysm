@@ -31,4 +31,5 @@ const (
 	LogMaxBlobCommitments                 = 4             // Log_2 of MaxBlobCommitmentsPerBlock
 	BlobLength                            = 131072        // BlobLength defines the byte length of a blob.
 	BlobSize                              = 131072        // defined to match blob.size in bazel ssz codegen
+	NextSyncCommitteeBranchDepth          = 5             // NextSyncCommitteeBranchDepth defines the depth of the next sync committee branch.
 )
