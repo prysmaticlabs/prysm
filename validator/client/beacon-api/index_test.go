@@ -36,9 +36,9 @@ func TestIndex_Nominal(t *testing.T) {
 	ctx := context.Background()
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -85,9 +85,9 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	ctx := context.Background()
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -126,9 +126,9 @@ func TestIndex_BadIndexError(t *testing.T) {
 	ctx := context.Background()
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -174,9 +174,9 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	ctx := context.Background()
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
