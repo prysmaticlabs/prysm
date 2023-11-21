@@ -19,6 +19,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -104,88 +105,84 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case event := <-opsChan:
-			if ok = handleBlockOperationEvents(w, flusher, topicsMap, event); !ok {
-				return
-			}
+			handleBlockOperationEvents(w, flusher, topicsMap, event)
 		case event := <-stateChan:
-			if ok = s.handleStateEvents(ctx, w, flusher, topicsMap, event); !ok {
-				return
-			}
+			s.handleStateEvents(ctx, w, flusher, topicsMap, event)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
+func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) {
 	switch event.Type {
 	case operation.AggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
-			return true
+			return
 		}
 		attData, ok := event.Data.(*operation.AggregatedAttReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, AttestationTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
+			return
 		}
 		att := shared.AttestationFromConsensus(attData.Attestation.Aggregate)
-		return send(w, flusher, AttestationTopic, att)
+		send(w, flusher, AttestationTopic, att)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
-			return true
+			return
 		}
 		attData, ok := event.Data.(*operation.UnAggregatedAttReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, AttestationTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
+			return
 		}
 		att := shared.AttestationFromConsensus(attData.Attestation)
-		return send(w, flusher, AttestationTopic, att)
+		send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
-			return true
+			return
 		}
 		exitData, ok := event.Data.(*operation.ExitReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, VoluntaryExitTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, VoluntaryExitTopic)
+			return
 		}
 		exit := shared.SignedVoluntaryExitFromConsensus(exitData.Exit)
-		return send(w, flusher, VoluntaryExitTopic, exit)
+		send(w, flusher, VoluntaryExitTopic, exit)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
-			return true
+			return
 		}
 		contributionData, ok := event.Data.(*operation.SyncCommitteeContributionReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, SyncCommitteeContributionTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, SyncCommitteeContributionTopic)
+			return
 		}
 		contribution := shared.SignedContributionAndProofFromConsensus(contributionData.Contribution)
-		return send(w, flusher, SyncCommitteeContributionTopic, contribution)
+		send(w, flusher, SyncCommitteeContributionTopic, contribution)
 	case operation.BLSToExecutionChangeReceived:
 		if _, ok := requestedTopics[BLSToExecutionChangeTopic]; !ok {
-			return true
+			return
 		}
 		changeData, ok := event.Data.(*operation.BLSToExecutionChangeReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BLSToExecutionChangeTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, BLSToExecutionChangeTopic)
+			return
 		}
 		change, err := shared.SignedBlsToExecutionChangeFromConsensus(changeData.Change)
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-			return false
+			write(w, flusher, err.Error())
+			return
 		}
-		return send(w, flusher, BLSToExecutionChangeTopic, change)
+		send(w, flusher, BLSToExecutionChangeTopic, change)
 	case operation.BlobSidecarReceived:
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
-			return true
+			return
 		}
 		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BlobSidecarTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
+			return
 		}
 		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
 		blobEvent := &BlobSidecarEvent{
@@ -195,20 +192,18 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			VersionedHash: versionedHash.String(),
 			KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
 		}
-		return send(w, flusher, BlobSidecarTopic, blobEvent)
-	default:
-		return true
+		send(w, flusher, BlobSidecarTopic, blobEvent)
 	}
 }
 
-func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) bool {
+func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, requestedTopics map[string]bool, event *feed.Event) {
 	switch event.Type {
 	case statefeed.NewHead:
 		if _, ok := requestedTopics[HeadTopic]; ok {
 			headData, ok := event.Data.(*ethpb.EventHead)
 			if !ok {
-				http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, HeadTopic), http.StatusInternalServerError)
-				return false
+				write(w, flusher, topicDataMismatch, event.Data, HeadTopic)
+				return
 			}
 			head := &HeadEvent{
 				Slot:                      fmt.Sprintf("%d", headData.Slot),
@@ -219,31 +214,23 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 				PreviousDutyDependentRoot: hexutil.Encode(headData.PreviousDutyDependentRoot),
 				CurrentDutyDependentRoot:  hexutil.Encode(headData.CurrentDutyDependentRoot),
 			}
-			if ok = send(w, flusher, HeadTopic, head); !ok {
-				return false
-			}
+			send(w, flusher, HeadTopic, head)
 		}
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if ok = s.sendPayloadAttributes(ctx, w, flusher); !ok {
-				return false
-			}
+			s.sendPayloadAttributes(ctx, w, flusher)
 		}
-		return true
 	case statefeed.MissedSlot:
 		if _, ok := requestedTopics[PayloadAttributesTopic]; ok {
-			if ok = s.sendPayloadAttributes(ctx, w, flusher); !ok {
-				return false
-			}
+			s.sendPayloadAttributes(ctx, w, flusher)
 		}
-		return true
 	case statefeed.FinalizedCheckpoint:
 		if _, ok := requestedTopics[FinalizedCheckpointTopic]; !ok {
-			return true
+			return
 		}
 		checkpointData, ok := event.Data.(*ethpb.EventFinalizedCheckpoint)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, FinalizedCheckpointTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, FinalizedCheckpointTopic)
+			return
 		}
 		checkpoint := &FinalizedCheckpointEvent{
 			Block:               hexutil.Encode(checkpointData.Block),
@@ -251,15 +238,15 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			Epoch:               fmt.Sprintf("%d", checkpointData.Epoch),
 			ExecutionOptimistic: checkpointData.ExecutionOptimistic,
 		}
-		return send(w, flusher, FinalizedCheckpointTopic, checkpoint)
+		send(w, flusher, FinalizedCheckpointTopic, checkpoint)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
-			return true
+			return
 		}
 		reorgData, ok := event.Data.(*ethpb.EventChainReorg)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, ChainReorgTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, ChainReorgTopic)
+			return
 		}
 		reorg := &ChainReorgEvent{
 			Slot:                fmt.Sprintf("%d", reorgData.Slot),
@@ -271,80 +258,78 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			Epoch:               fmt.Sprintf("%d", reorgData.Epoch),
 			ExecutionOptimistic: reorgData.ExecutionOptimistic,
 		}
-		return send(w, flusher, ChainReorgTopic, reorg)
+		send(w, flusher, ChainReorgTopic, reorg)
 	case statefeed.BlockProcessed:
 		if _, ok := requestedTopics[BlockTopic]; !ok {
-			return true
+			return
 		}
 		blkData, ok := event.Data.(*statefeed.BlockProcessedData)
 		if !ok {
-			http2.HandleError(w, fmt.Sprintf(topicDataMismatch, event.Data, BlockTopic), http.StatusInternalServerError)
-			return false
+			write(w, flusher, topicDataMismatch, event.Data, BlockTopic)
+			return
 		}
 		blockRoot, err := blkData.SignedBlock.Block().HashTreeRoot()
 		if err != nil {
-			http2.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
-			return false
+			write(w, flusher, "Could not get block root: "+err.Error())
+			return
 		}
 		blk := &BlockEvent{
 			Slot:                fmt.Sprintf("%d", blkData.Slot),
 			Block:               hexutil.Encode(blockRoot[:]),
 			ExecutionOptimistic: blkData.Optimistic,
 		}
-		return send(w, flusher, BlockTopic, blk)
-	default:
-		return true
+		send(w, flusher, BlockTopic, blk)
 	}
 }
 
 // This event stream is intended to be used by builders and relays.
 // Parent fields are based on state at N_{current_slot}, while the rest of fields are based on state of N_{current_slot + 1}
-func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWriter, flusher http.Flusher) bool {
+func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWriter, flusher http.Flusher) {
 	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
-		http2.HandleError(w, "Could not get head root: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head root: "+err.Error())
+		return
 	}
 	st, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head state: "+err.Error())
+		return
 	}
 	// advance the head state
 	headState, err := transition.ProcessSlotsIfPossible(ctx, st, s.ChainInfoFetcher.CurrentSlot()+1)
 	if err != nil {
-		http2.HandleError(w, "Could not advance head state: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not advance head state: "+err.Error())
+		return
 	}
 
 	headBlock, err := s.HeadFetcher.HeadBlock(ctx)
 	if err != nil {
-		http2.HandleError(w, "Could not get head block: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head block: "+err.Error())
+		return
 	}
 
 	headPayload, err := headBlock.Block().Body().Execution()
 	if err != nil {
-		http2.HandleError(w, "Could not get execution payload: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get execution payload: "+err.Error())
+		return
 	}
 
 	t, err := slots.ToTime(headState.GenesisTime(), headState.Slot())
 	if err != nil {
-		http2.HandleError(w, "Could not get head state slot time: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head state slot time: "+err.Error())
+		return
 	}
 
 	prevRando, err := helpers.RandaoMix(headState, time.CurrentEpoch(headState))
 	if err != nil {
-		http2.HandleError(w, "Could not get head state randao mix: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head state randao mix: "+err.Error())
+		return
 	}
 
 	proposerIndex, err := helpers.BeaconProposerIndex(ctx, headState)
 	if err != nil {
-		http2.HandleError(w, "Could not get head state proposer index: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not get head state proposer index: "+err.Error())
+		return
 	}
 
 	var attributes interface{}
@@ -358,8 +343,8 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 	case version.Capella:
 		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
-			http2.HandleError(w, "Could not get head state expected withdrawals: "+err.Error(), http.StatusInternalServerError)
-			return false
+			write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
+			return
 		}
 		attributes = &PayloadAttributesV2{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
@@ -370,13 +355,13 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 	case version.Deneb:
 		withdrawals, err := headState.ExpectedWithdrawals()
 		if err != nil {
-			http2.HandleError(w, "Could not get head state expected withdrawals: "+err.Error(), http.StatusInternalServerError)
-			return false
+			write(w, flusher, "Could not get head state expected withdrawals: "+err.Error())
+			return
 		}
 		parentRoot, err := headBlock.Block().HashTreeRoot()
 		if err != nil {
-			http2.HandleError(w, "Could not get head block root: "+err.Error(), http.StatusInternalServerError)
-			return false
+			write(w, flusher, "Could not get head block root: "+err.Error())
+			return
 		}
 		attributes = &PayloadAttributesV3{
 			Timestamp:             fmt.Sprintf("%d", t.Unix()),
@@ -386,14 +371,14 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 			ParentBeaconBlockRoot: hexutil.Encode(parentRoot[:]),
 		}
 	default:
-		http2.HandleError(w, fmt.Sprintf("Payload version %s is not supported", version.String(headState.Version())), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Payload version %s is not supported", version.String(headState.Version()))
+		return
 	}
 
 	attributesBytes, err := json.Marshal(attributes)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, err.Error())
+		return
 	}
 	eventData := PayloadAttributesEventData{
 		ProposerIndex:     fmt.Sprintf("%d", proposerIndex),
@@ -405,26 +390,28 @@ func (s *Server) sendPayloadAttributes(ctx context.Context, w http.ResponseWrite
 	}
 	eventDataBytes, err := json.Marshal(eventData)
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, err.Error())
+		return
 	}
-	return send(w, flusher, PayloadAttributesTopic, &PayloadAttributesEvent{
+	send(w, flusher, PayloadAttributesTopic, &PayloadAttributesEvent{
 		Version: version.String(headState.Version()),
 		Data:    eventDataBytes,
 	})
 }
 
-func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) bool {
+func send(w http.ResponseWriter, flusher http.Flusher, name string, data interface{}) {
 	j, err := json.Marshal(data)
 	if err != nil {
-		http2.HandleError(w, "Could not marshal event to JSON: "+err.Error(), http.StatusInternalServerError)
-		return false
+		write(w, flusher, "Could not marshal event to JSON: "+err.Error())
+		return
 	}
-	_, err = fmt.Fprintf(w, "event: %s\ndata: %s\n\n", name, string(j))
+	write(w, flusher, "event: %s\ndata: %s\n\n", name, string(j))
+}
+
+func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) {
+	_, err := fmt.Fprintf(w, format, a...)
 	if err != nil {
-		http2.HandleError(w, "Could not write event: "+err.Error(), http.StatusInternalServerError)
-		return false
+		log.WithError(err).Error("Could not write to response writer")
 	}
 	flusher.Flush()
-	return true
 }
