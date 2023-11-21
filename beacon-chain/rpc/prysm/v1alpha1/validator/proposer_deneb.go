@@ -10,47 +10,47 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
-var bundleCache = &blobsBundleCache{
-	blobs: make(map[primitives.Slot]*enginev1.BlobsBundle),
-}
+var bundleCache = &blobsBundleCache{}
 
 // BlobsBundleCache holds the KZG commitments and other relevant sidecar data for a local beacon block.
 type blobsBundleCache struct {
-	blobs map[primitives.Slot]*enginev1.BlobsBundle
 	sync.Mutex
+	slot   primitives.Slot
+	bundle *enginev1.BlobsBundle
 }
 
 // add adds a blobs bundle to the cache.
 // same slot overwrites the previous bundle.
 func (c *blobsBundleCache) add(slot primitives.Slot, bundle *enginev1.BlobsBundle) {
 	c.Lock()
-	c.blobs[slot] = bundle
-	c.Unlock()
+	defer c.Unlock()
 
-	// Trigger pruning in the background
-	go c.prune(slot)
+	if slot >= c.slot {
+		c.bundle = bundle
+		c.slot = slot
+	}
 }
 
 // get gets a blobs bundle from the cache.
 func (c *blobsBundleCache) get(slot primitives.Slot) *enginev1.BlobsBundle {
 	c.Lock()
-	blobs := c.blobs[slot]
-	c.Unlock()
+	defer c.Unlock()
 
-	// Trigger pruning in the background
-	go c.prune(slot)
+	if c.slot == slot {
+		return c.bundle
+	}
 
-	return blobs
+	return nil
 }
 
-// prune removes blobs bundles from the cache that are equal or older than the given slot.
+// prune acquires the lock before pruning.
 func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	c.Lock()
 	defer c.Unlock()
-	for s := range c.blobs {
-		if s < minSlot {
-			delete(c.blobs, s)
-		}
+
+	if minSlot > c.slot {
+		c.slot = 0
+		c.bundle = nil
 	}
 }
 

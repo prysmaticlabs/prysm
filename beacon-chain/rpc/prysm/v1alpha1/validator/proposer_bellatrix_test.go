@@ -270,6 +270,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		params.SetupTestConfigCleanup(t)
 
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
+		blk.SetSlot(1)
 		require.NoError(t, err)
 		vs.BlockBuilder = &builderTest.MockBuilderService{
 			HasConfigured: false,
