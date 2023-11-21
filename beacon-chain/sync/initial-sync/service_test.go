@@ -9,6 +9,7 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
@@ -382,6 +383,7 @@ func TestService_Resync(t *testing.T) {
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
+				BlobStorage:   filesystem.NewEphemeralBlobStorage(t),
 			})
 			assert.NotNil(t, s)
 			assert.Equal(t, primitives.Slot(0), s.cfg.Chain.HeadSlot())

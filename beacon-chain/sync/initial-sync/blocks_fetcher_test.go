@@ -962,7 +962,7 @@ func TestTimeToWait(t *testing.T) {
 
 func TestSortBlobs(t *testing.T) {
 	_, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
-	shuffled := make([]*ethpb.DeprecatedBlobSidecar, len(blobs))
+	shuffled := make([]blocks.ROBlob, len(blobs))
 	for i := range blobs {
 		shuffled[i] = blobs[i]
 	}
@@ -974,10 +974,10 @@ func TestSortBlobs(t *testing.T) {
 	for i := range blobs {
 		expect := blobs[i]
 		actual := sorted[i]
-		require.Equal(t, expect.Slot, actual.Slot)
+		require.Equal(t, expect.Slot(), actual.Slot())
 		require.Equal(t, expect.Index, actual.Index)
 		require.Equal(t, bytesutil.ToBytes48(expect.KzgCommitment), bytesutil.ToBytes48(actual.KzgCommitment))
-		require.Equal(t, bytesutil.ToBytes32(expect.BlockRoot), bytesutil.ToBytes32(actual.BlockRoot))
+		require.Equal(t, expect.BlockRoot(), actual.BlockRoot())
 	}
 }
 
@@ -1047,7 +1047,7 @@ func TestBlobRequest(t *testing.T) {
 	require.Equal(t, len(allAfter), int(req.Count))
 }
 
-func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []*ethpb.DeprecatedBlobSidecar) {
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []blocks.ROBlob) {
 	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {
@@ -1073,19 +1073,20 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	// Misalign the slots of the blobs for the first block to simulate them being missing from the response.
-	offByOne := blobs[0].Slot
+	offByOne := blobs[0].Slot()
 	for i := range blobs {
-		if blobs[i].Slot == offByOne {
-			blobs[i].Slot = offByOne + 1
+		if blobs[i].Slot() == offByOne {
+			blobs[i].SignedBlockHeader.Header.Slot = offByOne + 1
 		}
 	}
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorContains(t, "BlockSlot in BlobSidecar does not match the expected slot", err)
+	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
-	blobs[lastBlobIdx].BlockRoot = blobs[0].BlockRoot
+	blobs[lastBlobIdx], err = blocks.NewROBlobWithRoot(blobs[lastBlobIdx].BlobSidecar, blobs[0].BlockRoot())
+	require.NoError(t, err)
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, verify.ErrMismatchedBlobBlockRoot)
+	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].Index = 100
@@ -1093,18 +1094,24 @@ func TestVerifyAndPopulateBlobs(t *testing.T) {
 	require.ErrorIs(t, err, verify.ErrIncorrectBlobIndex)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
-	blobs[lastBlobIdx].ProposerIndex = 100
+	blobs[lastBlobIdx].SignedBlockHeader.Header.ProposerIndex = 100
+	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
+	require.NoError(t, err)
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, verify.ErrMismatchedProposerIndex)
+	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
-	blobs[lastBlobIdx].BlockParentRoot = blobs[0].BlockParentRoot
+	blobs[lastBlobIdx].SignedBlockHeader.Header.ParentRoot = blobs[0].SignedBlockHeader.Header.ParentRoot
+	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
+	require.NoError(t, err)
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
-	require.ErrorIs(t, err, verify.ErrMismatchedBlobBlockRoot)
+	require.ErrorIs(t, err, verify.ErrBlobBlockMisaligned)
 
 	var emptyKzg [48]byte
 	bwb, blobs = testSequenceBlockWithBlob(t, 10)
 	blobs[lastBlobIdx].KzgCommitment = emptyKzg[:]
+	blobs[lastBlobIdx], err = blocks.NewROBlob(blobs[lastBlobIdx].BlobSidecar)
+	require.NoError(t, err)
 	_, err = verifyAndPopulateBlobs(bwb, blobs, firstBlockSlot)
 	require.ErrorIs(t, err, verify.ErrMismatchedBlobCommitments)
 
