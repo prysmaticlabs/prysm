@@ -31,10 +31,10 @@ func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Cont
 
 	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonRegistration), nil)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpectedError)
+		return errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
-		return errors.Wrap(errJson, msgRequestFailed)
+		return errJson
 	}
 
 	return nil

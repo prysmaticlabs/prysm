@@ -34,10 +34,10 @@ func (c *beaconApiValidatorClient) prepareBeaconProposer(ctx context.Context, re
 		nil,
 	)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpectedError)
+		return errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
-		return errors.Wrap(errJson, msgRequestFailed)
+		return errJson
 	}
 
 	return nil

@@ -33,10 +33,10 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 
 	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil)
 	if err != nil {
-		return errors.Wrapf(err, msgUnexpectedError)
+		return errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
-		return errors.Wrap(errJson, msgRequestFailed)
+		return errJson
 	}
 
 	return nil
