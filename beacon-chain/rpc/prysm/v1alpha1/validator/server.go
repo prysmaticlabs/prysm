@@ -205,14 +205,14 @@ func (vs *Server) WaitForChainStart(_ *emptypb.Empty, stream ethpb.BeaconNodeVal
 // PruneBlobsBundleCacheRoutine prunes the blobs bundle cache at 6s mark of the slot.
 func (vs *Server) PruneBlobsBundleCacheRoutine() {
 	go func() {
-		_, err := vs.ClockWaiter.WaitForClock(vs.Ctx)
+		clock, err := vs.ClockWaiter.WaitForClock(vs.Ctx)
 		if err != nil {
 			log.WithError(err).Error("PruneBlobsBundleCacheRoutine failed to receive genesis data")
 			return
 		}
 
 		pruneInterval := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot/2)
-		ticker := slots.NewSlotTickerWithIntervals(vs.CoreService.GenesisTimeFetcher.GenesisTime(), []time.Duration{pruneInterval})
+		ticker := slots.NewSlotTickerWithIntervals(clock.GenesisTime(), []time.Duration{pruneInterval})
 		for {
 			select {
 			case <-vs.Ctx.Done():
