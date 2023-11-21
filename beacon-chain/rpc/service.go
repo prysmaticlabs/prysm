@@ -15,6 +15,13 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
+	"go.opencensus.io/plugin/ocgrpc"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/reflection"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -37,6 +44,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
+	lightclient "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/light-client"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -57,12 +65,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/sirupsen/logrus"
-	"go.opencensus.io/plugin/ocgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/peer"
-	"google.golang.org/grpc/reflection"
 )
 
 const attestationBufferSize = 100
@@ -476,6 +478,16 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", config.GetDepositContract).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/fork_schedule", config.GetForkSchedule).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/spec", config.GetSpec).Methods(http.MethodGet)
+
+	lightClientServer := &lightclient.Server{
+		Blocker:     blocker,
+		Stater:      stater,
+		HeadFetcher: s.cfg.HeadFetcher,
+	}
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/bootstrap/{block_root}", lightClientServer.GetLightClientBootstrap).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/updates", lightClientServer.GetLightClientUpdatesByRange).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/finality_update", lightClientServer.GetLightClientFinalityUpdate).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/optimistic_update", lightClientServer.GetLightClientOptimisticUpdate).Methods(http.MethodGet)
 
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
