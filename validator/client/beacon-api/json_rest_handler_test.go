@@ -91,13 +91,14 @@ func TestPost(t *testing.T) {
 		host:       server.URL,
 	}
 	resp := &beacon.GetGenesisResponse{}
-	_, err := jsonRestHandler.Post(
+	errJson, err := jsonRestHandler.Post(
 		ctx,
 		endpoint,
 		headers,
 		bytes.NewBuffer(dataBytes),
 		resp,
 	)
+	assert.Equal(t, true, errJson == nil)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, genesisJson, resp)
 }
