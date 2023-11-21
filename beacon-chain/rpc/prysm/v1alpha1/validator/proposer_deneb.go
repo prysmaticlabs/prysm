@@ -21,10 +21,14 @@ type blobsBundleCache struct {
 }
 
 // add adds a blobs bundle to the cache.
+// same slot overwrites the previous bundle.
 func (c *blobsBundleCache) add(slot primitives.Slot, bundle *enginev1.BlobsBundle) {
 	c.Lock()
-	defer c.Unlock()
 	c.blobs[slot] = bundle
+	c.Unlock()
+
+	// Trigger pruning in the background
+	go c.prune(slot)
 }
 
 // get gets a blobs bundle from the cache.
