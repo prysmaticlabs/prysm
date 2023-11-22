@@ -471,9 +471,9 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/headers/{block_id}", beaconChainServerV1.GetBlockHeader).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/genesis", beaconChainServerV1.GetGenesis).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/finality_checkpoints", beaconChainServerV1.GetFinalityCheckpoints).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators", beaconChainServerV1.GetValidators).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators", beaconChainServerV1.GetValidators).Methods(http.MethodGet, http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validators/{validator_id}", beaconChainServerV1.GetValidator).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_balances", beaconChainServerV1.GetValidatorBalances).Methods(http.MethodGet, http.MethodPost)
 
 	s.cfg.Router.HandleFunc("/eth/v1/config/deposit_contract", config.GetDepositContract).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/config/fork_schedule", config.GetForkSchedule).Methods(http.MethodGet)
