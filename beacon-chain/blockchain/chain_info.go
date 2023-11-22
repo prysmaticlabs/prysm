@@ -534,6 +534,6 @@ func (s *Service) BlockBeingSynced(root [32]byte) bool {
 // RecentBlockSlot returns block slot form fork choice store
 func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.Unlock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.Slot(root)
 }
