@@ -47,9 +47,6 @@ const (
 // blindBlobsBundle holds the KZG commitments and other relevant sidecar data for a builder's beacon block.
 var blindBlobsBundle *enginev1.BlindedBlobsBundle
 
-// fullBlobsBundle holds the KZG commitments and other relevant sidecar data for a local beacon block.
-var fullBlobsBundle *enginev1.BlobsBundle
-
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -122,8 +119,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(fullBlobsBundle, sBlk.Block())
-	fullBlobsBundle = nil // Reset full blobs bundle after use.
+	fullBlobs, err := blobsBundleToSidecars(bundleCache.get(req.Slot), sBlk.Block())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 	}
