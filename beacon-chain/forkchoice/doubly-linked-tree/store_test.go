@@ -82,7 +82,7 @@ func TestStore_Head_Itself(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(context.Background(), state, blkRoot))
 
-	// Since the justified node does not have a best descendant so the best node
+	// Since the justified node does not have the best descendant so the best node
 	// is itself.
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
 	h, err := f.store.head(context.Background())
