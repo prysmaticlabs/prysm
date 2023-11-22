@@ -351,6 +351,63 @@ func TestGetValidators(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
+	t.Run("POST empty", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validators",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+	t.Run("POST invalid", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		body := bytes.Buffer{}
+		_, err := body.WriteString("foo")
+		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validators",
+			&body,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidators(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "Could not decode request body", e.Message)
+	})
 }
 
 func TestGetValidators_FilterByStatus(t *testing.T) {
@@ -1061,5 +1118,62 @@ func TestGetValidatorBalances(t *testing.T) {
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
 		assert.Equal(t, "1", resp.Data[1].Index)
+	})
+	t.Run("POST empty", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances",
+			nil,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "No data submitted", e.Message)
+	})
+	t.Run("POST invalid", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		s := Server{
+			Stater: &testutil.MockStater{
+				BeaconState: st,
+			},
+			HeadFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+			FinalizationFetcher:   chainService,
+		}
+
+		body := bytes.Buffer{}
+		_, err := body.WriteString("foo")
+		require.NoError(t, err)
+		request := httptest.NewRequest(
+			http.MethodPost,
+			"http://example.com/eth/v1/beacon/states/{state_id}/validator_balances",
+			&body,
+		)
+		request = mux.SetURLVars(request, map[string]string{"state_id": "head"})
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.GetValidatorBalances(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		e := &http2.DefaultErrorJson{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+		assert.Equal(t, http.StatusBadRequest, e.Code)
+		assert.StringContains(t, "Could not decode request body", e.Message)
 	})
 }
