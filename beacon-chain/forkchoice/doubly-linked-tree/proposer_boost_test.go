@@ -158,7 +158,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		// Proposer boost score with these test parameters is 8
 		// Each of the nodes received one attestation accounting for 10.
-		// Node D is the only one with a proposer boost still applied:
+		// Node D is the only one with proposer boost still applied:
 		//
 		// (1: 48) -> (2: 38) -> (3: 10)
 		//		    \--------------->(4: 18)
