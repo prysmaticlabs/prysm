@@ -106,7 +106,7 @@ func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJ
 		}
 		return errorJson, nil
 	}
-	// Is nil in case of requests that do not return anything.
+	// resp is nil for requests that do not return anything.
 	if resp != nil {
 		if err = decoder.Decode(resp); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode response body into json for %s", httpResp.Request.URL)
