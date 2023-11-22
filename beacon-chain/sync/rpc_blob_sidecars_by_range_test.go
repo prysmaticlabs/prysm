@@ -6,8 +6,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -24,40 +24,41 @@ func (c *blobsTestCase) defaultOldestSlotByRange(t *testing.T) types.Slot {
 	return oldestSlot
 }
 
-func blobRangeRequestFromSidecars(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
+func blobRangeRequestFromSidecars(scs []blocks.ROBlob) interface{} {
 	maxBlobs := fieldparams.MaxBlobsPerBlock
 	count := uint64(len(scs) / maxBlobs)
 	return &ethpb.BlobSidecarsByRangeRequest{
-		StartSlot: scs[0].Slot,
+		StartSlot: scs[0].Slot(),
 		Count:     count,
 	}
 }
 
-func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []*ethpb.DeprecatedBlobSidecar, req interface{}) []*expectedBlobChunk {
+func (c *blobsTestCase) filterExpectedByRange(t *testing.T, scs []blocks.ROBlob, req interface{}) []*expectedBlobChunk {
 	var expect []*expectedBlobChunk
 	blockOffset := 0
-	lastRoot := bytesutil.ToBytes32(scs[0].BlockRoot)
+	lastRoot := scs[0].BlockRoot()
 	rreq, ok := req.(*ethpb.BlobSidecarsByRangeRequest)
 	require.Equal(t, true, ok)
 	var writes uint64
-	for _, sc := range scs {
-		root := bytesutil.ToBytes32(sc.BlockRoot)
+	for i := range scs {
+		sc := scs[i]
+		root := sc.BlockRoot()
 		if root != lastRoot {
 			blockOffset += 1
 		}
 		lastRoot = root
 
-		if sc.Slot < c.oldestSlot(t) {
+		if sc.Slot() < c.oldestSlot(t) {
 			continue
 		}
-		if sc.Slot < rreq.StartSlot || sc.Slot > rreq.StartSlot+types.Slot(rreq.Count)-1 {
+		if sc.Slot() < rreq.StartSlot || sc.Slot() > rreq.StartSlot+types.Slot(rreq.Count)-1 {
 			continue
 		}
 		if writes == params.BeaconNetworkConfig().MaxRequestBlobSidecars {
 			continue
 		}
 		expect = append(expect, &expectedBlobChunk{
-			sidecar: sc,
+			sidecar: &sc,
 			code:    responseCodeSuccess,
 			message: "",
 		})
@@ -107,9 +108,9 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "10 slots before window, 10 slots after, count = 20",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
+			requestFromSidecars: func(scs []blocks.ROBlob) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
-					StartSlot: scs[0].Slot - 10,
+					StartSlot: scs[0].Slot() - 10,
 					Count:     20,
 				}
 			},
@@ -117,9 +118,9 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "request before window, empty response",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
+			requestFromSidecars: func(scs []blocks.ROBlob) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
-					StartSlot: scs[0].Slot - 10,
+					StartSlot: scs[0].Slot() - 10,
 					Count:     10,
 				}
 			},
@@ -128,9 +129,9 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "10 blocks * 4 blobs = 40",
 			nblocks: 10,
-			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
+			requestFromSidecars: func(scs []blocks.ROBlob) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
-					StartSlot: scs[0].Slot - 10,
+					StartSlot: scs[0].Slot() - 10,
 					Count:     20,
 				}
 			},
@@ -139,9 +140,9 @@ func TestBlobByRangeOK(t *testing.T) {
 		{
 			name:    "when request count > MAX_REQUEST_BLOCKS_DENEB, MAX_REQUEST_BLOBS_SIDECARS sidecars in response",
 			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlocksDeneb) + 10,
-			requestFromSidecars: func(scs []*ethpb.DeprecatedBlobSidecar) interface{} {
+			requestFromSidecars: func(scs []blocks.ROBlob) interface{} {
 				return &ethpb.BlobSidecarsByRangeRequest{
-					StartSlot: scs[0].Slot,
+					StartSlot: scs[0].Slot(),
 					Count:     params.BeaconNetworkConfig().MaxRequestBlocksDeneb + 1,
 				}
 			},

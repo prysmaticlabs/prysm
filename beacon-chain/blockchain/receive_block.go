@@ -43,7 +43,7 @@ type BlockReceiver interface {
 // BlobReceiver interface defines the methods of chain service for receiving new
 // blobs
 type BlobReceiver interface {
-	ReceiveBlob(context.Context, *ethpb.DeprecatedBlobSidecar) error
+	ReceiveBlob(context.Context, blocks.VerifiedROBlob) error
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.

@@ -22,7 +22,7 @@ import (
 
 type beaconApiBeaconChainClient struct {
 	fallbackClient          iface.BeaconChainClient
-	jsonRestHandler         jsonRestHandler
+	jsonRestHandler         JsonRestHandler
 	stateValidatorsProvider stateValidatorsProvider
 }
 
@@ -30,8 +30,12 @@ const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
 func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
 	blockHeader := beacon.GetBlockHeaderResponse{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
-		return nil, errors.Wrap(err, "failed to get head block header")
+	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
+	if err != nil {
+		return nil, errors.Wrap(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
@@ -49,8 +53,12 @@ func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.E
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
 	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
-		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
+	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if finalityCheckpoints.Data == nil {
@@ -330,14 +338,12 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
 	resp := &validator.PerformanceResponse{}
-	if _, err := c.jsonRestHandler.PostRestJson(
-		ctx,
-		getValidatorPerformanceEndpoint,
-		nil,
-		bytes.NewBuffer(request),
-		resp,
-	); err != nil {
-		return nil, errors.Wrap(err, "failed to get validator performance")
+	errJson, err := c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
