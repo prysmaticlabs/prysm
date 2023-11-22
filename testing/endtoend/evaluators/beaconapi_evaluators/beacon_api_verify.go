@@ -10,9 +10,10 @@ import (
 // It compares responses from Prysm and other beacon nodes such as Lighthouse.
 // The evaluator is executed on every odd-numbered epoch.
 var BeaconAPIMultiClientVerifyIntegrity = e2etypes.Evaluator{
-	Name:       "beacon_api_multi-client_verify_integrity_epoch_%d",
-	Policy:     policies.EveryNEpochs(1, 2),
-	Evaluation: beaconAPIVerify,
+	Name:        "beacon_api_multi-client_verify_integrity_epoch_%d",
+	SlotInEpoch: 3,
+	Policy:      policies.EveryNEpochs(1, 2),
+	Evaluation:  beaconAPIVerify,
 }
 
 const (
