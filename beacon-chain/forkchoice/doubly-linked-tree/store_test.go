@@ -213,7 +213,7 @@ func TestStore_Prune_ReturnEarly(t *testing.T) {
 	require.Equal(t, nodeCount, f.NodeCount())
 }
 
-// This unit tests starts with a simple branch like this
+// This unit test starts with a simple branch like this
 //
 //   - 1
 //     /
