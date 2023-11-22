@@ -40,11 +40,14 @@ func SubmitValidatorRegistrations(
 		}
 
 		if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &innerSignerRegs); err != nil {
+			lastErr = errors.Wrap(err, "could not submit signed registrations to beacon node")
+
 			if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {
 				log.Warnln("Beacon node does not utilize a custom builder via the --http-mev-relay flag. Validator registration skipped.")
-			}
 
-			lastErr = errors.Wrap(err, "could not submit signed registrations to beacon node")
+				// We stop early the loop here, since if the builder endpoint is not configured for this chunk, it is useless to check the following chunks
+				break
+			}
 		}
 	}
 
@@ -123,11 +126,12 @@ func chunkSignedValidatorRegistrationV1(regs []*ethpb.SignedValidatorRegistratio
 	}
 
 	regsCount := len(regs)
-	carry := regsCount % chunkSize
 
-	chunksCount, lastChunkSize := regsCount/chunkSize, chunkSize
-	if carry != 0 {
-		chunksCount, lastChunkSize = regsCount/chunkSize+1, carry
+	chunksCount := (regsCount + chunkSize - 1) / chunkSize
+	lastChunkSize := regsCount % chunkSize
+
+	if lastChunkSize == 0 {
+		lastChunkSize = chunkSize
 	}
 
 	chunks := make([][]*ethpb.SignedValidatorRegistrationV1, chunksCount)
