@@ -794,11 +794,9 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 
 	registrations := []gateway.PbHandlerRegistration{
 		validatorpb.RegisterAuthHandler,
-		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
-		validatorpb.RegisterSlashingProtectionHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

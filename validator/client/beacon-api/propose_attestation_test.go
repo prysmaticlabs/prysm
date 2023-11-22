@@ -114,7 +114,7 @@ func TestProposeAttestation(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			var marshalledAttestations []byte
 			if checkNilAttestation(test.attestation) == nil {
@@ -125,7 +125,7 @@ func TestProposeAttestation(t *testing.T) {
 
 			ctx := context.Background()
 
-			jsonRestHandler.EXPECT().PostRestJson(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
 				"/eth/v1/beacon/pool/attestations",
 				nil,

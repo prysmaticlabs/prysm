@@ -20,7 +20,7 @@ import (
 func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	bellatrixBlock := generateSignedBellatrixBlock()
 
@@ -74,7 +74,7 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "bellatrix"}
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/beacon/blocks",
 		headers,

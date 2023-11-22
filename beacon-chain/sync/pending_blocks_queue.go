@@ -299,8 +299,10 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
 		req := p2ptypes.BeaconBlockByRootsReq(roots)
-		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
+		currentEpoch := slots.ToEpoch(s.cfg.clock.CurrentSlot())
+		maxReqBlock := params.MaxRequestBlock(currentEpoch)
+		if uint64(len(roots)) > maxReqBlock {
+			req = roots[:maxReqBlock]
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)

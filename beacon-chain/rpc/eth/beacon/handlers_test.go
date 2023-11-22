@@ -2670,6 +2670,7 @@ func TestGetBlockHeaders(t *testing.T) {
 				writer.Body = &bytes.Buffer{}
 
 				bs.GetBlockHeaders(writer, request)
+				require.Equal(t, http.StatusOK, writer.Code)
 				resp := &GetBlockHeadersResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
@@ -2721,6 +2722,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		bs.GetBlockHeaders(writer, request)
+		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetBlockHeadersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
@@ -2764,6 +2766,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
@@ -2777,6 +2780,7 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
@@ -2789,9 +2793,24 @@ func TestGetBlockHeaders(t *testing.T) {
 			writer.Body = &bytes.Buffer{}
 
 			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusOK, writer.Code)
 			resp := &GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
+		})
+		t.Run("no blocks found", func(t *testing.T) {
+			urlWithParams := fmt.Sprintf("%s?parent_root=%s", url, hexutil.Encode(bytes.Repeat([]byte{1}, 32)))
+			request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
+			writer := httptest.NewRecorder()
+
+			writer.Body = &bytes.Buffer{}
+
+			bs.GetBlockHeaders(writer, request)
+			require.Equal(t, http.StatusNotFound, writer.Code)
+			e := &http2.DefaultErrorJson{}
+			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
+			assert.Equal(t, http.StatusNotFound, e.Code)
+			assert.StringContains(t, "No blocks found", e.Message)
 		})
 	})
 }
@@ -3127,24 +3146,4 @@ func TestGetGenesis(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
-}
-
-func TestGetDepositContract(t *testing.T) {
-	params.SetupTestConfigCleanup(t)
-	config := params.BeaconConfig().Copy()
-	config.DepositChainID = uint64(10)
-	config.DepositContractAddress = "0x4242424242424242424242424242424242424242"
-	params.OverrideBeaconConfig(config)
-
-	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/states/{state_id}/finality_checkpoints", nil)
-	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
-
-	s := &Server{}
-	s.GetDepositContract(writer, request)
-	assert.Equal(t, http.StatusOK, writer.Code)
-	response := DepositContractResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
-	assert.Equal(t, "10", response.Data.ChainId)
-	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
 }

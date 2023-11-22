@@ -28,7 +28,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 	}, "")
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	wanted := []*beacon.ValidatorContainer{
 		{
@@ -63,7 +63,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -102,11 +102,11 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	url := "/eth/v1/beacon/states/head/validators?id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -123,7 +123,6 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 		nil,
 	)
 	assert.ErrorContains(t, "an error", err)
-	assert.ErrorContains(t, "failed to get json response", err)
 }
 
 func TestGetStateValidators_DataIsNil(t *testing.T) {
@@ -134,9 +133,9 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 
 	ctx := context.Background()
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
