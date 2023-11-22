@@ -51,11 +51,9 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	var rawIds []string
-	if r.Method == http.MethodGet {
-		rawIds = r.URL.Query()["id"]
-	} else {
-		err = json.NewDecoder(r.Body).Decode(&rawIds)
+	var req GetValidatorsRequest
+	if r.Method == http.MethodPost {
+		err = json.NewDecoder(r.Body).Decode(&req)
 		switch {
 		case err == io.EOF:
 			http2.HandleError(w, "No data submitted", http.StatusBadRequest)
@@ -64,6 +62,13 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			http2.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 			return
 		}
+	}
+
+	var rawIds []string
+	if r.Method == http.MethodGet {
+		rawIds = r.URL.Query()["id"]
+	} else {
+		rawIds = req.Ids
 	}
 
 	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
@@ -88,7 +93,12 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	epoch := slots.ToEpoch(st.Slot())
 	allBalances := st.Balances()
 
-	statuses := r.URL.Query()["status"]
+	var statuses []string
+	if r.Method == http.MethodGet {
+		statuses = r.URL.Query()["status"]
+	} else {
+		statuses = req.Statuses
+	}
 	for i, ss := range statuses {
 		statuses[i] = strings.ToLower(ss)
 	}
