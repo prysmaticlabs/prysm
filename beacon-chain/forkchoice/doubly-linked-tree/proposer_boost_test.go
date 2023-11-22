@@ -156,7 +156,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
 		require.Equal(t, f.store.treeRootNode.weight, uint64(0))
 
-		// Proposer boost score with these tests parameters is 8
+		// Proposer boost score with these test parameters is 8
 		// Each of the nodes received one attestation accounting for 10.
 		// Node D is the only one with a proposer boost still applied:
 		//
