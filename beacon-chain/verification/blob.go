@@ -1,12 +1,15 @@
 package verification
 
 import (
-	"fmt"
+	"context"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/sirupsen/logrus"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,14 +46,30 @@ var GossipSidecarRequirements = []Requirement{
 }
 
 var (
-	ErrBlobInvalid       = errors.New("blob failed verification")
-	ErrBlobIndexInBounds = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
+	ErrBlobInvalid            = errors.New("blob failed verification")
+	ErrBlobIndexInBounds      = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
+	ErrSlotBelowMaxDisparity  = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
+	ErrSlotBelowFinalized     = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
+	ErrSidecarParentSeen      = errors.Wrap(ErrBlobInvalid, "parent root has not been seen")
+	ErrSidecarParentValid     = errors.Wrap(ErrBlobInvalid, "parent block is not valid")
+	ErrSidecarParentSlotLower = errors.Wrap(ErrBlobInvalid, "blob slot <= parent slot")
 )
 
 type BlobVerifier struct {
-	shared  *sharedResources
+	*sharedResources
+	ctx     context.Context
 	results *results
 	blob    blocks.ROBlob
+}
+
+// VerifiedROBlob "upgrades" the wrapped ROBlob to a VerifiedROBlob.
+// If any of the verifications ran against the blob failed, or some required verifications
+// were not run, an error will be returned.
+func (bv *BlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
+	if bv.results.satisfied() {
+		return blocks.NewVerifiedROBlob(bv.blob), nil
+	}
+	return blocks.VerifiedROBlob{}, bv.results.errors(ErrBlobInvalid)
 }
 
 func (bv *BlobVerifier) recordResult(req Requirement, err *error) {
@@ -66,28 +85,89 @@ func (bv *BlobVerifier) recordResult(req Requirement, err *error) {
 func (bv *BlobVerifier) BlobIndexInBounds() (err error) {
 	defer bv.recordResult(RequireBlobIndexInBounds, &err)
 	if bv.blob.Index >= fieldparams.MaxBlobsPerBlock {
-		bv.logWithFields().Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
 		return ErrBlobIndexInBounds
 	}
 	return nil
 }
 
-// VerifiedROBlob "upgrades" the wrapped ROBlob to a VerifiedROBlob.
-// If any of the verifications ran against the blob failed, or some required verifications
-// were not run, an error will be returned.
-func (bv *BlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
-	if bv.results.satisfied() {
-		return blocks.NewVerifiedROBlob(bv.blob), nil
+func (bv *BlobVerifier) SlotBelowMaxDisparity() (err error) {
+	defer bv.recordResult(RequireSlotBelowMaxDisparity, &err)
+	if bv.clock.CurrentSlot() == bv.blob.Slot() {
+		return nil
 	}
-	return blocks.VerifiedROBlob{}, bv.results.errors(ErrBlobInvalid)
+	bt, err := slots.ToTime(uint64(bv.clock.GenesisTime().Second()), bv.blob.Slot())
+	if err != nil {
+		return errors.Wrapf(ErrSlotBelowMaxDisparity, "error computing slot time:%s", err.Error())
+	}
+	if bt.Sub(bv.clock.Now()) > params.BeaconNetworkConfig().MaximumGossipClockDisparity {
+		return ErrSlotBelowMaxDisparity
+	}
+	return nil
 }
 
-func (bv *BlobVerifier) logWithFields() *logrus.Entry {
-	return log.WithFields(logrus.Fields{
-		"slot":          bv.blob.Slot(),
-		"proposerIndex": bv.blob.ProposerIndex(),
-		"blockRoot":     fmt.Sprintf("%#x", bv.blob.BlockRoot()),
-		"kzgCommitment": fmt.Sprintf("%#x", bv.blob.KzgCommitment),
-		"index":         bv.blob.Index,
-	})
+func (bv *BlobVerifier) SlotBelowFinalized() (err error) {
+	defer bv.recordResult(RequireSlotBelowFinalized, &err)
+	fcp := bv.fc.FinalizedCheckpoint()
+	fSlot, err := slots.EpochStart(fcp.Epoch)
+	if err != nil {
+		return errors.Wrapf(ErrSlotBelowFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
+	}
+	if bv.blob.Slot() <= fSlot {
+		return ErrSlotBelowFinalized
+	}
+	return nil
 }
+
+func (bv *BlobVerifier) ValidProposerSignature() (err error) {
+	defer bv.recordResult(RequireValidProposerSignature, &err)
+	blob := bv.blob
+	sig := bytesutil.ToBytes96(blob.SignedBlockHeader.Signature)
+	return bv.sc.VerifySignature(bv.ctx, sig, blob.BlockRoot(), blob.ParentRoot(), blob.ProposerIndex(), blob.Slot())
+}
+
+func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err error) {
+	defer bv.recordResult(RequireSidecarParentSeen, &err)
+	if bv.fc.HasNode(bv.blob.ParentRoot()) {
+		return nil
+	}
+	if badParent != nil && badParent(bv.blob.ParentRoot()) {
+		return nil
+	}
+	return ErrSidecarParentSeen
+}
+
+func (bv *BlobVerifier) SidecareParentValid(badParent func([32]byte) bool) (err error) {
+	defer bv.recordResult(RequireSidecarParentValid, &err)
+	if badParent != nil && badParent(bv.blob.ParentRoot()) {
+		return ErrSidecarParentValid
+	}
+	return nil
+}
+
+func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
+	defer bv.recordResult(RequireSidecarParentSlotLower, &err)
+	parentSlot, err := bv.fc.Slot(bv.blob.ParentRoot())
+	if err != nil {
+		return errors.Wrap(ErrSidecarParentSlotLower, "parent root not in forkchoice")
+	}
+	if parentSlot < bv.blob.Slot() {
+		return nil
+	}
+	return ErrSidecarParentSlotLower
+}
+
+/*
+func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
+	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
+	return nil
+}
+*/
+
+/*
+	RequireSidecarDescendsFromFinalized
+	RequireSidecarInclusionProven
+	RequireSidecarBlobCommitmentProven
+	RequireSidecarFirstSeen
+	RequireSidecarProposerExpected
+*/

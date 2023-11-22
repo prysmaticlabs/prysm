@@ -109,6 +109,16 @@ func Data(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	return container.HashTreeRoot()
 }
 
+// ComputeSigningRootWithRoot works the same as ComputeSigningRoot,
+// except that gets the root from an argument instead of a callback.
+func ComputeSigningRootWithRoot(root [32]byte, domain []byte) ([32]byte, error) {
+	container := &ethpb.SigningData{
+		ObjectRoot: root[:],
+		Domain:     domain,
+	}
+	return container.HashTreeRoot()
+}
+
 // ComputeDomainVerifySigningRoot computes domain and verifies signing root of an object given the beacon state, validator index and signature.
 func ComputeDomainVerifySigningRoot(st state.ReadOnlyBeaconState, index primitives.ValidatorIndex, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, sig []byte) error {
 	v, err := st.ValidatorAtIndex(index)
