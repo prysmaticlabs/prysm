@@ -147,15 +147,3 @@ func logPayload(block interfaces.ReadOnlyBeaconBlock) error {
 	log.WithFields(fields).Debug("Synced new payload")
 	return nil
 }
-
-func logBlobSidecar(scs []*ethpb.DeprecatedBlobSidecar, startTime time.Time) {
-	if len(scs) == 0 {
-		return
-	}
-	log.WithFields(logrus.Fields{
-		"count":          len(scs),
-		"slot":           scs[0].Slot,
-		"block":          hex.EncodeToString(scs[0].BlockRoot),
-		"validationTime": time.Since(startTime),
-	}).Debug("Synced new blob sidecars")
-}

@@ -20,6 +20,7 @@ import (
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -63,6 +64,7 @@ type Service struct {
 	syncComplete         chan struct{}
 	blobNotifiers        *blobNotifierMap
 	blockBeingSynced     *currentlySyncingBlock
+	blobStorage          *filesystem.BlobStorage
 }
 
 // config options for the service.
