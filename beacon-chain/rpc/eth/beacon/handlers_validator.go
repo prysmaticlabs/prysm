@@ -64,11 +64,17 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var statuses []string
 	var rawIds []string
 	if r.Method == http.MethodGet {
 		rawIds = r.URL.Query()["id"]
+		statuses = r.URL.Query()["status"]
 	} else {
 		rawIds = req.Ids
+		statuses = req.Statuses
+	}
+	for i, ss := range statuses {
+		statuses[i] = strings.ToLower(ss)
 	}
 
 	ids, ok := decodeIds(w, st, rawIds, true /* ignore unknown */)
@@ -92,16 +98,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	epoch := slots.ToEpoch(st.Slot())
 	allBalances := st.Balances()
-
-	var statuses []string
-	if r.Method == http.MethodGet {
-		statuses = r.URL.Query()["status"]
-	} else {
-		statuses = req.Statuses
-	}
-	for i, ss := range statuses {
-		statuses[i] = strings.ToLower(ss)
-	}
 
 	// Exit early if no matching validators were found or we don't want to further filter validators by status.
 	if len(readOnlyVals) == 0 || len(statuses) == 0 {
