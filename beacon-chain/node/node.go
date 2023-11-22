@@ -20,6 +20,8 @@ import (
 	apigateway "github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/api"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/api/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -42,8 +44,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -825,7 +825,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
 
 	p2pService := b.fetchP2P()
-	rpcService := rpc.NewService(b.ctx, &rpc.Config{
+	rpcService := api.NewService(b.ctx, &api.Config{
 		ExecutionEngineCaller:         web3Service,
 		ExecutionPayloadReconstructor: web3Service,
 		Host:                          host,

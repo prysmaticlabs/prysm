@@ -11,7 +11,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/grpc-api",
     visibility = ["//validator:__subpackages__"],
     deps = [
-        "//beacon-chain/rpc/eth/helpers:go_default_library",
+        "//beacon-chain/api/eth/helpers:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//consensus-types/validator:go_default_library",

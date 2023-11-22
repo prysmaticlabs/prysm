@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/api/eth/node"
+	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/api/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"

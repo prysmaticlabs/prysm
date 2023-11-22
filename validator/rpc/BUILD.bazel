@@ -23,7 +23,7 @@ go_library(
         "//api/grpc:go_default_library",
         "//api/pagination:go_default_library",
         "//async/event:go_default_library",
-        "//beacon-chain/rpc/eth/shared:go_default_library",
+        "//beacon-chain/api/eth/shared:go_default_library",
         "//cmd:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",

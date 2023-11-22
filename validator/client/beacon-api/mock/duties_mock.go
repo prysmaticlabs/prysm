@@ -9,8 +9,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	shared "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	shared "github.com/prysmaticlabs/prysm/v4/beacon-chain/api/eth/shared"
+	validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/api/eth/validator"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
