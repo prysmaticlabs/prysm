@@ -69,7 +69,6 @@ go_test(
         "handlers_test.go",
         "handlers_validators_test.go",
         "init_test.go",
-        "server_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
@@ -108,7 +107,6 @@ go_test(
         "//encoding/bytesutil:go_default_library",
         "//encoding/ssz:go_default_library",
         "//network/http:go_default_library",
-        "//proto/eth/service:go_default_library",
         "//proto/migration:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//runtime/version:go_default_library",
