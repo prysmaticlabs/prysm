@@ -46,9 +46,6 @@ const (
 // blindBlobsBundle holds the KZG commitments and other relevant sidecar data for a builder's beacon block.
 var blindBlobsBundle *enginev1.BlindedBlobsBundle
 
-// fullBlobsBundle holds the KZG commitments and other relevant sidecar data for a local beacon block.
-var fullBlobsBundle *enginev1.BlobsBundle
-
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
 func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
@@ -134,34 +131,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}).Info("Finished building block")
 
 	return vs.constructGenericBeaconBlock(sBlk, blindBlobs)
-}
-
-// buildBlobSidecars given a block, builds the blob sidecars for the block.
-func buildBlobSidecars(blk interfaces.SignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
-	if blk.Version() < version.Deneb {
-		return nil, nil // No blobs before deneb.
-	}
-	blobSidecars := make([]*ethpb.BlobSidecar, len(fullBlobsBundle.KzgCommitments))
-	header, err := blk.Header()
-	if err != nil {
-		return nil, err
-	}
-	body := blk.Block().Body()
-	for i := range blobSidecars {
-		proof, err := blocks.MerkleProofKZGCommitment(body, i)
-		if err != nil {
-			return nil, err
-		}
-		blobSidecars[i] = &ethpb.BlobSidecar{
-			Index:                    uint64(i),
-			Blob:                     fullBlobsBundle.Blobs[i],
-			KzgCommitment:            fullBlobsBundle.KzgCommitments[i],
-			KzgProof:                 fullBlobsBundle.Proofs[i],
-			SignedBlockHeader:        header,
-			CommitmentInclusionProof: proof,
-		}
-	}
-	return blobSidecars, nil
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
@@ -252,7 +221,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}
 	blinded := unblinder.b.IsBlinded() //
 
-	blk, unblindedSidecars, err := unblinder.unblindBuilderBlock(ctx)
+	blk, _, err = unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -266,30 +235,31 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 
-	var scs []*ethpb.SignedBlobSidecar
-	if blk.Version() >= version.Deneb {
-		if blinded {
-			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
-		}
-		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
-		for i, sc := range scs {
-			log.WithFields(logrus.Fields{
-				"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),
-				"index":     sc.Message.Index,
-			}).Debug("Broadcasting blob sidecar")
-			if err := vs.P2P.BroadcastBlob(ctx, sc.Message.Index, sc); err != nil {
-				log.WithError(err).Errorf("Could not broadcast blob sidecar index %d / %d", i, len(scs))
-			}
-			sidecars[i] = sc.Message
-		}
-		// TODO: Broadcast the new object
-		// TODO: Save blob sidecars to the DB
-	}
-
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
+	if blk.Version() >= version.Deneb {
+		if blinded {
+			// TODO: Handle blobs from the builder
+		}
+
+		scs, err := buildBlobSidecars(blk)
+		if err != nil {
+			return nil, fmt.Errorf("could not build blob sidecars: %v", err)
+		}
+		for _, sc := range scs {
+			readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
+			if err != nil {
+				return nil, fmt.Errorf("could not create ROBlob: %v", err)
+			}
+			verifiedSc := blocks.NewVerifiedROBlob(readOnlySc)
+			if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedSc); err != nil {
+				log.WithError(err).Error("Could not receive blob")
+			}
+		}
+	}
+
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")

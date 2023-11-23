@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -171,7 +172,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 112, len(data))
+	assert.Equal(t, 113, len(data))
 	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":
@@ -414,6 +415,8 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "160", v)
 		case "MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT":
 			assert.Equal(t, "8", v)
+		case "MAX_REQUEST_LIGHT_CLIENT_UPDATES":
+			assert.Equal(t, "128", v)
 		case "SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY":
 		default:
 			t.Errorf("Incorrect key: %s", k)

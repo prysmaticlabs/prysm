@@ -481,21 +481,24 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 func TestBlobValidatorFromRootReq(t *testing.T) {
 	validRoot := bytesutil.PadTo([]byte("valid"), 32)
 	invalidRoot := bytesutil.PadTo([]byte("invalid"), 32)
+	header := &ethpb.SignedBeaconBlockHeader{}
+	validb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(validRoot), header, 0, []byte{})
+	invalidb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(invalidRoot), header, 0, []byte{})
 	cases := []struct {
 		name     string
 		ids      []*ethpb.BlobIdentifier
-		response []*ethpb.DeprecatedBlobSidecar
+		response []blocks.ROBlob
 		err      error
 	}{
 		{
 			name:     "valid",
 			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: validRoot}},
+			response: []blocks.ROBlob{validb},
 		},
 		{
 			name:     "invalid",
 			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: invalidRoot}},
+			response: []blocks.ROBlob{invalidb},
 			err:      errUnrequestedRoot,
 		},
 	}
@@ -517,10 +520,10 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 
 func TestBlobValidatorFromRangeReq(t *testing.T) {
 	cases := []struct {
-		name     string
-		req      *ethpb.BlobSidecarsByRangeRequest
-		response []*ethpb.DeprecatedBlobSidecar
-		err      error
+		name         string
+		req          *ethpb.BlobSidecarsByRangeRequest
+		responseSlot primitives.Slot
+		err          error
 	}{
 		{
 			name: "valid - count multi",
@@ -528,7 +531,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 14}},
+			responseSlot: 14,
 		},
 		{
 			name: "valid - count 1",
@@ -536,7 +539,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 10}},
+			responseSlot: 10,
 		},
 		{
 			name: "invalid - before",
@@ -544,8 +547,8 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 9}},
-			err:      errBlobResponseOutOfBounds,
+			responseSlot: 9,
+			err:          errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, count 1",
@@ -553,8 +556,8 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     1,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 11}},
-			err:      errBlobResponseOutOfBounds,
+			responseSlot: 11,
+			err:          errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, multi",
@@ -562,8 +565,8 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 23}},
-			err:      errBlobResponseOutOfBounds,
+			responseSlot: 23,
+			err:          errBlobResponseOutOfBounds,
 		},
 		{
 			name: "invalid - after, at boundary, multi",
@@ -571,21 +574,23 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 				StartSlot: 10,
 				Count:     10,
 			},
-			response: []*ethpb.DeprecatedBlobSidecar{{Slot: 20}},
-			err:      errBlobResponseOutOfBounds,
+			responseSlot: 20,
+			err:          errBlobResponseOutOfBounds,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			vf := blobValidatorFromRangeReq(c.req)
-			for _, sc := range c.response {
-				err := vf(sc)
-				if c.err != nil {
-					require.ErrorIs(t, err, c.err)
-					return
-				}
-				require.NoError(t, err)
+			header := &ethpb.SignedBeaconBlockHeader{
+				Header: &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
 			}
+			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{})
+			err := vf(sc)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
 		})
 	}
 }

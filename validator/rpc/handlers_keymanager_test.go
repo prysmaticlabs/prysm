@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
@@ -411,12 +410,17 @@ func TestServer_DeleteKeystores(t *testing.T) {
 	// JSON encode the protection JSON and save it.
 	encoded, err := json.Marshal(mockJSON)
 	require.NoError(t, err)
-
-	_, err = srv.ImportSlashingProtection(ctx, &validatorpb.ImportSlashingProtectionRequest{
+	request := &ImportSlashingProtectionRequest{
 		SlashingProtectionJson: string(encoded),
-	})
+	}
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
 	require.NoError(t, err)
 
+	req := httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
+	wr := httptest.NewRecorder()
+	srv.ImportSlashingProtection(wr, req)
+	require.Equal(t, http.StatusOK, wr.Code)
 	t.Run("no slashing protection response if no keys in request even if we have a history in DB", func(t *testing.T) {
 		request := &DeleteKeystoresRequest{
 			Pubkeys: nil,

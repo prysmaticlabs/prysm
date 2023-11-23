@@ -14,6 +14,7 @@ import (
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -41,6 +42,7 @@ type Config struct {
 	BlockNotifier       blockfeed.Notifier
 	ClockWaiter         startup.ClockWaiter
 	InitialSyncComplete chan struct{}
+	BlobStorage         *filesystem.BlobStorage
 }
 
 // Service service.

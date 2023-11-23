@@ -55,12 +55,12 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStat
 
 	stateForkResponseJson := &beacon.GetStateForkResponse{}
 
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(
-		ctx,
-		endpoint,
-		stateForkResponseJson,
-	); err != nil {
-		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
+	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, stateForkResponseJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return stateForkResponseJson, nil
@@ -71,12 +71,12 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetB
 
 	blockHeadersResponseJson := &beacon.GetBlockHeadersResponse{}
 
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(
-		ctx,
-		endpoint,
-		blockHeadersResponseJson,
-	); err != nil {
-		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
+	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, blockHeadersResponseJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return blockHeadersResponseJson, nil
@@ -93,8 +93,12 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 		return nil, errors.Wrapf(err, "failed to marshal validator indexes")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson); err != nil {
-		return nil, errors.Wrapf(err, "failed to send POST data to `%s` REST URL", url)
+	errJson, err := c.jsonRestHandler.Post(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return livenessResponseJson, nil
@@ -105,12 +109,12 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncSt
 
 	syncingResponseJson := &node.SyncStatusResponse{}
 
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(
-		ctx,
-		endpoint,
-		syncingResponseJson,
-	); err != nil {
-		return nil, errors.Wrapf(err, "failed to get json response from `%s` REST endpoint", endpoint)
+	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, syncingResponseJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return syncingResponseJson, nil

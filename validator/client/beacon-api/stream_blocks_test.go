@@ -26,8 +26,8 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		gomock.Any(),
 		&abstractSignedBlockResponseJson{},
@@ -149,8 +149,8 @@ func TestStreamBlocks_Error(t *testing.T) {
 
 					ctx := context.Background()
 
-					jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-					jsonRestHandler.EXPECT().GetRestJsonResponse(
+					jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+					jsonRestHandler.EXPECT().Get(
 						ctx,
 						gomock.Any(),
 						&abstractSignedBlockResponseJson{},
@@ -201,7 +201,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -216,7 +216,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -254,7 +254,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -282,7 +282,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
@@ -365,7 +365,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -380,7 +380,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -418,7 +418,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -446,7 +446,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
@@ -529,7 +529,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -544,7 +544,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -582,7 +582,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -610,7 +610,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
@@ -693,7 +693,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -708,7 +708,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -746,7 +746,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -774,7 +774,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
@@ -857,7 +857,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
@@ -872,7 +872,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(denebBlock)
 			require.NoError(t, err)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -902,7 +902,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(denebBlock2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
@@ -920,7 +920,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,

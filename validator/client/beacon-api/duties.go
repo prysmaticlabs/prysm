@@ -25,7 +25,7 @@ type dutiesProvider interface {
 }
 
 type beaconApiDutiesProvider struct {
-	jsonRestHandler jsonRestHandler
+	jsonRestHandler JsonRestHandler
 }
 
 type committeeIndexSlotPair struct {
@@ -207,8 +207,12 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
 
 	var stateCommittees beacon.GetCommitteesResponse
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, committeesRequest, &stateCommittees); err != nil {
-		return nil, errors.Wrapf(err, "failed to query committees for epoch `%d`", epoch)
+	errJson, err := c.jsonRestHandler.Get(ctx, committeesRequest, &stateCommittees)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if stateCommittees.Data == nil {
@@ -237,8 +241,18 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 	}
 
 	attesterDuties := &validator.GetAttesterDutiesResponse{}
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), attesterDuties); err != nil {
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+	errJson, err := c.jsonRestHandler.Post(
+		ctx,
+		fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch),
+		nil,
+		bytes.NewBuffer(validatorIndicesBytes),
+		attesterDuties,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	for index, attesterDuty := range attesterDuties.Data {
@@ -253,8 +267,12 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 // GetProposerDuties retrieves the proposer duties for the given epoch
 func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
 	proposerDuties := validator.GetProposerDutiesResponse{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
-		return nil, errors.Wrapf(err, "failed to query proposer duties for epoch `%d`", epoch)
+	errJson, err := c.jsonRestHandler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if proposerDuties.Data == nil {
@@ -283,8 +301,18 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primit
 	}
 
 	syncDuties := validator.GetSyncCommitteeDutiesResponse{}
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch), nil, bytes.NewBuffer(validatorIndicesBytes), &syncDuties); err != nil {
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+	errJson, err := c.jsonRestHandler.Post(
+		ctx,
+		fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch),
+		nil,
+		bytes.NewBuffer(validatorIndicesBytes),
+		&syncDuties,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if syncDuties.Data == nil {

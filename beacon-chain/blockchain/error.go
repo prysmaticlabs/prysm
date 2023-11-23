@@ -30,6 +30,8 @@ var (
 	ErrNotCheckpoint = errors.New("not a checkpoint in forkchoice")
 )
 
+var errMaxBlobsExceeded = errors.New("Expected commitments in block exceeds MAX_BLOBS_PER_BLOCK")
+
 // An invalid block is the block that fails state transition based on the core protocol rules.
 // The beacon node shall not be accepting nor building blocks that branch off from an invalid block.
 // Some examples of invalid blocks are:

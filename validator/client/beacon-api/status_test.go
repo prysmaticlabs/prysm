@@ -54,7 +54,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmBeaconChainCLient: prysmBeaconChainClient{
@@ -66,7 +66,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse node.GetVersionResponse
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
@@ -170,11 +170,11 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse node.GetVersionResponse
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
@@ -332,11 +332,11 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse node.GetVersionResponse
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
@@ -349,7 +349,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 	).Times(1)
 
 	var validatorCountResponse validator2.CountResponse
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		"/eth/v1/beacon/states/head/validator_count?",
 		&validatorCountResponse,
@@ -482,11 +482,11 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		nil,
 	).Times(1)
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	// Expect node version endpoint call.
 	var nodeVersionResponse node.GetVersionResponse
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
@@ -722,11 +722,11 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					testCase.inputGetStateValidatorsInterface.outputErr,
 				).Times(1)
 
-				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 				// Expect node version endpoint call.
 				var nodeVersionResponse node.GetVersionResponse
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v1/node/version",
 					&nodeVersionResponse,

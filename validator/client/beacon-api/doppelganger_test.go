@@ -292,14 +292,14 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := node.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
@@ -315,7 +315,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := beacon.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
@@ -331,7 +331,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			if testCase.getHeadersOutput != nil {
 				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
@@ -351,7 +351,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,
@@ -732,14 +732,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := node.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
@@ -755,7 +755,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := beacon.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
@@ -771,7 +771,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			if testCase.getHeadersOutput != nil {
 				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
@@ -805,7 +805,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,

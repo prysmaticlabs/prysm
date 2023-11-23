@@ -29,7 +29,7 @@ func NewPrysmBeaconChainClient(host string, timeout time.Duration, nodeClient if
 }
 
 type prysmBeaconChainClient struct {
-	jsonRestHandler jsonRestHandler
+	jsonRestHandler JsonRestHandler
 	nodeClient      iface.NodeClient
 }
 
@@ -52,8 +52,12 @@ func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID s
 	queryUrl := buildURL(fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count", stateID), queryParams)
 
 	var validatorCountResponse validator.CountResponse
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &validatorCountResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	errJson, err := c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	if validatorCountResponse.Data == nil {
