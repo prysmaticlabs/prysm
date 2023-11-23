@@ -134,6 +134,7 @@ var appFlags = []cli.Flag{
 	genesis.StatePath,
 	genesis.BeaconAPIURL,
 	flags.SlasherDirFlag,
+	flags.JwtId,
 }
 
 func init() {
