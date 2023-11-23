@@ -76,6 +76,11 @@ type GetBlockHeaderResponse struct {
 	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
 }
 
+type GetValidatorsRequest struct {
+	Ids      []string `json:"ids"`
+	Statuses []string `json:"statuses"`
+}
+
 type GetValidatorsResponse struct {
 	ExecutionOptimistic bool                  `json:"execution_optimistic"`
 	Finalized           bool                  `json:"finalized"`
