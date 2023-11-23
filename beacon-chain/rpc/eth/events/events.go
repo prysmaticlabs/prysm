@@ -61,8 +61,8 @@ var casesHandled = map[string]bool{
 	BlobSidecarTopic:               true,
 }
 
-// StreamEvents provides endpoint to subscribe to beacon node Server-Sent-Events stream.
-// Consumers should use eventsource implementation to listen on those events.
+// StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.
+// Consumers should use the eventsource implementation to listen for those events.
 // Servers may send SSE comments beginning with ':' for any purpose,
 // including to keep the event stream connection alive in the presence of proxy servers.
 func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
