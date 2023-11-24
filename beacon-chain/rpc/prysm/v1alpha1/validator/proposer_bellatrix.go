@@ -71,6 +71,11 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 			log.WithError(err).Warn("Proposer: failed to get builder payload value") // Default to local if can't get builder value.
 			return setLocalExecution(blk, localPayload)
 		}
+		// Check that the builder has built on top of the right block
+		if [32]byte(builderPayload.ParentHash()) != [32]byte(localPayload.ParentHash()) {
+			log.Warn("Proposer: builder's payload has the wrong parent hash, using local block.") // Default to local if can't get builder value.
+			return setLocalExecution(blk, localPayload)
+		}
 
 		withdrawalsMatched, err := matchingWithdrawalsRoot(localPayload, builderPayload)
 		if err != nil {
