@@ -17,8 +17,6 @@ import (
 
 // GetWeakSubjectivity computes the starting epoch of the current weak subjectivity period, and then also
 // determines the best block root and state root to use for a Checkpoint Sync starting from that point.
-//
-// DEPRECATED: GetWeakSubjectivity endpoint will no longer be supported
 func (s *Server) GetWeakSubjectivity(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetWeakSubjectivity")
 	defer span.End()
