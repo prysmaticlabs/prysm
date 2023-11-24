@@ -600,9 +600,6 @@ func (r *testRunner) executeProvidedEvaluators(ec *e2etypes.EvaluationContext, c
 		}
 		wg.Add(1)
 		go r.t.Run(fmt.Sprintf(evaluator.Name, currentEpoch), func(t *testing.T) {
-			if evaluator.SlotInEpoch != 0 {
-				time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-			}
 			err := evaluator.Evaluation(ec, conns...)
 			assert.NoError(t, err, "Evaluation failed for epoch %d: %v", currentEpoch, err)
 			wg.Done()

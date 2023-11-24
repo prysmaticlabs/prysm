@@ -91,10 +91,8 @@ func GenesisFork() int {
 // Evaluator defines the structure of the evaluators used to
 // conduct the current beacon state during the E2E.
 type Evaluator struct {
-	Name string
-	// SlotInEpoch defines the slot at which the evaluator will be executed.
-	SlotInEpoch primitives.Slot
-	Policy      func(currentEpoch primitives.Epoch) bool
+	Name   string
+	Policy func(currentEpoch primitives.Epoch) bool
 	// Evaluation accepts one or many/all conns, depending on what is needed by the set of evaluators.
 	Evaluation func(ec *EvaluationContext, conn ...*grpc.ClientConn) error
 }
