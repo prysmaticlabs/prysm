@@ -530,3 +530,10 @@ func (s *Service) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (
 func (s *Service) BlockBeingSynced(root [32]byte) bool {
 	return s.blockBeingSynced.isSyncing(root)
 }
+
+// RecentBlockSlot returns block slot form fork choice store
+func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.Slot(root)
+}

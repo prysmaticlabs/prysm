@@ -258,11 +258,6 @@ func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
 }
 
-// RecentBlockSlot returns block slot form fork choice store
-func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
-	return s.cfg.ForkChoiceStore.Slot(root)
-}
-
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice
 func (s *Service) ReceiveAttesterSlashing(ctx context.Context, slashing *ethpb.AttesterSlashing) {
 	s.cfg.ForkChoiceStore.Lock()

@@ -61,7 +61,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 }
 
 // insert registers a new block node to the fork choice store's node list.
-// It then updates the new node's parent with best child and descendant node.
+// It then updates the new node's parent with the best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot primitives.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,

@@ -43,7 +43,7 @@ func (m *MockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ uin
 }
 
 // BroadcastBlob broadcasts a blob for mock.
-func (m *MockBroadcaster) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
+func (m *MockBroadcaster) BroadcastBlob(context.Context, uint64, *ethpb.BlobSidecar) error {
 	m.BroadcastCalled.Store(true)
 	return nil
 }
