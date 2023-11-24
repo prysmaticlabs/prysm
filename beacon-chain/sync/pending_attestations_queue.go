@@ -154,7 +154,7 @@ func (s *Service) processAttestations(ctx context.Context, attestations []*ethpb
 					continue
 				}
 				// Broadcasting the signed attestation again once a node is able to process it.
-				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate); err != nil {
+				if err := s.cfg.p2p.BroadcastAttestation(ctx, helpers.ComputeSubnetForAttestation(valCount, signedAtt.Message.Aggregate), signedAtt.Message.Aggregate, false); err != nil {
 					log.WithError(err).Debug("Could not broadcast")
 				}
 			}

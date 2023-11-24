@@ -54,7 +54,7 @@ func (s *Service) Broadcast(ctx context.Context, msg proto.Message) error {
 
 // BroadcastAttestation broadcasts an attestation to the p2p network, the message is assumed to be
 // broadcasted to the current fork.
-func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation) error {
+func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, localAttestation bool) error {
 	if att == nil {
 		return errors.New("attempted to broadcast nil attestation")
 	}
@@ -68,7 +68,7 @@ func (s *Service) BroadcastAttestation(ctx context.Context, subnet uint64, att *
 	}
 
 	// Non-blocking broadcast, with attempts to discover a subnet peer if none available.
-	go s.broadcastAttestation(ctx, subnet, att, forkDigest)
+	go s.broadcastAttestation(ctx, subnet, att, forkDigest, localAttestation)
 
 	return nil
 }
@@ -94,7 +94,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 	return nil
 }
 
-func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
+func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte, localAttestation bool) {
 	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
@@ -139,6 +139,18 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 	if att.Data.Slot+params.BeaconConfig().SlotsPerEpoch < currSlot {
 		log.Warnf("Attestation is too old to broadcast, discarding it. Current Slot: %d , Attestation Slot: %d", currSlot, att.Data.Slot)
 		return
+	}
+
+	if localAttestation {
+		peers := s.pubsub.ListPeers(attestationToTopic(subnet, forkDigest) + s.Encoding().ProtocolSuffix())
+		for _, p := range peers {
+			rawAgent, err := s.host.Peerstore().Get(p, "AgentVersion")
+			agent, ok := rawAgent.(string)
+			if err != nil || !ok {
+				agent = "unknown"
+			}
+			log.Infof("Broadcasting attestation to peer with id %s and agent %s", p.String(), agent)
+		}
 	}
 
 	if err := s.broadcastObject(ctx, att, attestationToTopic(subnet, forkDigest)); err != nil {

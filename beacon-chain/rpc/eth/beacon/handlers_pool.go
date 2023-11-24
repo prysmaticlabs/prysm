@@ -141,7 +141,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 		}
 		subnet := corehelpers.ComputeSubnetFromCommitteeAndSlot(uint64(len(vals)), att.Data.CommitteeIndex, att.Data.Slot)
 
-		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att); err != nil {
+		if err = s.Broadcaster.BroadcastAttestation(ctx, subnet, att, true); err != nil {
 			log.WithError(err).Errorf("could not broadcast attestation at index %d", i)
 		}
 
