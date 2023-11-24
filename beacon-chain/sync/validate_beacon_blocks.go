@@ -204,7 +204,8 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Log the arrival time of the accepted block
 	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
 	if err != nil {
-		return pubsub.ValidationIgnore, err
+		// return without logging
+		return pubsub.ValidationAccept, nil
 	}
 	graffiti := blk.Block().Body().Graffiti()
 
