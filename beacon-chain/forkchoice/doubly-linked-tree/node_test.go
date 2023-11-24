@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -86,7 +86,7 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -99,7 +99,7 @@ func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -119,7 +119,7 @@ func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -237,7 +237,7 @@ func TestNode_SetFullyValidated(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, opt)
 
-	respNodes := make([]*v1.ForkChoiceNode, 0)
+	respNodes := make([]*forkchoice.Node, 0)
 	respNodes, err = f.store.treeRootNode.nodeTreeDump(ctx, respNodes)
 	require.NoError(t, err)
 	require.Equal(t, len(respNodes), f.NodeCount())

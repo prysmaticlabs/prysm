@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
@@ -34,11 +35,13 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/trailofbits/go-mutexasserts"
 )
 
 var _ runtime.Service = (*Service)(nil)
@@ -89,6 +92,7 @@ type config struct {
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
 	stateNotifier                 statefeed.Notifier
+	blobStorage                   *filesystem.BlobStorage
 }
 
 // This defines the interface for interacting with block chain service
@@ -147,12 +151,11 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
-	pendingBlobSidecars              *pendingBlobSidecars
 }
 
 // NewService initializes new regular sync service.
 func NewService(ctx context.Context, opts ...Option) *Service {
-	c := gcache.New(pendingBlockExpTime /* exp time */, 2*pendingBlockExpTime /* prune time */)
+	c := gcache.New(pendingBlockExpTime /* exp time */, 0 /* disable janitor */)
 	ctx, cancel := context.WithCancel(ctx)
 	r := &Service{
 		ctx:                  ctx,
@@ -163,13 +166,34 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 		seenPendingBlocks:    make(map[[32]byte]bool),
 		blkRootToPendingAtts: make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
 		signatureChan:        make(chan *signatureVerifier, verifierLimit),
-		pendingBlobSidecars:  newPendingBlobSidecars(),
 	}
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil
 		}
 	}
+	// Correctly remove it from our seen pending block map.
+	// The eviction method always assumes that the mutex is held.
+	r.slotToPendingBlocks.OnEvicted(func(s string, i interface{}) {
+		if !mutexasserts.RWMutexLocked(&r.pendingQueueLock) {
+			log.Errorf("Mutex is not locked during cache eviction of values")
+			// Continue on to allow elements to be properly removed.
+		}
+		blks, ok := i.([]interfaces.ReadOnlySignedBeaconBlock)
+		if !ok {
+			log.Errorf("Invalid type retrieved from the cache: %T", i)
+			return
+		}
+
+		for _, b := range blks {
+			root, err := b.Block().HashTreeRoot()
+			if err != nil {
+				log.WithError(err).Error("Could not calculate htr of block")
+				continue
+			}
+			delete(r.seenPendingBlocks, root)
+		}
+	})
 	r.subHandler = newSubTopicHandler()
 	r.rateLimiter = newRateLimiter(r.cfg.p2p)
 	r.initCaches()
@@ -190,7 +214,6 @@ func (s *Service) Start() {
 	s.cfg.p2p.AddPingMethod(s.sendPingRequest)
 	s.processPendingBlocksQueue()
 	s.processPendingAttsQueue()
-	s.processPendingBlobs()
 	s.maintainPeerStatuses()
 	s.resyncIfBehind()
 

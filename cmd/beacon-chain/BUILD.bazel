@@ -24,6 +24,7 @@ go_library(
         "//cmd/beacon-chain/execution:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
         "//cmd/beacon-chain/jwt:go_default_library",
+        "//cmd/beacon-chain/storage:go_default_library",
         "//cmd/beacon-chain/sync/checkpoint:go_default_library",
         "//cmd/beacon-chain/sync/genesis:go_default_library",
         "//config/features:go_default_library",
@@ -110,6 +111,10 @@ docker_push(
 go_binary(
     name = "beacon-chain",
     embed = [":go_default_library"],
+    pgoprofile = select({
+        "//:pgo_enabled": "pprof.beacon-chain.samples.cpu.pb.gz",
+        "//conditions:default": None,
+    }),
     visibility = [
         "//beacon-chain:__subpackages__",
         "//testing/endtoend:__pkg__",

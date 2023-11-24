@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -23,10 +24,13 @@ import (
 
 type mockBeaconNode struct {
 	stateFeed *event.Feed
+	mu        sync.Mutex
 }
 
 // StateFeed mocks the same method in the beacon node.
 func (mbn *mockBeaconNode) StateFeed() *event.Feed {
+	mbn.mu.Lock()
+	defer mbn.mu.Unlock()
 	if mbn.stateFeed == nil {
 		mbn.stateFeed = new(event.Feed)
 	}
@@ -52,7 +56,7 @@ func (mb *mockBroadcaster) BroadcastSyncCommitteeMessage(_ context.Context, _ ui
 	return nil
 }
 
-func (mb *mockBroadcaster) BroadcastBlob(_ context.Context, _ uint64, _ *ethpb.SignedBlobSidecar) error {
+func (mb *mockBroadcaster) BroadcastBlob(_ context.Context, _ uint64, _ *ethpb.BlobSidecar) error {
 	mb.broadcastCalled = true
 	return nil
 }

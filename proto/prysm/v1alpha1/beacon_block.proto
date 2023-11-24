@@ -468,7 +468,7 @@ message SignedBeaconBlockDeneb {
 
 message BeaconBlockAndBlobsDeneb {
     BeaconBlockDeneb block = 1;
-    repeated BlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
+    repeated DeprecatedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BeaconBlockDeneb {
@@ -777,3 +777,11 @@ message SignedBuilderBidDeneb {
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
 }
 
+message BlobSidecar {
+    uint64 index = 1;
+    bytes blob = 2 [(ethereum.eth.ext.ssz_size) = "blob.size"];
+    bytes kzg_commitment = 3 [(ethereum.eth.ext.ssz_size) = "48"];
+    bytes kzg_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
+    SignedBeaconBlockHeader signed_block_header = 5;
+    repeated bytes commitment_inclusion_proof = 6  [(ethereum.eth.ext.ssz_size) = "kzg_commitment_inclusion_proof_depth.size,32"];
+}

@@ -14,7 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
-	"github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
@@ -28,8 +27,8 @@ func getValidatorHappyPathTestServer(t *testing.T) *httptest.Server {
 		w.Header().Set("Content-Type", "application/json")
 		if r.Method == http.MethodGet {
 			if r.RequestURI == "/eth/v1/keystores" {
-				err := json.NewEncoder(w).Encode(&apimiddleware.ListKeystoresResponseJson{
-					Keystores: []*apimiddleware.KeystoreJson{
+				err := json.NewEncoder(w).Encode(&rpc.ListKeystoresResponse{
+					Data: []*rpc.Keystore{
 						{
 							ValidatingPubkey: key1,
 						},
@@ -57,8 +56,8 @@ func getValidatorHappyPathTestServer(t *testing.T) *httptest.Server {
 				}
 				address, ok := feeMap[validatorKey]
 				require.Equal(t, ok, true)
-				err := json.NewEncoder(w).Encode(&apimiddleware.GetFeeRecipientByPubkeyResponseJson{
-					Data: &apimiddleware.FeeRecipientJson{
+				err := json.NewEncoder(w).Encode(&rpc.GetFeeRecipientByPubkeyResponse{
+					Data: &rpc.FeeRecipient{
 						Pubkey:     validatorKey,
 						Ethaddress: address,
 					},

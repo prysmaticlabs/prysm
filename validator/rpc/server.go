@@ -13,10 +13,10 @@ import (
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/io/logs"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
@@ -102,7 +102,7 @@ type Server struct {
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Server{
+	server := &Server{
 		ctx:                      ctx,
 		cancel:                   cancel,
 		logsStreamer:             logs.NewStreamServer(),
@@ -132,6 +132,11 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		validatorGatewayPort:     cfg.ValidatorGatewayPort,
 		router:                   cfg.Router,
 	}
+	// immediately register routes to override any catchalls
+	if err := server.InitializeRoutes(); err != nil {
+		log.WithError(err).Fatal("Could not initialize routes")
+	}
+	return server
 }
 
 // Start the gRPC server.
@@ -179,17 +184,8 @@ func (s *Server) Start() {
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
 	validatorpb.RegisterAuthServer(s.grpcServer, s)
-	validatorpb.RegisterWalletServer(s.grpcServer, s)
-	validatorpb.RegisterHealthServer(s.grpcServer, s)
 	validatorpb.RegisterBeaconServer(s.grpcServer, s)
 	validatorpb.RegisterAccountsServer(s.grpcServer, s)
-	ethpbservice.RegisterKeyManagementServer(s.grpcServer, s)
-	validatorpb.RegisterSlashingProtectionServer(s.grpcServer, s)
-
-	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
-	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
-	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)
-	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
 
 	// routes needs to be set before the server calls the server function
 	go func() {
@@ -212,6 +208,43 @@ func (s *Server) Start() {
 		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
+}
+
+// InitializeRoutes initializes pure HTTP REST endpoints for the validator client.
+// needs to be called before the Serve function
+func (s *Server) InitializeRoutes() error {
+	if s.router == nil {
+		return errors.New("no router found on server")
+	}
+	// Register all services, HandleFunc calls, etc.
+	// ...
+	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/keystores", s.ImportKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/keystores", s.DeleteKeystores).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ListRemoteKeys).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.ImportRemoteKeys).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/remotekeys", s.DeleteRemoteKeys).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/gas_limit", s.GetGasLimit).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/gas_limit", s.SetGasLimit).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/gas_limit", s.DeleteGasLimit).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.ListFeeRecipientByPubkey).Methods(http.MethodGet)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
+	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	// web health endpoints
+	s.router.HandleFunc("/v2/validator/health/version", s.GetVersion).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/health/logs/validator/stream", s.StreamValidatorLogs).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/health/logs/beacon/stream", s.StreamBeaconLogs).Methods(http.MethodGet)
+	// web wallet endpoints
+	s.router.HandleFunc("/v2/validator/wallet", s.WalletConfig).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/wallet/create", s.CreateWallet).Methods(http.MethodPost)
+	s.router.HandleFunc("/v2/validator/wallet/keystores/validate", s.ValidateKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc("/v2/validator/wallet/recover", s.RecoverWallet).Methods(http.MethodPost)
+	// slashing protection endpoints
+	s.router.HandleFunc("/v2/validator/slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
+	s.router.HandleFunc("/v2/validator/slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
+	log.Info("Initialized REST API routes")
+	return nil
 }
 
 // Stop the gRPC server.

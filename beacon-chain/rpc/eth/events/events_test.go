@@ -242,7 +242,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 		commitment, err := hexutil.Decode("0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000")
 		require.NoError(t, err)
 		wantedBlobV1alpha1 := &eth.SignedBlobSidecar{
-			Message: &eth.BlobSidecar{
+			Message: &eth.DeprecatedBlobSidecar{
 				BlockRoot:     make([]byte, fieldparams.RootLength),
 				Index:         1,
 				Slot:          3,

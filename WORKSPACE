@@ -27,7 +27,23 @@ http_archive(
 
 load("@hermetic_cc_toolchain//toolchain:defs.bzl", zig_toolchains = "toolchains")
 
-zig_toolchains()
+# Temporarily use a nightly build until 0.12.0 is released.
+# See: https://github.com/prysmaticlabs/prysm/issues/13130
+zig_toolchains(
+    host_platform_sha256 = {
+        "linux-aarch64": "45afb8e32adde825165f4f293fcea9ecea503f7f9ec0e9bf4435afe70e67fb70",
+        "linux-x86_64": "f136c6a8a0f6adcb057d73615fbcd6f88281b3593f7008d5f7ed514ff925c02e",
+        "macos-aarch64": "05d995853c05243151deff47b60bdc2674f1e794a939eaeca0f42312da031cee",
+        "macos-x86_64": "721754ba5a50f31e8a1f0e1a74cace26f8246576878ac4a8591b0ee7b6db1fc1",
+        "windows-x86_64": "93f5248b2ea8c5ee8175e15b1384e133edc1cd49870b3ea259062a2e04164343",
+    },
+    url_formats = [
+        "https://ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
+        "https://mirror.bazel.build/ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
+        "https://prysmaticlabs.com/mirror/ziglang.org/builds/zig-{host_platform}-{version}.{_ext}",
+    ],
+    version = "0.12.0-dev.1349+fa022d1ec",
+)
 
 # Register zig sdk toolchains with support for Ubuntu 20.04 (Focal Fossa) which has an EOL date of April, 2025.
 # For ubuntu glibc support, see https://launchpad.net/ubuntu/+source/glibc
@@ -206,7 +222,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.20.9",
+    go_version = "1.20.10",
     nogo = "@//:nogo",
 )
 
@@ -247,9 +263,7 @@ filegroup(
     url = "https://github.com/ethereum/EIPs/archive/5480440fe51742ed23342b68cf106cefd427e39d.tar.gz",
 )
 
-consensus_spec_test_version = "v1.4.0-beta.2-hotfix"
-
-consensus_spec_version = "v1.4.0-beta.2"
+consensus_spec_version = "v1.4.0-beta.3"
 
 bls_test_version = "v0.1.1"
 
@@ -265,8 +279,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "99770a001189f66204a4ef79161c8002bcbbcbd8236f1c6479bd5b83a3c68d42",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_test_version,
+    sha256 = "67ae5b8fc368853da23d4297e480a4b7f4722fb970d1c7e2b6a5b7faef9cb907",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/general.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -281,8 +295,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "56763f6492ee137108271007d62feef60d8e3f1698e53dee4bc4b07e55f7326b",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_test_version,
+    sha256 = "82474f29fff4abd09fb1e71bafa98827e2573cf0ad02cf119610961831dc3bb5",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/minimal.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -297,8 +311,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "bc1cac1a991cdc7426efea14385dcf215df85ed3f0572b824ad6a1d7ca0c89ad",
-    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_test_version,
+    sha256 = "60e4b6eb6c341daab7ee5614a8e3f28567247c504c593b951bfe919622c8ef8f",
+    url = "https://github.com/ethereum/consensus-spec-tests/releases/download/%s/mainnet.tar.gz" % consensus_spec_version,
 )
 
 http_archive(
@@ -312,7 +326,7 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "c5898001aaab2a5bb38a39ff9d17a52f1f9befcc26e63752cbf556040f0c884e",
+    sha256 = "fdab9756c93a250219ff6a10d5a9faee1e2e6878a14508410409e307362c6991",
     strip_prefix = "consensus-specs-" + consensus_spec_version[1:],
     url = "https://github.com/ethereum/consensus-specs/archive/refs/tags/%s.tar.gz" % consensus_spec_version,
 )

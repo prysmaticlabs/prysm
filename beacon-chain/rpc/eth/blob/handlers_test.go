@@ -23,7 +23,7 @@ import (
 )
 
 func TestParseIndices(t *testing.T) {
-	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
+	assert.DeepEqual(t, []uint64{1, 2, 3}, parseIndices(&url.URL{RawQuery: "indices=100&indices=1&indices=2&indices=foo&indices=1&indices=3&bar=bar"}))
 }
 
 func TestBlobs(t *testing.T) {
@@ -34,7 +34,7 @@ func TestBlobs(t *testing.T) {
 
 	db := testDB.SetupDB(t)
 	blockroot := bytesutil.PadTo([]byte("blockroot"), 32)
-	require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.BlobSidecar{
+	require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
 		{
 			BlockRoot:       blockroot,
 			Index:           0,
@@ -272,7 +272,7 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "could not parse block ID"))
 	})
 	t.Run("ssz", func(t *testing.T) {
-		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.BlobSidecar{
+		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
 			{
 				BlockRoot:       blockroot,
 				Index:           0,

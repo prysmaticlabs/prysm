@@ -3,6 +3,7 @@ package blockchain
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -42,7 +43,7 @@ type BlockReceiver interface {
 // BlobReceiver interface defines the methods of chain service for receiving new
 // blobs
 type BlobReceiver interface {
-	ReceiveBlob(context.Context, *ethpb.BlobSidecar) error
+	ReceiveBlob(context.Context, blocks.VerifiedROBlob) error
 }
 
 // SlashingReceiver interface defines the methods of chain service for receiving validated slashing over the wire.
@@ -58,6 +59,11 @@ type SlashingReceiver interface {
 func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.ReceiveBlock")
 	defer span.End()
+	// Return early if the block has been synced
+	if s.InForkchoice(blockRoot) {
+		log.WithField("blockRoot", fmt.Sprintf("%#x", blockRoot)).Debug("Ignoring already synced block")
+		return nil
+	}
 	receivedTime := time.Now()
 	s.blockBeingSynced.set(blockRoot)
 	defer s.blockBeingSynced.unset(blockRoot)
@@ -250,11 +256,6 @@ func (s *Service) ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock
 // HasBlock returns true if the block of the input root exists in initial sync blocks cache or DB.
 func (s *Service) HasBlock(ctx context.Context, root [32]byte) bool {
 	return s.hasBlockInInitSyncOrDB(ctx, root)
-}
-
-// RecentBlockSlot returns block slot form fork choice store
-func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
-	return s.cfg.ForkChoiceStore.Slot(root)
 }
 
 // ReceiveAttesterSlashing receives an attester slashing and inserts it to forkchoice

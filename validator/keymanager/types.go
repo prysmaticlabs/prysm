@@ -8,7 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 )
 
@@ -42,12 +41,12 @@ type Signer interface {
 type Importer interface {
 	ImportKeystores(
 		ctx context.Context, keystores []*Keystore, passwords []string,
-	) ([]*ethpbservice.ImportedKeystoreStatus, error)
+	) ([]*KeyStatus, error)
 }
 
 // Deleter can delete keystores from the keymanager.
 type Deleter interface {
-	DeleteKeystores(ctx context.Context, publicKeys [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error)
+	DeleteKeystores(ctx context.Context, publicKeys [][]byte) ([]*KeyStatus, error)
 }
 
 // KeyChangeSubscriber allows subscribing to changes made to the underlying keys.
@@ -67,9 +66,22 @@ type PublicKeyAdder interface {
 
 // KeyStatus is a json representation of the status fields for the keymanager apis
 type KeyStatus struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
+	Status  KeyStatusType `json:"status"`
+	Message string        `json:"message"`
 }
+
+// KeyStatusType is a category of key status
+type KeyStatusType string
+
+const (
+	StatusImported  KeyStatusType = "IMPORTED"
+	StatusError     KeyStatusType = "ERROR"
+	StatusDuplicate KeyStatusType = "DUPLICATE"
+	StatusUnknown   KeyStatusType = "UNKNOWN"
+	StatusNotFound  KeyStatusType = "NOT_FOUND"
+	StatusDeleted   KeyStatusType = "DELETED"
+	StatusNotActive KeyStatusType = "NOT_ACTIVE"
+)
 
 // PublicKeyDeleter allows deleting public keys set in keymanager.
 type PublicKeyDeleter interface {

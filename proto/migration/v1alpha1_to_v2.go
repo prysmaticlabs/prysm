@@ -2,6 +2,8 @@ package migration
 
 import (
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -10,7 +12,6 @@ import (
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"google.golang.org/protobuf/proto"
 )
 
 // V1Alpha1BeaconBlockAltairToV2 converts a v1alpha1 Altair beacon block to a v2 Altair block.
@@ -96,7 +97,7 @@ func V1Alpha1SignedBeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBl
 }
 
 // V1Alpha1BlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
-func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.BlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
+func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.DeprecatedBlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
 	v2Blobs := make([]*ethpbv2.BlobSidecar, len(v1alpha1Blobs))
 	for index, v1Blob := range v1alpha1Blobs {
 		marshaledBlob, err := proto.Marshal(v1Blob)
@@ -1287,6 +1288,31 @@ func V1Alpha1SignedBLSToExecChangeToV2(alphaChange *ethpbalpha.SignedBLSToExecut
 			ToExecutionAddress: bytesutil.SafeCopyBytes(alphaChange.Message.ToExecutionAddress),
 		},
 		Signature: bytesutil.SafeCopyBytes(alphaChange.Signature),
+	}
+	return result
+}
+
+// V1Alpha1SyncCommitteeToV2 converts a v1alpha1 SyncCommittee object to its v2 equivalent.
+func V1Alpha1SyncCommitteeToV2(alphaCommittee *ethpbalpha.SyncCommittee) *ethpbv2.SyncCommittee {
+	if alphaCommittee == nil {
+		return nil
+	}
+
+	result := &ethpbv2.SyncCommittee{
+		Pubkeys:         bytesutil.SafeCopy2dBytes(alphaCommittee.Pubkeys),
+		AggregatePubkey: bytesutil.SafeCopyBytes(alphaCommittee.AggregatePubkey),
+	}
+	return result
+}
+
+func V2SyncCommitteeToV1Alpha1(committee *ethpbv2.SyncCommittee) *ethpbalpha.SyncCommittee {
+	if committee == nil {
+		return nil
+	}
+
+	result := &ethpbalpha.SyncCommittee{
+		Pubkeys:         bytesutil.SafeCopy2dBytes(committee.Pubkeys),
+		AggregatePubkey: bytesutil.SafeCopyBytes(committee.AggregatePubkey),
 	}
 	return result
 }

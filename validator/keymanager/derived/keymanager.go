@@ -9,7 +9,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
@@ -112,14 +111,14 @@ func (km *Keymanager) FetchValidatingPrivateKeys(ctx context.Context) ([][32]byt
 // ImportKeystores for a derived keymanager.
 func (km *Keymanager) ImportKeystores(
 	ctx context.Context, keystores []*keymanager.Keystore, passwords []string,
-) ([]*ethpbservice.ImportedKeystoreStatus, error) {
+) ([]*keymanager.KeyStatus, error) {
 	return km.localKM.ImportKeystores(ctx, keystores, passwords)
 }
 
 // DeleteKeystores for a derived keymanager.
 func (km *Keymanager) DeleteKeystores(
 	ctx context.Context, publicKeys [][]byte,
-) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+) ([]*keymanager.KeyStatus, error) {
 	return km.localKM.DeleteKeystores(ctx, publicKeys)
 }
 

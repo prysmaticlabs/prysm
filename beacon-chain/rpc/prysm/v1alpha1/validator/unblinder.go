@@ -100,7 +100,7 @@ func (u *unblinder) unblindBuilderBlock(ctx context.Context) (interfaces.SignedB
 		return nil, nil, errors.Wrap(err, "could not get transactions from payload")
 	}
 
-	if wb.Version() >= version.Bellatrix && blobsBundle != nil {
+	if wb.Version() >= version.Deneb && blobsBundle != nil {
 		log.WithField("blobCount", len(blobsBundle.Blobs))
 	}
 
@@ -124,11 +124,14 @@ func unblindBlobsSidecars(blindSidecars []*ethpb.SignedBlindedBlobSidecar, bundl
 	if bundle == nil {
 		return nil, nil
 	}
+	if len(blindSidecars) != len(bundle.Blobs) {
+		return nil, errors.Errorf("blob count mismatch: wanted %d but got %d", len(blindSidecars), len(bundle.Blobs))
+	}
 
 	sidecars := make([]*ethpb.SignedBlobSidecar, len(blindSidecars))
 	for i, b := range blindSidecars {
 		sidecars[i] = &ethpb.SignedBlobSidecar{
-			Message: &ethpb.BlobSidecar{
+			Message: &ethpb.DeprecatedBlobSidecar{
 				BlockRoot:       bytesutil.SafeCopyBytes(b.Message.BlockRoot),
 				Index:           b.Message.Index,
 				Slot:            b.Message.Slot,

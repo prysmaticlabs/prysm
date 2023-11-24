@@ -20,13 +20,6 @@ type GetCommitteesResponse struct {
 	Finalized           bool                `json:"finalized"`
 }
 
-type DepositContractResponse struct {
-	Data *struct {
-		ChainId string `json:"chain_id"`
-		Address string `json:"address"`
-	} `json:"data"`
-}
-
 type ListAttestationsResponse struct {
 	Data []*shared.Attestation `json:"data"`
 }
@@ -81,6 +74,11 @@ type GetBlockHeaderResponse struct {
 	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
 	Finalized           bool                                     `json:"finalized"`
 	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
+}
+
+type GetValidatorsRequest struct {
+	Ids      []string `json:"ids"`
+	Statuses []string `json:"statuses"`
 }
 
 type GetValidatorsResponse struct {
@@ -179,4 +177,12 @@ type SyncCommitteeValidators struct {
 
 type BLSToExecutionChangesPoolResponse struct {
 	Data []*shared.SignedBLSToExecutionChange `json:"data"`
+}
+
+type GetAttesterSlashingsResponse struct {
+	Data []*shared.AttesterSlashing `json:"data"`
+}
+
+type GetProposerSlashingsResponse struct {
+	Data []*shared.ProposerSlashing `json:"data"`
 }

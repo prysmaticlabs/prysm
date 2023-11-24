@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
@@ -219,11 +220,28 @@ func (s *Fork) ToConsensus() (*eth.Fork, error) {
 	}, nil
 }
 
+func ForkFromConsensus(f *eth.Fork) (*Fork, error) {
+	if f == nil {
+		return nil, errors.New("fork is empty")
+	}
+
+	return &Fork{
+		PreviousVersion: hexutil.Encode(f.PreviousVersion),
+		CurrentVersion:  hexutil.Encode(f.CurrentVersion),
+		Epoch:           strconv.FormatUint(uint64(f.Epoch), 10),
+	}, nil
+}
+
 type SyncCommitteeMessage struct {
 	Slot            string `json:"slot"`
 	BeaconBlockRoot string `json:"beacon_block_root"`
 	ValidatorIndex  string `json:"validator_index"`
 	Signature       string `json:"signature"`
+}
+
+type SyncCommittee struct {
+	Pubkeys         []string `json:"pubkeys"`
+	AggregatePubkey string   `json:"aggregate_pubkey"`
 }
 
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
@@ -609,6 +627,37 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 		BlockRoot:      root,
 		ValidatorIndex: primitives.ValidatorIndex(valIndex),
 		Signature:      sig,
+	}, nil
+}
+
+func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
+	var sPubKeys []string
+	for _, p := range sc.Pubkeys {
+		sPubKeys = append(sPubKeys, hexutil.Encode(p))
+	}
+
+	return &SyncCommittee{
+		Pubkeys:         sPubKeys,
+		AggregatePubkey: hexutil.Encode(sc.AggregatePubkey),
+	}
+}
+
+func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
+	var pubKeys [][]byte
+	for _, p := range sc.Pubkeys {
+		pubKey, err := hexutil.Decode(p)
+		if err != nil {
+			return nil, NewDecodeError(err, "Pubkeys")
+		}
+		pubKeys = append(pubKeys, pubKey)
+	}
+	aggPubKey, err := hexutil.Decode(sc.AggregatePubkey)
+	if err != nil {
+		return nil, NewDecodeError(err, "AggregatePubkey")
+	}
+	return &eth.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: aggPubKey,
 	}, nil
 }
 

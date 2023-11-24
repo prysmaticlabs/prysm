@@ -298,7 +298,7 @@ func TestStore_PullTips_Heuristics(t *testing.T) {
 		require.NoError(tt, err)
 		require.NoError(tt, f.InsertNode(ctx, st, root))
 		// Check that the justification point is not the parent's.
-		// This tests that the heuristics in pullTips did not apply and
+		// This test checks that the heuristics in pullTips did not apply and
 		// the test continues to compute a bogus unrealized
 		// justification
 		require.Equal(tt, primitives.Epoch(1), f.store.nodeByRoot[[32]byte{'h'}].unrealizedJustifiedEpoch)
@@ -315,7 +315,7 @@ func TestStore_PullTips_Heuristics(t *testing.T) {
 		require.NoError(tt, err)
 		require.NoError(tt, f.InsertNode(ctx, st, root))
 		// Check that the justification point is not the parent's.
-		// This tests that the heuristics in pullTips did not apply and
+		// This test checks that the heuristics in pullTips did not apply and
 		// the test continues to compute a bogus unrealized
 		// justification
 		require.Equal(tt, primitives.Epoch(1), f.store.nodeByRoot[[32]byte{'h'}].unrealizedJustifiedEpoch)
@@ -331,7 +331,7 @@ func TestStore_PullTips_Heuristics(t *testing.T) {
 		require.NoError(tt, err)
 		require.NoError(tt, f.InsertNode(ctx, st, root))
 		// Check that the justification point is not the parent's.
-		// This tests that the heuristics in pullTips did not apply and
+		// This test checks that the heuristics in pullTips did not apply and
 		// the test continues to compute a bogus unrealized
 		// justification
 		require.Equal(tt, primitives.Epoch(2), f.store.nodeByRoot[[32]byte{'h'}].unrealizedJustifiedEpoch)

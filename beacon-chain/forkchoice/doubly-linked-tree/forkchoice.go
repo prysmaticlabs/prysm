@@ -12,9 +12,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -475,7 +475,7 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 // `blocks`. This slice must be ordered from child to parent. It includes all
 // blocks **except** the first one (that is the one with the highest slot
 // number). All blocks are assumed to be a strict chain
-// where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
+// where blocks[i].Parent = blocks[i+1]. Also, we assume that the parent of the
 // last block in this list is already included in forkchoice store.
 func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	if len(chain) == 0 {
@@ -554,24 +554,24 @@ func (f *ForkChoice) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 }
 
 // ForkChoiceDump returns a full dump of forkchoice.
-func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, error) {
-	jc := &v1.Checkpoint{
+func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, error) {
+	jc := &ethpb.Checkpoint{
 		Epoch: f.store.justifiedCheckpoint.Epoch,
 		Root:  f.store.justifiedCheckpoint.Root[:],
 	}
-	ujc := &v1.Checkpoint{
+	ujc := &ethpb.Checkpoint{
 		Epoch: f.store.unrealizedJustifiedCheckpoint.Epoch,
 		Root:  f.store.unrealizedJustifiedCheckpoint.Root[:],
 	}
-	fc := &v1.Checkpoint{
+	fc := &ethpb.Checkpoint{
 		Epoch: f.store.finalizedCheckpoint.Epoch,
 		Root:  f.store.finalizedCheckpoint.Root[:],
 	}
-	ufc := &v1.Checkpoint{
+	ufc := &ethpb.Checkpoint{
 		Epoch: f.store.unrealizedFinalizedCheckpoint.Epoch,
 		Root:  f.store.unrealizedFinalizedCheckpoint.Root[:],
 	}
-	nodes := make([]*v1.ForkChoiceNode, 0, f.NodeCount())
+	nodes := make([]*forkchoice2.Node, 0, f.NodeCount())
 	var err error
 	if f.store.treeRootNode != nil {
 		nodes, err = f.store.treeRootNode.nodeTreeDump(ctx, nodes)
@@ -583,7 +583,7 @@ func (f *ForkChoice) ForkChoiceDump(ctx context.Context) (*v1.ForkChoiceDump, er
 	if f.store.headNode != nil {
 		headRoot = f.store.headNode.root
 	}
-	resp := &v1.ForkChoiceDump{
+	resp := &forkchoice2.Dump{
 		JustifiedCheckpoint:           jc,
 		UnrealizedJustifiedCheckpoint: ujc,
 		FinalizedCheckpoint:           fc,

@@ -35,5 +35,5 @@ func TestConfigureBlobRetentionEpoch(t *testing.T) {
 	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(minEpochsForSidecarRequest-1, 10)))
 	cliCtx = cli.NewContext(&app, set, nil)
 	err := ConfigureBlobRetentionEpoch(cliCtx)
-	require.ErrorContains(t, "extend-blob-retention-epoch smaller than spec default", err)
+	require.ErrorContains(t, "blob-retention-epochs smaller than spec default", err)
 }
