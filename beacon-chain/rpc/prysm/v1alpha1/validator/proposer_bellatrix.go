@@ -285,6 +285,7 @@ func matchingWithdrawalsRoot(local, builder interfaces.ExecutionData) (bool, err
 // It delegates to setExecution for the actual work.
 func setLocalExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
 	var kzgCommitments [][]byte
+	fullBlobsBundle := bundleCache.get(blk.Block().Slot())
 	if fullBlobsBundle != nil {
 		kzgCommitments = fullBlobsBundle.KzgCommitments
 	}

@@ -9,12 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 )
 
-type jsonRestHandler interface {
-	GetRestJsonResponse(ctx context.Context, query string, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error)
-	PostRestJson(ctx context.Context, apiEndpoint string, headers map[string]string, data *bytes.Buffer, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error)
+type JsonRestHandler interface {
+	Get(ctx context.Context, query string, resp interface{}) (*http2.DefaultErrorJson, error)
+	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*http2.DefaultErrorJson, error)
 }
 
 type beaconApiJsonRestHandler struct {
@@ -22,41 +22,46 @@ type beaconApiJsonRestHandler struct {
 	host       string
 }
 
-// GetRestJsonResponse sends a GET requests to apiEndpoint and decodes the response body as a JSON object into responseJson.
-// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object instead and returned as the first return value.
-// TODO: GetRestJsonResponse and PostRestJson have converged to the point of being nearly identical, but with some inconsistencies
-// (like responseJson is being checked for nil one but not the other). We should merge them into a single method
-// with variadic functional options for headers and data.
-func (c beaconApiJsonRestHandler) GetRestJsonResponse(ctx context.Context, apiEndpoint string, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
-	if responseJson == nil {
-		return nil, errors.New("responseJson is nil")
+// Get sends a GET request and decodes the response body as a JSON object into the passed in object.
+// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object and returned as the first return value.
+func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) (*http2.DefaultErrorJson, error) {
+	if resp == nil {
+		return nil, errors.New("resp is nil")
 	}
 
-	url := c.host + apiEndpoint
+	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request with context")
 	}
 
-	resp, err := c.httpClient.Do(req)
+	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to query REST API %s", url)
+		return nil, errors.Wrap(err, "failed to perform request with HTTP client")
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
+		if err := httpResp.Body.Close(); err != nil {
 			return
 		}
 	}()
 
-	return decodeJsonResp(resp, responseJson)
+	return decodeResp(httpResp, resp)
 }
 
-// PostRestJson sends a POST requests to apiEndpoint and decodes the response body as a JSON object into responseJson. If responseJson
-// is nil, nothing is decoded. If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object instead and returned
-// as the first return value.
-func (c beaconApiJsonRestHandler) PostRestJson(ctx context.Context, apiEndpoint string, headers map[string]string, data *bytes.Buffer, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
+// Post sends a POST request and decodes the response body as a JSON object into the passed in object.
+// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object and returned as the first return value.
+func (c beaconApiJsonRestHandler) Post(
+	ctx context.Context,
+	apiEndpoint string,
+	headers map[string]string,
+	data *bytes.Buffer,
+	resp interface{},
+) (*http2.DefaultErrorJson, error) {
 	if data == nil {
-		return nil, errors.New("POST data is nil")
+		return nil, errors.New("data is nil")
+	}
+	if resp == nil {
+		return nil, errors.New("resp is nil")
 	}
 
 	url := c.host + apiEndpoint
@@ -70,46 +75,39 @@ func (c beaconApiJsonRestHandler) PostRestJson(ctx context.Context, apiEndpoint 
 	}
 	req.Header.Set("Content-Type", api.JsonMediaType)
 
-	resp, err := c.httpClient.Do(req)
+	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to send POST data to REST endpoint %s", url)
+		return nil, errors.Wrap(err, "failed to perform request with HTTP client")
 	}
 	defer func() {
-		if err = resp.Body.Close(); err != nil {
+		if err = httpResp.Body.Close(); err != nil {
 			return
 		}
 	}()
 
-	return decodeJsonResp(resp, responseJson)
+	return decodeResp(httpResp, resp)
 }
 
-func decodeJsonResp(resp *http.Response, responseJson interface{}) (*apimiddleware.DefaultErrorJson, error) {
-	decoder := json.NewDecoder(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		errorJson := &apimiddleware.DefaultErrorJson{}
-		if err := decoder.Decode(errorJson); err != nil {
-			if resp.StatusCode == http.StatusNotFound {
-				errorJson = &apimiddleware.DefaultErrorJson{Code: http.StatusNotFound, Message: "Resource not found"}
-			} else {
-				remaining, readErr := io.ReadAll(decoder.Buffered())
-				if readErr == nil {
-					log.Debugf("Undecoded value: %s", string(remaining))
-				}
-				return nil, errors.Wrapf(err, "failed to decode error json for %s", resp.Request.URL)
-			}
-		}
-		return errorJson, errors.Errorf("error %d: %s", errorJson.Code, errorJson.Message)
+func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJson, error) {
+	body, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
 	}
 
-	if responseJson != nil {
-		if err := decoder.Decode(responseJson); err != nil {
-			remaining, readErr := io.ReadAll(decoder.Buffered())
-			if readErr == nil {
-				log.Debugf("Undecoded value: %s", string(remaining))
-			}
-			return nil, errors.Wrapf(err, "failed to decode response json for %s", resp.Request.URL)
+	if httpResp.Header.Get("Content-Type") != api.JsonMediaType {
+		return &http2.DefaultErrorJson{Code: httpResp.StatusCode, Message: string(body)}, nil
+	}
+
+	decoder := json.NewDecoder(bytes.NewBuffer(body))
+	if httpResp.StatusCode != http.StatusOK {
+		errorJson := &http2.DefaultErrorJson{}
+		if err := decoder.Decode(errorJson); err != nil {
+			return nil, errors.Wrapf(err, "failed to decode response body into error json for %s", httpResp.Request.URL)
 		}
+		return errorJson, nil
+	}
+	if err = decoder.Decode(resp); err != nil {
+		return nil, errors.Wrapf(err, "failed to decode response body into json for %s", httpResp.Request.URL)
 	}
 
 	return nil, nil

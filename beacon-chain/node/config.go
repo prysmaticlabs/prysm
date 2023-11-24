@@ -40,7 +40,7 @@ func configureHistoricalSlasher(cliCtx *cli.Context) error {
 			return err
 		}
 		cmdConfig := cmd.Get()
-		// Allow up to 4096 attestations at a time to be requested from the beacon nde.
+		// Allow up to 4096 attestations at a time to be requested from the beacon node.
 		cmdConfig.MaxRPCPageSize = int(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().MaxAttestations)) // lint:ignore uintcast -- Page size should not exceed int64 with these constants.
 		cmd.Init(cmdConfig)
 		log.Warnf(

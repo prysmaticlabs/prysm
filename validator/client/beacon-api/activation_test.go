@@ -113,10 +113,10 @@ func TestActivation_Nominal(t *testing.T) {
 	// Instantiate a cancellable context.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	// GetRestJsonResponse does not return any result for non existing key
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	// Get does not return any result for non existing key
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		url,
 		&stateValidatorsResponseJson,
@@ -238,8 +238,8 @@ func TestActivation_InvalidData(t *testing.T) {
 
 				ctx := context.Background()
 
-				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					gomock.Any(),
 					gomock.Any(),
@@ -278,8 +278,8 @@ func TestActivation_JsonResponseError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		gomock.Any(),
 		gomock.Any(),

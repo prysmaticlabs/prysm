@@ -7,7 +7,6 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -29,15 +28,22 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	defer span.End()
 	for _, b := range batch.canonical() {
 		root := b.Root()
-		scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, b.Root())
-		if errors.Is(err, db.ErrNotFound) {
-			continue
-		}
+		idxs, err := s.cfg.blobStorage.Indices(b.Root())
 		if err != nil {
 			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 			return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
 		}
-		for _, sc := range scs {
+		for i, l := uint64(0), uint64(len(idxs)); i < l; i++ {
+			// index not available, skip
+			if !idxs[i] {
+				continue
+			}
+			// We won't check for file not found since the .Indices method should normally prevent that from happening.
+			sc, err := s.cfg.blobStorage.Get(b.Root(), i)
+			if err != nil {
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				return wQuota, errors.Wrapf(err, "could not retrieve sidecar: index %d, block root %#x", i, root)
+			}
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")

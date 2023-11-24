@@ -57,7 +57,7 @@ func TestGetGenesis(t *testing.T) {
 			},
 			depositContractError:   errors.New("foo error"),
 			queriesDepositContract: true,
-			expectedError:          "failed to query deposit contract information: foo error",
+			expectedError:          "foo error",
 		},
 		{
 			name: "fails to read nil deposit contract data",
@@ -113,7 +113,7 @@ func TestGetGenesis(t *testing.T) {
 			defer ctrl.Finish()
 			ctx := context.Background()
 
-			genesisProvider := mock.NewMockgenesisProvider(ctrl)
+			genesisProvider := mock.NewMockGenesisProvider(ctrl)
 			genesisProvider.EXPECT().GetGenesis(
 				ctx,
 			).Return(
@@ -123,10 +123,10 @@ func TestGetGenesis(t *testing.T) {
 			)
 
 			depositContractJson := apimiddleware.DepositContractResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			if testCase.queriesDepositContract {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v1/config/deposit_contract",
 					&depositContractJson,
@@ -167,7 +167,7 @@ func TestGetSyncStatus(t *testing.T) {
 		{
 			name:              "fails to query REST endpoint",
 			restEndpointError: errors.New("foo error"),
-			expectedError:     "failed to get sync status: foo error",
+			expectedError:     "foo error",
 		},
 		{
 			name:                 "returns nil syncing data",
@@ -205,8 +205,8 @@ func TestGetSyncStatus(t *testing.T) {
 			ctx := context.Background()
 
 			syncingResponse := node.SyncStatusResponse{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				syncingEndpoint,
 				&syncingResponse,
@@ -243,7 +243,7 @@ func TestGetVersion(t *testing.T) {
 		{
 			name:              "fails to query REST endpoint",
 			restEndpointError: errors.New("foo error"),
-			expectedError:     "failed to query node version",
+			expectedError:     "foo error",
 		},
 		{
 			name:                 "returns nil version data",
@@ -270,8 +270,8 @@ func TestGetVersion(t *testing.T) {
 			ctx := context.Background()
 
 			var versionResponse node.GetVersionResponse
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				versionEndpoint,
 				&versionResponse,
