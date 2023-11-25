@@ -86,7 +86,7 @@ func TestNode_UpdateBestDescendant_NonViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -99,7 +99,7 @@ func TestNode_UpdateBestDescendant_ViableChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
@@ -119,7 +119,7 @@ func TestNode_UpdateBestDescendant_HigherWeightChild(t *testing.T) {
 func TestNode_UpdateBestDescendant_LowerWeightChild(t *testing.T) {
 	f := setup(1, 1)
 	ctx := context.Background()
-	// Input child is best descendant
+	// Input child is the best descendant
 	state, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
