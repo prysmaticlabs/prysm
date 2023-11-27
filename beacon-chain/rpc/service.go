@@ -15,6 +15,9 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	beacon2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
+	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
+	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -49,12 +52,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
 	beaconv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/beacon"
 	debugv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/debug"
 	nodev1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/node"
 	validatorv1alpha1 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
-	httpserver "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	slasherservice "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -363,22 +364,6 @@ func (s *Service) Start() {
 	s.cfg.Router.HandleFunc("/eth/v1/node/version", nodeServerEth.GetVersion).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/node/health", nodeServerEth.GetHealth).Methods(http.MethodGet)
 
-	nodeServerPrysm := &nodeprysm.Server{
-		BeaconDB:                  s.cfg.BeaconDB,
-		SyncChecker:               s.cfg.SyncService,
-		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
-		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
-		PeersFetcher:              s.cfg.PeersFetcher,
-		PeerManager:               s.cfg.PeerManager,
-		MetadataProvider:          s.cfg.MetadataProvider,
-		HeadFetcher:               s.cfg.HeadFetcher,
-		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
-	}
-
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
-
 	beaconChainServer := &beaconv1alpha1.Server{
 		Ctx:                         s.ctx,
 		BeaconDB:                    s.cfg.BeaconDB,
@@ -429,19 +414,6 @@ func (s *Service) Start() {
 		ForkchoiceFetcher:             s.cfg.ForkchoiceFetcher,
 		CoreService:                   coreService,
 	}
-	httpServer := &httpserver.Server{
-		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
-		HeadFetcher:           s.cfg.HeadFetcher,
-		SyncChecker:           s.cfg.SyncService,
-		CoreService:           coreService,
-		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
-		Stater:                stater,
-		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
-		BeaconDB:              s.cfg.BeaconDB,
-		FinalizationFetcher:   s.cfg.FinalizationFetcher,
-	}
-	s.cfg.Router.HandleFunc("/prysm/validators/performance", httpServer.GetValidatorPerformance).Methods(http.MethodPost)
-	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", httpServer.GetValidatorCount).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/committees", beaconChainServerV1.GetCommittees).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/fork", beaconChainServerV1.GetStateFork).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/root", beaconChainServerV1.GetStateRoot).Methods(http.MethodGet)
@@ -492,7 +464,6 @@ func (s *Service) Start() {
 	ethpbv1alpha1.RegisterNodeServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterHealthServer(s.grpcServer, nodeServer)
 	ethpbv1alpha1.RegisterBeaconChainServer(s.grpcServer, beaconChainServer)
-	ethpbservice.RegisterBeaconChainServer(s.grpcServer, beaconChainServerV1)
 	ethpbservice.RegisterEventsServer(s.grpcServer, &events.Server{
 		Ctx:               s.ctx,
 		StateNotifier:     s.cfg.StateNotifier,
@@ -532,6 +503,45 @@ func (s *Service) Start() {
 	reflection.Register(s.grpcServer)
 
 	validatorServer.PruneBlobsBundleCacheRoutine()
+
+	beaconServerPrysm := &beacon2.Server{
+		SyncChecker:           s.cfg.SyncService,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		TimeFetcher:           s.cfg.GenesisTimeFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		CanonicalHistory:      ch,
+		BeaconDB:              s.cfg.BeaconDB,
+	}
+	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
+
+	nodeServerPrysm := &nodeprysm.Server{
+		BeaconDB:                  s.cfg.BeaconDB,
+		SyncChecker:               s.cfg.SyncService,
+		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
+		GenesisTimeFetcher:        s.cfg.GenesisTimeFetcher,
+		PeersFetcher:              s.cfg.PeersFetcher,
+		PeerManager:               s.cfg.PeerManager,
+		MetadataProvider:          s.cfg.MetadataProvider,
+		HeadFetcher:               s.cfg.HeadFetcher,
+		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
+	}
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
+
+	validatorServerPrysm := &validatorprysm.Server{
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		CoreService:           coreService,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
+		Stater:                stater,
+		ChainInfoFetcher:      s.cfg.ChainInfoFetcher,
+		BeaconDB:              s.cfg.BeaconDB,
+		FinalizationFetcher:   s.cfg.FinalizationFetcher,
+	}
+	s.cfg.Router.HandleFunc("/prysm/validators/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
+	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", validatorServerPrysm.GetValidatorCount).Methods(http.MethodGet)
 
 	go func() {
 		if s.listener != nil {
