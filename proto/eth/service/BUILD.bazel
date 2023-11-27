@@ -7,7 +7,6 @@ load("@io_bazel_rules_go//proto:compiler.bzl", "go_proto_compiler")
 proto_library(
     name = "proto",
     srcs = [
-        "beacon_chain_service.proto",
         "events_service.proto",
     ],
     visibility = ["//visibility:public"],
