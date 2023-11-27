@@ -209,16 +209,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 	}
 
 	if bid.Version() >= version.Deneb {
-		bidKzgCommitments, err = bid.BlobKzgCommitments()
-		if err != nil {
-			return nil, errors.Wrap(err, "could not get blob kzg commitments")
-		}
-		if len(bidKzgCommitments) != 0 {
-			if len(bidKzgCommitments) > fieldparams.MaxBlobCommitmentsPerBlock {
-				return nil, fmt.Errorf("the number of kzg commitments(%d) exceeded the max(%d)", len(bidKzgCommitments), fieldparams.MaxBlobCommitmentsPerBlock)
-			}
-			log.WithField("kzg commitments", len(bidKzgCommitments))
-		}
+		//TODO: set the bid kzg commitments somewhere
 	}
 
 	log.WithFields(logrus.Fields{
@@ -298,7 +289,7 @@ func setLocalExecution(blk interfaces.SignedBeaconBlock, execution interfaces.Ex
 // setBuilderExecution sets the execution context for a builder's beacon block.
 // It delegates to setExecution for the actual work.
 func setBuilderExecution(blk interfaces.SignedBeaconBlock, execution interfaces.ExecutionData) error {
-	return setExecution(blk, execution, true, bidKzgCommitments)
+	return setExecution(blk, execution, true, nil) // TODO: bid kzg commitments need to be set here
 }
 
 // setExecution sets the execution context for a beacon block. It also sets KZG commitments based on the block version.

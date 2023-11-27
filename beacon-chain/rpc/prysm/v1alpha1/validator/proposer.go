@@ -25,7 +25,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -43,9 +42,6 @@ const (
 	CouldNotDecodeBlock = "Could not decode block"
 	eth1dataTimeout     = 2 * time.Second
 )
-
-// bidKzgCommitments holds the KZG commitments for a builder's beacon block.
-var bidKzgCommitments [][]byte //TODO: possibly change the architecture here to not use this package variable
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
@@ -124,19 +120,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 	}
 
-	// TODO: update this for blobBundle processing
-	//bidKzgCommitments = nil // Reset blind blobs bundle after use.
-	//if err != nil {
-	//	return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
-	//}
-
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
+	return vs.constructGenericBeaconBlock(sBlk, nil, fullBlobs) // TODO: update this function to remove blinded blobs
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
@@ -250,14 +240,14 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		}
 		// TODO: replace with blob storage
 		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
-		for i, sc := range scs {
-			log.WithFields(logrus.Fields{
-				"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),
-				"index":     sc.Message.Index,
-			}).Debug("Broadcasting blob sidecar")
-			// TODO: Broadcast sidecar will be fixed in #13189
-			sidecars[i] = sc.Message
-		}
+		//for i, sc := range scs {
+		//	log.WithFields(logrus.Fields{
+		//		"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),
+		//		"index":     sc.Message.Index,
+		//	}).Debug("Broadcasting blob sidecar")
+		//	// TODO: Broadcast sidecar will be fixed in #13189
+		//	sidecars[i] = sc.Message
+		//}
 		if len(scs) > 0 {
 			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecars); err != nil {
 				return nil, err
