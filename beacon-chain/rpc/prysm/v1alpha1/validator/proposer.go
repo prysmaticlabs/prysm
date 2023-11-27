@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -119,11 +118,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(bundleCache.get(req.Slot), sBlk.Block())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
-	}
-
 	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
 	blindBlobsBundle = nil // Reset blind blobs bundle after use.
 	if err != nil {
@@ -136,7 +130,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	return vs.constructGenericBeaconBlock(sBlk, blindBlobs, fullBlobs)
+	return vs.constructGenericBeaconBlock(sBlk, blindBlobs)
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
@@ -227,7 +221,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}
 	blinded := unblinder.b.IsBlinded() //
 
-	blk, unblindedSidecars, err := unblinder.unblindBuilderBlock(ctx)
+	blk, _, err = unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -241,32 +235,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 
-	var scs []*ethpb.SignedBlobSidecar
-	if blk.Version() >= version.Deneb {
-		if blinded {
-			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
-		} else {
-			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
-			if err != nil {
-				return nil, errors.Wrap(err, "could not extract blobs")
-			}
-		}
-		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
-		for i, sc := range scs {
-			log.WithFields(logrus.Fields{
-				"blockRoot": hex.EncodeToString(sc.Message.BlockRoot),
-				"index":     sc.Message.Index,
-			}).Debug("Broadcasting blob sidecar")
-			// TODO: Broadcast sidecar will be fixed in #13189
-			sidecars[i] = sc.Message
-		}
-		if len(scs) > 0 {
-			if err := vs.BeaconDB.SaveBlobSidecar(ctx, sidecars); err != nil {
-				return nil, err
-			}
-		}
-	}
-
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
@@ -274,6 +242,30 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	log.WithFields(logrus.Fields{
 		"blockRoot": hex.EncodeToString(root[:]),
 	}).Debug("Broadcasting block")
+
+	if blk.Version() >= version.Deneb {
+		if blinded {
+			// TODO: Handle blobs from the builder
+		}
+
+		scs, err := buildBlobSidecars(blk)
+		if err != nil {
+			return nil, fmt.Errorf("could not build blob sidecars: %v", err)
+		}
+		for i, sc := range scs {
+			if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
+				log.WithError(err).Error("Could not broadcast blob")
+			}
+			readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
+			if err != nil {
+				return nil, fmt.Errorf("could not create ROBlob: %v", err)
+			}
+			verifiedSc := blocks.NewVerifiedROBlob(readOnlySc)
+			if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedSc); err != nil {
+				log.WithError(err).Error("Could not receive blob")
+			}
+		}
+	}
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
@@ -289,19 +281,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	return &ethpb.ProposeResponse{
 		BlockRoot: root[:],
 	}, nil
-}
-
-// extraSidecars extracts the sidecars from the request.
-// return error if there are too many sidecars.
-func extraSidecars(req *ethpb.GenericSignedBeaconBlock) ([]*ethpb.SignedBlobSidecar, error) {
-	b, ok := req.GetBlock().(*ethpb.GenericSignedBeaconBlock_Deneb)
-	if !ok {
-		return nil, errors.New("Could not cast block to Deneb")
-	}
-	if len(b.Deneb.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("too many blobs in block: %d", len(b.Deneb.Blobs))
-	}
-	return b.Deneb.Blobs, nil
 }
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
