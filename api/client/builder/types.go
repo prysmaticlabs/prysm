@@ -869,16 +869,16 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
-	var bundle *v1.BlindedBlobsBundle
-	if bb.BlindedBlobsBundle != nil {
-		bundle, err = bb.BlindedBlobsBundle.ToProto()
-		if err != nil {
-			return nil, err
+	kzgCommitments := make([][]byte, len(bb.BlobKzgCommitments))
+	for i, commit := range bb.BlobKzgCommitments {
+		if len(commit) != fieldparams.BLSPubkeyLength {
+			return nil, fmt.Errorf("commitment length %d is not %d", len(commit), fieldparams.BLSPubkeyLength)
 		}
+		kzgCommitments[i] = bytesutil.SafeCopyBytes(commit)
 	}
 	return &eth.BuilderBidDeneb{
 		Header:             header,
-		BlindedBlobsBundle: bundle,
+		BlobKzgCommitments: kzgCommitments,
 		Value:              bytesutil.SafeCopyBytes(bb.Value.SSZBytes()),
 		Pubkey:             bytesutil.SafeCopyBytes(bb.Pubkey),
 	}, nil
@@ -887,40 +887,9 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 // BuilderBidDeneb is a field of ExecHeaderResponseDeneb.
 type BuilderBidDeneb struct {
 	Header             *ExecutionPayloadHeaderDeneb `json:"header"`
-	BlindedBlobsBundle *BlindedBlobsBundle          `json:"blinded_blobs_bundle"`
+	BlobKzgCommitments []hexutil.Bytes              `json:"blob_kzg_commitments"`
 	Value              Uint256                      `json:"value"`
 	Pubkey             hexutil.Bytes                `json:"pubkey"`
-}
-
-// BlindedBlobsBundle is a field of BuilderBidDeneb and represents the blinded blobs of the associated header.
-type BlindedBlobsBundle struct {
-	KzgCommitments []hexutil.Bytes `json:"commitments"`
-	Proofs         []hexutil.Bytes `json:"proofs"`
-	BlobRoots      []hexutil.Bytes `json:"blob_roots"`
-}
-
-// ToProto creates a BlindedBlobsBundle Proto from BlindedBlobsBundle.
-func (r *BlindedBlobsBundle) ToProto() (*v1.BlindedBlobsBundle, error) {
-	kzg := make([][]byte, len(r.KzgCommitments))
-	for i := range kzg {
-		kzg[i] = bytesutil.SafeCopyBytes(r.KzgCommitments[i])
-	}
-
-	proofs := make([][]byte, len(r.Proofs))
-	for i := range proofs {
-		proofs[i] = bytesutil.SafeCopyBytes(r.Proofs[i])
-	}
-
-	blobRoots := make([][]byte, len(r.BlobRoots))
-	for i := range blobRoots {
-		blobRoots[i] = bytesutil.SafeCopyBytes(r.BlobRoots[i])
-	}
-
-	return &v1.BlindedBlobsBundle{
-		KzgCommitments: kzg,
-		Proofs:         proofs,
-		BlobRoots:      blobRoots,
-	}, nil
 }
 
 // ExecutionPayloadHeaderDeneb a field part of the BuilderBidDeneb.

@@ -380,7 +380,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			unblinder, err := newUnblinder(tc.blk, tc.blindBlobs, tc.mock)
+			unblinder, err := newUnblinder(tc.blk, tc.mock)
 			require.NoError(t, err)
 			gotBlk, gotBlobs, err := unblinder.unblindBuilderBlock(context.Background())
 			if tc.err != "" {

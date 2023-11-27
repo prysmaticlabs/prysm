@@ -44,8 +44,8 @@ const (
 	eth1dataTimeout     = 2 * time.Second
 )
 
-// blindBlobsBundle holds the KZG commitments and other relevant sidecar data for a builder's beacon block.
-var blindBlobsBundle *enginev1.BlindedBlobsBundle
+// bidKzgCommitments holds the KZG commitments for a builder's beacon block.
+var bidKzgCommitments [][]byte //TODO: possibly change the architecture here to not use this package variable
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
 // by passing in the slot and the signed randao reveal of the slot.
@@ -124,11 +124,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
 	}
 
-	blindBlobs, err := blindBlobsBundleToSidecars(blindBlobsBundle, sBlk.Block())
-	blindBlobsBundle = nil // Reset blind blobs bundle after use.
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
-	}
+	// TODO: update this for blobBundle processing
+	//bidKzgCommitments = nil // Reset blind blobs bundle after use.
+	//if err != nil {
+	//	return nil, status.Errorf(codes.Internal, "Could not convert blind blobs bundle to sidecar: %v", err)
+	//}
 
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
@@ -216,12 +216,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", CouldNotDecodeBlock, err)
 	}
 
-	var blindSidecars []*ethpb.SignedBlindedBlobSidecar
-	if blk.Version() >= version.Deneb && blk.IsBlinded() {
-		blindSidecars = req.GetBlindedDeneb().SignedBlindedBlobSidecars
-	}
-
-	unblinder, err := newUnblinder(blk, blindSidecars, vs.BlockBuilder)
+	unblinder, err := newUnblinder(blk, vs.BlockBuilder)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not create unblinder")
 	}
@@ -241,16 +236,19 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, fmt.Errorf("could not broadcast block: %v", err)
 	}
 
-	var scs []*ethpb.SignedBlobSidecar
+	var scs []*ethpb.BlobSidecar
 	if blk.Version() >= version.Deneb {
 		if blinded {
 			scs = unblindedSidecars // Use sidecars from unblinder if the block was blinded.
 		} else {
-			scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
-			if err != nil {
-				return nil, errors.Wrap(err, "could not extract blobs")
-			}
+			// TODO: construct blob sidecars from block contents: kzg commiments + the blobs
+
+			//scs, err = extraSidecars(req) // Use sidecars from the request if the block was not blinded.
+			//if err != nil {
+			//	return nil, errors.Wrap(err, "could not extract blobs")
+			//}
 		}
+		// TODO: replace with blob storage
 		sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(scs))
 		for i, sc := range scs {
 			log.WithFields(logrus.Fields{
