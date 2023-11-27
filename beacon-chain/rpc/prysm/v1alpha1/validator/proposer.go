@@ -239,6 +239,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	if err != nil {
 		return nil, fmt.Errorf("could not tree hash block: %v", err)
 	}
+	log.WithFields(logrus.Fields{
+		"blockRoot": hex.EncodeToString(root[:]),
+	}).Debug("Broadcasting block")
+
 	if blk.Version() >= version.Deneb {
 		if blinded {
 			// TODO: Handle blobs from the builder
@@ -248,7 +252,10 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		if err != nil {
 			return nil, fmt.Errorf("could not build blob sidecars: %v", err)
 		}
-		for _, sc := range scs {
+		for i, sc := range scs {
+			if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
+				log.WithError(err).Error("Could not broadcast blob")
+			}
 			readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
 			if err != nil {
 				return nil, fmt.Errorf("could not create ROBlob: %v", err)
@@ -259,10 +266,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 			}
 		}
 	}
-
-	log.WithFields(logrus.Fields{
-		"blockRoot": hex.EncodeToString(root[:]),
-	}).Debug("Broadcasting block")
 
 	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
