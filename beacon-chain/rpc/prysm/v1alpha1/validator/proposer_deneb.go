@@ -3,6 +3,7 @@ package validator
 import (
 	"sync"
 
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -54,35 +55,36 @@ func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	}
 }
 
-// coverts a blobs bundle to a sidecar format.
-func blobsBundleToSidecars(bundle *enginev1.BlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.DeprecatedBlobSidecar, error) {
+// buildBlobSidecars given a block, builds the blob sidecars for the block.
+func buildBlobSidecars(blk interfaces.SignedBeaconBlock) ([]*ethpb.BlobSidecar, error) {
 	if blk.Version() < version.Deneb {
+		return nil, nil // No blobs before deneb.
+	}
+	bundle := bundleCache.get(blk.Block().Slot())
+	if bundle == nil {
 		return nil, nil
 	}
-	if bundle == nil || len(bundle.KzgCommitments) == 0 {
-		return nil, nil
-	}
-	r, err := blk.HashTreeRoot()
+	blobSidecars := make([]*ethpb.BlobSidecar, len(bundle.KzgCommitments))
+	header, err := blk.Header()
 	if err != nil {
 		return nil, err
 	}
-	pr := blk.ParentRoot()
-
-	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(bundle.Blobs))
-	for i := 0; i < len(bundle.Blobs); i++ {
-		sidecars[i] = &ethpb.DeprecatedBlobSidecar{
-			BlockRoot:       r[:],
-			Index:           uint64(i),
-			Slot:            blk.Slot(),
-			BlockParentRoot: pr[:],
-			ProposerIndex:   blk.ProposerIndex(),
-			Blob:            bundle.Blobs[i],
-			KzgCommitment:   bundle.KzgCommitments[i],
-			KzgProof:        bundle.Proofs[i],
+	body := blk.Block().Body()
+	for i := range blobSidecars {
+		proof, err := blocks.MerkleProofKZGCommitment(body, i)
+		if err != nil {
+			return nil, err
+		}
+		blobSidecars[i] = &ethpb.BlobSidecar{
+			Index:                    uint64(i),
+			Blob:                     bundle.Blobs[i],
+			KzgCommitment:            bundle.KzgCommitments[i],
+			KzgProof:                 bundle.Proofs[i],
+			SignedBlockHeader:        header,
+			CommitmentInclusionProof: proof,
 		}
 	}
-
-	return sidecars, nil
+	return blobSidecars, nil
 }
 
 // coverts a blinds blobs bundle to a sidecar format.
