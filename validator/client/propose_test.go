@@ -587,12 +587,10 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Deneb{
-					Deneb: func() *ethpb.BeaconBlockAndBlobsDeneb {
+					Deneb: func() *ethpb.BeaconBlockDeneb {
 						blk := util.NewBeaconBlockDeneb()
 						blk.Block.Body.Graffiti = graffiti
-						return &ethpb.BeaconBlockAndBlobsDeneb{
-							Block: blk.Block,
-						}
+						return blk.Block
 					}(),
 				},
 			},
