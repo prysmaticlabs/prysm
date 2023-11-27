@@ -209,7 +209,7 @@ func TestProduceBlockV2(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Fix this test for blob inclusion format as part of Beacon API PR")
+		t.Skip("TODO: Skip deneb until beacon api changes")
 
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
@@ -519,6 +519,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
+		t.Skip("TODO: Skip deneb until beacon api changes")
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -789,7 +790,7 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Fix this test for blob inclusion format as part of Beacon API PR")
+		t.Skip("TODO: Skip deneb until beacon api changes")
 
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)

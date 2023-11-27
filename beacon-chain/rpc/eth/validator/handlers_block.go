@@ -581,7 +581,9 @@ func handleProduceDenebV3(
 		http2.WriteSsz(w, sszResp, "denebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
+
+	// TODO: We need to add blobs here for beacon api
+	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(&eth.BeaconBlockAndBlobsDeneb{Block: blk.Deneb})
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
