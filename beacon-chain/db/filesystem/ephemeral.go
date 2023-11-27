@@ -44,7 +44,7 @@ func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices []uint64) error {
 	return nil
 }
 
-// NewEpehmeralBlobStorageWithMocker returns a *BlobMocker value in addition to the BlobStorage value.
+// NewEphemeralBlobStorageWithMocker returns a *BlobMocker value in addition to the BlobStorage value.
 // BlockMocker encapsulates things blob path construction to avoid leaking implementation details.
 func NewEphemeralBlobStorageWithMocker(_ testing.TB) (*BlobMocker, *BlobStorage) {
 	fs := afero.NewMemMapFs()

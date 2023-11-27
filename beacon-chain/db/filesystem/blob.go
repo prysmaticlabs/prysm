@@ -1,7 +1,9 @@
 package filesystem
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strconv"
@@ -11,9 +13,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -26,6 +30,7 @@ const (
 	sszExt  = "ssz"
 	partExt = "part"
 
+	bufferEpochs         = 2
 	directoryPermissions = 0700
 )
 
@@ -43,7 +48,8 @@ func NewBlobStorage(base string) (*BlobStorage, error) {
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs afero.Fs
+	fs             afero.Fs
+	retentionEpoch primitives.Epoch
 }
 
 // Save saves blobs given a list of sidecars.
@@ -176,4 +182,52 @@ func (p blobNamer) partPath() string {
 
 func (p blobNamer) path() string {
 	return p.fname(sszExt)
+}
+
+// Prune prunes blobs in the base directory based on the retention epoch.
+// It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
+// This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
+func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
+	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+	if err != nil {
+		return err
+	}
+	if currentSlot < retentionSlot {
+		return nil // Overflow would occur
+	}
+
+	folders, err := afero.ReadDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, folder := range folders {
+		if folder.IsDir() {
+			f, err := bs.fs.Open(folder.Name() + "/0." + sszExt)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+
+			slot, err := slotFromBlob(f)
+			if err != nil {
+				return err
+			}
+			if slot < (currentSlot - retentionSlot) {
+				if err = os.RemoveAll(folder.Name()); err != nil {
+					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
+	b := make([]byte, 8)
+	_, err := at.ReadAt(b, 40)
+	if err != nil {
+		return 0, err
+	}
+	rawSlot := binary.LittleEndian.Uint64(b)
+	return primitives.Slot(rawSlot), nil
 }

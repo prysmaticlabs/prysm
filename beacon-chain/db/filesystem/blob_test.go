@@ -7,6 +7,8 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/spf13/afero"
 
@@ -97,4 +99,47 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 	_, err = fh.Write([]byte("derp"))
 	require.NoError(t, err)
 	require.NoError(t, fh.Close())
+}
+
+func TestBlobStoragePrune(t *testing.T) {
+	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, fieldparams.MaxBlobsPerBlock)
+	testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+	require.NoError(t, err)
+
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	for _, sidecar := range testSidecars {
+		require.NoError(t, bs.Save(sidecar))
+	}
+
+	currentSlot := primitives.Slot(150000)
+	require.NoError(t, bs.Prune(currentSlot))
+
+	remainingFolders, err := afero.ReadDir(fs, ".")
+	require.NoError(t, err)
+	require.Equal(t, 1, len(remainingFolders))
+}
+
+func BenchmarkPruning(b *testing.B) {
+	var t *testing.T
+	_, bs := NewEphemeralBlobStorageWithFs(t)
+
+	blockQty := 10000
+	currentSlot := primitives.Slot(150000)
+	slot := primitives.Slot(0)
+
+	for j := 0; j <= blockQty; j++ {
+		root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
+		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, root, slot, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+		require.NoError(t, bs.Save(testSidecars[0]))
+
+		slot += 100
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := bs.Prune(currentSlot)
+		require.NoError(b, err)
+	}
 }
