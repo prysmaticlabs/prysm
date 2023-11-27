@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	log "github.com/sirupsen/logrus"
 )
@@ -33,12 +34,20 @@ func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, ds
 	if err != nil {
 		return err
 	}
+
+	var body interface{}
 	if httpResp.StatusCode != http.StatusOK {
-		var body interface{}
-		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
-			return err
+		if httpResp.Header.Get("Content-Type") == api.JsonMediaType {
+			if err = json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
+				return err
+			}
+		} else {
+			body, err = io.ReadAll(httpResp.Body)
+			if err != nil {
+				return err
+			}
 		}
-		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
+		return fmt.Errorf("%s request failed with response code %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
@@ -114,12 +123,20 @@ func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, p
 	if err != nil {
 		return err
 	}
+
+	var body interface{}
 	if httpResp.StatusCode != http.StatusOK {
-		var body interface{}
-		if err := json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
-			return err
+		if httpResp.Header.Get("Content-Type") == api.JsonMediaType {
+			if err = json.NewDecoder(httpResp.Body).Decode(&body); err != nil {
+				return err
+			}
+		} else {
+			body, err = io.ReadAll(httpResp.Body)
+			if err != nil {
+				return err
+			}
 		}
-		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
+		return fmt.Errorf("%s request failed with response code %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
 	return json.NewDecoder(httpResp.Body).Decode(&dst)
 }
