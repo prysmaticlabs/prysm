@@ -202,25 +202,25 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	msg.ValidatorData = blkPb // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
-	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
 	graffiti := blk.Block().Body().Graffiti()
-
+	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
+	logFields := logrus.Fields{
+		"blockSlot":     blk.Block().Slot(),
+		"proposerIndex": blk.Block().ProposerIndex(),
+		"graffiti":      string(graffiti[:]),
+	}
+	if err != nil {
+		log.WithError(err).WithFields(logFields).Warn("Received block, could not report timing information.")
+		return pubsub.ValidationAccept, nil
+	}
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	validationTime := prysmTime.Now().Sub(receivedTime)
-	log.WithFields(logrus.Fields{
-		"blockSlot":          blk.Block().Slot(),
-		"sinceSlotStartTime": sinceSlotStartTime,
-		"validationTime":     validationTime,
-		"proposerIndex":      blk.Block().ProposerIndex(),
-		"graffiti":           string(graffiti[:]),
-	}).Debug("Received block")
+	logFields["sinceSlotStartTime"] = sinceSlotStartTime
+	logFields["validationTime"] = validationTime
+	log.WithFields(logFields).Debug("Received block")
 
 	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime))
 	blockVerificationGossipSummary.Observe(float64(validationTime))
-
 	return pubsub.ValidationAccept, nil
 }
 

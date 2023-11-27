@@ -36,7 +36,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 	ctx := context.Background()
 
 	// Make sure that GetGenesis() is called exactly once
-	genesisProvider := mock.NewMockgenesisProvider(ctrl)
+	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
@@ -66,7 +66,7 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 	ctx := context.Background()
 
 	// Make sure that GetGenesis() is called exactly once
-	genesisProvider := mock.NewMockgenesisProvider(ctrl)
+	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(nil, nil, errors.New("foo error")).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
@@ -85,7 +85,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 	ctx := context.Background()
 
 	// Make sure that GetGenesis() is called exactly once
-	genesisProvider := mock.NewMockgenesisProvider(ctrl)
+	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&beacon.Genesis{GenesisValidatorsRoot: "foo"},
 		nil,

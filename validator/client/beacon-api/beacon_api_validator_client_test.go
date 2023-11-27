@@ -30,9 +30,9 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
@@ -71,9 +71,9 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
@@ -117,7 +117,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	genesisProvider := mock.NewMockgenesisProvider(ctrl)
+	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
@@ -147,8 +147,8 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/beacon/blocks",
 		map[string]string{"Eth-Consensus-Version": "phase0"},
@@ -184,8 +184,8 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/beacon/blocks",
 		map[string]string{"Eth-Consensus-Version": "phase0"},

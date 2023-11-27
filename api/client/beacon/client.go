@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	apibeacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
@@ -31,7 +32,7 @@ const (
 	getSignedBlockPath       = "/eth/v2/beacon/blocks"
 	getBlockRootPath         = "/eth/v1/beacon/blocks/{{.Id}}/root"
 	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
+	getWeakSubjectivityPath  = "/prysm/v1/beacon/weak_subjectivity"
 	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
 	getConfigSpecPath        = "/eth/v1/config/spec"
 	getStatePath             = "/eth/v2/debug/beacon/states"
@@ -258,16 +259,16 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 	if err != nil {
 		return nil, err
 	}
-	v := &apimiddleware.WeakSubjectivityResponse{}
+	v := &apibeacon.GetWeakSubjectivityResponse{}
 	err = json.Unmarshal(body, v)
 	if err != nil {
 		return nil, err
 	}
-	epoch, err := strconv.ParseUint(v.Data.Checkpoint.Epoch, 10, 64)
+	epoch, err := strconv.ParseUint(v.Data.WsCheckpoint.Epoch, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := hexutil.Decode(v.Data.Checkpoint.Root)
+	blockRoot, err := hexutil.Decode(v.Data.WsCheckpoint.Root)
 	if err != nil {
 		return nil, err
 	}

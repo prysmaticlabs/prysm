@@ -15,6 +15,7 @@ import (
 	gcache "github.com/patrickmn/go-cache"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -22,6 +23,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -364,7 +366,7 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 }
 
 func TestRequestPendingBlobs(t *testing.T) {
-	s := &Service{}
+	s := &Service{cfg: &config{blobStorage: filesystem.NewEphemeralBlobStorage(t)}}
 	t.Run("old block should not fail", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
@@ -393,10 +395,11 @@ func TestRequestPendingBlobs(t *testing.T) {
 		p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{FinalizedEpoch: 1})
 		s := &Service{
 			cfg: &config{
-				p2p:      p1,
-				chain:    chain,
-				clock:    startup.NewClock(time.Unix(0, 0), [32]byte{}),
-				beaconDB: db.SetupDB(t),
+				p2p:         p1,
+				chain:       chain,
+				clock:       startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				beaconDB:    db.SetupDB(t),
+				blobStorage: filesystem.NewEphemeralBlobStorage(t),
 			},
 		}
 		b := util.NewBeaconBlockDeneb()
@@ -409,7 +412,8 @@ func TestRequestPendingBlobs(t *testing.T) {
 
 func TestConstructPendingBlobsRequest(t *testing.T) {
 	d := db.SetupDB(t)
-	s := &Service{cfg: &config{beaconDB: d}}
+	bs := filesystem.NewEphemeralBlobStorage(t)
+	s := &Service{cfg: &config{beaconDB: d, blobStorage: bs}}
 	ctx := context.Background()
 
 	// No unknown indices.
@@ -424,11 +428,23 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	}
 
 	// Has indices.
-	blobSidecars := []*ethpb.DeprecatedBlobSidecar{
-		{Index: 0, BlockRoot: root[:]},
-		{Index: 2, BlockRoot: root[:]},
+	header := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			ParentRoot: bytesutil.PadTo([]byte{}, 32),
+			StateRoot:  bytesutil.PadTo([]byte{}, 32),
+			BodyRoot:   bytesutil.PadTo([]byte{}, 32),
+		},
+		Signature: bytesutil.PadTo([]byte{}, 96),
 	}
-	require.NoError(t, d.SaveBlobSidecar(ctx, blobSidecars))
+	blobSidecars := []blocks.ROBlob{
+		util.GenerateTestDenebBlobSidecar(t, root, header, 0, bytesutil.PadTo([]byte{}, 48)),
+		util.GenerateTestDenebBlobSidecar(t, root, header, 2, bytesutil.PadTo([]byte{}, 48)),
+	}
+	vscs, err := verification.BlobSidecarSliceNoop(blobSidecars)
+	require.NoError(t, err)
+	for i := range vscs {
+		require.NoError(t, bs.Save(vscs[i]))
+	}
 
 	expected := []*eth.BlobIdentifier{
 		{Index: 1, BlockRoot: root[:]},
@@ -439,29 +455,8 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 	require.DeepEqual(t, expected[0].BlockRoot, actual[0].BlockRoot)
 }
 
-func TestIndexSetFromBlobs(t *testing.T) {
-	blobs := []*ethpb.DeprecatedBlobSidecar{
-		{Index: 0},
-		{Index: 1},
-		{Index: 2},
-	}
-
-	expected := map[uint64]struct{}{
-		0: {},
-		1: {},
-		2: {},
-	}
-
-	actual := indexSetFromBlobs(blobs)
-	require.DeepEqual(t, expected, actual)
-}
-
 func TestFilterUnknownIndices(t *testing.T) {
-	knownIndices := map[uint64]struct{}{
-		0: {},
-		1: {},
-		2: {},
-	}
+	haveIndices := [fieldparams.MaxBlobsPerBlock]bool{true, true, true, false, false, false}
 
 	blockRoot := [32]byte{}
 	count := 5
@@ -471,7 +466,7 @@ func TestFilterUnknownIndices(t *testing.T) {
 		{Index: 4, BlockRoot: blockRoot[:]},
 	}
 
-	actual := filterUnknownIndices(knownIndices, count, blockRoot)
+	actual := requestsForMissingIndices(haveIndices, count, blockRoot)
 	require.Equal(t, len(expected), len(actual))
 	require.Equal(t, expected[0].Index, actual[0].Index)
 	require.DeepEqual(t, actual[0].BlockRoot, expected[0].BlockRoot)

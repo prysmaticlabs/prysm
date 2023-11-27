@@ -39,6 +39,10 @@ const (
 	broadcastValidationConsensusAndEquivocation = "consensus_and_equivocation"
 )
 
+var (
+	errNilBlock = errors.New("nil block")
+)
+
 type handled bool
 
 // GetBlock retrieves block details for given block ID.

@@ -114,11 +114,11 @@ func TestGetValidatorCount(t *testing.T) {
 			defer ctrl.Finish()
 
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			// Expect node version endpoint call.
 			var nodeVersionResponse node.GetVersionResponse
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/node/version",
 				&nodeVersionResponse,
@@ -131,7 +131,7 @@ func TestGetValidatorCount(t *testing.T) {
 			)
 
 			var validatorCountResponse validator2.CountResponse
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/states/head/validator_count?status=active",
 				&validatorCountResponse,
