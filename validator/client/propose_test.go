@@ -649,7 +649,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
-				assert.NoError(t, err, "Unexpected error unwrapping block")
+				require.NoError(t, err)
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})
 
