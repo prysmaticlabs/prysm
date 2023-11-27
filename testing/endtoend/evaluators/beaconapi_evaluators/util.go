@@ -11,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"prysm"}
 	}
@@ -40,7 +40,7 @@ func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, ds
 		}
 		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
-	return json.NewDecoder(httpResp.Body).Decode(&dst)
+	return json.NewDecoder(httpResp.Body).Decode(&resp)
 }
 
 func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
@@ -86,7 +86,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 	return body, nil
 }
 
-func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"prysm"}
 	}
@@ -121,7 +121,7 @@ func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, p
 		}
 		return fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], httpResp.StatusCode, body)
 	}
-	return json.NewDecoder(httpResp.Body).Decode(&dst)
+	return json.NewDecoder(httpResp.Body).Decode(&resp)
 }
 
 func closeBody(body io.Closer) {
