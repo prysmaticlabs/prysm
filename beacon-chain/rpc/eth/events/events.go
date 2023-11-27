@@ -16,6 +16,7 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -47,19 +48,25 @@ const (
 	PayloadAttributesTopic = "payload_attributes"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
+	// LightClientFinalityUpdateTopic represents a new light client finality update event topic.
+	LightClientFinalityUpdateTopic = "light_client_finality_update"
+	// LightClientOptimisticUpdateTopic represents a new light client optimistic update event topic.
+	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 )
 
 var casesHandled = map[string]bool{
-	HeadTopic:                      true,
-	BlockTopic:                     true,
-	AttestationTopic:               true,
-	VoluntaryExitTopic:             true,
-	FinalizedCheckpointTopic:       true,
-	ChainReorgTopic:                true,
-	SyncCommitteeContributionTopic: true,
-	BLSToExecutionChangeTopic:      true,
-	PayloadAttributesTopic:         true,
-	BlobSidecarTopic:               true,
+	HeadTopic:                        true,
+	BlockTopic:                       true,
+	AttestationTopic:                 true,
+	VoluntaryExitTopic:               true,
+	FinalizedCheckpointTopic:         true,
+	ChainReorgTopic:                  true,
+	SyncCommitteeContributionTopic:   true,
+	BLSToExecutionChangeTopic:        true,
+	PayloadAttributesTopic:           true,
+	BlobSidecarTopic:                 true,
+	LightClientFinalityUpdateTopic:   true,
+	LightClientOptimisticUpdateTopic: true,
 }
 
 // StreamEvents allows requesting all events from a set of topics defined in the Ethereum consensus API standard.
@@ -227,6 +234,24 @@ func (s *Server) handleStateEvents(
 			return nil
 		}
 		return streamData(stream, FinalizedCheckpointTopic, finalizedCheckpoint)
+	case statefeed.LightClientFinalityUpdate:
+		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
+			return nil
+		}
+		update, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
+		if !ok {
+			return nil
+		}
+		return streamData(stream, LightClientFinalityUpdateTopic, update)
+	case statefeed.LightClientOptimisticUpdate:
+		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
+			return nil
+		}
+		update, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateWithVersion)
+		if !ok {
+			return nil
+		}
+		return streamData(stream, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return nil
