@@ -69,7 +69,7 @@ type Service struct {
 	metaData              metadata.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
-	joinedTopicsLock      sync.Mutex
+	joinedTopicsLock      sync.RWMutex
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	initializationLock    sync.Mutex
