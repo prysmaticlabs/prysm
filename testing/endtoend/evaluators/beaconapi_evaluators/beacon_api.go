@@ -17,14 +17,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 var (
-	errSszCast             = errors.New("ssz response is not a byte array")
-	errEmptyPrysmData      = errors.New("prysm data is empty")
-	errEmptyLighthouseData = errors.New("lighthouse data is empty")
+	errSszCast   = errors.New("ssz response is not a byte array")
+	errEmptyData = errors.New("data is empty")
 )
 
 const (
@@ -32,9 +32,13 @@ const (
 )
 
 type meta interface {
+	getBasePath() string
+	sszEnabled() bool
+	enableSsz()
+	getSszResp() []byte
+	setSszResp(resp []byte)
 	getStart() primitives.Epoch
 	setStart(start primitives.Epoch)
-	getBasePath() string
 	getReq() interface{}
 	setReq(req interface{})
 	getPResp() interface{}
@@ -46,13 +50,35 @@ type meta interface {
 }
 
 type metadata[Resp any] struct {
-	start      primitives.Epoch
 	basePath   string
+	ssz        bool
+	start      primitives.Epoch
 	req        interface{}
 	pResp      *Resp
 	lResp      *Resp
+	sszResp    []byte
 	params     func(currentEpoch primitives.Epoch) []string
 	customEval func(interface{}, interface{}) error
+}
+
+func (m *metadata[Resp]) getBasePath() string {
+	return m.basePath
+}
+
+func (m *metadata[Resp]) sszEnabled() bool {
+	return m.ssz
+}
+
+func (m *metadata[Resp]) enableSsz() {
+	m.ssz = true
+}
+
+func (m *metadata[Resp]) getSszResp() []byte {
+	return m.sszResp
+}
+
+func (m *metadata[Resp]) setSszResp(resp []byte) {
+	m.sszResp = resp
 }
 
 func (m *metadata[Resp]) getStart() primitives.Epoch {
@@ -61,10 +87,6 @@ func (m *metadata[Resp]) getStart() primitives.Epoch {
 
 func (m *metadata[Resp]) setStart(start primitives.Epoch) {
 	m.start = start
-}
-
-func (m *metadata[Resp]) getBasePath() string {
-	return m.basePath
 }
 
 func (m *metadata[Resp]) getReq() interface{} {
@@ -115,6 +137,12 @@ func newMetadata[Resp any](basePath string, opts ...metadataOpt) *metadata[Resp]
 }
 
 type metadataOpt func(meta)
+
+func withSsz() metadataOpt {
+	return func(m meta) {
+		m.enableSsz()
+	}
+}
 
 func withStart(start primitives.Epoch) metadataOpt {
 	return func(m meta) {
@@ -190,6 +218,7 @@ var requests = map[string]meta{
 			return []string{fmt.Sprintf("%v", slot)}
 		})),
 	"/beacon/blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v2PathTemplate,
+		withSsz(),
 		withParams(func(e primitives.Epoch) []string {
 			return []string{"head"}
 		})),
@@ -202,96 +231,62 @@ var requests = map[string]meta{
 			return []string{"head"}
 		})),
 	"/beacon/blinded_blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v1PathTemplate,
+		withSsz(),
 		withParams(func(e primitives.Epoch) []string {
 			return []string{"head"}
 		})),
 	"/beacon/pool/attestations": newMetadata[beacon.ListAttestationsResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*beacon.ListAttestationsResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, p)
 			}
-			lResp, ok := l.(*beacon.ListAttestationsResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/beacon/pool/attester_slashings": newMetadata[beacon.GetAttesterSlashingsResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*beacon.GetAttesterSlashingsResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &beacon.GetAttesterSlashingsResponse{}, p)
 			}
-			lResp, ok := l.(*beacon.GetAttesterSlashingsResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.GetAttesterSlashingsResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/beacon/pool/proposer_slashings": newMetadata[beacon.GetProposerSlashingsResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*beacon.GetProposerSlashingsResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &beacon.GetProposerSlashingsResponse{}, p)
 			}
-			lResp, ok := l.(*beacon.GetProposerSlashingsResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.GetProposerSlashingsResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/beacon/pool/voluntary_exits": newMetadata[beacon.ListVoluntaryExitsResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*beacon.ListVoluntaryExitsResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &beacon.ListVoluntaryExitsResponse{}, p)
 			}
-			lResp, ok := l.(*beacon.ListVoluntaryExitsResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.ListVoluntaryExitsResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/beacon/pool/bls_to_execution_changes": newMetadata[beacon.BLSToExecutionChangesPoolResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*beacon.BLSToExecutionChangesPoolResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &beacon.BLSToExecutionChangesPoolResponse{}, p)
 			}
-			lResp, ok := l.(*beacon.BLSToExecutionChangesPoolResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &beacon.BLSToExecutionChangesPoolResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
@@ -325,56 +320,35 @@ var requests = map[string]meta{
 		})),
 	"/debug/beacon/heads": newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
 	"/node/identity": newMetadata[node.GetIdentityResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*node.GetIdentityResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &node.GetIdentityResponse{}, p)
 			}
-			lResp, ok := l.(*node.GetIdentityResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetIdentityResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/node/peers": newMetadata[node.GetPeersResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*node.GetPeersResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &node.GetPeersResponse{}, p)
 			}
-			lResp, ok := l.(*node.GetPeersResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetPeersResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
 	"/node/peer_count": newMetadata[node.GetPeerCountResponse](v1PathTemplate,
-		withCustomEval(func(p interface{}, l interface{}) error {
+		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*node.GetPeerCountResponse)
 			if !ok {
 				return fmt.Errorf(msgWrongJson, &node.GetPeerCountResponse{}, p)
 			}
-			lResp, ok := l.(*node.GetPeerCountResponse)
-			if !ok {
-				return fmt.Errorf(msgWrongJson, &node.GetPeerCountResponse{}, l)
-			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
-			}
-			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			return nil
 		})),
@@ -389,13 +363,13 @@ var requests = map[string]meta{
 				return fmt.Errorf(msgWrongJson, &beacon.ListAttestationsResponse{}, p)
 			}
 			if pResp.Data == nil {
-				return errEmptyPrysmData
+				return errEmptyData
 			}
 			if !strings.Contains(pResp.Data.Version, "Prysm") {
 				return errors.New("version response does not contain Prysm client name")
 			}
 			if lResp.Data == nil {
-				return errEmptyLighthouseData
+				return errEmptyData
 			}
 			if !strings.Contains(lResp.Data.Version, "Lighthouse") {
 				return errors.New("version response does not contain Lighthouse client name")
@@ -475,6 +449,13 @@ func withCompareBeaconAPIs(nodeIdx int) error {
 		if err = compareJSONMultiClient(nodeIdx, m.getBasePath(), apiPath, m.getReq(), m.getPResp(), m.getLResp(), m.getCustomEval()); err != nil {
 			return err
 		}
+		if m.sszEnabled() {
+			b, err := compareSSZMultiClient(nodeIdx, m.getBasePath(), apiPath)
+			if err != nil {
+				return err
+			}
+			m.setSszResp(b)
+		}
 		fmt.Printf("executing json api path: %s\n", apiPath)
 	}
 
@@ -485,71 +466,66 @@ func withCompareBeaconAPIs(nodeIdx int) error {
 // It is useful for things such as checking if specific fields match between endpoints.
 func postEvaluation(requests map[string]meta) error {
 	// verify that block SSZ responses have the correct structure
-	/*forkData := requests["/beacon/states/{param1}/fork"]
-	fork, ok := forkData.getPResp().(beacon.GetStateForkResponse)
+	forkData := requests["/beacon/states/{param1}/fork"]
+	fork, ok := forkData.getPResp().(*beacon.GetStateForkResponse)
 	if !ok {
-		return errJsonCast
+		return fmt.Errorf(msgWrongJson, &beacon.GetStateForkResponse{}, forkData.getPResp())
 	}
 	finalizedEpoch, err := strconv.ParseUint(fork.Data.Epoch, 10, 64)
 	if err != nil {
 		return err
 	}
 	blockData := requests["/beacon/blocks/{param1}"]
-	blockSsz, ok := blockData.prysmResps["ssz"].([]byte)
-	if !ok {
-		return errSszCast
-	}
 	blindedBlockData := requests["/beacon/blinded_blocks/{param1}"]
-	blindedBlockSsz, ok := blindedBlockData.prysmResps["ssz"].([]byte)
 	if !ok {
 		return errSszCast
 	}
 	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
 		b := &ethpb.SignedBeaconBlock{}
-		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBeaconBlock{}
-		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
-		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBeaconBlockAltair{}
-		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
-		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockBellatrix{}
-		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
-		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockCapella{}
-		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 	} else {
 		b := &ethpb.SignedBeaconBlockDeneb{}
-		if err := b.UnmarshalSSZ(blockSsz); err != nil {
+		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockDeneb{}
-		if err := bb.UnmarshalSSZ(blindedBlockSsz); err != nil {
+		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, "failed to unmarshal ssz")
 		}
-	}*/
+	}
 
 	// verify that dependent root of proposer duties matches block header
 	blockHeaderData := requests["/beacon/headers/{param1}"]
@@ -592,19 +568,19 @@ func compareJSONMultiClient(nodeIdx int, base, path string, req, pResp, lResp in
 	}
 }
 
-func compareSSZMultiClient(nodeIdx int, base, path string) ([]byte, []byte, error) {
+func compareSSZMultiClient(nodeIdx int, base, path string) ([]byte, error) {
 	pResp, err := doSSZGetRequest(base, path, nodeIdx)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could not perform Prysm SSZ GET request for path %s", path)
+		return nil, errors.Wrapf(err, "could not perform Prysm SSZ GET request for path %s", path)
 	}
 	lResp, err := doSSZGetRequest(base, path, nodeIdx, "lighthouse")
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "could not perform Lighthouse SSZ GET request for path %s", path)
+		return nil, errors.Wrapf(err, "could not perform Lighthouse SSZ GET request for path %s", path)
 	}
 	if !bytes.Equal(pResp, lResp) {
-		return nil, nil, errors.New("Prysm SSZ response does not match Lighthouse SSZ response")
+		return nil, errors.New("Prysm SSZ response does not match Lighthouse SSZ response")
 	}
-	return pResp, lResp, nil
+	return pResp, nil
 }
 
 func compareJSON(pResp interface{}, lResp interface{}) error {
