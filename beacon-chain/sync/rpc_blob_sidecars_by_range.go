@@ -27,18 +27,23 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	for _, b := range batch.canonical() {
-		_ = b.Root()
-		// TODO: Fix DB to return the right blob sidecars
-		//scs , err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, b.Root())
-		//if errors.Is(err, db.ErrNotFound) {
-		//	continue
-		//}
-		//if err != nil {
-		//	s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
-		//	return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
-		//}
-		scs := make([]*pb.BlobSidecar, 0)
-		for _, sc := range scs {
+		root := b.Root()
+		idxs, err := s.cfg.blobStorage.Indices(b.Root())
+		if err != nil {
+			s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+			return wQuota, errors.Wrapf(err, "could not retrieve sidecars for block root %#x", root)
+		}
+		for i, l := uint64(0), uint64(len(idxs)); i < l; i++ {
+			// index not available, skip
+			if !idxs[i] {
+				continue
+			}
+			// We won't check for file not found since the .Indices method should normally prevent that from happening.
+			sc, err := s.cfg.blobStorage.Get(b.Root(), i)
+			if err != nil {
+				s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+				return wQuota, errors.Wrapf(err, "could not retrieve sidecar: index %d, block root %#x", i, root)
+			}
 			SetStreamWriteDeadline(stream, defaultWriteDuration)
 			if chunkErr := WriteBlobSidecarChunk(stream, s.cfg.chain, s.cfg.p2p.Encoding(), sc); chunkErr != nil {
 				log.WithError(chunkErr).Debug("Could not send a chunked response")
@@ -153,7 +158,7 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow start + count -1")
 	}
 
-	maxRequest := params.BeaconNetworkConfig().MaxRequestBlocksDeneb
+	maxRequest := params.MaxRequestBlock(slots.ToEpoch(current))
 	// Allow some wiggle room, up to double the MaxRequestBlocks past the current slot,
 	// to give nodes syncing close to the head of the chain some margin for error.
 	maxStart, err := current.SafeAdd(maxRequest * 2)

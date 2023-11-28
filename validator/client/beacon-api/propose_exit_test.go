@@ -37,8 +37,8 @@ func TestProposeExit_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		proposeExitTestEndpoint,
 		nil,
@@ -87,8 +87,8 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		proposeExitTestEndpoint,
 		nil,
@@ -109,6 +109,5 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
-	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }

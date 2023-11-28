@@ -296,7 +296,7 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
 	case *eth.GenericBeaconBlock_Deneb:
 		// no need for sidecar
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockDeneb{Block: b.Deneb}})
 	case *eth.GenericBeaconBlock_BlindedDeneb:
 		// no need for sidecar
 		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
@@ -581,7 +581,9 @@ func handleProduceDenebV3(
 		http2.WriteSsz(w, sszResp, "denebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
+
+	// TODO: We need to add blobs here for beacon api
+	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(&eth.BeaconBlockAndBlobsDeneb{Block: blk.Deneb})
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return

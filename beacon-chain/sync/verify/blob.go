@@ -2,45 +2,42 @@ package verify
 
 import (
 	"github.com/pkg/errors"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 var (
 	errBlobVerification          = errors.New("unable to verify blobs")
-	ErrMismatchedBlobBlockRoot   = errors.Wrap(errBlobVerification, "BlockRoot in BlobSidecar does not match the expected root")
-	ErrMismatchedBlobBlockSlot   = errors.Wrap(errBlobVerification, "BlockSlot in BlobSidecar does not match the expected slot")
+	ErrIncorrectBlobIndex        = errors.New("incorrect blob index")
+	ErrBlobBlockMisaligned       = errors.Wrap(errBlobVerification, "root of block header in blob sidecar does not match block root")
 	ErrMismatchedBlobCommitments = errors.Wrap(errBlobVerification, "commitments at given slot, root and index do not match")
-	ErrMismatchedProposerIndex   = errors.Wrap(errBlobVerification, "proposer index does not match")
-	ErrIncorrectBlobIndex        = errors.Wrap(errBlobVerification, "incorrect blob index")
 )
 
 // BlobAlignsWithBlock verifies if the blob aligns with the block.
-func BlobAlignsWithBlock(blobSidecar blocks.ROBlob, block blocks.ROBlock) error {
+func BlobAlignsWithBlock(blob blocks.ROBlob, block blocks.ROBlock) error {
 	if block.Version() < version.Deneb {
 		return nil
 	}
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
+		return errors.Wrapf(ErrIncorrectBlobIndex, "index %d exceeds MAX_BLOBS_PER_BLOCK %d", blob.Index, fieldparams.MaxBlobsPerBlock)
+	}
 
+	if blob.BlockRoot() != block.Root() {
+		return ErrBlobBlockMisaligned
+	}
+
+	// Verify commitment byte values match
+	// TODO: verify commitment inclusion proof - actually replace this with a better rpc blob verification stack altogether.
 	commits, err := block.Block().Body().BlobKzgCommitments()
 	if err != nil {
 		return err
 	}
-
-	if len(commits) == 0 {
-		return nil
+	blockCommitment := bytesutil.ToBytes48(commits[blob.Index])
+	blobCommitment := bytesutil.ToBytes48(blob.KzgCommitment)
+	if blobCommitment != blockCommitment {
+		return errors.Wrapf(ErrMismatchedBlobCommitments, "commitment %#x != block commitment %#x, at index %d for block root %#x at slot %d ", blobCommitment, blockCommitment, blob.Index, block.Root(), blob.Slot())
 	}
-
-	if blobSidecar.Index >= field_params.MaxBlobsPerBlock {
-		return errors.Wrapf(ErrIncorrectBlobIndex, "blobSidecar index %d >= max blobs per block %d", blobSidecar.Index, field_params.MaxBlobsPerBlock)
-	}
-
-	if blobSidecar.BlockRoot() != block.Root() {
-		return errors.Wrapf(ErrMismatchedBlobBlockRoot, "blobSidecar root %#x != block root %#x", blobSidecar.BlockRoot(), block.Root())
-	}
-
-	// TODO: Verify blobSidecar to kzg commitment is correct
-	// TODO: Verify sidecar's inclusion proof is correct
-
 	return nil
 }

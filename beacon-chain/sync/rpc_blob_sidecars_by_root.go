@@ -7,6 +7,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -14,7 +15,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -65,10 +65,6 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	}
 	minReqEpoch := blobMinReqEpoch(s.cfg.chain.FinalizedCheckpt().Epoch, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 
-	buff := struct {
-		root [32]byte
-		scs  []*eth.BlobSidecar
-	}{}
 	for i := range blobIdents {
 		if err := ctx.Err(); err != nil {
 			closeStream(stream, log)
@@ -81,33 +77,20 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		}
 		s.rateLimiter.add(stream, 1)
 		root, idx := bytesutil.ToBytes32(blobIdents[i].BlockRoot), blobIdents[i].Index
-		if root != buff.root {
-			// TODO: Fix DB to return the right blob sidecars
-			// scs, err := s.cfg.beaconDB.BlobSidecarsByRoot(ctx, root)
-			var scs []*eth.BlobSidecar
-			buff.root, buff.scs = root, scs
-			//if err != nil {
-			//	if errors.Is(err, db.ErrNotFound) {
-			//		// In case db error path gave us a non-nil value, make sure that other indices for the problem root
-			//		// are not processed when we reenter the outer loop.
-			//		buff.scs = nil
-			//		log.WithError(err).Debugf("BlobSidecar not found in db, root=%x, index=%d", root, idx)
-			//		continue
-			//	}
-			//	log.WithError(err).Errorf("unexpected db error retrieving BlobSidecar, root=%x, index=%d", root, idx)
-			//	s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
-			//	return err
-			//}
+		sc, err := s.cfg.blobStorage.Get(root, idx)
+		if err != nil {
+			if db.IsNotFound(err) {
+				log.WithError(err).Debugf("BlobSidecar not found in db, root=%x, index=%d", root, idx)
+				continue
+			}
+			log.WithError(err).Errorf("unexpected db error retrieving BlobSidecar, root=%x, index=%d", root, idx)
+			s.writeErrorResponseToStream(responseCodeServerError, types.ErrGeneric.Error(), stream)
+			return err
 		}
-
-		if idx >= uint64(len(buff.scs)) {
-			continue
-		}
-		sc := buff.scs[idx]
 
 		// If any root in the request content references a block earlier than minimum_request_epoch,
 		// peers MAY respond with error code 3: ResourceUnavailable or not include the blob in the response.
-		if slots.ToEpoch(sc.SignedBlockHeader.Header.Slot) < minReqEpoch {
+		if slots.ToEpoch(sc.Slot()) < minReqEpoch {
 			s.writeErrorResponseToStream(responseCodeResourceUnavailable, types.ErrBlobLTMinRequest.Error(), stream)
 			log.WithError(types.ErrBlobLTMinRequest).
 				Debugf("requested blob for block %#x before minimum_request_epoch", blobIdents[i].BlockRoot)

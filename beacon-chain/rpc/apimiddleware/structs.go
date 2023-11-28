@@ -8,39 +8,14 @@ import (
 // Requests and responses.
 //----------------
 
-// WeakSubjectivityResponse is used to marshal/unmarshal the response for the
-// /eth/v1/beacon/weak_subjectivity endpoint.
-type WeakSubjectivityResponse struct {
-	Data *struct {
-		Checkpoint *CheckpointJson `json:"ws_checkpoint"`
-		StateRoot  string          `json:"state_root" hex:"true"`
-	} `json:"data"`
-}
-
 type BlockRootResponseJson struct {
 	Data                *BlockRootContainerJson `json:"data"`
 	ExecutionOptimistic bool                    `json:"execution_optimistic"`
 	Finalized           bool                    `json:"finalized"`
 }
 
-type AttesterSlashingsPoolResponseJson struct {
-	Data []*AttesterSlashingJson `json:"data"`
-}
-
-type ProposerSlashingsPoolResponseJson struct {
-	Data []*ProposerSlashingJson `json:"data"`
-}
-
-type ForkScheduleResponseJson struct {
-	Data []*ForkJson `json:"data"`
-}
-
 type DepositContractResponseJson struct {
 	Data *DepositContractJson `json:"data"`
-}
-
-type SpecResponseJson struct {
-	Data interface{} `json:"data"`
 }
 
 type AggregateAttestationResponseJson struct {

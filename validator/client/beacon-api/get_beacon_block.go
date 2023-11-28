@@ -37,7 +37,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 	// We try the blinded block endpoint first. If it fails, we assume that we got a full block and try the full block endpoint.
 	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), queryParams)
 	produceBlockV3ResponseJson := validator.ProduceBlockV3Response{}
-	errJson, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlockV3ResponseJson)
+	errJson, err := c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockV3ResponseJson)
 	if err == nil {
 		ver = produceBlockV3ResponseJson.Version
 		blinded = produceBlockV3ResponseJson.ExecutionPayloadBlinded
@@ -48,7 +48,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
 		produceBlindedBlockResponseJson := abstractProduceBlockResponseJson{}
 		queryUrl = buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
-		errJson, err = c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlindedBlockResponseJson)
+		errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlindedBlockResponseJson)
 		if err == nil {
 			ver = produceBlindedBlockResponseJson.Version
 			blinded = true
@@ -57,7 +57,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
 			produceBlockResponseJson := abstractProduceBlockResponseJson{}
 			queryUrl = buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
-			errJson, err = c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &produceBlockResponseJson)
+			errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockResponseJson)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to query GET REST endpoint")
 			}

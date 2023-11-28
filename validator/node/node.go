@@ -439,6 +439,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		ProposerSettings:           bpc,
 		BeaconApiTimeout:           time.Second * 30,
 		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
+		ValidatorRegBatchSize:      c.cliCtx.Int(flags.ValidatorRegistrationBatchSizeFlag.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -794,11 +795,9 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 
 	registrations := []gateway.PbHandlerRegistration{
 		validatorpb.RegisterAuthHandler,
-		validatorpb.RegisterWalletHandler,
 		pb.RegisterHealthHandler,
 		validatorpb.RegisterAccountsHandler,
 		validatorpb.RegisterBeaconHandler,
-		validatorpb.RegisterSlashingProtectionHandler,
 	}
 	gwmux := gwruntime.NewServeMux(
 		gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{

@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -277,17 +278,17 @@ var requests = map[string]metadata{
 	"/beacon/pool/attester_slashings": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterSlashingsPoolResponseJson{},
+			"json": &beacon.GetAttesterSlashingsResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.AttesterSlashingsPoolResponseJson{},
+			"json": &beacon.GetAttesterSlashingsResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
-			pResp, ok := p.(*apimiddleware.AttesterSlashingsPoolResponseJson)
+			pResp, ok := p.(*beacon.GetAttesterSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
-			lResp, ok := l.(*apimiddleware.AttesterSlashingsPoolResponseJson)
+			lResp, ok := l.(*beacon.GetAttesterSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -303,17 +304,17 @@ var requests = map[string]metadata{
 	"/beacon/pool/proposer_slashings": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerSlashingsPoolResponseJson{},
+			"json": &beacon.GetProposerSlashingsResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.ProposerSlashingsPoolResponseJson{},
+			"json": &beacon.GetProposerSlashingsResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
-			pResp, ok := p.(*apimiddleware.ProposerSlashingsPoolResponseJson)
+			pResp, ok := p.(*beacon.GetProposerSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
-			lResp, ok := l.(*apimiddleware.ProposerSlashingsPoolResponseJson)
+			lResp, ok := l.(*beacon.GetProposerSlashingsResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -381,14 +382,14 @@ var requests = map[string]metadata{
 	"/config/fork_schedule": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.ForkScheduleResponseJson{},
+			"json": &config.GetForkScheduleResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.ForkScheduleResponseJson{},
+			"json": &config.GetForkScheduleResponse{},
 		},
 		customEvaluation: func(p interface{}, l interface{}) error {
 			// remove all forks with far-future epoch
-			pSchedule, ok := p.(*apimiddleware.ForkScheduleResponseJson)
+			pSchedule, ok := p.(*config.GetForkScheduleResponse)
 			if !ok {
 				return errJsonCast
 			}
@@ -397,7 +398,7 @@ var requests = map[string]metadata{
 					pSchedule.Data = append(pSchedule.Data[:i], pSchedule.Data[i+1:]...)
 				}
 			}
-			lSchedule, ok := l.(*apimiddleware.ForkScheduleResponseJson)
+			lSchedule, ok := l.(*config.GetForkScheduleResponse)
 			if !ok {
 				return errJsonCast
 			}
