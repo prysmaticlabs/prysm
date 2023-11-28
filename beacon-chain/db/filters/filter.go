@@ -43,8 +43,6 @@ const (
 	TargetRoot
 	// SlotStep is used for range filters of objects by their slot in step increments.
 	SlotStep
-	// BlockRoots is used to filter for the target root attributes of objects.
-	BlockRoots
 )
 
 // QueryFilter defines a generic interface for type-asserting
@@ -132,11 +130,5 @@ func (q *QueryFilter) SetEndEpoch(val primitives.Epoch) *QueryFilter {
 // for blocks from 0 to 9 with a step of 2 would return objects at slot 0, 2, 4, 6, 8.
 func (q *QueryFilter) SetSlotStep(val uint64) *QueryFilter {
 	q.queries[SlotStep] = val
-	return q
-}
-
-// SetBlockRoots enables filtering by block roots.
-func (q *QueryFilter) SetBlockRoots(val map[[32]byte]interface{}) *QueryFilter {
-	q.queries[BlockRoots] = val
 	return q
 }
