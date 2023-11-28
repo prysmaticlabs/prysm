@@ -315,19 +315,25 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid slot: %w", proposal.Slot, err)
 		}
-		var signingRoot [32]byte
+
 		// Signing roots are optional in the standard JSON file.
+		// If the signing root is not provided, we use a default value which is a zero-length byte slice.
+		signingRoot := make([]byte, 0, fieldparams.RootLength)
+
 		if proposal.SigningRoot != "" {
-			signingRoot, err = RootFromHex(proposal.SigningRoot)
+			signingRoot32, err := RootFromHex(proposal.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%s is not a valid root: %w", proposal.SigningRoot, err)
 			}
+			signingRoot = signingRoot32[:]
 		}
+
 		proposals[i] = kv.Proposal{
 			Slot:        slot,
-			SigningRoot: signingRoot[:],
+			SigningRoot: signingRoot,
 		}
 	}
+
 	return &kv.ProposalHistoryForPubkey{
 		Proposals: proposals,
 	}, nil
