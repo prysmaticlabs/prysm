@@ -218,7 +218,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 				return err
 			}
 			if slot < (currentSlot - retentionSlot) {
-				if err = os.RemoveAll(folder.Name()); err != nil {
+				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
 					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 				}
 			}
