@@ -206,7 +206,12 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			if err != nil {
 				return err
 			}
-			defer f.Close()
+			defer func(f afero.File) {
+				err := f.Close()
+				if err != nil {
+					log.WithError(err).Errorf("Could not close blob file")
+				}
+			}(f)
 
 			slot, err := slotFromBlob(f)
 			if err != nil {
