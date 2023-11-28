@@ -1,7 +1,6 @@
 package apimiddleware
 
 import (
-	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 )
 
@@ -15,18 +14,12 @@ func (f *BeaconEndpointFactory) IsNil() bool {
 
 // Paths is a collection of all valid beacon chain API paths.
 func (_ *BeaconEndpointFactory) Paths() []string {
-	return []string{
-	}
+	return []string{}
 }
 
 // Create returns a new endpoint for the provided API path.
 func (_ *BeaconEndpointFactory) Create(path string) (*apimiddleware.Endpoint, error) {
 	endpoint := apimiddleware.DefaultEndpoint()
-	switch path {
-	default:
-		return nil, errors.New("invalid path")
-	}
-
 	endpoint.Path = path
 	return &endpoint, nil
 }
