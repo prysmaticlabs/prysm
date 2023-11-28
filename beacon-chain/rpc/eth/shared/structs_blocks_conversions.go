@@ -1185,11 +1185,8 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 	if err != nil {
 		return nil, NewDecodeError(err, "SignedBlock")
 	}
-	block := &eth.SignedBeaconBlockAndBlobsDeneb{
-		Block: signedDenebBlock,
-		Blobs: signedBlobSidecars,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
 }
 
 func (b *SignedBeaconBlockContentsDeneb) ToUnsigned() *BeaconBlockContentsDeneb {
@@ -1211,7 +1208,8 @@ func (b *BeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block.Block}}, nil
 }
 
 func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb, error) {

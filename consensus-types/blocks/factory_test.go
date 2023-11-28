@@ -123,11 +123,10 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 	})
 	t.Run("GenericSignedBeaconBlock_Deneb", func(t *testing.T) {
 		pb := &eth.GenericSignedBeaconBlock_Deneb{
-			Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{
-				Block: &eth.SignedBeaconBlockDeneb{
-					Block: &eth.BeaconBlockDeneb{
-						Body: &eth.BeaconBlockBodyDeneb{},
-					}}}}
+			Deneb: &eth.SignedBeaconBlockDeneb{
+				Block: &eth.BeaconBlockDeneb{
+					Body: &eth.BeaconBlockBodyDeneb{},
+				}}}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())
@@ -249,9 +248,9 @@ func Test_NewBeaconBlock(t *testing.T) {
 		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("GenericBeaconBlock_Deneb", func(t *testing.T) {
-		pb := &eth.GenericBeaconBlock_Deneb{Deneb: &eth.BeaconBlockAndBlobsDeneb{Block: &eth.BeaconBlockDeneb{
+		pb := &eth.GenericBeaconBlock_Deneb{Deneb: &eth.BeaconBlockDeneb{
 			Body: &eth.BeaconBlockBodyDeneb{},
-		}}}
+		}}
 		b, err := NewBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())
