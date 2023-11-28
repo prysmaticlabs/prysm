@@ -23,7 +23,7 @@ import (
 type beaconApiBeaconChainClient struct {
 	fallbackClient          iface.BeaconChainClient
 	jsonRestHandler         JsonRestHandler
-	stateValidatorsProvider stateValidatorsProvider
+	stateValidatorsProvider StateValidatorsProvider
 }
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
