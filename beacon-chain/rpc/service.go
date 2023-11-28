@@ -101,6 +101,7 @@ type Config struct {
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	AttestationReceiver           blockchain.AttestationReceiver
 	BlockReceiver                 blockchain.BlockReceiver
+	BlobReceiver                  blockchain.BlobReceiver
 	ExecutionChainService         execution.Chain
 	ChainStartFetcher             execution.ChainStartFetcher
 	ExecutionChainInfoFetcher     execution.ChainInfoFetcher
@@ -276,6 +277,7 @@ func (s *Service) Start() {
 		OperationNotifier:      s.cfg.OperationNotifier,
 		P2P:                    s.cfg.Broadcaster,
 		BlockReceiver:          s.cfg.BlockReceiver,
+		BlobReceiver:           s.cfg.BlobReceiver,
 		MockEth1Votes:          s.cfg.MockEth1Votes,
 		Eth1BlockFetcher:       s.cfg.ExecutionChainService,
 		PendingDepositsFetcher: s.cfg.PendingDepositFetcher,

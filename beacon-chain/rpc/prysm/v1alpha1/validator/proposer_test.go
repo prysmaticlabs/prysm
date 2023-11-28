@@ -547,12 +547,7 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 
 	got, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
-	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
-
-	require.Equal(t, 3, len(got.GetDeneb().Blobs))
-	blockRoot, err := got.GetDeneb().Block.HashTreeRoot()
-	require.NoError(t, err)
-	require.DeepEqual(t, blockRoot[:], got.GetDeneb().Blobs[0].BlockRoot)
+	require.DeepEqual(t, got.GetDeneb().Body.BlobKzgCommitments, kc)
 }
 
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
@@ -700,49 +695,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blockToPropose := util.NewBeaconBlockDeneb()
 				blockToPropose.Block.Slot = 5
 				blockToPropose.Block.ParentRoot = parent[:]
-				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-					Block: blockToPropose,
-				}}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk}
-			},
-		},
-		{
-			name: "deneb block has blobs",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				blockToPropose := util.NewBeaconBlockDeneb()
-				blockToPropose.Block.Slot = 5
-				blockToPropose.Block.ParentRoot = parent[:]
-				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-					Block: blockToPropose,
-					Blobs: []*ethpb.SignedBlobSidecar{
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
-					},
-				}}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk}
-			},
-		},
-		{
-			name: "deneb block has too many blobs",
-			err:  "too many blobs in block: 7",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				blockToPropose := util.NewBeaconBlockDeneb()
-				blockToPropose.Block.Slot = 5
-				blockToPropose.Block.ParentRoot = parent[:]
-				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-					Block: blockToPropose,
-					Blobs: []*ethpb.SignedBlobSidecar{
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 0, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 1, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 2, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 3, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 4, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 5, Slot: 5, BlockParentRoot: parent[:]}},
-						{Message: &ethpb.DeprecatedBlobSidecar{Index: 6, Slot: 5, BlockParentRoot: parent[:]}},
-					},
-				}}
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
@@ -806,14 +759,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				assert.NoError(t, err, "Could not propose block correctly")
 				if res == nil || len(res.BlockRoot) == 0 {
 					t.Error("No block root was returned")
-				}
-			}
-			if tt.name == "deneb block has blobs" {
-				scs, err := db.BlobSidecarsBySlot(ctx, blockToPropose.GetDeneb().Block.Block.Slot)
-				require.NoError(t, err)
-				assert.Equal(t, 4, len(scs))
-				for i, sc := range scs {
-					require.Equal(t, uint64(i), sc.Index)
 				}
 			}
 		})
@@ -2853,20 +2798,4 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
-}
-
-func Test_extractBlobs(t *testing.T) {
-	blobs := []*ethpb.SignedBlobSidecar{
-		{Message: &ethpb.DeprecatedBlobSidecar{Index: 0}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 1}},
-		{Message: &ethpb.DeprecatedBlobSidecar{Index: 2}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 3}},
-		{Message: &ethpb.DeprecatedBlobSidecar{Index: 4}}, {Message: &ethpb.DeprecatedBlobSidecar{Index: 5}}}
-	req := &ethpb.GenericSignedBeaconBlock{Block: &ethpb.GenericSignedBeaconBlock_Deneb{
-		Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-			Blobs: blobs,
-		},
-	},
-	}
-	bs, err := extraSidecars(req)
-	require.NoError(t, err)
-	require.DeepEqual(t, blobs, bs)
 }
