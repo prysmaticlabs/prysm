@@ -27,7 +27,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var processPendingBlocksPeriod = slots.DivideSlotBy(3 /* times per slot */)
+const (
+	firstIntervalPercentage  = 17
+	secondIntervalPercentage = 42
+	thirdIntervalPercentage  = 92
+)
 
 const maxPeerRequest = 50
 const numOfTries = 5
@@ -42,7 +46,8 @@ func (s *Service) processPendingBlocksQueue() {
 	}
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	locker := new(sync.Mutex)
-	async.RunWithTickerAndInterval(s.ctx, clock.GenesisTime(), []time.Duration{2 * time.Second, 5 * time.Second, 11 * time.Second}, func() {
+	slotTimeMultiplier := (time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second) / 100
+	async.RunWithTickerAndInterval(s.ctx, clock.GenesisTime(), []time.Duration{firstIntervalPercentage * slotTimeMultiplier, secondIntervalPercentage * slotTimeMultiplier, thirdIntervalPercentage * slotTimeMultiplier}, func() {
 		// Don't process the pending blocks if genesis time has not been set. The chain is not ready.
 		if !s.chainIsStarted() {
 			return

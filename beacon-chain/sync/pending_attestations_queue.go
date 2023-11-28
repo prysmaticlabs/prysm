@@ -21,7 +21,7 @@ import (
 )
 
 // This defines how often a node cleans up and processes pending attestations in the queue.
-var processPendingAttsPeriod = slots.DivideSlotBy(2 /* twice per slot */)
+
 var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
@@ -33,6 +33,7 @@ func (s *Service) processPendingAttsQueue() {
 	}
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
+	processPendingAttsPeriod := slots.DivideSlotBy(2 /* twice per slot */)
 	async.RunWithTickerAndInterval(s.ctx, clock.GenesisTime(), []time.Duration{0, processPendingAttsPeriod}, func() {
 		mutex.Lock()
 		if err := s.processPendingAtts(s.ctx); err != nil {
