@@ -114,18 +114,13 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetStateRoot(sr)
 
-	fullBlobs, err := blobsBundleToSidecars(bundleCache.get(req.Slot), sBlk.Block())
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not convert blobs bundle to sidecar: %v", err)
-	}
-
 	log.WithFields(logrus.Fields{
 		"slot":               req.Slot,
 		"sinceSlotStartTime": time.Since(t),
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	return vs.constructGenericBeaconBlock(sBlk, blindBlobs)
+	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
