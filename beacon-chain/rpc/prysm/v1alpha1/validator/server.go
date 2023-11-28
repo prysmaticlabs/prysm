@@ -65,6 +65,7 @@ type Server struct {
 	ExitPool               voluntaryexits.PoolManager
 	SyncCommitteePool      synccommittee.Pool
 	BlockReceiver          blockchain.BlockReceiver
+	BlobReceiver           blockchain.BlobReceiver
 	MockEth1Votes          bool
 	Eth1BlockFetcher       execution.POWBlockFetcher
 	PendingDepositsFetcher depositcache.PendingDepositsFetcher
