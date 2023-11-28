@@ -23,12 +23,12 @@ import (
 )
 
 var (
-	errSszCast   = errors.New("ssz response is not a byte array")
+	errSszCast   = errors.New("SSZ response is not a byte array")
 	errEmptyData = errors.New("data is empty")
 )
 
 const (
-	msgWrongJson = "json response has wrong structure, expected %T, got %T"
+	msgWrongJson = "JSON response has wrong structure, expected %T, got %T"
 )
 
 type meta interface {
@@ -490,47 +490,47 @@ func postEvaluation(requests map[string]meta) error {
 	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
 		b := &ethpb.SignedBeaconBlock{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 		bb := &ethpb.SignedBeaconBlock{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 		bb := &ethpb.SignedBeaconBlockAltair{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockCapella{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 	} else {
 		b := &ethpb.SignedBeaconBlockDeneb{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockDeneb{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal ssz")
+			return errors.Wrap(err, "failed to unmarshal SSZ")
 		}
 	}
 
