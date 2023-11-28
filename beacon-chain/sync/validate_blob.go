@@ -65,15 +65,15 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	}
 
 	// [REJECT] The sidecar's index is consistent with `MAX_BLOBS_PER_BLOCK` -- i.e. `sidecar.index < MAX_BLOBS_PER_BLOCK`
-	if roBlob.Index >= fieldparams.MaxBlobsPerBlock {
-		log.WithFields(blobFields(roBlob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
+		log.WithFields(blobFields(blob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
 		return pubsub.ValidationReject, errors.New("incorrect blob sidecar index")
 	}
 
 	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
 	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
-		log.WithFields(blobFields(roBlob)).Debug("Sidecar index  does not match topic")
+		log.WithFields(blobFields(blob)).Debug("Sidecar index  does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
@@ -101,16 +101,16 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	parentRoot := blob.ParentRoot()
 	switch parentStatus := s.handleBlobParentStatus(ctx, parentRoot); parentStatus {
 	case pubsub.ValidationIgnore:
-		log.WithFields(blobFields(roBlob)).Debug("Parent block not found - saving blob to cache")
+		log.WithFields(blobFields(blob)).Debug("Parent block not found - saving blob to cache")
 		go func() {
 			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{parentRoot}, rand.NewGenerator()); err != nil {
-				log.WithError(err).WithFields(blobFields(roBlob)).Debug("Failed to send batch root request")
+				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
 			}
 		}()
 		missingParentBlobSidecarCount.Inc()
 		return pubsub.ValidationIgnore, nil
 	case pubsub.ValidationReject:
-		log.WithFields(blobFields(roBlob)).Warning("Rejected blob: parent block is invalid")
+		log.WithFields(blobFields(blob)).Warning("Rejected blob: parent block is invalid")
 		return pubsub.ValidationReject, nil
 	default:
 	}
@@ -127,7 +127,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
-	fields := blobFields(roBlob)
+	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime
 	fields["validationTime"] = s.cfg.clock.Now().Sub(receivedTime)
@@ -147,6 +147,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 func (s *Service) validateBlobPostSeenParent(ctx context.Context, blob blocks.ROBlob) (pubsub.ValidationResult, error) {
 	parentRoot := blob.ParentRoot()
+
 	// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by sidecar.block_parent_root).
 	parentSlot, err := s.cfg.chain.RecentBlockSlot(parentRoot)
 	if err != nil {
@@ -171,8 +172,8 @@ func (s *Service) validateBlobPostSeenParent(ctx context.Context, blob blocks.RO
 		}
 	*/
 
-	// [IGNORE] The sidecar is the only sidecar with valid signature received for the tuple (sidecar.block_root, sidecar.index).
-	if s.hasSeenBlobIndex(blob.BlockRootSlice(), blob.Index) {
+	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature and sidecar inclusion proof
+	if s.hasSeenBlobIndex(blob.Slot(), blob.ProposerIndex(), blob.Index) {
 		return pubsub.ValidationIgnore, nil
 	}
 
@@ -193,8 +194,8 @@ func (s *Service) validateBlobPostSeenParent(ctx context.Context, blob blocks.RO
 	return pubsub.ValidationAccept, nil
 }
 
-// Returns true if the blob with the same root and index has been seen before.
-func (s *Service) hasSeenBlobIndex(root []byte, index uint64) bool {
+// Returns true if the blob with the same slot, proposer index, and blob index has been seen before.
+func (s *Service) hasSeenBlobIndex(slot primitives.Slot, proposerIndex primitives.ValidatorIndex, index uint64) bool {
 	s.seenBlobLock.RLock()
 	defer s.seenBlobLock.RUnlock()
 	b := append(bytesutil.Bytes32(uint64(slot)), bytesutil.Bytes32(uint64(proposerIndex))...)

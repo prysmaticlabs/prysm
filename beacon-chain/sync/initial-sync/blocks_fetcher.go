@@ -470,15 +470,7 @@ func (f *blocksFetcher) fetchBlobsFromPeer(ctx context.Context, bwb []blocks2.Bl
 		return nil, errors.Wrap(err, "could not request blobs by range")
 	}
 	f.p2p.Peers().Scorers().BlockProviderScorer().Touch(pid)
-	// Covert blob sidecars to ROBlobs.
-	roBlobs := make([]blocks2.ROBlob, len(blobs))
-	for i, b := range blobs {
-		roBlobs[i], err = blocks2.NewROBlob(b)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return verifyAndPopulateBlobs(bwb, roBlobs, blobWindowStart)
+	return verifyAndPopulateBlobs(bwb, blobs, blobWindowStart)
 }
 
 // requestBlocks is a wrapper for handling BeaconBlocksByRangeRequest requests/streams.

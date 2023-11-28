@@ -174,11 +174,11 @@ func (s *Service) sendAndSaveBlobSidecars(ctx context.Context, request types.Blo
 	if len(sidecars) != len(request) {
 		return fmt.Errorf("received %d blob sidecars, expected %d for RPC", len(sidecars), len(request))
 	}
-	for _, sc := range sidecars {
-		if err := verify.BlobAlignsWithBlock(sc, RoBlock); err != nil {
+	for _, sidecar := range sidecars {
+		if err := verify.BlobAlignsWithBlock(sidecar, RoBlock); err != nil {
 			return err
 		}
-		log.WithFields(blobFields(sc)).Debug("Received blob sidecar RPC")
+		log.WithFields(blobFields(sidecar)).Debug("Received blob sidecar RPC")
 	}
 
 	vscs, err := verification.BlobSidecarSliceNoop(sidecars)
