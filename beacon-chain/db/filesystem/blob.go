@@ -7,10 +7,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
@@ -176,4 +178,26 @@ func (p blobNamer) partPath() string {
 
 func (p blobNamer) path() string {
 	return p.fname(sszExt)
+}
+
+// Delete removes the directory matching the provided block root and all the blobs it contains.
+func (bs *BlobStorage) Delete(root [32]byte) error {
+	folders, err := afero.ReadDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, folder := range folders {
+		if folder.IsDir() {
+			blockRoot, err := hexutil.Decode(folder.Name())
+			if err != nil {
+				return err
+			}
+			if bytesutil.ToBytes32(blockRoot) == root {
+				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
+					return errors.Wrapf(err, "failed to delete blobs from block root %s", folder.Name())
+				}
+			}
+		}
+	}
+	return nil
 }
