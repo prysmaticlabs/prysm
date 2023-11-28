@@ -45,6 +45,10 @@ const digestLength = 4
 // Specifies the prefix for any pubsub topic.
 const gossipTopicPrefix = "/eth2/"
 
+type subscriberChecker interface {
+	isSubscribedToTopic(topic string) bool
+}
+
 // JoinTopic will join PubSub topic, if not already joined.
 func (s *Service) JoinTopic(topic string, opts ...pubsub.TopicOpt) (*pubsub.Topic, error) {
 	s.joinedTopicsLock.Lock()
@@ -119,6 +123,15 @@ func (s *Service) SubscribeToTopic(topic string, opts ...pubsub.SubOpt) (*pubsub
 	return topicHandle.Subscribe(opts...)
 }
 
+// checks if we are subscribed to the particular topic.
+func (s *Service) isSubscribedToTopic(topic string) bool {
+	s.joinedTopicsLock.RLock()
+	defer s.joinedTopicsLock.RUnlock()
+
+	_, ok := s.joinedTopics[topic]
+	return ok
+}
+
 // peerInspector will scrape all the relevant scoring data and add it to our
 // peer handler.
 func (s *Service) peerInspector(peerMap map[peer.ID]*pubsub.PeerScoreSnapshot) {
@@ -145,7 +158,7 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
-		pubsub.WithRawTracer(gossipTracer{host: s.host}),
+		pubsub.WithRawTracer(gossipTracer{host: s.host, checker: s}),
 	}
 	return psOpts
 }
