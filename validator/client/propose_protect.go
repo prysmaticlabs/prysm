@@ -19,7 +19,7 @@ func (v *validator) slashableProposalCheck(
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
 	blk := signedBlock.Block()
-	prevSigningRoot, proposalAtSlotExists, err := v.db.ProposalHistoryForSlot(ctx, pubKey, blk.Slot())
+	prevSigningRoot, proposalAtSlotExists, _, err := v.db.ProposalHistoryForSlot(ctx, pubKey, blk.Slot())
 	if err != nil {
 		if v.emitAccountMetrics {
 			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
