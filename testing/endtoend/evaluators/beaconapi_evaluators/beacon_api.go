@@ -220,7 +220,10 @@ var requests = map[string]meta{
 	"/beacon/blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v2PathTemplate,
 		withSsz(),
 		withParams(func(e primitives.Epoch) []string {
-			return []string{"head"}
+			if e < 4 {
+				return []string{"head"}
+			}
+			return []string{"finalized"}
 		})),
 	"/beacon/blocks/{param1}/root": newMetadata[beacon.BlockRootResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
@@ -233,7 +236,10 @@ var requests = map[string]meta{
 	"/beacon/blinded_blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v1PathTemplate,
 		withSsz(),
 		withParams(func(e primitives.Epoch) []string {
-			return []string{"head"}
+			if e < 4 {
+				return []string{"head"}
+			}
+			return []string{"finalized"}
 		})),
 	"/beacon/pool/attestations": newMetadata[beacon.ListAttestationsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
@@ -446,17 +452,18 @@ func withCompareBeaconAPIs(nodeIdx int) error {
 		if m.getParams(currentEpoch) != nil {
 			apiPath = pathFromParams(path, m.getParams(currentEpoch))
 		}
+		fmt.Printf("executing JSON path: %s\n", apiPath)
 		if err = compareJSONMultiClient(nodeIdx, m.getBasePath(), apiPath, m.getReq(), m.getPResp(), m.getLResp(), m.getCustomEval()); err != nil {
 			return err
 		}
 		if m.sszEnabled() {
+			fmt.Printf("executing SSZ path: %s\n", apiPath)
 			b, err := compareSSZMultiClient(nodeIdx, m.getBasePath(), apiPath)
 			if err != nil {
 				return err
 			}
 			m.setSszResp(b)
 		}
-		fmt.Printf("executing json api path: %s\n", apiPath)
 	}
 
 	return postEvaluation(requests)
