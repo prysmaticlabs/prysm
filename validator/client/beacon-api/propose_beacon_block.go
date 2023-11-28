@@ -97,7 +97,10 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to compute block root for deneb beacon block")
 		}
-		signedBlock, err := shared.SignedBeaconBlockContentsDenebFromConsensus(blockType.Deneb)
+		// TODO: Fix this as part of beacon API PR
+		signedBlock, err := shared.SignedBeaconBlockContentsDenebFromConsensus(&ethpb.SignedBeaconBlockAndBlobsDeneb{
+			Block: blockType.Deneb,
+		})
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert deneb beacon block contents")
 		}

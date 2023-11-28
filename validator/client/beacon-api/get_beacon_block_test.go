@@ -457,7 +457,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto,
+			Deneb: proto.Block,
 		},
 		IsBlinded: false,
 	}
@@ -617,7 +617,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto,
+			Deneb: proto.Block,
 		},
 		IsBlinded: false,
 	}

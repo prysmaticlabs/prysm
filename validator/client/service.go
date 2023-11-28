@@ -74,6 +74,7 @@ type ValidatorService struct {
 	graffiti              []byte
 	Web3SignerConfig      *remoteweb3signer.SetupConfig
 	proposerSettings      *validatorserviceconfig.ProposerSettings
+	validatorRegBatchSize int
 }
 
 // Config for the validator service.
@@ -99,6 +100,7 @@ type Config struct {
 	ProposerSettings           *validatorserviceconfig.ProposerSettings
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
+	ValidatorRegBatchSize      int
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -127,6 +129,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		graffitiStruct:        cfg.GraffitiStruct,
 		Web3SignerConfig:      cfg.Web3SignerConfig,
 		proposerSettings:      cfg.ProposerSettings,
+		validatorRegBatchSize: cfg.ValidatorRegBatchSize,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -220,6 +223,7 @@ func (v *ValidatorService) Start() {
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 		prysmBeaconClient:              prysmBeaconClient,
+		validatorRegBatchSize:          v.validatorRegBatchSize,
 	}
 
 	// To resolve a race condition at startup due to the interface
