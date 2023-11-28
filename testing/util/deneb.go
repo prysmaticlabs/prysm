@@ -9,6 +9,7 @@ import (
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
@@ -22,12 +23,16 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
 	parentHash := bytesutil.PadTo([]byte("parentHash"), fieldparams.RootLength)
-	tx := gethTypes.NewTransaction(
-		0,
-		common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
-		big.NewInt(0), 0, big.NewInt(0),
-		nil,
-	)
+	ads := common.HexToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87")
+	tx := gethTypes.NewTx(&gethTypes.LegacyTx{
+		Nonce:    0,
+		To:       &ads,
+		Value:    big.NewInt(0),
+		Gas:      0,
+		GasPrice: big.NewInt(0),
+		Data:     nil,
+	})
+
 	txs := []*gethTypes.Transaction{tx}
 	encodedBinaryTxs := make([][]byte, 1)
 	var err error
@@ -70,10 +75,9 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	sidecars := make([]blocks.ROBlob, len(commitments))
 	sbb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
-	sh, err := sbb.Header()
-	require.NoError(t, err)
+
 	for i, c := range block.Block.Body.BlobKzgCommitments {
-		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sh, i, c)
+		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sbb, i, c)
 	}
 
 	rob, err := blocks.NewROBlock(sbb)
@@ -81,17 +85,19 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	return rob, sidecars
 }
 
-func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.SignedBeaconBlockHeader, index int, commitment []byte) blocks.ROBlob {
+func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, sbb interfaces.SignedBeaconBlock, index int, commitment []byte) blocks.ROBlob {
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
+	sh, err := sbb.Header()
 	pb := &ethpb.BlobSidecar{
-		SignedBlockHeader: header,
+		SignedBlockHeader: sh,
 		Index:             uint64(index),
 		Blob:              blob,
 		KzgCommitment:     commitment,
 		KzgProof:          commitment,
 	}
-	pb.CommitmentInclusionProof = fakeEmptyProof(t, pb)
+	pb.CommitmentInclusionProof, err = blocks.MerkleProofKZGCommitment(sbb.Block().Body(), index)
+	require.NoError(t, err)
 	r, err := blocks.NewROBlobWithRoot(pb, root)
 	require.NoError(t, err)
 	return r
@@ -103,22 +109,6 @@ func fakeEmptyProof(_ *testing.T, _ *ethpb.BlobSidecar) [][]byte {
 		r[i] = make([]byte, fieldparams.RootLength)
 	}
 	return r
-}
-
-func GenerateTestDeprecatedBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.DeprecatedBlobSidecar {
-	blob := make([]byte, fieldparams.BlobSize)
-	binary.LittleEndian.PutUint64(blob, uint64(index))
-	pb := &ethpb.DeprecatedBlobSidecar{
-		BlockRoot:       root[:],
-		Index:           uint64(index),
-		Slot:            block.Block.Slot,
-		BlockParentRoot: block.Block.ParentRoot,
-		ProposerIndex:   block.Block.ProposerIndex,
-		Blob:            blob,
-		KzgCommitment:   commitment,
-		KzgProof:        commitment,
-	}
-	return pb
 }
 
 func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blocks.ROBlock, []blocks.ROBlob) {
