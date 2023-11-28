@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"sync"
+	"time"
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/prysmaticlabs/prysm/v4/async"
@@ -25,9 +26,14 @@ var pendingAttsLimit = 10000
 
 // This processes pending attestation queues on every `processPendingAttsPeriod`.
 func (s *Service) processPendingAttsQueue() {
+	clock, err := s.clockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("attestation queue failed to receive genesis data")
+		return
+	}
 	// Prevents multiple queue processing goroutines (invoked by RunEvery) from contending for data.
 	mutex := new(sync.Mutex)
-	async.RunEvery(s.ctx, processPendingAttsPeriod, func() {
+	async.RunWithTickerAndInterval(s.ctx, clock.GenesisTime(), []time.Duration{0, processPendingAttsPeriod}, func() {
 		mutex.Lock()
 		if err := s.processPendingAtts(s.ctx); err != nil {
 			log.WithError(err).Debugf("Could not process pending attestation: %v", err)
