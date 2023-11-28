@@ -1,0 +1,9 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["fake.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/verification",
+    visibility = ["//visibility:public"],
+    deps = ["//consensus-types/blocks:go_default_library"],
+)

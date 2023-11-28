@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -295,13 +296,14 @@ func runBlobStep(t *testing.T,
 		block := beaconBlock.Block()
 		root, err := block.HashTreeRoot()
 		require.NoError(t, err)
-		parentRoot := block.ParentRoot()
 		kzgs, err := block.Body().BlobKzgCommitments()
 		require.NoError(t, err)
 
 		blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*blobs, ".ssz_snappy"))
 		require.NoError(t, err)
 		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
+		require.NoError(t, err)
+		sh, err := beaconBlock.Header()
 		require.NoError(t, err)
 		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
 			var proof []byte
@@ -316,19 +318,31 @@ func runBlobStep(t *testing.T,
 			if uint64(len(kzgs)) < index {
 				kzg = kzgs[index]
 			}
+			if len(kzg) == 0 {
+				kzg = make([]byte, 48)
+			}
 			blob := [fieldparams.BlobLength]byte{}
 			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
-			sidecar := &ethpb.DeprecatedBlobSidecar{
-				BlockRoot:       root[:],
-				Index:           index,
-				Slot:            block.Slot(),
-				BlockParentRoot: parentRoot[:],
-				ProposerIndex:   block.ProposerIndex(),
-				Blob:            blob[:],
-				KzgCommitment:   kzg,
-				KzgProof:        proof,
+			fakeProof := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
+			for i := range fakeProof {
+				fakeProof[i] = make([]byte, fieldparams.RootLength)
 			}
-			require.NoError(t, builder.service.ReceiveBlob(context.Background(), sidecar))
+			if len(proof) == 0 {
+				proof = make([]byte, 48)
+			}
+			pb := &ethpb.BlobSidecar{
+				Index:                    index,
+				Blob:                     blob[:],
+				KzgCommitment:            kzg,
+				KzgProof:                 proof,
+				SignedBlockHeader:        sh,
+				CommitmentInclusionProof: fakeProof,
+			}
+			ro, err := blocks.NewROBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			vsc, err := verification.BlobSidecarNoop(ro)
+			require.NoError(t, err)
+			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
 		}
 	}
 }

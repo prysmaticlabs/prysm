@@ -178,7 +178,7 @@ func (p *TestP2P) BroadcastSyncCommitteeMessage(_ context.Context, _ uint64, _ *
 }
 
 // BroadcastBlob broadcasts a blob for mock.
-func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.SignedBlobSidecar) error {
+func (p *TestP2P) BroadcastBlob(context.Context, uint64, *ethpb.BlobSidecar) error {
 	p.BroadcastCalled.Store(true)
 	return nil
 }

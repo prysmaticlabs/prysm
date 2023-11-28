@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []*ethpb.DeprecatedBlobSidecar) {
+func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []blocks.ROBlob) {
 	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
@@ -67,22 +67,48 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	root, err := block.Block.HashTreeRoot()
 	require.NoError(t, err)
 
-	sidecars := make([]*ethpb.DeprecatedBlobSidecar, len(commitments))
-	for i, c := range block.Block.Body.BlobKzgCommitments {
-		sidecars[i] = GenerateTestDenebBlobSidecar(root, block, i, c)
-	}
-
+	sidecars := make([]blocks.ROBlob, len(commitments))
 	sbb, err := blocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
+	sh, err := sbb.Header()
+	require.NoError(t, err)
+	for i, c := range block.Block.Body.BlobKzgCommitments {
+		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sh, i, c)
+	}
+
 	rob, err := blocks.NewROBlock(sbb)
 	require.NoError(t, err)
 	return rob, sidecars
 }
 
-func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.DeprecatedBlobSidecar {
+func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.SignedBeaconBlockHeader, index int, commitment []byte) blocks.ROBlob {
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
-	sc := &ethpb.DeprecatedBlobSidecar{
+	pb := &ethpb.BlobSidecar{
+		SignedBlockHeader: header,
+		Index:             uint64(index),
+		Blob:              blob,
+		KzgCommitment:     commitment,
+		KzgProof:          commitment,
+	}
+	pb.CommitmentInclusionProof = fakeEmptyProof(t, pb)
+	r, err := blocks.NewROBlobWithRoot(pb, root)
+	require.NoError(t, err)
+	return r
+}
+
+func fakeEmptyProof(_ *testing.T, _ *ethpb.BlobSidecar) [][]byte {
+	r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
+	for i := range r {
+		r[i] = make([]byte, fieldparams.RootLength)
+	}
+	return r
+}
+
+func GenerateTestDeprecatedBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockDeneb, index int, commitment []byte) *ethpb.DeprecatedBlobSidecar {
+	blob := make([]byte, fieldparams.BlobSize)
+	binary.LittleEndian.PutUint64(blob, uint64(index))
+	pb := &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       root[:],
 		Index:           uint64(index),
 		Slot:            block.Block.Slot,
@@ -92,11 +118,11 @@ func GenerateTestDenebBlobSidecar(root [32]byte, block *ethpb.SignedBeaconBlockD
 		KzgCommitment:   commitment,
 		KzgProof:        commitment,
 	}
-	return sc
+	return pb
 }
 
-func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blocks.ROBlock, []*ethpb.DeprecatedBlobSidecar) {
-	blobs := make([]*ethpb.DeprecatedBlobSidecar, 0)
+func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blocks.ROBlock, []blocks.ROBlob) {
+	blobs := make([]blocks.ROBlob, 0)
 	if len(blks) == 0 {
 		blk, blb := GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 6)
 		blobs = append(blobs, blb...)
