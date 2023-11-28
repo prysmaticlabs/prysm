@@ -16,8 +16,12 @@ func (c *beaconApiValidatorClient) submitSignedAggregateSelectionProof(ctx conte
 		return nil, errors.Wrap(err, "failed to marshal SignedAggregateAttestationAndProof")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, "/eth/v1/validator/aggregate_and_proofs", nil, bytes.NewBuffer(body), nil); err != nil {
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+	errJson, err := c.jsonRestHandler.Post(ctx, "/eth/v1/validator/aggregate_and_proofs", nil, bytes.NewBuffer(body), nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	attestationDataRoot, err := in.SignedAggregateAndProof.Message.Aggregate.Data.HashTreeRoot()

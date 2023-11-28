@@ -2,12 +2,13 @@ package migration
 
 import (
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"google.golang.org/protobuf/proto"
 )
 
 // BlockIfaceToV1BlockHeader converts a signed beacon block interface into a signed beacon block header.
@@ -170,14 +171,23 @@ func V1Alpha1SignedHeaderToV1(v1alpha1Hdr *ethpbalpha.SignedBeaconBlockHeader) *
 		return &ethpbv1.SignedBeaconBlockHeader{}
 	}
 	return &ethpbv1.SignedBeaconBlockHeader{
-		Message: &ethpbv1.BeaconBlockHeader{
-			Slot:          v1alpha1Hdr.Header.Slot,
-			ProposerIndex: v1alpha1Hdr.Header.ProposerIndex,
-			ParentRoot:    v1alpha1Hdr.Header.ParentRoot,
-			StateRoot:     v1alpha1Hdr.Header.StateRoot,
-			BodyRoot:      v1alpha1Hdr.Header.BodyRoot,
-		},
+		Message:   V1Alpha1HeaderToV1(v1alpha1Hdr.Header),
 		Signature: v1alpha1Hdr.Signature,
+	}
+}
+
+// V1Alpha1HeaderToV1 converts a v1alpha1 beacon block header to v1.
+func V1Alpha1HeaderToV1(v1alpha1Hdr *ethpbalpha.BeaconBlockHeader) *ethpbv1.BeaconBlockHeader {
+	if v1alpha1Hdr == nil {
+		return &ethpbv1.BeaconBlockHeader{}
+	}
+
+	return &ethpbv1.BeaconBlockHeader{
+		Slot:          v1alpha1Hdr.Slot,
+		ProposerIndex: v1alpha1Hdr.ProposerIndex,
+		ParentRoot:    v1alpha1Hdr.ParentRoot,
+		StateRoot:     v1alpha1Hdr.StateRoot,
+		BodyRoot:      v1alpha1Hdr.BodyRoot,
 	}
 }
 
@@ -195,6 +205,20 @@ func V1SignedHeaderToV1Alpha1(v1Header *ethpbv1.SignedBeaconBlockHeader) *ethpba
 			BodyRoot:      v1Header.Message.BodyRoot,
 		},
 		Signature: v1Header.Signature,
+	}
+}
+
+// V1HeaderToV1Alpha1 converts a v1 beacon block header to v1alpha1.
+func V1HeaderToV1Alpha1(v1Header *ethpbv1.BeaconBlockHeader) *ethpbalpha.BeaconBlockHeader {
+	if v1Header == nil {
+		return &ethpbalpha.BeaconBlockHeader{}
+	}
+	return &ethpbalpha.BeaconBlockHeader{
+		Slot:          v1Header.Slot,
+		ProposerIndex: v1Header.ProposerIndex,
+		ParentRoot:    v1Header.ParentRoot,
+		StateRoot:     v1Header.StateRoot,
+		BodyRoot:      v1Header.BodyRoot,
 	}
 }
 

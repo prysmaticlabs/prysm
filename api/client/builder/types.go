@@ -117,7 +117,7 @@ type VersionResponse struct {
 	Version string `json:"version"`
 }
 
-// ExecHeaderResponse is a JSON representation of  the builder API header response for Bellatrix.
+// ExecHeaderResponse is a JSON representation of the builder API header response for Bellatrix.
 type ExecHeaderResponse struct {
 	Version string `json:"version"`
 	Data    struct {

@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
@@ -91,6 +92,7 @@ type config struct {
 	slasherBlockHeadersFeed       *event.Feed
 	clock                         *startup.Clock
 	stateNotifier                 statefeed.Notifier
+	blobStorage                   *filesystem.BlobStorage
 }
 
 // This defines the interface for interacting with block chain service

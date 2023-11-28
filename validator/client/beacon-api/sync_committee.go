@@ -31,8 +31,12 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 		return errors.Wrap(err, "failed to marshal sync committee message")
 	}
 
-	if _, err := c.jsonRestHandler.PostRestJson(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil); err != nil {
-		return errors.Wrapf(err, "failed to send POST data to `%s` REST endpoint", endpoint)
+	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(marshalledJsonSyncCommitteeMessage), nil)
+	if err != nil {
+		return errors.Wrap(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return errJson
 	}
 
 	return nil
@@ -41,8 +45,12 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
 	var resp apimiddleware.BlockRootResponseJson
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/blocks/head/root", &resp); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	// An optimistic validator MUST NOT participate in sync committees
@@ -88,8 +96,12 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
 
 	var resp apimiddleware.ProduceSyncCommitteeContributionResponseJson
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, url, &resp); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	errJson, err := c.jsonRestHandler.Get(ctx, url, &resp)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	return convertSyncContributionJsonToProto(resp.Data)

@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
@@ -2114,4 +2115,100 @@ func Test_commitmentsToCheck(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestMissingIndices(t *testing.T) {
+	cases := []struct {
+		name     string
+		expected [][]byte
+		present  []uint64
+		result   map[uint64]struct{}
+		root     [32]byte
+		err      error
+	}{
+		{
+			name: "zero len",
+		},
+		{
+			name:     "expected exceeds max",
+			expected: fakeCommitments(fieldparams.MaxBlobsPerBlock + 1),
+			err:      errMaxBlobsExceeded,
+		},
+		{
+			name:     "first missing",
+			expected: fakeCommitments(fieldparams.MaxBlobsPerBlock),
+			present:  []uint64{1, 2, 3, 4, 5},
+			result:   fakeResult([]uint64{0}),
+		},
+		{
+			name:     "all missing",
+			expected: fakeCommitments(fieldparams.MaxBlobsPerBlock),
+			result:   fakeResult([]uint64{0, 1, 2, 3, 4, 5}),
+		},
+		{
+			name:     "none missing",
+			expected: fakeCommitments(fieldparams.MaxBlobsPerBlock),
+			present:  []uint64{0, 1, 2, 3, 4, 5},
+			result:   fakeResult([]uint64{}),
+		},
+		{
+			name:     "one commitment, missing",
+			expected: fakeCommitments(1),
+			present:  []uint64{},
+			result:   fakeResult([]uint64{0}),
+		},
+		{
+			name:     "3 commitments, 1 missing",
+			expected: fakeCommitments(3),
+			present:  []uint64{1},
+			result:   fakeResult([]uint64{0, 2}),
+		},
+		{
+			name:     "3 commitments, none missing",
+			expected: fakeCommitments(3),
+			present:  []uint64{0, 1, 2},
+			result:   fakeResult([]uint64{}),
+		},
+		{
+			name:     "3 commitments, all missing",
+			expected: fakeCommitments(3),
+			present:  []uint64{},
+			result:   fakeResult([]uint64{0, 1, 2}),
+		},
+	}
+
+	for _, c := range cases {
+		bm, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
+		t.Run(c.name, func(t *testing.T) {
+			require.NoError(t, bm.CreateFakeIndices(c.root, c.present))
+			missing, err := missingIndices(bs, c.root, c.expected)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, len(c.result), len(missing))
+			for key := range c.result {
+				m, ok := missing[key]
+				require.Equal(t, true, ok)
+				require.Equal(t, c.result[key], m)
+			}
+		})
+	}
+}
+
+func fakeCommitments(n int) [][]byte {
+	f := make([][]byte, n)
+	for i := range f {
+		f[i] = make([]byte, 48)
+	}
+	return f
+}
+
+func fakeResult(missing []uint64) map[uint64]struct{} {
+	r := make(map[uint64]struct{}, len(missing))
+	for i := range missing {
+		r[missing[i]] = struct{}{}
+	}
+	return r
 }

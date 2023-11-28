@@ -79,11 +79,10 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		var pid [8]byte
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
-		var payload interfaces.ExecutionData
-		var overrideBuilder bool
-		payload, fullBlobsBundle, overrideBuilder, err = vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
+		payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
+			bundleCache.add(slot, bundle)
 			warnIfFeeRecipientDiffers(payload, feeRecipient)
 			return payload, overrideBuilder, nil
 		case errors.Is(err, context.DeadlineExceeded):
@@ -178,12 +177,11 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	if payloadID == nil {
 		return nil, false, fmt.Errorf("nil payload with block hash: %#x", parentHash)
 	}
-	var payload interfaces.ExecutionData
-	var overrideBuilder bool
-	payload, fullBlobsBundle, overrideBuilder, err = vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
+	payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, *payloadID, slot)
 	if err != nil {
 		return nil, false, err
 	}
+	bundleCache.add(slot, bundle)
 	warnIfFeeRecipientDiffers(payload, feeRecipient)
 	return payload, overrideBuilder, nil
 }

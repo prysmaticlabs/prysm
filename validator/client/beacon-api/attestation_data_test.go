@@ -30,10 +30,10 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
 
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", expectedCommitteeIndex, expectedSlot),
 		&produceAttestationDataResponseJson,
@@ -183,8 +183,8 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			defer ctrl.Finish()
 
 			produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/validator/attestation_data?committee_index=2&slot=1",
 				&produceAttestationDataResponseJson,
@@ -212,9 +212,9 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
@@ -225,7 +225,6 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getAttestationData(ctx, slot, committeeIndex)
-	assert.ErrorContains(t, "failed to get json response", err)
 	assert.ErrorContains(t, "some specific json response error", err)
 }
 

@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	bytesutil2 "github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -1184,11 +1185,8 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 	if err != nil {
 		return nil, NewDecodeError(err, "SignedBlock")
 	}
-	block := &eth.SignedBeaconBlockAndBlobsDeneb{
-		Block: signedDenebBlock,
-		Blobs: signedBlobSidecars,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
 }
 
 func (b *SignedBeaconBlockContentsDeneb) ToUnsigned() *BeaconBlockContentsDeneb {
@@ -1210,7 +1208,8 @@ func (b *BeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block.Block}}, nil
 }
 
 func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -37,6 +38,7 @@ func TestLifecycle_OK(t *testing.T) {
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
 		Router:                mux.NewRouter(),
+		ClockWaiter:           startup.NewClockSynchronizer(),
 	})
 
 	rpcService.Start()
@@ -78,6 +80,7 @@ func TestRPC_InsecureEndpoint(t *testing.T) {
 		ExecutionChainService: &mockExecution.Chain{},
 		StateNotifier:         chainService.StateNotifier(),
 		Router:                mux.NewRouter(),
+		ClockWaiter:           startup.NewClockSynchronizer(),
 	})
 
 	rpcService.Start()

@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -353,11 +353,15 @@ func (s *Service) databaseDACheck(ctx context.Context, b consensusblocks.ROBlock
 	if len(commitments) == 0 {
 		return nil
 	}
-	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, b.Root())
+	missing, err := missingIndices(s.blobStorage, b.Root(), commitments)
 	if err != nil {
-		return errors.Wrap(err, "could not get blob sidecars")
+		return err
 	}
-	return kzg.IsDataAvailable(commitments, sidecars)
+	if len(missing) == 0 {
+		return nil
+	}
+	// TODO: don't worry that this error isn't informative, it will be superceded by a detailed sidecar cache error.
+	return errors.New("not all kzg commitments are available")
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
@@ -529,11 +533,43 @@ func (s *Service) runLateBlockTasks() {
 	}
 }
 
+// missingIndices uses the expected commitments from the block to determine
+// which BlobSidecar indices would need to be in the database for DA success.
+// It returns a map where each key represents a missing BlobSidecar index.
+// An empty map means we have all indices; a non-empty map can be used to compare incoming
+// BlobSidecars against the set of known missing sidecars.
+func missingIndices(bs *filesystem.BlobStorage, root [32]byte, expected [][]byte) (map[uint64]struct{}, error) {
+	if len(expected) == 0 {
+		return nil, nil
+	}
+	if len(expected) > fieldparams.MaxBlobsPerBlock {
+		return nil, errMaxBlobsExceeded
+	}
+	indices, err := bs.Indices(root)
+	if err != nil {
+		return nil, err
+	}
+	missing := make(map[uint64]struct{}, len(expected))
+	for i := range expected {
+		ui := uint64(i)
+		if len(expected[i]) > 0 {
+			if !indices[i] {
+				missing[ui] = struct{}{}
+			}
+		}
+	}
+	return missing, nil
+}
+
+// isDataAvailable blocks until all BlobSidecars committed to in the block are available,
+// or an error or context cancellation occurs. A nil result means that the data availability check is successful.
+// The function will first check the database to see if all sidecars have been persisted. If any
+// sidecars are missing, it will then read from the blobNotifier channel for the given root until the channel is
+// closed, the context hits cancellation/timeout, or notifications have been received for all the missing sidecars.
 func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed interfaces.ReadOnlySignedBeaconBlock) error {
 	if signed.Version() < version.Deneb {
 		return nil
 	}
-	t := time.Now()
 
 	block := signed.Block()
 	if block == nil {
@@ -552,59 +588,35 @@ func (s *Service) isDataAvailable(ctx context.Context, root [32]byte, signed int
 	if err != nil {
 		return errors.Wrap(err, "could not get KZG commitments")
 	}
+	// expected is the number of kzg commitments observed in the block.
 	expected := len(kzgCommitments)
 	if expected == 0 {
 		return nil
 	}
-
-	// Read first from db in case we have the blobs
-	sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-	switch {
-	case err == nil:
-		if len(sidecars) >= expected {
-			s.blobNotifiers.delete(root)
-			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
-				log.WithField("root", fmt.Sprintf("%#x", root)).Warn("removing blob sidecars with invalid proofs")
-				if err2 := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err2 != nil {
-					log.WithError(err2).Error("could not delete sidecars")
-				}
-				return err
-			}
-			logBlobSidecar(sidecars, t)
-			return nil
-		}
-	case errors.Is(err, db.ErrNotFound):
-		// If the blob sidecars haven't arrived yet, the subsequent code will wait for them.
-		// Note: The system will not exit with an error in this scenario.
-	default:
-		log.WithError(err).Error("could not get blob sidecars from DB")
+	// get a map of BlobSidecar indices that are not currently available.
+	missing, err := missingIndices(s.blobStorage, root, kzgCommitments)
+	if err != nil {
+		return err
+	}
+	// If there are no missing indices, all BlobSidecars are available.
+	if len(missing) == 0 {
+		return nil
 	}
 
-	found := map[uint64]struct{}{}
-	for _, sc := range sidecars {
-		found[sc.Index] = struct{}{}
-	}
+	// The gossip handler for blobs writes the index of each verified blob referencing the given
+	// root to the channel returned by blobNotifiers.forRoot.
 	nc := s.blobNotifiers.forRoot(root)
 	for {
 		select {
 		case idx := <-nc:
-			found[idx] = struct{}{}
-			if len(found) != expected {
+			// Delete each index seen in the notification channel.
+			delete(missing, idx)
+			// Read from the channel until there are no more missing sidecars.
+			if len(missing) > 0 {
 				continue
 			}
+			// Once all sidecars have been observed, clean up the notification channel.
 			s.blobNotifiers.delete(root)
-			sidecars, err := s.cfg.BeaconDB.BlobSidecarsByRoot(ctx, root)
-			if err != nil {
-				return errors.Wrap(err, "could not get blob sidecars")
-			}
-			if err := kzg.IsDataAvailable(kzgCommitments, sidecars); err != nil {
-				log.WithField("root", fmt.Sprintf("%#x", root)).Warn("removing blob sidecars with invalid proofs")
-				if err2 := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err2 != nil {
-					log.WithError(err2).Error("could not delete sidecars")
-				}
-				return err
-			}
-			logBlobSidecar(sidecars, t)
 			return nil
 		case <-ctx.Done():
 			return errors.Wrap(ctx.Err(), "context deadline waiting for blob sidecars")

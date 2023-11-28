@@ -3,16 +3,13 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	jsonMediaType        = "application/json"
-	octetStreamMediaType = "application/octet-stream"
 )
 
 type HasStatusCode interface {
@@ -29,9 +26,13 @@ func (e *DefaultErrorJson) StatusCode() int {
 	return e.Code
 }
 
+func (e *DefaultErrorJson) Error() string {
+	return fmt.Sprintf("HTTP request unsuccessful (%d: %s)", e.Code, e.Message)
+}
+
 // WriteJson writes the response message in JSON format.
 func WriteJson(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", jsonMediaType)
+	w.Header().Set("Content-Type", api.JsonMediaType)
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(v); err != nil {
 		log.WithError(err).Error("Could not write response message")
@@ -41,7 +42,7 @@ func WriteJson(w http.ResponseWriter, v any) {
 // WriteSsz writes the response message in ssz format
 func WriteSsz(w http.ResponseWriter, respSsz []byte, fileName string) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(respSsz)))
-	w.Header().Set("Content-Type", octetStreamMediaType)
+	w.Header().Set("Content-Type", api.OctetStreamMediaType)
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(respSsz))); err != nil {
 		log.WithError(err).Error("could not write response message")
@@ -56,7 +57,7 @@ func WriteError(w http.ResponseWriter, errJson HasStatusCode) {
 		return
 	}
 	w.Header().Set("Content-Length", strconv.Itoa(len(j)))
-	w.Header().Set("Content-Type", jsonMediaType)
+	w.Header().Set("Content-Type", api.JsonMediaType)
 	w.WriteHeader(errJson.StatusCode())
 	if _, err := io.Copy(w, io.NopCloser(bytes.NewReader(j))); err != nil {
 		log.WithError(err).Error("Could not write error message")
