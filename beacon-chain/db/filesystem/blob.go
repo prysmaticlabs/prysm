@@ -196,6 +196,7 @@ func (bs *BlobStorage) Delete(root [32]byte) error {
 				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
 					return errors.Wrapf(err, "failed to delete blobs from block root %s", folder.Name())
 				}
+				return nil
 			}
 		}
 	}
