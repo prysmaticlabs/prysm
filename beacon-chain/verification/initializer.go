@@ -6,10 +6,12 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 )
 
+// Database represents the db methods that the verifiers need.
 type Database interface {
 	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 }
@@ -21,9 +23,10 @@ type sharedResources struct {
 	ready bool
 	cw    startup.ClockWaiter
 	clock *startup.Clock
-	fc    forkchoice.ForkChoicer
-	sc    *SignatureCache
+	fc    forkchoice.Getter
+	cache *Cache
 	db    Database
+	sg    *stategen.State
 }
 
 func (r *sharedResources) isReady() bool {
