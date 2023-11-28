@@ -10,10 +10,20 @@ import (
 
 var _ = pubsub.RawTracer(gossipTracer{})
 
+// Initializes the values for the pubsub rpc action.
+type action int
+
+const (
+	recv action = iota
+	send
+	drop
+)
+
 // This tracer is used to implement metrics collection for messages received
 // and broadcasted through gossipsub.
 type gossipTracer struct {
-	host host.Host
+	host    host.Host
+	checker subscriberChecker
 }
 
 // AddPeer .
@@ -79,25 +89,33 @@ func (g gossipTracer) ThrottlePeer(p peer.ID) {
 
 // RecvRPC .
 func (g gossipTracer) RecvRPC(rpc *pubsub.RPC) {
-	setMetricFromRPC(pubsubRPCSubRecv, pubsubRPCRecv, rpc)
+	g.setMetricFromRPC(recv, pubsubRPCSubRecv, pubsubRPCPubRecv, pubsubRPCRecv, rpc)
 }
 
 // SendRPC .
 func (g gossipTracer) SendRPC(rpc *pubsub.RPC, p peer.ID) {
-	setMetricFromRPC(pubsubRPCSubSent, pubsubRPCSent, rpc)
+	g.setMetricFromRPC(send, pubsubRPCSubSent, pubsubRPCPubSent, pubsubRPCSent, rpc)
 }
 
 // DropRPC .
 func (g gossipTracer) DropRPC(rpc *pubsub.RPC, p peer.ID) {
-	setMetricFromRPC(pubsubRPCSubDrop, pubsubRPCDrop, rpc)
+	g.setMetricFromRPC(drop, pubsubRPCSubDrop, pubsubRPCPubDrop, pubsubRPCDrop, rpc)
 }
 
-func setMetricFromRPC(ctr prometheus.Counter, gauge *prometheus.CounterVec, rpc *pubsub.RPC) {
-	ctr.Add(float64(len(rpc.Subscriptions)))
+func (g gossipTracer) setMetricFromRPC(act action, subCtr prometheus.Counter, pubCtr, ctrlCtr *prometheus.CounterVec, rpc *pubsub.RPC) {
+	subCtr.Add(float64(len(rpc.Subscriptions)))
 	if rpc.Control != nil {
-		gauge.WithLabelValues("graft").Add(float64(len(rpc.Control.Graft)))
-		gauge.WithLabelValues("prune").Add(float64(len(rpc.Control.Prune)))
-		gauge.WithLabelValues("ihave").Add(float64(len(rpc.Control.Ihave)))
-		gauge.WithLabelValues("iwant").Add(float64(len(rpc.Control.Iwant)))
+		ctrlCtr.WithLabelValues("graft").Add(float64(len(rpc.Control.Graft)))
+		ctrlCtr.WithLabelValues("prune").Add(float64(len(rpc.Control.Prune)))
+		ctrlCtr.WithLabelValues("ihave").Add(float64(len(rpc.Control.Ihave)))
+		ctrlCtr.WithLabelValues("iwant").Add(float64(len(rpc.Control.Iwant)))
+	}
+	for _, msg := range rpc.Publish {
+		// For incoming messages from pubsub, we validate that the topics are valid
+		// before recording metrics for them.
+		if act == recv && !g.checker.isSubscribedToTopic(*msg.Topic) {
+			continue
+		}
+		pubCtr.WithLabelValues(*msg.Topic).Inc()
 	}
 }
