@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -115,8 +114,7 @@ func TestBlobStorageDelete(t *testing.T) {
 		require.NoError(t, bs.Save(sidecar))
 	}
 
-	fmt.Println(hexutil.Encode(blockRoot[:]))
-	exists, err := afero.DirExists(fs, hexutil.Encode(blockRoot[:]))
+	exists, err := afero.DirExists(fs, hexutil.Encode(blockRoot))
 	require.NoError(t, err)
 	require.Equal(t, true, exists)
 
@@ -124,7 +122,7 @@ func TestBlobStorageDelete(t *testing.T) {
 	require.NoError(t, bs.Delete(bytesutil.ToBytes32(blockRoot)))
 
 	// Ensure that the directory no longer exists after deletion
-	exists, err = afero.DirExists(fs, hexutil.Encode(blockRoot[:]))
+	exists, err = afero.DirExists(fs, hexutil.Encode(blockRoot))
 	require.NoError(t, err)
 	require.Equal(t, false, exists)
 }
