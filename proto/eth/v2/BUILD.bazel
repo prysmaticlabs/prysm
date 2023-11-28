@@ -52,9 +52,7 @@ ssz_gen_marshal(
         "BlobSidecar",
         "BlobSidecars",
         "SignedBeaconBlockContentsDeneb",
-        "SignedBlindedBeaconBlockContentsDeneb",
         "BeaconBlockContentsDeneb",
-        "BlindedBeaconBlockContentsDeneb",
         "SyncCommittee",
     ],
 )
@@ -105,7 +103,6 @@ ssz_proto_files(
         "beacon_block.proto",
         "beacon_lightclient.proto",
         "beacon_state.proto",
-        "blobs.proto",
         "sync_committee.proto",
         "validator.proto",
         "withdrawals.proto",

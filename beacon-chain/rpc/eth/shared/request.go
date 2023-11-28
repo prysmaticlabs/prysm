@@ -143,6 +143,23 @@ func IsOptimistic(
 	return true, nil
 }
 
+// DecodeHexArrayWithLength takes an array of string and a length in bytes,
+// and validates whether the string is a hex and has the correct length returning a 2d array of bytes at the end.
+func DecodeHexArrayWithLength(name string, s []string, length int) ([][]byte, error) {
+	var hexArray [][]byte
+	var err error
+	if len(s) != 0 {
+		hexArray = make([][]byte, len(s))
+		for i, proof := range s {
+			hexArray[i], err = DecodeHexWithLength(proof, length)
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf("%s at index %d failed to decode", name, i))
+			}
+		}
+	}
+	return hexArray, nil
+}
+
 // DecodeHexWithLength takes a string and a length in bytes,
 // and validates whether the string is a hex and has the correct length.
 func DecodeHexWithLength(s string, length int) ([]byte, error) {
