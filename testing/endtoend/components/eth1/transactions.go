@@ -84,7 +84,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
-	// Broadcast Transactions every 3 blocks
+	// Broadcast Transactions every slot
 	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	gasPrice := big.NewInt(1e11)
