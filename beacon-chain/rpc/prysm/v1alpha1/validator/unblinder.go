@@ -128,12 +128,12 @@ func unblindBlobsSidecars(block interfaces.SignedBeaconBlock, bundle *enginev1.B
 	}
 	sidecars := make([]*ethpb.BlobSidecar, len(bundle.Blobs))
 	for i, b := range bundle.Blobs {
-		proof, err := consensusblocks.MerkleProofKZGCommitment(block.Block().Body(), i) //TODO: is use of this index correct?
+		proof, err := consensusblocks.MerkleProofKZGCommitment(block.Block().Body(), i)
 		if err != nil {
 			return nil, err
 		}
 		sidecars[i] = &ethpb.BlobSidecar{
-			Index:                    uint64(i), //TODO: is use of this index correct?
+			Index:                    uint64(i),
 			Blob:                     bytesutil.SafeCopyBytes(b),
 			KzgCommitment:            bytesutil.SafeCopyBytes(bundle.KzgCommitments[i]),
 			KzgProof:                 bytesutil.SafeCopyBytes(bundle.Proofs[i]),

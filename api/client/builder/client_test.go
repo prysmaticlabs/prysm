@@ -12,10 +12,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -356,18 +354,17 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.Equal(t, uint64(1), withdrawals[0].Amount)
 	})
 	t.Run("deneb", func(t *testing.T) {
-
-		test := testSignedBlindedBeaconBlockAndBlobsDeneb(t)
+		test := testSignedBlindedBeaconBlockDeneb(t)
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
 				require.Equal(t, postBlindedBeaconBlockPath, r.URL.Path)
 				require.Equal(t, "deneb", r.Header.Get("Eth-Consensus-Version"))
-				var req shared.SignedBlindedBeaconBlockContentsDeneb
+				var req shared.SignedBlindedBeaconBlockDeneb
 				err := json.NewDecoder(r.Body).Decode(&req)
 				require.NoError(t, err)
-				block, err := req.SignedBlindedBlock.ToConsensus()
+				block, err := req.ToConsensus()
 				require.NoError(t, err)
-				require.DeepEqual(t, block, test.SignedBlindedBlock)
+				require.DeepEqual(t, block, test)
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Body:       io.NopCloser(bytes.NewBufferString(testExampleExecutionPayloadDeneb)),
@@ -380,7 +377,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
 		}
 
-		sbb, err := blocks.NewSignedBeaconBlock(test.SignedBlindedBlock)
+		sbb, err := blocks.NewSignedBeaconBlock(test)
 		require.NoError(t, err)
 
 		ep, blobBundle, err := c.SubmitBlindedBlock(ctx, sbb)
@@ -393,9 +390,6 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		assert.DeepEqual(t, ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943"), withdrawals[0].Address)
 		assert.Equal(t, uint64(1), withdrawals[0].Amount)
 		require.NotNil(t, blobBundle)
-		require.Equal(t, hexutil.Encode(blobBundle.Blobs[0]), hexutil.Encode(make([]byte, fieldparams.BlobLength)))
-		require.Equal(t, hexutil.Encode(blobBundle.KzgCommitments[0]), "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f")
-		require.Equal(t, hexutil.Encode(blobBundle.Proofs[0]), "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a")
 	})
 	t.Run("mismatched versions, expected bellatrix got capella", func(t *testing.T) {
 		hc := &http.Client{
@@ -710,91 +704,70 @@ func testSignedBlindedBeaconBlockCapella(t *testing.T) *eth.SignedBlindedBeaconB
 	}
 }
 
-func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedBeaconBlockAndBlobsDeneb {
+func testSignedBlindedBeaconBlockDeneb(t *testing.T) *eth.SignedBlindedBeaconBlockDeneb {
 	basebytes, err := shared.Uint256ToSSZBytes("14074904626401341155369551180448584754667373453244490859944217516317499064576")
 	if err != nil {
 		log.Error(err)
 	}
-	return &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-		SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{
-			Message: &eth.BlindedBeaconBlockDeneb{
-				Slot:          1,
-				ProposerIndex: 1,
-				ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-				StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-				Body: &eth.BlindedBeaconBlockBodyDeneb{
-					RandaoReveal: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-					Eth1Data: &eth.Eth1Data{
-						DepositRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						DepositCount: 1,
-						BlockHash:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					},
-					Graffiti: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					ProposerSlashings: []*eth.ProposerSlashing{
-						{
-							Header_1: &eth.SignedBeaconBlockHeader{
-								Header: &eth.BeaconBlockHeader{
-									Slot:          1,
-									ProposerIndex: 1,
-									ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									BodyRoot:      ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-								},
-								Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+	return &eth.SignedBlindedBeaconBlockDeneb{
+		Message: &eth.BlindedBeaconBlockDeneb{
+			Slot:          1,
+			ProposerIndex: 1,
+			ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+			Body: &eth.BlindedBeaconBlockBodyDeneb{
+				RandaoReveal: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				Eth1Data: &eth.Eth1Data{
+					DepositRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					DepositCount: 1,
+					BlockHash:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+				},
+				Graffiti: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+				ProposerSlashings: []*eth.ProposerSlashing{
+					{
+						Header_1: &eth.SignedBeaconBlockHeader{
+							Header: &eth.BeaconBlockHeader{
+								Slot:          1,
+								ProposerIndex: 1,
+								ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+								StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+								BodyRoot:      ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 							},
-							Header_2: &eth.SignedBeaconBlockHeader{
-								Header: &eth.BeaconBlockHeader{
-									Slot:          1,
-									ProposerIndex: 1,
-									ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									BodyRoot:      ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-								},
-								Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+						},
+						Header_2: &eth.SignedBeaconBlockHeader{
+							Header: &eth.BeaconBlockHeader{
+								Slot:          1,
+								ProposerIndex: 1,
+								ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+								StateRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+								BodyRoot:      ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 							},
+							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 					},
-					AttesterSlashings: []*eth.AttesterSlashing{
-						{
-							Attestation_1: &eth.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-								Data: &eth.AttestationData{
-									Slot:            1,
-									CommitteeIndex:  1,
-									BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									Source: &eth.Checkpoint{
-										Epoch: 1,
-										Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									},
-									Target: &eth.Checkpoint{
-										Epoch: 1,
-										Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									},
+				},
+				AttesterSlashings: []*eth.AttesterSlashing{
+					{
+						Attestation_1: &eth.IndexedAttestation{
+							AttestingIndices: []uint64{1},
+							Data: &eth.AttestationData{
+								Slot:            1,
+								CommitteeIndex:  1,
+								BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+								Source: &eth.Checkpoint{
+									Epoch: 1,
+									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
-								Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-							},
-							Attestation_2: &eth.IndexedAttestation{
-								AttestingIndices: []uint64{1},
-								Data: &eth.AttestationData{
-									Slot:            1,
-									CommitteeIndex:  1,
-									BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									Source: &eth.Checkpoint{
-										Epoch: 1,
-										Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									},
-									Target: &eth.Checkpoint{
-										Epoch: 1,
-										Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-									},
+								Target: &eth.Checkpoint{
+									Epoch: 1,
+									Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 								},
-								Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 							},
+							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
-					},
-					Attestations: []*eth.Attestation{
-						{
-							AggregationBits: bitfield.Bitlist{0x01},
+						Attestation_2: &eth.IndexedAttestation{
+							AttestingIndices: []uint64{1},
 							Data: &eth.AttestationData{
 								Slot:            1,
 								CommitteeIndex:  1,
@@ -811,68 +784,72 @@ func testSignedBlindedBeaconBlockAndBlobsDeneb(t *testing.T) *eth.SignedBlindedB
 							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 					},
-					Deposits: []*eth.Deposit{
-						{
-							Proof: [][]byte{ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")},
-							Data: &eth.Deposit_Data{
-								PublicKey:             ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
-								WithdrawalCredentials: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-								Amount:                1,
-								Signature:             ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				},
+				Attestations: []*eth.Attestation{
+					{
+						AggregationBits: bitfield.Bitlist{0x01},
+						Data: &eth.AttestationData{
+							Slot:            1,
+							CommitteeIndex:  1,
+							BeaconBlockRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+							Source: &eth.Checkpoint{
+								Epoch: 1,
+								Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+							},
+							Target: &eth.Checkpoint{
+								Epoch: 1,
+								Root:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
 							},
 						},
+						Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 					},
-					VoluntaryExits: []*eth.SignedVoluntaryExit{
-						{
-							Exit: &eth.VoluntaryExit{
-								Epoch:          1,
-								ValidatorIndex: 1,
-							},
-							Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				},
+				Deposits: []*eth.Deposit{
+					{
+						Proof: [][]byte{ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")},
+						Data: &eth.Deposit_Data{
+							PublicKey:             ezDecode(t, "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"),
+							WithdrawalCredentials: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+							Amount:                1,
+							Signature:             ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 						},
 					},
-					SyncAggregate: &eth.SyncAggregate{
-						SyncCommitteeSignature: make([]byte, 96),
-						SyncCommitteeBits:      ezDecode(t, "0x6451e9f951ebf05edc01de67e593484b672877054f055903ff0df1a1a945cf30ca26bb4d4b154f94a1bc776bcf5d0efb3603e1f9b8ee2499ccdcfe2a18cef458"),
-					},
-					ExecutionPayloadHeader: &v1.ExecutionPayloadHeaderDeneb{
-						ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
-						StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
-						PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						BlockNumber:      1,
-						GasLimit:         1,
-						GasUsed:          1,
-						Timestamp:        1,
-						ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						BaseFeePerGas:    basebytes,
-						BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						WithdrawalsRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-						BlobGasUsed:      1,
-						ExcessBlobGas:    2,
+				},
+				VoluntaryExits: []*eth.SignedVoluntaryExit{
+					{
+						Exit: &eth.VoluntaryExit{
+							Epoch:          1,
+							ValidatorIndex: 1,
+						},
+						Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 					},
 				},
-			},
-			Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
-		},
-		SignedBlindedBlobSidecars: []*eth.SignedBlindedBlobSidecar{
-			{
-				Message: &eth.BlindedBlobSidecar{
-					BlockRoot:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					Index:           0,
-					Slot:            1,
-					BlockParentRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
-					ProposerIndex:   1,
-					BlobRoot:        ezDecode(t, "0x24564723180fcb3d994104538d351c8dcbde12d541676bb736cf678018ca4739"),
-					KzgCommitment:   ezDecode(t, "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"),
-					KzgProof:        ezDecode(t, "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"),
+				SyncAggregate: &eth.SyncAggregate{
+					SyncCommitteeSignature: make([]byte, 96),
+					SyncCommitteeBits:      ezDecode(t, "0x6451e9f951ebf05edc01de67e593484b672877054f055903ff0df1a1a945cf30ca26bb4d4b154f94a1bc776bcf5d0efb3603e1f9b8ee2499ccdcfe2a18cef458"),
 				},
-				Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
+				ExecutionPayloadHeader: &v1.ExecutionPayloadHeaderDeneb{
+					ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
+					StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+					PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					BlockNumber:      1,
+					GasLimit:         1,
+					GasUsed:          1,
+					Timestamp:        1,
+					ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					BaseFeePerGas:    basebytes,
+					BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					WithdrawalsRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+					BlobGasUsed:      1,
+					ExcessBlobGas:    2,
+				},
 			},
 		},
+		Signature: ezDecode(t, "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"),
 	}
 }
 
