@@ -1046,17 +1046,17 @@ func (e executionPayloadHeaderDeneb) ExcessBlobGas() (uint64, error) {
 }
 
 // PbDeneb --
-func (e executionPayloadHeaderDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
+func (executionPayloadHeaderDeneb) PbDeneb() (*enginev1.ExecutionPayloadDeneb, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbBellatrix --
-func (e executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
+func (executionPayloadHeaderDeneb) PbBellatrix() (*enginev1.ExecutionPayload, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
 // PbCapella --
-func (e executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
+func (executionPayloadHeaderDeneb) PbCapella() (*enginev1.ExecutionPayloadCapella, error) {
 	return nil, consensus_types.ErrUnsupportedField
 }
 
