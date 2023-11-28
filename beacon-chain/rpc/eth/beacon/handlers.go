@@ -39,6 +39,10 @@ const (
 	broadcastValidationConsensusAndEquivocation = "consensus_and_equivocation"
 )
 
+var (
+	errNilBlock = errors.New("nil block")
+)
+
 type handled bool
 
 // GetBlock retrieves block details for given block ID.
@@ -1211,7 +1215,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
 		return
 	}
-	denebBlockContents := &eth.SignedBeaconBlockAndBlobsDeneb{}
+	denebBlockContents := &eth.SignedBeaconBlockDeneb{}
 	if err := denebBlockContents.UnmarshalSSZ(body); err == nil {
 		genericBlock := &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{

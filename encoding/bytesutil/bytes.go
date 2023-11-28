@@ -136,7 +136,7 @@ func PadTo(b []byte, size int) []byte {
 }
 
 // ReverseByteOrder Switch the endianness of a byte slice by reversing its order.
-// this function does not modify the actual input bytes.
+// This function does not modify the actual input bytes.
 func ReverseByteOrder(input []byte) []byte {
 	b := make([]byte, len(input))
 	copy(b, input)
