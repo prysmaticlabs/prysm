@@ -94,6 +94,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
 
+	s.cfg = validateConfig(s.cfg)
+
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 
 	cfg.Discv5BootStrapAddr = dv5Nodes
