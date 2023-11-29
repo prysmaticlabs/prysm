@@ -40,18 +40,39 @@ const (
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string) (*BlobStorage, error) {
+func NewBlobStorage(cliCtx *cli.Context, base string) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
 		return nil, err
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	return &BlobStorage{fs: fs}, nil
+	retentionSlot, err := determineRetentionSlot(cliCtx)
+	if err != nil {
+		return nil, err
+	}
+	return &BlobStorage{fs: fs, retentionSlot: retentionSlot}, nil
+}
+
+// determineRetentionEpoch if a user defined retention epoch is set, we use that instead
+// of the default value. And return the first slot of the epoch + buffer period.
+func determineRetentionSlot(cliCtx *cli.Context) (primitives.Slot, error) {
+	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
+		// Retrieve and cast the epoch value.
+		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
+		retentionEpoch = primitives.Epoch(epochValue)
+	}
+	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
+	if err != nil {
+		return 0, err
+	}
+	return retentionSlot, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs afero.Fs
+	fs            afero.Fs
+	retentionSlot primitives.Slot
 }
 
 // Save saves blobs given a list of sidecars.
@@ -189,12 +210,8 @@ func (p blobNamer) path() string {
 // Prune prunes blobs in the base directory based on the retention epoch.
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) error {
-	retentionSlot, err := determineRetentionSlot(cliCtx)
-	if err != nil {
-		return err
-	}
-	if currentSlot < retentionSlot {
+func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
+	if currentSlot < bs.retentionSlot {
 		return nil // Overflow would occur
 	}
 
@@ -219,7 +236,7 @@ func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) e
 			if err != nil {
 				return err
 			}
-			if slot < (currentSlot - retentionSlot) {
+			if slot < (currentSlot - bs.retentionSlot) {
 				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
 					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 				}
@@ -240,20 +257,4 @@ func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	}
 	rawSlot := binary.LittleEndian.Uint64(b)
 	return primitives.Slot(rawSlot), nil
-}
-
-// determineRetentionEpoch if a user defined retention epoch is set, we use that instead
-// of the default value. And return the first slot of the epoch + buffer period.
-func determineRetentionSlot(cliCtx *cli.Context) (primitives.Slot, error) {
-	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
-		// Retrieve and cast the epoch value.
-		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
-		retentionEpoch = primitives.Epoch(epochValue)
-	}
-	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
-	if err != nil {
-		return 0, err
-	}
-	return retentionSlot, nil
 }

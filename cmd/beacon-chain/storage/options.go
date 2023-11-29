@@ -23,7 +23,7 @@ var (
 // package instead, and allow the functional options to tap into context cancellation.
 func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 	blobsPath := blobStoragePath(c)
-	bs, err := filesystem.NewBlobStorage(blobsPath)
+	bs, err := filesystem.NewBlobStorage(c, blobsPath)
 	if err != nil {
 		return nil, err
 	}
