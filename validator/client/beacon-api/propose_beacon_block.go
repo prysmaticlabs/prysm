@@ -111,18 +111,19 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
 		blinded = true
 		consensusVersion = "deneb"
-		beaconBlockRoot, err = blockType.BlindedDeneb.SignedBlindedBlock.HashTreeRoot()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to compute block root for blinded deneb beacon block")
-		}
-		signedBlock, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(blockType.BlindedDeneb)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block contents")
-		}
-		marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal blinded deneb beacon block contents")
-		}
+		//TODO: update for beaocn API
+		//beaconBlockRoot, err = blockType.BlindedDeneb.SignedBlindedBlock.HashTreeRoot()
+		//if err != nil {
+		//	return nil, errors.Wrap(err, "failed to compute block root for blinded deneb beacon block")
+		//}
+		//signedBlock, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(blockType.BlindedDeneb)
+		//if err != nil {
+		//	return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block contents")
+		//}
+		//marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
+		//if err != nil {
+		//	return nil, errors.Wrap(err, "failed to marshal blinded deneb beacon block contents")
+		//}
 	default:
 		return nil, errors.Errorf("unsupported block type %T", in.Block)
 	}
