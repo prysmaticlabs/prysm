@@ -113,7 +113,7 @@ var (
 		Name: "p2p_pubsub_reject_total",
 		Help: "The number of messages rejected of a particular topic",
 	},
-		[]string{"topic"})
+		[]string{"topic", "reason"})
 	pubsubPeerThrottle = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "p2p_pubsub_throttle_total",
 		Help: "The number of times a peer has been throttled for a particular topic",
