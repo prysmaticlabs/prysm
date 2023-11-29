@@ -139,9 +139,9 @@ func (s *Service) pubsubOptions() []pubsub.Option {
 			return MsgID(s.genesisValidatorsRoot, pmsg)
 		}),
 		pubsub.WithSubscriptionFilter(s),
-		pubsub.WithPeerOutboundQueueSize(pubsubQueueSize),
+		pubsub.WithPeerOutboundQueueSize(int(s.cfg.QueueSize)),
 		pubsub.WithMaxMessageSize(int(params.BeaconNetworkConfig().GossipMaxSizeBellatrix)),
-		pubsub.WithValidateQueueSize(pubsubQueueSize),
+		pubsub.WithValidateQueueSize(int(s.cfg.QueueSize)),
 		pubsub.WithPeerScore(peerScoringParams()),
 		pubsub.WithPeerScoreInspect(s.peerInspector, time.Minute),
 		pubsub.WithGossipSubParams(pubsubGossipParam()),
