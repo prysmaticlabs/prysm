@@ -123,7 +123,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Wanted type of customtypes.BlockRoots",
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots",
@@ -145,7 +145,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Wanted type of customtypes.StateRoots",
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots convert all false",
@@ -178,7 +178,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Wanted type of customtypes.RandaoMixes",
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "Eth1DataVotes type not found",

@@ -96,7 +96,7 @@ func convertRoots(indices []uint64, elements interface{}, convertAll bool) ([][3
 	case MultiValueSliceComposite[[32]byte, *BeaconState]:
 		return handle32ByteMVslice(castedType, indices, convertAll)
 	default:
-		return nil, errors.Errorf("non-existnet type provided %T", castedType)
+		return nil, errors.Errorf("non-existent type provided %T", castedType)
 	}
 }
 

@@ -22,7 +22,7 @@ func TestFieldTrie_NewTrie(t *testing.T) {
 		runNewTrie(t)
 	})
 	t.Run("native state with multivalue slice", func(t *testing.T) {
-		cfg := features.Get()
+		cfg := &features.Flags{}
 		cfg.EnableExperimentalState = true
 		reset := features.InitWithReset(cfg)
 		runNewTrie(t)
@@ -70,7 +70,7 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 		runRecomputeTrie(t)
 	})
 	t.Run("native state with multivalue slice", func(t *testing.T) {
-		cfg := features.Get()
+		cfg := &features.Flags{}
 		cfg.EnableExperimentalState = true
 		reset := features.InitWithReset(cfg)
 		runRecomputeTrie(t)
@@ -131,7 +131,7 @@ func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
 		runRecomputeTrie_CompressedArray(t)
 	})
 	t.Run("native state with multivalue slice", func(t *testing.T) {
-		cfg := features.Get()
+		cfg := &features.Flags{}
 		cfg.EnableExperimentalState = true
 		reset := features.InitWithReset(cfg)
 		runRecomputeTrie_CompressedArray(t)
