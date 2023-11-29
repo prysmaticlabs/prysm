@@ -34,33 +34,16 @@ const (
 	v2PathTemplate = "http://localhost:%d/eth/v2"
 )
 
-type apiComparisonFunc func(beaconNodeIdx int) error
-
 func verify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	comparison := []apiComparisonFunc{
-		withCompareBeaconAPIs,
-	}
 	for beaconNodeIdx := range conns {
-		if err := runAPIComparisonFunctions(
-			beaconNodeIdx,
-			comparison...,
-		); err != nil {
+		if err := run(beaconNodeIdx); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runAPIComparisonFunctions(beaconNodeIdx int, fs ...apiComparisonFunc) error {
-	for _, f := range fs {
-		if err := f(beaconNodeIdx); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func withCompareBeaconAPIs(nodeIdx int) error {
+func run(nodeIdx int) error {
 	genesisResp := &beacon.GetGenesisResponse{}
 	if err := doJSONGetRequest(v1PathTemplate, "/beacon/genesis", nodeIdx, genesisResp); err != nil {
 		return errors.Wrap(err, "error getting genesis data")
