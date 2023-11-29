@@ -1752,7 +1752,7 @@ func (b *BlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blindedBlock,}, IsBlinded: true}, nil
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blindedBlock}, IsBlinded: true}, nil
 }
 
 func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader {
@@ -2478,30 +2478,25 @@ func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlash
 	return proposerSlashings, nil
 }
 
+func SignedBeaconBlockHeaderFromConsensus(src *eth.SignedBeaconBlockHeader) *SignedBeaconBlockHeader {
+	return &SignedBeaconBlockHeader{
+		Message: &BeaconBlockHeader{
+			Slot:          fmt.Sprintf("%d", src.Header.Slot),
+			ProposerIndex: fmt.Sprintf("%d", src.Header.ProposerIndex),
+			ParentRoot:    hexutil.Encode(src.Header.ParentRoot),
+			StateRoot:     hexutil.Encode(src.Header.StateRoot),
+			BodyRoot:      hexutil.Encode(src.Header.BodyRoot),
+		},
+		Signature: hexutil.Encode(src.Signature),
+	}
+}
+
 func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) []*ProposerSlashing {
 	proposerSlashings := make([]*ProposerSlashing, len(src))
 	for i, s := range src {
 		proposerSlashings[i] = &ProposerSlashing{
-			SignedHeader1: &SignedBeaconBlockHeader{
-				Message: &BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", s.Header_1.Header.Slot),
-					ProposerIndex: fmt.Sprintf("%d", s.Header_1.Header.ProposerIndex),
-					ParentRoot:    hexutil.Encode(s.Header_1.Header.ParentRoot),
-					StateRoot:     hexutil.Encode(s.Header_1.Header.StateRoot),
-					BodyRoot:      hexutil.Encode(s.Header_1.Header.BodyRoot),
-				},
-				Signature: hexutil.Encode(s.Header_1.Signature),
-			},
-			SignedHeader2: &SignedBeaconBlockHeader{
-				Message: &BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", s.Header_2.Header.Slot),
-					ProposerIndex: fmt.Sprintf("%d", s.Header_2.Header.ProposerIndex),
-					ParentRoot:    hexutil.Encode(s.Header_2.Header.ParentRoot),
-					StateRoot:     hexutil.Encode(s.Header_2.Header.StateRoot),
-					BodyRoot:      hexutil.Encode(s.Header_2.Header.BodyRoot),
-				},
-				Signature: hexutil.Encode(s.Header_2.Signature),
-			},
+			SignedHeader1: SignedBeaconBlockHeaderFromConsensus(s.Header_1),
+			SignedHeader2: SignedBeaconBlockHeaderFromConsensus(s.Header_2),
 		}
 	}
 	return proposerSlashings

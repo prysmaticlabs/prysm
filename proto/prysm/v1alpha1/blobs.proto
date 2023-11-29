@@ -24,7 +24,7 @@ option java_outer_classname = "BlobsProto";
 option java_package = "org.ethereum.eth.v1alpha1";
 option php_namespace = "Ethereum\\Eth\\v1alpha1";
 
-message BlobSidecars {
+message DeprecatedBlobSidecars {
   repeated DeprecatedBlobSidecar sidecars = 1;
 }
 

@@ -287,7 +287,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
 // The response is the full execution payload used to create the blinded block.
-func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
 	if !sb.IsBlinded() {
 		return nil, nil, errNotBlinded
 	}

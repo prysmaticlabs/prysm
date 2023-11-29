@@ -15,6 +15,7 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	beacon2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
 	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
@@ -132,6 +133,7 @@ type Config struct {
 	BlockBuilder                  builder.BlockBuilder
 	Router                        *mux.Router
 	ClockWaiter                   startup.ClockWaiter
+	BlobStorage                   *filesystem.BlobStorage
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -240,6 +242,7 @@ func (s *Service) Start() {
 	blobServer := &blob.Server{
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 		BeaconDB:         s.cfg.BeaconDB,
+		BlobStorage:      s.cfg.BlobStorage,
 	}
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blob_sidecars/{block_id}", blobServer.Blobs).Methods(http.MethodGet)
 
