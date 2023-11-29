@@ -12,6 +12,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -101,4 +102,77 @@ func TestPost(t *testing.T) {
 	assert.Equal(t, true, errJson == nil)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, genesisJson, resp)
+}
+
+func decodeRespTest(t *testing.T) {
+	type j struct {
+		Foo string `json:"foo"`
+	}
+
+	t.Run("200 non-JSON", func(t *testing.T) {
+		r := &http.Response{StatusCode: http.StatusOK, Header: map[string][]string{"Content-Type": {api.OctetStreamMediaType}}}
+		errJson, err := decodeResp(r, nil)
+		require.Equal(t, true, errJson == nil)
+		require.NoError(t, err)
+	})
+	t.Run("non-200 non-JSON", func(t *testing.T) {
+		body := bytes.Buffer{}
+		_, err := body.WriteString("foo")
+		require.NoError(t, err)
+		r := &http.Response{StatusCode: http.StatusInternalServerError, Header: map[string][]string{"Content-Type": {api.OctetStreamMediaType}}}
+		errJson, err := decodeResp(r, nil)
+		require.NotNil(t, errJson)
+		assert.Equal(t, http.StatusInternalServerError, errJson.Code)
+		assert.Equal(t, "foo", errJson.Message)
+		require.NoError(t, err)
+	})
+	t.Run("200 JSON with resp", func(t *testing.T) {
+		body := bytes.Buffer{}
+		b, err := json.Marshal(&j{Foo: "foo"})
+		require.NoError(t, err)
+		body.Write(b)
+		r := &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}
+		resp := &j{}
+		errJson, err := decodeResp(r, resp)
+		require.Equal(t, true, errJson == nil)
+		require.NoError(t, err)
+		assert.Equal(t, "foo", resp.Foo)
+	})
+	t.Run("200 JSON without resp", func(t *testing.T) {
+		r := &http.Response{StatusCode: http.StatusOK, Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}
+		errJson, err := decodeResp(r, nil)
+		require.Equal(t, true, errJson == nil)
+		require.NoError(t, err)
+	})
+	t.Run("non-200 JSON", func(t *testing.T) {
+		body := bytes.Buffer{}
+		b, err := json.Marshal(&http2.DefaultErrorJson{Code: http.StatusInternalServerError, Message: "error"})
+		require.NoError(t, err)
+		body.Write(b)
+		r := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}
+		errJson, err := decodeResp(r, nil)
+		require.NotNil(t, errJson)
+		assert.Equal(t, http.StatusInternalServerError, errJson.Code)
+		assert.Equal(t, "error", errJson.Message)
+		require.NoError(t, err)
+	})
+	t.Run("200 JSON cannot decode", func(t *testing.T) {
+		body := bytes.Buffer{}
+		_, err := body.WriteString("foo")
+		require.NoError(t, err)
+		r := &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}
+		resp := &j{}
+		errJson, err := decodeResp(r, resp)
+		require.Equal(t, true, errJson == nil)
+		assert.ErrorContains(t, "failed to decode response body into json", err)
+	})
+	t.Run("non-200 JSON cannot decode", func(t *testing.T) {
+		body := bytes.Buffer{}
+		_, err := body.WriteString("foo")
+		require.NoError(t, err)
+		r := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}
+		errJson, err := decodeResp(r, nil)
+		require.Equal(t, true, errJson == nil)
+		assert.ErrorContains(t, "failed to decode response body into error json", err)
+	})
 }

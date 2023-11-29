@@ -19,8 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	"github.com/prysmaticlabs/prysm/v4/network/authorization"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -104,8 +102,7 @@ type Client struct {
 // `host` is the base host + port used to construct request urls. This value can be
 // a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
-	endpoint := covertEndPoint(host)
-	u, err := urlForHost(endpoint.Url)
+	u, err := urlForHost(host)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +118,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 
 func urlForHost(h string) (*url.URL, error) {
 	// try to parse as url (being permissive)
-	u, err := url.Parse(h)
-	if err == nil && u.Host != "" {
+	if u, err := url.Parse(h); err == nil && u.Host != "" {
 		return u, nil
 	}
 	// try to parse as host:port
@@ -140,7 +136,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder/types.go.
+// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) (res []byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "builder.client.do")
 	defer func() {
@@ -456,13 +452,4 @@ func non200Err(response *http.Response) error {
 		log.WithError(ErrNotOK).Debug(msg)
 		return errors.Wrap(ErrNotOK, fmt.Sprintf("unsupported error code: %d", response.StatusCode))
 	}
-}
-
-func covertEndPoint(ep string) network.Endpoint {
-	return network.Endpoint{
-		Url: ep,
-		Auth: network.AuthorizationData{ // Auth is not used for builder.
-			Method: authorization.None,
-			Value:  "",
-		}}
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -559,6 +560,23 @@ type Withdrawal struct {
 	ValidatorIndex   string `json:"validator_index" validate:"required"`
 	ExecutionAddress string `json:"address" validate:"required"`
 	Amount           string `json:"amount" validate:"required"`
+}
+
+func WithdrawalsFromConsensus(ws []*enginev1.Withdrawal) []*Withdrawal {
+	result := make([]*Withdrawal, len(ws))
+	for i, w := range ws {
+		result[i] = WithdrawalFromConsensus(w)
+	}
+	return result
+}
+
+func WithdrawalFromConsensus(w *enginev1.Withdrawal) *Withdrawal {
+	return &Withdrawal{
+		WithdrawalIndex:  fmt.Sprintf("%d", w.Index),
+		ValidatorIndex:   fmt.Sprintf("%d", w.ValidatorIndex),
+		ExecutionAddress: hexutil.Encode(w.Address),
+		Amount:           fmt.Sprintf("%d", w.Amount),
+	}
 }
 
 type SignedBlsToExecutionChange struct {

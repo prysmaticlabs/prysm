@@ -105,6 +105,7 @@ type validator struct {
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
 	prysmBeaconClient                  iface.PrysmBeaconChainClient
+	validatorRegBatchSize              int
 }
 
 type validatorStatus struct {
@@ -1043,7 +1044,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err != nil {
 		return err
 	}
-	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs); err != nil {
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 
