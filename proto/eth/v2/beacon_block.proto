@@ -69,7 +69,7 @@ message BlindedBeaconBlockContainer {
     BeaconBlockAltair altair_block = 2;
     BlindedBeaconBlockBellatrix bellatrix_block = 3;
     BlindedBeaconBlockCapella capella_block = 4;
-    BlindedBeaconBlockContentsDeneb deneb_contents = 5; // is contents
+    BlindedBeaconBlockDeneb deneb_block = 5; // is contents
   }
 }
 
@@ -93,7 +93,7 @@ message SignedBlindedBeaconBlockContentsContainer {
     SignedBeaconBlockAltair altair_block = 2;
     SignedBlindedBeaconBlockBellatrix bellatrix_block = 3;
     SignedBlindedBeaconBlockCapella capella_block = 4;
-    SignedBlindedBeaconBlockContentsDeneb deneb_contents = 5;
+    SignedBlindedBeaconBlockDeneb deneb_block = 5;
   }
 }
 
@@ -533,17 +533,7 @@ message SignedBeaconBlockContentsDeneb {
   repeated SignedBlobSidecar signed_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
-message SignedBlindedBeaconBlockContentsDeneb {
-  SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
-  repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
 message BeaconBlockContentsDeneb {
   BeaconBlockDeneb block = 1;
   repeated BlobSidecar blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
-message BlindedBeaconBlockContentsDeneb {
-  BlindedBeaconBlockDeneb blinded_block = 1;
-  repeated BlindedBlobSidecar blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }

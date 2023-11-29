@@ -39,6 +39,7 @@ message BlobSidecar {
         bytes kzg_proof = 8 [(ethereum.eth.ext.ssz_size) = "48"];
 }
 
+// TODO: remove after blob sidecar inclusion proof format is used
 message SignedBlobSidecar {
         BlobSidecar message = 1;
         bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
@@ -47,20 +48,4 @@ message SignedBlobSidecar {
 message BlobIdentifier {
         bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
         uint64 index = 2;
-}
-
-message SignedBlindedBlobSidecar {
-  BlindedBlobSidecar message = 1;
-  bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
-message BlindedBlobSidecar {
-  bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 index = 2;
-  uint64 slot = 3 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
-  bytes block_parent_root = 4 [(ethereum.eth.ext.ssz_size) = "32"];
-  uint64 proposer_index = 5 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.ValidatorIndex"];
-  bytes blob_root = 6 [(ethereum.eth.ext.ssz_size) = "32"];
-  bytes kzg_commitment = 7 [(ethereum.eth.ext.ssz_size) = "48"];
-  bytes kzg_proof = 8 [(ethereum.eth.ext.ssz_size) = "48"];
 }
