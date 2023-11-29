@@ -21,7 +21,7 @@ func TestProposeBeaconBlock_BlindedDeneb(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	var blockContents shared.SignedBlindedBeaconBlockContentsDeneb
-	err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &blockContents)
+	err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &blockContents)
 	require.NoError(t, err)
 	genericSignedBlock, err := blockContents.ToGeneric()
 	require.NoError(t, err)
