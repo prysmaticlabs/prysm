@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -1178,7 +1177,7 @@ func finalizerCleanup(b *BeaconState) {
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 				b,
 				b.blockRootsMultiValue,
 			}, fieldparams.BlockRootsLength)
@@ -1195,7 +1194,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 			b,
 			b.blockRootsMultiValue,
 		})
@@ -1207,7 +1206,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 				b,
 				b.stateRootsMultiValue,
 			}, fieldparams.StateRootsLength)
@@ -1224,7 +1223,7 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 			b,
 			b.stateRootsMultiValue,
 		})
@@ -1259,7 +1258,7 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, mv32Byte[uint64, *BeaconState]{
+			err := b.resetFieldTrie(field, mvObj[uint64, *BeaconState]{
 				b,
 				b.balancesMultiValue,
 			}, stateutil.ValidatorLimitForBalancesChunks())
@@ -1276,7 +1275,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, mv32Byte[uint64, *BeaconState]{
+		return b.recomputeFieldTrie(field, mvObj[uint64, *BeaconState]{
 			b,
 			b.balancesMultiValue,
 		})
@@ -1288,7 +1287,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 				b,
 				b.randaoMixesMultiValue,
 			}, fieldparams.RandaoMixesLength)
@@ -1305,25 +1304,11 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, mv32Byte[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, mvObj[[32]byte, *BeaconState]{
 			b,
 			b.randaoMixesMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.randaoMixes)
 	}
-}
-
-type MultiValueSliceComposite[V comparable, O multi_value_slice.Identifiable] interface {
-	State() *BeaconState
-	multi_value_slice.MultiValueSlice[V, O]
-}
-
-type mv32Byte[V comparable, O multi_value_slice.Identifiable] struct {
-	*BeaconState
-	multi_value_slice.MultiValueSlice[V, O]
-}
-
-func (m mv32Byte[V, O]) State() *BeaconState {
-	return m.BeaconState
 }

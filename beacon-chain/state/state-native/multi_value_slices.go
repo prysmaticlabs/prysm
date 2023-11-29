@@ -32,6 +32,24 @@ var (
 	})
 )
 
+// MultiValueSliceComposite describes an interface for which we have access to a multivalue
+// slice along with the desired state.
+type MultiValueSliceComposite[V comparable, O multi_value_slice.Identifiable] interface {
+	State() *BeaconState
+	multi_value_slice.MultiValueSlice[V, O]
+}
+
+// mvObj is an implementation of the composite interface.
+type mvObj[V comparable, O multi_value_slice.Identifiable] struct {
+	*BeaconState
+	multi_value_slice.MultiValueSlice[V, O]
+}
+
+// State returns the referenced state.
+func (m mvObj[V, O]) State() *BeaconState {
+	return m.BeaconState
+}
+
 // MultiValueRandaoMixes is a multi-value slice of randao mixes.
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
 
