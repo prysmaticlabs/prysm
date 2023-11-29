@@ -4,8 +4,6 @@
 package events
 
 import (
-	"context"
-
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -14,7 +12,6 @@ import (
 // Server defines a server implementation of the gRPC events service,
 // providing RPC endpoints to subscribe to events from the beacon node.
 type Server struct {
-	Ctx               context.Context
 	StateNotifier     statefeed.Notifier
 	OperationNotifier opfeed.Notifier
 	HeadFetcher       blockchain.HeadFetcher

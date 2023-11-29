@@ -31,7 +31,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 
 	ctx := context.Background()
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
@@ -97,7 +97,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 
 	ctx := context.Background()
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
@@ -139,12 +139,12 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		stringValidatorsPubKey,
-		nil,
+		[]primitives.ValidatorIndex{},
 		nil,
 	).Return(
 		&beacon.GetValidatorsResponse{
@@ -225,12 +225,12 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		gomock.Any(),
-		nil,
+		[]primitives.ValidatorIndex{},
 		nil,
 	).Return(
 		&beacon.GetValidatorsResponse{},
@@ -270,14 +270,14 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		validatorsPubKey[i] = validatorPubKey
 	}
 
-	validatorsIndex := []int64{
+	validatorsIndex := []primitives.ValidatorIndex{
 		12345, // NOT existing
 		33333, // existing
 	}
 
 	extraStringValidatorKey := "0x80003eb1e78ffdea6c878026b7074f84aaa16536c8e1960a652e817c848e7ccb051087f837b7d2bb6773cd9705601ede"
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
@@ -459,7 +459,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
@@ -525,7 +525,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 type getStateValidatorsInterface struct {
 	// Inputs
 	inputStringPubKeys []string
-	inputIndexes       []int64
+	inputIndexes       []primitives.ValidatorIndex
 	inputStatuses      []string
 
 	// Outputs
@@ -543,7 +543,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 
 		// Inputs
 		inputPubKeys                     [][]byte
-		inputIndexes                     []int64
+		inputIndexes                     []primitives.ValidatorIndex
 		inputGetStateValidatorsInterface getStateValidatorsInterface
 		validatorCountCalled             int
 
@@ -711,7 +711,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 				defer ctrl.Finish()
 
 				ctx := context.Background()
-				stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+				stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 				stateValidatorsProvider.EXPECT().GetStateValidators(
 					ctx,
 					testCase.inputGetStateValidatorsInterface.inputStringPubKeys,

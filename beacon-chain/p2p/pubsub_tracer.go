@@ -22,8 +22,7 @@ const (
 // This tracer is used to implement metrics collection for messages received
 // and broadcasted through gossipsub.
 type gossipTracer struct {
-	host    host.Host
-	checker subscriberChecker
+	host host.Host
 }
 
 // AddPeer .
@@ -111,9 +110,9 @@ func (g gossipTracer) setMetricFromRPC(act action, subCtr prometheus.Counter, pu
 		ctrlCtr.WithLabelValues("iwant").Add(float64(len(rpc.Control.Iwant)))
 	}
 	for _, msg := range rpc.Publish {
-		// For incoming messages from pubsub, we validate that the topics are valid
-		// before recording metrics for them.
-		if act == recv && !g.checker.isSubscribedToTopic(*msg.Topic) {
+		// For incoming messages from pubsub, we do not record metrics for them as these values
+		// could be junk.
+		if act == recv {
 			continue
 		}
 		pubCtr.WithLabelValues(*msg.Topic).Inc()
