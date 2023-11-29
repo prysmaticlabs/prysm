@@ -16,6 +16,14 @@ var (
 	ErrEmptyFieldTrie   = errors.New("empty field trie")
 )
 
+// SliceAccessor describes an interface for a multivalue slice composite
+// object that returns both the shared multivalue slice along with the
+// particular state instance we are referencing.
+type SliceAccessor[O multi_value_slice.Identifiable] interface {
+	Len(obj O) int
+	State() *BeaconState
+}
+
 // FieldTrie is the representation of the representative
 // trie of the particular field.
 type FieldTrie struct {
@@ -52,21 +60,17 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	type temp[O multi_value_slice.Identifiable] interface {
-		Len(obj O) int
-		State() *BeaconState
+	numOfElems := 0
+	if val, ok := elements.(SliceAccessor[*BeaconState]); ok {
+		numOfElems = val.Len(val.State())
+	} else {
+		numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 	}
 	switch fieldInfo {
 	case types.BasicArray:
 		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
 		if err != nil {
 			return nil, err
-		}
-		numOfElems := 0
-		if val, ok := elements.(temp[*BeaconState]); ok {
-			numOfElems = val.Len(val.State())
-		} else {
-			numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return &FieldTrie{
 			fieldLayers: fl,
@@ -78,12 +82,6 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 			numOfElems:  numOfElems,
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
-		numOfElems := 0
-		if val, ok := elements.(temp[*BeaconState]); ok {
-			numOfElems = val.Len(val.State())
-		} else {
-			numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
-		}
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
@@ -117,9 +115,10 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
-	type temp[O multi_value_slice.Identifiable] interface {
-		Len(obj O) int
-		State() *BeaconState
+	if val, ok := elements.(SliceAccessor[*BeaconState]); ok {
+		f.numOfElems = val.Len(val.State())
+	} else {
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 	}
 	switch f.dataType {
 	case types.BasicArray:
@@ -127,21 +126,11 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		if val, ok := elements.(temp[*BeaconState]); ok {
-			f.numOfElems = val.Len(val.State())
-		} else {
-			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
-		}
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
-		}
-		if val, ok := elements.(temp[*BeaconState]); ok {
-			f.numOfElems = val.Len(val.State())
-		} else {
-			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
@@ -170,11 +159,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(newRoots, newIndices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
-		}
-		if val, ok := elements.(temp[*BeaconState]); ok {
-			f.numOfElems = val.Len(val.State())
-		} else {
-			f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		}
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:

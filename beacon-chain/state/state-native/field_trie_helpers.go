@@ -9,7 +9,6 @@ import (
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
-	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -54,11 +53,7 @@ func validateElements(field types.FieldIndex, fieldInfo types.DataType, elements
 		}
 		length *= comLength
 	}
-	type temp[O multi_value_slice.Identifiable] interface {
-		Len(obj O) int
-		State() *BeaconState
-	}
-	if val, ok := elements.(temp[*BeaconState]); ok {
+	if val, ok := elements.(SliceAccessor[*BeaconState]); ok {
 		totalLen := val.Len(val.State())
 		if uint64(totalLen) > length {
 			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), totalLen, length)
