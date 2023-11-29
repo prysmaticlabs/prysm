@@ -998,7 +998,7 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 		http2.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	denebBlockContents := &eth.SignedBlindedBeaconBlockAndBlobsDeneb{}
+	denebBlockContents := &eth.SignedBlindedBeaconBlockDeneb{}
 	if err := denebBlockContents.UnmarshalSSZ(body); err == nil {
 		genericBlock := &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
@@ -1081,7 +1081,7 @@ func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter,
 	}
 	versionHeader := r.Header.Get(api.VersionHeader)
 	var blockVersionError string
-	var denebBlockContents *shared.SignedBlindedBeaconBlockContentsDeneb
+	var denebBlockContents *shared.SignedBlindedBeaconBlockDeneb
 	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
 		consensusBlock, err := denebBlockContents.ToGeneric()
 		if err == nil {
@@ -1215,7 +1215,7 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 		http2.HandleError(w, "Could not read request body", http.StatusInternalServerError)
 		return
 	}
-	denebBlockContents := &eth.SignedBeaconBlockDeneb{}
+	denebBlockContents := &eth.SignedBeaconBlockContentsDeneb{}
 	if err := denebBlockContents.UnmarshalSSZ(body); err == nil {
 		genericBlock := &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{

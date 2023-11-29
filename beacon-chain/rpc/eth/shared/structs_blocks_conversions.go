@@ -1510,6 +1510,24 @@ func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconB
 	}, nil
 }
 
+func (b *SignedBlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "Signature")
+	}
+	blindedBlock, err := b.Message.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{
+		Message:   blindedBlock,
+		Signature: sig,
+	}}, IsBlinded: true}, nil
+}
+
 func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errNilValue
@@ -1723,6 +1741,18 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 			BlobKzgCommitments:    blobKzgCommitments,
 		},
 	}, nil
+}
+
+func (b *BlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+
+	blindedBlock, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blindedBlock,}, IsBlinded: true}, nil
 }
 
 func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader {
