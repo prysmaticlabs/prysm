@@ -315,13 +315,21 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
+			valsReq := &beacon.GetValidatorsRequest{
+				Ids:      []string{pubkeyStr},
+				Statuses: []string{},
+			}
+			valsReqBytes, err := json.Marshal(valsReq)
+			require.NoError(t, err)
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().Get(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
-				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
+				validatorsEndpoint,
+				nil,
+				bytes.NewBuffer(valsReqBytes),
 				&beacon.GetValidatorsResponse{},
 			).SetArg(
-				2,
+				4,
 				beacon.GetValidatorsResponse{
 					Data: []*beacon.ValidatorContainer{
 						{

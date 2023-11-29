@@ -367,7 +367,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				}
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
@@ -784,7 +784,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				).Times(1)
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
