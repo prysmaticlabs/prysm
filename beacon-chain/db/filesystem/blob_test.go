@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/spf13/afero"
+	"github.com/urfave/cli/v2"
 
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -102,7 +103,7 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 }
 
 func TestBlobStoragePrune(t *testing.T) {
-	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, fieldparams.MaxBlobsPerBlock)
+	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
 	testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
 	require.NoError(t, err)
 
@@ -112,11 +113,12 @@ func TestBlobStoragePrune(t *testing.T) {
 	}
 
 	currentSlot := primitives.Slot(150000)
-	require.NoError(t, bs.Prune(currentSlot))
+	ctx := &cli.Context{}
+	require.NoError(t, bs.Prune(ctx, currentSlot))
 
 	remainingFolders, err := afero.ReadDir(fs, ".")
 	require.NoError(t, err)
-	require.Equal(t, 1, len(remainingFolders))
+	require.Equal(t, 0, len(remainingFolders))
 }
 
 func BenchmarkPruning(b *testing.B) {
@@ -136,10 +138,11 @@ func BenchmarkPruning(b *testing.B) {
 
 		slot += 100
 	}
+	ctx := &cli.Context{}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		err := bs.Prune(currentSlot)
+		err := bs.Prune(ctx, currentSlot)
 		require.NoError(b, err)
 	}
 }

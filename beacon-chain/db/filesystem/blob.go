@@ -11,7 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
@@ -20,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -48,8 +51,7 @@ func NewBlobStorage(base string) (*BlobStorage, error) {
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs             afero.Fs
-	retentionEpoch primitives.Epoch
+	fs afero.Fs
 }
 
 // Save saves blobs given a list of sidecars.
@@ -187,8 +189,14 @@ func (p blobNamer) path() string {
 // Prune prunes blobs in the base directory based on the retention epoch.
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) error {
+	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
+		// Retrieve and cast the epoch value.
+		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
+		retentionEpoch = primitives.Epoch(epochValue)
+	}
+	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
 	if err != nil {
 		return err
 	}
@@ -229,7 +237,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	b := make([]byte, 8)
-	_, err := at.ReadAt(b, 40)
+	_, err := at.ReadAt(b, 131096)
 	if err != nil {
 		return 0, err
 	}
