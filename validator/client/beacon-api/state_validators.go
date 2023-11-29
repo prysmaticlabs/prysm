@@ -76,6 +76,7 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 		Ids:      []string{},
 		Statuses: []string{},
 	}
+	req.Statuses = append(req.Statuses, statuses...)
 
 	valSet := make(map[string]struct{}, len(vals))
 	for _, v := range vals {
@@ -83,10 +84,6 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 			valSet[v] = struct{}{}
 			req.Ids = append(req.Ids, v)
 		}
-	}
-
-	for _, status := range statuses {
-		req.Statuses = append(req.Statuses, status)
 	}
 
 	reqBytes, err := json.Marshal(req)
