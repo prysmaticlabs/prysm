@@ -100,15 +100,6 @@ func convertRoots(indices []uint64, elements interface{}, convertAll bool) ([][3
 	}
 }
 
-func convert32ByteArrays[T ~[][32]byte](indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.(T)
-	if !ok {
-		var t T
-		return nil, errors.Errorf("Wanted type of %T but got %T", t, elements)
-	}
-	return handle32ByteArrays(val, indices, convertAll)
-}
-
 func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
 	val, ok := elements.([]*ethpb.Eth1Data)
 	if !ok {

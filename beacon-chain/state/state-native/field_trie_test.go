@@ -1,12 +1,14 @@
 package state_native_test
 
 import (
+	"context"
 	"testing"
 
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -16,7 +18,28 @@ import (
 )
 
 func TestFieldTrie_NewTrie(t *testing.T) {
+	t.Run("native state", func(t *testing.T) {
+		runNewTrie(t)
+	})
+	t.Run("native state with multivalue slice", func(t *testing.T) {
+		cfg := features.Get()
+		cfg.EnableExperimentalState = true
+		reset := features.InitWithReset(cfg)
+		runNewTrie(t)
+
+		reset()
+	})
+}
+
+func runNewTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 40)
+	// Initialize state caches
+	_, err := newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, newState.UpdateBlockRootAtIndex(0, [32]byte{}))
+	_, err = newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
 	roots := newState.BlockRoots()
 	blockRoots := make([][32]byte, len(roots))
 	for i, r := range roots {
@@ -40,7 +63,37 @@ func TestFieldTrie_NewTrie_NilElements(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie(t *testing.T) {
+	t.Run("native state", func(t *testing.T) {
+		runRecomputeTrie(t)
+	})
+	t.Run("native state with multivalue slice", func(t *testing.T) {
+		cfg := features.Get()
+		cfg.EnableExperimentalState = true
+		reset := features.InitWithReset(cfg)
+		runRecomputeTrie(t)
+
+		reset()
+	})
+}
+
+func runRecomputeTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
+	// Initialize state caches
+	_, err := newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, newState.UpdateValidatorAtIndex(0, &ethpb.Validator{
+		PublicKey:                  make([]byte, 48),
+		WithdrawalCredentials:      nil,
+		EffectiveBalance:           1000,
+		Slashed:                    false,
+		ActivationEligibilityEpoch: 0,
+		ActivationEpoch:            0,
+		ExitEpoch:                  1000,
+		WithdrawableEpoch:          0,
+	}))
+	_, err = newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
 	trie, err := state_native.NewFieldTrie(types.Validators, types.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
@@ -71,7 +124,31 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 }
 
 func TestFieldTrie_RecomputeTrie_CompressedArray(t *testing.T) {
+	t.Run("native state", func(t *testing.T) {
+		runRecomputeTrie_CompressedArray(t)
+	})
+	t.Run("native state with multivalue slice", func(t *testing.T) {
+		cfg := features.Get()
+		cfg.EnableExperimentalState = true
+		reset := features.InitWithReset(cfg)
+		runRecomputeTrie_CompressedArray(t)
+
+		reset()
+	})
+}
+
+func runRecomputeTrie_CompressedArray(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
+	// Initialize state caches
+	_, err := newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, newState.UpdateBalancesAtIndex(0, 1000))
+	_, err = newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	require.NoError(t, newState.UpdateBalancesAtIndex(1, 10000))
+	_, err = newState.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
 	trie, err := state_native.NewFieldTrie(types.Balances, types.CompressedArray, newState.Balances(), stateutil.ValidatorLimitForBalancesChunks())
 	require.NoError(t, err)
 	require.Equal(t, trie.Length(), stateutil.ValidatorLimitForBalancesChunks())
