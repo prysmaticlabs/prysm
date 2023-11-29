@@ -3,7 +3,9 @@ package filesystem
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/spf13/afero"
+	"github.com/urfave/cli/v2"
 )
 
 // NewEphemeralBlobStorage should only be used for tests.
@@ -15,9 +17,11 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 
 // NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
 // in order to interact with it outside the parameters of the BlobStorage api.
-func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage) {
+func NewEphemeralBlobStorageWithFs(tb testing.TB) (afero.Fs, *BlobStorage) {
 	fs := afero.NewMemMapFs()
-	return fs, &BlobStorage{fs: fs}
+	retentionSlot, err := determineRetentionSlot(&cli.Context{})
+	require.NoError(tb, err)
+	return fs, &BlobStorage{fs: fs, retentionSlot: retentionSlot}
 }
 
 type BlobMocker struct {
