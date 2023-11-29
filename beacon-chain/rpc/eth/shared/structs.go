@@ -326,6 +326,14 @@ func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndPr
 	}, nil
 }
 
+func SignedContributionAndProofFromConsensus(c *eth.SignedContributionAndProof) *SignedContributionAndProof {
+	contribution := ContributionAndProofFromConsensus(c.Message)
+	return &SignedContributionAndProof{
+		Message:   contribution,
+		Signature: hexutil.Encode(c.Signature),
+	}
+}
+
 func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) {
 	contribution, err := c.Contribution.ToConsensus()
 	if err != nil {
@@ -345,6 +353,15 @@ func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) 
 		Contribution:    contribution,
 		SelectionProof:  selectionProof,
 	}, nil
+}
+
+func ContributionAndProofFromConsensus(c *eth.ContributionAndProof) *ContributionAndProof {
+	contribution := SyncCommitteeContributionFromConsensus(c.Contribution)
+	return &ContributionAndProof{
+		AggregatorIndex: fmt.Sprintf("%d", c.AggregatorIndex),
+		Contribution:    contribution,
+		SelectionProof:  hexutil.Encode(c.SelectionProof),
+	}
 }
 
 func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContribution, error) {
@@ -376,6 +393,16 @@ func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContributio
 		AggregationBits:   aggBits,
 		Signature:         sig,
 	}, nil
+}
+
+func SyncCommitteeContributionFromConsensus(c *eth.SyncCommitteeContribution) *SyncCommitteeContribution {
+	return &SyncCommitteeContribution{
+		Slot:              fmt.Sprintf("%d", c.Slot),
+		BeaconBlockRoot:   hexutil.Encode(c.BlockRoot),
+		SubcommitteeIndex: fmt.Sprintf("%d", c.SubcommitteeIndex),
+		AggregationBits:   hexutil.Encode(c.AggregationBits),
+		Signature:         hexutil.Encode(c.Signature),
+	}
 }
 
 func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregateAttestationAndProof, error) {
