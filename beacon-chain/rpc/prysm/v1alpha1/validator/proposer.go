@@ -171,16 +171,17 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 
 	// There's no reason to try to get a builder bid if local override is true.
 	var builderPayload interfaces.ExecutionData
+	var builderKzgCommitments [][]byte
 	overrideBuilder = overrideBuilder || skipMevBoost // Skip using mev-boost if requested by the caller.
 	if !overrideBuilder {
-		builderPayload, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
+		builderPayload, builderKzgCommitments, err = vs.getBuilderPayloadAndBlobs(ctx, sBlk.Block().Slot(), sBlk.Block().ProposerIndex())
 		if err != nil {
 			builderGetPayloadMissCount.Inc()
 			log.WithError(err).Error("Could not get builder payload")
 		}
 	}
 
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload); err != nil {
+	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
@@ -206,7 +207,8 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}
 	blinded := unblinder.b.IsBlinded() //
 
-	blk, _, err = unblinder.unblindBuilderBlock(ctx)
+	var scs []*ethpb.BlobSidecar
+	blk, scs, err = unblinder.unblindBuilderBlock(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not unblind builder block")
 	}
@@ -229,13 +231,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}).Debug("Broadcasting block")
 
 	if blk.Version() >= version.Deneb {
-		if blinded {
-			// TODO: Handle blobs from the builder
-		}
-
-		scs, err := buildBlobSidecars(blk)
-		if err != nil {
-			return nil, fmt.Errorf("could not build blob sidecars: %v", err)
+		if !blinded {
+			scs, err = buildBlobSidecars(blk)
+			if err != nil {
+				return nil, fmt.Errorf("could not build blob sidecars: %v", err)
+			}
 		}
 		for i, sc := range scs {
 			if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
