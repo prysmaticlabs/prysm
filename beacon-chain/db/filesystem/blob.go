@@ -190,13 +190,7 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) error {
-	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
-		// Retrieve and cast the epoch value.
-		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
-		retentionEpoch = primitives.Epoch(epochValue)
-	}
-	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
+	retentionSlot, err := determineRetentionSlot(cliCtx)
 	if err != nil {
 		return err
 	}
@@ -235,6 +229,9 @@ func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) e
 	return nil
 }
 
+// slotFromBlob reads the ssz data of a file at the specified offset (131096 bytes), which is
+// calculated based on the size of the BlobSidecar struct and is based on the size of the fields
+// preceding the slot information within SignedBeaconBlockHeader.
 func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	b := make([]byte, 8)
 	_, err := at.ReadAt(b, 131096)
@@ -243,4 +240,20 @@ func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	}
 	rawSlot := binary.LittleEndian.Uint64(b)
 	return primitives.Slot(rawSlot), nil
+}
+
+// determineRetentionEpoch if a user defined retention epoch is set, we use that instead
+// of the default value. And return the first slot of the epoch + buffer period.
+func determineRetentionSlot(cliCtx *cli.Context) (primitives.Slot, error) {
+	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
+		// Retrieve and cast the epoch value.
+		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
+		retentionEpoch = primitives.Epoch(epochValue)
+	}
+	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
+	if err != nil {
+		return 0, err
+	}
+	return retentionSlot, nil
 }
