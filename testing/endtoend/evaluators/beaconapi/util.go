@@ -1,4 +1,4 @@
-package beaconapi_evaluators
+package beaconapi
 
 import (
 	"bytes"
@@ -7,9 +7,19 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	log "github.com/sirupsen/logrus"
+)
+
+var (
+	errSszCast   = errors.New("SSZ response is not a byte array")
+	errEmptyData = errors.New("data is empty")
+)
+
+const (
+	msgWrongJson = "JSON response has wrong structure, expected %T, got %T"
 )
 
 func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
