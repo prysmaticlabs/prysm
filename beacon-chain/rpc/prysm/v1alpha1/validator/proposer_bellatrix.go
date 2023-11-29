@@ -123,7 +123,7 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 // This function retrieves the payload header given the slot number and the validator index.
 // It's a no-op if the latest head block is not versioned bellatrix.
-func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (interfaces.ExecutionData, [][]byte, error) {
+func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitives.Slot, idx primitives.ValidatorIndex) (header interfaces.ExecutionData, kzgCommitments [][]byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "ProposerServer.getPayloadHeaderFromBuilder")
 	defer span.End()
 
@@ -180,7 +180,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, nil, errors.New("builder returned header with 0 bid amount")
 	}
 
-	header, err := bid.Header()
+	header, err = bid.Header()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "could not get bid header")
 	}
@@ -208,7 +208,6 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		return nil, nil, errors.Wrap(err, "could not validate builder signature")
 	}
 
-	var kzgCommitments [][]byte
 	if bid.Version() >= version.Deneb {
 		kzgCommitments, err = bid.BlobKzgCommitments()
 		if err != nil {
