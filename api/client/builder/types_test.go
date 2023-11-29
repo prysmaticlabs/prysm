@@ -142,17 +142,9 @@ var testExampleHeaderResponseDeneb = `{
 		"blob_gas_used": "1",	
 		"excess_blob_gas": "2"	
       },
-      "blinded_blobs_bundle": {
-        "commitments": [
+      "blob_kzg_commitments": [
           "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"
-        ],
-        "proofs": [
-          "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"
-        ],
-        "blob_roots": [
-          "0x24564723180fcb3d994104538d351c8dcbde12d541676bb736cf678018ca4739"
-        ]
-      },
+	  ],
       "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
       "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
     },

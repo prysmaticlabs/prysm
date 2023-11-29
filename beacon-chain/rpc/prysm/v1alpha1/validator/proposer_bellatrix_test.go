@@ -325,13 +325,9 @@ func TestServer_setExecutionData(t *testing.T) {
 				BlobGasUsed:      123,
 				ExcessBlobGas:    456,
 			},
-			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo(builderValue, 32),
-			BlindedBlobsBundle: &v1.BlindedBlobsBundle{
-				KzgCommitments: [][]byte{bytesutil.PadTo([]byte{1}, fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte{4}, fieldparams.BLSPubkeyLength)},
-				Proofs:         [][]byte{bytesutil.PadTo([]byte{2}, fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte{5}, fieldparams.BLSPubkeyLength)},
-				BlobRoots:      [][]byte{bytesutil.PadTo([]byte{3}, fieldparams.RootLength), bytesutil.PadTo([]byte{6}, fieldparams.RootLength)},
-			},
+			Pubkey:             sk.PublicKey().Marshal(),
+			Value:              bytesutil.PadTo(builderValue, 32),
+			BlobKzgCommitments: [][]byte{bytesutil.PadTo([]byte{2}, fieldparams.BLSPubkeyLength), bytesutil.PadTo([]byte{5}, fieldparams.BLSPubkeyLength)},
 		}
 
 		d := params.BeaconConfig().DomainApplicationBuilder
@@ -365,7 +361,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, err := vs.getBuilderPayloadAndBlobs(ctx, blk.Block().Slot(), blk.Block().ProposerIndex())
 		require.NoError(t, err)
 		require.Equal(t, bid.Header.BlockNumber, builderPayload.BlockNumber()) // header should be the same from block
-		require.DeepEqual(t, blindBlobsBundle, bid.BlindedBlobsBundle)         // blind blobs should be the same from block
 	})
 }
 func TestServer_getPayloadHeader(t *testing.T) {

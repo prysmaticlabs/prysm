@@ -652,103 +652,6 @@ type SszResponse interface {
 }
 
 // ---------------
-// Events.
-// ---------------
-
-type EventHeadJson struct {
-	Slot                      string `json:"slot"`
-	Block                     string `json:"block" hex:"true"`
-	State                     string `json:"state" hex:"true"`
-	EpochTransition           bool   `json:"epoch_transition"`
-	ExecutionOptimistic       bool   `json:"execution_optimistic"`
-	PreviousDutyDependentRoot string `json:"previous_duty_dependent_root" hex:"true"`
-	CurrentDutyDependentRoot  string `json:"current_duty_dependent_root" hex:"true"`
-}
-
-type ReceivedBlockDataJson struct {
-	Slot                string `json:"slot"`
-	Block               string `json:"block" hex:"true"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-}
-
-type AggregatedAttReceivedDataJson struct {
-	Aggregate *AttestationJson `json:"aggregate"`
-}
-
-type UnaggregatedAttReceivedDataJson struct {
-	AggregationBits string               `json:"aggregation_bits" hex:"true"`
-	Data            *AttestationDataJson `json:"data"`
-	Signature       string               `json:"signature" hex:"true"`
-}
-
-type EventFinalizedCheckpointJson struct {
-	Block               string `json:"block" hex:"true"`
-	State               string `json:"state" hex:"true"`
-	Epoch               string `json:"epoch"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-}
-
-type EventChainReorgJson struct {
-	Slot                string `json:"slot"`
-	Depth               string `json:"depth"`
-	OldHeadBlock        string `json:"old_head_block" hex:"true"`
-	NewHeadBlock        string `json:"old_head_state" hex:"true"`
-	OldHeadState        string `json:"new_head_block" hex:"true"`
-	NewHeadState        string `json:"new_head_state" hex:"true"`
-	Epoch               string `json:"epoch"`
-	ExecutionOptimistic bool   `json:"execution_optimistic"`
-}
-
-type EventPayloadAttributeStreamV1Json struct {
-	Version string `json:"version"`
-	Data    *EventPayloadAttributeV1Json
-}
-
-type EventPayloadAttributeStreamV2Json struct {
-	Version string                       `json:"version"`
-	Data    *EventPayloadAttributeV2Json `json:"data"`
-}
-
-type EventPayloadAttributeV1Json struct {
-	ProposerIndex     string                   `json:"proposer_index"`
-	ProposalSlot      string                   `json:"proposal_slot"`
-	ParentBlockNumber string                   `json:"parent_block_number"`
-	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
-	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
-	PayloadAttributes *PayloadAttributesV1Json `json:"payload_attributes"`
-}
-
-type EventPayloadAttributeV2Json struct {
-	ProposerIndex     string                   `json:"proposer_index"`
-	ProposalSlot      string                   `json:"proposal_slot"`
-	ParentBlockNumber string                   `json:"parent_block_number"`
-	ParentBlockRoot   string                   `json:"parent_block_root" hex:"true"`
-	ParentBlockHash   string                   `json:"parent_block_hash" hex:"true"`
-	PayloadAttributes *PayloadAttributesV2Json `json:"payload_attributes"`
-}
-
-type PayloadAttributesV1Json struct {
-	Timestamp             string `json:"timestamp"`
-	Random                string `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string `json:"suggested_fee_recipient" hex:"true"`
-}
-
-type PayloadAttributesV2Json struct {
-	Timestamp             string            `json:"timestamp"`
-	Random                string            `json:"prev_randao" hex:"true"`
-	SuggestedFeeRecipient string            `json:"suggested_fee_recipient" hex:"true"`
-	Withdrawals           []*WithdrawalJson `json:"withdrawals"`
-}
-
-type EventBlobSidecarJson struct {
-	BlockRoot     string `json:"block_root" hex:"true"`
-	Index         string `json:"index"`
-	Slot          string `json:"slot"`
-	KzgCommitment string `json:"kzg_commitment" hex:"true"`
-	VersionedHash string `json:"versioned_hash" hex:"true"`
-}
-
-// ---------------
 // Error handling.
 // ---------------
 
@@ -762,9 +665,4 @@ type IndexedVerificationFailureErrorJson struct {
 type SingleIndexedVerificationFailureJson struct {
 	Index   int    `json:"index"`
 	Message string `json:"message"`
-}
-
-type EventErrorJson struct {
-	StatusCode int    `json:"status_code"`
-	Message    string `json:"message"`
 }

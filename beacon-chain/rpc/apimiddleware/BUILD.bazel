@@ -3,7 +3,6 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "custom_handlers.go",
         "custom_hooks.go",
         "endpoint_factory.go",
         "structs.go",
@@ -13,20 +12,16 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
-        "//beacon-chain/rpc/eth/events:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
-        "//runtime/version:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
-        "@com_github_r3labs_sse_v2//:go_default_library",
     ],
 )
 
 go_test(
     name = "go_default_test",
     srcs = [
-        "custom_handlers_test.go",
         "custom_hooks_test.go",
         "endpoint_factory_test.go",
         "structs_marshalling_test.go",
@@ -34,11 +29,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//api/gateway/apimiddleware:go_default_library",
-        "//beacon-chain/rpc/eth/events:go_default_library",
         "//config/params:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//time/slots:go_default_library",
-        "@com_github_r3labs_sse_v2//:go_default_library",
     ],
 )
