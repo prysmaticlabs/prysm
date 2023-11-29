@@ -1,7 +1,5 @@
 package testing
 
-import "github.com/ethereum/go-ethereum/common/hexutil"
-
 const (
 	Phase0Block = `{
   "message": {
@@ -1840,17 +1838,6 @@ var DenebBlockContents = `{
 		  },
 		  "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
 		},
-		"signed_blob_sidecars":[{
-			"message":{
-				"block_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-				"index":"1",
-				"slot":"1",
-				"block_parent_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
-				"proposer_index":"1",
-				"blob":"` + hexutil.Encode(make([]byte, 131072)) + `" ,
-				"kzg_commitment":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000",
-				"kzg_proof":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8000"
-			},
-			"signature":"0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
-		}]
+		"kzg_proofs":["0xaa0ef7404c3a164741856c78cc844072448886291e3c5b29514001d1bd8c5ccc9c342a1caa58c3b45734195ef4b4122a"],
+		"blobs":[]
 }`

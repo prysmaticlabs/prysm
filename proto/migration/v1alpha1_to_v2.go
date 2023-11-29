@@ -96,6 +96,20 @@ func V1Alpha1SignedBeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBl
 	return v2Block, nil
 }
 
+// V1Alpha1SignedBeaconBlockContentsDenebToV2 converts a v1alpha1 signed Deneb beacon block to a v2
+// Deneb block.
+func V1Alpha1SignedBeaconBlockContentsDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBlockContentsDeneb) (*ethpbv2.SignedBeaconBlockContentsDeneb, error) {
+	marshaledBlk, err := proto.Marshal(v1alpha1Block)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
+	}
+	v2Block := &ethpbv2.SignedBeaconBlockContentsDeneb{}
+	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
+		return nil, errors.Wrap(err, "could not unmarshal block")
+	}
+	return v2Block, nil
+}
+
 // V1Alpha1BeaconBlockBlindedDenebToV2Blinded converts a v1alpha1 Blinded Deneb beacon block to a v2 Blinded Deneb block.
 func V1Alpha1BeaconBlockBlindedDenebToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockDeneb) (*ethpbv2.BlindedBeaconBlockDeneb, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)

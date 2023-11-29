@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -1082,20 +1083,20 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-			converted, err := shared.BeaconBlockDenebFromConsensus(block.Deneb.Block)
+			converted, err := shared.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, converted, signedblock.SignedBlock.Message)
+			require.DeepEqual(t, converted, signedblock)
 			return ok
 		}))
 		server := &Server{
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.DenebBlockContents)))
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1199,33 +1200,31 @@ func TestPublishBlockSSZ(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		// TODO: Fix this as part of beacon API changes
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
 
-		//v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		//v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-		//	_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-		//	return ok
-		//}))
-		//server := &Server{
-		//	V1Alpha1ValidatorServer: v1alpha1Server,
-		//	SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		//}
-		//
-		//var dblock shared.SignedBeaconBlockContentsDeneb
-		//err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
-		//require.NoError(t, err)
-		//genericBlock, err := dblock.ToGeneric()
-		//require.NoError(t, err)
-		//v2block, err := migration.V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(genericBlock.GetDeneb())
-		//require.NoError(t, err)
-		//sszvalue, err := v2block.MarshalSSZ()
-		//require.NoError(t, err)
-		//request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		//request.Header.Set("Accept", "application/octet-stream")
-		//writer := httptest.NewRecorder()
-		//writer.Body = &bytes.Buffer{}
-		//server.PublishBlock(writer, request)
-		//assert.Equal(t, http.StatusOK, writer.Code)
+		var dblock shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		require.NoError(t, err)
+		genericBlock, err := dblock.ToGeneric()
+		require.NoError(t, err)
+		v2block, err := migration.V1Alpha1SignedBeaconBlockContentsDenebToV2(genericBlock.GetDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v2block.MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlock(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("invalid block", func(t *testing.T) {
 		server := &Server{
@@ -1339,12 +1338,12 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.SignedBlindedBlock.Message)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
-			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
+			var signedblock *shared.SignedBlindedBeaconBlockDeneb
+			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, converted, signedblock.SignedBlindedBlock.Message)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1352,7 +1351,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlockContents)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1597,12 +1596,12 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-			converted, err := shared.BeaconBlockDenebFromConsensus(block.Deneb.Block)
+			converted, err := shared.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
 			require.NoError(t, err)
 			var signedblock *shared.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, converted, signedblock.SignedBlock.Message)
+			require.DeepEqual(t, converted, signedblock)
 			return ok
 		}))
 		server := &Server{
@@ -1714,33 +1713,31 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		// TODO: Fix this as part of beacon API changes
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
 
-		//v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		//v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-		//	_, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-		//	return ok
-		//}))
-		//server := &Server{
-		//	V1Alpha1ValidatorServer: v1alpha1Server,
-		//	SyncChecker:             &mockSync.Sync{IsSyncing: false},
-		//}
-		//
-		//var dblock shared.SignedBeaconBlockContentsDeneb
-		//err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
-		//require.NoError(t, err)
-		//genericBlock, err := dblock.ToGeneric()
-		//require.NoError(t, err)
-		//v2block, err := migration.V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(genericBlock.GetDeneb())
-		//require.NoError(t, err)
-		//sszvalue, err := v2block.MarshalSSZ()
-		//require.NoError(t, err)
-		//request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		//request.Header.Set("Accept", "application/octet-stream")
-		//writer := httptest.NewRecorder()
-		//writer.Body = &bytes.Buffer{}
-		//server.PublishBlockV2(writer, request)
-		//assert.Equal(t, http.StatusOK, writer.Code)
+		var dblock shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		require.NoError(t, err)
+		genericBlock, err := dblock.ToGeneric()
+		require.NoError(t, err)
+		v2block, err := migration.V1Alpha1SignedBeaconBlockContentsDenebToV2(genericBlock.GetDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v2block.MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("invalid block", func(t *testing.T) {
 		server := &Server{
@@ -1854,12 +1851,12 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.SignedBlindedBlock.Message)
+			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockContentsDeneb
-			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &signedblock)
+			var signedblock *shared.SignedBlindedBeaconBlockDeneb
+			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, converted, signedblock.SignedBlindedBlock.Message)
+			require.DeepEqual(t, converted, signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1867,7 +1864,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlockContents)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlock)))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1971,34 +1968,33 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
-	// TODO: update this test when updating beacon apis
-	//t.Run("Deneb", func(t *testing.T) {
-	//	v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-	//	v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
-	//		_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-	//		return ok
-	//	}))
-	//	server := &Server{
-	//		V1Alpha1ValidatorServer: v1alpha1Server,
-	//		SyncChecker:             &mockSync.Sync{IsSyncing: false},
-	//	}
-	//
-	//	var cblock shared.SignedBlindedBeaconBlockContentsDeneb
-	//	err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &cblock)
-	//	require.NoError(t, err)
-	//	genericBlock, err := cblock.ToGeneric()
-	//	require.NoError(t, err)
-	//	v1block, err := migration.V1Alpha1SignedBlindedBlockAndBlobsDenebToV2Blinded(genericBlock.GetBlindedDeneb())
-	//	require.NoError(t, err)
-	//	sszvalue, err := v1block.MarshalSSZ()
-	//	require.NoError(t, err)
-	//	request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-	//	request.Header.Set("Accept", "application/octet-stream")
-	//	writer := httptest.NewRecorder()
-	//	writer.Body = &bytes.Buffer{}
-	//	server.PublishBlindedBlockV2(writer, request)
-	//	assert.Equal(t, http.StatusOK, writer.Code)
-	//})
+	t.Run("Deneb", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			_, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var cblock shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &cblock)
+		require.NoError(t, err)
+		genericBlock, err := cblock.ToGeneric()
+		require.NoError(t, err)
+		v1block, err := migration.V1Alpha1SignedBeaconBlockBlindedDenebToV2Blinded(genericBlock.GetBlindedDeneb())
+		require.NoError(t, err)
+		sszvalue, err := v1block.MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request.Header.Set("Accept", "application/octet-stream")
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("invalid block", func(t *testing.T) {
 		server := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: false},

@@ -494,7 +494,7 @@ func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 				{BlockRoot: r, Slot: primitives.Slot(i)},
 			}
 			k := blobSidecarKey(scs[0])
-			encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
+			encodedBlobSidecar, err := encode(ctx, &ethpb.DeprecatedBlobSidecars{Sidecars: scs})
 			require.NoError(b, err)
 			require.NoError(b, bkt.Put(k, encodedBlobSidecar))
 		}

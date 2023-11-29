@@ -2162,20 +2162,13 @@ func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockContentsDeneb) (*Be
 	if err != nil {
 		return nil, err
 	}
-	var proofs []string
-	if len(b.KzgProofs) != 0 {
-		proofs = make([]string, len(b.KzgProofs))
-		for i, proof := range b.KzgProofs {
-			proofs[i] = hexutil.Encode(proof)
-		}
+	proofs := make([]string, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i] = hexutil.Encode(proof)
 	}
-
-	var blbs []string
-	for len(b.Blobs) != 0 {
-		blbs = make([]string, len(b.Blobs))
-		for i, blob := range b.Blobs {
-			blbs[i] = hexutil.Encode(blob)
-		}
+	blbs := make([]string, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i] = hexutil.Encode(blob)
 	}
 	return &BeaconBlockContentsDeneb{
 		Block:     block,
@@ -2189,21 +2182,17 @@ func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockContent
 	if err != nil {
 		return nil, err
 	}
-	var proofs []string
-	if len(b.KzgProofs) != 0 {
-		proofs = make([]string, len(b.KzgProofs))
-		for i, proof := range b.KzgProofs {
-			proofs[i] = hexutil.Encode(proof)
-		}
+
+	proofs := make([]string, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i] = hexutil.Encode(proof)
 	}
 
-	var blbs []string
-	for len(b.Blobs) != 0 {
-		blbs = make([]string, len(b.Blobs))
-		for i, blob := range b.Blobs {
-			blbs[i] = hexutil.Encode(blob)
-		}
+	blbs := make([]string, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i] = hexutil.Encode(blob)
 	}
+
 	return &SignedBeaconBlockContentsDeneb{
 		SignedBlock: block,
 		KzgProofs:   proofs,
