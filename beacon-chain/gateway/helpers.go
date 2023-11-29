@@ -4,7 +4,6 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -51,9 +50,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 		}
 	}
 	if flags.EnableHTTPEthAPI(httpModules) {
-		ethRegistrations := []gateway.PbHandlerRegistration{
-			ethpbservice.RegisterEventsHandler,
-		}
+		ethRegistrations := []gateway.PbHandlerRegistration{}
 		ethMux := gwruntime.NewServeMux(
 			gwruntime.WithMarshalerOption(gwruntime.MIMEWildcard, &gwruntime.HTTPBodyMarshaler{
 				Marshaler: &gwruntime.JSONPb{

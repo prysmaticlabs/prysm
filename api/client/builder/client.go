@@ -87,7 +87,7 @@ type BuilderClient interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
-	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock, blobs []*ethpb.SignedBlindedBlobSidecar) (interfaces.ExecutionData, *v1.BlobsBundle, error)
+	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, *v1.BlobsBundle, error)
 	Status(ctx context.Context) error
 }
 
@@ -367,42 +367,42 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		}
 		return payload, nil, nil
 	case version.Deneb:
-		//psb, err := sb.PbBlindedDenebBlock()
-		//if err != nil {
-		//	return nil, nil, errors.Wrapf(err, "could not get protobuf block")
-		//}
-		//b, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: psb, SignedBlindedBlobSidecars: blobs})
-		//if err != nil {
-		//	return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockContentsDeneb to json marshalable type")
-		//}
-		//body, err := json.Marshal(b)
-		//if err != nil {
-		//	return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockDeneb value body in SubmitBlindedBlockDeneb")
-		//}
-		//
-		//versionOpt := func(r *http.Request) {
-		//	r.Header.Add("Eth-Consensus-Version", version.String(version.Deneb))
-		//}
-		//rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
-		//if err != nil {
-		//	return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockDeneb to the builder api")
-		//}
-		//ep := &ExecPayloadResponseDeneb{}
-		//if err := json.Unmarshal(rb, ep); err != nil {
-		//	return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockDeneb response")
-		//}
-		//if strings.ToLower(ep.Version) != version.String(version.Deneb) {
-		//	return nil, nil, errors.New("not a deneb payload")
-		//}
-		//p, blobBundle, err := ep.ToProto()
-		//if err != nil {
-		//	return nil, nil, errors.Wrapf(err, "could not extract proto message from payload")
-		//}
-		//payload, err := blocks.WrappedExecutionPayloadDeneb(p, 0)
-		//if err != nil {
-		//	return nil, nil, errors.Wrapf(err, "could not wrap execution payload in interface")
-		//}
-		return nil, nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
+		psb, err := sb.PbBlindedDenebBlock()
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
+		}
+		b, err := shared.SignedBlindedBeaconBlockDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockDeneb{Message: psb.Message, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockDeneb to json marshalable type")
+		}
+		body, err := json.Marshal(b)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockDeneb value body in SubmitBlindedBlockDeneb")
+		}
+
+		versionOpt := func(r *http.Request) {
+			r.Header.Add("Eth-Consensus-Version", version.String(version.Deneb))
+		}
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockDeneb to the builder api")
+		}
+		ep := &ExecPayloadResponseDeneb{}
+		if err := json.Unmarshal(rb, ep); err != nil {
+			return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockDeneb response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Deneb) {
+			return nil, nil, errors.New("not a deneb payload")
+		}
+		p, blobBundle, err := ep.ToProto()
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not extract proto message from payload")
+		}
+		payload, err := blocks.WrappedExecutionPayloadDeneb(p, 0)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not wrap execution payload in interface")
+		}
+		return payload, blobBundle, nil
 	default:
 		return nil, nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}

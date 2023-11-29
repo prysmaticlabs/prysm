@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
@@ -39,13 +39,13 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		require.NoError(t, err)
 		r1, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
-		scs := []*ethpb.BlindedBlobSidecar{{}, {}, {}, {}, {}, {}}
+		scs := &enginev1.BlobsBundle{}
 		result, err := vs.constructGenericBeaconBlock(b, scs)
 		require.NoError(t, err)
 		r2, err := result.GetBlindedDeneb().Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.Equal(t, r1, r2)
-		require.Equal(t, len(result.GetBlindedDeneb().Blobs), len(scs))
+		// TODO: update with kzg commit check after updating generic beacon block
 		require.Equal(t, result.IsBlinded, true)
 	})
 

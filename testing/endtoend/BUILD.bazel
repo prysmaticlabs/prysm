@@ -57,7 +57,6 @@ common_deps = [
     "//crypto/bls:go_default_library",
     "//encoding/bytesutil:go_default_library",
     "//io/file:go_default_library",
-    "//proto/eth/service:go_default_library",
     "//proto/eth/v1:go_default_library",
     "//math:go_default_library",
     "//proto/engine/v1:go_default_library",
