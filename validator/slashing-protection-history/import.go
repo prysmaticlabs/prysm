@@ -119,7 +119,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
 		indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
-		signingRoots := make([][32]byte, len(attestations))
+		signingRoots := make([][]byte, len(attestations))
 		for i, att := range attestations {
 			indexedAtt := createAttestation(att.Source, att.Target)
 			indexedAtts[i] = indexedAtt
@@ -264,7 +264,7 @@ func filterSlashablePubKeysFromAttestations(
 	// First we need to find attestations that are slashable with respect to other
 	// attestations within the same JSON import.
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		signingRootsByTarget := make(map[primitives.Epoch][32]byte)
+		signingRootsByTarget := make(map[primitives.Epoch][]byte)
 		targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
 	Loop:
 		for _, att := range signedAtts {
@@ -350,13 +350,17 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.SourceEpoch, err)
 		}
-		var signingRoot [32]byte
+
 		// Signing roots are optional in the standard JSON file.
+		// If the signing root is not provided, we use a default value which is a zero-length byte slice.
+		signingRoot := make([]byte, 0, fieldparams.RootLength)
+
 		if attestation.SigningRoot != "" {
-			signingRoot, err = RootFromHex(attestation.SigningRoot)
+			signingRoot32, err := RootFromHex(attestation.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%s is not a valid root: %w", attestation.SigningRoot, err)
 			}
+			signingRoot = signingRoot32[:]
 		}
 		historicalAtts = append(historicalAtts, &kv.AttestationRecord{
 			PubKey:      pubKey,
