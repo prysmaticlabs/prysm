@@ -229,12 +229,12 @@ func (bs *BlobStorage) Prune(cliCtx *cli.Context, currentSlot primitives.Slot) e
 	return nil
 }
 
-// slotFromBlob reads the ssz data of a file at the specified offset (131096 bytes), which is
-// calculated based on the size of the BlobSidecar struct and is based on the size of the fields
+// slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
+// which is calculated based on the size of the BlobSidecar struct and is based on the size of the fields
 // preceding the slot information within SignedBeaconBlockHeader.
 func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	b := make([]byte, 8)
-	_, err := at.ReadAt(b, 131096)
+	_, err := at.ReadAt(b, 131176)
 	if err != nil {
 		return 0, err
 	}
