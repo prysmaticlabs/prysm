@@ -20,13 +20,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-// BeaconAPIMultiClientVerifyIntegrity tests Beacon API endpoints.
+// MultiClientVerifyIntegrity tests Beacon API endpoints.
 // It compares responses from Prysm and other beacon nodes such as Lighthouse.
 // The evaluator is executed on every odd-numbered epoch.
-var BeaconAPIMultiClientVerifyIntegrity = e2etypes.Evaluator{
+var MultiClientVerifyIntegrity = e2etypes.Evaluator{
 	Name:       "beacon_api_multi-client_verify_integrity_epoch_%d",
 	Policy:     policies.EveryNEpochs(1, 2),
-	Evaluation: beaconAPIVerify,
+	Evaluation: verify,
 }
 
 const (
@@ -36,14 +36,14 @@ const (
 
 type apiComparisonFunc func(beaconNodeIdx int) error
 
-func beaconAPIVerify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
-	beacon := []apiComparisonFunc{
+func verify(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) error {
+	comparison := []apiComparisonFunc{
 		withCompareBeaconAPIs,
 	}
 	for beaconNodeIdx := range conns {
 		if err := runAPIComparisonFunctions(
 			beaconNodeIdx,
-			beacon...,
+			comparison...,
 		); err != nil {
 			return err
 		}
@@ -80,7 +80,7 @@ func withCompareBeaconAPIs(nodeIdx int) error {
 			apiPath = pathFromParams(path, m.getParams(currentEpoch))
 		}
 		fmt.Printf("executing JSON path: %s\n", apiPath)
-		if err = compareJSONMultiClient(nodeIdx, m.getBasePath(), apiPath, m.getReq(), m.getPResp(), m.getLResp(), m.getCustomEval()); err != nil {
+		if err = compareJSONMultiClient(nodeIdx, m.getBasePath(), apiPath, m.getReq(), m.getPResp(), m.getLHResp(), m.getCustomEval()); err != nil {
 			return err
 		}
 		if m.sszEnabled() {
@@ -98,7 +98,7 @@ func withCompareBeaconAPIs(nodeIdx int) error {
 
 // postEvaluation performs additional evaluation after all requests have been completed.
 // It is useful for things such as checking if specific fields match between endpoints.
-func postEvaluation(requests map[string]meta) error {
+func postEvaluation(requests map[string]endpoint) error {
 	// verify that block SSZ responses have the correct structure
 	forkData := requests["/beacon/states/{param1}/fork"]
 	fork, ok := forkData.getPResp().(*beacon.GetStateForkResponse)
@@ -117,47 +117,47 @@ func postEvaluation(requests map[string]meta) error {
 	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
 		b := &ethpb.SignedBeaconBlock{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 		bb := &ethpb.SignedBeaconBlock{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 		bb := &ethpb.SignedBeaconBlockAltair{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockBellatrix{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockCapella{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 	} else {
 		b := &ethpb.SignedBeaconBlockDeneb{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 		bb := &ethpb.SignedBlindedBeaconBlockDeneb{}
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
-			return errors.Wrap(err, "failed to unmarshal SSZ")
+			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
 	}
 
@@ -179,26 +179,26 @@ func postEvaluation(requests map[string]meta) error {
 	return nil
 }
 
-func compareJSONMultiClient(nodeIdx int, base, path string, req, pResp, lResp interface{}, customEval func(interface{}, interface{}) error) error {
+func compareJSONMultiClient(nodeIdx int, base, path string, req, pResp, lhResp interface{}, customEval func(interface{}, interface{}) error) error {
 	if req != nil {
 		if err := doJSONPostRequest(base, path, nodeIdx, req, pResp); err != nil {
 			return errors.Wrapf(err, "could not perform Prysm JSON POST request for path %s", path)
 		}
-		if err := doJSONPostRequest(base, path, nodeIdx, req, lResp, "lighthouse"); err != nil {
+		if err := doJSONPostRequest(base, path, nodeIdx, req, lhResp, "lighthouse"); err != nil {
 			return errors.Wrapf(err, "could not perform Lighthouse JSON POST request for path %s", path)
 		}
 	} else {
 		if err := doJSONGetRequest(base, path, nodeIdx, pResp); err != nil {
 			return errors.Wrapf(err, "could not perform Prysm JSON GET request for path %s", path)
 		}
-		if err := doJSONGetRequest(base, path, nodeIdx, lResp, "lighthouse"); err != nil {
+		if err := doJSONGetRequest(base, path, nodeIdx, lhResp, "lighthouse"); err != nil {
 			return errors.Wrapf(err, "could not perform Lighthouse JSON GET request for path %s", path)
 		}
 	}
 	if customEval != nil {
-		return customEval(pResp, lResp)
+		return customEval(pResp, lhResp)
 	} else {
-		return compareJSON(pResp, lResp)
+		return compareJSON(pResp, lhResp)
 	}
 }
 
@@ -207,27 +207,27 @@ func compareSSZMultiClient(nodeIdx int, base, path string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not perform Prysm SSZ GET request for path %s", path)
 	}
-	lResp, err := doSSZGetRequest(base, path, nodeIdx, "lighthouse")
+	lhResp, err := doSSZGetRequest(base, path, nodeIdx, "lighthouse")
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not perform Lighthouse SSZ GET request for path %s", path)
 	}
-	if !bytes.Equal(pResp, lResp) {
+	if !bytes.Equal(pResp, lhResp) {
 		return nil, errors.New("Prysm SSZ response does not match Lighthouse SSZ response")
 	}
 	return pResp, nil
 }
 
-func compareJSON(pResp interface{}, lResp interface{}) error {
-	if !reflect.DeepEqual(pResp, lResp) {
+func compareJSON(pResp interface{}, lhResp interface{}) error {
+	if !reflect.DeepEqual(pResp, lhResp) {
 		p, err := json.Marshal(pResp)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal Prysm response to JSON")
 		}
-		l, err := json.Marshal(lResp)
+		lh, err := json.Marshal(lhResp)
 		if err != nil {
 			return errors.Wrap(err, "failed to marshal Lighthouse response to JSON")
 		}
-		return fmt.Errorf("Prysm response %s does not match Lighthouse response %s", string(p), string(l))
+		return fmt.Errorf("Prysm response %s does not match Lighthouse response %s", string(p), string(lh))
 	}
 	return nil
 }
