@@ -144,7 +144,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		stringValidatorsPubKey,
-		nil,
+		[]primitives.ValidatorIndex{},
 		nil,
 	).Return(
 		&beacon.GetValidatorsResponse{
@@ -230,7 +230,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		gomock.Any(),
-		nil,
+		[]primitives.ValidatorIndex{},
 		nil,
 	).Return(
 		&beacon.GetValidatorsResponse{},
@@ -525,7 +525,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 type getStateValidatorsInterface struct {
 	// Inputs
 	inputStringPubKeys []string
-	inputIndexes       []int64
+	inputIndexes       []primitives.ValidatorIndex
 	inputStatuses      []string
 
 	// Outputs
