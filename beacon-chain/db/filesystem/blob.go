@@ -58,7 +58,6 @@ func NewBlobStorage(cliCtx *cli.Context, base string) (*BlobStorage, error) {
 func determineRetentionSlot(cliCtx *cli.Context) (primitives.Slot, error) {
 	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
-		// Retrieve and cast the epoch value.
 		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
 		retentionEpoch = primitives.Epoch(epochValue)
 	}
