@@ -9,6 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
+// ROForkChoice is an implementation of forkchoice.Getter which calls `Rlock`/`RUnlock`
+// around a delegated method call to the underlying Getter implementation.
 type ROForkChoice struct {
 	getter Getter
 	l      Locker
@@ -17,7 +19,9 @@ type ROForkChoice struct {
 var _ Getter = &ROForkChoice{}
 
 // ROWrappable represents the subset of ForkChoicer a type needs to support
-// in order for ROForkChoice to wrap it.
+// in order for ROForkChoice to wrap it. This simplifies the creation of a mock
+// type that can be used to assert that all of the wrapped methods are correctly
+// called between mutex acquire/release.
 type ROWrappable interface {
 	Locker
 	Getter
