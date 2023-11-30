@@ -86,34 +86,3 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock) ([]*ethpb.BlobSidecar, 
 	}
 	return blobSidecars, nil
 }
-
-// coverts a blinds blobs bundle to a sidecar format.
-func blindBlobsBundleToSidecars(bundle *enginev1.BlindedBlobsBundle, blk interfaces.ReadOnlyBeaconBlock) ([]*ethpb.BlindedBlobSidecar, error) {
-	if blk.Version() < version.Deneb {
-		return nil, nil
-	}
-	if bundle == nil || len(bundle.KzgCommitments) == 0 {
-		return nil, nil
-	}
-	r, err := blk.HashTreeRoot()
-	if err != nil {
-		return nil, err
-	}
-	pr := blk.ParentRoot()
-
-	sidecars := make([]*ethpb.BlindedBlobSidecar, len(bundle.BlobRoots))
-	for i := 0; i < len(bundle.BlobRoots); i++ {
-		sidecars[i] = &ethpb.BlindedBlobSidecar{
-			BlockRoot:       r[:],
-			Index:           uint64(i),
-			Slot:            blk.Slot(),
-			BlockParentRoot: pr[:],
-			ProposerIndex:   blk.ProposerIndex(),
-			BlobRoot:        bundle.BlobRoots[i],
-			KzgCommitment:   bundle.KzgCommitments[i],
-			KzgProof:        bundle.Proofs[i],
-		}
-	}
-
-	return sidecars, nil
-}

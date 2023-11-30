@@ -28,6 +28,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const txCount = 20
+
 var fundedAccount *keystore.Key
 
 type TransactionGenerator struct {
@@ -82,7 +84,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 		return err
 	}
 	f := filler.NewFiller(rnd)
-	// Broadcast Transactions every 3 blocks
+	// Broadcast Transactions every slot
 	txPeriod := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	ticker := time.NewTicker(txPeriod)
 	gasPrice := big.NewInt(1e11)
@@ -92,7 +94,7 @@ func (t *TransactionGenerator) Start(ctx context.Context) error {
 			return nil
 		case <-ticker.C:
 			backend := ethclient.NewClient(client)
-			err = SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), 100, backend, false)
+			err = SendTransaction(client, mineKey.PrivateKey, f, gasPrice, mineKey.Address.String(), txCount, backend, false)
 			if err != nil {
 				return err
 			}

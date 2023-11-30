@@ -699,38 +699,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
-		{
-			name: "blind capella",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				blockToPropose := util.NewBlindedBeaconBlockDeneb()
-				blockToPropose.Message.Slot = 5
-				blockToPropose.Message.ParentRoot = parent[:]
-				txRoot, err := ssz.TransactionsRoot([][]byte{})
-				require.NoError(t, err)
-				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
-				require.NoError(t, err)
-				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
-				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
-				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
-					SignedBlindedBlock: blockToPropose,
-					SignedBlindedBlobSidecars: []*ethpb.SignedBlindedBlobSidecar{
-						{
-							Message: &ethpb.BlindedBlobSidecar{
-								BlockRoot:       []byte{0x01},
-								Slot:            2,
-								BlockParentRoot: []byte{0x03},
-								ProposerIndex:   3,
-								BlobRoot:        []byte{0x04},
-								KzgCommitment:   []byte{0x05},
-								KzgProof:        []byte{0x06},
-							},
-							Signature: []byte{0x07},
-						},
-					},
-				}}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk}
-			},
-		},
+		//TODO: add deneb blocks
 	}
 
 	for _, tt := range tests {

@@ -2417,28 +2417,6 @@ func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBl
 	}, nil
 }
 
-func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeaconBlockAndBlobsDeneb) (*SignedBlindedBeaconBlockContentsDeneb, error) {
-	var blindedBlobSidecars []*SignedBlindedBlobSidecar
-	if len(b.SignedBlindedBlobSidecars) != 0 {
-		blindedBlobSidecars = make([]*SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
-		for i, s := range b.SignedBlindedBlobSidecars {
-			signedBlob, err := SignedBlindedBlobSidecarFromConsensus(s)
-			if err != nil {
-				return nil, err
-			}
-			blindedBlobSidecars[i] = signedBlob
-		}
-	}
-	blindedBlock, err := SignedBlindedBeaconBlockDenebFromConsensus(b.SignedBlindedBlock)
-	if err != nil {
-		return nil, err
-	}
-	return &SignedBlindedBeaconBlockContentsDeneb{
-		SignedBlindedBlock:        blindedBlock,
-		SignedBlindedBlobSidecars: blindedBlobSidecars,
-	}, nil
-}
-
 func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
 	var blobSidecars []*BlobSidecar
 	if len(b.Blobs) != 0 {
