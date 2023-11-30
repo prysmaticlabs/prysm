@@ -7,7 +7,7 @@ import (
 )
 
 // This is the default queue size used if we have specified an invalid one.
-const defaultPubsubQueueSize = 32
+const defaultPubsubQueueSize = 600
 
 // Config for the p2p service. These parameters are set from application level flags
 // to initialize the p2p service.
