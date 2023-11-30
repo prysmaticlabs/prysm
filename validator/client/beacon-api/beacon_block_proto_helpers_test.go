@@ -31,7 +31,9 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 			name:                 "bad header 1",
 			expectedErrorMessage: "failed to get proposer header 1",
 			generateInput: func() []*shared.ProposerSlashing {
-				return []*shared.ProposerSlashing{}
+				input := generateProposerSlashings()
+				input[0].SignedHeader1 = nil
+				return input
 			},
 		},
 		{
@@ -39,7 +41,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 			expectedErrorMessage: "failed to get proposer header 2",
 			generateInput: func() []*shared.ProposerSlashing {
 				input := generateProposerSlashings()
-				input[0].SignedHeader1 = nil
+				input[0].SignedHeader2 = nil
 				return input
 			},
 		},
@@ -234,7 +236,12 @@ func TestBeaconBlockProtoHelpers_ConvertAttesterSlashingsToProto(t *testing.T) {
 			name:                 "bad attestation 1",
 			expectedErrorMessage: "failed to get attestation 1",
 			generateInput: func() []*shared.AttesterSlashing {
-				return []*shared.AttesterSlashing{}
+				return []*shared.AttesterSlashing{
+					{
+						Attestation1: nil,
+						Attestation2: nil,
+					},
+				}
 			},
 		},
 		{
