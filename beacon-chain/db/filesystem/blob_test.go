@@ -125,4 +125,7 @@ func TestBlobStorageDelete(t *testing.T) {
 	exists, err = afero.DirExists(fs, hexutil.Encode(blockRoot))
 	require.NoError(t, err)
 	require.Equal(t, false, exists)
+
+	// Deleting a non-existent root does not return an error.
+	require.NoError(t, bs.Delete(bytesutil.ToBytes32([]byte{0x1})))
 }

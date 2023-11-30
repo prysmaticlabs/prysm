@@ -181,8 +181,8 @@ func (p blobNamer) path() string {
 
 // Delete removes the directory matching the provided block root and all the blobs it contains.
 func (bs *BlobStorage) Delete(root [32]byte) error {
-  if err := bs.fs.RemoveAll(hexutil.Encode(root[:])); err != nil {
-    return fmt.Errorf("failed to delete blobs for root %#x: %w", root, err)
-  }
-  return nil
+	if err := bs.fs.RemoveAll(hexutil.Encode(root[:])); err != nil {
+		return fmt.Errorf("failed to delete blobs for root %#x: %w", root, err)
+	}
+	return nil
 }
