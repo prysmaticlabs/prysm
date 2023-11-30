@@ -27,10 +27,12 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
 	}
+
 	interchangeJSON := &format.EIPSlashingProtectionFormat{}
 	if err := json.Unmarshal(encodedJSON, interchangeJSON); err != nil {
 		return errors.Wrap(err, "could not unmarshal slashing protection JSON file")
 	}
+
 	if interchangeJSON.Data == nil {
 		log.Warn("No slashing protection data to import")
 		return nil
@@ -47,6 +49,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
+
 	signedAttsByPubKey, err := parseAttestationsForUniquePublicKeys(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
@@ -54,6 +57,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 
 	attestingHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
 	proposalHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey)
+
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
 		// file into the internal Prysm representation of proposal history.
@@ -61,6 +65,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed blocks in JSON file for key %#x", pubKey)
 		}
+
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
 	}
 
@@ -71,15 +76,15 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
 		}
+
 		attestingHistoryByPubKey[pubKey] = historicalAtt
 	}
 
 	// We validate and filter out public keys parsed from JSON to ensure we are
 	// not importing those which are slashable with respect to other data within the same JSON.
 	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, proposalHistoryByPubKey)
-	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(
-		ctx, validatorDB, attestingHistoryByPubKey,
-	)
+
+	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB, attestingHistoryByPubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
 	}
@@ -96,39 +101,63 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 	// We save the histories to disk as atomic operations, ensuring that this only occurs
 	// until after we successfully parse all data from the JSON file. If there is any error
 	// in parsing the JSON proposal and attesting histories, we will not reach this point.
+	if err := saveProposals(ctx, proposalHistoryByPubKey, validatorDB); err != nil {
+		return errors.Wrap(err, "could not save proposals")
+	}
+
+	if err := saveAttestations(ctx, attestingHistoryByPubKey, validatorDB); err != nil {
+		return errors.Wrap(err, "could not save attestations")
+	}
+
+	return nil
+}
+
+func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey, validatorDB db.Database) error {
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
 		bar := initializeProgressBar(
 			len(proposalHistory.Proposals),
 			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
 		)
+
 		for _, proposal := range proposalHistory.Proposals {
 			if err := bar.Add(1); err != nil {
 				log.WithError(err).Debug("Could not increase progress bar")
 			}
-			if err = validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+
+			if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
 				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 			}
 		}
 	}
+
+	return nil
+}
+
+func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord, validatorDB db.Database) error {
 	bar := initializeProgressBar(
 		len(attestingHistoryByPubKey),
 		"Importing attesting history for validator public keys",
 	)
+
 	for pubKey, attestations := range attestingHistoryByPubKey {
 		if err := bar.Add(1); err != nil {
 			log.WithError(err).Debug("Could not increase progress bar")
 		}
+
 		indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
 		signingRoots := make([][]byte, len(attestations))
+
 		for i, att := range attestations {
 			indexedAtt := createAttestation(att.Source, att.Target)
 			indexedAtts[i] = indexedAtt
 			signingRoots[i] = att.SigningRoot
 		}
+
 		if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
 			return errors.Wrap(err, "could not save attestations from imported JSON to database")
 		}
 	}
+
 	return nil
 }
 
