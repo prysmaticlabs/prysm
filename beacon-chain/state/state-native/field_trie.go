@@ -21,7 +21,7 @@ var (
 // particular state instance we are referencing.
 type sliceAccessor interface {
 	Len(obj multi_value_slice.Identifiable) int
-	State() *BeaconState
+	State() multi_value_slice.Identifiable
 }
 
 // FieldTrie is the representation of the representative
