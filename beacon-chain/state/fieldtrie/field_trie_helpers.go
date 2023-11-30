@@ -139,7 +139,7 @@ func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([
 	}
 }
 
-// handle32ByteArrays computes and returns 32 byte arrays in a slice of root format. This is modified
+// handle32ByteMVslice computes and returns 32 byte arrays in a slice of root format. This is modified
 // to be used with multivalue slices.
 func handle32ByteMVslice(mv multi_value_slice.MultiValueSliceComposite[[32]byte],
 	indices []uint64, convertAll bool) ([][32]byte, error) {
