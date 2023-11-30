@@ -7,12 +7,14 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	mvslice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -165,7 +167,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -206,7 +208,7 @@ func InitializeFromProtoUnsafePhase0(st *ethpb.BeaconState) (state.BeaconState, 
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -271,7 +273,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -314,7 +316,7 @@ func InitializeFromProtoUnsafeAltair(st *ethpb.BeaconStateAltair) (state.BeaconS
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -381,7 +383,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -424,7 +426,7 @@ func InitializeFromProtoUnsafeBellatrix(st *ethpb.BeaconStateBellatrix) (state.B
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -495,7 +497,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -538,7 +540,7 @@ func InitializeFromProtoUnsafeCapella(st *ethpb.BeaconStateCapella) (state.Beaco
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -608,7 +610,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
 		valMapHandler:    stateutil.NewValMapHandler(st.Validators),
 	}
@@ -651,7 +653,7 @@ func InitializeFromProtoUnsafeDeneb(st *ethpb.BeaconStateDeneb) (state.BeaconSta
 		b.dirtyFields[f] = true
 		b.rebuildTrie[f] = true
 		b.dirtyIndices[f] = []uint64{}
-		trie, err := NewFieldTrie(f, types.BasicArray, nil, 0)
+		trie, err := fieldtrie.NewFieldTrie(f, types.BasicArray, nil, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -754,7 +756,7 @@ func (b *BeaconState) Copy() state.BeaconState {
 		dirtyFields:      make(map[types.FieldIndex]bool, fieldCount),
 		dirtyIndices:     make(map[types.FieldIndex][]uint64, fieldCount),
 		rebuildTrie:      make(map[types.FieldIndex]bool, fieldCount),
-		stateFieldLeaves: make(map[types.FieldIndex]*FieldTrie, fieldCount),
+		stateFieldLeaves: make(map[types.FieldIndex]*fieldtrie.FieldTrie, fieldCount),
 
 		// Share the reference to validator index map.
 		valMapHandler: b.valMapHandler,
@@ -1116,7 +1118,7 @@ func (b *BeaconState) recomputeFieldTrie(index types.FieldIndex, elements interf
 }
 
 func (b *BeaconState) resetFieldTrie(index types.FieldIndex, elements interface{}, length uint64) error {
-	fTrie, err := NewFieldTrie(index, fieldMap[index], elements, length)
+	fTrie, err := fieldtrie.NewFieldTrie(index, fieldMap[index], elements, length)
 	if err != nil {
 		return err
 	}
@@ -1177,9 +1179,9 @@ func finalizerCleanup(b *BeaconState) {
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-				b,
-				b.blockRootsMultiValue,
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.blockRootsMultiValue,
 			}, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
@@ -1194,9 +1196,9 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-			b,
-			b.blockRootsMultiValue,
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.blockRootsMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.blockRoots)
@@ -1206,9 +1208,9 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-				b,
-				b.stateRootsMultiValue,
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.stateRootsMultiValue,
 			}, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
@@ -1223,9 +1225,9 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-			b,
-			b.stateRootsMultiValue,
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.stateRootsMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.stateRoots)
@@ -1235,9 +1237,9 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[*ethpb.Validator]{
-				b,
-				b.validatorsMultiValue,
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[*ethpb.Validator]{
+				Identifiable:    b,
+				MultiValueSlice: b.validatorsMultiValue,
 			}, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
@@ -1252,9 +1254,9 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[*ethpb.Validator]{
-			b,
-			b.validatorsMultiValue,
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[*ethpb.Validator]{
+			Identifiable:    b,
+			MultiValueSlice: b.validatorsMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.validators)
@@ -1264,9 +1266,9 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[uint64]{
-				b,
-				b.balancesMultiValue,
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[uint64]{
+				Identifiable:    b,
+				MultiValueSlice: b.balancesMultiValue,
 			}, stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
 				return [32]byte{}, err
@@ -1281,9 +1283,9 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[uint64]{
-			b,
-			b.balancesMultiValue,
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[uint64]{
+			Identifiable:    b,
+			MultiValueSlice: b.balancesMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.balances)
@@ -1293,9 +1295,9 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-				b,
-				b.randaoMixesMultiValue,
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.randaoMixesMultiValue,
 			}, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
@@ -1310,9 +1312,9 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
-			b,
-			b.randaoMixesMultiValue,
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.randaoMixesMultiValue,
 		})
 	} else {
 		return b.recomputeFieldTrie(field, b.randaoMixes)

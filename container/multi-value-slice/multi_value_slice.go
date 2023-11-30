@@ -109,6 +109,18 @@ type MultiValueSlice[V comparable] interface {
 	Value(obj Identifiable) []V
 }
 
+// MultiValueSliceComposite describes a struct for which we have access to a multivalue
+// slice along with the desired state.
+type MultiValueSliceComposite[V comparable] struct {
+	Identifiable
+	MultiValueSlice[V]
+}
+
+// State returns the referenced state.
+func (m MultiValueSliceComposite[V]) State() Identifiable {
+	return m.Identifiable
+}
+
 // Value defines a single value along with one or more IDs that share this value.
 type Value[V any] struct {
 	val V

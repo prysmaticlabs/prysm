@@ -1,15 +1,16 @@
-package state_native_test
+package fieldtrie_test
 
 import (
 	"testing"
 
-	. "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	. "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/fieldtrie"
 	customtypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	mvslice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -41,10 +42,10 @@ func runNewTrie(t *testing.T) {
 	elements = customtypes.BlockRoots(blockRoots)
 
 	if features.Get().EnableExperimentalState {
-		mvRoots := NewMultiValueBlockRoots(roots)
-		elements = MultiValueSliceComposite[[32]byte]{
-			newState.(*BeaconState),
-			mvRoots,
+		mvRoots := buildTestCompositeSlice[[32]byte](blockRoots)
+		elements = mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    mockIdentifier{},
+			MultiValueSlice: mvRoots,
 		}
 	}
 
@@ -84,10 +85,10 @@ func runRecomputeTrie(t *testing.T) {
 	var elements interface{}
 	elements = newState.Validators()
 	if features.Get().EnableExperimentalState {
-		mvRoots := NewMultiValueValidators(newState.Validators())
-		elements = MultiValueSliceComposite[*ethpb.Validator]{
-			newState.(*BeaconState),
-			mvRoots,
+		mvRoots := buildTestCompositeSlice[*ethpb.Validator](newState.Validators())
+		elements = mvslice.MultiValueSliceComposite[*ethpb.Validator]{
+			Identifiable:    mockIdentifier{},
+			MultiValueSlice: mvRoots,
 		}
 	}
 
@@ -139,10 +140,10 @@ func runRecomputeTrie_CompressedArray(t *testing.T) {
 	var elements interface{}
 	elements = newState.Balances()
 	if features.Get().EnableExperimentalState {
-		mvBals := NewMultiValueBalances(newState.Balances())
-		elements = MultiValueSliceComposite[uint64]{
-			newState.(*BeaconState),
-			mvBals,
+		mvBals := buildTestCompositeSlice(newState.Balances())
+		elements = mvslice.MultiValueSliceComposite[uint64]{
+			Identifiable:    mockIdentifier{},
+			MultiValueSlice: mvBals,
 		}
 	}
 
@@ -248,4 +249,19 @@ func FuzzFieldTrie(f *testing.F) {
 			return
 		}
 	})
+}
+
+func buildTestCompositeSlice[V comparable](values []V) mvslice.MultiValueSliceComposite[V] {
+	obj := &mvslice.Slice[V]{}
+	obj.Init(values)
+	return mvslice.MultiValueSliceComposite[V]{
+		Identifiable:    nil,
+		MultiValueSlice: obj,
+	}
+}
+
+type mockIdentifier struct{}
+
+func (_ mockIdentifier) Id() mvslice.Id {
+	return 0
 }

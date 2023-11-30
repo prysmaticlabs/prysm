@@ -1,4 +1,4 @@
-package state_native
+package fieldtrie
 
 import (
 	"encoding/binary"
@@ -94,7 +94,7 @@ func convertRoots(indices []uint64, elements interface{}, convertAll bool) ([][3
 		return handle32ByteMVslice(buildEmptyCompositeSlice[[32]byte](castedType), indices, convertAll)
 	case customtypes.RandaoMixes:
 		return handle32ByteMVslice(buildEmptyCompositeSlice[[32]byte](castedType), indices, convertAll)
-	case MultiValueSliceComposite[[32]byte]:
+	case multi_value_slice.MultiValueSliceComposite[[32]byte]:
 		return handle32ByteMVslice(castedType, indices, convertAll)
 	default:
 		return nil, errors.Errorf("non-existent type provided %T", castedType)
@@ -113,7 +113,7 @@ func convertValidators(indices []uint64, elements interface{}, convertAll bool) 
 	switch casted := elements.(type) {
 	case []*ethpb.Validator:
 		return handleValidatorMVSlice(buildEmptyCompositeSlice[*ethpb.Validator](casted), indices, convertAll)
-	case MultiValueSliceComposite[*ethpb.Validator]:
+	case multi_value_slice.MultiValueSliceComposite[*ethpb.Validator]:
 		return handleValidatorMVSlice(casted, indices, convertAll)
 	default:
 		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
@@ -132,7 +132,7 @@ func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([
 	switch casted := elements.(type) {
 	case []uint64:
 		return handleBalanceMVSlice(buildEmptyCompositeSlice[uint64](casted), indices, convertAll)
-	case MultiValueSliceComposite[uint64]:
+	case multi_value_slice.MultiValueSliceComposite[uint64]:
 		return handleBalanceMVSlice(casted, indices, convertAll)
 	default:
 		return nil, errors.Errorf("Wanted type of %T but got %T", []uint64{}, elements)
@@ -141,7 +141,7 @@ func convertBalances(indices []uint64, elements interface{}, convertAll bool) ([
 
 // handle32ByteArrays computes and returns 32 byte arrays in a slice of root format. This is modified
 // to be used with multivalue slices.
-func handle32ByteMVslice(mv MultiValueSliceComposite[[32]byte],
+func handle32ByteMVslice(mv multi_value_slice.MultiValueSliceComposite[[32]byte],
 	indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
@@ -175,7 +175,7 @@ func handle32ByteMVslice(mv MultiValueSliceComposite[[32]byte],
 }
 
 // handleValidatorMVSlice returns the validator indices in a slice of root format.
-func handleValidatorMVSlice(mv MultiValueSliceComposite[*ethpb.Validator], indices []uint64, convertAll bool) ([][32]byte, error) {
+func handleValidatorMVSlice(mv multi_value_slice.MultiValueSliceComposite[*ethpb.Validator], indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
 		return stateutil.OptimizedValidatorRoots(mv.Value(mv.State()))
@@ -284,7 +284,7 @@ func handlePendingAttestationSlice(val []*ethpb.PendingAttestation, indices []ui
 	return roots, nil
 }
 
-func handleBalanceMVSlice(mv MultiValueSliceComposite[uint64], indices []uint64, convertAll bool) ([][32]byte, error) {
+func handleBalanceMVSlice(mv multi_value_slice.MultiValueSliceComposite[uint64], indices []uint64, convertAll bool) ([][32]byte, error) {
 	if convertAll {
 		val := mv.Value(mv.State())
 		return stateutil.PackUint64IntoChunks(val)
@@ -351,9 +351,9 @@ func (e emptyMVSlice[V]) Value(_ multi_value_slice.Identifiable) []V {
 	return e.fullSlice
 }
 
-func buildEmptyCompositeSlice[V comparable](values []V) MultiValueSliceComposite[V] {
-	return MultiValueSliceComposite[V]{
-		nil,
-		emptyMVSlice[V]{fullSlice: values},
+func buildEmptyCompositeSlice[V comparable](values []V) multi_value_slice.MultiValueSliceComposite[V] {
+	return multi_value_slice.MultiValueSliceComposite[V]{
+		Identifiable:    nil,
+		MultiValueSlice: emptyMVSlice[V]{fullSlice: values},
 	}
 }

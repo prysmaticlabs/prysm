@@ -32,18 +32,6 @@ var (
 	})
 )
 
-// MultiValueSliceComposite describes a struct for which we have access to a multivalue
-// slice along with the desired state.
-type MultiValueSliceComposite[V comparable] struct {
-	multi_value_slice.Identifiable
-	multi_value_slice.MultiValueSlice[V]
-}
-
-// State returns the referenced state.
-func (m MultiValueSliceComposite[V]) State() multi_value_slice.Identifiable {
-	return m.Identifiable
-}
-
 // MultiValueRandaoMixes is a multi-value slice of randao mixes.
 type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte]
 
