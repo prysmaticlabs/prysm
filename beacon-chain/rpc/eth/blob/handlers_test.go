@@ -12,9 +12,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -34,48 +36,40 @@ func TestBlobs(t *testing.T) {
 
 	db := testDB.SetupDB(t)
 	blockroot := bytesutil.PadTo([]byte("blockroot"), 32)
-	require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
+
+	blobs := []*eth.BlobSidecar{
 		{
-			BlockRoot:       blockroot,
-			Index:           0,
-			Slot:            123,
-			BlockParentRoot: []byte("blockparentroot"),
-			ProposerIndex:   123,
-			Blob:            []byte("blob0"),
-			KzgCommitment:   []byte("kzgcommitment0"),
-			KzgProof:        []byte("kzgproof0"),
+			Index:         0,
+			Blob:          []byte("blob0"),
+			KzgCommitment: []byte("kzgcommitment0"),
+			KzgProof:      []byte("kzgproof0"),
 		},
 		{
-			BlockRoot:       blockroot,
-			Index:           1,
-			Slot:            123,
-			BlockParentRoot: []byte("blockparentroot"),
-			ProposerIndex:   123,
-			Blob:            []byte("blob1"),
-			KzgCommitment:   []byte("kzgcommitment1"),
-			KzgProof:        []byte("kzgproof1"),
+			Index:         1,
+			Blob:          []byte("blob1"),
+			KzgCommitment: []byte("kzgcommitment1"),
+			KzgProof:      []byte("kzgproof1"),
 		},
 		{
-			BlockRoot:       blockroot,
-			Index:           2,
-			Slot:            123,
-			BlockParentRoot: []byte("blockparentroot"),
-			ProposerIndex:   123,
-			Blob:            []byte("blob2"),
-			KzgCommitment:   []byte("kzgcommitment2"),
-			KzgProof:        []byte("kzgproof2"),
+			Index:         2,
+			Blob:          []byte("blob2"),
+			KzgCommitment: []byte("kzgcommitment2"),
+			KzgProof:      []byte("kzgproof2"),
 		},
 		{
-			BlockRoot:       blockroot,
-			Index:           3,
-			Slot:            123,
-			BlockParentRoot: []byte("blockparentroot"),
-			ProposerIndex:   123,
-			Blob:            []byte("blob3"),
-			KzgCommitment:   []byte("kzgcommitment3"),
-			KzgProof:        []byte("kzgproof3"),
+			Index:         3,
+			Blob:          []byte("blob3"),
+			KzgCommitment: []byte("kzgcommitment3"),
+			KzgProof:      []byte("kzgproof3"),
 		},
-	}))
+	}
+	verifiedBlob := make([]blocks.VerifiedROBlob, len(blobs))
+	bm, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
+	for i := range verifiedBlob {
+		roBlob, err := blocks.NewROBlob(blobs[i])
+		require.NoError(t, err)
+		require.NoError(t, bs.Save(blocks.NewVerifiedROBlob(roBlob)))
+	}
 
 	t.Run("genesis", func(t *testing.T) {
 		u := "http://foo.example/genesis"
@@ -110,41 +104,25 @@ func TestBlobs(t *testing.T) {
 		require.Equal(t, 4, len(resp.Data))
 		sidecar := resp.Data[0]
 		require.NotNil(t, sidecar)
-		assert.Equal(t, "0x626c6f636b726f6f740000000000000000000000000000000000000000000000", sidecar.BlockRoot)
 		assert.Equal(t, "0", sidecar.Index)
-		assert.Equal(t, "123", sidecar.Slot)
-		assert.Equal(t, "0x626c6f636b706172656e74726f6f74", sidecar.BlockParentRoot)
-		assert.Equal(t, "123", sidecar.ProposerIndex)
 		assert.Equal(t, "0x626c6f6230", sidecar.Blob)
 		assert.Equal(t, "0x6b7a67636f6d6d69746d656e7430", sidecar.KZGCommitment)
 		assert.Equal(t, "0x6b7a6770726f6f6630", sidecar.KZGProof)
 		sidecar = resp.Data[1]
 		require.NotNil(t, sidecar)
-		assert.Equal(t, "0x626c6f636b726f6f740000000000000000000000000000000000000000000000", sidecar.BlockRoot)
 		assert.Equal(t, "1", sidecar.Index)
-		assert.Equal(t, "123", sidecar.Slot)
-		assert.Equal(t, "0x626c6f636b706172656e74726f6f74", sidecar.BlockParentRoot)
-		assert.Equal(t, "123", sidecar.ProposerIndex)
 		assert.Equal(t, "0x626c6f6231", sidecar.Blob)
 		assert.Equal(t, "0x6b7a67636f6d6d69746d656e7431", sidecar.KZGCommitment)
 		assert.Equal(t, "0x6b7a6770726f6f6631", sidecar.KZGProof)
 		sidecar = resp.Data[2]
 		require.NotNil(t, sidecar)
-		assert.Equal(t, "0x626c6f636b726f6f740000000000000000000000000000000000000000000000", sidecar.BlockRoot)
 		assert.Equal(t, "2", sidecar.Index)
-		assert.Equal(t, "123", sidecar.Slot)
-		assert.Equal(t, "0x626c6f636b706172656e74726f6f74", sidecar.BlockParentRoot)
-		assert.Equal(t, "123", sidecar.ProposerIndex)
 		assert.Equal(t, "0x626c6f6232", sidecar.Blob)
 		assert.Equal(t, "0x6b7a67636f6d6d69746d656e7432", sidecar.KZGCommitment)
 		assert.Equal(t, "0x6b7a6770726f6f6632", sidecar.KZGProof)
 		sidecar = resp.Data[3]
 		require.NotNil(t, sidecar)
-		assert.Equal(t, "0x626c6f636b726f6f740000000000000000000000000000000000000000000000", sidecar.BlockRoot)
 		assert.Equal(t, "3", sidecar.Index)
-		assert.Equal(t, "123", sidecar.Slot)
-		assert.Equal(t, "0x626c6f636b706172656e74726f6f74", sidecar.BlockParentRoot)
-		assert.Equal(t, "123", sidecar.ProposerIndex)
 		assert.Equal(t, "0x626c6f6233", sidecar.Blob)
 		assert.Equal(t, "0x6b7a67636f6d6d69746d656e7433", sidecar.KZGCommitment)
 		assert.Equal(t, "0x6b7a6770726f6f6633", sidecar.KZGProof)
@@ -232,11 +210,7 @@ func TestBlobs(t *testing.T) {
 		require.Equal(t, 1, len(resp.Data))
 		sidecar := resp.Data[0]
 		require.NotNil(t, sidecar)
-		assert.Equal(t, "0x626c6f636b726f6f740000000000000000000000000000000000000000000000", sidecar.BlockRoot)
 		assert.Equal(t, "2", sidecar.Index)
-		assert.Equal(t, "123", sidecar.Slot)
-		assert.Equal(t, "0x626c6f636b706172656e74726f6f74", sidecar.BlockParentRoot)
-		assert.Equal(t, "123", sidecar.ProposerIndex)
 		assert.Equal(t, "0x626c6f6232", sidecar.Blob)
 		assert.Equal(t, "0x6b7a67636f6d6d69746d656e7432", sidecar.KZGCommitment)
 		assert.Equal(t, "0x6b7a6770726f6f6632", sidecar.KZGProof)
