@@ -130,9 +130,9 @@ func Data(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	return container.HashTreeRoot()
 }
 
-// ComputeSigningRootWithRoot works the same as ComputeSigningRoot,
+// ComputeSigningRootForRoot works the same as ComputeSigningRoot,
 // except that gets the root from an argument instead of a callback.
-func ComputeSigningRootWithRoot(root [32]byte, domain []byte) ([32]byte, error) {
+func ComputeSigningRootForRoot(root [32]byte, domain []byte) ([32]byte, error) {
 	container := &ethpb.SigningData{
 		ObjectRoot: root[:],
 		Domain:     domain,

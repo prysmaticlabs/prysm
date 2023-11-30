@@ -102,7 +102,7 @@ func (c *sigCache) VerifySignature(sig SignatureData, v ValidatorAtIndexer) (err
 	if err != nil {
 		return err
 	}
-	sr, err := signing.ComputeSigningRootWithRoot(sig.Root, domain)
+	sr, err := signing.ComputeSigningRootForRoot(sig.Root, domain)
 	if err != nil {
 		return err
 	}
