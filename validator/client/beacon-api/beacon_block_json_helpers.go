@@ -18,7 +18,6 @@ func jsonifyTransactions(transactions [][]byte) []string {
 	return jsonTransactions
 }
 
-// TODO: remove when apimiddleware is migrated away
 func jsonifyBlsToExecutionChanges(blsToExecutionChanges []*ethpb.SignedBLSToExecutionChange) []*shared.SignedBLSToExecutionChange {
 	jsonBlsToExecutionChanges := make([]*shared.SignedBLSToExecutionChange, len(blsToExecutionChanges))
 	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
