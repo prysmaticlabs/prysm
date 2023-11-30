@@ -19,8 +19,8 @@ var (
 // sliceAccessor describes an interface for a multivalue slice
 // object that returns information about the multivalue slice along with the
 // particular state instance we are referencing.
-type sliceAccessor[O multi_value_slice.Identifiable] interface {
-	Len(obj O) int
+type sliceAccessor interface {
+	Len(obj multi_value_slice.Identifiable) int
 	State() *BeaconState
 }
 
@@ -61,7 +61,7 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 		return nil, err
 	}
 	numOfElems := 0
-	if val, ok := elements.(sliceAccessor[*BeaconState]); ok {
+	if val, ok := elements.(sliceAccessor); ok {
 		numOfElems = val.Len(val.State())
 	} else {
 		numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
@@ -115,7 +115,7 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
-	if val, ok := elements.(sliceAccessor[*BeaconState]); ok {
+	if val, ok := elements.(sliceAccessor); ok {
 		f.numOfElems = val.Len(val.State())
 	} else {
 		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()

@@ -1177,7 +1177,7 @@ func finalizerCleanup(b *BeaconState) {
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 				b,
 				b.blockRootsMultiValue,
 			}, fieldparams.BlockRootsLength)
@@ -1194,7 +1194,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 			b,
 			b.blockRootsMultiValue,
 		})
@@ -1206,7 +1206,7 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 				b,
 				b.stateRootsMultiValue,
 			}, fieldparams.StateRootsLength)
@@ -1223,7 +1223,7 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 			b,
 			b.stateRootsMultiValue,
 		})
@@ -1258,7 +1258,7 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[uint64, *BeaconState]{
+			err := b.resetFieldTrie(field, MultiValueSliceComposite[uint64]{
 				b,
 				b.balancesMultiValue,
 			}, stateutil.ValidatorLimitForBalancesChunks())
@@ -1275,7 +1275,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[uint64, *BeaconState]{
+		return b.recomputeFieldTrie(field, MultiValueSliceComposite[uint64]{
 			b,
 			b.balancesMultiValue,
 		})
@@ -1287,7 +1287,7 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+			err := b.resetFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 				b,
 				b.randaoMixesMultiValue,
 			}, fieldparams.RandaoMixesLength)
@@ -1304,7 +1304,7 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte, *BeaconState]{
+		return b.recomputeFieldTrie(field, MultiValueSliceComposite[[32]byte]{
 			b,
 			b.randaoMixesMultiValue,
 		})

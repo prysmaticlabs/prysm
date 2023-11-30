@@ -34,18 +34,18 @@ var (
 
 // MultiValueSliceComposite describes a struct for which we have access to a multivalue
 // slice along with the desired state.
-type MultiValueSliceComposite[V comparable, O multi_value_slice.Identifiable] struct {
+type MultiValueSliceComposite[V comparable] struct {
 	*BeaconState
-	multi_value_slice.MultiValueSlice[V, O]
+	multi_value_slice.MultiValueSlice[V]
 }
 
 // State returns the referenced state.
-func (m MultiValueSliceComposite[V, O]) State() *BeaconState {
+func (m MultiValueSliceComposite[V]) State() *BeaconState {
 	return m.BeaconState
 }
 
 // MultiValueRandaoMixes is a multi-value slice of randao mixes.
-type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte, *BeaconState]
+type MultiValueRandaoMixes = multi_value_slice.Slice[[32]byte]
 
 // NewMultiValueRandaoMixes creates a new slice whose shared items will be populated with copies of input values.
 func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
@@ -61,7 +61,7 @@ func NewMultiValueRandaoMixes(mixes [][]byte) *MultiValueRandaoMixes {
 }
 
 // MultiValueBlockRoots is a multi-value slice of block roots.
-type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
+type MultiValueBlockRoots = multi_value_slice.Slice[[32]byte]
 
 // NewMultiValueBlockRoots creates a new slice whose shared items will be populated with copies of input values.
 func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
@@ -77,7 +77,7 @@ func NewMultiValueBlockRoots(roots [][]byte) *MultiValueBlockRoots {
 }
 
 // MultiValueStateRoots is a multi-value slice of state roots.
-type MultiValueStateRoots = multi_value_slice.Slice[[32]byte, *BeaconState]
+type MultiValueStateRoots = multi_value_slice.Slice[[32]byte]
 
 // NewMultiValueStateRoots creates a new slice whose shared items will be populated with copies of input values.
 func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
@@ -93,7 +93,7 @@ func NewMultiValueStateRoots(roots [][]byte) *MultiValueStateRoots {
 }
 
 // MultiValueBalances is a multi-value slice of balances.
-type MultiValueBalances = multi_value_slice.Slice[uint64, *BeaconState]
+type MultiValueBalances = multi_value_slice.Slice[uint64]
 
 // NewMultiValueBalances creates a new slice whose shared items will be populated with copies of input values.
 func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
@@ -107,7 +107,7 @@ func NewMultiValueBalances(balances []uint64) *MultiValueBalances {
 }
 
 // MultiValueInactivityScores is a multi-value slice of inactivity scores.
-type MultiValueInactivityScores = multi_value_slice.Slice[uint64, *BeaconState]
+type MultiValueInactivityScores = multi_value_slice.Slice[uint64]
 
 // NewMultiValueInactivityScores creates a new slice whose shared items will be populated with copies of input values.
 func NewMultiValueInactivityScores(scores []uint64) *MultiValueInactivityScores {
@@ -121,7 +121,7 @@ func NewMultiValueInactivityScores(scores []uint64) *MultiValueInactivityScores 
 }
 
 // MultiValueValidators is a multi-value slice of validator references.
-type MultiValueValidators = multi_value_slice.Slice[*ethpb.Validator, *BeaconState]
+type MultiValueValidators = multi_value_slice.Slice[*ethpb.Validator]
 
 // NewMultiValueValidators creates a new slice whose shared items will be populated with input values.
 func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {

@@ -43,7 +43,7 @@ func runNewTrie(t *testing.T) {
 
 	if features.Get().EnableExperimentalState {
 		mvRoots := NewMultiValueBlockRoots(roots)
-		elements = MultiValueSliceComposite[[32]byte, *BeaconState]{
+		elements = MultiValueSliceComposite[[32]byte]{
 			newState.(*BeaconState),
 			mvRoots,
 		}
@@ -146,7 +146,7 @@ func runRecomputeTrie_CompressedArray(t *testing.T) {
 	elements = newState.Balances()
 	if features.Get().EnableExperimentalState {
 		mvBals := NewMultiValueBalances(newState.Balances())
-		elements = MultiValueSliceComposite[uint64, *BeaconState]{
+		elements = MultiValueSliceComposite[uint64]{
 			newState.(*BeaconState),
 			mvBals,
 		}

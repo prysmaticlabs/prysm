@@ -41,7 +41,7 @@ func Test_handleValidatorSlice_OutOfRange(t *testing.T) {
 
 func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{}, true)
+	roots, err := handleBalanceMVSlice(buildEmptyCompositeSlice[uint64](balances), []uint64{}, true)
 	assert.NoError(t, err)
 
 	var root1 [32]byte
@@ -58,7 +58,7 @@ func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 
 func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{2, 3}, false)
+	roots, err := handleBalanceMVSlice(buildEmptyCompositeSlice[uint64](balances), []uint64{2, 3}, false)
 	assert.NoError(t, err)
 
 	var root1 [32]byte

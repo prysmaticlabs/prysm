@@ -103,10 +103,10 @@ type Identifiable interface {
 }
 
 // MultiValueSlice defines an abstraction over all concrete implementations of the generic Slice.
-type MultiValueSlice[V comparable, O Identifiable] interface {
-	Len(obj O) int
-	At(obj O, index uint64) (V, error)
-	Value(obj O) []V
+type MultiValueSlice[V comparable] interface {
+	Len(obj Identifiable) int
+	At(obj Identifiable, index uint64) (V, error)
+	Value(obj Identifiable) []V
 }
 
 // Value defines a single value along with one or more IDs that share this value.
@@ -126,7 +126,7 @@ type MultiValueItem[V any] struct {
 //   - O interfaces.Identifiable - the type of objects sharing the slice. The constraint is required
 //     because we need a way to compare objects against each other in order to know which objects
 //     values should be accessed.
-type Slice[V comparable, O Identifiable] struct {
+type Slice[V comparable] struct {
 	sharedItems     []V
 	individualItems map[uint64]*MultiValueItem[V]
 	appendedItems   []*MultiValueItem[V]
@@ -135,7 +135,7 @@ type Slice[V comparable, O Identifiable] struct {
 }
 
 // Init initializes the slice with sensible defaults. Input values are assigned to shared items.
-func (s *Slice[V, O]) Init(items []V) {
+func (s *Slice[V]) Init(items []V) {
 	s.sharedItems = items
 	s.individualItems = map[uint64]*MultiValueItem[V]{}
 	s.appendedItems = []*MultiValueItem[V]{}
@@ -143,7 +143,7 @@ func (s *Slice[V, O]) Init(items []V) {
 }
 
 // Len returns the number of items for the input object.
-func (s *Slice[V, O]) Len(obj O) int {
+func (s *Slice[V]) Len(obj Identifiable) int {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -155,7 +155,7 @@ func (s *Slice[V, O]) Len(obj O) int {
 }
 
 // Copy copies items between the source and destination.
-func (s *Slice[V, O]) Copy(src O, dst O) {
+func (s *Slice[V]) Copy(src, dst Identifiable) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -192,7 +192,7 @@ func (s *Slice[V, O]) Copy(src O, dst O) {
 }
 
 // Value returns all items for the input object.
-func (s *Slice[V, O]) Value(obj O) []V {
+func (s *Slice[V]) Value(obj Identifiable) []V {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -230,7 +230,7 @@ func (s *Slice[V, O]) Value(obj O) []V {
 // We first check if the index is within the length of shared items.
 // If it is, then we return an individual value at that index - if it exists - or a shared value otherwise.
 // If the index is beyond the length of shared values, it is an appended item and that's what gets returned.
-func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
+func (s *Slice[V]) At(obj Identifiable, index uint64) (V, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -268,7 +268,7 @@ func (s *Slice[V, O]) At(obj O, index uint64) (V, error) {
 }
 
 // UpdateAt updates the item at the required index for the input object to the passed in value.
-func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
+func (s *Slice[V]) UpdateAt(obj Identifiable, index uint64, val V) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -285,7 +285,7 @@ func (s *Slice[V, O]) UpdateAt(obj O, index uint64, val V) error {
 }
 
 // Append adds a new item to the input object.
-func (s *Slice[V, O]) Append(obj O, val V) {
+func (s *Slice[V]) Append(obj Identifiable, val V) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -334,7 +334,7 @@ func (s *Slice[V, O]) Append(obj O, val V) {
 
 // Detach removes the input object from the multi-value slice.
 // What this means in practice is that we remove all individual and appended values for that object and clear the cached length.
-func (s *Slice[V, O]) Detach(obj O) {
+func (s *Slice[V]) Detach(obj Identifiable) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -380,7 +380,7 @@ func (s *Slice[V, O]) Detach(obj O) {
 	delete(s.cachedLengths, obj.Id())
 }
 
-func (s *Slice[V, O]) fillOriginalItems(obj O, items *[]V) {
+func (s *Slice[V]) fillOriginalItems(obj Identifiable, items *[]V) {
 	for i, item := range s.sharedItems {
 		ind, ok := s.individualItems[uint64(i)]
 		if !ok {
@@ -401,7 +401,7 @@ func (s *Slice[V, O]) fillOriginalItems(obj O, items *[]V) {
 	}
 }
 
-func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
+func (s *Slice[V]) updateOriginalItem(obj Identifiable, index uint64, val V) {
 	ind, ok := s.individualItems[index]
 	if ok {
 		for mvi, v := range ind.Values {
@@ -442,7 +442,7 @@ func (s *Slice[V, O]) updateOriginalItem(obj O, index uint64, val V) {
 	}
 }
 
-func (s *Slice[V, O]) updateAppendedItem(obj O, index uint64, val V) error {
+func (s *Slice[V]) updateAppendedItem(obj Identifiable, index uint64, val V) error {
 	item := s.appendedItems[index-uint64(len(s.sharedItems))]
 	found := false
 	for vi, v := range item.Values {
