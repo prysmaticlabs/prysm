@@ -32,21 +32,15 @@ var (
 	})
 )
 
-// MultiValueSliceComposite describes an interface for which we have access to a multivalue
+// MultiValueSliceComposite describes a struct for which we have access to a multivalue
 // slice along with the desired state.
-type MultiValueSliceComposite[V comparable, O multi_value_slice.Identifiable] interface {
-	State() *BeaconState
-	multi_value_slice.MultiValueSlice[V, O]
-}
-
-// MVObj is an implementation of the composite interface.
-type MVObj[V comparable, O multi_value_slice.Identifiable] struct {
+type MultiValueSliceComposite[V comparable, O multi_value_slice.Identifiable] struct {
 	*BeaconState
 	multi_value_slice.MultiValueSlice[V, O]
 }
 
 // State returns the referenced state.
-func (m MVObj[V, O]) State() *BeaconState {
+func (m MultiValueSliceComposite[V, O]) State() *BeaconState {
 	return m.BeaconState
 }
 

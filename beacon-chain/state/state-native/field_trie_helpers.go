@@ -53,7 +53,7 @@ func validateElements(field types.FieldIndex, fieldInfo types.DataType, elements
 		}
 		length *= comLength
 	}
-	if val, ok := elements.(SliceAccessor[*BeaconState]); ok {
+	if val, ok := elements.(sliceAccessor[*BeaconState]); ok {
 		totalLen := val.Len(val.State())
 		if uint64(totalLen) > length {
 			return errors.Errorf("elements length is larger than expected for field %s: %d > %d", field.String(), totalLen, length)
