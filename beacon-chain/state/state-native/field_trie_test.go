@@ -1,7 +1,6 @@
 package state_native_test
 
 import (
-	"context"
 	"testing"
 
 	. "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -81,23 +80,18 @@ func TestFieldTrie_RecomputeTrie(t *testing.T) {
 
 func runRecomputeTrie(t *testing.T) {
 	newState, _ := util.DeterministicGenesisState(t, 32)
-	// Initialize state caches
-	_, err := newState.HashTreeRoot(context.Background())
-	require.NoError(t, err)
-	require.NoError(t, newState.UpdateValidatorAtIndex(0, &ethpb.Validator{
-		PublicKey:                  make([]byte, 48),
-		WithdrawalCredentials:      nil,
-		EffectiveBalance:           1000,
-		Slashed:                    false,
-		ActivationEligibilityEpoch: 0,
-		ActivationEpoch:            0,
-		ExitEpoch:                  1000,
-		WithdrawableEpoch:          0,
-	}))
-	_, err = newState.HashTreeRoot(context.Background())
-	require.NoError(t, err)
 
-	trie, err := NewFieldTrie(types.Validators, types.CompositeArray, newState.Validators(), params.BeaconConfig().ValidatorRegistryLimit)
+	var elements interface{}
+	elements = newState.Validators()
+	if features.Get().EnableExperimentalState {
+		mvRoots := NewMultiValueValidators(newState.Validators())
+		elements = MultiValueSliceComposite[*ethpb.Validator]{
+			newState.(*BeaconState),
+			mvRoots,
+		}
+	}
+
+	trie, err := NewFieldTrie(types.Validators, types.CompositeArray, elements, params.BeaconConfig().ValidatorRegistryLimit)
 	require.NoError(t, err)
 
 	oldroot, err := trie.TrieRoot()

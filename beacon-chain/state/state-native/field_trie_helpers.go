@@ -110,11 +110,14 @@ func convertEth1DataVotes(indices []uint64, elements interface{}, convertAll boo
 }
 
 func convertValidators(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
-	val, ok := elements.([]*ethpb.Validator)
-	if !ok {
+	switch casted := elements.(type) {
+	case []*ethpb.Validator:
+		return handleValidatorMVSlice(buildEmptyCompositeSlice[*ethpb.Validator](casted), indices, convertAll)
+	case MultiValueSliceComposite[*ethpb.Validator]:
+		return handleValidatorMVSlice(casted, indices, convertAll)
+	default:
 		return nil, errors.Errorf("Wanted type of %T but got %T", []*ethpb.Validator{}, elements)
 	}
-	return handleValidatorSlice(val, indices, convertAll)
 }
 
 func convertAttestations(indices []uint64, elements interface{}, convertAll bool) ([][32]byte, error) {
@@ -171,11 +174,11 @@ func handle32ByteMVslice(mv MultiValueSliceComposite[[32]byte],
 	return roots, nil
 }
 
-// handleValidatorSlice returns the validator indices in a slice of root format.
-func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll bool) ([][32]byte, error) {
+// handleValidatorMVSlice returns the validator indices in a slice of root format.
+func handleValidatorMVSlice(mv MultiValueSliceComposite[*ethpb.Validator], indices []uint64, convertAll bool) ([][32]byte, error) {
 	length := len(indices)
 	if convertAll {
-		return stateutil.OptimizedValidatorRoots(val)
+		return stateutil.OptimizedValidatorRoots(mv.Value(mv.State()))
 	}
 	roots := make([][32]byte, 0, length)
 	rootCreator := func(input *ethpb.Validator) error {
@@ -186,12 +189,17 @@ func handleValidatorSlice(val []*ethpb.Validator, indices []uint64, convertAll b
 		roots = append(roots, newRoot)
 		return nil
 	}
-	if len(val) > 0 {
+	totalLen := mv.Len(mv.State())
+	if totalLen > 0 {
 		for _, idx := range indices {
-			if idx > uint64(len(val))-1 {
-				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, len(val))
+			if idx > uint64(totalLen)-1 {
+				return nil, fmt.Errorf("index %d greater than number of validators %d", idx, totalLen)
 			}
-			err := rootCreator(val[idx])
+			val, err := mv.At(mv.State(), idx)
+			if err != nil {
+				return nil, err
+			}
+			err = rootCreator(val)
 			if err != nil {
 				return nil, err
 			}

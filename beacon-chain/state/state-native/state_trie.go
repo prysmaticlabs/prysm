@@ -1235,7 +1235,10 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.validatorsMultiValue.Value(b), fieldparams.ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, MultiValueSliceComposite[*ethpb.Validator]{
+				b,
+				b.validatorsMultiValue,
+			}, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1249,7 +1252,10 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, b.validatorsMultiValue.Value(b))
+		return b.recomputeFieldTrie(field, MultiValueSliceComposite[*ethpb.Validator]{
+			b,
+			b.validatorsMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.validators)
 	}
