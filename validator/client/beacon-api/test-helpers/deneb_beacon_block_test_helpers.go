@@ -1,7 +1,7 @@
 package test_helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -575,25 +575,25 @@ func GenerateProtoBlindedDenebBeaconBlock() *ethpb.BlindedBeaconBlockAndBlobsDen
 	}
 }
 
-func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson {
-	return &apimiddleware.BeaconBlockContentsDenebJson{
-		Block: &apimiddleware.BeaconBlockDenebJson{
+func GenerateJsonDenebBeaconBlock() *shared.BeaconBlockContentsDeneb {
+	return &shared.BeaconBlockContentsDeneb{
+		Block: &shared.BeaconBlockDeneb{
 			Slot:          "1",
 			ProposerIndex: "2",
 			ParentRoot:    FillEncodedByteSlice(32, 3),
 			StateRoot:     FillEncodedByteSlice(32, 4),
-			Body: &apimiddleware.BeaconBlockBodyDenebJson{
+			Body: &shared.BeaconBlockBodyDeneb{
 				RandaoReveal: FillEncodedByteSlice(96, 5),
-				Eth1Data: &apimiddleware.Eth1DataJson{
+				Eth1Data: &shared.Eth1Data{
 					DepositRoot:  FillEncodedByteSlice(32, 6),
 					DepositCount: "7",
 					BlockHash:    FillEncodedByteSlice(32, 8),
 				},
 				Graffiti: FillEncodedByteSlice(32, 9),
-				ProposerSlashings: []*apimiddleware.ProposerSlashingJson{
+				ProposerSlashings: []*shared.ProposerSlashing{
 					{
-						Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader1: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "10",
 								ProposerIndex: "11",
 								ParentRoot:    FillEncodedByteSlice(32, 12),
@@ -602,8 +602,8 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 							},
 							Signature: FillEncodedByteSlice(96, 15),
 						},
-						Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader2: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "16",
 								ProposerIndex: "17",
 								ParentRoot:    FillEncodedByteSlice(32, 18),
@@ -614,8 +614,8 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						},
 					},
 					{
-						Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader1: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "22",
 								ProposerIndex: "23",
 								ParentRoot:    FillEncodedByteSlice(32, 24),
@@ -624,8 +624,8 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 							},
 							Signature: FillEncodedByteSlice(96, 27),
 						},
-						Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader2: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "28",
 								ProposerIndex: "29",
 								ParentRoot:    FillEncodedByteSlice(32, 30),
@@ -636,36 +636,36 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						},
 					},
 				},
-				AttesterSlashings: []*apimiddleware.AttesterSlashingJson{
+				AttesterSlashings: []*shared.AttesterSlashing{
 					{
-						Attestation_1: &apimiddleware.IndexedAttestationJson{
+						Attestation1: &shared.IndexedAttestation{
 							AttestingIndices: []string{"34", "35"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "36",
 								CommitteeIndex:  "37",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "39",
 									Root:  FillEncodedByteSlice(32, 40),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "41",
 									Root:  FillEncodedByteSlice(32, 42),
 								},
 							},
 							Signature: FillEncodedByteSlice(96, 43),
 						},
-						Attestation_2: &apimiddleware.IndexedAttestationJson{
+						Attestation2: &shared.IndexedAttestation{
 							AttestingIndices: []string{"44", "45"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "46",
 								CommitteeIndex:  "47",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "49",
 									Root:  FillEncodedByteSlice(32, 50),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "51",
 									Root:  FillEncodedByteSlice(32, 52),
 								},
@@ -674,34 +674,34 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						},
 					},
 					{
-						Attestation_1: &apimiddleware.IndexedAttestationJson{
+						Attestation1: &shared.IndexedAttestation{
 							AttestingIndices: []string{"54", "55"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "56",
 								CommitteeIndex:  "57",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "59",
 									Root:  FillEncodedByteSlice(32, 60),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "61",
 									Root:  FillEncodedByteSlice(32, 62),
 								},
 							},
 							Signature: FillEncodedByteSlice(96, 63),
 						},
-						Attestation_2: &apimiddleware.IndexedAttestationJson{
+						Attestation2: &shared.IndexedAttestation{
 							AttestingIndices: []string{"64", "65"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "66",
 								CommitteeIndex:  "67",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "69",
 									Root:  FillEncodedByteSlice(32, 70),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "71",
 									Root:  FillEncodedByteSlice(32, 72),
 								},
@@ -710,18 +710,18 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						},
 					},
 				},
-				Attestations: []*apimiddleware.AttestationJson{
+				Attestations: []*shared.Attestation{
 					{
 						AggregationBits: FillEncodedByteSlice(4, 74),
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &shared.AttestationData{
 							Slot:            "75",
 							CommitteeIndex:  "76",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &shared.Checkpoint{
 								Epoch: "78",
 								Root:  FillEncodedByteSlice(32, 79),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &shared.Checkpoint{
 								Epoch: "80",
 								Root:  FillEncodedByteSlice(32, 81),
 							},
@@ -730,15 +730,15 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 					},
 					{
 						AggregationBits: FillEncodedByteSlice(4, 83),
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &shared.AttestationData{
 							Slot:            "84",
 							CommitteeIndex:  "85",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &shared.Checkpoint{
 								Epoch: "87",
 								Root:  FillEncodedByteSlice(32, 88),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &shared.Checkpoint{
 								Epoch: "89",
 								Root:  FillEncodedByteSlice(32, 90),
 							},
@@ -746,11 +746,11 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						Signature: FillEncodedByteSlice(96, 91),
 					},
 				},
-				Deposits: []*apimiddleware.DepositJson{
+				Deposits: []*shared.Deposit{
 					{
 						Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 92)),
-						Data: &apimiddleware.Deposit_DataJson{
-							PublicKey:             FillEncodedByteSlice(48, 94),
+						Data: &shared.DepositData{
+							Pubkey:                FillEncodedByteSlice(48, 94),
 							WithdrawalCredentials: FillEncodedByteSlice(32, 95),
 							Amount:                "96",
 							Signature:             FillEncodedByteSlice(96, 97),
@@ -758,35 +758,35 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 					},
 					{
 						Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 98)),
-						Data: &apimiddleware.Deposit_DataJson{
-							PublicKey:             FillEncodedByteSlice(48, 100),
+						Data: &shared.DepositData{
+							Pubkey:                FillEncodedByteSlice(48, 100),
 							WithdrawalCredentials: FillEncodedByteSlice(32, 101),
 							Amount:                "102",
 							Signature:             FillEncodedByteSlice(96, 103),
 						},
 					},
 				},
-				VoluntaryExits: []*apimiddleware.SignedVoluntaryExitJson{
+				VoluntaryExits: []*shared.SignedVoluntaryExit{
 					{
-						Exit: &apimiddleware.VoluntaryExitJson{
+						Message: &shared.VoluntaryExit{
 							Epoch:          "104",
 							ValidatorIndex: "105",
 						},
 						Signature: FillEncodedByteSlice(96, 106),
 					},
 					{
-						Exit: &apimiddleware.VoluntaryExitJson{
+						Message: &shared.VoluntaryExit{
 							Epoch:          "107",
 							ValidatorIndex: "108",
 						},
 						Signature: FillEncodedByteSlice(96, 109),
 					},
 				},
-				SyncAggregate: &apimiddleware.SyncAggregateJson{
+				SyncAggregate: &shared.SyncAggregate{
 					SyncCommitteeBits:      FillEncodedByteSlice(64, 110),
 					SyncCommitteeSignature: FillEncodedByteSlice(96, 111),
 				},
-				ExecutionPayload: &apimiddleware.ExecutionPayloadDenebJson{
+				ExecutionPayload: &shared.ExecutionPayloadDeneb{
 					ParentHash:    FillEncodedByteSlice(32, 112),
 					FeeRecipient:  FillEncodedByteSlice(20, 113),
 					StateRoot:     FillEncodedByteSlice(32, 114),
@@ -796,7 +796,7 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 					BlockNumber:   "118",
 					GasLimit:      "119",
 					GasUsed:       "120",
-					TimeStamp:     "121",
+					Timestamp:     "121",
 					ExtraData:     FillEncodedByteSlice(32, 122),
 					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(FillByteSlice(32, 123)).String(),
 					BlockHash:     FillEncodedByteSlice(32, 124),
@@ -804,7 +804,7 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						FillEncodedByteSlice(32, 125),
 						FillEncodedByteSlice(32, 126),
 					},
-					Withdrawals: []*apimiddleware.WithdrawalJson{
+					Withdrawals: []*shared.Withdrawal{
 						{
 							WithdrawalIndex:  "127",
 							ValidatorIndex:   "128",
@@ -821,9 +821,9 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 					BlobGasUsed:   "135",
 					ExcessBlobGas: "136",
 				},
-				BLSToExecutionChanges: []*apimiddleware.SignedBLSToExecutionChangeJson{
+				BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 					{
-						Message: &apimiddleware.BLSToExecutionChangeJson{
+						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "137",
 							FromBLSPubkey:      FillEncodedByteSlice(48, 138),
 							ToExecutionAddress: FillEncodedByteSlice(20, 139),
@@ -831,7 +831,7 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 						Signature: FillEncodedByteSlice(96, 140),
 					},
 					{
-						Message: &apimiddleware.BLSToExecutionChangeJson{
+						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "141",
 							FromBLSPubkey:      FillEncodedByteSlice(48, 142),
 							ToExecutionAddress: FillEncodedByteSlice(20, 143),
@@ -842,7 +842,7 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 				BlobKzgCommitments: []string{FillEncodedByteSlice(48, 145), FillEncodedByteSlice(48, 146)},
 			},
 		},
-		BlobSidecars: []*apimiddleware.BlobSidecarJson{
+		BlobSidecars: []*shared.BlobSidecar{
 			{
 				BlockRoot:       FillEncodedByteSlice(32, 147),
 				Index:           "148",
@@ -867,25 +867,25 @@ func GenerateJsonDenebBeaconBlock() *apimiddleware.BeaconBlockContentsDenebJson 
 	}
 }
 
-func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockContentsDenebJson {
-	return &apimiddleware.BlindedBeaconBlockContentsDenebJson{
-		BlindedBlock: &apimiddleware.BlindedBeaconBlockDenebJson{
+func GenerateJsonBlindedDenebBeaconBlock() *shared.BlindedBeaconBlockContentsDeneb {
+	return &shared.BlindedBeaconBlockContentsDeneb{
+		BlindedBlock: &shared.BlindedBeaconBlockDeneb{
 			Slot:          "1",
 			ProposerIndex: "2",
 			ParentRoot:    FillEncodedByteSlice(32, 3),
 			StateRoot:     FillEncodedByteSlice(32, 4),
-			Body: &apimiddleware.BlindedBeaconBlockBodyDenebJson{
+			Body: &shared.BlindedBeaconBlockBodyDeneb{
 				RandaoReveal: FillEncodedByteSlice(96, 5),
-				Eth1Data: &apimiddleware.Eth1DataJson{
+				Eth1Data: &shared.Eth1Data{
 					DepositRoot:  FillEncodedByteSlice(32, 6),
 					DepositCount: "7",
 					BlockHash:    FillEncodedByteSlice(32, 8),
 				},
 				Graffiti: FillEncodedByteSlice(32, 9),
-				ProposerSlashings: []*apimiddleware.ProposerSlashingJson{
+				ProposerSlashings: []*shared.ProposerSlashing{
 					{
-						Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader1: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "10",
 								ProposerIndex: "11",
 								ParentRoot:    FillEncodedByteSlice(32, 12),
@@ -894,8 +894,8 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 							},
 							Signature: FillEncodedByteSlice(96, 15),
 						},
-						Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader2: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "16",
 								ProposerIndex: "17",
 								ParentRoot:    FillEncodedByteSlice(32, 18),
@@ -906,8 +906,8 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						},
 					},
 					{
-						Header_1: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader1: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "22",
 								ProposerIndex: "23",
 								ParentRoot:    FillEncodedByteSlice(32, 24),
@@ -916,8 +916,8 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 							},
 							Signature: FillEncodedByteSlice(96, 27),
 						},
-						Header_2: &apimiddleware.SignedBeaconBlockHeaderJson{
-							Header: &apimiddleware.BeaconBlockHeaderJson{
+						SignedHeader2: &shared.SignedBeaconBlockHeader{
+							Message: &shared.BeaconBlockHeader{
 								Slot:          "28",
 								ProposerIndex: "29",
 								ParentRoot:    FillEncodedByteSlice(32, 30),
@@ -928,36 +928,36 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						},
 					},
 				},
-				AttesterSlashings: []*apimiddleware.AttesterSlashingJson{
+				AttesterSlashings: []*shared.AttesterSlashing{
 					{
-						Attestation_1: &apimiddleware.IndexedAttestationJson{
+						Attestation1: &shared.IndexedAttestation{
 							AttestingIndices: []string{"34", "35"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "36",
 								CommitteeIndex:  "37",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "39",
 									Root:  FillEncodedByteSlice(32, 40),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "41",
 									Root:  FillEncodedByteSlice(32, 42),
 								},
 							},
 							Signature: FillEncodedByteSlice(96, 43),
 						},
-						Attestation_2: &apimiddleware.IndexedAttestationJson{
+						Attestation2: &shared.IndexedAttestation{
 							AttestingIndices: []string{"44", "45"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "46",
 								CommitteeIndex:  "47",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "49",
 									Root:  FillEncodedByteSlice(32, 50),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "51",
 									Root:  FillEncodedByteSlice(32, 52),
 								},
@@ -966,34 +966,34 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						},
 					},
 					{
-						Attestation_1: &apimiddleware.IndexedAttestationJson{
+						Attestation1: &shared.IndexedAttestation{
 							AttestingIndices: []string{"54", "55"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "56",
 								CommitteeIndex:  "57",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "59",
 									Root:  FillEncodedByteSlice(32, 60),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "61",
 									Root:  FillEncodedByteSlice(32, 62),
 								},
 							},
 							Signature: FillEncodedByteSlice(96, 63),
 						},
-						Attestation_2: &apimiddleware.IndexedAttestationJson{
+						Attestation2: &shared.IndexedAttestation{
 							AttestingIndices: []string{"64", "65"},
-							Data: &apimiddleware.AttestationDataJson{
+							Data: &shared.AttestationData{
 								Slot:            "66",
 								CommitteeIndex:  "67",
 								BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-								Source: &apimiddleware.CheckpointJson{
+								Source: &shared.Checkpoint{
 									Epoch: "69",
 									Root:  FillEncodedByteSlice(32, 70),
 								},
-								Target: &apimiddleware.CheckpointJson{
+								Target: &shared.Checkpoint{
 									Epoch: "71",
 									Root:  FillEncodedByteSlice(32, 72),
 								},
@@ -1002,18 +1002,18 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						},
 					},
 				},
-				Attestations: []*apimiddleware.AttestationJson{
+				Attestations: []*shared.Attestation{
 					{
 						AggregationBits: FillEncodedByteSlice(4, 74),
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &shared.AttestationData{
 							Slot:            "75",
 							CommitteeIndex:  "76",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &shared.Checkpoint{
 								Epoch: "78",
 								Root:  FillEncodedByteSlice(32, 79),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &shared.Checkpoint{
 								Epoch: "80",
 								Root:  FillEncodedByteSlice(32, 81),
 							},
@@ -1022,15 +1022,15 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 					},
 					{
 						AggregationBits: FillEncodedByteSlice(4, 83),
-						Data: &apimiddleware.AttestationDataJson{
+						Data: &shared.AttestationData{
 							Slot:            "84",
 							CommitteeIndex:  "85",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &apimiddleware.CheckpointJson{
+							Source: &shared.Checkpoint{
 								Epoch: "87",
 								Root:  FillEncodedByteSlice(32, 88),
 							},
-							Target: &apimiddleware.CheckpointJson{
+							Target: &shared.Checkpoint{
 								Epoch: "89",
 								Root:  FillEncodedByteSlice(32, 90),
 							},
@@ -1038,11 +1038,11 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						Signature: FillEncodedByteSlice(96, 91),
 					},
 				},
-				Deposits: []*apimiddleware.DepositJson{
+				Deposits: []*shared.Deposit{
 					{
 						Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 92)),
-						Data: &apimiddleware.Deposit_DataJson{
-							PublicKey:             FillEncodedByteSlice(48, 94),
+						Data: &shared.DepositData{
+							Pubkey:                FillEncodedByteSlice(48, 94),
 							WithdrawalCredentials: FillEncodedByteSlice(32, 95),
 							Amount:                "96",
 							Signature:             FillEncodedByteSlice(96, 97),
@@ -1050,35 +1050,35 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 					},
 					{
 						Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 98)),
-						Data: &apimiddleware.Deposit_DataJson{
-							PublicKey:             FillEncodedByteSlice(48, 100),
+						Data: &shared.DepositData{
+							Pubkey:                FillEncodedByteSlice(48, 100),
 							WithdrawalCredentials: FillEncodedByteSlice(32, 101),
 							Amount:                "102",
 							Signature:             FillEncodedByteSlice(96, 103),
 						},
 					},
 				},
-				VoluntaryExits: []*apimiddleware.SignedVoluntaryExitJson{
+				VoluntaryExits: []*shared.SignedVoluntaryExit{
 					{
-						Exit: &apimiddleware.VoluntaryExitJson{
+						Message: &shared.VoluntaryExit{
 							Epoch:          "104",
 							ValidatorIndex: "105",
 						},
 						Signature: FillEncodedByteSlice(96, 106),
 					},
 					{
-						Exit: &apimiddleware.VoluntaryExitJson{
+						Message: &shared.VoluntaryExit{
 							Epoch:          "107",
 							ValidatorIndex: "108",
 						},
 						Signature: FillEncodedByteSlice(96, 109),
 					},
 				},
-				SyncAggregate: &apimiddleware.SyncAggregateJson{
+				SyncAggregate: &shared.SyncAggregate{
 					SyncCommitteeBits:      FillEncodedByteSlice(64, 110),
 					SyncCommitteeSignature: FillEncodedByteSlice(96, 111),
 				},
-				ExecutionPayloadHeader: &apimiddleware.ExecutionPayloadHeaderDenebJson{
+				ExecutionPayloadHeader: &shared.ExecutionPayloadHeaderDeneb{
 					ParentHash:       FillEncodedByteSlice(32, 112),
 					FeeRecipient:     FillEncodedByteSlice(20, 113),
 					StateRoot:        FillEncodedByteSlice(32, 114),
@@ -1088,7 +1088,7 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 					BlockNumber:      "118",
 					GasLimit:         "119",
 					GasUsed:          "120",
-					TimeStamp:        "121",
+					Timestamp:        "121",
 					ExtraData:        FillEncodedByteSlice(32, 122),
 					BaseFeePerGas:    bytesutil.LittleEndianBytesToBigInt(FillByteSlice(32, 123)).String(),
 					BlockHash:        FillEncodedByteSlice(32, 124),
@@ -1097,9 +1097,9 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 					BlobGasUsed:      "127",
 					ExcessBlobGas:    "128",
 				},
-				BLSToExecutionChanges: []*apimiddleware.SignedBLSToExecutionChangeJson{
+				BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 					{
-						Message: &apimiddleware.BLSToExecutionChangeJson{
+						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "129",
 							FromBLSPubkey:      FillEncodedByteSlice(48, 130),
 							ToExecutionAddress: FillEncodedByteSlice(20, 131),
@@ -1107,7 +1107,7 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 						Signature: FillEncodedByteSlice(96, 132),
 					},
 					{
-						Message: &apimiddleware.BLSToExecutionChangeJson{
+						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "133",
 							FromBLSPubkey:      FillEncodedByteSlice(48, 134),
 							ToExecutionAddress: FillEncodedByteSlice(20, 135),
@@ -1118,7 +1118,7 @@ func GenerateJsonBlindedDenebBeaconBlock() *apimiddleware.BlindedBeaconBlockCont
 				BlobKzgCommitments: []string{FillEncodedByteSlice(48, 137), FillEncodedByteSlice(48, 138)},
 			},
 		},
-		BlindedBlobSidecars: []*apimiddleware.BlindedBlobSidecarJson{
+		BlindedBlobSidecars: []*shared.BlindedBlobSidecar{
 			{
 				BlockRoot:       FillEncodedByteSlice(32, 139),
 				Index:           "140",

@@ -13,7 +13,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-type beaconBlockConverter interface {
+type BeaconBlockConverter interface {
 	ConvertRESTPhase0BlockToProto(block *shared.BeaconBlock) (*ethpb.BeaconBlock, error)
 	ConvertRESTAltairBlockToProto(block *shared.BeaconBlockAltair) (*ethpb.BeaconBlockAltair, error)
 	ConvertRESTBellatrixBlockToProto(block *shared.BeaconBlockBellatrix) (*ethpb.BeaconBlockBellatrix, error)

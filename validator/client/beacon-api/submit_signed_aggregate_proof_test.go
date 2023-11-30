@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,7 +21,7 @@ func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
 	defer ctrl.Finish()
 
 	signedAggregateAndProof := generateSignedAggregateAndProofJson()
-	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
+	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*shared.SignedAggregateAttestationAndProof{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -54,7 +54,7 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 	defer ctrl.Finish()
 
 	signedAggregateAndProof := generateSignedAggregateAndProofJson()
-	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
+	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*shared.SignedAggregateAttestationAndProof{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
 	ctx := context.Background()

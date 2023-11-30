@@ -116,6 +116,7 @@ go_test(
     deps = [
         "//api:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
+        "//beacon-chain/rpc/eth/config:go_default_library",
         "//beacon-chain/rpc/eth/node:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/eth/shared/testing:go_default_library",

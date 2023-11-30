@@ -11,7 +11,6 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -102,12 +101,12 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 		name                 string
 		endpointError        error
 		expectedErrorMessage string
-		expectedResponse     apimiddleware.BlockRootResponseJson
+		expectedResponse     beacon.BlockRootResponse
 	}{
 		{
 			name: "valid request",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
-				Data: &apimiddleware.BlockRootContainerJson{
+			expectedResponse: beacon.BlockRootResponse{
+				Data: &beacon.BlockRoot{
 					Root: blockRoot,
 				},
 			},
@@ -119,20 +118,20 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 		},
 		{
 			name: "execution optimistic",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
+			expectedResponse: beacon.BlockRootResponse{
 				ExecutionOptimistic: true,
 			},
 			expectedErrorMessage: "the node is currently optimistic and cannot serve validators",
 		},
 		{
 			name:                 "no data",
-			expectedResponse:     apimiddleware.BlockRootResponseJson{},
+			expectedResponse:     beacon.BlockRootResponse{},
 			expectedErrorMessage: "no data returned",
 		},
 		{
 			name: "no root",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
-				Data: new(apimiddleware.BlockRootContainerJson),
+			expectedResponse: beacon.BlockRootResponse{
+				Data: new(beacon.BlockRoot),
 			},
 			expectedErrorMessage: "no root returned",
 		},
@@ -145,7 +144,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/blocks/head/root",
-				&apimiddleware.BlockRootResponseJson{},
+				&beacon.BlockRootResponse{},
 			).SetArg(
 				2,
 				test.expectedResponse,
@@ -184,7 +183,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 		SubnetId:  1,
 	}
 
-	contributionJson := &apimiddleware.SyncCommitteeContributionJson{
+	contributionJson := &shared.SyncCommitteeContribution{
 		Slot:              "1",
 		BeaconBlockRoot:   blockRoot,
 		SubcommitteeIndex: "1",
@@ -194,13 +193,13 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		contribution   apimiddleware.ProduceSyncCommitteeContributionResponseJson
+		contribution   validator.ProduceSyncCommitteeContributionResponse
 		endpointErr    error
 		expectedErrMsg string
 	}{
 		{
 			name:         "valid request",
-			contribution: apimiddleware.ProduceSyncCommitteeContributionResponseJson{Data: contributionJson},
+			contribution: validator.ProduceSyncCommitteeContributionResponse{Data: contributionJson},
 		},
 		{
 			name:           "bad request",
@@ -216,11 +215,11 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/blocks/head/root",
-				&apimiddleware.BlockRootResponseJson{},
+				&beacon.BlockRootResponse{},
 			).SetArg(
 				2,
-				apimiddleware.BlockRootResponseJson{
-					Data: &apimiddleware.BlockRootContainerJson{
+				beacon.BlockRootResponse{
+					Data: &beacon.BlockRoot{
 						Root: blockRoot,
 					},
 				},
@@ -233,7 +232,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 				ctx,
 				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?beacon_block_root=%s&slot=%d&subcommittee_index=%d",
 					blockRoot, uint64(request.Slot), request.SubnetId),
-				&apimiddleware.ProduceSyncCommitteeContributionResponseJson{},
+				&validator.ProduceSyncCommitteeContributionResponse{},
 			).SetArg(
 				2,
 				test.contribution,
