@@ -294,11 +294,14 @@ func filterSlashablePubKeysFromAttestations(
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		for _, att := range signedAtts {
 			indexedAtt := createAttestation(att.Source, att.Target)
+
+			// If slashable == NotSlashable and err != nil, then CheckSlashableAttestation failed.
+			// If slashable != NotSlashable, then err contains the reason why the attestation is slashable.
 			slashable, err := validatorDB.CheckSlashableAttestation(ctx, pubKey, att.SigningRoot, indexedAtt)
-			if err != nil {
+			if err != nil && slashable == kv.NotSlashable {
 				return nil, err
 			}
-			// Malformed data should not prevent us from completing this function.
+
 			if slashable != kv.NotSlashable {
 				slashablePubKeys = append(slashablePubKeys, pubKey)
 				break
