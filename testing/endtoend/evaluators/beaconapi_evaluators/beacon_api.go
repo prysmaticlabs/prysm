@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
@@ -413,10 +412,10 @@ var requests = map[string]metadata{
 	"/config/deposit_contract": {
 		basepath: v1PathTemplate,
 		prysmResps: map[string]interface{}{
-			"json": &apimiddleware.DepositContractResponseJson{},
+			"json": &config.GetDepositContractResponse{},
 		},
 		lighthouseResps: map[string]interface{}{
-			"json": &apimiddleware.DepositContractResponseJson{},
+			"json": &config.GetDepositContractResponse{},
 		},
 	},
 	"/debug/beacon/states/{param1}": {
