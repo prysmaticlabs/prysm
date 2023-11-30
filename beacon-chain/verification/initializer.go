@@ -4,16 +4,33 @@ import (
 	"context"
 	"sync"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // Database represents the db methods that the verifiers need.
 type Database interface {
 	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+}
+
+// Forkchoicer represents the forkchoice methods that the verifiers need.
+// Note that forkchoice is used here in a lock-free fashion, assuming that a version of forkchoice
+// is given that internally handles the details of locking the underlying store.
+type Forkchoicer interface {
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	HasNode([32]byte) bool
+	IsCanonical(root [32]byte) bool
+	Slot([32]byte) (primitives.Slot, error)
+}
+
+// StateByRooter describes a stategen-ish type that can produce arbitrary states by their root
+type StateByRooter interface {
+	StateByRoot(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
 
 // sharedResources provides access to resources that are required by different verification types.
@@ -23,10 +40,11 @@ type sharedResources struct {
 	ready bool
 	cw    startup.ClockWaiter
 	clock *startup.Clock
-	fc    forkchoice.Getter
-	cache *Cache
+	fc    Forkchoicer
+	sc    SignatureCache
+	pc    ProposerCache
 	db    Database
-	sg    *stategen.State
+	sr    StateByRooter
 }
 
 func (r *sharedResources) isReady() bool {
@@ -65,8 +83,16 @@ type InitializerWaiter struct {
 	ini *Initializer
 }
 
-func NewInitializerWaiter(cw startup.ClockWaiter) *InitializerWaiter {
-	return &InitializerWaiter{ini: &Initializer{shared: &sharedResources{cw: cw}}}
+func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCache, pc ProposerCache, db Database, sr StateByRooter) *InitializerWaiter {
+	shared := &sharedResources{
+		cw: cw,
+		fc: fc,
+		sc: sc,
+		pc: pc,
+		db: db,
+		sr: sr,
+	}
+	return &InitializerWaiter{ini: &Initializer{shared: shared}}
 }
 
 // WaitForInitializer ensures that asyncronous initialization of the shared resources the initializer
@@ -80,5 +106,10 @@ func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initialize
 
 // NewBlobVerifier creates a BlobVerifier for a single blob, with the given set of requirements.
 func (ini *Initializer) NewBlobVerifier(ctx context.Context, b blocks.ROBlob, reqs ...Requirement) *BlobVerifier {
-	return &BlobVerifier{sharedResources: ini.shared, ctx: ctx, blob: b, results: newResults(reqs...)}
+	return &BlobVerifier{
+		sharedResources:      ini.shared,
+		blob:                 b,
+		results:              newResults(reqs...),
+		verifyBlobCommitment: kzg.VerifyROBlobCommitment,
+	}
 }

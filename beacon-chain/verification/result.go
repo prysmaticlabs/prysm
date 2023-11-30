@@ -20,8 +20,8 @@ func (r *results) record(req Requirement, err error) {
 	r.done[req] = err
 }
 
-// satisfied returns true if there is a nil error result for every Requirement.
-func (r *results) satisfied() bool {
+// allSatisfied returns true if there is a nil error result for every Requirement.
+func (r *results) allSatisfied() bool {
 	if len(r.done) != len(r.reqs) {
 		return false
 	}
@@ -32,6 +32,15 @@ func (r *results) satisfied() bool {
 		}
 	}
 	return true
+}
+
+func (r *results) executed(req Requirement) bool {
+	_, ok := r.done[req]
+	return ok
+}
+
+func (r *results) result(req Requirement) error {
+	return r.done[req]
 }
 
 func (r *results) errors(err error) error {

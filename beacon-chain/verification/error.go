@@ -11,6 +11,10 @@ type VerificationMultiError struct {
 	err error
 }
 
+func (ve VerificationMultiError) Unwrap() error {
+	return ve.err
+}
+
 func (ve VerificationMultiError) Error() string {
 	return ve.err.Error()
 }

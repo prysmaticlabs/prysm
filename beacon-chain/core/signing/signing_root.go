@@ -79,6 +79,27 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, 
 	return key.Sign(sr[:]).Marshal(), nil
 }
 
+// ComputeDomainAndSignWithoutState offers the same functionalit as ComputeDomainAndSign without the need to provide a BeaconState.
+// This is particularly helpful for signing values in tests.
+func ComputeDomainAndSignWithoutState(fork *ethpb.Fork, epoch primitives.Epoch, domain [4]byte, vr []byte, obj fssz.HashRoot, key bls.SecretKey) ([]byte, error) {
+	if domain == params.BeaconConfig().DomainVoluntaryExit && epoch >= params.BeaconConfig().DenebForkEpoch {
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		}
+	}
+	d, err := Domain(fork, epoch, domain, vr)
+	if err != nil {
+		return nil, err
+	}
+	sr, err := ComputeSigningRoot(obj, d)
+	if err != nil {
+		return nil, err
+	}
+	return key.Sign(sr[:]).Marshal(), nil
+}
+
 // ComputeSigningRoot computes the root of the object by calculating the hash tree root of the signing data with the given domain.
 //
 // Spec pseudocode definition:

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -62,17 +61,19 @@ var (
 
 type BlobVerifier struct {
 	*sharedResources
-	ctx     context.Context
-	results *results
-	blob    blocks.ROBlob
-	parent  state.BeaconState
+	results              *results
+	blob                 blocks.ROBlob
+	parent               state.BeaconState
+	verifyBlobCommitment roblobCommitmentVerifier
 }
+
+type roblobCommitmentVerifier func(blocks.ROBlob) error
 
 // VerifiedROBlob "upgrades" the wrapped ROBlob to a VerifiedROBlob.
 // If any of the verifications ran against the blob failed, or some required verifications
 // were not run, an error will be returned.
 func (bv *BlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
-	if bv.results.satisfied() {
+	if bv.results.allSatisfied() {
 		return blocks.NewVerifiedROBlob(bv.blob), nil
 	}
 	return blocks.VerifiedROBlob{}, bv.results.errors(ErrBlobInvalid)
@@ -127,20 +128,11 @@ func (bv *BlobVerifier) SlotBelowFinalized() (err error) {
 	return nil
 }
 
-func (bv *BlobVerifier) sigData() SignatureData {
-	return SignatureData{
-		Root:      bv.blob.BlockRoot(),
-		Parent:    bv.blob.ParentRoot(),
-		Signature: bytesutil.ToBytes96(bv.blob.SignedBlockHeader.Signature),
-		Proposer:  bv.blob.ProposerIndex(),
-		Slot:      bv.blob.Slot(),
-	}
-}
-
 func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireValidProposerSignature, &err)
 	sd := bv.sigData()
-	seen, err := bv.cache.SignatureVerified(sd)
+	// First check if there is a cached verification that can be reused.
+	seen, err := bv.sc.SignatureVerified(sd)
 	if seen {
 		if err != nil {
 			log.WithFields(logging.BlobFields(bv.blob)).WithError(err).Debug("reusing failed proposer signature validation from cache")
@@ -148,19 +140,26 @@ func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) 
 		}
 		return nil
 	}
+
+	// retrieve the parent state to fallback to full verification
 	parent, err := bv.parentState(ctx)
 	if err != nil {
 		log.WithFields(logging.BlobFields(bv.blob)).WithError(err).Debug("could not replay parent state for blob signature verification")
 		return ErrValidProposerSignature
 	}
-	return bv.cache.VerifySignature(sd, parent)
+	// Full verification, which will subsequently be cached for anything sharing the signature cache.
+	if err := bv.sc.VerifySignature(sd, parent); err != nil {
+		log.WithFields(logging.BlobFields(bv.blob)).WithError(err).Debug("signature verification failed")
+		return ErrValidProposerSignature
+	}
+	return nil
 }
 
 func (bv *BlobVerifier) parentState(ctx context.Context) (state.BeaconState, error) {
 	if bv.parent != nil {
 		return bv.parent, nil
 	}
-	st, err := bv.sg.StateByRoot(ctx, bv.blob.ParentRoot())
+	st, err := bv.sr.StateByRoot(ctx, bv.blob.ParentRoot())
 	if err != nil {
 		return nil, err
 	}
@@ -218,31 +217,23 @@ func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 
 func (bv *BlobVerifier) SidecarBlobCommitmentProven() (err error) {
 	defer bv.recordResult(RequireSidecarBlobCommitmentProven, &err)
-	if err := kzg.VerifyROBlobCommitment(bv.blob); err != nil {
+	if err := bv.verifyBlobCommitment(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("kzg commitment proof verification failed")
 		return ErrSidecarBlobCommitmentProven
 	}
 	return nil
 }
 
-func (bv *BlobVerifier) proposerKey() ProposerData {
-	return ProposerData{
-		Parent: bv.blob.ParentRoot(),
-		Slot:   bv.blob.Slot(),
-	}
-}
-
 func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireSidecarProposerExpected, &err)
-	pst, err := bv.parentState(ctx)
-	if err != nil {
-		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("state replay to parent_root failed")
-		return ErrSidecarProposerExpected
-	}
-	pd := bv.proposerKey()
-	idx, cached := bv.cache.Proposer(pd)
+	idx, cached := bv.pc.Proposer(bv.blob.ParentRoot(), bv.blob.Slot())
 	if !cached {
-		idx, err = bv.cache.ComputeProposer(ctx, pd, pst)
+		pst, err := bv.parentState(ctx)
+		if err != nil {
+			log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("state replay to parent_root failed")
+			return ErrSidecarProposerExpected
+		}
+		idx, err = bv.pc.ComputeProposer(ctx, bv.blob.ParentRoot(), bv.blob.Slot(), pst)
 		if err != nil {
 			log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("error computing proposer index from parent state")
 			return ErrSidecarProposerExpected
@@ -255,4 +246,18 @@ func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error)
 		return ErrSidecarProposerExpected
 	}
 	return nil
+}
+
+func blobToSignatureData(b blocks.ROBlob) SignatureData {
+	return SignatureData{
+		Root:      b.BlockRoot(),
+		Parent:    b.ParentRoot(),
+		Signature: bytesutil.ToBytes96(b.SignedBlockHeader.Signature),
+		Proposer:  b.ProposerIndex(),
+		Slot:      b.Slot(),
+	}
+}
+
+func (bv *BlobVerifier) sigData() SignatureData {
+	return blobToSignatureData(bv.blob)
 }

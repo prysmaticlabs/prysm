@@ -9,6 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // ForkScheduleEntry is a Version+Epoch tuple for sorted storage in an OrderedSchedule
@@ -55,6 +56,20 @@ func (o OrderedSchedule) VersionForName(name string) ([fieldparams.VersionLength
 		}
 	}
 	return [4]byte{}, errors.Wrapf(ErrVersionNotFound, "no version with name %s", lower)
+}
+
+func (o OrderedSchedule) ForkFromVersion(version [fieldparams.VersionLength]byte) (*ethpb.Fork, error) {
+	for i := range o {
+		e := o[i]
+		if e.Version == version {
+			f := &ethpb.Fork{Epoch: e.Epoch, CurrentVersion: version[:], PreviousVersion: version[:]}
+			if i > 0 {
+				f.PreviousVersion = o[i-1].Version[:]
+			}
+			return f, nil
+		}
+	}
+	return nil, errors.Wrapf(ErrVersionNotFound, "could not determine fork for version %#x", version)
 }
 
 func (o OrderedSchedule) Previous(version [fieldparams.VersionLength]byte) ([fieldparams.VersionLength]byte, error) {
