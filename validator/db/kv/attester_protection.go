@@ -161,11 +161,12 @@ func (s *Store) CheckSlashableAttestation(
 		if signingRootsBucket != nil {
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(att.Data.Target.Epoch)
 			existingSigningRoot := signingRootsBucket.Get(targetEpochBytes)
-			if existingSigningRoot != nil {
-				if slashings.SigningRootsDiffer(existingSigningRoot, signingRoot) {
-					slashKind = DoubleVote
-					return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
-				}
+
+			// If a signing root exists in the database, and if this database signing root is empty => We consider the new attestation as a double vote.
+			// If a signing root exists in the database, and if this database signing differs from the signing root of the new attestation => We consider the new attestation as a double vote.
+			if existingSigningRoot != nil && (len(existingSigningRoot) == 0 || slashings.SigningRootsDiffer(existingSigningRoot, signingRoot)) {
+				slashKind = DoubleVote
+				return fmt.Errorf(doubleVoteMessage, att.Data.Target.Epoch, existingSigningRoot)
 			}
 		}
 
