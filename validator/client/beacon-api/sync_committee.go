@@ -9,8 +9,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -44,7 +45,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 
 func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
-	var resp apimiddleware.BlockRootResponseJson
+	var resp beacon.BlockRootResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp)
 	if err != nil {
 		return nil, errors.Wrapf(err, msgUnexpectedError)
@@ -95,7 +96,7 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 
 	url := buildURL("/eth/v1/validator/sync_committee_contribution", params)
 
-	var resp apimiddleware.ProduceSyncCommitteeContributionResponseJson
+	var resp validator.ProduceSyncCommitteeContributionResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, url, &resp)
 	if err != nil {
 		return nil, errors.Wrapf(err, msgUnexpectedError)
@@ -138,7 +139,7 @@ func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context,
 	return &ethpb.SyncSubcommitteeIndexResponse{Indices: indices}, nil
 }
 
-func convertSyncContributionJsonToProto(contribution *apimiddleware.SyncCommitteeContributionJson) (*ethpb.SyncCommitteeContribution, error) {
+func convertSyncContributionJsonToProto(contribution *shared.SyncCommitteeContribution) (*ethpb.SyncCommitteeContribution, error) {
 	if contribution == nil {
 		return nil, errors.New("sync committee contribution is nil")
 	}
