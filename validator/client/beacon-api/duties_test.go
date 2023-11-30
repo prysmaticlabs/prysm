@@ -1148,7 +1148,7 @@ func TestGetDuties_Valid(t *testing.T) {
 				).Times(2)
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 			stateValidatorsProvider.EXPECT().GetStateValidators(
 				ctx,
 				gomock.Any(),
@@ -1314,7 +1314,7 @@ func TestGetDuties_GetValidatorStatusFailed(t *testing.T) {
 
 	ctx := context.Background()
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		gomock.Any(),
@@ -1343,7 +1343,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 
 	ctx := context.Background()
 
-	stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+	stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 	stateValidatorsProvider.EXPECT().GetStateValidators(
 		ctx,
 		gomock.Any(),
