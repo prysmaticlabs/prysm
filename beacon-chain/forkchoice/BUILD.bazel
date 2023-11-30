@@ -6,6 +6,7 @@ go_library(
         "doc.go",
         "error.go",
         "interfaces.go",
+        "ro.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice",
     visibility = [
