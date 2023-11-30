@@ -29,7 +29,11 @@ func (c *beaconApiValidatorClient) validatorStatus(ctx context.Context, in *ethp
 }
 
 func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(ctx, in.PublicKeys, in.Indices)
+	indices := make([]primitives.ValidatorIndex, len(in.Indices))
+	for i, ix := range in.Indices {
+		indices[i] = primitives.ValidatorIndex(ix)
+	}
+	publicKeys, indices, statuses, err := c.getValidatorsStatusResponse(ctx, in.PublicKeys, indices)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validators status response")
 	}
@@ -41,7 +45,7 @@ func (c *beaconApiValidatorClient) multipleValidatorStatus(ctx context.Context, 
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []int64) (
+func (c *beaconApiValidatorClient) getValidatorsStatusResponse(ctx context.Context, inPubKeys [][]byte, inIndexes []primitives.ValidatorIndex) (
 	[][]byte,
 	[]primitives.ValidatorIndex,
 	[]*ethpb.ValidatorStatusResponse,

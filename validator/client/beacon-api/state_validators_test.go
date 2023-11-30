@@ -1,13 +1,15 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
-	"strings"
+	"encoding/json"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -17,15 +19,18 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	url := strings.Join([]string{
-		"/eth/v1/beacon/states/head/validators?",
-		"id=12345&",
-		"id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13&", // active_ongoing
-		"id=0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526&", // active_exiting
-		"id=0x424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242&", // does not exist
-		"id=0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5&", // exited_slashed
-		"status=active_ongoing&status=active_exiting&status=exited_slashed&status=exited_unslashed",
-	}, "")
+	req := &beacon.GetValidatorsRequest{
+		Ids: []string{
+			"12345",
+			"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
+			"0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526",
+			"0x424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242",
+			"0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
+		},
+		Statuses: []string{"active_ongoing", "active_exiting", "exited_slashed", "exited_unslashed"},
+	}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
@@ -63,15 +68,17 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler.EXPECT().Get(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
-		url,
+		"/eth/v1/beacon/states/head/validators",
+		nil,
+		bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		2,
+		4,
 		beacon.GetValidatorsResponse{
 			Data: wanted,
 		},
@@ -85,7 +92,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // active_ongoing - duplicate
 		"0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5", // exited_slashed
 	},
-		[]int64{
+		[]primitives.ValidatorIndex{
 			12345, // active_ongoing
 			12345, // active_ongoing - duplicate
 		},
@@ -99,16 +106,23 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	url := "/eth/v1/beacon/states/head/validators?id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
+	req := &beacon.GetValidatorsRequest{
+		Ids:      []string{"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"},
+		Statuses: []string{},
+	}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
 
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
 
-	jsonRestHandler.EXPECT().Get(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
-		url,
+		"/eth/v1/beacon/states/head/validators",
+		nil,
+		bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
@@ -116,7 +130,7 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	).Times(1)
 
 	stateValidatorsProvider := beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler}
-	_, err := stateValidatorsProvider.GetStateValidators(ctx, []string{
+	_, err = stateValidatorsProvider.GetStateValidators(ctx, []string{
 		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // active_ongoing
 	},
 		nil,
@@ -129,28 +143,34 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	url := "/eth/v1/beacon/states/head/validators?id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"
+	req := &beacon.GetValidatorsRequest{
+		Ids:      []string{"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"},
+		Statuses: []string{},
+	}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	jsonRestHandler.EXPECT().Get(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
-		url,
+		"/eth/v1/beacon/states/head/validators",
+		nil, bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 		nil,
 	).SetArg(
-		2,
+		4,
 		beacon.GetValidatorsResponse{
 			Data: nil,
 		},
 	).Times(1)
 
 	stateValidatorsProvider := beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler}
-	_, err := stateValidatorsProvider.GetStateValidators(ctx, []string{
+	_, err = stateValidatorsProvider.GetStateValidators(ctx, []string{
 		"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13", // active_ongoing
 	},
 		nil,

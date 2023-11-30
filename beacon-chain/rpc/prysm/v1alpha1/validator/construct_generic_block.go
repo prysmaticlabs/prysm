@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/protobuf/proto"
 )
 
 // constructGenericBeaconBlock constructs a `GenericBeaconBlock` based on the block version and other parameters.
-func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock, blindBlobs []*ethpb.BlindedBlobSidecar) (*ethpb.GenericBeaconBlock, error) {
+func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock, blobsBundle *enginev1.BlobsBundle) (*ethpb.GenericBeaconBlock, error) {
 	if sBlk == nil || sBlk.Block() == nil {
 		return nil, fmt.Errorf("block cannot be nil")
 	}
@@ -25,7 +26,7 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 
 	switch sBlk.Version() {
 	case version.Deneb:
-		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blindBlobs), nil
+		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Capella:
 		return vs.constructCapellaBlock(blockProto, isBlinded, payloadValue), nil
 	case version.Bellatrix:
@@ -40,9 +41,10 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 }
 
 // Helper functions for constructing blocks for each version
-func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue uint64, blindBlobs []*ethpb.BlindedBlobSidecar) *ethpb.GenericBeaconBlock {
+func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue uint64, _ *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
+	// TODO update generic beacon block to use block contents instead
 	if isBlinded {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.BlindedBeaconBlockAndBlobsDeneb{Block: blockProto.(*ethpb.BlindedBeaconBlockDeneb), Blobs: blindBlobs}}, IsBlinded: true, PayloadValue: payloadValue}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.BlindedBeaconBlockAndBlobsDeneb{Block: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}}, IsBlinded: true, PayloadValue: payloadValue}
 	}
 	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blockProto.(*ethpb.BeaconBlockDeneb)}, IsBlinded: false, PayloadValue: payloadValue}
 }
