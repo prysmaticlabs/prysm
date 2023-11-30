@@ -8,7 +8,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ev "github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi_evaluators"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi"
 	e2eParams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -166,7 +166,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	// In the event we use the cross-client e2e option, we add in an additional
 	// evaluator for multiclient runs to verify the beacon api conformance.
 	if testConfig.UseValidatorCrossClient {
-		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
+		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi.MultiClientVerifyIntegrity)
 	}
 	if testConfig.UseBuilder {
 		testConfig.Evaluators = append(testConfig.Evaluators, ev.BuilderIsActive)

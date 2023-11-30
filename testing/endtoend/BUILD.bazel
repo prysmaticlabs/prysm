@@ -65,7 +65,7 @@ common_deps = [
     "//testing/endtoend/components:go_default_library",
     "//testing/endtoend/components/eth1:go_default_library",
     "//testing/endtoend/evaluators:go_default_library",
-    "//testing/endtoend/evaluators/beaconapi_evaluators:go_default_library",
+    "//testing/endtoend/evaluators/beaconapi:go_default_library",
     "//testing/endtoend/helpers:go_default_library",
     "//testing/endtoend/params:go_default_library",
     "//testing/endtoend/types:go_default_library",
