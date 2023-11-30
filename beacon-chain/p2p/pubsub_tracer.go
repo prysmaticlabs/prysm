@@ -67,7 +67,7 @@ func (g gossipTracer) DeliverMessage(msg *pubsub.Message) {
 
 // RejectMessage .
 func (g gossipTracer) RejectMessage(msg *pubsub.Message, reason string) {
-	pubsubMessageReject.WithLabelValues(*msg.Topic).Inc()
+	pubsubMessageReject.WithLabelValues(*msg.Topic, reason).Inc()
 }
 
 // DuplicateMessage .
