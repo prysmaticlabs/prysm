@@ -11,11 +11,11 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware",
     visibility = ["//visibility:public"],
     deps = [
-        "//api/gateway/apimiddleware:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//time/slots:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
+        "@com_github_prysmaticlabs_prysm_v4//api/gateway/apimiddleware:go_default_library",
     ],
 )
 
@@ -28,10 +28,10 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//api/gateway/apimiddleware:go_default_library",
         "//config/params:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
         "//time/slots:go_default_library",
+        "@com_github_prysmaticlabs_prysm_v4//api/gateway/apimiddleware:go_default_library",
     ],
 )
