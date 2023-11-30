@@ -570,6 +570,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		TCPPort:           cliCtx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
+		QueueSize:         cliCtx.Uint(cmd.PubsubQueueSize.Name),
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
