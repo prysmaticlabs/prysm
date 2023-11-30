@@ -33,13 +33,8 @@ var epochsSinceFinalitySaveHotStateDB = primitives.Epoch(100)
 
 // BlockReceiver interface defines the methods of chain service for receiving and processing new blocks.
 type BlockReceiver interface {
-	BlockInformer
 	ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error
 	ReceiveBlockBatch(ctx context.Context, blocks []blocks.ROBlock) error
-}
-
-// BlockInformer interface defines methods for getting information about blocks from the chain service.
-type BlockInformer interface {
 	HasBlock(ctx context.Context, root [32]byte) bool
 	RecentBlockSlot(root [32]byte) (primitives.Slot, error)
 	BlockBeingSynced([32]byte) bool
