@@ -52,7 +52,7 @@ type Initializer struct {
 }
 
 // NewBlobVerifier creates a BlobVerifier for a single blob, with the given set of requirements.
-func (ini *Initializer) NewBlobVerifier(ctx context.Context, b blocks.ROBlob, reqs ...Requirement) *BlobVerifier {
+func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs ...Requirement) *BlobVerifier {
 	return &BlobVerifier{
 		sharedResources:      ini.shared,
 		blob:                 b,

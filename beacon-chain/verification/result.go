@@ -1,6 +1,5 @@
 package verification
 
-// represents a verification requirement.
 // Requirement represents a validation check that needs to pass in order for a Verified form a consensus type to be issued.
 type Requirement int
 

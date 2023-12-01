@@ -6,7 +6,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
-	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -52,8 +51,8 @@ type SignatureData struct {
 	Slot      primitives.Slot
 }
 
-func (d SignatureData) logFields() logrus.Fields {
-	return logrus.Fields{
+func (d SignatureData) logFields() log.Fields {
+	return log.Fields{
 		"root":        fmt.Sprintf("%#x", d.Root),
 		"parent_root": fmt.Sprintf("%#x", d.Parent),
 		"signature":   fmt.Sprintf("%#x", d.Signature),
@@ -149,8 +148,8 @@ type ProposerData struct {
 	Slot   primitives.Slot
 }
 
-func (d ProposerData) logFields() logrus.Fields {
-	return logrus.Fields{
+func (d ProposerData) logFields() log.Fields {
+	return log.Fields{
 		"parent_root": fmt.Sprintf("%#x", d.Parent),
 		"slot":        d.Slot,
 	}
