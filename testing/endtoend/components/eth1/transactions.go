@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const txCount = 20
+const txCount = 100
 
 var fundedAccount *keystore.Key
 
@@ -126,8 +126,8 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		gasPrice = expectedPrice
 	}
 	g, _ := errgroup.WithContext(context.Background())
-	txs := make([]*types.Transaction, 10)
-	for i := uint64(0); i < 10; i++ {
+	txs := make([]*types.Transaction, 0, 10)
+	for i := uint64(0); i < 1; i++ {
 		index := i
 		g.Go(func() error {
 			tx, err := RandomBlobTx(client, f, fundedAccount.Address, nonce+index, gasPrice, chainid, al)
