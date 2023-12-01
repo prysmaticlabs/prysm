@@ -228,9 +228,13 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		return nil, err
 	}
 
-	log.Debugln("Pruning old blobs")
-	if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
-		return nil, err
+	if beacon.finalizedStateAtStartUp != nil {
+		log.Debugln("Pruning old blobs")
+		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
+			return nil, err
+		}
+	} else {
+		log.Warn("No finalized beacon state at startup, cannot prune blobs")
 	}
 
 	log.Debugln("Registering P2P Service")
