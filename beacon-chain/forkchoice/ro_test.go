@@ -182,7 +182,7 @@ func (ro *mockROForkchoice) RUnlock() {
 	ro.calls = append(ro.calls, runlockCalled)
 }
 
-func (ro *mockROForkchoice) HasNode(root [32]byte) bool {
+func (ro *mockROForkchoice) HasNode(_ [32]byte) bool {
 	ro.calls = append(ro.calls, hasNodeCalled)
 	return false
 }
@@ -192,7 +192,7 @@ func (ro *mockROForkchoice) ProposerBoost() [fieldparams.RootLength]byte {
 	return [fieldparams.RootLength]byte{}
 }
 
-func (ro *mockROForkchoice) IsCanonical(root [32]byte) bool {
+func (ro *mockROForkchoice) IsCanonical(_ [32]byte) bool {
 	ro.calls = append(ro.calls, isCanonicalCalled)
 	return false
 }
@@ -202,7 +202,7 @@ func (ro *mockROForkchoice) FinalizedCheckpoint() *forkchoicetypes.Checkpoint {
 	return nil
 }
 
-func (ro *mockROForkchoice) IsViableForCheckpoint(cp *forkchoicetypes.Checkpoint) (bool, error) {
+func (ro *mockROForkchoice) IsViableForCheckpoint(_ *forkchoicetypes.Checkpoint) (bool, error) {
 	ro.calls = append(ro.calls, isViableForCheckpointCalled)
 	return false, nil
 }
@@ -247,12 +247,12 @@ func (ro *mockROForkchoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	return 0, nil
 }
 
-func (ro *mockROForkchoice) Weight(root [32]byte) (uint64, error) {
+func (ro *mockROForkchoice) Weight(_ [32]byte) (uint64, error) {
 	ro.calls = append(ro.calls, weightCalled)
 	return 0, nil
 }
 
-func (ro *mockROForkchoice) IsOptimistic(root [32]byte) (bool, error) {
+func (ro *mockROForkchoice) IsOptimistic(_ [32]byte) (bool, error) {
 	ro.calls = append(ro.calls, isOptimisticCalled)
 	return false, nil
 }
@@ -262,12 +262,12 @@ func (ro *mockROForkchoice) ShouldOverrideFCU() bool {
 	return false
 }
 
-func (ro *mockROForkchoice) Slot(root [32]byte) (primitives.Slot, error) {
+func (ro *mockROForkchoice) Slot(_ [32]byte) (primitives.Slot, error) {
 	ro.calls = append(ro.calls, slotCalled)
 	return 0, nil
 }
 
-func (ro *mockROForkchoice) LastRoot(e primitives.Epoch) [32]byte {
+func (ro *mockROForkchoice) LastRoot(_ primitives.Epoch) [32]byte {
 	ro.calls = append(ro.calls, lastRootCalled)
 	return [32]byte{}
 }
