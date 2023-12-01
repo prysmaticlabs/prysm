@@ -1,6 +1,7 @@
 package forkchoice
 
 import (
+	"io"
 	"testing"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -37,6 +38,10 @@ const (
 	targetRootCalled
 )
 
+func _discard(err error) {
+	io.Discard.Write([]byte(err.Error()))
+}
+
 // ensures that the correct func was called with the correct lock pattern
 // for each method in the interface.
 func TestROLocking(t *testing.T) {
@@ -68,7 +73,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "isViableForCheckpointCalled",
 			call: isViableForCheckpointCalled,
-			cb:   func(g FastGetter) { g.IsViableForCheckpoint(nil) },
+			cb:   func(g FastGetter) { _, err := g.IsViableForCheckpoint(nil); _discard(err) },
 		},
 		{
 			name: "finalizedPayloadBlockHashCalled",
@@ -108,17 +113,17 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "receivedBlocksLastEpochCalled",
 			call: receivedBlocksLastEpochCalled,
-			cb:   func(g FastGetter) { g.ReceivedBlocksLastEpoch() },
+			cb:   func(g FastGetter) { _, err := g.ReceivedBlocksLastEpoch(); _discard(err) },
 		},
 		{
 			name: "weightCalled",
 			call: weightCalled,
-			cb:   func(g FastGetter) { g.Weight([32]byte{}) },
+			cb:   func(g FastGetter) { _, err := g.Weight([32]byte{}); _discard(err) },
 		},
 		{
 			name: "isOptimisticCalled",
 			call: isOptimisticCalled,
-			cb:   func(g FastGetter) { g.IsOptimistic([32]byte{}) },
+			cb:   func(g FastGetter) { _, err := g.IsOptimistic([32]byte{}); _discard(err) },
 		},
 		{
 			name: "shouldOverrideFCUCalled",
@@ -128,7 +133,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "slotCalled",
 			call: slotCalled,
-			cb:   func(g FastGetter) { g.Slot([32]byte{}) },
+			cb:   func(g FastGetter) { _, err := g.Slot([32]byte{}); _discard(err) },
 		},
 		{
 			name: "lastRootCalled",
@@ -138,7 +143,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "targetRootCalled",
 			call: targetRootCalled,
-			cb:   func(g FastGetter) { g.TargetRoot([32]byte{}) },
+			cb:   func(g FastGetter) { _, err := g.TargetRoot([32]byte{}); _discard(err) },
 		},
 	}
 	for _, c := range cases {
