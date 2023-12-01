@@ -660,15 +660,11 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 	s.ListBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
-	json1, err := shared.SignedBlsToExecutionChangeFromConsensus(change1)
-	require.NoError(t, err)
-	json2, err := shared.SignedBlsToExecutionChangeFromConsensus(change2)
-	require.NoError(t, err)
 	resp := &BLSToExecutionChangesPoolResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, 2, len(resp.Data))
-	assert.DeepEqual(t, json1, resp.Data[0])
-	assert.DeepEqual(t, json2, resp.Data[1])
+	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change1), resp.Data[0])
+	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change2), resp.Data[1])
 }
 
 func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
@@ -730,10 +726,8 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
-		m, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
 		signed := &shared.SignedBLSToExecutionChange{
-			Message:   m,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 		signedChanges[i] = signed
@@ -845,11 +839,8 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
-		bl, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
-
 		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   bl,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -947,14 +938,11 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
-
-		bl, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
 		if i == 1 {
 			signature[0] = 0x00
 		}
 		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   bl,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -987,15 +975,10 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
 	require.Equal(t, len(poolChanges)+1, len(signedChanges))
 	require.NoError(t, err)
-
-	v2Change, err := shared.SignedBlsToExecutionChangeFromConsensus(poolChanges[0])
-	require.NoError(t, err)
-	require.DeepEqual(t, v2Change, signedChanges[0])
+	require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[0]), signedChanges[0])
 
 	for i := 2; i < numValidators; i++ {
-		v2Change, err := shared.SignedBlsToExecutionChangeFromConsensus(poolChanges[i-1])
-		require.NoError(t, err)
-		require.DeepEqual(t, v2Change, signedChanges[i])
+		require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[i-1]), signedChanges[i])
 	}
 }
 

@@ -298,10 +298,7 @@ func (*Server) getBlockPhase0(_ context.Context, blk interfaces.ReadOnlySignedBe
 	if consensusBlk == nil {
 		return nil, errNilBlock
 	}
-	respBlk, err := shared.SignedBeaconBlockFromConsensus(consensusBlk)
-	if err != nil {
-		return nil, err
-	}
+	respBlk := shared.SignedBeaconBlockFromConsensus(consensusBlk)
 	jsonBytes, err := json.Marshal(respBlk.Message)
 	if err != nil {
 		return nil, err
@@ -324,10 +321,7 @@ func (*Server) getBlockAltair(_ context.Context, blk interfaces.ReadOnlySignedBe
 	if consensusBlk == nil {
 		return nil, errNilBlock
 	}
-	respBlk, err := shared.SignedBeaconBlockAltairFromConsensus(consensusBlk)
-	if err != nil {
-		return nil, err
-	}
+	respBlk := shared.SignedBeaconBlockAltairFromConsensus(consensusBlk)
 	jsonBytes, err := json.Marshal(respBlk.Message)
 	if err != nil {
 		return nil, err
@@ -924,7 +918,7 @@ func (s *Server) GetBlockAttestations(w http.ResponseWriter, r *http.Request) {
 	consensusAtts := blk.Block().Body().Attestations()
 	atts := make([]*shared.Attestation, len(consensusAtts))
 	for i, att := range consensusAtts {
-		atts[i] = shared.AttestationFromConsensus(att)
+		atts[i] = shared.AttFromConsensus(att)
 	}
 	root, err := blk.Block().HashTreeRoot()
 	if err != nil {

@@ -1,18 +1,174 @@
 package shared
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
-	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
+
+var errPayloadHeaderNotFound = errors.New("expected payload header not found")
+
+type BeaconState struct {
+	GenesisTime                 string                `json:"genesis_time"`
+	GenesisValidatorsRoot       string                `json:"genesis_validators_root"`
+	Slot                        string                `json:"slot"`
+	Fork                        *Fork                 `json:"fork"`
+	LatestBlockHeader           *BeaconBlockHeader    `json:"latest_block_header"`
+	BlockRoots                  []string              `json:"block_roots"`
+	StateRoots                  []string              `json:"state_roots"`
+	HistoricalRoots             []string              `json:"historical_roots"`
+	Eth1Data                    *Eth1Data             `json:"eth1_data"`
+	Eth1DataVotes               []*Eth1Data           `json:"eth1_data_votes"`
+	Eth1DepositIndex            string                `json:"eth1_deposit_index"`
+	Validators                  []*Validator          `json:"validators"`
+	Balances                    []string              `json:"balances"`
+	RandaoMixes                 []string              `json:"randao_mixes"`
+	Slashings                   []string              `json:"slashings"`
+	PreviousEpochAttestations   []*PendingAttestation `json:"previous_epoch_attestations"`
+	CurrentEpochAttestations    []*PendingAttestation `json:"current_epoch_attestations"`
+	JustificationBits           string                `json:"justification_bits"`
+	PreviousJustifiedCheckpoint *Checkpoint           `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  *Checkpoint           `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint         *Checkpoint           `json:"finalized_checkpoint"`
+}
+
+type BeaconStateAltair struct {
+	GenesisTime                 string             `json:"genesis_time"`
+	GenesisValidatorsRoot       string             `json:"genesis_validators_root"`
+	Slot                        string             `json:"slot"`
+	Fork                        *Fork              `json:"fork"`
+	LatestBlockHeader           *BeaconBlockHeader `json:"latest_block_header"`
+	BlockRoots                  []string           `json:"block_roots"`
+	StateRoots                  []string           `json:"state_roots"`
+	HistoricalRoots             []string           `json:"historical_roots"`
+	Eth1Data                    *Eth1Data          `json:"eth1_data"`
+	Eth1DataVotes               []*Eth1Data        `json:"eth1_data_votes"`
+	Eth1DepositIndex            string             `json:"eth1_deposit_index"`
+	Validators                  []*Validator       `json:"validators"`
+	Balances                    []string           `json:"balances"`
+	RandaoMixes                 []string           `json:"randao_mixes"`
+	Slashings                   []string           `json:"slashings"`
+	PreviousEpochParticipation  []string           `json:"previous_epoch_participation"`
+	CurrentEpochParticipation   []string           `json:"current_epoch_participation"`
+	JustificationBits           string             `json:"justification_bits"`
+	PreviousJustifiedCheckpoint *Checkpoint        `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint  *Checkpoint        `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint         *Checkpoint        `json:"finalized_checkpoint"`
+	InactivityScores            []string           `json:"inactivity_scores"`
+	CurrentSyncCommittee        *SyncCommittee     `json:"current_sync_committee"`
+	NextSyncCommittee           *SyncCommittee     `json:"next_sync_committee"`
+}
+
+type BeaconStateBellatrix struct {
+	GenesisTime                  string                  `json:"genesis_time"`
+	GenesisValidatorsRoot        string                  `json:"genesis_validators_root"`
+	Slot                         string                  `json:"slot"`
+	Fork                         *Fork                   `json:"fork"`
+	LatestBlockHeader            *BeaconBlockHeader      `json:"latest_block_header"`
+	BlockRoots                   []string                `json:"block_roots"`
+	StateRoots                   []string                `json:"state_roots"`
+	HistoricalRoots              []string                `json:"historical_roots"`
+	Eth1Data                     *Eth1Data               `json:"eth1_data"`
+	Eth1DataVotes                []*Eth1Data             `json:"eth1_data_votes"`
+	Eth1DepositIndex             string                  `json:"eth1_deposit_index"`
+	Validators                   []*Validator            `json:"validators"`
+	Balances                     []string                `json:"balances"`
+	RandaoMixes                  []string                `json:"randao_mixes"`
+	Slashings                    []string                `json:"slashings"`
+	PreviousEpochParticipation   []string                `json:"previous_epoch_participation"`
+	CurrentEpochParticipation    []string                `json:"current_epoch_participation"`
+	JustificationBits            string                  `json:"justification_bits"`
+	PreviousJustifiedCheckpoint  *Checkpoint             `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *Checkpoint             `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *Checkpoint             `json:"finalized_checkpoint"`
+	InactivityScores             []string                `json:"inactivity_scores"`
+	CurrentSyncCommittee         *SyncCommittee          `json:"current_sync_committee"`
+	NextSyncCommittee            *SyncCommittee          `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *ExecutionPayloadHeader `json:"latest_execution_payload_header"`
+}
+
+type BeaconStateCapella struct {
+	GenesisTime                  string                         `json:"genesis_time"`
+	GenesisValidatorsRoot        string                         `json:"genesis_validators_root"`
+	Slot                         string                         `json:"slot"`
+	Fork                         *Fork                          `json:"fork"`
+	LatestBlockHeader            *BeaconBlockHeader             `json:"latest_block_header"`
+	BlockRoots                   []string                       `json:"block_roots"`
+	StateRoots                   []string                       `json:"state_roots"`
+	HistoricalRoots              []string                       `json:"historical_roots"`
+	Eth1Data                     *Eth1Data                      `json:"eth1_data"`
+	Eth1DataVotes                []*Eth1Data                    `json:"eth1_data_votes"`
+	Eth1DepositIndex             string                         `json:"eth1_deposit_index"`
+	Validators                   []*Validator                   `json:"validators"`
+	Balances                     []string                       `json:"balances"`
+	RandaoMixes                  []string                       `json:"randao_mixes"`
+	Slashings                    []string                       `json:"slashings"`
+	PreviousEpochParticipation   []string                       `json:"previous_epoch_participation"`
+	CurrentEpochParticipation    []string                       `json:"current_epoch_participation"`
+	JustificationBits            string                         `json:"justification_bits"`
+	PreviousJustifiedCheckpoint  *Checkpoint                    `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *Checkpoint                    `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *Checkpoint                    `json:"finalized_checkpoint"`
+	InactivityScores             []string                       `json:"inactivity_scores"`
+	CurrentSyncCommittee         *SyncCommittee                 `json:"current_sync_committee"`
+	NextSyncCommittee            *SyncCommittee                 `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"latest_execution_payload_header"`
+	NextWithdrawalIndex          string                         `json:"next_withdrawal_index"`
+	NextWithdrawalValidatorIndex string                         `json:"next_withdrawal_validator_index"`
+	HistoricalSummaries          []*HistoricalSummary           `json:"historical_summaries"`
+}
+
+type BeaconStateDeneb struct {
+	GenesisTime                  string                       `json:"genesis_time"`
+	GenesisValidatorsRoot        string                       `json:"genesis_validators_root"`
+	Slot                         string                       `json:"slot"`
+	Fork                         *Fork                        `json:"fork"`
+	LatestBlockHeader            *BeaconBlockHeader           `json:"latest_block_header"`
+	BlockRoots                   []string                     `json:"block_roots"`
+	StateRoots                   []string                     `json:"state_roots"`
+	HistoricalRoots              []string                     `json:"historical_roots"`
+	Eth1Data                     *Eth1Data                    `json:"eth1_data"`
+	Eth1DataVotes                []*Eth1Data                  `json:"eth1_data_votes"`
+	Eth1DepositIndex             string                       `json:"eth1_deposit_index"`
+	Validators                   []*Validator                 `json:"validators"`
+	Balances                     []string                     `json:"balances"`
+	RandaoMixes                  []string                     `json:"randao_mixes"`
+	Slashings                    []string                     `json:"slashings"`
+	PreviousEpochParticipation   []string                     `json:"previous_epoch_participation"`
+	CurrentEpochParticipation    []string                     `json:"current_epoch_participation"`
+	JustificationBits            string                       `json:"justification_bits"`
+	PreviousJustifiedCheckpoint  *Checkpoint                  `json:"previous_justified_checkpoint"`
+	CurrentJustifiedCheckpoint   *Checkpoint                  `json:"current_justified_checkpoint"`
+	FinalizedCheckpoint          *Checkpoint                  `json:"finalized_checkpoint"`
+	InactivityScores             []string                     `json:"inactivity_scores"`
+	CurrentSyncCommittee         *SyncCommittee               `json:"current_sync_committee"`
+	NextSyncCommittee            *SyncCommittee               `json:"next_sync_committee"`
+	LatestExecutionPayloadHeader *ExecutionPayloadHeaderDeneb `json:"latest_execution_payload_header"`
+	NextWithdrawalIndex          string                       `json:"next_withdrawal_index"`
+	NextWithdrawalValidatorIndex string                       `json:"next_withdrawal_validator_index"`
+	HistoricalSummaries          []*HistoricalSummary         `json:"historical_summaries"`
+}
+
+type Validator struct {
+	PublicKey                  string `json:"pubkey"`
+	WithdrawalCredentials      string `json:"withdrawal_credentials"`
+	EffectiveBalance           string `json:"effective_balance"`
+	Slashed                    bool   `json:"slashed"`
+	ActivationEligibilityEpoch string `json:"activation_eligibility_epoch"`
+	ActivationEpoch            string `json:"activation_epoch"`
+	ExitEpoch                  string `json:"exit_epoch"`
+	WithdrawableEpoch          string `json:"withdrawable_epoch"`
+}
+
+type PendingAttestation struct {
+	AggregationBits string           `json:"aggregation_bits"`
+	Data            *AttestationData `json:"data"`
+	InclusionDelay  string           `json:"inclusion_delay"`
+	ProposerIndex   string           `json:"proposer_index"`
+}
+
+type HistoricalSummary struct {
+	BlockSummaryRoot string `json:"block_summary_root"`
+	StateSummaryRoot string `json:"state_summary_root"`
+}
 
 type Attestation struct {
 	AggregationBits string           `json:"aggregation_bits"`
@@ -121,115 +277,10 @@ type SignedBLSToExecutionChange struct {
 	Signature string                `json:"signature"`
 }
 
-func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
-	change, err := s.Message.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Message")
-	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-	return &eth.SignedBLSToExecutionChange{
-		Message:   change,
-		Signature: sig,
-	}, nil
-}
-
 type BLSToExecutionChange struct {
 	ValidatorIndex     string `json:"validator_index"`
 	FromBLSPubkey      string `json:"from_bls_pubkey"`
 	ToExecutionAddress string `json:"to_execution_address"`
-}
-
-func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) {
-	index, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
-	}
-	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "FromBLSPubkey")
-	}
-	executionAddress, err := DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "ToExecutionAddress")
-	}
-	return &eth.BLSToExecutionChange{
-		ValidatorIndex:     primitives.ValidatorIndex(index),
-		FromBlsPubkey:      pubkey,
-		ToExecutionAddress: executionAddress,
-	}, nil
-}
-
-func BlsToExecutionChangeFromConsensus(blsToExecutionChange *eth.BLSToExecutionChange) (*BLSToExecutionChange, error) {
-	if blsToExecutionChange == nil {
-		return nil, errors.New("BLSToExecutionChange is empty")
-	}
-
-	return &BLSToExecutionChange{
-		ValidatorIndex:     strconv.FormatUint(uint64(blsToExecutionChange.ValidatorIndex), 10),
-		FromBLSPubkey:      hexutil.Encode(blsToExecutionChange.FromBlsPubkey),
-		ToExecutionAddress: hexutil.Encode(blsToExecutionChange.ToExecutionAddress),
-	}, nil
-}
-
-func SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange *eth.SignedBLSToExecutionChange) (*SignedBLSToExecutionChange, error) {
-	if signedBlsToExecutionChange == nil {
-		return nil, errors.New("SignedBLSToExecutionChange is empty")
-	}
-	bls, err := BlsToExecutionChangeFromConsensus(signedBlsToExecutionChange.Message)
-	if err != nil {
-		return nil, err
-	}
-	return &SignedBLSToExecutionChange{
-		Message:   bls,
-		Signature: hexutil.Encode(signedBlsToExecutionChange.Signature),
-	}, nil
-}
-
-func SignedBlsToExecutionChangesFromConsensus(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) ([]*SignedBLSToExecutionChange, error) {
-	jsonBlsToExecutionChanges := make([]*SignedBLSToExecutionChange, len(blsToExecutionChanges))
-	for index, signedBlsToExecutionChange := range blsToExecutionChanges {
-		sbls, err := SignedBlsToExecutionChangeFromConsensus(signedBlsToExecutionChange)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("blsExecutionChange message failed to encode at index %d", index))
-		}
-		jsonBlsToExecutionChanges[index] = sbls
-	}
-	return jsonBlsToExecutionChanges, nil
-}
-
-func (s *Fork) ToConsensus() (*eth.Fork, error) {
-	previousVersion, err := hexutil.Decode(s.PreviousVersion)
-	if err != nil {
-		return nil, NewDecodeError(err, "PreviousVersion")
-	}
-	currentVersion, err := hexutil.Decode(s.CurrentVersion)
-	if err != nil {
-		return nil, NewDecodeError(err, "CurrentVersion")
-	}
-	epoch, err := strconv.ParseUint(s.Epoch, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
-	}
-	return &eth.Fork{
-		PreviousVersion: previousVersion,
-		CurrentVersion:  currentVersion,
-		Epoch:           primitives.Epoch(epoch),
-	}, nil
-}
-
-func ForkFromConsensus(f *eth.Fork) (*Fork, error) {
-	if f == nil {
-		return nil, errors.New("fork is empty")
-	}
-
-	return &Fork{
-		PreviousVersion: hexutil.Encode(f.PreviousVersion),
-		CurrentVersion:  hexutil.Encode(f.CurrentVersion),
-		Epoch:           strconv.FormatUint(uint64(f.Epoch), 10),
-	}, nil
 }
 
 type SyncCommitteeMessage struct {
@@ -244,450 +295,6 @@ type SyncCommittee struct {
 	AggregatePubkey string   `json:"aggregate_pubkey"`
 }
 
-func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
-	msg, err := s.Message.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Message")
-	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-	return &eth.SignedValidatorRegistrationV1{
-		Message:   msg,
-		Signature: sig,
-	}, nil
-}
-
-func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
-	feeRecipient, err := DecodeHexWithLength(s.FeeRecipient, fieldparams.FeeRecipientLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "FeeRecipient")
-	}
-	pubKey, err := DecodeHexWithLength(s.Pubkey, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "Pubkey")
-	}
-	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "GasLimit")
-	}
-	timestamp, err := strconv.ParseUint(s.Timestamp, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Timestamp")
-	}
-	return &eth.ValidatorRegistrationV1{
-		FeeRecipient: feeRecipient,
-		GasLimit:     gasLimit,
-		Timestamp:    timestamp,
-		Pubkey:       pubKey,
-	}, nil
-}
-
-func ValidatorRegistrationFromConsensus(vr *eth.ValidatorRegistrationV1) (*ValidatorRegistration, error) {
-	if vr == nil {
-		return nil, errors.New("ValidatorRegistrationV1 is empty")
-	}
-	return &ValidatorRegistration{
-		FeeRecipient: hexutil.Encode(vr.FeeRecipient),
-		GasLimit:     strconv.FormatUint(vr.GasLimit, 10),
-		Timestamp:    strconv.FormatUint(vr.Timestamp, 10),
-		Pubkey:       hexutil.Encode(vr.Pubkey),
-	}, nil
-}
-
-func SignedValidatorRegistrationFromConsensus(vr *eth.SignedValidatorRegistrationV1) (*SignedValidatorRegistration, error) {
-	if vr == nil {
-		return nil, errors.New("SignedValidatorRegistrationV1 is empty")
-	}
-	v, err := ValidatorRegistrationFromConsensus(vr.Message)
-	if err != nil {
-		return nil, err
-	}
-	return &SignedValidatorRegistration{
-		Message:   v,
-		Signature: hexutil.Encode(vr.Signature),
-	}, nil
-}
-
-func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
-	msg, err := s.Message.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Message")
-	}
-	sig, err := hexutil.Decode(s.Signature)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-
-	return &eth.SignedContributionAndProof{
-		Message:   msg,
-		Signature: sig,
-	}, nil
-}
-
-func SignedContributionAndProofFromConsensus(c *eth.SignedContributionAndProof) *SignedContributionAndProof {
-	contribution := ContributionAndProofFromConsensus(c.Message)
-	return &SignedContributionAndProof{
-		Message:   contribution,
-		Signature: hexutil.Encode(c.Signature),
-	}
-}
-
-func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) {
-	contribution, err := c.Contribution.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Contribution")
-	}
-	aggregatorIndex, err := strconv.ParseUint(c.AggregatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "AggregatorIndex")
-	}
-	selectionProof, err := hexutil.Decode(c.SelectionProof)
-	if err != nil {
-		return nil, NewDecodeError(err, "SelectionProof")
-	}
-
-	return &eth.ContributionAndProof{
-		AggregatorIndex: primitives.ValidatorIndex(aggregatorIndex),
-		Contribution:    contribution,
-		SelectionProof:  selectionProof,
-	}, nil
-}
-
-func ContributionAndProofFromConsensus(c *eth.ContributionAndProof) *ContributionAndProof {
-	contribution := SyncCommitteeContributionFromConsensus(c.Contribution)
-	return &ContributionAndProof{
-		AggregatorIndex: fmt.Sprintf("%d", c.AggregatorIndex),
-		Contribution:    contribution,
-		SelectionProof:  hexutil.Encode(c.SelectionProof),
-	}
-}
-
-func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContribution, error) {
-	slot, err := strconv.ParseUint(s.Slot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
-	}
-	bbRoot, err := hexutil.Decode(s.BeaconBlockRoot)
-	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
-	}
-	subcommitteeIndex, err := strconv.ParseUint(s.SubcommitteeIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "SubcommitteeIndex")
-	}
-	aggBits, err := hexutil.Decode(s.AggregationBits)
-	if err != nil {
-		return nil, NewDecodeError(err, "AggregationBits")
-	}
-	sig, err := hexutil.Decode(s.Signature)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-
-	return &eth.SyncCommitteeContribution{
-		Slot:              primitives.Slot(slot),
-		BlockRoot:         bbRoot,
-		SubcommitteeIndex: subcommitteeIndex,
-		AggregationBits:   aggBits,
-		Signature:         sig,
-	}, nil
-}
-
-func SyncCommitteeContributionFromConsensus(c *eth.SyncCommitteeContribution) *SyncCommitteeContribution {
-	return &SyncCommitteeContribution{
-		Slot:              fmt.Sprintf("%d", c.Slot),
-		BeaconBlockRoot:   hexutil.Encode(c.BlockRoot),
-		SubcommitteeIndex: fmt.Sprintf("%d", c.SubcommitteeIndex),
-		AggregationBits:   hexutil.Encode(c.AggregationBits),
-		Signature:         hexutil.Encode(c.Signature),
-	}
-}
-
-func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregateAttestationAndProof, error) {
-	msg, err := s.Message.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Message")
-	}
-	sig, err := hexutil.Decode(s.Signature)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-
-	return &eth.SignedAggregateAttestationAndProof{
-		Message:   msg,
-		Signature: sig,
-	}, nil
-}
-
-func (a *AggregateAttestationAndProof) ToConsensus() (*eth.AggregateAttestationAndProof, error) {
-	aggIndex, err := strconv.ParseUint(a.AggregatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "AggregatorIndex")
-	}
-	agg, err := a.Aggregate.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Aggregate")
-	}
-	proof, err := hexutil.Decode(a.SelectionProof)
-	if err != nil {
-		return nil, NewDecodeError(err, "SelectionProof")
-	}
-	return &eth.AggregateAttestationAndProof{
-		AggregatorIndex: primitives.ValidatorIndex(aggIndex),
-		Aggregate:       agg,
-		SelectionProof:  proof,
-	}, nil
-}
-
-func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
-	aggBits, err := hexutil.Decode(a.AggregationBits)
-	if err != nil {
-		return nil, NewDecodeError(err, "AggregationBits")
-	}
-	data, err := a.Data.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Data")
-	}
-	sig, err := hexutil.Decode(a.Signature)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-
-	return &eth.Attestation{
-		AggregationBits: aggBits,
-		Data:            data,
-		Signature:       sig,
-	}, nil
-}
-
-func AttestationFromConsensus(a *eth.Attestation) *Attestation {
-	return &Attestation{
-		AggregationBits: hexutil.Encode(a.AggregationBits),
-		Data:            AttestationDataFromConsensus(a.Data),
-		Signature:       hexutil.Encode(a.Signature),
-	}
-}
-
-func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
-	slot, err := strconv.ParseUint(a.Slot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
-	}
-	committeeIndex, err := strconv.ParseUint(a.CommitteeIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "CommitteeIndex")
-	}
-	bbRoot, err := hexutil.Decode(a.BeaconBlockRoot)
-	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
-	}
-	source, err := a.Source.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Source")
-	}
-	target, err := a.Target.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Target")
-	}
-
-	return &eth.AttestationData{
-		Slot:            primitives.Slot(slot),
-		CommitteeIndex:  primitives.CommitteeIndex(committeeIndex),
-		BeaconBlockRoot: bbRoot,
-		Source:          source,
-		Target:          target,
-	}, nil
-}
-
-func AttestationDataFromConsensus(a *eth.AttestationData) *AttestationData {
-	return &AttestationData{
-		Slot:            strconv.FormatUint(uint64(a.Slot), 10),
-		CommitteeIndex:  strconv.FormatUint(uint64(a.CommitteeIndex), 10),
-		BeaconBlockRoot: hexutil.Encode(a.BeaconBlockRoot),
-		Source:          CheckpointFromConsensus(a.Source),
-		Target:          CheckpointFromConsensus(a.Target),
-	}
-}
-
-func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
-	epoch, err := strconv.ParseUint(c.Epoch, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
-	}
-	root, err := hexutil.Decode(c.Root)
-	if err != nil {
-		return nil, NewDecodeError(err, "Root")
-	}
-
-	return &eth.Checkpoint{
-		Epoch: primitives.Epoch(epoch),
-		Root:  root,
-	}, nil
-}
-
-func CheckpointFromConsensus(c *eth.Checkpoint) *Checkpoint {
-	return &Checkpoint{
-		Epoch: strconv.FormatUint(uint64(c.Epoch), 10),
-		Root:  hexutil.Encode(c.Root),
-	}
-}
-
-func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubscription, error) {
-	index, err := strconv.ParseUint(s.ValidatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
-	}
-	scIndices := make([]uint64, len(s.SyncCommitteeIndices))
-	for i, ix := range s.SyncCommitteeIndices {
-		scIndices[i], err = strconv.ParseUint(ix, 10, 64)
-		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("SyncCommitteeIndices[%d]", i))
-		}
-	}
-	epoch, err := strconv.ParseUint(s.UntilEpoch, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "UntilEpoch")
-	}
-
-	return &validator.SyncCommitteeSubscription{
-		ValidatorIndex:       primitives.ValidatorIndex(index),
-		SyncCommitteeIndices: scIndices,
-		UntilEpoch:           primitives.Epoch(epoch),
-	}, nil
-}
-
-func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeSubscription, error) {
-	valIndex, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
-	}
-	committeeIndex, err := strconv.ParseUint(b.CommitteeIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "CommitteeIndex")
-	}
-	committeesAtSlot, err := strconv.ParseUint(b.CommitteesAtSlot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "CommitteesAtSlot")
-	}
-	slot, err := strconv.ParseUint(b.Slot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
-	}
-
-	return &validator.BeaconCommitteeSubscription{
-		ValidatorIndex:   primitives.ValidatorIndex(valIndex),
-		CommitteeIndex:   primitives.CommitteeIndex(committeeIndex),
-		CommitteesAtSlot: committeesAtSlot,
-		Slot:             primitives.Slot(slot),
-		IsAggregator:     b.IsAggregator,
-	}, nil
-}
-
-func (e *SignedVoluntaryExit) ToConsensus() (*eth.SignedVoluntaryExit, error) {
-	sig, err := hexutil.Decode(e.Signature)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-	exit, err := e.Message.ToConsensus()
-	if err != nil {
-		return nil, NewDecodeError(err, "Message")
-	}
-
-	return &eth.SignedVoluntaryExit{
-		Exit:      exit,
-		Signature: sig,
-	}, nil
-}
-
-func SignedVoluntaryExitFromConsensus(e *eth.SignedVoluntaryExit) *SignedVoluntaryExit {
-	return &SignedVoluntaryExit{
-		Message:   VoluntaryExitFromConsensus(e.Exit),
-		Signature: hexutil.Encode(e.Signature),
-	}
-}
-
-func (e *VoluntaryExit) ToConsensus() (*eth.VoluntaryExit, error) {
-	epoch, err := strconv.ParseUint(e.Epoch, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
-	}
-	valIndex, err := strconv.ParseUint(e.ValidatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
-	}
-
-	return &eth.VoluntaryExit{
-		Epoch:          primitives.Epoch(epoch),
-		ValidatorIndex: primitives.ValidatorIndex(valIndex),
-	}, nil
-}
-
-func VoluntaryExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
-	return &VoluntaryExit{
-		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
-		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
-	}
-}
-
-func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) {
-	slot, err := strconv.ParseUint(m.Slot, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
-	}
-	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
-	}
-	valIndex, err := strconv.ParseUint(m.ValidatorIndex, 10, 64)
-	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
-	}
-	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
-	}
-
-	return &eth.SyncCommitteeMessage{
-		Slot:           primitives.Slot(slot),
-		BlockRoot:      root,
-		ValidatorIndex: primitives.ValidatorIndex(valIndex),
-		Signature:      sig,
-	}, nil
-}
-
-func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
-	var sPubKeys []string
-	for _, p := range sc.Pubkeys {
-		sPubKeys = append(sPubKeys, hexutil.Encode(p))
-	}
-
-	return &SyncCommittee{
-		Pubkeys:         sPubKeys,
-		AggregatePubkey: hexutil.Encode(sc.AggregatePubkey),
-	}
-}
-
-func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
-	var pubKeys [][]byte
-	for _, p := range sc.Pubkeys {
-		pubKey, err := hexutil.Decode(p)
-		if err != nil {
-			return nil, NewDecodeError(err, "Pubkeys")
-		}
-		pubKeys = append(pubKeys, pubKey)
-	}
-	aggPubKey, err := hexutil.Decode(sc.AggregatePubkey)
-	if err != nil {
-		return nil, NewDecodeError(err, "AggregatePubkey")
-	}
-	return &eth.SyncCommittee{
-		Pubkeys:         pubKeys,
-		AggregatePubkey: aggPubKey,
-	}, nil
-}
-
 // SyncDetails contains information about node sync status.
 type SyncDetails struct {
 	HeadSlot     string `json:"head_slot"`
@@ -700,4 +307,442 @@ type SyncDetails struct {
 // SyncDetailsContainer is a wrapper for Data.
 type SyncDetailsContainer struct {
 	Data *SyncDetails `json:"data"`
+}
+
+type SignedBeaconBlock struct {
+	Message   *BeaconBlock `json:"message"`
+	Signature string       `json:"signature"`
+}
+
+type BeaconBlock struct {
+	Slot          string           `json:"slot"`
+	ProposerIndex string           `json:"proposer_index"`
+	ParentRoot    string           `json:"parent_root"`
+	StateRoot     string           `json:"state_root"`
+	Body          *BeaconBlockBody `json:"body"`
+}
+
+type BeaconBlockBody struct {
+	RandaoReveal      string                 `json:"randao_reveal"`
+	Eth1Data          *Eth1Data              `json:"eth1_data"`
+	Graffiti          string                 `json:"graffiti"`
+	ProposerSlashings []*ProposerSlashing    `json:"proposer_slashings"`
+	AttesterSlashings []*AttesterSlashing    `json:"attester_slashings"`
+	Attestations      []*Attestation         `json:"attestations"`
+	Deposits          []*Deposit             `json:"deposits"`
+	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits"`
+}
+
+type SignedBeaconBlockAltair struct {
+	Message   *BeaconBlockAltair `json:"message"`
+	Signature string             `json:"signature"`
+}
+
+type BeaconBlockAltair struct {
+	Slot          string                 `json:"slot"`
+	ProposerIndex string                 `json:"proposer_index"`
+	ParentRoot    string                 `json:"parent_root"`
+	StateRoot     string                 `json:"state_root"`
+	Body          *BeaconBlockBodyAltair `json:"body"`
+}
+
+type BeaconBlockBodyAltair struct {
+	RandaoReveal      string                 `json:"randao_reveal"`
+	Eth1Data          *Eth1Data              `json:"eth1_data"`
+	Graffiti          string                 `json:"graffiti"`
+	ProposerSlashings []*ProposerSlashing    `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings []*AttesterSlashing    `json:"attester_slashings" validate:"required,dive"`
+	Attestations      []*Attestation         `json:"attestations" validate:"required,dive"`
+	Deposits          []*Deposit             `json:"deposits" validate:"required,dive"`
+	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+}
+
+type SignedBeaconBlockBellatrix struct {
+	Message   *BeaconBlockBellatrix `json:"message"`
+	Signature string                `json:"signature"`
+}
+
+type BeaconBlockBellatrix struct {
+	Slot          string                    `json:"slot"`
+	ProposerIndex string                    `json:"proposer_index"`
+	ParentRoot    string                    `json:"parent_root"`
+	StateRoot     string                    `json:"state_root"`
+	Body          *BeaconBlockBodyBellatrix `json:"body"`
+}
+
+type BeaconBlockBodyBellatrix struct {
+	RandaoReveal      string                 `json:"randao_reveal"`
+	Eth1Data          *Eth1Data              `json:"eth1_data"`
+	Graffiti          string                 `json:"graffiti"`
+	ProposerSlashings []*ProposerSlashing    `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings []*AttesterSlashing    `json:"attester_slashings" validate:"required,dive"`
+	Attestations      []*Attestation         `json:"attestations" validate:"required,dive"`
+	Deposits          []*Deposit             `json:"deposits" validate:"required,dive"`
+	VoluntaryExits    []*SignedVoluntaryExit `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate     *SyncAggregate         `json:"sync_aggregate"`
+	ExecutionPayload  *ExecutionPayload      `json:"execution_payload"`
+}
+
+type SignedBlindedBeaconBlockBellatrix struct {
+	Message   *BlindedBeaconBlockBellatrix `json:"message"`
+	Signature string                       `json:"signature"`
+}
+
+type BlindedBeaconBlockBellatrix struct {
+	Slot          string                           `json:"slot"`
+	ProposerIndex string                           `json:"proposer_index"`
+	ParentRoot    string                           `json:"parent_root"`
+	StateRoot     string                           `json:"state_root"`
+	Body          *BlindedBeaconBlockBodyBellatrix `json:"body"`
+}
+
+type BlindedBeaconBlockBodyBellatrix struct {
+	RandaoReveal           string                  `json:"randao_reveal"`
+	Eth1Data               *Eth1Data               `json:"eth1_data"`
+	Graffiti               string                  `json:"graffiti"`
+	ProposerSlashings      []*ProposerSlashing     `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings      []*AttesterSlashing     `json:"attester_slashings" validate:"required,dive"`
+	Attestations           []*Attestation          `json:"attestations" validate:"required,dive"`
+	Deposits               []*Deposit              `json:"deposits" validate:"required,dive"`
+	VoluntaryExits         []*SignedVoluntaryExit  `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate          *SyncAggregate          `json:"sync_aggregate"`
+	ExecutionPayloadHeader *ExecutionPayloadHeader `json:"execution_payload_header"`
+}
+
+type SignedBeaconBlockCapella struct {
+	Message   *BeaconBlockCapella `json:"message"`
+	Signature string              `json:"signature"`
+}
+
+type BeaconBlockCapella struct {
+	Slot          string                  `json:"slot"`
+	ProposerIndex string                  `json:"proposer_index"`
+	ParentRoot    string                  `json:"parent_root"`
+	StateRoot     string                  `json:"state_root"`
+	Body          *BeaconBlockBodyCapella `json:"body"`
+}
+
+type BeaconBlockBodyCapella struct {
+	RandaoReveal          string                        `json:"randao_reveal"`
+	Eth1Data              *Eth1Data                     `json:"eth1_data"`
+	Graffiti              string                        `json:"graffiti"`
+	ProposerSlashings     []*ProposerSlashing           `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings     []*AttesterSlashing           `json:"attester_slashings" validate:"required,dive"`
+	Attestations          []*Attestation                `json:"attestations" validate:"required,dive"`
+	Deposits              []*Deposit                    `json:"deposits" validate:"required,dive"`
+	VoluntaryExits        []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate         *SyncAggregate                `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadCapella      `json:"execution_payload"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+}
+
+type SignedBlindedBeaconBlockCapella struct {
+	Message   *BlindedBeaconBlockCapella `json:"message"`
+	Signature string                     `json:"signature"`
+}
+
+type BlindedBeaconBlockCapella struct {
+	Slot          string                         `json:"slot"`
+	ProposerIndex string                         `json:"proposer_index"`
+	ParentRoot    string                         `json:"parent_root"`
+	StateRoot     string                         `json:"state_root"`
+	Body          *BlindedBeaconBlockBodyCapella `json:"body"`
+}
+
+type BlindedBeaconBlockBodyCapella struct {
+	RandaoReveal           string                         `json:"randao_reveal"`
+	Eth1Data               *Eth1Data                      `json:"eth1_data"`
+	Graffiti               string                         `json:"graffiti"`
+	ProposerSlashings      []*ProposerSlashing            `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings      []*AttesterSlashing            `json:"attester_slashings" validate:"required,dive"`
+	Attestations           []*Attestation                 `json:"attestations" validate:"required,dive"`
+	Deposits               []*Deposit                     `json:"deposits" validate:"required,dive"`
+	VoluntaryExits         []*SignedVoluntaryExit         `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate          *SyncAggregate                 `json:"sync_aggregate"`
+	ExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"execution_payload_header"`
+	BlsToExecutionChanges  []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes" validate:"required,dive"`
+}
+
+type SignedBeaconBlockContentsDeneb struct {
+	SignedBlock        *SignedBeaconBlockDeneb `json:"signed_block"`
+	SignedBlobSidecars []*SignedBlobSidecar    `json:"signed_blob_sidecars"  validate:"dive"`
+}
+
+type BeaconBlockContentsDeneb struct {
+	Block        *BeaconBlockDeneb `json:"block"`
+	BlobSidecars []*BlobSidecar    `json:"blob_sidecars" validate:"dive"`
+}
+
+type SignedBeaconBlockDeneb struct {
+	Message   *BeaconBlockDeneb `json:"message"`
+	Signature string            `json:"signature"`
+}
+
+type BeaconBlockDeneb struct {
+	Slot          string                `json:"slot"`
+	ProposerIndex string                `json:"proposer_index"`
+	ParentRoot    string                `json:"parent_root"`
+	StateRoot     string                `json:"state_root"`
+	Body          *BeaconBlockBodyDeneb `json:"body"`
+}
+
+type BeaconBlockBodyDeneb struct {
+	RandaoReveal          string                        `json:"randao_reveal"`
+	Eth1Data              *Eth1Data                     `json:"eth1_data"`
+	Graffiti              string                        `json:"graffiti"`
+	ProposerSlashings     []*ProposerSlashing           `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings     []*AttesterSlashing           `json:"attester_slashings" validate:"required,dive"`
+	Attestations          []*Attestation                `json:"attestations" validate:"required,dive"`
+	Deposits              []*Deposit                    `json:"deposits" validate:"required,dive"`
+	VoluntaryExits        []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate         *SyncAggregate                `json:"sync_aggregate"`
+	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlobKzgCommitments    []string                      `json:"blob_kzg_commitments" validate:"required,dive"`
+}
+
+type ExecutionPayloadDeneb struct {
+	ParentHash    string        `json:"parent_hash"`
+	FeeRecipient  string        `json:"fee_recipient"`
+	StateRoot     string        `json:"state_root"`
+	ReceiptsRoot  string        `json:"receipts_root"`
+	LogsBloom     string        `json:"logs_bloom"`
+	PrevRandao    string        `json:"prev_randao"`
+	BlockNumber   string        `json:"block_number"`
+	GasLimit      string        `json:"gas_limit"`
+	GasUsed       string        `json:"gas_used"`
+	Timestamp     string        `json:"timestamp"`
+	ExtraData     string        `json:"extra_data"`
+	BaseFeePerGas string        `json:"base_fee_per_gas"`
+	BlobGasUsed   string        `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas string        `json:"excess_blob_gas"` // new in deneb
+	BlockHash     string        `json:"block_hash"`
+	Transactions  []string      `json:"transactions" validate:"required,dive,hexadecimal"`
+	Withdrawals   []*Withdrawal `json:"withdrawals" validate:"required,dive"`
+}
+
+type SignedBlindedBeaconBlockContentsDeneb struct {
+	SignedBlindedBlock        *SignedBlindedBeaconBlockDeneb `json:"signed_blinded_block"`
+	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecar    `json:"signed_blinded_blob_sidecars" validate:"dive"`
+}
+
+type BlindedBeaconBlockContentsDeneb struct {
+	BlindedBlock        *BlindedBeaconBlockDeneb `json:"blinded_block"`
+	BlindedBlobSidecars []*BlindedBlobSidecar    `json:"blinded_blob_sidecars" validate:"dive"`
+}
+
+type BlindedBeaconBlockDeneb struct {
+	Slot          string                       `json:"slot"`
+	ProposerIndex string                       `json:"proposer_index"`
+	ParentRoot    string                       `json:"parent_root"`
+	StateRoot     string                       `json:"state_root"`
+	Body          *BlindedBeaconBlockBodyDeneb `json:"body"`
+}
+
+type SignedBlindedBeaconBlockDeneb struct {
+	Message   *BlindedBeaconBlockDeneb `json:"message"`
+	Signature string                   `json:"signature"`
+}
+
+type BlindedBeaconBlockBodyDeneb struct {
+	RandaoReveal           string                        `json:"randao_reveal"`
+	Eth1Data               *Eth1Data                     `json:"eth1_data"`
+	Graffiti               string                        `json:"graffiti"`
+	ProposerSlashings      []*ProposerSlashing           `json:"proposer_slashings" validate:"required,dive"`
+	AttesterSlashings      []*AttesterSlashing           `json:"attester_slashings" validate:"required,dive"`
+	Attestations           []*Attestation                `json:"attestations" validate:"required,dive"`
+	Deposits               []*Deposit                    `json:"deposits" validate:"required,dive"`
+	VoluntaryExits         []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
+	SyncAggregate          *SyncAggregate                `json:"sync_aggregate"`
+	ExecutionPayloadHeader *ExecutionPayloadHeaderDeneb  `json:"execution_payload_header"`
+	BlsToExecutionChanges  []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlobKzgCommitments     []string                      `json:"blob_kzg_commitments" validate:"required,dive,hexadecimal"`
+}
+
+type SignedBlindedBlobSidecar struct {
+	Message   *BlindedBlobSidecar `json:"message"`
+	Signature string              `json:"signature"`
+}
+
+type SignedBlobSidecar struct {
+	Message   *BlobSidecar `json:"message"`
+	Signature string       `json:"signature"`
+}
+
+type BlindedBlobSidecar struct {
+	BlockRoot       string `json:"block_root"`
+	Index           string `json:"index"`
+	Slot            string `json:"slot"`
+	BlockParentRoot string `json:"block_parent_root"`
+	ProposerIndex   string `json:"proposer_index"`
+	BlobRoot        string `json:"blob_root"`
+	KzgCommitment   string `json:"kzg_commitment"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
+	KzgProof        string `json:"kzg_proof"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
+}
+
+type BlobSidecar struct {
+	BlockRoot       string `json:"block_root"`
+	Index           string `json:"index"`
+	Slot            string `json:"slot"`
+	BlockParentRoot string `json:"block_parent_root"`
+	ProposerIndex   string `json:"proposer_index"`
+	Blob            string `json:"blob"`           // pattern: "^0x[a-fA-F0-9]{262144}$"
+	KzgCommitment   string `json:"kzg_commitment"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
+	KzgProof        string `json:"kzg_proof"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
+}
+
+type Eth1Data struct {
+	DepositRoot  string `json:"deposit_root"`
+	DepositCount string `json:"deposit_count"`
+	BlockHash    string `json:"block_hash"`
+}
+
+type ProposerSlashing struct {
+	SignedHeader1 *SignedBeaconBlockHeader `json:"signed_header_1"`
+	SignedHeader2 *SignedBeaconBlockHeader `json:"signed_header_2"`
+}
+
+type AttesterSlashing struct {
+	Attestation1 *IndexedAttestation `json:"attestation_1"`
+	Attestation2 *IndexedAttestation `json:"attestation_2"`
+}
+
+type Deposit struct {
+	Proof []string     `json:"proof" validate:"required,dive,hexadecimal"`
+	Data  *DepositData `json:"data"`
+}
+
+type DepositData struct {
+	Pubkey                string `json:"pubkey"`
+	WithdrawalCredentials string `json:"withdrawal_credentials"`
+	Amount                string `json:"amount"`
+	Signature             string `json:"signature"`
+}
+
+type SignedBeaconBlockHeaderContainer struct {
+	Header    *SignedBeaconBlockHeader `json:"header"`
+	Root      string                   `json:"root"`
+	Canonical bool                     `json:"canonical"`
+}
+
+type SignedBeaconBlockHeader struct {
+	Message   *BeaconBlockHeader `json:"message"`
+	Signature string             `json:"signature"`
+}
+
+type BeaconBlockHeader struct {
+	Slot          string `json:"slot"`
+	ProposerIndex string `json:"proposer_index"`
+	ParentRoot    string `json:"parent_root"`
+	StateRoot     string `json:"state_root"`
+	BodyRoot      string `json:"body_root"`
+}
+
+type IndexedAttestation struct {
+	AttestingIndices []string         `json:"attesting_indices" validate:"required,dive"`
+	Data             *AttestationData `json:"data"`
+	Signature        string           `json:"signature"`
+}
+
+type SyncAggregate struct {
+	SyncCommitteeBits      string `json:"sync_committee_bits"`
+	SyncCommitteeSignature string `json:"sync_committee_signature"`
+}
+
+type ExecutionPayload struct {
+	ParentHash    string   `json:"parent_hash"`
+	FeeRecipient  string   `json:"fee_recipient"`
+	StateRoot     string   `json:"state_root"`
+	ReceiptsRoot  string   `json:"receipts_root"`
+	LogsBloom     string   `json:"logs_bloom"`
+	PrevRandao    string   `json:"prev_randao"`
+	BlockNumber   string   `json:"block_number"`
+	GasLimit      string   `json:"gas_limit"`
+	GasUsed       string   `json:"gas_used"`
+	Timestamp     string   `json:"timestamp"`
+	ExtraData     string   `json:"extra_data"`
+	BaseFeePerGas string   `json:"base_fee_per_gas"`
+	BlockHash     string   `json:"block_hash"`
+	Transactions  []string `json:"transactions" validate:"required,dive,hexadecimal"`
+}
+
+type ExecutionPayloadHeader struct {
+	ParentHash       string `json:"parent_hash"`
+	FeeRecipient     string `json:"fee_recipient"`
+	StateRoot        string `json:"state_root"`
+	ReceiptsRoot     string `json:"receipts_root"`
+	LogsBloom        string `json:"logs_bloom"`
+	PrevRandao       string `json:"prev_randao"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	Timestamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data"`
+	BaseFeePerGas    string `json:"base_fee_per_gas"`
+	BlockHash        string `json:"block_hash"`
+	TransactionsRoot string `json:"transactions_root"`
+}
+
+type ExecutionPayloadCapella struct {
+	ParentHash    string        `json:"parent_hash"`
+	FeeRecipient  string        `json:"fee_recipient"`
+	StateRoot     string        `json:"state_root"`
+	ReceiptsRoot  string        `json:"receipts_root"`
+	LogsBloom     string        `json:"logs_bloom"`
+	PrevRandao    string        `json:"prev_randao"`
+	BlockNumber   string        `json:"block_number"`
+	GasLimit      string        `json:"gas_limit"`
+	GasUsed       string        `json:"gas_used"`
+	Timestamp     string        `json:"timestamp"`
+	ExtraData     string        `json:"extra_data"`
+	BaseFeePerGas string        `json:"base_fee_per_gas"`
+	BlockHash     string        `json:"block_hash"`
+	Transactions  []string      `json:"transactions" validate:"required,dive"`
+	Withdrawals   []*Withdrawal `json:"withdrawals" validate:"required,dive"`
+}
+
+type ExecutionPayloadHeaderCapella struct {
+	ParentHash       string `json:"parent_hash"`
+	FeeRecipient     string `json:"fee_recipient"`
+	StateRoot        string `json:"state_root"`
+	ReceiptsRoot     string `json:"receipts_root"`
+	LogsBloom        string `json:"logs_bloom"`
+	PrevRandao       string `json:"prev_randao"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	Timestamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data"`
+	BaseFeePerGas    string `json:"base_fee_per_gas"`
+	BlockHash        string `json:"block_hash"`
+	TransactionsRoot string `json:"transactions_root"`
+	WithdrawalsRoot  string `json:"withdrawals_root"`
+}
+
+type ExecutionPayloadHeaderDeneb struct {
+	ParentHash       string `json:"parent_hash"`
+	FeeRecipient     string `json:"fee_recipient"`
+	StateRoot        string `json:"state_root"`
+	ReceiptsRoot     string `json:"receipts_root"`
+	LogsBloom        string `json:"logs_bloom"`
+	PrevRandao       string `json:"prev_randao"`
+	BlockNumber      string `json:"block_number"`
+	GasLimit         string `json:"gas_limit"`
+	GasUsed          string `json:"gas_used"`
+	Timestamp        string `json:"timestamp"`
+	ExtraData        string `json:"extra_data"`
+	BaseFeePerGas    string `json:"base_fee_per_gas"`
+	BlobGasUsed      string `json:"blob_gas_used"`   // new in deneb
+	ExcessBlobGas    string `json:"excess_blob_gas"` // new in deneb
+	BlockHash        string `json:"block_hash"`
+	TransactionsRoot string `json:"transactions_root"`
+	WithdrawalsRoot  string `json:"withdrawals_root"`
+}
+
+type Withdrawal struct {
+	WithdrawalIndex  string `json:"index"`
+	ValidatorIndex   string `json:"validator_index"`
+	ExecutionAddress string `json:"address"`
+	Amount           string `json:"amount"`
 }

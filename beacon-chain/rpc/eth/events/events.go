@@ -125,7 +125,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 			return
 		}
-		att := shared.AttestationFromConsensus(attData.Attestation.Aggregate)
+		att := shared.AttFromConsensus(attData.Attestation.Aggregate)
 		send(w, flusher, AttestationTopic, att)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
@@ -136,7 +136,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 			return
 		}
-		att := shared.AttestationFromConsensus(attData.Attestation)
+		att := shared.AttFromConsensus(attData.Attestation)
 		send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
@@ -147,7 +147,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, VoluntaryExitTopic)
 			return
 		}
-		exit := shared.SignedVoluntaryExitFromConsensus(exitData.Exit)
+		exit := shared.SignedExitFromConsensus(exitData.Exit)
 		send(w, flusher, VoluntaryExitTopic, exit)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
@@ -169,12 +169,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, BLSToExecutionChangeTopic)
 			return
 		}
-		change, err := shared.SignedBlsToExecutionChangeFromConsensus(changeData.Change)
-		if err != nil {
-			write(w, flusher, err.Error())
-			return
-		}
-		send(w, flusher, BLSToExecutionChangeTopic, change)
+		send(w, flusher, BLSToExecutionChangeTopic, shared.SignedBLSChangeFromConsensus(changeData.Change))
 	case operation.BlobSidecarReceived:
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
 			return

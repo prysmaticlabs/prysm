@@ -84,31 +84,31 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 
 	switch st.Version() {
 	case version.Phase0:
-		respSt, err = BeaconStateFromConsensus(st)
+		respSt, err = shared.BeaconStateFromConsensus(st)
 		if err != nil {
 			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Altair:
-		respSt, err = BeaconStateAltairFromConsensus(st)
+		respSt, err = shared.BeaconStateAltairFromConsensus(st)
 		if err != nil {
 			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Bellatrix:
-		respSt, err = BeaconStateBellatrixFromConsensus(st)
+		respSt, err = shared.BeaconStateBellatrixFromConsensus(st)
 		if err != nil {
 			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Capella:
-		respSt, err = BeaconStateCapellaFromConsensus(st)
+		respSt, err = shared.BeaconStateCapellaFromConsensus(st)
 		if err != nil {
 			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Deneb:
-		respSt, err = BeaconStateDenebFromConsensus(st)
+		respSt, err = shared.BeaconStateDenebFromConsensus(st)
 		if err != nil {
 			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return

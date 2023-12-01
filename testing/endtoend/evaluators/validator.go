@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -153,19 +154,19 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		case version.String(version.Phase0):
 		// Do Nothing
 		case version.String(version.Altair):
-			st := &debug.BeaconStateAltair{}
+			st := &shared.BeaconStateAltair{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Bellatrix):
-			st := &debug.BeaconStateBellatrix{}
+			st := &shared.BeaconStateBellatrix{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Capella):
-			st := &debug.BeaconStateCapella{}
+			st := &shared.BeaconStateCapella{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}

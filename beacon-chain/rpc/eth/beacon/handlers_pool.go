@@ -56,7 +56,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	if isEmptyReq {
 		allAtts := make([]*shared.Attestation, len(attestations))
 		for i, att := range attestations {
-			allAtts[i] = shared.AttestationFromConsensus(att)
+			allAtts[i] = shared.AttFromConsensus(att)
 		}
 		http2.WriteJson(w, &ListAttestationsResponse{Data: allAtts})
 		return
@@ -69,7 +69,7 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 		slotMatch := rawSlot != "" && att.Data.Slot == primitives.Slot(slot)
 		shouldAppend := (bothDefined && committeeIndexMatch && slotMatch) || (!bothDefined && (committeeIndexMatch || slotMatch))
 		if shouldAppend {
-			filteredAtts = append(filteredAtts, shared.AttestationFromConsensus(att))
+			filteredAtts = append(filteredAtts, shared.AttFromConsensus(att))
 		}
 	}
 	http2.WriteJson(w, &ListAttestationsResponse{Data: filteredAtts})
@@ -187,7 +187,7 @@ func (s *Server) ListVoluntaryExits(w http.ResponseWriter, r *http.Request) {
 	}
 	exits := make([]*shared.SignedVoluntaryExit, len(sourceExits))
 	for i, e := range sourceExits {
-		exits[i] = shared.SignedVoluntaryExitFromConsensus(e)
+		exits[i] = shared.SignedExitFromConsensus(e)
 	}
 
 	http2.WriteJson(w, &ListVoluntaryExitsResponse{Data: exits})
@@ -436,14 +436,8 @@ func (s *Server) ListBLSToExecutionChanges(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	changes, err := shared.SignedBlsToExecutionChangesFromConsensus(sourceChanges)
-	if err != nil {
-		http2.HandleError(w, "failed to decode SignedBlsToExecutionChanges: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	http2.WriteJson(w, &BLSToExecutionChangesPoolResponse{
-		Data: changes,
+		Data: shared.SignedBLSChangesFromConsensus(sourceChanges),
 	})
 }
 

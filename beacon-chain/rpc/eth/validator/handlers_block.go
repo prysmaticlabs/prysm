@@ -336,12 +336,7 @@ func handleProducePhase0V3(
 		http2.WriteSsz(w, sszResp, "phase0Block.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockFromConsensus(blk.Phase0)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	jsonBytes, err := json.Marshal(block)
+	jsonBytes, err := json.Marshal(shared.BeaconBlockFromConsensus(blk.Phase0))
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -371,12 +366,7 @@ func handleProduceAltairV3(
 		http2.WriteSsz(w, sszResp, "altairBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockAltairFromConsensus(blk.Altair)
-	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	jsonBytes, err := json.Marshal(block)
+	jsonBytes, err := json.Marshal(shared.BeaconBlockAltairFromConsensus(blk.Altair))
 	if err != nil {
 		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return

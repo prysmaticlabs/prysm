@@ -1014,19 +1014,19 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 				TransactionsRoot: FillEncodedByteSlice(32, 125),
 				WithdrawalsRoot:  FillEncodedByteSlice(32, 126),
 			},
-			BlsToExecutionChanges: []*shared.SignedBlsToExecutionChange{
+			BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 				{
-					Message: &shared.BlsToExecutionChange{
+					Message: &shared.BLSToExecutionChange{
 						ValidatorIndex:     "135",
-						FromBlsPubkey:      FillEncodedByteSlice(48, 136),
+						FromBLSPubkey:      FillEncodedByteSlice(48, 136),
 						ToExecutionAddress: FillEncodedByteSlice(20, 137),
 					},
 					Signature: FillEncodedByteSlice(96, 138),
 				},
 				{
-					Message: &shared.BlsToExecutionChange{
+					Message: &shared.BLSToExecutionChange{
 						ValidatorIndex:     "139",
-						FromBlsPubkey:      FillEncodedByteSlice(48, 140),
+						FromBLSPubkey:      FillEncodedByteSlice(48, 140),
 						ToExecutionAddress: FillEncodedByteSlice(20, 141),
 					},
 					Signature: FillEncodedByteSlice(96, 142),
