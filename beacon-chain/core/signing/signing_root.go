@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
 // ForkVersionByteLength length of fork version byte array.
@@ -57,31 +56,14 @@ const (
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	fork := st.Fork()
-	// EIP-7044: Beginning in Deneb, fix the fork version to Capella for signed exits.
-	// This allows for signed validator exits to be valid forever.
-	if st.Version() >= version.Deneb && domain == params.BeaconConfig().DomainVoluntaryExit {
-		fork = &ethpb.Fork{
-			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
-			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
-			Epoch:           params.BeaconConfig().CapellaForkEpoch,
-		}
-	}
-
-	d, err := Domain(fork, epoch, domain, st.GenesisValidatorsRoot())
-	if err != nil {
-		return nil, err
-	}
-	sr, err := ComputeSigningRoot(obj, d)
-	if err != nil {
-		return nil, err
-	}
-	return key.Sign(sr[:]).Marshal(), nil
+	return ComputeDomainAndSignWithoutState(st.Fork(), epoch, domain, st.GenesisValidatorsRoot(), obj, key)
 }
 
 // ComputeDomainAndSignWithoutState offers the same functionalit as ComputeDomainAndSign without the need to provide a BeaconState.
 // This is particularly helpful for signing values in tests.
 func ComputeDomainAndSignWithoutState(fork *ethpb.Fork, epoch primitives.Epoch, domain [4]byte, vr []byte, obj fssz.HashRoot, key bls.SecretKey) ([]byte, error) {
+	// EIP-7044: Beginning in Deneb, fix the fork version to Capella for signed exits.
+	// This allows for signed validator exits to be valid forever.
 	if domain == params.BeaconConfig().DomainVoluntaryExit && epoch >= params.BeaconConfig().DenebForkEpoch {
 		fork = &ethpb.Fork{
 			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
@@ -123,11 +105,7 @@ func Data(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	if err != nil {
 		return [32]byte{}, err
 	}
-	container := &ethpb.SigningData{
-		ObjectRoot: objRoot[:],
-		Domain:     domain,
-	}
-	return container.HashTreeRoot()
+	return ComputeSigningRootForRoot(objRoot, domain)
 }
 
 // ComputeSigningRootForRoot works the same as ComputeSigningRoot,

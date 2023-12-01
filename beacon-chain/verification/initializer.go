@@ -36,9 +36,6 @@ type StateByRooter interface {
 // sharedResources provides access to resources that are required by different verification types.
 // for example, sidecar verifcation and block verification share the block signature verification cache.
 type sharedResources struct {
-	sync.RWMutex
-	ready bool
-	cw    startup.ClockWaiter
 	clock *startup.Clock
 	fc    Forkchoicer
 	sc    SignatureCache
@@ -47,61 +44,11 @@ type sharedResources struct {
 	sr    StateByRooter
 }
 
-func (r *sharedResources) isReady() bool {
-	r.RLock()
-	defer r.RUnlock()
-	return r.ready
-}
-
-func (r *sharedResources) waitForReady(ctx context.Context) error {
-	if r.isReady() {
-		return nil
-	}
-	clock, err := r.cw.WaitForClock(ctx)
-	if err != nil {
-		return err
-	}
-	r.Lock()
-	defer r.Unlock()
-	if !r.ready {
-		r.clock = clock
-		r.ready = true
-	}
-	return nil
-}
-
 // Initializer is used to create different Verifiers.
 // Verifiers require access to stateful data structures, like caches,
 // and it is Initializer's job to provides access to those.
 type Initializer struct {
 	shared *sharedResources
-}
-
-// InitializerWaiter provides an Initializer once all dependent resources are ready
-// via the WaitForInitializer method.
-type InitializerWaiter struct {
-	ini *Initializer
-}
-
-func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCache, pc ProposerCache, db Database, sr StateByRooter) *InitializerWaiter {
-	shared := &sharedResources{
-		cw: cw,
-		fc: fc,
-		sc: sc,
-		pc: pc,
-		db: db,
-		sr: sr,
-	}
-	return &InitializerWaiter{ini: &Initializer{shared: shared}}
-}
-
-// WaitForInitializer ensures that asynchronous initialization of the shared resources the initializer
-// depends on has completed beofe the underlying Initializer is accessible by client code.
-func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initializer, error) {
-	if err := w.ini.shared.waitForReady(ctx); err != nil {
-		return nil, err
-	}
-	return w.ini, nil
 }
 
 // NewBlobVerifier creates a BlobVerifier for a single blob, with the given set of requirements.
@@ -112,4 +59,50 @@ func (ini *Initializer) NewBlobVerifier(ctx context.Context, b blocks.ROBlob, re
 		results:              newResults(reqs...),
 		verifyBlobCommitment: kzg.VerifyROBlobCommitment,
 	}
+}
+
+// InitializerWaiter provides an Initializer once all dependent resources are ready
+// via the WaitForInitializer method.
+type InitializerWaiter struct {
+	sync.RWMutex
+	ready bool
+	cw    startup.ClockWaiter
+	ini   *Initializer
+}
+
+// NewInitializerWaiter creates an InitializerWaiter which can be used to obtain an Initializer once async dependencies are ready.
+func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCache, pc ProposerCache, db Database, sr StateByRooter) *InitializerWaiter {
+	shared := &sharedResources{
+		fc: fc,
+		sc: sc,
+		pc: pc,
+		db: db,
+		sr: sr,
+	}
+	return &InitializerWaiter{cw: cw, ini: &Initializer{shared: shared}}
+}
+
+// WaitForInitializer ensures that asynchronous initialization of the shared resources the initializer
+// depends on has completed beofe the underlying Initializer is accessible by client code.
+func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initializer, error) {
+	if err := w.waitForReady(ctx); err != nil {
+		return nil, err
+	}
+	return w.ini, nil
+}
+
+func (w *InitializerWaiter) waitForReady(ctx context.Context) error {
+	w.Lock()
+	defer w.Unlock()
+	if w.ready {
+		return nil
+	}
+
+	clock, err := w.cw.WaitForClock(ctx)
+	if err != nil {
+		return err
+	}
+	w.ini.shared.clock = clock
+	w.ready = true
+	return nil
 }
