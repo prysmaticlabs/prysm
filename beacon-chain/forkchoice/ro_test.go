@@ -34,6 +34,7 @@ const (
 	shouldOverrideFCUCalled
 	slotCalled
 	lastRootCalled
+	targetRootCalled
 )
 
 // ensures that the correct func was called with the correct lock pattern
@@ -134,6 +135,11 @@ func TestROLocking(t *testing.T) {
 			call: lastRootCalled,
 			cb:   func(g FastGetter) { g.LastRoot(0) },
 		},
+		{
+			name: "targetRootCalled",
+			call: targetRootCalled,
+			cb:   func(g FastGetter) { g.TargetRoot([32]byte{}) },
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -149,6 +155,12 @@ func TestROLocking(t *testing.T) {
 
 type mockROForkchoice struct {
 	calls []mockCall
+}
+
+// TargetRoot implements FastGetter.
+func (ro *mockROForkchoice) TargetRoot([32]byte) ([32]byte, error) {
+	ro.calls = append(ro.calls, targetRootCalled)
+	return [32]byte{}, nil
 }
 
 var _ FastGetter = &mockROForkchoice{}

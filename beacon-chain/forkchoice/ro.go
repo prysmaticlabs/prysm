@@ -155,3 +155,9 @@ func (ro *ROForkChoice) LastRoot(e primitives.Epoch) [32]byte {
 	defer ro.l.RUnlock()
 	return ro.getter.LastRoot(e)
 }
+
+func (ro *ROForkChoice) TargetRoot(root [32]byte) ([32]byte, error) {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.TargetRoot(root)
+}
