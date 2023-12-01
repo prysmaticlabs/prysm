@@ -14,11 +14,11 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/io/logs"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
@@ -183,9 +183,6 @@ func (s *Server) Start() {
 
 	// Register services available for the gRPC server.
 	reflection.Register(s.grpcServer)
-	validatorpb.RegisterAuthServer(s.grpcServer, s)
-	validatorpb.RegisterBeaconServer(s.grpcServer, s)
-	validatorpb.RegisterAccountsServer(s.grpcServer, s)
 
 	// routes needs to be set before the server calls the server function
 	go func() {
@@ -204,7 +201,7 @@ func (s *Server) Start() {
 			return
 		}
 		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
-		authTokenPath := filepath.Join(s.walletDir, authTokenFileName)
+		authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
 		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
 	}
@@ -216,6 +213,8 @@ func (s *Server) InitializeRoutes() error {
 	if s.router == nil {
 		return errors.New("no router found on server")
 	}
+	// Adding Auth Interceptor for the routes below
+	s.router.Use(s.JwtHttpInterceptor)
 	// Register all services, HandleFunc calls, etc.
 	// ...
 	s.router.HandleFunc("/eth/v1/keystores", s.ListKeystores).Methods(http.MethodGet)
@@ -231,18 +230,30 @@ func (s *Server) InitializeRoutes() error {
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.SetFeeRecipientByPubkey).Methods(http.MethodPost)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/feerecipient", s.DeleteFeeRecipientByPubkey).Methods(http.MethodDelete)
 	s.router.HandleFunc("/eth/v1/validator/{pubkey}/voluntary_exit", s.SetVoluntaryExit).Methods(http.MethodPost)
+	// auth endpoint
+	s.router.HandleFunc(api.WebUrlPrefix+"initialize", s.Initialize).Methods(http.MethodGet)
+	// accounts endpoints
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts", s.ListAccounts).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts/backup", s.BackupAccounts).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"accounts/voluntary-exit", s.VoluntaryExit).Methods(http.MethodPost)
 	// web health endpoints
-	s.router.HandleFunc("/v2/validator/health/version", s.GetVersion).Methods(http.MethodGet)
-	s.router.HandleFunc("/v2/validator/health/logs/validator/stream", s.StreamValidatorLogs).Methods(http.MethodGet)
-	s.router.HandleFunc("/v2/validator/health/logs/beacon/stream", s.StreamBeaconLogs).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"health/version", s.GetVersion).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"health/logs/validator/stream", s.StreamValidatorLogs).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"health/logs/beacon/stream", s.StreamBeaconLogs).Methods(http.MethodGet)
+	// Beacon calls
+	s.router.HandleFunc(api.WebUrlPrefix+"beacon/status", s.GetBeaconStatus).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"beacon/summary", s.GetValidatorPerformance).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"beacon/validators", s.GetValidators).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"beacon/balances", s.GetValidatorBalances).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"beacon/peers", s.GetPeers).Methods(http.MethodGet)
 	// web wallet endpoints
-	s.router.HandleFunc("/v2/validator/wallet", s.WalletConfig).Methods(http.MethodGet)
-	s.router.HandleFunc("/v2/validator/wallet/create", s.CreateWallet).Methods(http.MethodPost)
-	s.router.HandleFunc("/v2/validator/wallet/keystores/validate", s.ValidateKeystores).Methods(http.MethodPost)
-	s.router.HandleFunc("/v2/validator/wallet/recover", s.RecoverWallet).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"wallet", s.WalletConfig).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"wallet/create", s.CreateWallet).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"wallet/keystores/validate", s.ValidateKeystores).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"wallet/recover", s.RecoverWallet).Methods(http.MethodPost)
 	// slashing protection endpoints
-	s.router.HandleFunc("/v2/validator/slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
-	s.router.HandleFunc("/v2/validator/slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
+	s.router.HandleFunc(api.WebUrlPrefix+"slashing-protection/export", s.ExportSlashingProtection).Methods(http.MethodGet)
+	s.router.HandleFunc(api.WebUrlPrefix+"slashing-protection/import", s.ImportSlashingProtection).Methods(http.MethodPost)
 	log.Info("Initialized REST API routes")
 	return nil
 }
