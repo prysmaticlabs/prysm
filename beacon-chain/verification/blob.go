@@ -115,6 +115,9 @@ func (bv *BlobVerifier) SlotBelowMaxDisparity() (err error) {
 	return nil
 }
 
+// SlotBelowFinalized represents the spec verification:
+// [IGNORE] The sidecar is from a slot greater than the latest finalized slot
+// -- i.e. validate that block_header.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
 func (bv *BlobVerifier) SlotBelowFinalized() (err error) {
 	defer bv.recordResult(RequireSlotBelowFinalized, &err)
 	fcp := bv.fc.FinalizedCheckpoint()
@@ -128,9 +131,12 @@ func (bv *BlobVerifier) SlotBelowFinalized() (err error) {
 	return nil
 }
 
+// ValidProposerSignature represents the spec verification:
+// [REJECT] The proposer signature of blob_sidecar.signed_block_header,
+// is valid with respect to the block_header.proposer_index pubkey.
 func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireValidProposerSignature, &err)
-	sd := bv.sigData()
+	sd := blobToSignatureData(bv.blob)
 	// First check if there is a cached verification that can be reused.
 	seen, err := bv.sc.SignatureVerified(sd)
 	if seen {
@@ -155,18 +161,9 @@ func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) 
 	return nil
 }
 
-func (bv *BlobVerifier) parentState(ctx context.Context) (state.BeaconState, error) {
-	if bv.parent != nil {
-		return bv.parent, nil
-	}
-	st, err := bv.sr.StateByRoot(ctx, bv.blob.ParentRoot())
-	if err != nil {
-		return nil, err
-	}
-	bv.parent = st
-	return bv.parent, nil
-}
-
+// SidecarParentSeen represents the spec verification:
+// [IGNORE] The sidecar's block's parent (defined by block_header.parent_root) has been seen
+// (via both gossip and non-gossip sources) (a client MAY queue sidecars for processing once the parent block is retrieved).
 func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentSeen, &err)
 	if bv.fc.HasNode(bv.blob.ParentRoot()) {
@@ -178,6 +175,8 @@ func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err er
 	return ErrSidecarParentSeen
 }
 
+// SidecareParentValid represents the spec verification:
+// [REJECT] The sidecar's block's parent (defined by block_header.parent_root) passes validation.
 func (bv *BlobVerifier) SidecareParentValid(badParent func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentValid, &err)
 	if badParent != nil && badParent(bv.blob.ParentRoot()) {
@@ -186,6 +185,8 @@ func (bv *BlobVerifier) SidecareParentValid(badParent func([32]byte) bool) (err 
 	return nil
 }
 
+// SidecarParentSlotLower represents the spec verification:
+// [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by block_header.parent_root).
 func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
 	defer bv.recordResult(RequireSidecarParentSlotLower, &err)
 	parentSlot, err := bv.fc.Slot(bv.blob.ParentRoot())
@@ -198,6 +199,9 @@ func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
 	return ErrSidecarParentSlotLower
 }
 
+// SidecarDescendsFromFinalized represents the spec verification:
+// [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
+// -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch) == store.finalized_checkpoint.root.
 func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
 	if bv.fc.IsCanonical(bv.blob.ParentRoot()) {
@@ -206,6 +210,8 @@ func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	return ErrSidecarDescendsFromFinalized
 }
 
+// SidecarInclusionProven represents the spec verification:
+// [REJECT] The sidecar's inclusion proof is valid as verified by verify_blob_sidecar_inclusion_proof(blob_sidecar).
 func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 	defer bv.recordResult(RequireSidecarInclusionProven, &err)
 	if err := blocks.VerifyKZGInclusionProof(bv.blob); err != nil {
@@ -215,6 +221,9 @@ func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 	return nil
 }
 
+// SidecarBlobCommitmentProven represents the spec verification:
+// [REJECT] The sidecar's blob is valid as verified by
+// verify_blob_kzg_proof(blob_sidecar.blob, blob_sidecar.kzg_commitment, blob_sidecar.kzg_proof).
 func (bv *BlobVerifier) SidecarBlobCommitmentProven() (err error) {
 	defer bv.recordResult(RequireSidecarBlobCommitmentProven, &err)
 	if err := bv.verifyBlobCommitment(bv.blob); err != nil {
@@ -224,6 +233,10 @@ func (bv *BlobVerifier) SidecarBlobCommitmentProven() (err error) {
 	return nil
 }
 
+// [REJECT] The sidecar is proposed by the expected proposer_index for the block's slot
+// in the context of the current shuffling (defined by block_header.parent_root/block_header.slot).
+// If the proposer_index cannot immediately be verified against the expected shuffling, the sidecar MAY be queued
+// for later processing while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE this message.
 func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireSidecarProposerExpected, &err)
 	idx, cached := bv.pc.Proposer(bv.blob.ParentRoot(), bv.blob.Slot())
@@ -248,6 +261,18 @@ func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error)
 	return nil
 }
 
+func (bv *BlobVerifier) parentState(ctx context.Context) (state.BeaconState, error) {
+	if bv.parent != nil {
+		return bv.parent, nil
+	}
+	st, err := bv.sr.StateByRoot(ctx, bv.blob.ParentRoot())
+	if err != nil {
+		return nil, err
+	}
+	bv.parent = st
+	return bv.parent, nil
+}
+
 func blobToSignatureData(b blocks.ROBlob) SignatureData {
 	return SignatureData{
 		Root:      b.BlockRoot(),
@@ -256,8 +281,4 @@ func blobToSignatureData(b blocks.ROBlob) SignatureData {
 		Proposer:  b.ProposerIndex(),
 		Slot:      b.Slot(),
 	}
-}
-
-func (bv *BlobVerifier) sigData() SignatureData {
-	return blobToSignatureData(bv.blob)
 }
