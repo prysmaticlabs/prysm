@@ -92,6 +92,8 @@ package mvslice
 import (
 	"fmt"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // Id is an object identifier.
@@ -504,4 +506,35 @@ func deleteElemFromSlice[T any](s []T, i int) []T {
 	s[i] = s[len(s)-1] // Copy last element to index i.
 	s = s[:len(s)-1]   // Truncate slice.
 	return s
+}
+
+// EmptyMVSlice specifies a type which allows a normal slice to conform
+// to the multivalue slice interface.
+type EmptyMVSlice[V comparable] struct {
+	fullSlice []V
+}
+
+func (e EmptyMVSlice[V]) Len(_ Identifiable) int {
+	return len(e.fullSlice)
+}
+
+func (e EmptyMVSlice[V]) At(_ Identifiable, index uint64) (V, error) {
+	if index >= uint64(len(e.fullSlice)) {
+		var def V
+		return def, errors.Errorf("index %d out of bounds", index)
+	}
+	return e.fullSlice[index], nil
+}
+
+func (e EmptyMVSlice[V]) Value(_ Identifiable) []V {
+	return e.fullSlice
+}
+
+// BuildEmptyCompositeSlice builds a composite multivalue object with a native
+// slice.
+func BuildEmptyCompositeSlice[V comparable](values []V) MultiValueSliceComposite[V] {
+	return MultiValueSliceComposite[V]{
+		Identifiable:    nil,
+		MultiValueSlice: EmptyMVSlice[V]{fullSlice: values},
+	}
 }
