@@ -2,7 +2,6 @@ package blob
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +13,6 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -22,6 +20,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
 func TestParseIndices(t *testing.T) {
@@ -36,39 +35,11 @@ func TestBlobs(t *testing.T) {
 
 	db := testDB.SetupDB(t)
 	blockroot := bytesutil.PadTo([]byte("blockroot"), 32)
-
-	blobs := []*eth.BlobSidecar{
-		{
-			Index:         0,
-			Blob:          []byte("blob0"),
-			KzgCommitment: []byte("kzgcommitment0"),
-			KzgProof:      []byte("kzgproof0"),
-		},
-		{
-			Index:         1,
-			Blob:          []byte("blob1"),
-			KzgCommitment: []byte("kzgcommitment1"),
-			KzgProof:      []byte("kzgproof1"),
-		},
-		{
-			Index:         2,
-			Blob:          []byte("blob2"),
-			KzgCommitment: []byte("kzgcommitment2"),
-			KzgProof:      []byte("kzgproof2"),
-		},
-		{
-			Index:         3,
-			Blob:          []byte("blob3"),
-			KzgCommitment: []byte("kzgcommitment3"),
-			KzgProof:      []byte("kzgproof3"),
-		},
-	}
+	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 4)
 	verifiedBlob := make([]blocks.VerifiedROBlob, len(blobs))
-	bm, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
+	_, bs := filesystem.NewEphemeralBlobStorageWithMocker(t)
 	for i := range verifiedBlob {
-		roBlob, err := blocks.NewROBlob(blobs[i])
-		require.NoError(t, err)
-		require.NoError(t, bs.Save(blocks.NewVerifiedROBlob(roBlob)))
+		require.NoError(t, bs.Save(blocks.NewVerifiedROBlob(blobs[i])))
 	}
 
 	t.Run("genesis", func(t *testing.T) {
@@ -94,6 +65,7 @@ func TestBlobs(t *testing.T) {
 		s := &Server{
 			ChainInfoFetcher: &mockChain.ChainService{Root: blockroot},
 			BeaconDB:         db,
+			BlobStorage:      bs,
 		}
 
 		s.Blobs(writer, request)
@@ -183,7 +155,8 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		s := &Server{
-			BeaconDB: db,
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 
 		s.Blobs(writer, request)
@@ -199,7 +172,8 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		s := &Server{
-			BeaconDB: db,
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 
 		s.Blobs(writer, request)
@@ -246,18 +220,18 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "could not parse block ID"))
 	})
 	t.Run("ssz", func(t *testing.T) {
-		require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
-			{
-				BlockRoot:       blockroot,
-				Index:           0,
-				Slot:            3,
-				BlockParentRoot: make([]byte, fieldparams.RootLength),
-				ProposerIndex:   123,
-				Blob:            make([]byte, fieldparams.BlobLength),
-				KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
-				KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
-			},
-		}))
+		//require.NoError(t, db.SaveBlobSidecar(context.Background(), []*eth.DeprecatedBlobSidecar{
+		//	{
+		//		BlockRoot:       blockroot,
+		//		Index:           0,
+		//		Slot:            3,
+		//		BlockParentRoot: make([]byte, fieldparams.RootLength),
+		//		ProposerIndex:   123,
+		//		Blob:            make([]byte, fieldparams.BlobLength),
+		//		KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
+		//		KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
+		//	},
+		//}))
 		u := "http://foo.example/finalized?indices=0"
 		request := httptest.NewRequest("GET", u, nil)
 		request.Header.Add("Accept", "application/octet-stream")
@@ -266,6 +240,7 @@ func TestBlobs(t *testing.T) {
 		s := &Server{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockroot}},
 			BeaconDB:         db,
+			BlobStorage:      bs,
 		}
 
 		s.Blobs(writer, request)
