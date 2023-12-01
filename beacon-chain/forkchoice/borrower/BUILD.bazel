@@ -1,0 +1,19 @@
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["borrower.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/borrower",
+    visibility = ["//visibility:public"],
+    deps = ["//beacon-chain/forkchoice:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["borrower_test.go"],
+    deps = [
+        ":go_default_library",
+        "//beacon-chain/forkchoice/doubly-linked-tree:go_default_library",
+        "//testing/require:go_default_library",
+    ],
+)
