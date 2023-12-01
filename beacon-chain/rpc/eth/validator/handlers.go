@@ -45,13 +45,13 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	defer span.End()
 
 	attDataRoot := r.URL.Query().Get("attestation_data_root")
-	attDataRootBytes, valid := shared.ValidateHex(w, "Attestation data root", attDataRoot, fieldparams.RootLength)
+	attDataRootBytes, valid := shared.ValidateHex(w, "attestation_data_root", attDataRoot, fieldparams.RootLength)
 	if !valid {
 		return
 	}
 
 	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
 	}
@@ -407,12 +407,12 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
 	}
 	rawCommitteeIndex := r.URL.Query().Get("committee_index")
-	committeeIndex, valid := shared.ValidateUint(w, "Committee Index", rawCommitteeIndex)
+	committeeIndex, valid := shared.ValidateUint(w, "committee_index", rawCommitteeIndex)
 	if !valid {
 		return
 	}
@@ -451,12 +451,12 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	defer span.End()
 
 	subIndex := r.URL.Query().Get("subcommittee_index")
-	index, valid := shared.ValidateUint(w, "Subcommittee Index", subIndex)
+	index, valid := shared.ValidateUint(w, "subcommittee_index", subIndex)
 	if !valid {
 		return
 	}
 	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "Slot", rawSlot)
+	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
 	}
@@ -576,11 +576,11 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	var validatorIndices []primitives.ValidatorIndex
 	// filter for found fee recipients
 	for _, r := range jsonFeeRecipients {
-		validatorIndex, valid := shared.ValidateUint(w, "Validator Index", r.ValidatorIndex)
+		validatorIndex, valid := shared.ValidateUint(w, "validator_index", r.ValidatorIndex)
 		if !valid {
 			return
 		}
-		feeRecipientBytes, valid := shared.ValidateHex(w, "Fee Recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
+		feeRecipientBytes, valid := shared.ValidateHex(w, "fee_recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
 		if !valid {
 			return
 		}
@@ -622,7 +622,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
 	if !valid {
 		return
 	}
@@ -752,7 +752,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
 	if !valid {
 		return
 	}
@@ -883,7 +883,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 	}
 
 	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
 	if !valid {
 		return
 	}
@@ -1013,7 +1013,7 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "Epoch", rawEpoch)
+	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
 	if !valid {
 		return
 	}

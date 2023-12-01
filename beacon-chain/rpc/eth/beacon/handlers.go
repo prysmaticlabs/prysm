@@ -1697,7 +1697,7 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	var blkRoots [][32]byte
 
 	if rawParentRoot != "" {
-		parentRoot, valid := shared.ValidateHex(w, "Parent Root", rawParentRoot, fieldparams.RootLength)
+		parentRoot, valid := shared.ValidateHex(w, "parent_root", rawParentRoot, fieldparams.RootLength)
 		if !valid {
 			return
 		}
@@ -1710,7 +1710,7 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 		slot := uint64(s.ChainInfoFetcher.HeadSlot())
 		if rawSlot != "" {
 			var valid bool
-			slot, valid = shared.ValidateUint(w, "Slot", rawSlot)
+			slot, valid = shared.ValidateUint(w, "slot", rawSlot)
 			if !valid {
 				return
 			}

@@ -204,7 +204,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 	}
 	bytePubKeys := make([][]byte, len(req.Pubkeys))
 	for i, pubkey := range req.Pubkeys {
-		key, ok := shared.ValidateHex(w, "Pubkey", pubkey, fieldparams.BLSPubkeyLength)
+		key, ok := shared.ValidateHex(w, fmt.Sprintf("pubkeys[%d]", i), pubkey, fieldparams.BLSPubkeyLength)
 		if !ok {
 			return
 		}
@@ -597,7 +597,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	ethAddress, valid := shared.ValidateHex(w, "Ethereum Address", req.Ethaddress, fieldparams.FeeRecipientLength)
+	ethAddress, valid := shared.ValidateHex(w, "ethaddress", req.Ethaddress, fieldparams.FeeRecipientLength)
 	if !valid {
 		return
 	}
@@ -762,7 +762,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gasLimit, valid := shared.ValidateUint(w, "Gas Limit", req.GasLimit)
+	gasLimit, valid := shared.ValidateUint(w, "gas_limit", req.GasLimit)
 	if !valid {
 		return
 	}
