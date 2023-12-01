@@ -64,7 +64,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	currentSecret := srv.jwtSecret
 	require.Equal(t, true, len(currentSecret) > 0)
 
-	authTokenPath := filepath.Join(walletDir, authTokenFileName)
+	authTokenPath := filepath.Join(walletDir, AuthTokenFileName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -81,7 +81,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
-	err = os.Remove(authTokenFileName)
+	err = os.Remove(AuthTokenFileName)
 	require.NoError(t, err)
 }
 

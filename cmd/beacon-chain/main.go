@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -142,11 +143,14 @@ func init() {
 }
 
 func main() {
+	// rctx = root context with cancellation.
+	// note other instances of ctx in this func are *cli.Context.
+	rctx, cancel := context.WithCancel(context.Background())
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum"
 	app.Action = func(ctx *cli.Context) error {
-		if err := startNode(ctx); err != nil {
+		if err := startNode(ctx, cancel); err != nil {
 			return cli.Exit(err.Error(), 1)
 		}
 		return nil
@@ -219,12 +223,12 @@ func main() {
 		}
 	}()
 
-	if err := app.Run(os.Args); err != nil {
+	if err := app.RunContext(rctx, os.Args); err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func startNode(ctx *cli.Context) error {
+func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 	// Fix data dir for Windows users.
 	outdatedDataDir := filepath.Join(file.HomeDir(), "AppData", "Roaming", "Eth2")
 	currentDataDir := ctx.String(cmd.DataDirFlag.Name)
@@ -292,7 +296,7 @@ func startNode(ctx *cli.Context) error {
 		}
 	}
 
-	beacon, err := node.New(ctx, opts...)
+	beacon, err := node.New(ctx, cancel, opts...)
 	if err != nil {
 		return fmt.Errorf("unable to start beacon node: %w", err)
 	}
