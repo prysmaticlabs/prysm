@@ -6,7 +6,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -58,13 +58,13 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 		MissingValidators:             computed.MissingValidators,
 		InactivityScores:              computed.InactivityScores, // Only populated in Altair
 	}
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 func handleHTTPError(w http.ResponseWriter, message string, code int) {
-	errJson := &http2.DefaultErrorJson{
+	errJson := &httputil.DefaultErrorJson{
 		Message: message,
 		Code:    code,
 	}
-	http2.WriteError(w, errJson)
+	httputil.WriteError(w, errJson)
 }

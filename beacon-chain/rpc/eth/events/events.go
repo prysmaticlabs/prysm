@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -71,19 +71,19 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		httputil.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
 	topics := r.URL.Query()["topics"]
 	if len(topics) == 0 {
-		http2.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
+		httputil.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
 		return
 	}
 	topicsMap := make(map[string]bool)
 	for _, topic := range topics {
 		if _, ok := casesHandled[topic]; !ok {
-			http2.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
+			httputil.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
 			return
 		}
 		topicsMap[topic] = true

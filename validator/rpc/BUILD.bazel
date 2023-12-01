@@ -38,7 +38,7 @@ go_library(
         "//io/logs:go_default_library",
         "//io/prompt:go_default_library",
         "//monitoring/tracing:go_default_library",
-        "//network/http:go_default_library",
+        "//network/httputil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",

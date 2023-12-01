@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
@@ -53,7 +53,7 @@ func TestWriteStateFetchError(t *testing.T) {
 		assert.Equal(t, c.expectedCode, writer.Code, "incorrect status code")
 		assert.StringContains(t, c.expectedMessage, writer.Body.String(), "incorrect error message")
 
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		assert.NoError(t, json.Unmarshal(writer.Body.Bytes(), e), "failed to unmarshal response")
 	}
 }

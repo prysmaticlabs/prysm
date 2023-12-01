@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
@@ -139,7 +139,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			return err
 		}
 		if httpResp.StatusCode != http.StatusOK {
-			e := http2.DefaultErrorJson{}
+			e := httputil.DefaultErrorJson{}
 			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
 				return err
 			}

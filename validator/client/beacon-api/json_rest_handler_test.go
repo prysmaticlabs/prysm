@@ -12,7 +12,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -146,7 +146,7 @@ func decodeRespTest(t *testing.T) {
 	})
 	t.Run("non-200 JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
-		b, err := json.Marshal(&http2.DefaultErrorJson{Code: http.StatusInternalServerError, Message: "error"})
+		b, err := json.Marshal(&httputil.DefaultErrorJson{Code: http.StatusInternalServerError, Message: "error"})
 		require.NoError(t, err)
 		body.Write(b)
 		r := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}

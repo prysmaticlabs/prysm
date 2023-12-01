@@ -34,7 +34,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -275,7 +275,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -290,7 +290,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -433,7 +433,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -449,7 +449,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
@@ -466,7 +466,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Invalid exit"))
@@ -495,7 +495,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not get validator"))
@@ -590,7 +590,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		require.NoError(t, err)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
@@ -610,7 +610,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -624,7 +624,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -1341,7 +1341,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitAttesterSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &http2.DefaultErrorJson{}
+	e := &httputil.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid attester slashing", e.Message)
@@ -1532,7 +1532,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitProposerSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &http2.DefaultErrorJson{}
+	e := &httputil.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid proposer slashing", e.Message)

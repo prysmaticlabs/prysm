@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
@@ -24,54 +24,54 @@ func (s *Server) GetPeer(w http.ResponseWriter, r *http.Request) {
 
 	rawId := mux.Vars(r)["peer_id"]
 	if rawId == "" {
-		http2.HandleError(w, "peer_id is required in URL params", http.StatusBadRequest)
+		httputil.HandleError(w, "peer_id is required in URL params", http.StatusBadRequest)
 		return
 	}
 
 	peerStatus := s.PeersFetcher.Peers()
 	id, err := peer.Decode(rawId)
 	if err != nil {
-		http2.HandleError(w, "Invalid peer ID: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "Invalid peer ID: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
 		if errors.Is(err, peerdata.ErrPeerUnknown) {
-			http2.HandleError(w, "Peer not found: "+err.Error(), http.StatusNotFound)
+			httputil.HandleError(w, "Peer not found: "+err.Error(), http.StatusNotFound)
 			return
 		}
-		http2.HandleError(w, "Could not obtain ENR: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not obtain ENR: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	serializedEnr, err := p2p.SerializeENR(enr)
 	if err != nil {
-		http2.HandleError(w, "Could not obtain ENR: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not obtain ENR: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	p2pAddress, err := peerStatus.Address(id)
 	if err != nil {
-		http2.HandleError(w, "Could not obtain address: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not obtain address: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	state, err := peerStatus.ConnectionState(id)
 	if err != nil {
-		http2.HandleError(w, "Could not obtain connection state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not obtain connection state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	direction, err := peerStatus.Direction(id)
 	if err != nil {
-		http2.HandleError(w, "Could not obtain direction: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not obtain direction: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {
-		http2.HandleError(w, "Peer not found", http.StatusNotFound)
+		httputil.HandleError(w, "Peer not found", http.StatusNotFound)
 		return
 	}
 
 	v1ConnState := migration.V1Alpha1ConnectionStateToV1(eth.ConnectionState(state))
 	v1PeerDirection, err := migration.V1Alpha1PeerDirectionToV1(eth.PeerDirection(direction))
 	if err != nil {
-		http2.HandleError(w, "Could not handle peer direction: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not handle peer direction: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -84,7 +84,7 @@ func (s *Server) GetPeer(w http.ResponseWriter, r *http.Request) {
 			Direction:          strings.ToLower(v1PeerDirection.String()),
 		},
 	}
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }
 
 // GetPeers retrieves data about the node's network peers.
@@ -104,7 +104,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 		for _, id := range allIds {
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
-				http2.HandleError(w, "Could not get peer info: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "Could not get peer info: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			if p == nil {
@@ -113,7 +113,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 			allPeers = append(allPeers, p)
 		}
 		resp := &GetPeersResponse{Data: allPeers}
-		http2.WriteJson(w, resp)
+		httputil.WriteJson(w, resp)
 		return
 	}
 
@@ -168,7 +168,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 	for _, id := range filteredIds {
 		p, err := peerInfo(peerStatus, id)
 		if err != nil {
-			http2.HandleError(w, "Could not get peer info: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not get peer info: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		if p == nil {
@@ -178,7 +178,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp := &GetPeersResponse{Data: filteredPeers}
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }
 
 // GetPeerCount retrieves number of known peers.
@@ -196,7 +196,7 @@ func (s *Server) GetPeerCount(w http.ResponseWriter, r *http.Request) {
 			Disconnecting: strconv.FormatInt(int64(len(peerStatus.Disconnecting())), 10),
 		},
 	}
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }
 
 func handleEmptyFilters(states []string, directions []string) (emptyState, emptyDirection bool) {
