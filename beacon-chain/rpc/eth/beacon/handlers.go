@@ -1543,9 +1543,7 @@ func (s *Server) GetBlockRoot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	response := &BlockRootResponse{
-		Data: &struct {
-			Root string `json:"root"`
-		}{
+		Data: &BlockRoot{
 			Root: hexutil.Encode(root),
 		},
 		ExecutionOptimistic: isOptimistic,

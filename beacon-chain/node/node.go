@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -938,9 +937,6 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
 		apigateway.WithAllowedOrigins(allowedOrigins),
 		apigateway.WithTimeout(uint64(timeout)),
-	}
-	if flags.EnableHTTPEthAPI(httpModules) {
-		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 	g, err := apigateway.New(b.ctx, opts...)
 	if err != nil {
