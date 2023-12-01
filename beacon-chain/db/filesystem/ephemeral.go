@@ -3,8 +3,8 @@ package filesystem
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/spf13/afero"
-	"github.com/urfave/cli/v2"
 )
 
 // NewEphemeralBlobStorage should only be used for tests.
@@ -18,11 +18,8 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 // in order to interact with it outside the parameters of the BlobStorage api.
 func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	retentionSlot, err := determineRetentionSlot(&cli.Context{})
-	if err != nil {
-		return nil, nil, err
-	}
-	return fs, &BlobStorage{fs: fs, retentionSlot: retentionSlot}, nil
+	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	return fs, &BlobStorage{fs: fs, retentionEpoch: retentionEpoch}, nil
 }
 
 type BlobMocker struct {

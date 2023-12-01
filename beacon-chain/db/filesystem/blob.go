@@ -47,32 +47,19 @@ func NewBlobStorage(cliCtx *cli.Context, base string) (*BlobStorage, error) {
 		return nil, err
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	retentionSlot, err := determineRetentionSlot(cliCtx)
-	if err != nil {
-		return nil, err
-	}
-	return &BlobStorage{fs: fs, retentionSlot: retentionSlot}, nil
-}
 
-// determineRetentionEpoch if a user defined retention epoch is set, we use that instead
-// of the default value. And return the first slot of the epoch + buffer period.
-func determineRetentionSlot(cliCtx *cli.Context) (primitives.Slot, error) {
 	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
 		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
 		retentionEpoch = primitives.Epoch(epochValue)
 	}
-	retentionSlot, err := slots.EpochStart(retentionEpoch + bufferEpochs)
-	if err != nil {
-		return 0, err
-	}
-	return retentionSlot, nil
+	return &BlobStorage{fs: fs, retentionEpoch: retentionEpoch}, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs            afero.Fs
-	retentionSlot primitives.Slot
+	fs             afero.Fs
+	retentionEpoch primitives.Epoch
 }
 
 // Save saves blobs given a list of sidecars.
@@ -211,7 +198,11 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	if currentSlot < bs.retentionSlot {
+	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+	if err != nil {
+		return err
+	}
+	if currentSlot < retentionSlot {
 		return nil // Overflow would occur
 	}
 
@@ -236,7 +227,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			if err != nil {
 				return err
 			}
-			if slot < (currentSlot - bs.retentionSlot) {
+			if slot < (currentSlot - retentionSlot) {
 				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
 					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 				}
