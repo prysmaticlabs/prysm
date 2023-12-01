@@ -138,7 +138,7 @@ type Validator struct {
 
 func ValidatorsResponseFromConsensus(e *eth.Validators) (*ValidatorsResponse, error) {
 	if e == nil {
-		return nil, errors.New("VValidatorsResponse is empty")
+		return nil, errors.New("ValidatorsResponse is empty")
 	}
 	validatorList := make([]*ValidatorContainer, len(e.ValidatorList))
 	for i, validatorContainer := range e.ValidatorList {
