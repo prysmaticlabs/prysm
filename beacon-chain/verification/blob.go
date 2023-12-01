@@ -17,7 +17,7 @@ import (
 const (
 	RequireBlobIndexInBounds Requirement = iota
 	RequireSlotBelowMaxDisparity
-	RequireSlotBelowFinalized
+	RequireSlotAboveFinalized
 	RequireValidProposerSignature
 	RequireSidecarParentSeen
 	RequireSidecarParentValid
@@ -33,7 +33,7 @@ const (
 var GossipSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
 	RequireSlotBelowMaxDisparity,
-	RequireSlotBelowFinalized,
+	RequireSlotAboveFinalized,
 	RequireValidProposerSignature,
 	RequireSidecarParentSeen,
 	RequireSidecarParentValid,
@@ -48,7 +48,7 @@ var (
 	ErrBlobInvalid                  = errors.New("blob failed verification")
 	ErrBlobIndexInBounds            = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
 	ErrSlotBelowMaxDisparity        = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
-	ErrSlotBelowFinalized           = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
+	ErrSlotAboveFinalized           = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
 	ErrValidProposerSignature       = errors.Wrap(ErrBlobInvalid, "proposer signature could not be verified")
 	ErrSidecarParentSeen            = errors.Wrap(ErrBlobInvalid, "parent root has not been seen")
 	ErrSidecarParentValid           = errors.Wrap(ErrBlobInvalid, "parent block is not valid")
@@ -115,18 +115,18 @@ func (bv *BlobVerifier) SlotBelowMaxDisparity() (err error) {
 	return nil
 }
 
-// SlotBelowFinalized represents the spec verification:
+// SlotAboveFinalized represents the spec verification:
 // [IGNORE] The sidecar is from a slot greater than the latest finalized slot
 // -- i.e. validate that block_header.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-func (bv *BlobVerifier) SlotBelowFinalized() (err error) {
-	defer bv.recordResult(RequireSlotBelowFinalized, &err)
+func (bv *BlobVerifier) SlotAboveFinalized() (err error) {
+	defer bv.recordResult(RequireSlotAboveFinalized, &err)
 	fcp := bv.fc.FinalizedCheckpoint()
 	fSlot, err := slots.EpochStart(fcp.Epoch)
 	if err != nil {
-		return errors.Wrapf(ErrSlotBelowFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
+		return errors.Wrapf(ErrSlotAboveFinalized, "error computing epoch start slot for finalized checkpoint (%d) %s", fcp.Epoch, err.Error())
 	}
 	if bv.blob.Slot() <= fSlot {
-		return ErrSlotBelowFinalized
+		return ErrSlotAboveFinalized
 	}
 	return nil
 }

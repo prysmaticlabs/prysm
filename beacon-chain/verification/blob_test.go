@@ -75,7 +75,7 @@ func TestSlotBelowMaxDisparity(t *testing.T) {
 	require.NotNil(t, v.results.result(RequireSlotBelowMaxDisparity))
 }
 
-func TestSlotBelowFinalized(t *testing.T) {
+func TestSlotAboveFinalized(t *testing.T) {
 	ini := &Initializer{shared: &sharedResources{}}
 	cases := []struct {
 		name          string
@@ -94,7 +94,7 @@ func TestSlotBelowFinalized(t *testing.T) {
 		{
 			name:          "finalized epoch > blob epoch",
 			finalizedSlot: 32,
-			err:           ErrSlotBelowFinalized,
+			err:           ErrSlotAboveFinalized,
 		},
 		{
 			name:          "finalized slot == blob slot",
@@ -115,14 +115,14 @@ func TestSlotBelowFinalized(t *testing.T) {
 			b := blobs[0]
 			b.SignedBlockHeader.Header.Slot = c.slot
 			v := ini.NewBlobVerifier(nil, b, GossipSidecarRequirements...)
-			err := v.SlotBelowFinalized()
-			require.Equal(t, true, v.results.executed(RequireSlotBelowFinalized))
+			err := v.SlotAboveFinalized()
+			require.Equal(t, true, v.results.executed(RequireSlotAboveFinalized))
 			if c.err == nil {
 				require.NoError(t, err)
-				require.NoError(t, v.results.result(RequireSlotBelowFinalized))
+				require.NoError(t, v.results.result(RequireSlotAboveFinalized))
 			} else {
 				require.ErrorIs(t, err, c.err)
-				require.NotNil(t, v.results.result(RequireSlotBelowFinalized))
+				require.NotNil(t, v.results.result(RequireSlotAboveFinalized))
 			}
 		})
 	}
