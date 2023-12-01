@@ -8,6 +8,7 @@ go_library(
         "structs.go",
         "structs_blocks.go",
         "structs_blocks_conversions.go",
+        "structs_validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared",
     visibility = ["//visibility:public"],

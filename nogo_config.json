@@ -164,7 +164,8 @@
     },
     "exclude_files": {
       ".*_test\\.go": "Tests are ok",
-      "io/file/fileutil.go": "Package which defines the proper rules"
+      "io/file/fileutil.go": "Package which defines the proper rules",
+      "validator/web/site_data.go": "Generated web ui assets"
     }
   },
   "uintcast": {
