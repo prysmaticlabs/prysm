@@ -52,29 +52,33 @@ type AttestationProcessor interface {
 
 // Getter returns fork choice related information.
 type Getter interface {
-	HasNode([32]byte) bool
-	ProposerBoost() [fieldparams.RootLength]byte
+	FastGetter
 	AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error)
 	CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error)
-	IsCanonical(root [32]byte) bool
-	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
-	IsViableForCheckpoint(*forkchoicetypes.Checkpoint) (bool, error)
-	FinalizedPayloadBlockHash() [32]byte
-	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
-	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
-	JustifiedPayloadBlockHash() [32]byte
-	UnrealizedJustifiedPayloadBlockHash() [32]byte
-	NodeCount() int
-	HighestReceivedBlockSlot() primitives.Slot
-	ReceivedBlocksLastEpoch() (uint64, error)
 	ForkChoiceDump(context.Context) (*forkchoice2.Dump, error)
-	Weight(root [32]byte) (uint64, error)
 	Tips() ([][32]byte, []primitives.Slot)
+}
+
+type FastGetter interface {
+	FinalizedCheckpoint() *forkchoicetypes.Checkpoint
+	FinalizedPayloadBlockHash() [32]byte
+	HasNode([32]byte) bool
+	HighestReceivedBlockSlot() primitives.Slot
+	IsCanonical(root [32]byte) bool
 	IsOptimistic(root [32]byte) (bool, error)
+	IsViableForCheckpoint(*forkchoicetypes.Checkpoint) (bool, error)
+	JustifiedCheckpoint() *forkchoicetypes.Checkpoint
+	JustifiedPayloadBlockHash() [32]byte
+	LastRoot(primitives.Epoch) [32]byte
+	NodeCount() int
+	PreviousJustifiedCheckpoint() *forkchoicetypes.Checkpoint
+	ProposerBoost() [fieldparams.RootLength]byte
+	ReceivedBlocksLastEpoch() (uint64, error)
 	ShouldOverrideFCU() bool
 	Slot([32]byte) (primitives.Slot, error)
-	LastRoot(primitives.Epoch) [32]byte
 	TargetRoot([32]byte) ([32]byte, error)
+	UnrealizedJustifiedPayloadBlockHash() [32]byte
+	Weight(root [32]byte) (uint64, error)
 }
 
 // Setter allows to set forkchoice information

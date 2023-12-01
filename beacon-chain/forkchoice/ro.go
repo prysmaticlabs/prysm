@@ -1,22 +1,19 @@
 package forkchoice
 
 import (
-	"context"
-
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 // ROForkChoice is an implementation of forkchoice.Getter which calls `Rlock`/`RUnlock`
 // around a delegated method call to the underlying Getter implementation.
 type ROForkChoice struct {
-	getter Getter
+	getter FastGetter
 	l      Locker
 }
 
-var _ Getter = &ROForkChoice{}
+var _ FastGetter = &ROForkChoice{}
 
 // ROWrappable represents the subset of ForkChoicer a type needs to support
 // in order for ROForkChoice to wrap it. This simplifies the creation of a mock
@@ -24,7 +21,7 @@ var _ Getter = &ROForkChoice{}
 // called between mutex acquire/release.
 type ROWrappable interface {
 	Locker
-	Getter
+	FastGetter
 }
 
 // NewROForkChoice returns an ROForkChoice that delegates forkchoice.Getter calls to the
@@ -45,20 +42,6 @@ func (ro *ROForkChoice) ProposerBoost() [fieldparams.RootLength]byte {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.ProposerBoost()
-}
-
-// AncestorRoot delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error) {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.AncestorRoot(ctx, root, slot)
-}
-
-// CommonAncestor delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error) {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.CommonAncestor(ctx, root1, root2)
 }
 
 // IsCanonical delegates to the underlying forkchoice call, under a lock.
@@ -138,25 +121,11 @@ func (ro *ROForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	return ro.getter.ReceivedBlocksLastEpoch()
 }
 
-// ForkChoiceDump delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, error) {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.ForkChoiceDump(ctx)
-}
-
 // Weight delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) Weight(root [32]byte) (uint64, error) {
 	ro.l.RLock()
 	defer ro.l.RUnlock()
 	return ro.getter.Weight(root)
-}
-
-// Tips delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) Tips() ([][32]byte, []primitives.Slot) {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.Tips()
 }
 
 // IsOptimistic delegates to the underlying forkchoice call, under a lock.

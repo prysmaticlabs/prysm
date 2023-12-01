@@ -1,12 +1,10 @@
 package forkchoice
 
 import (
-	"context"
 	"testing"
 
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	forkchoice2 "github.com/prysmaticlabs/prysm/v4/consensus-types/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -20,8 +18,6 @@ const (
 	runlockCalled
 	hasNodeCalled
 	proposerBoostCalled
-	ancestorRootCalled
-	commonAncestorCalled
 	isCanonicalCalled
 	finalizedCheckpointCalled
 	isViableForCheckpointCalled
@@ -33,9 +29,7 @@ const (
 	nodeCountCalled
 	highestReceivedBlockSlotCalled
 	receivedBlocksLastEpochCalled
-	forkChoiceDumpCalled
 	weightCalled
-	tipsCalled
 	isOptimisticCalled
 	shouldOverrideFCUCalled
 	slotCalled
@@ -48,117 +42,97 @@ func TestROLocking(t *testing.T) {
 	cases := []struct {
 		name string
 		call mockCall
-		cb   func(Getter)
+		cb   func(FastGetter)
 	}{
 		{
 			name: "hasNodeCalled",
 			call: hasNodeCalled,
-			cb:   func(g Getter) { g.HasNode([32]byte{}) },
+			cb:   func(g FastGetter) { g.HasNode([32]byte{}) },
 		},
 		{
 			name: "proposerBoostCalled",
 			call: proposerBoostCalled,
-			cb:   func(g Getter) { g.ProposerBoost() },
-		},
-		{
-			name: "ancestorRootCalled",
-			call: ancestorRootCalled,
-			cb:   func(g Getter) { g.AncestorRoot(context.TODO(), [32]byte{}, 0) },
-		},
-		{
-			name: "commonAncestorCalled",
-			call: commonAncestorCalled,
-			cb:   func(g Getter) { g.CommonAncestor(context.TODO(), [32]byte{}, [32]byte{}) },
+			cb:   func(g FastGetter) { g.ProposerBoost() },
 		},
 		{
 			name: "isCanonicalCalled",
 			call: isCanonicalCalled,
-			cb:   func(g Getter) { g.IsCanonical([32]byte{}) },
+			cb:   func(g FastGetter) { g.IsCanonical([32]byte{}) },
 		},
 		{
 			name: "finalizedCheckpointCalled",
 			call: finalizedCheckpointCalled,
-			cb:   func(g Getter) { g.FinalizedCheckpoint() },
+			cb:   func(g FastGetter) { g.FinalizedCheckpoint() },
 		},
 		{
 			name: "isViableForCheckpointCalled",
 			call: isViableForCheckpointCalled,
-			cb:   func(g Getter) { g.IsViableForCheckpoint(nil) },
+			cb:   func(g FastGetter) { g.IsViableForCheckpoint(nil) },
 		},
 		{
 			name: "finalizedPayloadBlockHashCalled",
 			call: finalizedPayloadBlockHashCalled,
-			cb:   func(g Getter) { g.FinalizedPayloadBlockHash() },
+			cb:   func(g FastGetter) { g.FinalizedPayloadBlockHash() },
 		},
 		{
 			name: "justifiedCheckpointCalled",
 			call: justifiedCheckpointCalled,
-			cb:   func(g Getter) { g.JustifiedCheckpoint() },
+			cb:   func(g FastGetter) { g.JustifiedCheckpoint() },
 		},
 		{
 			name: "previousJustifiedCheckpointCalled",
 			call: previousJustifiedCheckpointCalled,
-			cb:   func(g Getter) { g.PreviousJustifiedCheckpoint() },
+			cb:   func(g FastGetter) { g.PreviousJustifiedCheckpoint() },
 		},
 		{
 			name: "justifiedPayloadBlockHashCalled",
 			call: justifiedPayloadBlockHashCalled,
-			cb:   func(g Getter) { g.JustifiedPayloadBlockHash() },
+			cb:   func(g FastGetter) { g.JustifiedPayloadBlockHash() },
 		},
 		{
 			name: "unrealizedJustifiedPayloadBlockHashCalled",
 			call: unrealizedJustifiedPayloadBlockHashCalled,
-			cb:   func(g Getter) { g.UnrealizedJustifiedPayloadBlockHash() },
+			cb:   func(g FastGetter) { g.UnrealizedJustifiedPayloadBlockHash() },
 		},
 		{
 			name: "nodeCountCalled",
 			call: nodeCountCalled,
-			cb:   func(g Getter) { g.NodeCount() },
+			cb:   func(g FastGetter) { g.NodeCount() },
 		},
 		{
 			name: "highestReceivedBlockSlotCalled",
 			call: highestReceivedBlockSlotCalled,
-			cb:   func(g Getter) { g.HighestReceivedBlockSlot() },
+			cb:   func(g FastGetter) { g.HighestReceivedBlockSlot() },
 		},
 		{
 			name: "receivedBlocksLastEpochCalled",
 			call: receivedBlocksLastEpochCalled,
-			cb:   func(g Getter) { g.ReceivedBlocksLastEpoch() },
-		},
-		{
-			name: "forkChoiceDumpCalled",
-			call: forkChoiceDumpCalled,
-			cb:   func(g Getter) { g.ForkChoiceDump(context.TODO()) },
+			cb:   func(g FastGetter) { g.ReceivedBlocksLastEpoch() },
 		},
 		{
 			name: "weightCalled",
 			call: weightCalled,
-			cb:   func(g Getter) { g.Weight([32]byte{}) },
-		},
-		{
-			name: "tipsCalled",
-			call: tipsCalled,
-			cb:   func(g Getter) { g.Tips() },
+			cb:   func(g FastGetter) { g.Weight([32]byte{}) },
 		},
 		{
 			name: "isOptimisticCalled",
 			call: isOptimisticCalled,
-			cb:   func(g Getter) { g.IsOptimistic([32]byte{}) },
+			cb:   func(g FastGetter) { g.IsOptimistic([32]byte{}) },
 		},
 		{
 			name: "shouldOverrideFCUCalled",
 			call: shouldOverrideFCUCalled,
-			cb:   func(g Getter) { g.ShouldOverrideFCU() },
+			cb:   func(g FastGetter) { g.ShouldOverrideFCU() },
 		},
 		{
 			name: "slotCalled",
 			call: slotCalled,
-			cb:   func(g Getter) { g.Slot([32]byte{}) },
+			cb:   func(g FastGetter) { g.Slot([32]byte{}) },
 		},
 		{
 			name: "lastRootCalled",
 			call: lastRootCalled,
-			cb:   func(g Getter) { g.LastRoot(0) },
+			cb:   func(g FastGetter) { g.LastRoot(0) },
 		},
 	}
 	for _, c := range cases {
@@ -177,7 +151,7 @@ type mockROForkchoice struct {
 	calls []mockCall
 }
 
-var _ Getter = &mockROForkchoice{}
+var _ FastGetter = &mockROForkchoice{}
 var _ Locker = &mockROForkchoice{}
 
 func (ro *mockROForkchoice) Lock() {
@@ -204,16 +178,6 @@ func (ro *mockROForkchoice) HasNode(root [32]byte) bool {
 func (ro *mockROForkchoice) ProposerBoost() [fieldparams.RootLength]byte {
 	ro.calls = append(ro.calls, proposerBoostCalled)
 	return [fieldparams.RootLength]byte{}
-}
-
-func (ro *mockROForkchoice) AncestorRoot(ctx context.Context, root [32]byte, slot primitives.Slot) ([32]byte, error) {
-	ro.calls = append(ro.calls, ancestorRootCalled)
-	return [32]byte{}, nil
-}
-
-func (ro *mockROForkchoice) CommonAncestor(ctx context.Context, root1 [32]byte, root2 [32]byte) ([32]byte, primitives.Slot, error) {
-	ro.calls = append(ro.calls, commonAncestorCalled)
-	return [32]byte{}, 0, nil
 }
 
 func (ro *mockROForkchoice) IsCanonical(root [32]byte) bool {
@@ -271,19 +235,9 @@ func (ro *mockROForkchoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	return 0, nil
 }
 
-func (ro *mockROForkchoice) ForkChoiceDump(ctx context.Context) (*forkchoice2.Dump, error) {
-	ro.calls = append(ro.calls, forkChoiceDumpCalled)
-	return nil, nil
-}
-
 func (ro *mockROForkchoice) Weight(root [32]byte) (uint64, error) {
 	ro.calls = append(ro.calls, weightCalled)
 	return 0, nil
-}
-
-func (ro *mockROForkchoice) Tips() ([][32]byte, []primitives.Slot) {
-	ro.calls = append(ro.calls, tipsCalled)
-	return make([][32]byte, 0), []primitives.Slot{}
 }
 
 func (ro *mockROForkchoice) IsOptimistic(root [32]byte) (bool, error) {
