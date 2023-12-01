@@ -62,7 +62,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     gotags = ["develop"],
-    race = "on",
+    tags = ["CI_race_detection"],
     deps = [
         "//consensus-types/primitives:go_default_library",
         "//encoding/bytesutil:go_default_library",
