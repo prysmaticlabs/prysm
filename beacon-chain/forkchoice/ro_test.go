@@ -63,12 +63,12 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "ancestorRootCalled",
 			call: ancestorRootCalled,
-			cb:   func(g Getter) { g.AncestorRoot(nil, [32]byte{}, 0) },
+			cb:   func(g Getter) { g.AncestorRoot(context.TODO(), [32]byte{}, 0) },
 		},
 		{
 			name: "commonAncestorCalled",
 			call: commonAncestorCalled,
-			cb:   func(g Getter) { g.CommonAncestor(nil, [32]byte{}, [32]byte{}) },
+			cb:   func(g Getter) { g.CommonAncestor(context.TODO(), [32]byte{}, [32]byte{}) },
 		},
 		{
 			name: "isCanonicalCalled",
@@ -128,7 +128,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "forkChoiceDumpCalled",
 			call: forkChoiceDumpCalled,
-			cb:   func(g Getter) { g.ForkChoiceDump(nil) },
+			cb:   func(g Getter) { g.ForkChoiceDump(context.TODO()) },
 		},
 		{
 			name: "weightCalled",
