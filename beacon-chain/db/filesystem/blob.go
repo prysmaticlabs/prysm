@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
@@ -256,4 +257,12 @@ func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
 	}
 	rawSlot := binary.LittleEndian.Uint64(b)
 	return primitives.Slot(rawSlot), nil
+}
+
+// Delete removes the directory matching the provided block root and all the blobs it contains.
+func (bs *BlobStorage) Delete(root [32]byte) error {
+	if err := bs.fs.RemoveAll(hexutil.Encode(root[:])); err != nil {
+		return fmt.Errorf("failed to delete blobs for root %#x: %w", root, err)
+	}
+	return nil
 }
