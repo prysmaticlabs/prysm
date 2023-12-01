@@ -464,6 +464,13 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
+// TargetRoot wraps the corresponding method in forkchoice
+func (s *Service) TargetRoot(root [32]byte) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.TargetRoot(root)
+}
+
 // Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
