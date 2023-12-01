@@ -1,4 +1,4 @@
-package beaconapi_evaluators
+package beaconapi
 
 import (
 	"bytes"
@@ -7,12 +7,26 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	log "github.com/sirupsen/logrus"
 )
 
-func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, dst interface{}, bnType ...string) error {
+var (
+	errSszCast             = errors.New("SSZ response is not a byte array")
+	errEmptyPrysmData      = errors.New("Prysm data is empty")
+	errEmptyLighthouseData = errors.New("Lighthouse data is empty")
+)
+
+const (
+	msgWrongJson          = "JSON response has wrong structure, expected %T, got %T"
+	msgRequestFailed      = "%s request failed with response code %d with response body %s"
+	msgUnknownNode        = "unknown node type %s"
+	msgSSZUnmarshalFailed = "failed to unmarshal SSZ"
+)
+
+func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"prysm"}
 	}
@@ -24,7 +38,7 @@ func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, ds
 	case "lighthouse":
 		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
 	default:
-		return fmt.Errorf("unknown node type %s", bnType[0])
+		return fmt.Errorf(msgUnknownNode, bnType[0])
 	}
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
@@ -47,9 +61,9 @@ func doJSONGetRequest(template string, requestPath string, beaconNodeIdx int, ds
 				return err
 			}
 		}
-		return fmt.Errorf("%s request failed with response code %d with response body %s", bnType[0], httpResp.StatusCode, body)
+		return fmt.Errorf(msgRequestFailed, bnType[0], httpResp.StatusCode, body)
 	}
-	return json.NewDecoder(httpResp.Body).Decode(&dst)
+	return json.NewDecoder(httpResp.Body).Decode(&resp)
 }
 
 func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnType ...string) ([]byte, error) {
@@ -65,7 +79,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 	case "lighthouse":
 		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
 	default:
-		return nil, fmt.Errorf("unknown node type %s", bnType[0])
+		return nil, fmt.Errorf(msgUnknownNode, bnType[0])
 	}
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
@@ -84,7 +98,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 		if err := json.NewDecoder(rsp.Body).Decode(&body); err != nil {
 			return nil, err
 		}
-		return nil, fmt.Errorf("%s request failed with response code: %d with response body %s", bnType[0], rsp.StatusCode, body)
+		return nil, fmt.Errorf(msgRequestFailed, bnType[0], rsp.StatusCode, body)
 	}
 	defer closeBody(rsp.Body)
 	body, err := io.ReadAll(rsp.Body)
@@ -95,7 +109,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 	return body, nil
 }
 
-func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, dst interface{}, bnType ...string) error {
+func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, postData, resp interface{}, bnType ...string) error {
 	if len(bnType) == 0 {
 		bnType = []string{"prysm"}
 	}
@@ -107,7 +121,7 @@ func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, p
 	case "lighthouse":
 		port = params.TestParams.Ports.LighthouseBeaconNodeHTTPPort
 	default:
-		return fmt.Errorf("unknown node type %s", bnType[0])
+		return fmt.Errorf(msgUnknownNode, bnType[0])
 	}
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
@@ -136,9 +150,9 @@ func doJSONPostRequest(template string, requestPath string, beaconNodeIdx int, p
 				return err
 			}
 		}
-		return fmt.Errorf("%s request failed with response code %d with response body %s", bnType[0], httpResp.StatusCode, body)
+		return fmt.Errorf(msgRequestFailed, bnType[0], httpResp.StatusCode, body)
 	}
-	return json.NewDecoder(httpResp.Body).Decode(&dst)
+	return json.NewDecoder(httpResp.Body).Decode(&resp)
 }
 
 func closeBody(body io.Closer) {
