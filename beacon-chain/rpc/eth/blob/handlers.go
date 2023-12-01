@@ -62,7 +62,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 			var err error
 			root, err = hexutil.Decode(blockId)
 			if err != nil {
-				http2.HandleError(w, errors.Wrap(err, "could not decode block ID into hex").Error(), http.StatusInternalServerError)
+				http2.HandleError(w, errors.Wrap(err, "Invalid block ID: current").Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
@@ -105,6 +105,25 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+	}
+
+	if len(indices) == 0 {
+		m, err := s.BlobStorage.Indices(bytesutil.ToBytes32(root))
+		if err != nil {
+			http2.HandleError(w, errors.Wrapf(err, "could not retrieve blob indicies").Error(), http.StatusInternalServerError)
+			return
+		}
+		for k, v := range m {
+			if v {
+				indices = append(indices, uint64(k))
+			}
+		}
+	}
+
+	// if it's still empty
+	if len(indices) == 0 {
+		http2.HandleError(w, "Block not found", http.StatusNotFound)
+		return
 	}
 
 	for _, index := range indices {
