@@ -380,7 +380,7 @@ func (c beaconApiBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *sha
 		return nil, errors.Wrap(err, "failed to get withdrawals")
 	}
 
-	blsToExecutionChanges, err := convertBlsToExecutionChangesToProto(block.Body.BlsToExecutionChanges)
+	blsToExecutionChanges, err := convertBlsToExecutionChangesToProto(block.Body.BLSToExecutionChanges)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get bls to execution changes")
 	}

@@ -821,7 +821,7 @@ func GenerateJsonDenebBeaconBlock() *shared.BeaconBlockContentsDeneb {
 					BlobGasUsed:   "135",
 					ExcessBlobGas: "136",
 				},
-				BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
+				BLSToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 					{
 						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "137",
@@ -1097,7 +1097,7 @@ func GenerateJsonBlindedDenebBeaconBlock() *shared.BlindedBeaconBlockContentsDen
 					BlobGasUsed:      "127",
 					ExcessBlobGas:    "128",
 				},
-				BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
+				BLSToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 					{
 						Message: &shared.BLSToExecutionChange{
 							ValidatorIndex:     "129",

@@ -3513,7 +3513,7 @@ func (b *BeaconBlockBodyCapella) MarshalSSZTo(buf []byte) (dst []byte, err error
 
 	// Field (10) 'BlsToExecutionChanges'
 	if size := len(b.BlsToExecutionChanges); size > 16 {
-		err = ssz.ErrListTooBigFn("--.BlsToExecutionChanges", size, 16)
+		err = ssz.ErrListTooBigFn("--.BLSToExecutionChanges", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.BlsToExecutionChanges); ii++ {
@@ -4088,7 +4088,7 @@ func (b *BlindedBeaconBlockBodyCapella) MarshalSSZTo(buf []byte) (dst []byte, er
 
 	// Field (10) 'BlsToExecutionChanges'
 	if size := len(b.BlsToExecutionChanges); size > 16 {
-		err = ssz.ErrListTooBigFn("--.BlsToExecutionChanges", size, 16)
+		err = ssz.ErrListTooBigFn("--.BLSToExecutionChanges", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.BlsToExecutionChanges); ii++ {
@@ -4667,7 +4667,7 @@ func (b *BlindedBeaconBlockBodyDeneb) MarshalSSZTo(buf []byte) (dst []byte, err 
 
 	// Field (10) 'BlsToExecutionChanges'
 	if size := len(b.BlsToExecutionChanges); size > 16 {
-		err = ssz.ErrListTooBigFn("--.BlsToExecutionChanges", size, 16)
+		err = ssz.ErrListTooBigFn("--.BLSToExecutionChanges", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.BlsToExecutionChanges); ii++ {
@@ -5306,7 +5306,7 @@ func (b *BeaconBlockBodyDeneb) MarshalSSZTo(buf []byte) (dst []byte, err error) 
 
 	// Field (10) 'BlsToExecutionChanges'
 	if size := len(b.BlsToExecutionChanges); size > 16 {
-		err = ssz.ErrListTooBigFn("--.BlsToExecutionChanges", size, 16)
+		err = ssz.ErrListTooBigFn("--.BLSToExecutionChanges", size, 16)
 		return
 	}
 	for ii := 0; ii < len(b.BlsToExecutionChanges); ii++ {

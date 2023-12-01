@@ -2171,9 +2171,9 @@ func (b *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 			Amount:         amount,
 		}
 	}
-	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BlsToExecutionChanges)
+	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlsToExecutionChanges")
+		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 
 	return &eth.BeaconBlockCapella{
@@ -2389,9 +2389,9 @@ func (b *BlindedBeaconBlockCapella) ToConsensus() (*eth.BlindedBeaconBlockCapell
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
-	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BlsToExecutionChanges)
+	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlsToExecutionChanges")
+		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 
 	return &eth.BlindedBeaconBlockCapella{
@@ -2777,9 +2777,9 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
-	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BlsToExecutionChanges)
+	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlsToExecutionChanges")
+		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 	err = VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
 	if err != nil {
@@ -3138,9 +3138,9 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
 
-	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BlsToExecutionChanges)
+	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlsToExecutionChanges")
+		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 	err = VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
 	if err != nil {
@@ -3460,7 +3460,7 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
 			ExecutionPayloadHeader: payload,
-			BlsToExecutionChanges:  SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
+			BLSToExecutionChanges:  SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 		},
 	}, nil
 }
@@ -3530,7 +3530,7 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 				Transactions:  transactions,
 				Withdrawals:   withdrawals,
 			},
-			BlsToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
+			BLSToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 		},
 	}, nil
 }
@@ -3629,7 +3629,7 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 				SyncCommitteeSignature: hexutil.Encode(b.Body.SyncAggregate.SyncCommitteeSignature),
 			},
 			ExecutionPayloadHeader: payload,
-			BlsToExecutionChanges:  SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
+			BLSToExecutionChanges:  SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			BlobKzgCommitments:     blobKzgCommitments,
 		},
 	}, nil
@@ -3706,7 +3706,7 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 				BlobGasUsed:   fmt.Sprintf("%d", b.Body.ExecutionPayload.BlobGasUsed),   // TODO: rename to blob
 				ExcessBlobGas: fmt.Sprintf("%d", b.Body.ExecutionPayload.ExcessBlobGas), // TODO: rename to blob
 			},
-			BlsToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
+			BLSToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			BlobKzgCommitments:    blobKzgCommitments,
 		},
 	}, nil
