@@ -42,7 +42,7 @@ type SignatureCache interface {
 	SignatureVerified(sig SignatureData) (bool, error)
 }
 
-// SignatureData represents the set of parameters that together unqiuely identify a signature observed on
+// SignatureData represents the set of parameters that together uniquely identify a signature observed on
 // a beacon block. This is used as the key for the signature cache.
 type SignatureData struct {
 	Root      [32]byte
@@ -114,7 +114,7 @@ func (c *sigCache) VerifySignature(sig SignatureData, v ValidatorAtIndexer) (err
 }
 
 // SignatureVerified checks the signature cache for the given key, and returns a boolean value of true
-// if it has been seen before, and an error value indicating whether the signature verification suceeded.
+// if it has been seen before, and an error value indicating whether the signature verification succeeded.
 // ie only a result of (true, nil) means a previous signature check passed.
 func (c *sigCache) SignatureVerified(sig SignatureData) (bool, error) {
 	val, seen := c.Get(sig)

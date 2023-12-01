@@ -95,7 +95,7 @@ func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCa
 	return &InitializerWaiter{ini: &Initializer{shared: shared}}
 }
 
-// WaitForInitializer ensures that asyncronous initialization of the shared resources the initializer
+// WaitForInitializer ensures that asynchronous initialization of the shared resources the initializer
 // depends on has completed beofe the underlying Initializer is accessible by client code.
 func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initializer, error) {
 	if err := w.ini.shared.waitForReady(ctx); err != nil {
