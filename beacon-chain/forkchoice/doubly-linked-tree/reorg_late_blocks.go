@@ -28,7 +28,7 @@ const orphanLateBlockProposingEarly = 2
 // 3- The beacon node is serving a validator that will propose during the next
 // slot.
 //
-// This function only applies an heuristic to decide if the beacon will update
+// This function only applies a heuristic to decide if the beacon will update
 // the engine's view of head with the parent block or the incoming block. It
 // does not guarantee an attempted reorg. This will only be decided later at
 // proposal time by calling GetProposerHead.

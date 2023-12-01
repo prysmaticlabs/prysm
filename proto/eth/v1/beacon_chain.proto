@@ -17,8 +17,6 @@ package ethereum.eth.v1;
 
 import "google/protobuf/descriptor.proto";
 
-import "proto/eth/v1/attestation.proto";
-
 option csharp_namespace = "Ethereum.Eth.V1";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/eth/v1";
 option java_multiple_files = true;
@@ -32,17 +30,4 @@ message StateRequest {
     // The state id which can be any of: "head" (canonical head in node's view),
     // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
     bytes state_id = 1;
-}
-
-// DEPRECATED: GetWeakSubjectivity endpoint is no longer be supported
-message WeakSubjectivityResponse {
-    option deprecated = true;
-	WeakSubjectivityData data = 1;
-}
-
-// DEPRECATED: GetWeakSubjectivity endpoint is no longer be supported
-message WeakSubjectivityData {
-    option deprecated = true;
-    ethereum.eth.v1.Checkpoint ws_checkpoint = 1;
-    bytes state_root = 2;
 }

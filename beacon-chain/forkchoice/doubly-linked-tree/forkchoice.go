@@ -475,7 +475,7 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 // `blocks`. This slice must be ordered from child to parent. It includes all
 // blocks **except** the first one (that is the one with the highest slot
 // number). All blocks are assumed to be a strict chain
-// where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
+// where blocks[i].Parent = blocks[i+1]. Also, we assume that the parent of the
 // last block in this list is already included in forkchoice store.
 func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	if len(chain) == 0 {
@@ -636,4 +636,16 @@ func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
 		return 0, ErrNilNode
 	}
 	return n.slot, nil
+}
+
+// TargetRoot returns the root of the checkpoint block for the given head root
+func (f *ForkChoice) TargetRoot(root [32]byte) ([32]byte, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return [32]byte{}, ErrNilNode
+	}
+	if n.target == nil {
+		return [32]byte{}, nil
+	}
+	return n.target.root, nil
 }

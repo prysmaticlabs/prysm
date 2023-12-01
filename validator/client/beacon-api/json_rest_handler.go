@@ -60,9 +60,6 @@ func (c beaconApiJsonRestHandler) Post(
 	if data == nil {
 		return nil, errors.New("data is nil")
 	}
-	if resp == nil {
-		return nil, errors.New("resp is nil")
-	}
 
 	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
@@ -95,19 +92,25 @@ func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJ
 	}
 
 	if httpResp.Header.Get("Content-Type") != api.JsonMediaType {
+		if httpResp.StatusCode == http.StatusOK {
+			return nil, nil
+		}
 		return &http2.DefaultErrorJson{Code: httpResp.StatusCode, Message: string(body)}, nil
 	}
 
 	decoder := json.NewDecoder(bytes.NewBuffer(body))
 	if httpResp.StatusCode != http.StatusOK {
 		errorJson := &http2.DefaultErrorJson{}
-		if err := decoder.Decode(errorJson); err != nil {
+		if err = decoder.Decode(errorJson); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode response body into error json for %s", httpResp.Request.URL)
 		}
 		return errorJson, nil
 	}
-	if err = decoder.Decode(resp); err != nil {
-		return nil, errors.Wrapf(err, "failed to decode response body into json for %s", httpResp.Request.URL)
+	// resp is nil for requests that do not return anything.
+	if resp != nil {
+		if err = decoder.Decode(resp); err != nil {
+			return nil, errors.Wrapf(err, "failed to decode response body into json for %s", httpResp.Request.URL)
+		}
 	}
 
 	return nil, nil

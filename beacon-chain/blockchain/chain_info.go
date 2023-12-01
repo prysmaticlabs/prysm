@@ -464,6 +464,13 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
+// TargetRoot wraps the corresponding method in forkchoice
+func (s *Service) TargetRoot(root [32]byte) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.TargetRoot(root)
+}
+
 // Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
@@ -529,4 +536,11 @@ func (s *Service) recoverStateSummary(ctx context.Context, blockRoot [32]byte) (
 // BlockBeingSynced returns whether the block with the given root is currently being synced
 func (s *Service) BlockBeingSynced(root [32]byte) bool {
 	return s.blockBeingSynced.isSyncing(root)
+}
+
+// RecentBlockSlot returns block slot form fork choice store
+func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.Slot(root)
 }
