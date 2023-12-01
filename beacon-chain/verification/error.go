@@ -11,14 +11,18 @@ type VerificationMultiError struct {
 	err error
 }
 
+// Unwrap is used by errors.Is to unwrap errors.
 func (ve VerificationMultiError) Unwrap() error {
 	return ve.err
 }
 
+// Error satisfies the standard error interface.
 func (ve VerificationMultiError) Error() string {
 	return ve.err.Error()
 }
 
+// Failures provides access to map of Requirements->error messages
+// so that calling code can introspect on what went wrong.
 func (ve VerificationMultiError) Failures() map[Requirement]error {
 	return ve.r.failures()
 }
