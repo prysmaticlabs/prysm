@@ -10,7 +10,7 @@ import (
 // around a delegated method call to the underlying Getter implementation.
 type ROForkChoice struct {
 	getter FastGetter
-	l      Locker
+	l      RLocker
 }
 
 var _ FastGetter = &ROForkChoice{}
@@ -20,7 +20,7 @@ var _ FastGetter = &ROForkChoice{}
 // type that can be used to assert that all of the wrapped methods are correctly
 // called between mutex acquire/release.
 type ROWrappable interface {
-	Locker
+	RLocker
 	FastGetter
 }
 

@@ -152,7 +152,7 @@ type mockROForkchoice struct {
 }
 
 var _ FastGetter = &mockROForkchoice{}
-var _ Locker = &mockROForkchoice{}
+var _ RLocker = &mockROForkchoice{}
 
 func (ro *mockROForkchoice) Lock() {
 	ro.calls = append(ro.calls, lockCalled)

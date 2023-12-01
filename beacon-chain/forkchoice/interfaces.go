@@ -16,7 +16,9 @@ type BalancesByRooter func(context.Context, [32]byte) ([]uint64, error)
 
 // ForkChoicer represents the full fork choice interface composed of all the sub-interfaces.
 type ForkChoicer interface {
-	Locker               // separate interface for locking.
+	RLocker // separate interface isolates  read locking for ROForkChoice.
+	Lock()
+	Unlock()
 	HeadRetriever        // to compute head.
 	BlockProcessor       // to track new block for fork choice.
 	AttestationProcessor // to track new attestation for fork choice.
@@ -24,10 +26,8 @@ type ForkChoicer interface {
 	Setter               // to set fork choice information.
 }
 
-// Locker exposes methods to manage forkchoice's internal RWMutex.
-type Locker interface {
-	Lock()
-	Unlock()
+// RLocker represents forkchoice's internal RWMutex read-only lock/unlock methods.
+type RLocker interface {
 	RLock()
 	RUnlock()
 }
