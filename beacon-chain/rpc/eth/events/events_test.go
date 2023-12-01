@@ -115,12 +115,13 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				},
 			},
 		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.BlobSidecarReceived,
-			Data: &operation.BlobSidecarReceivedData{
-				Blob: util.HydrateSignedBlobSidecar(&eth.SignedBlobSidecar{}),
-			},
-		})
+		// TODO: update when P2P is updated for blobs
+		//s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		//	Type: operation.BlobSidecarReceived,
+		//	Data: &operation.BlobSidecarReceivedData{
+		//		Blob: util.HydrateSignedBlobSidecar(&eth.SignedBlobSidecar{}),
+		//	},
+		//})
 		// wait for feed
 		time.Sleep(1 * time.Second)
 		request.Context().Done()

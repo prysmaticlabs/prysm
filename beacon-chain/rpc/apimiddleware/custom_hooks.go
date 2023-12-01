@@ -34,16 +34,8 @@ type bellatrixPublishBlockRequestJson struct {
 	BellatrixBlock *SignedBeaconBlockBellatrixJson `json:"bellatrix_block"`
 }
 
-type bellatrixPublishBlindedBlockRequestJson struct {
-	BellatrixBlock *SignedBlindedBeaconBlockBellatrixJson `json:"bellatrix_block"`
-}
-
 type capellaPublishBlockRequestJson struct {
 	CapellaBlock *SignedBeaconBlockCapellaJson `json:"capella_block"`
-}
-
-type capellaPublishBlindedBlockRequestJson struct {
-	CapellaBlock *SignedBlindedBeaconBlockCapellaJson `json:"capella_block"`
 }
 
 type denebPublishBlockRequestJson struct {

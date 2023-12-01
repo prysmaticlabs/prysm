@@ -587,10 +587,10 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Deneb{
-					Deneb: func() *ethpb.BeaconBlockDeneb {
+					Deneb: func() *ethpb.BeaconBlockContentsDeneb {
 						blk := util.NewBeaconBlockDeneb()
 						blk.Block.Body.Graffiti = graffiti
-						return blk.Block
+						return &ethpb.BeaconBlockContentsDeneb{Block: blk.Block}
 					}(),
 				},
 			},
@@ -600,12 +600,10 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
-					BlindedDeneb: func() *ethpb.BlindedBeaconBlockAndBlobsDeneb {
+					BlindedDeneb: func() *ethpb.BlindedBeaconBlockDeneb {
 						blk := util.NewBlindedBeaconBlockDeneb()
 						blk.Message.Body.Graffiti = graffiti
-						return &ethpb.BlindedBeaconBlockAndBlobsDeneb{
-							Block: blk.Message,
-						}
+						return blk.Message
 					}(),
 				},
 			},
