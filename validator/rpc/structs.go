@@ -90,6 +90,15 @@ type SetFeeRecipientByPubkeyRequest struct {
 	Ethaddress string `json:"ethaddress"`
 }
 
+type BeaconStatusResponse struct {
+	BeaconNodeEndpoint     string            `json:"beacon_node_endpoint"`
+	Connected              bool              `json:"connected"`
+	Syncing                bool              `json:"syncing"`
+	GenesisTime            string            `json:"genesis_time"`
+	DepositContractAddress string            `json:"deposit_contract_address"`
+	ChainHead              *shared.ChainHead `json:"chain_head"`
+}
+
 // KeymanagerKind is a type of key manager for the wallet
 type KeymanagerKind string
 
@@ -139,4 +148,39 @@ type ImportSlashingProtectionRequest struct {
 
 type ExportSlashingProtectionResponse struct {
 	File string `json:"file"`
+}
+
+type BackupAccountsRequest struct {
+	PublicKeys     []string `json:"public_keys"`
+	BackupPassword string   `json:"backup_password"`
+}
+
+type VoluntaryExitRequest struct {
+	PublicKeys []string `json:"public_keys"`
+}
+
+type BackupAccountsResponse struct {
+	ZipFile string `json:"zip_file"`
+}
+
+type ListAccountsResponse struct {
+	Accounts      []*Account `json:"accounts"`
+	NextPageToken string     `json:"next_page_token"`
+	TotalSize     int32      `json:"total_size"`
+}
+
+type Account struct {
+	ValidatingPublicKey string `json:"validating_public_key"`
+	AccountName         string `json:"account_name"`
+	DepositTxData       string `json:"deposit_tx_data"`
+	DerivationPath      string `json:"derivation_path"`
+}
+
+type VoluntaryExitResponse struct {
+	ExitedKeys [][]byte `protobuf:"bytes,1,rep,name=exited_keys,json=exitedKeys,proto3" json:"exited_keys,omitempty"`
+}
+
+type InitializeAuthResponse struct {
+	HasSignedUp bool `json:"has_signed_up"`
+	HasWallet   bool `json:"has_wallet"`
 }
