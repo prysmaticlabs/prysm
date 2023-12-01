@@ -126,7 +126,7 @@ func SendTransaction(client *rpc.Client, key *ecdsa.PrivateKey, f *filler.Filler
 		gasPrice = expectedPrice
 	}
 	g, _ := errgroup.WithContext(context.Background())
-	txs := make([]*types.Transaction, 0, 10)
+	txs := make([]*types.Transaction, 1)
 	for i := uint64(0); i < 1; i++ {
 		index := i
 		g.Go(func() error {
