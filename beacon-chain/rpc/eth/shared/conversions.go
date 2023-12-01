@@ -710,11 +710,11 @@ func SignedBLSChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) []*Sig
 }
 
 func (s *Fork) ToConsensus() (*eth.Fork, error) {
-	previousVersion, err := hexutil.Decode(s.PreviousVersion)
+	previousVersion, err := DecodeHexWithLength(s.PreviousVersion, 4)
 	if err != nil {
 		return nil, NewDecodeError(err, "PreviousVersion")
 	}
-	currentVersion, err := hexutil.Decode(s.CurrentVersion)
+	currentVersion, err := DecodeHexWithLength(s.CurrentVersion, 4)
 	if err != nil {
 		return nil, NewDecodeError(err, "CurrentVersion")
 	}
@@ -798,7 +798,7 @@ func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndPr
 	if err != nil {
 		return nil, NewDecodeError(err, "Message")
 	}
-	sig, err := hexutil.Decode(s.Signature)
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
@@ -826,7 +826,7 @@ func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) 
 	if err != nil {
 		return nil, NewDecodeError(err, "AggregatorIndex")
 	}
-	selectionProof, err := hexutil.Decode(c.SelectionProof)
+	selectionProof, err := DecodeHexWithLength(c.SelectionProof, 96)
 	if err != nil {
 		return nil, NewDecodeError(err, "SelectionProof")
 	}
@@ -852,7 +852,7 @@ func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContributio
 	if err != nil {
 		return nil, NewDecodeError(err, "Slot")
 	}
-	bbRoot, err := hexutil.Decode(s.BeaconBlockRoot)
+	bbRoot, err := DecodeHexWithLength(s.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "BeaconBlockRoot")
 	}
@@ -864,7 +864,7 @@ func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContributio
 	if err != nil {
 		return nil, NewDecodeError(err, "AggregationBits")
 	}
-	sig, err := hexutil.Decode(s.Signature)
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
@@ -893,7 +893,7 @@ func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregate
 	if err != nil {
 		return nil, NewDecodeError(err, "Message")
 	}
-	sig, err := hexutil.Decode(s.Signature)
+	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
@@ -913,7 +913,7 @@ func (a *AggregateAttestationAndProof) ToConsensus() (*eth.AggregateAttestationA
 	if err != nil {
 		return nil, NewDecodeError(err, "Aggregate")
 	}
-	proof, err := hexutil.Decode(a.SelectionProof)
+	proof, err := DecodeHexWithLength(a.SelectionProof, 96)
 	if err != nil {
 		return nil, NewDecodeError(err, "SelectionProof")
 	}
@@ -933,7 +933,7 @@ func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Data")
 	}
-	sig, err := hexutil.Decode(a.Signature)
+	sig, err := DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
@@ -962,7 +962,7 @@ func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "CommitteeIndex")
 	}
-	bbRoot, err := hexutil.Decode(a.BeaconBlockRoot)
+	bbRoot, err := DecodeHexWithLength(a.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "BeaconBlockRoot")
 	}
@@ -999,7 +999,7 @@ func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 	if err != nil {
 		return nil, NewDecodeError(err, "Epoch")
 	}
-	root, err := hexutil.Decode(c.Root)
+	root, err := DecodeHexWithLength(c.Root, fieldparams.RootLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Root")
 	}
@@ -1069,7 +1069,7 @@ func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeS
 }
 
 func (e *SignedVoluntaryExit) ToConsensus() (*eth.SignedVoluntaryExit, error) {
-	sig, err := hexutil.Decode(e.Signature)
+	sig, err := DecodeHexWithLength(e.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "Signature")
 	}
@@ -1155,13 +1155,13 @@ func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
 func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
 	var pubKeys [][]byte
 	for _, p := range sc.Pubkeys {
-		pubKey, err := hexutil.Decode(p)
+		pubKey, err := DecodeHexWithLength(p, fieldparams.BLSPubkeyLength)
 		if err != nil {
 			return nil, NewDecodeError(err, "Pubkeys")
 		}
 		pubKeys = append(pubKeys, pubKey)
 	}
-	aggPubKey, err := hexutil.Decode(sc.AggregatePubkey)
+	aggPubKey, err := DecodeHexWithLength(sc.AggregatePubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
 		return nil, NewDecodeError(err, "AggregatePubkey")
 	}
