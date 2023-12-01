@@ -172,7 +172,8 @@ func BenchmarkPruning(b *testing.B) {
 }
 
 func TestBlobStorageDelete(t *testing.T) {
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+	require.NoError(t, err)
 	rawRoot := "0xcf9bb70c98f58092c9d6459227c9765f984d240be9690e85179bc5a6f60366ad"
 	blockRoot, err := hexutil.Decode(rawRoot)
 	require.NoError(t, err)
