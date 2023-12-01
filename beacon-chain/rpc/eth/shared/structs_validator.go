@@ -20,7 +20,7 @@ type ValidatorPerformanceResponse struct {
 	InactivityScores              []uint64 `json:"inactivity_scores"`
 }
 
-func ValidatorPerformanceResponseFromConsensus(e *eth.ValidatorPerformanceResponse) (*ValidatorPerformanceResponse, error) {
+func ValidatorPerformanceResponseFromConsensus(e *eth.ValidatorPerformanceResponse) *ValidatorPerformanceResponse {
 	inclusionSlots := make([]uint64, len(e.InclusionSlots))
 	for i, index := range e.InclusionSlots {
 		inclusionSlots[i] = uint64(index)
@@ -71,7 +71,7 @@ func ValidatorPerformanceResponseFromConsensus(e *eth.ValidatorPerformanceRespon
 		AverageActiveValidatorBalance: e.AverageActiveValidatorBalance,
 		PublicKeys:                    publicKeys,
 		InactivityScores:              e.InactivityScores,
-	}, nil
+	}
 }
 
 type ValidatorBalancesResponse struct {

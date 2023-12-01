@@ -90,12 +90,7 @@ func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, errors.Wrap(err, "GetValidatorPerformance call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := shared.ValidatorPerformanceResponseFromConsensus(validatorPerformance)
-	if err != nil {
-		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
-		return
-	}
-	httputil.WriteJson(w, response)
+	httputil.WriteJson(w, shared.ValidatorPerformanceResponseFromConsensus(validatorPerformance))
 }
 
 // GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
