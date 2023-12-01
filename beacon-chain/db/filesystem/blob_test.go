@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/spf13/afero"
 
@@ -97,4 +99,33 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 	_, err = fh.Write([]byte("derp"))
 	require.NoError(t, err)
 	require.NoError(t, fh.Close())
+}
+
+func TestBlobStorageDelete(t *testing.T) {
+	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	rawRoot := "0xcf9bb70c98f58092c9d6459227c9765f984d240be9690e85179bc5a6f60366ad"
+	blockRoot, err := hexutil.Decode(rawRoot)
+	require.NoError(t, err)
+
+	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, fieldparams.MaxBlobsPerBlock)
+	testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+	require.NoError(t, err)
+	for _, sidecar := range testSidecars {
+		require.NoError(t, bs.Save(sidecar))
+	}
+
+	exists, err := afero.DirExists(fs, hexutil.Encode(blockRoot))
+	require.NoError(t, err)
+	require.Equal(t, true, exists)
+
+	// Delete the directory corresponding to the block root
+	require.NoError(t, bs.Delete(bytesutil.ToBytes32(blockRoot)))
+
+	// Ensure that the directory no longer exists after deletion
+	exists, err = afero.DirExists(fs, hexutil.Encode(blockRoot))
+	require.NoError(t, err)
+	require.Equal(t, false, exists)
+
+	// Deleting a non-existent root does not return an error.
+	require.NoError(t, bs.Delete(bytesutil.ToBytes32([]byte{0x1})))
 }
