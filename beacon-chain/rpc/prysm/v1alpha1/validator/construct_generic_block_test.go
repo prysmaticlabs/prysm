@@ -42,7 +42,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		scs := &enginev1.BlobsBundle{}
 		result, err := vs.constructGenericBeaconBlock(b, scs)
 		require.NoError(t, err)
-		r2, err := result.GetBlindedDeneb().Block.HashTreeRoot()
+		r2, err := result.GetBlindedDeneb().HashTreeRoot()
 		require.NoError(t, err)
 		require.Equal(t, r1, r2)
 		// TODO: update with kzg commit check after updating generic beacon block

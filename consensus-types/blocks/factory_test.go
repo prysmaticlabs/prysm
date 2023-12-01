@@ -123,10 +123,12 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 	})
 	t.Run("GenericSignedBeaconBlock_Deneb", func(t *testing.T) {
 		pb := &eth.GenericSignedBeaconBlock_Deneb{
-			Deneb: &eth.SignedBeaconBlockDeneb{
-				Block: &eth.BeaconBlockDeneb{
+			Deneb: &eth.SignedBeaconBlockContentsDeneb{
+				Block: &eth.SignedBeaconBlockDeneb{Block: &eth.BeaconBlockDeneb{
 					Body: &eth.BeaconBlockBodyDeneb{},
-				}}}
+				}},
+			},
+		}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())
@@ -150,11 +152,10 @@ func Test_NewSignedBeaconBlock(t *testing.T) {
 	})
 	t.Run("GenericSignedBeaconBlock_BlindedDeneb", func(t *testing.T) {
 		pb := &eth.GenericSignedBeaconBlock_BlindedDeneb{
-			BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-				SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{
-					Message: &eth.BlindedBeaconBlockDeneb{
-						Body: &eth.BlindedBeaconBlockBodyDeneb{},
-					}}}}
+			BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{
+				Message: &eth.BlindedBeaconBlockDeneb{
+					Body: &eth.BlindedBeaconBlockBodyDeneb{},
+				}}}
 		b, err := NewSignedBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())
@@ -248,9 +249,9 @@ func Test_NewBeaconBlock(t *testing.T) {
 		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("GenericBeaconBlock_Deneb", func(t *testing.T) {
-		pb := &eth.GenericBeaconBlock_Deneb{Deneb: &eth.BeaconBlockDeneb{
+		pb := &eth.GenericBeaconBlock_Deneb{Deneb: &eth.BeaconBlockContentsDeneb{Block: &eth.BeaconBlockDeneb{
 			Body: &eth.BeaconBlockBodyDeneb{},
-		}}
+		}}}
 		b, err := NewBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())
@@ -269,7 +270,7 @@ func Test_NewBeaconBlock(t *testing.T) {
 		assert.Equal(t, true, b.IsBlinded())
 	})
 	t.Run("GenericBeaconBlock_BlindedDeneb", func(t *testing.T) {
-		pb := &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.BlindedBeaconBlockAndBlobsDeneb{Block: &eth.BlindedBeaconBlockDeneb{Body: &eth.BlindedBeaconBlockBodyDeneb{}}}}
+		pb := &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.BlindedBeaconBlockDeneb{Body: &eth.BlindedBeaconBlockBodyDeneb{}}}
 		b, err := NewBeaconBlock(pb)
 		require.NoError(t, err)
 		assert.Equal(t, version.Deneb, b.Version())

@@ -42,11 +42,10 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 
 // Helper functions for constructing blocks for each version
 func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue uint64, _ *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
-	// TODO update generic beacon block to use block contents instead
 	if isBlinded {
-		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: &ethpb.BlindedBeaconBlockAndBlobsDeneb{Block: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}}, IsBlinded: true, PayloadValue: payloadValue}
+		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}, IsBlinded: true, PayloadValue: payloadValue}
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blockProto.(*ethpb.BeaconBlockDeneb)}, IsBlinded: false, PayloadValue: payloadValue}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blockProto.(*ethpb.BeaconBlockContentsDeneb)}, IsBlinded: false, PayloadValue: payloadValue}
 }
 
 func (vs *Server) constructCapellaBlock(pb proto.Message, isBlinded bool, payloadValue uint64) *ethpb.GenericBeaconBlock {
