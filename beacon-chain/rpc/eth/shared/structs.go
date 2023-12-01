@@ -719,10 +719,7 @@ type ChainHead struct {
 	OptimisticStatus           bool   `json:"optimistic_status"`
 }
 
-func ChainHeadResponseFromConsensus(e *eth.ChainHead) (*ChainHead, error) {
-	if e == nil {
-		return nil, errors.New("ChainHead is empty")
-	}
+func ChainHeadResponseFromConsensus(e *eth.ChainHead) *ChainHead {
 	return &ChainHead{
 		HeadSlot:                   fmt.Sprintf("%d", e.HeadSlot),
 		HeadEpoch:                  fmt.Sprintf("%d", e.HeadEpoch),
@@ -737,7 +734,7 @@ func ChainHeadResponseFromConsensus(e *eth.ChainHead) (*ChainHead, error) {
 		PreviousJustifiedEpoch:     fmt.Sprintf("%d", e.PreviousJustifiedEpoch),
 		PreviousJustifiedBlockRoot: hexutil.Encode(e.PreviousJustifiedBlockRoot),
 		OptimisticStatus:           e.OptimisticStatus,
-	}, nil
+	}
 }
 
 func (m *ChainHead) ToConsensus() (*eth.ChainHead, error) {

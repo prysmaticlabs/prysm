@@ -47,18 +47,13 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "GetChainHead").Error(), http.StatusInternalServerError)
 		return
 	}
-	chJson, err := shared.ChainHeadResponseFromConsensus(chainHead)
-	if err != nil {
-		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
-		return
-	}
 	httputil.WriteJson(w, &BeaconStatusResponse{
 		BeaconNodeEndpoint:     s.beaconClientEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus.Syncing,
 		GenesisTime:            fmt.Sprintf("%d", genesisTime),
 		DepositContractAddress: hexutil.Encode(address),
-		ChainHead:              chJson,
+		ChainHead:              shared.ChainHeadResponseFromConsensus(chainHead),
 	})
 }
 

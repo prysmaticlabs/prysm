@@ -2,7 +2,6 @@ package shared
 
 import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -22,9 +21,6 @@ type ValidatorPerformanceResponse struct {
 }
 
 func ValidatorPerformanceResponseFromConsensus(e *eth.ValidatorPerformanceResponse) (*ValidatorPerformanceResponse, error) {
-	if e == nil {
-		return nil, errors.New("ValidatorPerformanceResponse is empty")
-	}
 	inclusionSlots := make([]uint64, len(e.InclusionSlots))
 	for i, index := range e.InclusionSlots {
 		inclusionSlots[i] = uint64(index)
@@ -93,9 +89,6 @@ type ValidatorBalance struct {
 }
 
 func ValidatorBalancesResponseFromConsensus(e *eth.ValidatorBalances) (*ValidatorBalancesResponse, error) {
-	if e == nil {
-		return nil, errors.New("ValidatorBalances is empty")
-	}
 	balances := make([]*ValidatorBalance, len(e.Balances))
 	for i, balance := range e.Balances {
 		balances[i] = &ValidatorBalance{
@@ -137,9 +130,6 @@ type Validator struct {
 }
 
 func ValidatorsResponseFromConsensus(e *eth.Validators) (*ValidatorsResponse, error) {
-	if e == nil {
-		return nil, errors.New("ValidatorsResponse is empty")
-	}
 	validatorList := make([]*ValidatorContainer, len(e.ValidatorList))
 	for i, validatorContainer := range e.ValidatorList {
 		val := validatorContainer.Validator
