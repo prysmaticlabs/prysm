@@ -53,13 +53,37 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	r, err := s.TargetRoot([32]byte(a.Data.BeaconBlockRoot))
+	targetSlot, err := slots.EpochStart(a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}
-	if !bytes.Equal(a.Data.Target.Root, r[:]) {
-		return fmt.Errorf("FFG and LMD votes are not consistent, block root: %#x, target root: %#x, canonical target root: %#x", a.Data.BeaconBlockRoot, a.Data.Target.Root, r)
+
+	blockRoot := [32]byte(a.Data.BeaconBlockRoot)
+	slot, err := s.RecentBlockSlot(blockRoot)
+	if err != nil {
+		return err
 	}
+
+	if targetSlot >= slot {
+		if !bytes.Equal(a.Data.Target.Root, a.Data.BeaconBlockRoot) {
+			return fmt.Errorf("FFG and LMD votes are not consistent, block root: %#x, target root: %#x, canonical target root: %#x",
+				a.Data.BeaconBlockRoot,
+				a.Data.Target.Root,
+				a.Data.BeaconBlockRoot)
+		}
+	} else {
+		r, err := s.TargetRoot(blockRoot)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(a.Data.Target.Root, r[:]) {
+			return fmt.Errorf("FFG and LMD votes are not consistent, block root: %#x, target root: %#x, canonical target root: %#x",
+				a.Data.BeaconBlockRoot,
+				a.Data.Target.Root,
+				r)
+		}
+	}
+
 	return nil
 }
 
