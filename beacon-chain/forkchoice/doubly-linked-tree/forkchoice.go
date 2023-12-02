@@ -649,3 +649,18 @@ func (f *ForkChoice) TargetRoot(root [32]byte) ([32]byte, error) {
 	}
 	return n.target.root, nil
 }
+
+// TargetRootForSlot returns the root of the checkpoint block for the given slot.
+func (f *ForkChoice) TargetRootForSlot(root [32]byte, slot primitives.Slot) ([32]byte, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return [32]byte{}, ErrNilNode
+	}
+	if n.target == nil {
+		return [32]byte{}, nil
+	}
+	if slot >= n.slot {
+		return n.root, nil
+	}
+	return n.target.root, nil
+}

@@ -471,6 +471,13 @@ func (s *Service) TargetRoot(root [32]byte) ([32]byte, error) {
 	return s.cfg.ForkChoiceStore.TargetRoot(root)
 }
 
+// TargetRootForSlot wraps the corresponding method in forkchoice
+func (s *Service) TargetRootForSlot(root [32]byte, slot primitives.Slot) ([32]byte, error) {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.TargetRootForSlot(root, slot)
+}
+
 // Ancestor returns the block root of an ancestry block from the input block root.
 //
 // Spec pseudocode definition:
