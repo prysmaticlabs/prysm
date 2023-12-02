@@ -75,6 +75,7 @@ type HeadFetcher interface {
 	HeadPublicKeyToValidatorIndex(pubKey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
 	HeadValidatorIndexToPublicKey(ctx context.Context, index primitives.ValidatorIndex) ([fieldparams.BLSPubkeyLength]byte, error)
 	ChainHeads() ([][32]byte, []primitives.Slot)
+	TargetRoot(root [32]byte) ([32]byte, error)
 	HeadSyncCommitteeFetcher
 	HeadDomainFetcher
 }

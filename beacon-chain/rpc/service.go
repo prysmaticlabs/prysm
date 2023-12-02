@@ -357,6 +357,7 @@ func (s *Service) Start() {
 
 	coreService := &core.Service{
 		HeadFetcher:        s.cfg.HeadFetcher,
+		FinalizedFetcher:   s.cfg.FinalizationFetcher,
 		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
 		SyncChecker:        s.cfg.SyncService,
 		Broadcaster:        s.cfg.Broadcaster,
