@@ -464,13 +464,6 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
-// TargetRoot wraps the corresponding method in forkchoice
-func (s *Service) TargetRoot(root [32]byte) ([32]byte, error) {
-	s.cfg.ForkChoiceStore.RLock()
-	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.TargetRoot(root)
-}
-
 // TargetRootForSlot wraps the corresponding method in forkchoice
 func (s *Service) TargetRootForSlot(root [32]byte, slot primitives.Slot) ([32]byte, error) {
 	s.cfg.ForkChoiceStore.RLock()

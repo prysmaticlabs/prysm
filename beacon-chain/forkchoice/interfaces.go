@@ -69,7 +69,6 @@ type Getter interface {
 	ShouldOverrideFCU() bool
 	Slot([32]byte) (primitives.Slot, error)
 	LastRoot(primitives.Epoch) [32]byte
-	TargetRoot([32]byte) ([32]byte, error)
 	TargetRootForSlot([32]byte, primitives.Slot) ([32]byte, error)
 }
 
