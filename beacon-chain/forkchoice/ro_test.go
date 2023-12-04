@@ -38,8 +38,9 @@ const (
 	targetRootForEpochCalled
 )
 
-func _discard(t *testing.T, err error) {
-	require.NoError(t, io.Discard.Write([]byte(err.Error())))
+func _discard(t *testing.T, e error) {
+	_, err := io.Discard.Write([]byte(e.Error()))
+	require.NoError(t, err)
 }
 
 // ensures that the correct func was called with the correct lock pattern
