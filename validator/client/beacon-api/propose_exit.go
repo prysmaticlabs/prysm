@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -21,8 +21,8 @@ func (c beaconApiValidatorClient) proposeExit(ctx context.Context, signedVolunta
 		return nil, errors.New("exit is nil")
 	}
 
-	jsonSignedVoluntaryExit := apimiddleware.SignedVoluntaryExitJson{
-		Exit: &apimiddleware.VoluntaryExitJson{
+	jsonSignedVoluntaryExit := shared.SignedVoluntaryExit{
+		Message: &shared.VoluntaryExit{
 			Epoch:          strconv.FormatUint(uint64(signedVoluntaryExit.Exit.Epoch), 10),
 			ValidatorIndex: strconv.FormatUint(uint64(signedVoluntaryExit.Exit.ValidatorIndex), 10),
 		},

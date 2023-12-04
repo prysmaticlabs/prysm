@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -221,8 +220,8 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 		if r.Method == http.MethodPost && r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
 			w.WriteHeader(400)
 			w.Header().Set("Content-Type", "application/json")
-			err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
-				Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
+			err = json.NewEncoder(w).Encode(&shared.IndexedVerificationFailureError{
+				Failures: []*shared.IndexedVerificationFailure{
 					{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
 				},
 			})

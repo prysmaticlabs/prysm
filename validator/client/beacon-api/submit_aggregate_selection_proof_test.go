@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
@@ -242,10 +241,10 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("%s?attestation_data_root=%s&slot=%d", aggregateAttestationEndpoint, hexutil.Encode(attestationDataRootBytes[:]), slot),
-				&apimiddleware.AggregateAttestationResponseJson{},
+				&validator.AggregateAttestationResponse{},
 			).SetArg(
 				2,
-				apimiddleware.AggregateAttestationResponseJson{
+				validator.AggregateAttestationResponse{
 					Data: jsonifyAttestation(aggregateAttestation),
 				},
 			).Return(

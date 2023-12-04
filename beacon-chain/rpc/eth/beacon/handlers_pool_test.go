@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits/mock"
 	p2pMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -306,7 +305,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		e := &shared.IndexedVerificationFailureError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		require.Equal(t, 1, len(e.Failures))
