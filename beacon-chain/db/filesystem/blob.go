@@ -12,9 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
@@ -47,13 +45,7 @@ func NewBlobStorage(cliCtx *cli.Context, base string) (*BlobStorage, error) {
 		return nil, err
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-
-	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	if cliCtx.IsSet(flags.BlobRetentionEpoch.Name) {
-		epochValue := cliCtx.Uint64(flags.BlobRetentionEpoch.Name)
-		retentionEpoch = primitives.Epoch(epochValue)
-	}
-	return &BlobStorage{fs: fs, retentionEpoch: retentionEpoch}, nil
+	return &BlobStorage{fs: fs, retentionEpoch: MaxEpochsToPersistBlobs}, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
