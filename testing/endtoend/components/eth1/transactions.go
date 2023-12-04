@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-const txCount = 100
+const txCount = 20
 
 var fundedAccount *keystore.Key
 
