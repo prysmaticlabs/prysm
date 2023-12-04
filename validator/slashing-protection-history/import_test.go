@@ -87,7 +87,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 					},
 				},
 			}
-			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], [32]byte{}, indexedAtt)
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
 			// We expect we do not have an attesting history for each attestation
 			require.NoError(t, err)
 			require.Equal(t, kv.NotSlashable, slashingKind)
@@ -139,7 +139,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 					},
 				},
 			}
-			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], [32]byte{}, indexedAtt)
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
 			// We expect we have an attesting history for the attestation and when
 			// attempting to verify the same att is slashable with a different signing root,
 			// we expect to receive a double vote slashing kind.
@@ -1051,8 +1051,11 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 				attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
 				require.NoError(t, err)
 				for _, att := range attestingHistory {
+					var signingRoot [32]byte
+					copy(signingRoot[:], att.SigningRoot)
+
 					indexedAtt := createAttestation(att.Source, att.Target)
-					err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, att.SigningRoot, indexedAtt)
+					err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt)
 					require.NoError(t, err)
 				}
 			}
