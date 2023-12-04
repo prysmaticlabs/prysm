@@ -368,7 +368,7 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head root")}
 	}
 	targetEpoch := slots.ToEpoch(s.HeadFetcher.HeadSlot())
-	targetRoot, err := s.HeadFetcher.TargetRoot(bytesutil.ToBytes32(headRoot))
+	targetRoot, err := s.HeadFetcher.TargetRootForEpoch(bytesutil.ToBytes32(headRoot), targetEpoch)
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
