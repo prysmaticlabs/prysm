@@ -538,3 +538,8 @@ message BeaconBlockContentsDeneb {
   repeated bytes kzg_proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4096"];
   repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max)  = "4096"];
 }
+
+message BlobIdentifier {
+  bytes block_root = 1 [(ethereum.eth.ext.ssz_size) = "32"];
+  uint64 index = 2;
+}

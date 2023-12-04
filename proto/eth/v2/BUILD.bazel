@@ -47,13 +47,10 @@ ssz_gen_marshal(
         "SignedBlindedBeaconBlockDeneb",
         "BlsToExecutionChange",
         "SignedBlsToExecutionChange",
-        "SignedBlindedBlobSidecar",
-        "BlindedBlobSidecar",
-        "BlobSidecar",
-        "BlobSidecars",
         "SignedBeaconBlockContentsDeneb",
         "BeaconBlockContentsDeneb",
         "SyncCommittee",
+        "BlobIdentifier",
     ],
 )
 
