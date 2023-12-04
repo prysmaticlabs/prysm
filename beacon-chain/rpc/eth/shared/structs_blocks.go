@@ -137,7 +137,7 @@ type BeaconBlockBodyCapella struct {
 	VoluntaryExits        []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
 	SyncAggregate         *SyncAggregate                `json:"sync_aggregate" validate:"required"`
 	ExecutionPayload      *ExecutionPayloadCapella      `json:"execution_payload" validate:"required"`
-	BlsToExecutionChanges []*SignedBlsToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
 }
 
 type SignedBlindedBeaconBlockCapella struct {
@@ -164,7 +164,7 @@ type BlindedBeaconBlockBodyCapella struct {
 	VoluntaryExits         []*SignedVoluntaryExit         `json:"voluntary_exits" validate:"required,dive"`
 	SyncAggregate          *SyncAggregate                 `json:"sync_aggregate" validate:"required"`
 	ExecutionPayloadHeader *ExecutionPayloadHeaderCapella `json:"execution_payload_header" validate:"required"`
-	BlsToExecutionChanges  []*SignedBlsToExecutionChange  `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlsToExecutionChanges  []*SignedBLSToExecutionChange  `json:"bls_to_execution_changes" validate:"required,dive"`
 }
 
 type SignedBeaconBlockContentsDeneb struct {
@@ -201,7 +201,7 @@ type BeaconBlockBodyDeneb struct {
 	VoluntaryExits        []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
 	SyncAggregate         *SyncAggregate                `json:"sync_aggregate" validate:"required"`
 	ExecutionPayload      *ExecutionPayloadDeneb        `json:"execution_payload" validate:"required"`
-	BlsToExecutionChanges []*SignedBlsToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlsToExecutionChanges []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
 	BlobKzgCommitments    []string                      `json:"blob_kzg_commitments" validate:"required,dive"`
 }
 
@@ -259,7 +259,7 @@ type BlindedBeaconBlockBodyDeneb struct {
 	VoluntaryExits         []*SignedVoluntaryExit        `json:"voluntary_exits" validate:"required,dive"`
 	SyncAggregate          *SyncAggregate                `json:"sync_aggregate" validate:"required"`
 	ExecutionPayloadHeader *ExecutionPayloadHeaderDeneb  `json:"execution_payload_header" validate:"required"`
-	BlsToExecutionChanges  []*SignedBlsToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
+	BlsToExecutionChanges  []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
 	BlobKzgCommitments     []string                      `json:"blob_kzg_commitments" validate:"required,dive,hexadecimal"`
 }
 
@@ -577,15 +577,4 @@ func WithdrawalFromConsensus(w *enginev1.Withdrawal) *Withdrawal {
 		ExecutionAddress: hexutil.Encode(w.Address),
 		Amount:           fmt.Sprintf("%d", w.Amount),
 	}
-}
-
-type SignedBlsToExecutionChange struct {
-	Message   *BlsToExecutionChange `json:"message" validate:"required"`
-	Signature string                `json:"signature" validate:"required"`
-}
-
-type BlsToExecutionChange struct {
-	ValidatorIndex     string `json:"validator_index" validate:"required"`
-	FromBlsPubkey      string `json:"from_bls_pubkey" validate:"required"`
-	ToExecutionAddress string `json:"to_execution_address" validate:"required"`
 }

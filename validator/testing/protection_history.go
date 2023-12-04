@@ -74,7 +74,7 @@ func MockAttestingAndProposalHistories(pubkeys [][fieldparams.BLSPubkeyLength]by
 			historicalAtts = append(historicalAtts, &kv.AttestationRecord{
 				Source:      i - 1,
 				Target:      i,
-				SigningRoot: signingRoot,
+				SigningRoot: signingRoot[:],
 				PubKey:      pubkeys[v],
 			})
 		}

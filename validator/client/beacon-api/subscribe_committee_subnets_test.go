@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -31,9 +31,9 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonCommitteeSubscriptions := make([]*apimiddleware.BeaconCommitteeSubscribeJson, len(subscribeSlots))
+	jsonCommitteeSubscriptions := make([]*shared.BeaconCommitteeSubscription, len(subscribeSlots))
 	for index := range jsonCommitteeSubscriptions {
-		jsonCommitteeSubscriptions[index] = &apimiddleware.BeaconCommitteeSubscribeJson{
+		jsonCommitteeSubscriptions[index] = &shared.BeaconCommitteeSubscription{
 			ValidatorIndex:   strconv.FormatUint(uint64(validatorIndices[index]), 10),
 			CommitteeIndex:   strconv.FormatUint(uint64(committeeIndices[index]), 10),
 			CommitteesAtSlot: strconv.FormatUint(committeesAtSlot[index], 10),

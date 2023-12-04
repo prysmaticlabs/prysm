@@ -6,7 +6,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/build/bazel"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -57,10 +57,10 @@ func TestWriteSignedVoluntaryExitJSON(t *testing.T) {
 	b, err := file.ReadFileAsBytes(path.Join(output, "validator-exit-300.json"))
 	require.NoError(t, err)
 
-	svej := &apimiddleware.SignedVoluntaryExitJson{}
+	svej := &shared.SignedVoluntaryExit{}
 	require.NoError(t, json.Unmarshal(b, svej))
 
-	require.Equal(t, fmt.Sprintf("%d", sve.Exit.Epoch), svej.Exit.Epoch)
-	require.Equal(t, fmt.Sprintf("%d", sve.Exit.ValidatorIndex), svej.Exit.ValidatorIndex)
+	require.Equal(t, fmt.Sprintf("%d", sve.Exit.Epoch), svej.Message.Epoch)
+	require.Equal(t, fmt.Sprintf("%d", sve.Exit.ValidatorIndex), svej.Message.ValidatorIndex)
 	require.Equal(t, "0x0102", svej.Signature)
 }
