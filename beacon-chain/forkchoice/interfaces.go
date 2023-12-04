@@ -76,7 +76,6 @@ type FastGetter interface {
 	ReceivedBlocksLastEpoch() (uint64, error)
 	ShouldOverrideFCU() bool
 	Slot([32]byte) (primitives.Slot, error)
-	TargetRoot([32]byte) ([32]byte, error)
 	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 	UnrealizedJustifiedPayloadBlockHash() [32]byte
 	Weight(root [32]byte) (uint64, error)

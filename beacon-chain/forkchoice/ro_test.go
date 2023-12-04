@@ -35,7 +35,6 @@ const (
 	shouldOverrideFCUCalled
 	slotCalled
 	lastRootCalled
-	targetRootCalled
 	targetRootForEpochCalled
 )
 
@@ -140,11 +139,6 @@ func TestROLocking(t *testing.T) {
 			name: "lastRootCalled",
 			call: lastRootCalled,
 			cb:   func(g FastGetter) { g.LastRoot(0) },
-		},
-		{
-			name: "targetRootCalled",
-			call: targetRootCalled,
-			cb:   func(g FastGetter) { _, err := g.TargetRoot([32]byte{}); _discard(t, err) },
 		},
 		{
 			name: "targetRootForEpochCalled",
@@ -278,14 +272,8 @@ func (ro *mockROForkchoice) LastRoot(_ primitives.Epoch) [32]byte {
 	return [32]byte{}
 }
 
-// TargetRoot implements FastGetter.
-func (ro *mockROForkchoice) TargetRoot([32]byte) ([32]byte, error) {
-	ro.calls = append(ro.calls, targetRootCalled)
-	return [32]byte{}, nil
-}
-
 // TargetRootForEpoch implements FastGetter.
 func (ro *mockROForkchoice) TargetRootForEpoch(bytes [32]byte, epoch primitives.Epoch) ([32]byte, error) {
-	ro.calls = append(ro.calls, targetRootCalled)
+	ro.calls = append(ro.calls, targetRootForEpochCalled)
 	return [32]byte{}, nil
 }

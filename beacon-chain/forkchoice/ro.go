@@ -156,13 +156,6 @@ func (ro *ROForkChoice) LastRoot(e primitives.Epoch) [32]byte {
 	return ro.getter.LastRoot(e)
 }
 
-// TargetRoot delegates to the underlying forkchoice call, under a lock.
-func (ro *ROForkChoice) TargetRoot(root [32]byte) ([32]byte, error) {
-	ro.l.RLock()
-	defer ro.l.RUnlock()
-	return ro.getter.TargetRoot(root)
-}
-
 // TargetRootForEpoch delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
 	ro.l.RLock()
