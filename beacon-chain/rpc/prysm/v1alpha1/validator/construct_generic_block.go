@@ -3,6 +3,7 @@ package validator
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -26,6 +27,9 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 
 	switch sBlk.Version() {
 	case version.Deneb:
+		if blobsBundle == nil {
+			return nil, errors.New("no blob bundle found")
+		}
 		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Capella:
 		return vs.constructCapellaBlock(blockProto, isBlinded, payloadValue), nil
@@ -41,11 +45,11 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 }
 
 // Helper functions for constructing blocks for each version
-func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue uint64, _ *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
+func (vs *Server) constructDenebBlock(blockProto proto.Message, isBlinded bool, payloadValue uint64, bundle *enginev1.BlobsBundle) *ethpb.GenericBeaconBlock {
 	if isBlinded {
 		return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blockProto.(*ethpb.BlindedBeaconBlockDeneb)}, IsBlinded: true, PayloadValue: payloadValue}
 	}
-	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: blockProto.(*ethpb.BeaconBlockContentsDeneb)}, IsBlinded: false, PayloadValue: payloadValue}
+	return &ethpb.GenericBeaconBlock{Block: &ethpb.GenericBeaconBlock_Deneb{Deneb: &ethpb.BeaconBlockContentsDeneb{Block: blockProto.(*ethpb.BeaconBlockDeneb), KzgProofs: bundle.Proofs, Blobs: bundle.Blobs}}, IsBlinded: false, PayloadValue: payloadValue}
 }
 
 func (vs *Server) constructCapellaBlock(pb proto.Message, isBlinded bool, payloadValue uint64) *ethpb.GenericBeaconBlock {
