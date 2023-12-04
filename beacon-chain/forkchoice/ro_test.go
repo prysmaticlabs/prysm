@@ -276,7 +276,7 @@ func (ro *mockROForkchoice) LastRoot(_ primitives.Epoch) [32]byte {
 }
 
 // TargetRootForEpoch implements FastGetter.
-func (ro *mockROForkchoice) TargetRootForEpoch(bytes [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+func (ro *mockROForkchoice) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]byte, error) {
 	ro.calls = append(ro.calls, targetRootForEpochCalled)
 	return [32]byte{}, nil
 }
