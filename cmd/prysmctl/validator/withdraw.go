@@ -14,7 +14,6 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -52,7 +51,7 @@ func getWithdrawalMessagesFromPathFlag(c *cli.Context) ([]*shared.SignedBLSToExe
 		if err != nil {
 			return setWithdrawalAddressJsons, errors.Wrap(err, "failed to open file")
 		}
-		var to []*apimiddleware.SignedBLSToExecutionChangeJson
+		var to []*shared.SignedBLSToExecutionChange
 		if err := json.Unmarshal(b, &to); err != nil {
 			log.Warnf("provided file: %s, is not a list of signed withdrawal messages. Error:%s", foundFilePath, err.Error())
 			continue
