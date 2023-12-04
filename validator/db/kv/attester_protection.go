@@ -127,8 +127,9 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldpa
 					Target: targetEpoch,
 				}
 				signingRoot := signingRootsBucket.Get(bytesutil.EpochToBytesBigEndian(targetEpoch))
-				if signingRoot != nil {
-					record.SigningRoot = signingRoot
+				if len(signingRoot) != 0 {
+					record.SigningRoot = make([]byte, fieldparams.RootLength)
+					copy(record.SigningRoot, signingRoot)
 				}
 				records = append(records, record)
 			}
