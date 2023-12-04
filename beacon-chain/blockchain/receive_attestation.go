@@ -53,11 +53,7 @@ func (s *Service) AttestationTargetState(ctx context.Context, target *ethpb.Chec
 
 // VerifyLmdFfgConsistency verifies that attestation's LMD and FFG votes are consistency to each other.
 func (s *Service) VerifyLmdFfgConsistency(ctx context.Context, a *ethpb.Attestation) error {
-	targetSlot, err := slots.EpochStart(a.Data.Target.Epoch)
-	if err != nil {
-		return err
-	}
-	r, err := s.TargetRootForSlot([32]byte(a.Data.BeaconBlockRoot), targetSlot)
+	r, err := s.TargetRootForEpoch([32]byte(a.Data.BeaconBlockRoot), a.Data.Target.Epoch)
 	if err != nil {
 		return err
 	}

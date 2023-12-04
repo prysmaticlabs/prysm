@@ -464,11 +464,11 @@ func (s *Service) IsOptimisticForRoot(ctx context.Context, root [32]byte) (bool,
 	return !isCanonical, nil
 }
 
-// TargetRootForSlot wraps the corresponding method in forkchoice
-func (s *Service) TargetRootForSlot(root [32]byte, slot primitives.Slot) ([32]byte, error) {
+// TargetRootForEpoch wraps the corresponding method in forkchoice
+func (s *Service) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
-	return s.cfg.ForkChoiceStore.TargetRootForSlot(root, slot)
+	return s.cfg.ForkChoiceStore.TargetRootForEpoch(root, epoch)
 }
 
 // Ancestor returns the block root of an ancestry block from the input block root.
