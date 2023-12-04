@@ -68,7 +68,7 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
-	domainDataLock                     sync.Mutex
+	domainDataLock                     sync.RWMutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	highestValidSlotLock               sync.Mutex
@@ -868,8 +868,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot primitives.
 }
 
 func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
-	v.domainDataLock.Lock()
-	defer v.domainDataLock.Unlock()
+	v.domainDataLock.RLock()
 
 	req := &ethpb.DomainRequest{
 		Epoch:  epoch,
@@ -879,9 +878,23 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 	key := strings.Join([]string{strconv.FormatUint(uint64(req.Epoch), 10), hex.EncodeToString(req.Domain)}, ",")
 
 	if val, ok := v.domainDataCache.Get(key); ok {
+		v.domainDataLock.RUnlock()
+		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
+	}
+	v.domainDataLock.RUnlock()
+
+	// Lock as we are about to perform an expensive request to the beacon node.
+	v.domainDataLock.Lock()
+
+	// We check the cache again as in the event there are multiple inflight requests for
+	// the same domain data, the cache might have been filled while we were waiting
+	// to acquire the lock.
+	if val, ok := v.domainDataCache.Get(key); ok {
+		v.domainDataLock.Unlock()
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
 
+	defer v.domainDataLock.Unlock()
 	res, err := v.validatorClient.DomainData(ctx, req)
 	if err != nil {
 		return nil, err
