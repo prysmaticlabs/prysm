@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -64,7 +65,11 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgproo
 	if err != nil {
 		return nil, err
 	}
-	blobSidecars := make([]*ethpb.BlobSidecar, len(denebBlk.Block.Body.BlobKzgCommitments))
+	clen := len(denebBlk.Block.Body.BlobKzgCommitments)
+	if clen != len(blobs) || clen != len(kzgproofs) {
+		return nil, errors.New("blob KZG commitments don't match number of blobs or KZG proofs")
+	}
+	blobSidecars := make([]*ethpb.BlobSidecar, clen)
 	header, err := blk.Header()
 	if err != nil {
 		return nil, err
