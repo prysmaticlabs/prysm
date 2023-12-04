@@ -36,10 +36,11 @@ const (
 	slotCalled
 	lastRootCalled
 	targetRootCalled
+	targetRootForEpochCalled
 )
 
-func _discard(err error) {
-	io.Discard.Write([]byte(err.Error()))
+func _discard(t *testing.T, err error) {
+	require.NoError(t, io.Discard.Write([]byte(err.Error())))
 }
 
 // ensures that the correct func was called with the correct lock pattern
@@ -73,7 +74,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "isViableForCheckpointCalled",
 			call: isViableForCheckpointCalled,
-			cb:   func(g FastGetter) { _, err := g.IsViableForCheckpoint(nil); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.IsViableForCheckpoint(nil); _discard(t, err) },
 		},
 		{
 			name: "finalizedPayloadBlockHashCalled",
@@ -113,17 +114,17 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "receivedBlocksLastEpochCalled",
 			call: receivedBlocksLastEpochCalled,
-			cb:   func(g FastGetter) { _, err := g.ReceivedBlocksLastEpoch(); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.ReceivedBlocksLastEpoch(); _discard(t, err) },
 		},
 		{
 			name: "weightCalled",
 			call: weightCalled,
-			cb:   func(g FastGetter) { _, err := g.Weight([32]byte{}); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.Weight([32]byte{}); _discard(t, err) },
 		},
 		{
 			name: "isOptimisticCalled",
 			call: isOptimisticCalled,
-			cb:   func(g FastGetter) { _, err := g.IsOptimistic([32]byte{}); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.IsOptimistic([32]byte{}); _discard(t, err) },
 		},
 		{
 			name: "shouldOverrideFCUCalled",
@@ -133,7 +134,7 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "slotCalled",
 			call: slotCalled,
-			cb:   func(g FastGetter) { _, err := g.Slot([32]byte{}); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.Slot([32]byte{}); _discard(t, err) },
 		},
 		{
 			name: "lastRootCalled",
@@ -143,7 +144,12 @@ func TestROLocking(t *testing.T) {
 		{
 			name: "targetRootCalled",
 			call: targetRootCalled,
-			cb:   func(g FastGetter) { _, err := g.TargetRoot([32]byte{}); _discard(err) },
+			cb:   func(g FastGetter) { _, err := g.TargetRoot([32]byte{}); _discard(t, err) },
+		},
+		{
+			name: "targetRootForEpochCalled",
+			call: targetRootForEpochCalled,
+			cb:   func(g FastGetter) { _, err := g.TargetRootForEpoch([32]byte{}, 0); _discard(t, err) },
 		},
 	}
 	for _, c := range cases {
@@ -162,13 +168,8 @@ type mockROForkchoice struct {
 	calls []mockCall
 }
 
-// TargetRoot implements FastGetter.
-func (ro *mockROForkchoice) TargetRoot([32]byte) ([32]byte, error) {
-	ro.calls = append(ro.calls, targetRootCalled)
-	return [32]byte{}, nil
-}
-
 var _ FastGetter = &mockROForkchoice{}
+
 var _ RLocker = &mockROForkchoice{}
 
 func (ro *mockROForkchoice) Lock() {
@@ -275,4 +276,16 @@ func (ro *mockROForkchoice) Slot(_ [32]byte) (primitives.Slot, error) {
 func (ro *mockROForkchoice) LastRoot(_ primitives.Epoch) [32]byte {
 	ro.calls = append(ro.calls, lastRootCalled)
 	return [32]byte{}
+}
+
+// TargetRoot implements FastGetter.
+func (ro *mockROForkchoice) TargetRoot([32]byte) ([32]byte, error) {
+	ro.calls = append(ro.calls, targetRootCalled)
+	return [32]byte{}, nil
+}
+
+// TargetRootForEpoch implements FastGetter.
+func (ro *mockROForkchoice) TargetRootForEpoch(bytes [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	ro.calls = append(ro.calls, targetRootCalled)
+	return [32]byte{}, nil
 }
