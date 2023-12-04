@@ -588,9 +588,9 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Deneb{
 					Deneb: func() *ethpb.BeaconBlockContentsDeneb {
-						blk := util.NewBeaconBlockDeneb()
-						blk.Block.Body.Graffiti = graffiti
-						return &ethpb.BeaconBlockContentsDeneb{Block: blk.Block}
+						blk := util.NewBeaconBlockContentsDeneb()
+						blk.Block.Block.Body.Graffiti = graffiti
+						return &ethpb.BeaconBlockContentsDeneb{Block: blk.Block.Block, KzgProofs: blk.KzgProofs, Blobs: blk.Blobs}
 					}(),
 				},
 			},

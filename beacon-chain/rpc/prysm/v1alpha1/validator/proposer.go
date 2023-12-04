@@ -240,7 +240,11 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	if blk.Version() >= version.Deneb {
 		if !blinded {
-			scs, err = buildBlobSidecars(blk)
+			dbBlockContents := req.GetDeneb()
+			if dbBlockContents == nil {
+				return nil, errors.New("signed beacon block contents is empty")
+			}
+			scs, err = buildBlobSidecars(blk, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
 			if err != nil {
 				return nil, fmt.Errorf("could not build blob sidecars: %v", err)
 			}
