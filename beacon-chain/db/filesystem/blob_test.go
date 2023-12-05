@@ -10,12 +10,12 @@ import (
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/spf13/afero"
-
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/spf13/afero"
 )
 
 func TestBlobStorage_SaveBlobData(t *testing.T) {
@@ -24,7 +24,8 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("no error for duplicate", func(t *testing.T) {
-		fs, bs := NewEphemeralBlobStorageWithFs(t)
+		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+		require.NoError(t, err)
 		existingSidecar := testSidecars[0]
 
 		blobPath := namerForSidecar(existingSidecar).path()
@@ -74,7 +75,8 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 }
 
 func TestBlobIndicesBounds(t *testing.T) {
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+	require.NoError(t, err)
 	root := [32]byte{}
 
 	okIdx := uint64(fieldparams.MaxBlobsPerBlock - 1)
@@ -103,8 +105,77 @@ func writeFakeSSZ(t *testing.T, fs afero.Fs, root [32]byte, idx uint64) {
 	require.NoError(t, fh.Close())
 }
 
+func TestBlobStoragePrune(t *testing.T) {
+	currentSlot := primitives.Slot(200000)
+	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+	require.NoError(t, err)
+
+	t.Run("PruneOne", func(t *testing.T) {
+		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+
+		for _, sidecar := range testSidecars {
+			require.NoError(t, bs.Save(sidecar))
+		}
+
+		require.NoError(t, bs.Prune(currentSlot))
+
+		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		require.Equal(t, 0, len(remainingFolders))
+	})
+	t.Run("PruneMany", func(t *testing.T) {
+		blockQty := 10
+		slot := primitives.Slot(0)
+
+		for j := 0; j <= blockQty; j++ {
+			root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
+			_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, root, slot, fieldparams.MaxBlobsPerBlock)
+			testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+			require.NoError(t, err)
+			require.NoError(t, bs.Save(testSidecars[0]))
+
+			slot += 10000
+		}
+
+		require.NoError(t, bs.Prune(currentSlot))
+
+		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		require.Equal(t, 4, len(remainingFolders))
+	})
+}
+
+func BenchmarkPruning(b *testing.B) {
+	var t *testing.T
+	_, bs, err := NewEphemeralBlobStorageWithFs(t)
+	require.NoError(t, err)
+
+	blockQty := 10000
+	currentSlot := primitives.Slot(150000)
+	slot := primitives.Slot(0)
+
+	for j := 0; j <= blockQty; j++ {
+		root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
+		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, root, slot, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+		require.NoError(t, bs.Save(testSidecars[0]))
+
+		slot += 100
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		err := bs.Prune(currentSlot)
+		require.NoError(b, err)
+	}
+}
+
 func TestBlobStorageDelete(t *testing.T) {
-	fs, bs := NewEphemeralBlobStorageWithFs(t)
+	fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+	require.NoError(t, err)
 	rawRoot := "0xcf9bb70c98f58092c9d6459227c9765f984d240be9690e85179bc5a6f60366ad"
 	blockRoot, err := hexutil.Decode(rawRoot)
 	require.NoError(t, err)

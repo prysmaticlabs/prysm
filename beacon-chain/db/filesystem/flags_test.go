@@ -1,4 +1,4 @@
-package kv
+package filesystem
 
 import (
 	"flag"
@@ -13,14 +13,14 @@ import (
 )
 
 func TestConfigureBlobRetentionEpoch(t *testing.T) {
-	maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	MaxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 	params.SetupTestConfigCleanup(t)
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 
 	// Test case: Spec default.
 	require.NoError(t, ConfigureBlobRetentionEpoch(cli.NewContext(&app, set, nil)))
-	require.Equal(t, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest, maxEpochsToPersistBlobs)
+	require.Equal(t, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest, MaxEpochsToPersistBlobs)
 
 	set.Uint64(flags.BlobRetentionEpoch.Name, 0, "")
 	minEpochsForSidecarRequest := uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
@@ -29,7 +29,7 @@ func TestConfigureBlobRetentionEpoch(t *testing.T) {
 
 	// Test case: Input epoch is greater than or equal to spec value.
 	require.NoError(t, ConfigureBlobRetentionEpoch(cliCtx))
-	require.Equal(t, primitives.Epoch(2*minEpochsForSidecarRequest), maxEpochsToPersistBlobs)
+	require.Equal(t, primitives.Epoch(2*minEpochsForSidecarRequest), MaxEpochsToPersistBlobs)
 
 	// Test case: Input epoch is less than spec value.
 	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(minEpochsForSidecarRequest-1, 10)))
