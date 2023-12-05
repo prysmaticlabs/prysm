@@ -436,21 +436,21 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	require.Equal(t, uint64(0), count)
 }
 
-func TestStore_Target(t *testing.T) {
+func TestStore_TargetRootForEpoch(t *testing.T) {
 	ctx := context.Background()
 	f := setup(1, 1)
 
 	state, blkRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
-	target, err := f.TargetRoot(blkRoot)
+	target, err := f.TargetRootForEpoch(blkRoot, 1)
 	require.NoError(t, err)
 	require.Equal(t, target, blkRoot)
 
 	state, root1, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'b'}, blkRoot, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, root1))
-	target, err = f.TargetRoot(root1)
+	target, err = f.TargetRootForEpoch(root1, 1)
 	require.NoError(t, err)
 	require.Equal(t, target, blkRoot)
 
@@ -459,14 +459,14 @@ func TestStore_Target(t *testing.T) {
 	state, root2, err := prepareForkchoiceState(ctx, 2*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'c'}, root1, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, root2))
-	target, err = f.TargetRoot(root2)
+	target, err = f.TargetRootForEpoch(root2, 2)
 	require.NoError(t, err)
 	require.Equal(t, target, root1)
 
 	state, root3, err := prepareForkchoiceState(ctx, 2*params.BeaconConfig().SlotsPerEpoch+2, [32]byte{'d'}, root2, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, root3))
-	target, err = f.TargetRoot(root2)
+	target, err = f.TargetRootForEpoch(root2, 2)
 	require.NoError(t, err)
 	require.Equal(t, target, root1)
 
@@ -474,7 +474,7 @@ func TestStore_Target(t *testing.T) {
 	s := f.store
 	s.finalizedCheckpoint.Root = root1
 	require.NoError(t, s.prune(ctx))
-	target, err = f.TargetRoot(root1)
+	target, err = f.TargetRootForEpoch(root1, 1)
 	require.NoError(t, err)
 	require.Equal(t, [32]byte{}, target)
 
@@ -483,21 +483,26 @@ func TestStore_Target(t *testing.T) {
 	state, root4, err := prepareForkchoiceState(ctx, 3*params.BeaconConfig().SlotsPerEpoch, [32]byte{'e'}, root1, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, root4))
-	target, err = f.TargetRoot(root4)
+	target, err = f.TargetRootForEpoch(root4, 3)
 	require.NoError(t, err)
 	require.Equal(t, target, root4)
 
 	state, root5, err := prepareForkchoiceState(ctx, 3*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'f'}, root4, params.BeaconConfig().ZeroHash, 1, 1)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, state, root5))
-	target, err = f.TargetRoot(root5)
+	target, err = f.TargetRootForEpoch(root5, 3)
 	require.NoError(t, err)
 	require.Equal(t, target, root4)
+
+	// Target root where the target epoch is same or ahead of the block slot
+	target, err = f.TargetRootForEpoch(root5, 4)
+	require.NoError(t, err)
+	require.Equal(t, target, root5)
 
 	// Prune finalization
 	s.finalizedCheckpoint.Root = root4
 	require.NoError(t, s.prune(ctx))
-	target, err = f.TargetRoot(root4)
+	target, err = f.TargetRootForEpoch(root4, 3)
 	require.NoError(t, err)
 	require.Equal(t, root4, target)
 }

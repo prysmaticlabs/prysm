@@ -3069,7 +3069,7 @@ func ExitsFromConsensus(src []*eth.SignedVoluntaryExit) ([]*SignedVoluntaryExit,
 	return exits, nil
 }
 
-func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
+func BlsChangesToConsensus(src []*SignedBLSToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
 	if src == nil {
 		return nil, errNilValue
 	}
@@ -3092,7 +3092,7 @@ func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLST
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Message.ValidatorIndex", i))
 		}
-		pubkey, err := DecodeHexWithLength(ch.Message.FromBlsPubkey, fieldparams.BLSPubkeyLength)
+		pubkey, err := DecodeHexWithLength(ch.Message.FromBLSPubkey, fieldparams.BLSPubkeyLength)
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Message.FromBlsPubkey", i))
 		}
@@ -3112,13 +3112,13 @@ func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLST
 	return changes, nil
 }
 
-func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBlsToExecutionChange, error) {
-	changes := make([]*SignedBlsToExecutionChange, len(src))
+func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBLSToExecutionChange, error) {
+	changes := make([]*SignedBLSToExecutionChange, len(src))
 	for i, ch := range src {
-		changes[i] = &SignedBlsToExecutionChange{
-			Message: &BlsToExecutionChange{
+		changes[i] = &SignedBLSToExecutionChange{
+			Message: &BLSToExecutionChange{
 				ValidatorIndex:     fmt.Sprintf("%d", ch.Message.ValidatorIndex),
-				FromBlsPubkey:      hexutil.Encode(ch.Message.FromBlsPubkey),
+				FromBLSPubkey:      hexutil.Encode(ch.Message.FromBlsPubkey),
 				ToExecutionAddress: hexutil.Encode(ch.Message.ToExecutionAddress),
 			},
 			Signature: hexutil.Encode(ch.Signature),

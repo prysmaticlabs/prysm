@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/rs/cors"
 	"google.golang.org/grpc"
@@ -34,7 +33,6 @@ type PbHandlerRegistration func(context.Context, *gwruntime.ServeMux, *grpc.Clie
 
 // MuxHandler is a function that implements the mux handler functionality.
 type MuxHandler func(
-	apiMiddlewareHandler *apimiddleware.ApiProxyMiddleware,
 	h http.HandlerFunc,
 	w http.ResponseWriter,
 	req *http.Request,
@@ -42,16 +40,15 @@ type MuxHandler func(
 
 // Config parameters for setting up the gateway service.
 type config struct {
-	maxCallRecvMsgSize           uint64
-	remoteCert                   string
-	gatewayAddr                  string
-	remoteAddr                   string
-	allowedOrigins               []string
-	apiMiddlewareEndpointFactory apimiddleware.EndpointFactory
-	muxHandler                   MuxHandler
-	pbHandlers                   []*PbMux
-	router                       *mux.Router
-	timeout                      time.Duration
+	maxCallRecvMsgSize uint64
+	remoteCert         string
+	gatewayAddr        string
+	remoteAddr         string
+	allowedOrigins     []string
+	muxHandler         MuxHandler
+	pbHandlers         []*PbMux
+	router             *mux.Router
+	timeout            time.Duration
 }
 
 // Gateway is the gRPC gateway to serve HTTP JSON traffic as a proxy and forward it to the gRPC server.
@@ -60,7 +57,6 @@ type Gateway struct {
 	conn         *grpc.ClientConn
 	server       *http.Server
 	cancel       context.CancelFunc
-	proxy        *apimiddleware.ApiProxyMiddleware
 	ctx          context.Context
 	startFailure error
 }
@@ -110,13 +106,9 @@ func (g *Gateway) Start() {
 
 	corsMux := g.corsMiddleware(g.cfg.router)
 
-	if g.cfg.apiMiddlewareEndpointFactory != nil && !g.cfg.apiMiddlewareEndpointFactory.IsNil() {
-		g.registerApiMiddleware()
-	}
-
 	if g.cfg.muxHandler != nil {
 		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			g.cfg.muxHandler(g.proxy, corsMux.ServeHTTP, w, r)
+			g.cfg.muxHandler(corsMux.ServeHTTP, w, r)
 		})
 	}
 
@@ -228,14 +220,4 @@ func (g *Gateway) dialUnix(ctx context.Context, addr string) (*grpc.ClientConn, 
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(int(g.cfg.maxCallRecvMsgSize))),
 	}
 	return grpc.DialContext(ctx, addr, opts...)
-}
-
-func (g *Gateway) registerApiMiddleware() {
-	g.proxy = &apimiddleware.ApiProxyMiddleware{
-		GatewayAddress:  g.cfg.gatewayAddr,
-		EndpointCreator: g.cfg.apiMiddlewareEndpointFactory,
-		Timeout:         g.cfg.timeout,
-	}
-	log.Info("Starting API middleware")
-	g.proxy.Run(g.cfg.router)
 }
