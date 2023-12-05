@@ -185,9 +185,9 @@ func buildSidecarsResponse(sidecars []*eth.BlobSidecar) *SidecarsResponse {
 		resp.Data[i] = &Sidecar{
 			Index:                    strconv.FormatUint(sc.Index, 10),
 			Blob:                     hexutil.Encode(sc.Blob),
-			KZGCommitment:            hexutil.Encode(sc.KzgCommitment),
+			KzgCommitment:            hexutil.Encode(sc.KzgCommitment),
 			SignedBeaconBlockHeader:  shared.SignedBeaconBlockHeaderFromConsensus(sc.SignedBlockHeader),
-			KZGProof:                 hexutil.Encode(sc.KzgProof),
+			KzgProof:                 hexutil.Encode(sc.KzgProof),
 			CommitmentInclusionProof: proofs,
 		}
 	}

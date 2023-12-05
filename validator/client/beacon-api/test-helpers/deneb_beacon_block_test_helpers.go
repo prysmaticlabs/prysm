@@ -7,7 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-func GenerateProtoDenebBeaconBlock() *ethpb.BeaconBlockContentsDeneb {
+func GenerateProtoDenebBeaconBlockContents() *ethpb.BeaconBlockContentsDeneb {
 	return &ethpb.BeaconBlockContentsDeneb{
 		Block: &ethpb.BeaconBlockDeneb{
 			Slot:          1,

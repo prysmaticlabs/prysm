@@ -79,27 +79,27 @@ func TestBlobs(t *testing.T) {
 		sidecar := resp.Data[0]
 		require.NotNil(t, sidecar)
 		assert.Equal(t, "0", sidecar.Index)
-		//assert.Equal(t, "0x626c6f6230", sidecar.Blob)
-		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7430", sidecar.KZGCommitment)
-		//assert.Equal(t, "0x6b7a6770726f6f6630", sidecar.KZGProof)
+		assert.Equal(t, hexutil.Encode(blobs[0].Blob), sidecar.Blob)
+		assert.Equal(t, hexutil.Encode(blobs[0].KzgCommitment), sidecar.KzgCommitment)
+		assert.Equal(t, hexutil.Encode(blobs[0].KzgProof), sidecar.KzgProof)
 		sidecar = resp.Data[1]
 		require.NotNil(t, sidecar)
 		assert.Equal(t, "1", sidecar.Index)
-		//assert.Equal(t, "0x626c6f6231", sidecar.Blob)
-		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7431", sidecar.KZGCommitment)
-		//assert.Equal(t, "0x6b7a6770726f6f6631", sidecar.KZGProof)
+		assert.Equal(t, hexutil.Encode(blobs[1].Blob), sidecar.Blob)
+		assert.Equal(t, hexutil.Encode(blobs[1].KzgCommitment), sidecar.KzgCommitment)
+		assert.Equal(t, hexutil.Encode(blobs[1].KzgProof), sidecar.KzgProof)
 		sidecar = resp.Data[2]
 		require.NotNil(t, sidecar)
 		assert.Equal(t, "2", sidecar.Index)
-		//assert.Equal(t, "0x626c6f6232", sidecar.Blob)
-		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7432", sidecar.KZGCommitment)
-		//assert.Equal(t, "0x6b7a6770726f6f6632", sidecar.KZGProof)
+		assert.Equal(t, hexutil.Encode(blobs[2].Blob), sidecar.Blob)
+		assert.Equal(t, hexutil.Encode(blobs[2].KzgCommitment), sidecar.KzgCommitment)
+		assert.Equal(t, hexutil.Encode(blobs[2].KzgProof), sidecar.KzgProof)
 		sidecar = resp.Data[3]
 		require.NotNil(t, sidecar)
 		assert.Equal(t, "3", sidecar.Index)
-		//assert.Equal(t, "0x626c6f6233", sidecar.Blob)
-		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7433", sidecar.KZGCommitment)
-		//assert.Equal(t, "0x6b7a6770726f6f6633", sidecar.KZGProof)
+		assert.Equal(t, hexutil.Encode(blobs[3].Blob), sidecar.Blob)
+		assert.Equal(t, hexutil.Encode(blobs[3].KzgCommitment), sidecar.KzgCommitment)
+		assert.Equal(t, hexutil.Encode(blobs[3].KzgProof), sidecar.KzgProof)
 	})
 	t.Run("finalized", func(t *testing.T) {
 		u := "http://foo.example/finalized"
@@ -192,8 +192,8 @@ func TestBlobs(t *testing.T) {
 		require.NotNil(t, sidecar)
 		assert.Equal(t, "2", sidecar.Index)
 		//assert.Equal(t, "0x626c6f6232", sidecar.Blob)
-		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7432", sidecar.KZGCommitment)
-		//assert.Equal(t, "0x6b7a6770726f6f6632", sidecar.KZGProof)
+		//assert.Equal(t, "0x6b7a67636f6d6d69746d656e7432", sidecar.KzgCommitment)
+		//assert.Equal(t, "0x6b7a6770726f6f6632", sidecar.KzgProof)
 	})
 	t.Run("slot before Deneb fork", func(t *testing.T) {
 		u := "http://foo.example/31"

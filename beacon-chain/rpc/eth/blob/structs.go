@@ -10,7 +10,7 @@ type Sidecar struct {
 	Index                    string                          `json:"index"`
 	Blob                     string                          `json:"blob"`
 	SignedBeaconBlockHeader  *shared.SignedBeaconBlockHeader `json:"signed_block_header"`
-	KZGCommitment            string                          `json:"kzg_commitment"`
-	KZGProof                 string                          `json:"kzg_proof"`
+	KzgCommitment            string                          `json:"kzg_commitment"`
+	KzgProof                 string                          `json:"kzg_proof"`
 	CommitmentInclusionProof []string                        `json:"commitment_inclusion_proof"`
 }
