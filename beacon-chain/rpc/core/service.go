@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -18,7 +17,6 @@ type Service struct {
 	Broadcaster        p2p.Broadcaster
 	SyncCommitteePool  synccommittee.Pool
 	OperationNotifier  opfeed.Notifier
-	AttestationCache   *cache.AttestationCache
 	StateGen           stategen.StateManager
 	P2P                p2p.Broadcaster
 }

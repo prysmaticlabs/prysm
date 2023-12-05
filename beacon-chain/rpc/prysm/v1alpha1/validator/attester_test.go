@@ -111,8 +111,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache: cache.NewAttestationCache(),
-			HeadFetcher:      &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:]},
+			HeadFetcher: &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:]},
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
@@ -183,7 +182,6 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		CoreService: &core.Service{
 			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
 			HeadFetcher:        &mock.ChainService{Optimistic: false, State: beaconState},
-			AttestationCache:   cache.NewAttestationCache(),
 			FinalizedFetcher:   &mock.ChainService{},
 		},
 	}
@@ -246,7 +244,6 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache:   cache.NewAttestationCache(),
 			HeadFetcher:        &mock.ChainService{TargetRoot: blockRoot2, Root: blockRoot[:]},
 			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 			StateGen:           stategen.New(db, doublylinkedtree.New()),
@@ -305,7 +302,6 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache: cache.NewAttestationCache(),
 			HeadFetcher: &mock.ChainService{
 				TargetRoot: targetRoot, Root: blockRoot[:],
 			},

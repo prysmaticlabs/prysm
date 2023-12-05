@@ -363,7 +363,6 @@ func (s *Service) Start() {
 		Broadcaster:        s.cfg.Broadcaster,
 		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
 		OperationNotifier:  s.cfg.OperationNotifier,
-		AttestationCache:   cache.NewAttestationCache(),
 		StateGen:           s.cfg.StateGen,
 		P2P:                s.cfg.Broadcaster,
 	}
