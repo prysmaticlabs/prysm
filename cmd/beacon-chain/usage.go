@@ -129,7 +129,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SlasherDirFlag,
 			flags.LocalBlockValueBoost,
 			flags.BlobRetentionEpoch,
-      flags.JwtId,
+			flags.JwtId,
 			checkpoint.BlockPath,
 			checkpoint.StatePath,
 			checkpoint.RemoteURL,
