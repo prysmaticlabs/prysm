@@ -244,7 +244,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 			if dbBlockContents == nil {
 				return nil, errors.New("signed beacon block contents is empty")
 			}
-			scs, err = buildBlobSidecars(blk, dbBlockContents.Blobs, dbBlockContents.KzgProofs)
+			scs, err = buildBlobSidecars(blk, &sidecarMetaData{Blobs: dbBlockContents.Blobs, KzgProofs: dbBlockContents.KzgProofs})
 			if err != nil {
 				return nil, fmt.Errorf("could not build blob sidecars: %v", err)
 			}
