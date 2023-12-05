@@ -113,6 +113,7 @@ func TestProposerCache(t *testing.T) {
 	require.Equal(t, primitives.ValidatorIndex(expectedIdx), idx)
 
 	idx, cached = pc.Proposer([32]byte{}, 1)
-	require.Equal(t, true, cached)
-	require.Equal(t, primitives.ValidatorIndex(expectedIdx), idx)
+	// TODO: update this test when we integrate a proposer id cache
+	require.Equal(t, false, cached)
+	require.Equal(t, primitives.ValidatorIndex(0), idx)
 }
