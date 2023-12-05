@@ -2,6 +2,8 @@ package filesystem
 
 import (
 	"bytes"
+	"os"
+	"path"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -128,4 +130,15 @@ func TestBlobStorageDelete(t *testing.T) {
 
 	// Deleting a non-existent root does not return an error.
 	require.NoError(t, bs.Delete(bytesutil.ToBytes32([]byte{0x1})))
+}
+
+func TestNewBlobStorage(t *testing.T) {
+	_, err := NewBlobStorage(path.Join(t.TempDir(), "good"))
+	require.NoError(t, err)
+
+	// If directory already exists with improper permissions, expect a wrapped err message.
+	fp := path.Join(t.TempDir(), "bad")
+	require.NoError(t, os.Mkdir(fp, 0777))
+	_, err = NewBlobStorage(fp)
+	require.ErrorContains(t, "failed to create blob storage", err)
 }
