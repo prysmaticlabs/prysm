@@ -424,7 +424,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 	defer ctrl.Finish()
 
 	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	bytes, err := json.Marshal(block)
 	require.NoError(t, err)
 
@@ -569,7 +569,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	defer ctrl.Finish()
 
 	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	blockBytes, err := json.Marshal(block)
 	require.NoError(t, err)
 

@@ -1153,12 +1153,6 @@ func HydrateSignedBeaconBlockDeneb(b *ethpb.SignedBeaconBlockDeneb) *ethpb.Signe
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDeneb) *ethpb.SignedBeaconBlockContentsDeneb {
 	b.Block = HydrateSignedBeaconBlockDeneb(b.Block)
-	b.KzgProofs = [][]byte{
-		make([]byte, fieldparams.BLSPubkeyLength),
-	}
-	b.Blobs = [][]byte{
-		make([]byte, fieldparams.BlobLength),
-	}
 	return b
 }
 

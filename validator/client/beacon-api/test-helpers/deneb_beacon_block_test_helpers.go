@@ -8,7 +8,6 @@ import (
 )
 
 func GenerateProtoDenebBeaconBlock() *ethpb.BeaconBlockContentsDeneb {
-	// TODO: improve kzg proofs and blobs testing here
 	return &ethpb.BeaconBlockContentsDeneb{
 		Block: &ethpb.BeaconBlockDeneb{
 			Slot:          1,
@@ -275,8 +274,8 @@ func GenerateProtoDenebBeaconBlock() *ethpb.BeaconBlockContentsDeneb {
 				BlobKzgCommitments: [][]byte{FillByteSlice(48, 145), FillByteSlice(48, 146)},
 			},
 		},
-		KzgProofs: nil,
-		Blobs:     nil,
+		KzgProofs: [][]byte{FillByteSlice(48, 146)},
+		Blobs:     [][]byte{FillByteSlice(131072, 147)},
 	}
 }
 
@@ -532,7 +531,7 @@ func GenerateProtoBlindedDenebBeaconBlock() *ethpb.BlindedBeaconBlockDeneb {
 	}
 }
 
-func GenerateJsonDenebBeaconBlock() *shared.BeaconBlockContentsDeneb {
+func GenerateJsonDenebBeaconBlockContents() *shared.BeaconBlockContentsDeneb {
 	return &shared.BeaconBlockContentsDeneb{
 		Block: &shared.BeaconBlockDeneb{
 			Slot:          "1",
