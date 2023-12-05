@@ -101,7 +101,7 @@ func TestProposerCache(t *testing.T) {
 	// 3 validators because that was the first number that produced a non-zero proposer index by default
 	st, _ := util.DeterministicGenesisStateDeneb(t, 3)
 
-	pc := newPropCache(DefaultProposerCacheSize)
+	pc := newPropCache()
 	_, cached := pc.Proposer([32]byte{}, 1)
 	// should not be cached yet
 	require.Equal(t, false, cached)
