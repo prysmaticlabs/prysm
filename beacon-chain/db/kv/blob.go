@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -290,7 +291,7 @@ func blobSidecarKey(blob *ethpb.DeprecatedBlobSidecar) blobRotatingKey {
 
 func slotKey(slot types.Slot) []byte {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	maxSlotsToPersistBlobs := types.Slot(maxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
+	maxSlotsToPersistBlobs := types.Slot(filesystem.MaxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
 	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(maxSlotsToPersistBlobs))
 }
 
@@ -299,14 +300,14 @@ func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
 		b := tx.Bucket(chainMetadataBucket)
 		v := b.Get(blobRetentionEpochsKey)
 		if v == nil {
-			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(maxEpochsToPersistBlobs))); err != nil {
+			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(filesystem.MaxEpochsToPersistBlobs))); err != nil {
 				return err
 			}
 			return nil
 		}
 		e := bytesutil.BytesToUint64BigEndian(v)
-		if e != uint64(maxEpochsToPersistBlobs) {
-			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, maxEpochsToPersistBlobs)
+		if e != uint64(filesystem.MaxEpochsToPersistBlobs) {
+			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, filesystem.MaxEpochsToPersistBlobs)
 		}
 		return nil
 	}); err != nil {
