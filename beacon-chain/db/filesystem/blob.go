@@ -189,7 +189,7 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	retentionSlot, err := slots.EpochStart(bs.retentionEpoch + bufferEpochs)
+	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
 	if err != nil {
 		return err
 	}
