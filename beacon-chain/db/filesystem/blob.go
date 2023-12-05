@@ -36,7 +36,7 @@ const (
 func NewBlobStorage(base string) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	return &BlobStorage{fs: fs}, nil
