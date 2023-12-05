@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -89,7 +88,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 
 	switch signedBlockResponseJson.Version {
 	case "phase0":
-		jsonPhase0Block := apimiddleware.SignedBeaconBlockJson{}
+		jsonPhase0Block := shared.SignedBeaconBlock{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed phase0 block response json")
 		}
@@ -114,7 +113,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = phase0Block.Slot
 
 	case "altair":
-		jsonAltairBlock := apimiddleware.SignedBeaconBlockAltairJson{}
+		jsonAltairBlock := shared.SignedBeaconBlockAltair{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed altair block response json")
 		}
@@ -139,7 +138,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = altairBlock.Slot
 
 	case "bellatrix":
-		jsonBellatrixBlock := apimiddleware.SignedBeaconBlockBellatrixJson{}
+		jsonBellatrixBlock := shared.SignedBeaconBlockBellatrix{}
 		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed bellatrix block response json")
 		}
@@ -164,7 +163,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = bellatrixBlock.Slot
 
 	case "capella":
-		jsonCapellaBlock := apimiddleware.SignedBeaconBlockCapellaJson{}
+		jsonCapellaBlock := shared.SignedBeaconBlockCapella{}
 		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed capella block response json")
 		}

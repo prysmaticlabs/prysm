@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -22,7 +22,7 @@ func TestGetGenesis(t *testing.T) {
 		name                    string
 		genesisResponse         *beacon.Genesis
 		genesisError            error
-		depositContractResponse apimiddleware.DepositContractResponseJson
+		depositContractResponse config.GetDepositContractResponse
 		depositContractError    error
 		queriesDepositContract  bool
 		expectedResponse        *ethpb.Genesis
@@ -66,7 +66,7 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
+			depositContractResponse: config.GetDepositContractResponse{
 				Data: nil,
 			},
 			expectedError: "deposit contract data is nil",
@@ -78,8 +78,8 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
-				Data: &apimiddleware.DepositContractJson{
+			depositContractResponse: config.GetDepositContractResponse{
+				Data: &config.DepositContractData{
 					Address: "foo",
 				},
 			},
@@ -92,8 +92,8 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
-				Data: &apimiddleware.DepositContractJson{
+			depositContractResponse: config.GetDepositContractResponse{
+				Data: &config.DepositContractData{
 					Address: hexutil.Encode([]byte{3}),
 				},
 			},
@@ -122,7 +122,7 @@ func TestGetGenesis(t *testing.T) {
 				testCase.genesisError,
 			)
 
-			depositContractJson := apimiddleware.DepositContractResponseJson{}
+			depositContractJson := config.GetDepositContractResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			if testCase.queriesDepositContract {
