@@ -39,7 +39,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	wsb, err := blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{4})
-	require.ErrorContains(t, "could not sign block with slot <= lowest signed", err)
+	require.ErrorContains(t, "could not sign block with slot < lowest signed", err)
 
 	// We expect the same block with a slot equal to the lowest
 	// signed slot to pass validation if signing roots are equal.
@@ -61,7 +61,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	wsb, err = blocks.NewSignedBeaconBlock(blk)
 	require.NoError(t, err)
 	err = validator.slashableProposalCheck(context.Background(), pubKeyBytes, wsb, [32]byte{4})
-	require.ErrorContains(t, failedBlockSignLocalErr, err)
+	require.ErrorContains(t, "could not sign block with slot == lowest signed", err)
 
 	// We expect the same block with a slot > than the lowest
 	// signed slot to pass validation.
