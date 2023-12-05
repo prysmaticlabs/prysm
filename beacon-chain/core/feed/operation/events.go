@@ -2,7 +2,6 @@
 package operation
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -59,5 +58,5 @@ type BLSToExecutionChangeReceivedData struct {
 
 // BlobSidecarReceivedData is the data sent with BlobSidecarReceived events.
 type BlobSidecarReceivedData struct {
-	Blob blocks.ROBlob
+	Blob *ethpb.SignedBlobSidecar
 }

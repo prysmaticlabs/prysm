@@ -56,13 +56,8 @@ func (c *blobsBundleCache) prune(minSlot primitives.Slot) {
 	}
 }
 
-type sidecarMetaData struct {
-	Blobs     [][]byte
-	KzgProofs [][]byte
-}
-
 // buildBlobSidecars given a block, builds the blob sidecars for the block.
-func buildBlobSidecars(blk interfaces.SignedBeaconBlock, metadata *sidecarMetaData) ([]*ethpb.BlobSidecar, error) {
+func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgproofs [][]byte) ([]*ethpb.BlobSidecar, error) {
 	if blk.Version() < version.Deneb {
 		return nil, nil // No blobs before deneb.
 	}
@@ -71,7 +66,7 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, metadata *sidecarMetaDa
 		return nil, err
 	}
 	clen := len(denebBlk.Block.Body.BlobKzgCommitments)
-	if clen != len(metadata.Blobs) || clen != len(metadata.KzgProofs) {
+	if clen != len(blobs) || clen != len(kzgproofs) {
 		return nil, errors.New("blob KZG commitments don't match number of blobs or KZG proofs")
 	}
 	blobSidecars := make([]*ethpb.BlobSidecar, clen)
@@ -87,9 +82,9 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, metadata *sidecarMetaDa
 		}
 		blobSidecars[i] = &ethpb.BlobSidecar{
 			Index:                    uint64(i),
-			Blob:                     metadata.Blobs[i],
+			Blob:                     blobs[i],
 			KzgCommitment:            denebBlk.Block.Body.BlobKzgCommitments[i],
-			KzgProof:                 metadata.KzgProofs[i],
+			KzgProof:                 kzgproofs[i],
 			SignedBlockHeader:        header,
 			CommitmentInclusionProof: proof,
 		}

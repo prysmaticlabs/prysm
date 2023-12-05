@@ -132,8 +132,8 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
 				Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
 					Block:     denebBlock,
-					KzgProofs: bytesutil.SafeCopy2dBytes(b.GetDeneb().KzgProofs),
-					Blobs:     bytesutil.SafeCopy2dBytes(b.GetDeneb().Blobs),
+					KzgProofs: b.GetDeneb().KzgProofs,
+					Blobs:     b.GetDeneb().Blobs,
 				},
 			},
 		}

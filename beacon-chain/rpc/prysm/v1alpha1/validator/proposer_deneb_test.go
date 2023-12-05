@@ -51,12 +51,11 @@ func TestServer_buildBlobSidecars(t *testing.T) {
 	require.NoError(t, blk.SetBlobKzgCommitments(kzgCommitments))
 	proof, err := hexutil.Decode("0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a")
 	require.NoError(t, err)
-	m := &sidecarMetaData{Blobs: [][]byte{
+	scs, err := buildBlobSidecars(blk, [][]byte{
 		make([]byte, fieldparams.BlobLength), make([]byte, fieldparams.BlobLength),
-	}, KzgProofs: [][]byte{
+	}, [][]byte{
 		proof, proof,
-	}}
-	scs, err := buildBlobSidecars(blk, m)
+	})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(scs))
 
