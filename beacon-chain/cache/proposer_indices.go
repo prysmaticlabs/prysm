@@ -1,5 +1,3 @@
-//go:build !fuzz
-
 package cache
 
 import (
@@ -7,15 +5,11 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"k8s.io/client-go/tools/cache"
 )
 
 var (
-	// maxProposerIndicesCacheSize defines the max number of proposer indices on per block root basis can cache.
-	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
-	maxProposerIndicesCacheSize = uint64(8)
-
 	// ProposerIndicesCacheMiss tracks the number of proposerIndices requests that aren't present in the cache.
 	ProposerIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "proposer_indices_cache_miss",
@@ -28,85 +22,96 @@ var (
 	})
 )
 
-// ProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.
+// ProposerIndicesCache keeps track of the proposer indices in the next two
+// epochs. It is keyed by the state root of the last epoch before. That is, for
+// blocks during epoch 2, for example slot 65, it will be keyed by the state
+// root of slot 63 (last slot in epoch 1).
+// The cache keeps two sets of indices computed, the "safe" set is computed
+// right before the epoch transition into the current epoch. For example for
+// epoch 2 we will compute this list after importing block 63. The "unsafe"
+// version is computed an epoch in advance, for example for epoch 3, it will be
+// computed after importing block 63.
 type ProposerIndicesCache struct {
-	proposerIndicesCache *cache.FIFO
-	lock                 sync.RWMutex
+	sync.Mutex
+	indices       map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
+	unsafeIndices map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
 }
 
-// proposerIndicesKeyFn takes the block root as the key to retrieve proposer indices in a given epoch.
-func proposerIndicesKeyFn(obj interface{}) (string, error) {
-	info, ok := obj.(*ProposerIndices)
-	if !ok {
-		return "", ErrNotProposerIndices
-	}
-
-	return key(info.BlockRoot), nil
-}
-
-// NewProposerIndicesCache creates a new proposer indices cache for storing/accessing proposer index assignments of an epoch.
+// NewProposerIndicesCache returns a newly created cache
 func NewProposerIndicesCache() *ProposerIndicesCache {
-	c := &ProposerIndicesCache{}
-	c.Clear()
-	return c
-}
-
-// Clear resets the ProposerIndicesCache to its initial state
-func (c *ProposerIndicesCache) Clear() {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.proposerIndicesCache = cache.NewFIFO(proposerIndicesKeyFn)
-}
-
-// AddProposerIndices adds ProposerIndices object to the cache.
-// This method also trims the least recently list if the cache size has ready the max cache size limit.
-func (c *ProposerIndicesCache) AddProposerIndices(p *ProposerIndices) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if err := c.proposerIndicesCache.AddIfNotPresent(p); err != nil {
-		return err
+	return &ProposerIndicesCache{
+		indices:       make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
+		unsafeIndices: make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
 	}
-	trim(c.proposerIndicesCache, maxProposerIndicesCacheSize)
-	return nil
 }
 
-// HasProposerIndices returns the proposer indices of a block root seed.
-func (c *ProposerIndicesCache) HasProposerIndices(r [32]byte) (bool, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	_, exists, err := c.proposerIndicesCache.GetByKey(key(r))
-	if err != nil {
-		return false, err
+// ProposerIndices returns the proposer indices (safe) for the given root
+func (p *ProposerIndicesCache) ProposerIndices(epoch primitives.Epoch, root [32]byte) ([fieldparams.SlotsPerEpoch]primitives.ValidatorIndex, bool) {
+	p.Lock()
+	defer p.Unlock()
+	inner, ok := p.indices[epoch]
+	if !ok {
+		ProposerIndicesCacheMiss.Inc()
+		return [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}, false
 	}
-	return exists, nil
-}
-
-// ProposerIndices returns the proposer indices of a block root seed.
-func (c *ProposerIndicesCache) ProposerIndices(r [32]byte) ([]primitives.ValidatorIndex, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-	obj, exists, err := c.proposerIndicesCache.GetByKey(key(r))
-	if err != nil {
-		return nil, err
-	}
-
+	indices, exists := inner[root]
 	if exists {
 		ProposerIndicesCacheHit.Inc()
 	} else {
 		ProposerIndicesCacheMiss.Inc()
-		return nil, nil
 	}
-
-	item, ok := obj.(*ProposerIndices)
-	if !ok {
-		return nil, ErrNotProposerIndices
-	}
-
-	return item.ProposerIndices, nil
+	return indices, exists
 }
 
-// Len returns the number of keys in the underlying cache.
-func (c *ProposerIndicesCache) Len() int {
-	return len(c.proposerIndicesCache.ListKeys())
+// UnsafeProposerIndices returns the proposer indices (unsafe) for the given root
+func (p *ProposerIndicesCache) UnsafeProposerIndices(epoch primitives.Epoch, root [32]byte) ([fieldparams.SlotsPerEpoch]primitives.ValidatorIndex, bool) {
+	p.Lock()
+	defer p.Unlock()
+	inner, ok := p.unsafeIndices[epoch]
+	if !ok {
+		return [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}, false
+	}
+	indices, exists := inner[root]
+	return indices, exists
+}
+
+// Prune resets the ProposerIndicesCache to its initial state
+func (p *ProposerIndicesCache) Prune(epoch primitives.Epoch) {
+	p.Lock()
+	defer p.Unlock()
+	for key := range p.indices {
+		if key < epoch {
+			delete(p.indices, key)
+		}
+	}
+	for key := range p.unsafeIndices {
+		if key < epoch {
+			delete(p.unsafeIndices, key)
+		}
+	}
+}
+
+// Set sets the proposer indices for the given root as key
+func (p *ProposerIndicesCache) Set(epoch primitives.Epoch, root [32]byte, indices [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex) {
+	p.Lock()
+	defer p.Unlock()
+
+	inner, ok := p.indices[epoch]
+	if !ok {
+		inner = make(map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex)
+		p.indices[epoch] = inner
+	}
+	inner[root] = indices
+}
+
+// Set sets the unsafe proposer indices for the given root as key
+func (p *ProposerIndicesCache) SetUnsafe(epoch primitives.Epoch, root [32]byte, indices [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex) {
+	p.Lock()
+	defer p.Unlock()
+	inner, ok := p.unsafeIndices[epoch]
+	if !ok {
+		inner = make(map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex)
+		p.unsafeIndices[epoch] = inner
+	}
+	inner[root] = indices
 }
