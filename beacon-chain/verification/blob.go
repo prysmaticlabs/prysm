@@ -50,7 +50,7 @@ var (
 	ErrBlobIndexInvalid = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
 	// ErrSlotTooEarly means RequireSlotNotTooEarly failed.
 	ErrSlotTooEarly = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
-	//ErrSlotNotAfterFinalized means RequireSlotAboveFinalized failed.
+	// ErrSlotNotAfterFinalized means RequireSlotAboveFinalized failed.
 	ErrSlotNotAfterFinalized = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
 	// ErrInvalidProposerSignature means RequireValidProposerSignature failed.
 	ErrInvalidProposerSignature = errors.Wrap(ErrBlobInvalid, "proposer signature could not be verified")
