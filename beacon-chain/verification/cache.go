@@ -149,7 +149,7 @@ type propCache struct {
 
 // ComputeProposer takes the state for the given parent root and slot and computes the proposer index, updating the
 // proposer index cache when successful.
-func (c *propCache) ComputeProposer(ctx context.Context, parent [32]byte, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error) {
+func (_ *propCache) ComputeProposer(ctx context.Context, parent [32]byte, slot primitives.Slot, pst state.BeaconState) (primitives.ValidatorIndex, error) {
 	pst, err := transition.ProcessSlotsUsingNextSlotCache(ctx, pst, parent[:], slot)
 	if err != nil {
 		return 0, err
@@ -163,7 +163,7 @@ func (c *propCache) ComputeProposer(ctx context.Context, parent [32]byte, slot p
 
 // Proposer returns the validator index if it is found in the cache, along with a boolean indicating
 // whether the value was present, similar to accessing an lru or go map.
-func (c *propCache) Proposer(_ [32]byte, _ primitives.Slot) (primitives.ValidatorIndex, bool) {
+func (_ *propCache) Proposer(_ [32]byte, _ primitives.Slot) (primitives.ValidatorIndex, bool) {
 	// TODO: replace with potuz' proposer id cache
 	return 0, false
 }
