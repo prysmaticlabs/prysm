@@ -16,7 +16,7 @@ import (
 
 const (
 	RequireBlobIndexInBounds Requirement = iota
-	RequireSlotBelowMaxDisparity
+	RequireSlotNotTooEarly
 	RequireSlotAboveFinalized
 	RequireValidProposerSignature
 	RequireSidecarParentSeen
@@ -32,7 +32,7 @@ const (
 // must satisfy in order to upgrade an ROBlob to a VerifiedROBlob.
 var GossipSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
-	RequireSlotBelowMaxDisparity,
+	RequireSlotNotTooEarly,
 	RequireSlotAboveFinalized,
 	RequireValidProposerSignature,
 	RequireSidecarParentSeen,
@@ -47,7 +47,7 @@ var GossipSidecarRequirements = []Requirement{
 var (
 	ErrBlobInvalid                  = errors.New("blob failed verification")
 	ErrBlobIndexInBounds            = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
-	ErrSlotBelowMaxDisparity        = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
+	ErrSlotNotTooEarly              = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
 	ErrSlotAboveFinalized           = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
 	ErrValidProposerSignature       = errors.Wrap(ErrBlobInvalid, "proposer signature could not be verified")
 	ErrSidecarParentSeen            = errors.Wrap(ErrBlobInvalid, "parent root has not been seen")
@@ -98,11 +98,11 @@ func (bv *BlobVerifier) BlobIndexInBounds() (err error) {
 	return nil
 }
 
-// SlotBelowMaxDisparity represents the spec verification:
+// SlotNotTooEarly represents the spec verification:
 // [IGNORE] The sidecar is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
 // -- i.e. validate that block_header.slot <= current_slot
-func (bv *BlobVerifier) SlotBelowMaxDisparity() (err error) {
-	defer bv.recordResult(RequireSlotBelowMaxDisparity, &err)
+func (bv *BlobVerifier) SlotNotTooEarly() (err error) {
+	defer bv.recordResult(RequireSlotNotTooEarly, &err)
 	if bv.clock.CurrentSlot() == bv.blob.Slot() {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (bv *BlobVerifier) SlotBelowMaxDisparity() (err error) {
 	validAfter := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconNetworkConfig().MaximumGossipClockDisparity)
 	// If the difference between now and gt is greater than maximum clock disparity, the block is too far in the future.
 	if bv.clock.Now().Before(validAfter) {
-		return ErrSlotBelowMaxDisparity
+		return ErrSlotNotTooEarly
 	}
 	return nil
 }

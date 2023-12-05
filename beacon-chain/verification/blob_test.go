@@ -39,7 +39,7 @@ func TestBlobIndexInBounds(t *testing.T) {
 	require.NotNil(t, v.results.result(RequireBlobIndexInBounds))
 }
 
-func TestSlotBelowMaxDisparity(t *testing.T) {
+func TestSlotNotTooEarly(t *testing.T) {
 	now := time.Now()
 	// make genesis 1 slot in the past
 	genesis := now.Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
@@ -53,16 +53,16 @@ func TestSlotBelowMaxDisparity(t *testing.T) {
 	happyClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now }))
 	ini := Initializer{shared: &sharedResources{clock: happyClock}}
 	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.NoError(t, v.SlotBelowMaxDisparity())
-	require.Equal(t, true, v.results.executed(RequireSlotBelowMaxDisparity))
-	require.NoError(t, v.results.result(RequireSlotBelowMaxDisparity))
+	require.NoError(t, v.SlotNotTooEarly())
+	require.Equal(t, true, v.results.executed(RequireSlotNotTooEarly))
+	require.NoError(t, v.results.result(RequireSlotNotTooEarly))
 
 	// Since we have an early return for slots that are directly equal, give a time that is less than max disparity
 	// but still in the previous slot.
 	closeClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now.Add(-1 * params.BeaconNetworkConfig().MaximumGossipClockDisparity / 2) }))
 	ini = Initializer{shared: &sharedResources{clock: closeClock}}
 	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.NoError(t, v.SlotBelowMaxDisparity())
+	require.NoError(t, v.SlotNotTooEarly())
 
 	// This clock will give a current slot of 0, with now coming more than max clock disparity before slot 1
 	disparate := now.Add(-2 * params.BeaconNetworkConfig().MaximumGossipClockDisparity)
@@ -70,9 +70,9 @@ func TestSlotBelowMaxDisparity(t *testing.T) {
 	// Set up initializer to use the clock that will set now to a little to far before slot 1
 	ini = Initializer{shared: &sharedResources{clock: dispClock}}
 	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.ErrorIs(t, v.SlotBelowMaxDisparity(), ErrSlotBelowMaxDisparity)
-	require.Equal(t, true, v.results.executed(RequireSlotBelowMaxDisparity))
-	require.NotNil(t, v.results.result(RequireSlotBelowMaxDisparity))
+	require.ErrorIs(t, v.SlotNotTooEarly(), ErrSlotNotTooEarly)
+	require.Equal(t, true, v.results.executed(RequireSlotNotTooEarly))
+	require.NotNil(t, v.results.result(RequireSlotNotTooEarly))
 }
 
 func TestSlotAboveFinalized(t *testing.T) {
