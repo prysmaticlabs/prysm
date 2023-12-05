@@ -57,7 +57,7 @@ func TestNodeClose_OK(t *testing.T) {
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
 	ctx, cancel := newCliContextWithCancel(&app, set)
 
-	node, err := New(ctx, cancel)
+	node, err := New(ctx, cancel, WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 
 	node.Close()
