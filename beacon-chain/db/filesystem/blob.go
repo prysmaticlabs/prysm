@@ -21,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -39,7 +38,7 @@ const (
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(cliCtx *cli.Context, base string) (*BlobStorage, error) {
+func NewBlobStorage(base string) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
 		return nil, err
