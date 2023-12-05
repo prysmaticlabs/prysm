@@ -34,7 +34,7 @@ type StateByRooter interface {
 }
 
 // sharedResources provides access to resources that are required by different verification types.
-// for example, sidecar verifcation and block verification share the block signature verification cache.
+// for example, sidecar verification and block verification share the block signature verification cache.
 type sharedResources struct {
 	clock *startup.Clock
 	fc    Forkchoicer
@@ -83,7 +83,7 @@ func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCa
 }
 
 // WaitForInitializer ensures that asynchronous initialization of the shared resources the initializer
-// depends on has completed beofe the underlying Initializer is accessible by client code.
+// depends on has completed before the underlying Initializer is accessible by client code.
 func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initializer, error) {
 	if err := w.waitForReady(ctx); err != nil {
 		return nil, err

@@ -24,7 +24,7 @@ const (
 	RequireSidecarParentSlotLower
 	RequireSidecarDescendsFromFinalized
 	RequireSidecarInclusionProven
-	RequireSidecarBlobCommitmentProven
+	RequireSidecarKzgProofVerified
 	RequireSidecarProposerExpected
 )
 
@@ -40,7 +40,7 @@ var GossipSidecarRequirements = []Requirement{
 	RequireSidecarParentSlotLower,
 	RequireSidecarDescendsFromFinalized,
 	RequireSidecarInclusionProven,
-	RequireSidecarBlobCommitmentProven,
+	RequireSidecarKzgProofVerified,
 	RequireSidecarProposerExpected,
 }
 
@@ -54,8 +54,8 @@ var (
 	ErrSidecarParentValid           = errors.Wrap(ErrBlobInvalid, "parent block is not valid")
 	ErrSidecarParentSlotLower       = errors.Wrap(ErrBlobInvalid, "blob slot <= parent slot")
 	ErrSidecarDescendsFromFinalized = errors.Wrap(ErrBlobInvalid, "blob parent is not descended from the finalized block")
-	ErrSidecarInclusionProven       = errors.Wrap(ErrBlobInvalid, "sidecar inclusion proof verification failure")
-	ErrSidecarBlobCommitmentProven  = errors.Wrap(ErrBlobInvalid, "sidecar kzg commitment proof verification failed")
+	ErrSidecarInclusionProven       = errors.Wrap(ErrBlobInvalid, "sidecar inclusion proof verification failed")
+	ErrSidecarKzgProofVerified      = errors.Wrap(ErrBlobInvalid, "sidecar kzg commitment proof verification failed")
 	ErrSidecarProposerExpected      = errors.Wrap(ErrBlobInvalid, "sidecar was not proposed by the expected proposer_index")
 )
 
@@ -175,9 +175,9 @@ func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err er
 	return ErrSidecarParentSeen
 }
 
-// SidecareParentValid represents the spec verification:
+// SidecarParentValid represents the spec verification:
 // [REJECT] The sidecar's block's parent (defined by block_header.parent_root) passes validation.
-func (bv *BlobVerifier) SidecareParentValid(badParent func([32]byte) bool) (err error) {
+func (bv *BlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentValid, &err)
 	if badParent != nil && badParent(bv.blob.ParentRoot()) {
 		return ErrSidecarParentValid
@@ -221,14 +221,14 @@ func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 	return nil
 }
 
-// SidecarBlobCommitmentProven represents the spec verification:
+// SidecarKzgProofVerified represents the spec verification:
 // [REJECT] The sidecar's blob is valid as verified by
 // verify_blob_kzg_proof(blob_sidecar.blob, blob_sidecar.kzg_commitment, blob_sidecar.kzg_proof).
-func (bv *BlobVerifier) SidecarBlobCommitmentProven() (err error) {
-	defer bv.recordResult(RequireSidecarBlobCommitmentProven, &err)
+func (bv *BlobVerifier) SidecarKzgProofVerified() (err error) {
+	defer bv.recordResult(RequireSidecarKzgProofVerified, &err)
 	if err := bv.verifyBlobCommitment(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("kzg commitment proof verification failed")
-		return ErrSidecarBlobCommitmentProven
+		return ErrSidecarKzgProofVerified
 	}
 	return nil
 }

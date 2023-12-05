@@ -70,7 +70,7 @@ type sigCache struct {
 	valRoot []byte
 }
 
-// VerifySignatureWithState verifies the given signature data against the key obtained via ValidatorAtIndexer.
+// VerifySignature verifies the given signature data against the key obtained via ValidatorAtIndexer.
 func (c *sigCache) VerifySignature(sig SignatureData, v ValidatorAtIndexer) (err error) {
 	defer func() {
 		if err == nil {

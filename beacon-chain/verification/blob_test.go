@@ -42,7 +42,7 @@ func TestBlobIndexInBounds(t *testing.T) {
 func TestSlotBelowMaxDisparity(t *testing.T) {
 	now := time.Now()
 	// make genesis 1 slot in the past
-	genesis := now.Add(time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Second)
+	genesis := now.Add(-1 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
 	b := blobs[0]
@@ -290,14 +290,14 @@ func TestSidecarParentValid(t *testing.T) {
 	t.Run("parent valid", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{}}
 		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-		require.NoError(t, v.SidecareParentValid(badParentCb(t, b.ParentRoot(), false)))
+		require.NoError(t, v.SidecarParentValid(badParentCb(t, b.ParentRoot(), false)))
 		require.Equal(t, true, v.results.executed(RequireSidecarParentValid))
 		require.NoError(t, v.results.result(RequireSidecarParentValid))
 	})
 	t.Run("parent not valid", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{}}
 		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-		require.ErrorIs(t, v.SidecareParentValid(badParentCb(t, b.ParentRoot(), true)), ErrSidecarParentValid)
+		require.ErrorIs(t, v.SidecarParentValid(badParentCb(t, b.ParentRoot(), true)), ErrSidecarParentValid)
 		require.Equal(t, true, v.results.executed(RequireSidecarParentValid))
 		require.NotNil(t, v.results.result(RequireSidecarParentValid))
 	})
@@ -403,7 +403,7 @@ func TestSidecarInclusionProven(t *testing.T) {
 	require.NotNil(t, v.results.result(RequireSidecarInclusionProven))
 }
 
-func TestSidecarBlobCommitmentProven(t *testing.T) {
+func TestSidecarKzgProofVerified(t *testing.T) {
 	// GenerateTestDenebBlockWithSidecar is supposed to generate valid commitments
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
@@ -412,18 +412,18 @@ func TestSidecarBlobCommitmentProven(t *testing.T) {
 		return nil
 	}
 	v := &BlobVerifier{verifyBlobCommitment: passes, results: newResults(), blob: b}
-	require.NoError(t, v.SidecarBlobCommitmentProven())
-	require.Equal(t, true, v.results.executed(RequireSidecarBlobCommitmentProven))
-	require.NoError(t, v.results.result(RequireSidecarBlobCommitmentProven))
+	require.NoError(t, v.SidecarKzgProofVerified())
+	require.Equal(t, true, v.results.executed(RequireSidecarKzgProofVerified))
+	require.NoError(t, v.results.result(RequireSidecarKzgProofVerified))
 
 	fails := func(vb blocks.ROBlob) error {
 		require.Equal(t, true, bytes.Equal(b.KzgCommitment, vb.KzgCommitment))
 		return errors.New("bad blob")
 	}
 	v = &BlobVerifier{verifyBlobCommitment: fails, results: newResults(), blob: b}
-	require.ErrorIs(t, v.SidecarBlobCommitmentProven(), ErrSidecarBlobCommitmentProven)
-	require.Equal(t, true, v.results.executed(RequireSidecarBlobCommitmentProven))
-	require.NotNil(t, v.results.result(RequireSidecarBlobCommitmentProven))
+	require.ErrorIs(t, v.SidecarKzgProofVerified(), ErrSidecarKzgProofVerified)
+	require.Equal(t, true, v.results.executed(RequireSidecarKzgProofVerified))
+	require.NotNil(t, v.results.result(RequireSidecarKzgProofVerified))
 }
 
 func TestSidecarProposerExpected(t *testing.T) {
