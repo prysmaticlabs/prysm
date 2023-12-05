@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -151,6 +152,7 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	verifier                         *verification.Initializer
 }
 
 // NewService initializes new regular sync service.
