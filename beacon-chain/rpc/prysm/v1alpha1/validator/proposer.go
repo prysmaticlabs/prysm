@@ -24,7 +24,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -105,15 +104,9 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
+	// Blob cache is updated after BuildBlockParallel
 	if err = vs.BuildBlockParallel(ctx, sBlk, head, false); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
-	}
-
-	// Blob cache is updated after BuildBlockParallel
-	var bundle *enginev1.BlobsBundle
-	if sBlk.Version() >= version.Deneb {
-		bundle = bundleCache.get(req.Slot)
-		//TODO: compare kzg commitments between block and bundle, or trust that the cache is matching?
 	}
 
 	sr, err := vs.computeStateRoot(ctx, sBlk)
@@ -128,7 +121,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
-	return vs.constructGenericBeaconBlock(sBlk, bundle)
+	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
