@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -11,8 +12,8 @@ import (
 
 func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {
 	ctx := context.Background()
-	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-	tests := []struct {
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, complete)
+	subTests := []struct {
 		name     string
 		want     uint64
 		write    uint64
@@ -48,13 +49,15 @@ func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {
 			fileHash: hash.Hash([]byte("two")),
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := db.GraffitiOrderedIndex(ctx, tt.fileHash)
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.want, got)
-			err = db.SaveGraffitiOrderedIndex(ctx, tt.write)
-			require.NoError(t, err)
-		})
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				got, err := db.GraffitiOrderedIndex(ctx, st.fileHash)
+				require.NoError(t, err)
+				require.DeepEqual(t, st.want, got)
+				err = db.SaveGraffitiOrderedIndex(ctx, st.write)
+				require.NoError(t, err)
+			})
+		}
 	}
 }

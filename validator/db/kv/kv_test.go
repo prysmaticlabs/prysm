@@ -18,9 +18,10 @@ func TestMain(m *testing.M) {
 }
 
 // setupDB instantiates and returns a DB instance for the validator client.
-func setupDB(t testing.TB, pubkeys [][fieldparams.BLSPubkeyLength]byte) *Store {
+func setupDB(t testing.TB, pubkeys [][fieldparams.BLSPubkeyLength]byte, slashingProtectionType SlashingProtectionType) *Store {
 	db, err := NewKVStore(context.Background(), t.TempDir(), &Config{
-		PubKeys: pubkeys,
+		PubKeys:                pubkeys,
+		SlashingProtectionType: slashingProtectionType,
 	})
 	require.NoError(t, err, "Failed to instantiate DB")
 	err = db.UpdatePublicKeysBuckets(pubkeys)
@@ -30,4 +31,12 @@ func setupDB(t testing.TB, pubkeys [][fieldparams.BLSPubkeyLength]byte) *Store {
 		require.NoError(t, db.ClearDB(), "Failed to clear database")
 	})
 	return db
+}
+
+var testCases = []struct {
+	name                   string
+	slashingProtectionType SlashingProtectionType
+}{
+	{name: "complete", slashingProtectionType: complete},
+	{name: "minimal", slashingProtectionType: minimal},
 }

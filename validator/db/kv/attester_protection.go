@@ -441,6 +441,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create public key bucket")
 			}
+
 			sourceEpochBytes := bytesutil.EpochToBytesBigEndian(att.Source)
 			targetEpochBytes := bytesutil.EpochToBytesBigEndian(att.Target)
 
@@ -448,18 +449,33 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create signing roots bucket")
 			}
+
+			if s.slashingProtectionType == minimal {
+				if err := emptyBucket(signingRootsBucket); err != nil {
+					return errors.Wrap(err, "could not empty signing roots bucket")
+				}
+			}
+
 			if err := signingRootsBucket.Put(targetEpochBytes, att.SigningRoot); err != nil {
 				return errors.Wrapf(err, "could not save signing root for epoch %d", att.Target)
 			}
+
 			sourceEpochsBucket, err := pkBucket.CreateBucketIfNotExists(attestationSourceEpochsBucket)
 			if err != nil {
 				return errors.Wrap(err, "could not create source epochs bucket")
+			}
+
+			if s.slashingProtectionType == minimal {
+				if err := emptyBucket(sourceEpochsBucket); err != nil {
+					return errors.Wrap(err, "could not empty source epoch bucket")
+				}
 			}
 
 			// There can be multiple attested target epochs per source epoch.
 			// If a previous list exists, we append to that list with the incoming target epoch.
 			// Otherwise, we initialize it using the incoming target epoch.
 			var existingAttestedTargetsBytes []byte
+
 			if existing := sourceEpochsBucket.Get(sourceEpochBytes); existing != nil {
 				existingAttestedTargetsBytes = append(existing, targetEpochBytes...)
 			} else {
@@ -474,7 +490,15 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 			if err != nil {
 				return errors.Wrap(err, "could not create target epochs bucket")
 			}
+
+			if s.slashingProtectionType == minimal {
+				if err := emptyBucket(targetEpochsBucket); err != nil {
+					return errors.Wrap(err, "could not empty target epoch bucket")
+				}
+			}
+
 			var existingAttestedSourceBytes []byte
+
 			if existing := targetEpochsBucket.Get(targetEpochBytes); existing != nil {
 				existingAttestedSourceBytes = append(existing, sourceEpochBytes...)
 			} else {
@@ -485,33 +509,46 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrapf(err, "could not save target epoch %d for epoch %d", att.Target, att.Source)
 			}
 
-			// If the incoming source epoch is lower than the lowest signed source epoch, override.
-			lowestSignedSourceBytes := lowestSourceBucket.Get(att.PubKey[:])
-			var lowestSignedSourceEpoch primitives.Epoch
-			if len(lowestSignedSourceBytes) >= 8 {
-				lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
-			}
-			if len(lowestSignedSourceBytes) == 0 || att.Source < lowestSignedSourceEpoch {
-				if err := lowestSourceBucket.Put(
-					att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Source),
-				); err != nil {
-					return err
+			if s.slashingProtectionType == minimal {
+				if err := lowestSourceBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Source)); err != nil {
+					return errors.Wrapf(err, "could not save lowest source epoch %d", att.Source)
+				}
+			} else {
+				// If the incoming source epoch is lower than the lowest signed source epoch, override.
+				lowestSignedSourceBytes := lowestSourceBucket.Get(att.PubKey[:])
+				var lowestSignedSourceEpoch primitives.Epoch
+
+				if len(lowestSignedSourceBytes) >= 8 {
+					lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
+				}
+
+				if len(lowestSignedSourceBytes) == 0 || att.Source < lowestSignedSourceEpoch {
+					if err := lowestSourceBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Source)); err != nil {
+						return errors.Wrapf(err, "could not save lowest source epoch %d", att.Source)
+					}
 				}
 			}
 
-			// If the incoming target epoch is lower than the lowest signed target epoch, override.
-			lowestSignedTargetBytes := lowestTargetBucket.Get(att.PubKey[:])
-			var lowestSignedTargetEpoch primitives.Epoch
-			if len(lowestSignedTargetBytes) >= 8 {
-				lowestSignedTargetEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedTargetBytes)
-			}
-			if len(lowestSignedTargetBytes) == 0 || att.Target < lowestSignedTargetEpoch {
-				if err := lowestTargetBucket.Put(
-					att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Target),
-				); err != nil {
-					return err
+			if s.slashingProtectionType == minimal {
+				if err := lowestTargetBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Target)); err != nil {
+					return errors.Wrapf(err, "could not save lowest target epoch %d", att.Target)
+				}
+			} else {
+				// If the incoming target epoch is lower than the lowest signed target epoch, override.
+				lowestSignedTargetBytes := lowestTargetBucket.Get(att.PubKey[:])
+				var lowestSignedTargetEpoch primitives.Epoch
+
+				if len(lowestSignedTargetBytes) >= 8 {
+					lowestSignedTargetEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedTargetBytes)
+				}
+
+				if len(lowestSignedTargetBytes) == 0 || att.Target < lowestSignedTargetEpoch {
+					if err := lowestTargetBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Target)); err != nil {
+						return err
+					}
 				}
 			}
+
 		}
 		return nil
 	})

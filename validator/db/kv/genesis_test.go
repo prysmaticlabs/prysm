@@ -2,6 +2,7 @@ package kv
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -12,7 +13,7 @@ import (
 func TestStore_GenesisValidatorsRoot_ReadAndWrite(t *testing.T) {
 	ctx := context.Background()
 
-	tests := []struct {
+	subTests := []struct {
 		name    string
 		init    []byte
 		want    []byte
@@ -41,32 +42,33 @@ func TestStore_GenesisValidatorsRoot_ReadAndWrite(t *testing.T) {
 			wantErr: true,
 		},
 	}
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				// Initialize the database with the initial value.
+				db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, tt.slashingProtectionType)
+				err := db.SaveGenesisValidatorsRoot(ctx, st.init)
+				require.NoError(t, err)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Initialize the database with the initial value.
-			db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-			err := db.SaveGenesisValidatorsRoot(ctx, tt.init)
-			require.NoError(t, err)
+				// Read the value from the database (just to ensure our setup is OK).
+				got, err := db.GenesisValidatorsRoot(ctx)
+				require.NoError(t, err)
+				require.DeepEqual(t, st.init, got)
 
-			// Read the value from the database (just to ensure our setup is OK).
-			got, err := db.GenesisValidatorsRoot(ctx)
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.init, got)
+				// Write the value to the database.
+				err = db.SaveGenesisValidatorsRoot(ctx, st.write)
+				if (err != nil) != st.wantErr {
+					t.Errorf("GenesisValidatorsRoot() error = %v, wantErr %v", err, st.wantErr)
+				}
 
-			// Write the value to the database.
-			err = db.SaveGenesisValidatorsRoot(ctx, tt.write)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GenesisValidatorsRoot() error = %v, wantErr %v", err, tt.wantErr)
-			}
+				// Read the value from the database.
+				got, err = db.GenesisValidatorsRoot(ctx)
+				require.NoError(t, err)
+				require.DeepEqual(t, st.want, got)
 
-			// Read the value from the database.
-			got, err = db.GenesisValidatorsRoot(ctx)
-			require.NoError(t, err)
-			require.DeepEqual(t, tt.want, got)
-
-			// Close the database.
-			require.NoError(t, db.Close())
-		})
+				// Close the database.
+				require.NoError(t, db.Close())
+			})
+		}
 	}
 }

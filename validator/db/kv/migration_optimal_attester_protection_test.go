@@ -13,7 +13,7 @@ import (
 )
 
 func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
-	tests := []struct {
+	subTests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
@@ -180,18 +180,20 @@ func Test_migrateOptimalAttesterProtectionUp(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			validatorDB := setupDB(t, nil)
-			tt.setup(t, validatorDB)
-			require.NoError(t, validatorDB.migrateOptimalAttesterProtectionUp(context.Background()))
-			tt.eval(t, validatorDB)
-		})
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				validatorDB := setupDB(t, nil, tt.slashingProtectionType)
+				st.setup(t, validatorDB)
+				require.NoError(t, validatorDB.migrateOptimalAttesterProtectionUp(context.Background()))
+				st.eval(t, validatorDB)
+			})
+		}
 	}
 }
 
 func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
-	tests := []struct {
+	subTests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
@@ -289,12 +291,14 @@ func Test_migrateOptimalAttesterProtectionDown(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			validatorDB := setupDB(t, nil)
-			tt.setup(t, validatorDB)
-			require.NoError(t, validatorDB.migrateOptimalAttesterProtectionDown(context.Background()))
-			tt.eval(t, validatorDB)
-		})
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				validatorDB := setupDB(t, nil, tt.slashingProtectionType)
+				st.setup(t, validatorDB)
+				require.NoError(t, validatorDB.migrateOptimalAttesterProtectionDown(context.Background()))
+				st.eval(t, validatorDB)
+			})
+		}
 	}
 }

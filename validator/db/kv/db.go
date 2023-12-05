@@ -218,3 +218,9 @@ func (s *Store) Size() (int64, error) {
 func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db, blockedBuckets...)
 }
+
+func emptyBucket(bucket *bolt.Bucket) error {
+	return bucket.ForEach(func(k, _ []byte) error {
+		return bucket.Delete(k)
+	})
+}

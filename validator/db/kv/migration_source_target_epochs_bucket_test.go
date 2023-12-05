@@ -24,7 +24,7 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 		copy(pk[:], fmt.Sprintf("%d", i))
 		pubKeys[i] = pk
 	}
-	tests := []struct {
+	subTests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
@@ -105,13 +105,15 @@ func TestStore_migrateSourceTargetEpochsBucketUp(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			validatorDB := setupDB(t, pubKeys)
-			tt.setup(t, validatorDB)
-			require.NoError(t, validatorDB.migrateSourceTargetEpochsBucketUp(context.Background()))
-			tt.eval(t, validatorDB)
-		})
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				validatorDB := setupDB(t, pubKeys, tt.slashingProtectionType)
+				st.setup(t, validatorDB)
+				require.NoError(t, validatorDB.migrateSourceTargetEpochsBucketUp(context.Background()))
+				st.eval(t, validatorDB)
+			})
+		}
 	}
 }
 
@@ -125,7 +127,7 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 		copy(pk[:], fmt.Sprintf("%d", i))
 		pubKeys[i] = pk
 	}
-	tests := []struct {
+	subTests := []struct {
 		name  string
 		setup func(t *testing.T, validatorDB *Store)
 		eval  func(t *testing.T, validatorDB *Store)
@@ -200,13 +202,15 @@ func TestStore_migrateSourceTargetEpochsBucketDown(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			validatorDB := setupDB(t, nil)
-			tt.setup(t, validatorDB)
-			require.NoError(t, validatorDB.migrateSourceTargetEpochsBucketDown(context.Background()))
-			tt.eval(t, validatorDB)
-		})
+	for _, tt := range testCases {
+		for _, st := range subTests {
+			t.Run(fmt.Sprintf("%s - %s", tt.name, st.name), func(t *testing.T) {
+				validatorDB := setupDB(t, nil, tt.slashingProtectionType)
+				st.setup(t, validatorDB)
+				require.NoError(t, validatorDB.migrateSourceTargetEpochsBucketDown(context.Background()))
+				st.eval(t, validatorDB)
+			})
+		}
 	}
 }
 
