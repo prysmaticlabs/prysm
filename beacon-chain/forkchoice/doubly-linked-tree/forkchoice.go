@@ -638,11 +638,18 @@ func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
 	return n.slot, nil
 }
 
-// TargetRoot returns the root of the checkpoint block for the given head root
-func (f *ForkChoice) TargetRoot(root [32]byte) ([32]byte, error) {
+// TargetRootForEpoch returns the root of the target block for a given epoch.
+// The epoch parameter is crucial to identify the correct target root. For example:
+// When inserting a block at slot 63 with block root 0xA and target root 0xB (pointing to the block at slot 32),
+// and at slot 64, where the block is skipped, the attestation will reference the target root as 0xA (for slot 63), not 0xB (for slot 32).
+// This implies that if the input slot exceeds the block slot, the target root will be the same as the block root.
+func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
 	n, ok := f.store.nodeByRoot[root]
 	if !ok || n == nil {
 		return [32]byte{}, ErrNilNode
+	}
+	if epoch > slots.ToEpoch(n.slot) {
+		return n.root, nil
 	}
 	if n.target == nil {
 		return [32]byte{}, nil

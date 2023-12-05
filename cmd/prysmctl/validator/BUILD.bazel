@@ -14,7 +14,6 @@ go_library(
         "//api/client:go_default_library",
         "//api/client/beacon:go_default_library",
         "//api/client/validator:go_default_library",
-        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//cmd:go_default_library",
         "//cmd/validator/accounts:go_default_library",
@@ -47,7 +46,6 @@ go_test(
     data = glob(["testdata/**"]),
     embed = [":go_default_library"],
     deps = [
-        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/config:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",

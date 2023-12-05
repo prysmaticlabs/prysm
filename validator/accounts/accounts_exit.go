@@ -188,7 +188,7 @@ func writeSignedVoluntaryExitJSON(sve *eth.SignedVoluntaryExit, outputDirectory 
 		return errors.Wrap(err, "failed to marshal JSON signed voluntary exit")
 	}
 
-	filepath := path.Join(outputDirectory, fmt.Sprintf("validator-exit-%s.json", jsve.Exit.ValidatorIndex))
+	filepath := path.Join(outputDirectory, fmt.Sprintf("validator-exit-%s.json", jsve.Message.ValidatorIndex))
 	if err := file.WriteFile(filepath, b); err != nil {
 		return errors.Wrap(err, "failed to write validator exist json")
 	}
