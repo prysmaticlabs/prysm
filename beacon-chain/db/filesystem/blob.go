@@ -44,13 +44,13 @@ func NewBlobStorage(base string) (*BlobStorage, error) {
 		return nil, err
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	return &BlobStorage{fs: fs, retentionEpoch: MaxEpochsToPersistBlobs}, nil
+	return &BlobStorage{fs: fs, retentionEpochs: MaxEpochsToPersistBlobs}, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs             afero.Fs
-	retentionEpoch primitives.Epoch
+	fs              afero.Fs
+	retentionEpochs primitives.Epoch
 }
 
 // Save saves blobs given a list of sidecars.
@@ -186,14 +186,14 @@ func (p blobNamer) path() string {
 }
 
 // Prune prunes blobs in the base directory based on the retention epoch.
-// It deletes blobs older than currentEpoch - (retentionEpoch+bufferEpochs).
+// It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
 	if err != nil {
 		return err
 	}
-	if currentSlot < retentionSlot {
+	if currentSlot < retentionSlots {
 		return nil // Overflow would occur
 	}
 
@@ -218,7 +218,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			if err != nil {
 				return err
 			}
-			if slot < (currentSlot - retentionSlot) {
+			if slot < (currentSlot - retentionSlots) {
 				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
 					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 				}

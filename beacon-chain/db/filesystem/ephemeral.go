@@ -19,7 +19,7 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
 	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
-	return fs, &BlobStorage{fs: fs, retentionEpoch: retentionEpoch}, nil
+	return fs, &BlobStorage{fs: fs, retentionEpochs: retentionEpoch}, nil
 }
 
 type BlobMocker struct {
