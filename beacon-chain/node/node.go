@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -156,7 +155,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
-	if err := kv.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
+	if err := filesystem.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
 		return nil, err
 	}
 	configureFastSSZHashingAlgorithm()
@@ -676,6 +675,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		execution.WithStateGen(b.stateGen),
 		execution.WithBeaconNodeStatsUpdater(bs),
 		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		execution.WithJwtId(b.cliCtx.String(flags.JwtId.Name)),
 	)
 	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
@@ -938,9 +938,6 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
 		apigateway.WithAllowedOrigins(allowedOrigins),
 		apigateway.WithTimeout(uint64(timeout)),
-	}
-	if flags.EnableHTTPEthAPI(httpModules) {
-		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 	g, err := apigateway.New(b.ctx, opts...)
 	if err != nil {

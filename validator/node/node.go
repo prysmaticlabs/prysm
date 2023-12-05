@@ -27,7 +27,6 @@ import (
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
@@ -814,7 +813,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
 
-	muxHandler := func(_ *apimiddleware.ApiProxyMiddleware, h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
+	muxHandler := func(h http.HandlerFunc, w http.ResponseWriter, req *http.Request) {
 		// The validator gateway handler requires this special logic as it serves the web APIs and the web UI.
 		if strings.HasPrefix(req.URL.Path, "/api") {
 			req.URL.Path = strings.Replace(req.URL.Path, "/api", "", 1)

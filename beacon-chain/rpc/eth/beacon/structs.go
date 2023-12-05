@@ -7,11 +7,13 @@ import (
 )
 
 type BlockRootResponse struct {
-	Data *struct {
-		Root string `json:"root"`
-	} `json:"data"`
-	ExecutionOptimistic bool `json:"execution_optimistic"`
-	Finalized           bool `json:"finalized"`
+	Data                *BlockRoot `json:"data"`
+	ExecutionOptimistic bool       `json:"execution_optimistic"`
+	Finalized           bool       `json:"finalized"`
+}
+
+type BlockRoot struct {
+	Root string `json:"root"`
 }
 
 type GetCommitteesResponse struct {
