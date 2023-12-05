@@ -42,7 +42,7 @@ func TestBlobIndexInBounds(t *testing.T) {
 func TestSlotBelowMaxDisparity(t *testing.T) {
 	now := time.Now()
 	// make genesis 1 slot in the past
-	genesis := now.Add(-12 * time.Second)
+	genesis := now.Add(time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Second)
 
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
 	b := blobs[0]

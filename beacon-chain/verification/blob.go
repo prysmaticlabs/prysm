@@ -193,10 +193,10 @@ func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
 	if err != nil {
 		return errors.Wrap(ErrSidecarParentSlotLower, "parent root not in forkchoice")
 	}
-	if parentSlot < bv.blob.Slot() {
-		return nil
+	if parentSlot >= bv.blob.Slot() {
+		return ErrSidecarParentSlotLower
 	}
-	return ErrSidecarParentSlotLower
+	return nil
 }
 
 // SidecarDescendsFromFinalized represents the spec verification:
@@ -204,10 +204,10 @@ func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
 // -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch) == store.finalized_checkpoint.root.
 func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
-	if bv.fc.IsCanonical(bv.blob.ParentRoot()) {
-		return nil
+	if !bv.fc.IsCanonical(bv.blob.ParentRoot()) {
+		return ErrSidecarDescendsFromFinalized
 	}
-	return ErrSidecarDescendsFromFinalized
+	return nil
 }
 
 // SidecarInclusionProven represents the spec verification:
