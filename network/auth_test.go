@@ -91,7 +91,7 @@ func TestJWTWithId(t *testing.T) {
 		// check jwt claims id
 		id, ok := claims["id"]
 		require.Equal(t, true, ok)
-		require.Equal(t, true, id == jwtId)
+		require.Equal(t, id, jwtId)
 	}))
 	defer srv.Close()
 	_, err := client.Get(srv.URL)
