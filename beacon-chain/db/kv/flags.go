@@ -11,7 +11,7 @@ import (
 
 var maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 
-// ConfigureBlobRetentionEpoch sets the for blob retention based on command-line context. It sets the local config `maxEpochsToPersistBlobs`.
+// ConfigureBlobRetentionEpoch sets the epoch for blob retention based on command-line context. It sets the local config `maxEpochsToPersistBlobs`.
 // If the flag is not set, the spec default `MinEpochsForBlobsSidecarsRequest` is used.
 // An error if the input epoch is smaller than the spec default value.
 func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {

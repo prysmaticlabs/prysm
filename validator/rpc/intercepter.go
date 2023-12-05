@@ -3,9 +3,11 @@ package rpc
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v4"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -31,6 +33,29 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 		}).Debug("Request handled")
 		return h, err
 	}
+}
+
+// JwtHttpInterceptor is an HTTP handler to authorize a route.
+func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if it's not initialize or has a web prefix
+		if !strings.Contains(r.URL.Path, api.WebUrlPrefix+"initialize") && // ignore some routes
+			!strings.Contains(r.URL.Path, api.WebUrlPrefix+"health/logs") &&
+			strings.Contains(r.URL.Path, api.WebUrlPrefix) {
+			reqToken := r.Header.Get("Authorization")
+			if reqToken == "" {
+				http.Error(w, "unauthorized: no Authorization header passed. Please use an Authorization header with the jwt created in the prysm wallet", http.StatusUnauthorized)
+				return
+			}
+			token := strings.Split(reqToken, "Bearer ")[1]
+			_, err := jwt.Parse(token, s.validateJWT)
+			if err != nil {
+				http.Error(w, fmt.Errorf("unauthorized:could not parse JWT token: %v", err).Error(), http.StatusUnauthorized)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // Authorize the token received is valid.

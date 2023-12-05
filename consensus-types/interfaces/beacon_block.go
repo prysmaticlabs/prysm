@@ -129,5 +129,6 @@ type ExecutionData interface {
 	WithdrawalsRoot() ([]byte, error)
 	PbCapella() (*enginev1.ExecutionPayloadCapella, error)
 	PbBellatrix() (*enginev1.ExecutionPayload, error)
+	PbDeneb() (*enginev1.ExecutionPayloadDeneb, error)
 	ValueInGwei() (uint64, error)
 }

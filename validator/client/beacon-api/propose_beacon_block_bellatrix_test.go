@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -27,14 +27,14 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = bellatrixBlock
 
-	jsonBellatrixBlock := &apimiddleware.SignedBeaconBlockBellatrixJson{
+	jsonBellatrixBlock := &shared.SignedBeaconBlockBellatrix{
 		Signature: hexutil.Encode(bellatrixBlock.Bellatrix.Signature),
-		Message: &apimiddleware.BeaconBlockBellatrixJson{
+		Message: &shared.BeaconBlockBellatrix{
 			ParentRoot:    hexutil.Encode(bellatrixBlock.Bellatrix.Block.ParentRoot),
 			ProposerIndex: uint64ToString(bellatrixBlock.Bellatrix.Block.ProposerIndex),
 			Slot:          uint64ToString(bellatrixBlock.Bellatrix.Block.Slot),
 			StateRoot:     hexutil.Encode(bellatrixBlock.Bellatrix.Block.StateRoot),
-			Body: &apimiddleware.BeaconBlockBodyBellatrixJson{
+			Body: &shared.BeaconBlockBodyBellatrix{
 				Attestations:      jsonifyAttestations(bellatrixBlock.Bellatrix.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(bellatrixBlock.Bellatrix.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(bellatrixBlock.Bellatrix.Block.Body.Deposits),
@@ -43,11 +43,11 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(bellatrixBlock.Bellatrix.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(bellatrixBlock.Bellatrix.Block.Body.VoluntaryExits),
-				SyncAggregate: &apimiddleware.SyncAggregateJson{
+				SyncAggregate: &shared.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				ExecutionPayload: &apimiddleware.ExecutionPayloadJson{
+				ExecutionPayload: &shared.ExecutionPayload{
 					BaseFeePerGas: bytesutil.LittleEndianBytesToBigInt(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BaseFeePerGas).String(),
 					BlockHash:     hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BlockHash),
 					BlockNumber:   uint64ToString(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.BlockNumber),
@@ -60,7 +60,7 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 					PrevRandao:    hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.PrevRandao),
 					ReceiptsRoot:  hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.ReceiptsRoot),
 					StateRoot:     hexutil.Encode(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.StateRoot),
-					TimeStamp:     uint64ToString(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.Timestamp),
+					Timestamp:     uint64ToString(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.Timestamp),
 					Transactions:  jsonifyTransactions(bellatrixBlock.Bellatrix.Block.Body.ExecutionPayload.Transactions),
 				},
 			},

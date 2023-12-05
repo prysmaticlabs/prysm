@@ -475,7 +475,7 @@ func (f *ForkChoice) CommonAncestor(ctx context.Context, r1 [32]byte, r2 [32]byt
 // `blocks`. This slice must be ordered from child to parent. It includes all
 // blocks **except** the first one (that is the one with the highest slot
 // number). All blocks are assumed to be a strict chain
-// where blocks[i].Parent = blocks[i+1]. Also we assume that the parent of the
+// where blocks[i].Parent = blocks[i+1]. Also, we assume that the parent of the
 // last block in this list is already included in forkchoice store.
 func (f *ForkChoice) InsertChain(ctx context.Context, chain []*forkchoicetypes.BlockAndCheckpoints) error {
 	if len(chain) == 0 {
@@ -636,4 +636,23 @@ func (f *ForkChoice) Slot(root [32]byte) (primitives.Slot, error) {
 		return 0, ErrNilNode
 	}
 	return n.slot, nil
+}
+
+// TargetRootForEpoch returns the root of the target block for a given epoch.
+// The epoch parameter is crucial to identify the correct target root. For example:
+// When inserting a block at slot 63 with block root 0xA and target root 0xB (pointing to the block at slot 32),
+// and at slot 64, where the block is skipped, the attestation will reference the target root as 0xA (for slot 63), not 0xB (for slot 32).
+// This implies that if the input slot exceeds the block slot, the target root will be the same as the block root.
+func (f *ForkChoice) TargetRootForEpoch(root [32]byte, epoch primitives.Epoch) ([32]byte, error) {
+	n, ok := f.store.nodeByRoot[root]
+	if !ok || n == nil {
+		return [32]byte{}, ErrNilNode
+	}
+	if epoch > slots.ToEpoch(n.slot) {
+		return n.root, nil
+	}
+	if n.target == nil {
+		return [32]byte{}, nil
+	}
+	return n.target.root, nil
 }

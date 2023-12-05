@@ -1185,11 +1185,8 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 	if err != nil {
 		return nil, NewDecodeError(err, "SignedBlock")
 	}
-	block := &eth.SignedBeaconBlockAndBlobsDeneb{
-		Block: signedDenebBlock,
-		Blobs: signedBlobSidecars,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
 }
 
 func (b *SignedBeaconBlockContentsDeneb) ToUnsigned() *BeaconBlockContentsDeneb {
@@ -1211,7 +1208,8 @@ func (b *BeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block}}, nil
+
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block.Block}}, nil
 }
 
 func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb, error) {
@@ -2419,28 +2417,6 @@ func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBl
 	}, nil
 }
 
-func SignedBlindedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBlindedBeaconBlockAndBlobsDeneb) (*SignedBlindedBeaconBlockContentsDeneb, error) {
-	var blindedBlobSidecars []*SignedBlindedBlobSidecar
-	if len(b.SignedBlindedBlobSidecars) != 0 {
-		blindedBlobSidecars = make([]*SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
-		for i, s := range b.SignedBlindedBlobSidecars {
-			signedBlob, err := SignedBlindedBlobSidecarFromConsensus(s)
-			if err != nil {
-				return nil, err
-			}
-			blindedBlobSidecars[i] = signedBlob
-		}
-	}
-	blindedBlock, err := SignedBlindedBeaconBlockDenebFromConsensus(b.SignedBlindedBlock)
-	if err != nil {
-		return nil, err
-	}
-	return &SignedBlindedBeaconBlockContentsDeneb{
-		SignedBlindedBlock:        blindedBlock,
-		SignedBlindedBlobSidecars: blindedBlobSidecars,
-	}, nil
-}
-
 func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
 	var blobSidecars []*BlobSidecar
 	if len(b.Blobs) != 0 {
@@ -3093,7 +3069,7 @@ func ExitsFromConsensus(src []*eth.SignedVoluntaryExit) ([]*SignedVoluntaryExit,
 	return exits, nil
 }
 
-func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
+func BlsChangesToConsensus(src []*SignedBLSToExecutionChange) ([]*eth.SignedBLSToExecutionChange, error) {
 	if src == nil {
 		return nil, errNilValue
 	}
@@ -3116,7 +3092,7 @@ func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLST
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Message.ValidatorIndex", i))
 		}
-		pubkey, err := DecodeHexWithLength(ch.Message.FromBlsPubkey, fieldparams.BLSPubkeyLength)
+		pubkey, err := DecodeHexWithLength(ch.Message.FromBLSPubkey, fieldparams.BLSPubkeyLength)
 		if err != nil {
 			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Message.FromBlsPubkey", i))
 		}
@@ -3136,13 +3112,13 @@ func BlsChangesToConsensus(src []*SignedBlsToExecutionChange) ([]*eth.SignedBLST
 	return changes, nil
 }
 
-func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBlsToExecutionChange, error) {
-	changes := make([]*SignedBlsToExecutionChange, len(src))
+func BlsChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) ([]*SignedBLSToExecutionChange, error) {
+	changes := make([]*SignedBLSToExecutionChange, len(src))
 	for i, ch := range src {
-		changes[i] = &SignedBlsToExecutionChange{
-			Message: &BlsToExecutionChange{
+		changes[i] = &SignedBLSToExecutionChange{
+			Message: &BLSToExecutionChange{
 				ValidatorIndex:     fmt.Sprintf("%d", ch.Message.ValidatorIndex),
-				FromBlsPubkey:      hexutil.Encode(ch.Message.FromBlsPubkey),
+				FromBLSPubkey:      hexutil.Encode(ch.Message.FromBlsPubkey),
 				ToExecutionAddress: hexutil.Encode(ch.Message.ToExecutionAddress),
 			},
 			Signature: hexutil.Encode(ch.Signature),
