@@ -1,4 +1,4 @@
-package kv
+package filesystem
 
 import (
 	"fmt"
@@ -9,9 +9,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var maxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+var MaxEpochsToPersistBlobs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
 
-// ConfigureBlobRetentionEpoch sets the epoch for blob retention based on command-line context. It sets the local config `maxEpochsToPersistBlobs`.
+// ConfigureBlobRetentionEpoch sets the epoch for blob retention based on command-line context. It sets the local config `MaxEpochsToPersistBlobs`.
 // If the flag is not set, the spec default `MinEpochsForBlobsSidecarsRequest` is used.
 // An error if the input epoch is smaller than the spec default value.
 func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {
@@ -26,7 +26,7 @@ func ConfigureBlobRetentionEpoch(cliCtx *cli.Context) error {
 			return fmt.Errorf("%s smaller than spec default, %d < %d", flags.BlobRetentionEpoch.Name, e, params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
 		}
 
-		maxEpochsToPersistBlobs = e
+		MaxEpochsToPersistBlobs = e
 	}
 
 	return nil
