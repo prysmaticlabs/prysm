@@ -55,19 +55,30 @@ var blockedBuckets = [][]byte{
 
 // Config represents store's config object.
 type Config struct {
-	PubKeys [][fieldparams.BLSPubkeyLength]byte
+	PubKeys                [][fieldparams.BLSPubkeyLength]byte
+	SlashingProtectionType SlashingProtectionType
 }
 
 // Store defines an implementation of the Prysm Database interface
 // using BoltDB as the underlying persistent kv-store for Ethereum consensus nodes.
 type Store struct {
+	slashingProtectionType             SlashingProtectionType
+	batchedAttestationsFlushInProgress abool.AtomicBool
+	batchAttestationsFlushedFeed       *event.Feed
+	batchedAttestationsChan            chan *AttestationRecordSaveRequest
+	batchedAttestations                *QueuedAttestationRecords
 	db                                 *bolt.DB
 	databasePath                       string
-	batchedAttestations                *QueuedAttestationRecords
-	batchedAttestationsChan            chan *AttestationRecordSaveRequest
-	batchAttestationsFlushedFeed       *event.Feed
-	batchedAttestationsFlushInProgress abool.AtomicBool
 }
+
+// Slashing protection type, as defined in EIP-3076.
+// https://eips.ethereum.org/EIPS/eip-3076
+type SlashingProtectionType uint8
+
+const (
+	complete SlashingProtectionType = iota
+	minimal
+)
 
 // Close closes the underlying boltdb database.
 func (s *Store) Close() error {
@@ -160,6 +171,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 
 	// Initialize the required public keys into the DB to ensure they're not empty.
 	if config != nil {
+		kv.slashingProtectionType = config.SlashingProtectionType
 		if err := kv.UpdatePublicKeysBuckets(config.PubKeys); err != nil {
 			return nil, err
 		}
