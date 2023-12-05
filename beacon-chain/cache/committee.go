@@ -23,11 +23,6 @@ const (
 	// maxCommitteesCacheSize defines the max number of shuffled committees on per randao basis can cache.
 	// Due to reorgs and long finality, it's good to keep the old cache around for quickly switch over.
 	maxCommitteesCacheSize = int(32)
-
-	// delay parameters for checking in progress requests.
-	minDelay    = float64(10)        // 10 nanoseconds
-	maxDelay    = float64(100000000) // 0.1 second
-	delayFactor = 1.1
 )
 
 var (
