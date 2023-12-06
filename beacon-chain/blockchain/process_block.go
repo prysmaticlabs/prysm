@@ -374,16 +374,6 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	if err := helpers.UpdateProposerIndicesInCache(ctx, st, e); err != nil {
 		return errors.Wrap(err, "could not update proposer index cache")
 	}
-	// The latest block header is from the previous epoch
-	r := [32]byte(st.LatestBlockHeader().BodyRoot)
-	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
-	if err != nil {
-		log.WithError(err).Error("could not update proposer index state-root map")
-	}
-	err = helpers.UpdateCachedCheckpointToStateRoot(st, &forkchoicetypes.Checkpoint{Epoch: e, Root: target})
-	if err != nil {
-		log.WithError(err).Error("could not update proposer index state-root map")
-	}
 	go func() {
 		// Use a custom deadline here, since this method runs asynchronously.
 		// We ignore the parent method's context and instead create a new one
@@ -397,6 +387,22 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
 	}()
+	// The latest block header is from the previous epoch
+	r, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+		return nil
+	}
+	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+		return nil
+	}
+	err = helpers.UpdateCachedCheckpointToStateRoot(st, &forkchoicetypes.Checkpoint{Epoch: e, Root: target})
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+		return nil
+	}
 	return nil
 }
 
