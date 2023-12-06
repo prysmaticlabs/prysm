@@ -702,12 +702,6 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		return err
 	}
 
-	w := verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, nil, nil, b.db, b.stateGen)
-	verifier, err := w.WaitForInitializer(b.ctx)
-	if err != nil {
-		return err
-	}
-
 	rs := regularsync.NewService(
 		b.ctx,
 		regularsync.WithDatabase(b.db),
@@ -730,7 +724,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
-		regularsync.WithVerifier(verifier),
+		regularsync.WithVerifier(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, nil, nil, b.db, b.stateGen)),
 	)
 	return b.services.RegisterService(rs)
 }

@@ -152,6 +152,7 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	verifierWaiter                   *verification.InitializerWaiter
 	verifier                         *verification.Initializer
 }
 
@@ -205,6 +206,13 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.verifier = v
+
 	go s.verifierRoutine()
 	go s.registerHandlers()
 
