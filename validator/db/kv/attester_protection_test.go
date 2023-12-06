@@ -125,7 +125,7 @@ func TestStore_CheckSlashableAttestation_SurroundVote_MultipleTargetsPerSource(t
 			ctx := context.Background()
 			numValidators := 1
 			pubKeys := make([][fieldparams.BLSPubkeyLength]byte, numValidators)
-			validatorDB := setupDB(t, pubKeys, minimal)
+			validatorDB := setupDB(t, pubKeys, Minimal)
 
 			// Create an attestation with source 1 and target 100, save it.
 			secondAtt := createAttestation(1, 100)
@@ -280,7 +280,7 @@ func TestLowestSignedSourceEpoch_SaveRetrieve(t *testing.T) {
 				validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(200, 201)),
 			)
 
-			if tt.slashingProtectionType == complete {
+			if tt.slashingProtectionType == Complete {
 				// Can not replace.
 				got, _, err = validatorDB.LowestSignedSourceEpoch(ctx, p0)
 				require.NoError(t, err)
@@ -354,7 +354,7 @@ func TestLowestSignedTargetEpoch_SaveRetrieveReplace(t *testing.T) {
 				validatorDB.SaveAttestationForPubKey(ctx, p1, [32]byte{}, createAttestation(199, 200)),
 			)
 
-			if tt.slashingProtectionType == complete {
+			if tt.slashingProtectionType == Complete {
 				// Can not replace.
 				got, _, err = validatorDB.LowestSignedTargetEpoch(ctx, p0)
 				require.NoError(t, err)
@@ -412,7 +412,7 @@ func TestStore_SaveAttestationsForPubKey(t *testing.T) {
 					[]byte{},
 					att,
 				)
-				if tt.slashingProtectionType == complete || tt.slashingProtectionType == minimal && i == len(atts)-1 {
+				if tt.slashingProtectionType == Complete || tt.slashingProtectionType == Minimal && i == len(atts)-1 {
 					require.NotNil(t, err)
 					require.Equal(t, DoubleVote, slashingKind)
 				} else {
@@ -503,7 +503,7 @@ func TestSaveAttestationForPubKey_BatchWrites_LowCapacity_TimerReached(t *testin
 				copy(pubKeys[i][:], []byte(strconv.Itoa(i)))
 			}
 
-			validatorDB := setupDB(t, pubKeys, complete)
+			validatorDB := setupDB(t, pubKeys, Complete)
 
 			// For each public key, we attempt to save an attestation with signing root.
 			var wg sync.WaitGroup

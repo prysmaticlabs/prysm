@@ -450,7 +450,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrap(err, "could not create signing roots bucket")
 			}
 
-			if s.slashingProtectionType == minimal {
+			if s.slashingProtectionType == Minimal {
 				if err := emptyBucket(signingRootsBucket); err != nil {
 					return errors.Wrap(err, "could not empty signing roots bucket")
 				}
@@ -465,7 +465,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrap(err, "could not create source epochs bucket")
 			}
 
-			if s.slashingProtectionType == minimal {
+			if s.slashingProtectionType == Minimal {
 				if err := emptyBucket(sourceEpochsBucket); err != nil {
 					return errors.Wrap(err, "could not empty source epoch bucket")
 				}
@@ -491,7 +491,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrap(err, "could not create target epochs bucket")
 			}
 
-			if s.slashingProtectionType == minimal {
+			if s.slashingProtectionType == Minimal {
 				if err := emptyBucket(targetEpochsBucket); err != nil {
 					return errors.Wrap(err, "could not empty target epoch bucket")
 				}
@@ -509,7 +509,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				return errors.Wrapf(err, "could not save target epoch %d for epoch %d", att.Target, att.Source)
 			}
 
-			if s.slashingProtectionType == minimal {
+			if s.slashingProtectionType == Minimal {
 				if err := lowestSourceBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Source)); err != nil {
 					return errors.Wrapf(err, "could not save lowest source epoch %d", att.Source)
 				}
@@ -529,7 +529,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 				}
 			}
 
-			if s.slashingProtectionType == minimal {
+			if s.slashingProtectionType == Minimal {
 				if err := lowestTargetBucket.Put(att.PubKey[:], bytesutil.EpochToBytesBigEndian(att.Target)); err != nil {
 					return errors.Wrapf(err, "could not save lowest target epoch %d", att.Target)
 				}

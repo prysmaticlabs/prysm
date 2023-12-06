@@ -37,6 +37,6 @@ var testCases = []struct {
 	name                   string
 	slashingProtectionType SlashingProtectionType
 }{
-	{name: "complete", slashingProtectionType: complete},
-	{name: "minimal", slashingProtectionType: minimal},
+	{name: "complete", slashingProtectionType: Complete},
+	{name: "minimal", slashingProtectionType: Minimal},
 }

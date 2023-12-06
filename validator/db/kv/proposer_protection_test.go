@@ -177,7 +177,7 @@ func TestPruneProposalHistoryBySlot_OK(t *testing.T) {
 	signedRoot := bytesutil.PadTo([]byte{1}, 32)
 
 	for _, st := range tests {
-		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, complete)
+		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, Complete)
 		for _, slot := range st.slots {
 			err := db.SaveProposalHistoryForSlot(context.Background(), pubKey, slot, signedRoot)
 			require.NoError(t, err, "Saving proposal history failed")
@@ -253,7 +253,7 @@ func TestStore_LowestSignedProposal(t *testing.T) {
 			err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 3 /* slot */, dummySigningRoot[:])
 			require.NoError(t, err)
 
-			if tt.slashingProtectionType == complete {
+			if tt.slashingProtectionType == Complete {
 				// We expect the lowest signed slot did not change.
 				slot, exists, err = validatorDB.LowestSignedProposal(ctx, pubkey)
 				require.NoError(t, err)
@@ -306,7 +306,7 @@ func TestStore_HighestSignedProposal(t *testing.T) {
 			err = validatorDB.SaveProposalHistoryForSlot(ctx, pubkey, 1 /* slot */, dummySigningRoot[:])
 			require.NoError(t, err)
 
-			if tt.slashingProtectionType == complete {
+			if tt.slashingProtectionType == Complete {
 				// We expect the lowest signed slot did not change.
 				slot, exists, err = validatorDB.HighestSignedProposal(ctx, pubkey)
 				require.NoError(t, err)

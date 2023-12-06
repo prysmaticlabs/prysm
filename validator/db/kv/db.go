@@ -76,8 +76,8 @@ type Store struct {
 type SlashingProtectionType uint8
 
 const (
-	complete SlashingProtectionType = iota
-	minimal
+	Complete SlashingProtectionType = iota
+	Minimal
 )
 
 // Close closes the underlying boltdb database.

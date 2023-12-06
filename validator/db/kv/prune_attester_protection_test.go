@@ -15,7 +15,7 @@ import (
 
 func TestPruneAttestations_NoPruning(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{1}
-	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, complete)
+	validatorDB := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, Complete)
 
 	// Write attesting history for every single epoch
 	// since genesis to a specified number of epochs.
@@ -45,7 +45,7 @@ func TestPruneAttestations_OK(t *testing.T) {
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
-	validatorDB := setupDB(t, pks, complete)
+	validatorDB := setupDB(t, pks, Complete)
 
 	// Write attesting history for every single epoch
 	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 2.
@@ -94,7 +94,7 @@ func BenchmarkPruneAttestations(b *testing.B) {
 	for i := uint64(0); i < numKeys; i++ {
 		pks = append(pks, bytesutil.ToBytes48(bytesutil.ToBytes(i, 48)))
 	}
-	validatorDB := setupDB(b, pks, complete)
+	validatorDB := setupDB(b, pks, Complete)
 
 	// Write attesting history for every single epoch
 	// since genesis to SLASHING_PROTECTION_PRUNING_EPOCHS * 20.

@@ -124,7 +124,7 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 
 		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
 
-		if s.slashingProtectionType == minimal {
+		if s.slashingProtectionType == Minimal {
 			if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
 				return errors.Wrapf(err, "could not put lowest signed proposal for slot %d", slot)
 			}
@@ -146,7 +146,7 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 
 		highestSignedBkt := tx.Bucket(highestSignedProposalsBucket)
 
-		if s.slashingProtectionType == minimal {
+		if s.slashingProtectionType == Minimal {
 			if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
 				return errors.Wrapf(err, "could not put highest signed proposal for slot %d", slot)
 			}
@@ -166,7 +166,7 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 			}
 		}
 
-		if s.slashingProtectionType == minimal {
+		if s.slashingProtectionType == Minimal {
 			if err := emptyBucket(valBucket); err != nil {
 				return errors.Wrapf(err, "could not empty pubkey bucket")
 			}
@@ -176,7 +176,7 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 			return err
 		}
 
-		if s.slashingProtectionType == complete {
+		if s.slashingProtectionType == Complete {
 			if err := pruneProposalHistoryBySlot(valBucket, slot); err != nil {
 				return errors.Wrapf(err, "could not prune proposal history for slot %d", slot)
 			}

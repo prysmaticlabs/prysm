@@ -12,7 +12,7 @@ import (
 
 func TestStore_GraffitiOrderedIndex_ReadAndWrite(t *testing.T) {
 	ctx := context.Background()
-	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, complete)
+	db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, Complete)
 	subTests := []struct {
 		name     string
 		want     uint64
