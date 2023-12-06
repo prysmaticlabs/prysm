@@ -159,7 +159,7 @@ var (
 	P2PMaxPeers = &cli.IntFlag{
 		Name:  "p2p-max-peers",
 		Usage: "The max number of p2p peers to maintain.",
-		Value: 45,
+		Value: 70,
 	}
 	// P2PAllowList defines a CIDR subnet to exclusively allow connections.
 	P2PAllowList = &cli.StringFlag{
