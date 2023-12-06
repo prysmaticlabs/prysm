@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -292,7 +291,7 @@ func (s *Store) slotKey(slot types.Slot) []byte {
 	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(s.blobRetentionSlots()))
 }
 
-func (s *Store) blobRetentionSlots() primitives.Slot {
+func (s *Store) blobRetentionSlots() types.Slot {
 	return types.Slot(s.blobRetentionEpochs.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 }
 
