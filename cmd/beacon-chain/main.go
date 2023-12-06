@@ -78,7 +78,6 @@ var appFlags = []cli.Flag{
 	flags.MaxBuilderConsecutiveMissedSlots,
 	flags.EngineEndpointTimeoutSeconds,
 	flags.LocalBlockValueBoost,
-	flags.BlobRetentionEpoch,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -137,6 +136,8 @@ var appFlags = []cli.Flag{
 	genesis.BeaconAPIURL,
 	flags.SlasherDirFlag,
 	flags.JwtId,
+	storage.BlobStoragePathFlag,
+	storage.BlobRetentionEpochFlag,
 }
 
 func init() {
@@ -282,7 +283,7 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 
-	optFuncs := []func(*cli.Context) (node.Option, error){
+	optFuncs := []func(*cli.Context) ([]node.Option, error){
 		genesis.BeaconNodeOptions,
 		checkpoint.BeaconNodeOptions,
 		storage.BeaconNodeOptions,
@@ -293,7 +294,7 @@ func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 			return err
 		}
 		if ofo != nil {
-			opts = append(opts, ofo)
+			opts = append(opts, ofo...)
 		}
 	}
 
