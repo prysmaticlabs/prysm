@@ -104,7 +104,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	// Blob cache is updated after BuildBlockParallel
 	if err = vs.BuildBlockParallel(ctx, sBlk, head, false); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
@@ -121,6 +120,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		"validator":          sBlk.Block().ProposerIndex(),
 	}).Info("Finished building block")
 
+	// Blob cache is updated after BuildBlockParallel
 	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 

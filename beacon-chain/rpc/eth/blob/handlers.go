@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -34,26 +34,26 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	blockId := segments[len(segments)-1]
 	switch blockId {
 	case "genesis":
-		http2.HandleError(w, "blobs are not supported for Phase 0 fork", http.StatusBadRequest)
+		httputil.HandleError(w, "Blobs are not supported for Phase 0 fork", http.StatusBadRequest)
 		return
 	case "head":
 		var err error
 		root, err = s.ChainInfoFetcher.HeadRoot(r.Context())
 		if err != nil {
-			http2.HandleError(w, errors.Wrapf(err, "could not retrieve head root").Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve head root").Error(), http.StatusInternalServerError)
 			return
 		}
 	case "finalized":
 		fcp := s.ChainInfoFetcher.FinalizedCheckpt()
 		if fcp == nil {
-			http2.HandleError(w, "received nil finalized checkpoint", http.StatusInternalServerError)
+			httputil.HandleError(w, "Received nil finalized checkpoint", http.StatusInternalServerError)
 			return
 		}
 		root = fcp.Root
 	case "justified":
 		jcp := s.ChainInfoFetcher.CurrentJustifiedCheckpt()
 		if jcp == nil {
-			http2.HandleError(w, "received nil justified checkpoint", http.StatusInternalServerError)
+			httputil.HandleError(w, "Received nil justified checkpoint", http.StatusInternalServerError)
 			return
 		}
 		root = jcp.Root
@@ -62,31 +62,31 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 			var err error
 			root, err = hexutil.Decode(blockId)
 			if err != nil {
-				http2.HandleError(w, errors.Wrap(err, "Invalid block ID: current").Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, errors.Wrap(err, "Invalid block ID").Error(), http.StatusInternalServerError)
 				return
 			}
 		} else {
 			slot, err := strconv.ParseUint(blockId, 10, 64)
 			if err != nil {
-				http2.HandleError(w, lookup.NewBlockIdParseError(err).Error(), http.StatusBadRequest)
+				httputil.HandleError(w, lookup.NewBlockIdParseError(err).Error(), http.StatusBadRequest)
 				return
 			}
 			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 			if err != nil {
-				http2.HandleError(w, errors.Wrap(err, "could not calculate Deneb start slot").Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, errors.Wrap(err, "Could not calculate Deneb start slot").Error(), http.StatusInternalServerError)
 				return
 			}
 			if primitives.Slot(slot) < denebStart {
-				http2.HandleError(w, "blobs are not supported before Deneb fork", http.StatusBadRequest)
+				httputil.HandleError(w, "Blobs are not supported before Deneb fork", http.StatusBadRequest)
 				return
 			}
 			ok, roots, err := s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
 			if !ok {
-				http2.HandleError(w, fmt.Sprintf("no block roots at slot %d", slot), http.StatusBadRequest)
+				httputil.HandleError(w, fmt.Sprintf("Block not found: no block roots at slot %d", slot), http.StatusNotFound)
 				return
 			}
 			if err != nil {
-				http2.HandleError(w, errors.Wrap(err, "failed to get block roots by slot").Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, errors.Wrap(err, "Failed to get block roots by slot").Error(), http.StatusInternalServerError)
 				return
 			}
 			root = roots[0][:]
@@ -96,7 +96,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 			for _, blockRoot := range roots {
 				canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
 				if err != nil {
-					http2.HandleError(w, "Could not determine if block root is canonical: "+err.Error(), http.StatusInternalServerError)
+					httputil.HandleError(w, "Could not determine if block root is canonical: "+err.Error(), http.StatusInternalServerError)
 					return
 				}
 				if canonical {
@@ -110,7 +110,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	if len(indices) == 0 {
 		m, err := s.BlobStorage.Indices(bytesutil.ToBytes32(root))
 		if err != nil {
-			http2.HandleError(w, errors.Wrapf(err, "could not retrieve blob indicies").Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blob indices for root %#x", root).Error(), http.StatusInternalServerError)
 			return
 		}
 		for k, v := range m {
@@ -120,36 +120,35 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// if it's still empty
 	if len(indices) == 0 {
-		http2.HandleError(w, "Block not found", http.StatusNotFound)
+		httputil.HandleError(w, "No blobs found", http.StatusNotFound)
 		return
 	}
 
 	for _, index := range indices {
 		sidecar, err := s.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
-			http2.HandleError(w, errors.Wrapf(err, "could not retrieve blobs for root %#x", root).Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blobs with root %#x and index %d", root, index).Error(), http.StatusInternalServerError)
 			return
 		}
 		sidecars = append(sidecars, sidecar.ROBlob.BlobSidecar)
 	}
 
-	ssz := http2.SszRequested(r)
+	ssz := httputil.SszRequested(r)
 	if ssz {
 		sidecarResp := &eth.BlobSidecars{
 			Sidecars: sidecars,
 		}
 		sszResp, err := sidecarResp.MarshalSSZ()
 		if err != nil {
-			http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http2.WriteSsz(w, sszResp, "blob_sidecars.ssz")
+		httputil.WriteSsz(w, sszResp, "blob_sidecars.ssz")
 		return
 	}
 
-	http2.WriteJson(w, buildSidecarsResponse(sidecars))
+	httputil.WriteJson(w, buildSidecarsResponse(sidecars))
 }
 
 // parseIndices filters out invalid and duplicate blob indices
