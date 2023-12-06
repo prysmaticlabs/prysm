@@ -59,10 +59,9 @@ func HandleBackupDir(dirPath string, permissionOverride bool) error {
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
 
-// MkdirAll takes in a path, expands it if necessary, and looks through the
-// permissions of every directory along the path, ensuring we are not attempting
-// to overwrite any existing permissions. Finally, creates the directory accordingly
-// with standardized, Prysm project permissions. This is the static-analysis enforced
+// MkdirAll takes in a path, expands it if necessary, and creates the directory accordingly
+// with standardized, Prysm project permissions. If a directory already exists as this path,
+// then the method returns without making any changes. This is the static-analysis enforced
 // method for creating a directory programmatically in Prysm.
 func MkdirAll(dirPath string) error {
 	expanded, err := ExpandPath(dirPath)
@@ -74,13 +73,7 @@ func MkdirAll(dirPath string) error {
 		return err
 	}
 	if exists {
-		info, err := os.Stat(expanded)
-		if err != nil {
-			return err
-		}
-		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
-			return errors.New("dir already exists without proper 0700 permissions")
-		}
+		return nil
 	}
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
