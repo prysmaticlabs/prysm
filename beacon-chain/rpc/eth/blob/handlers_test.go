@@ -58,7 +58,7 @@ func TestBlobs(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, "blobs are not supported for Phase 0 fork", e.Message)
+		assert.Equal(t, "Blobs are not supported for Phase 0 fork", e.Message)
 	})
 	t.Run("head", func(t *testing.T) {
 		u := "http://foo.example/head"
@@ -209,7 +209,7 @@ func TestBlobs(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, "blobs are not supported before Deneb fork", e.Message)
+		assert.Equal(t, "Blobs are not supported before Deneb fork", e.Message)
 	})
 	t.Run("malformed block ID", func(t *testing.T) {
 		u := "http://foo.example/foo"
