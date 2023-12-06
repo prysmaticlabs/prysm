@@ -26,7 +26,6 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 
 	switch sBlk.Version() {
 	case version.Deneb:
-
 		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Capella:
 		return vs.constructCapellaBlock(blockProto, isBlinded, payloadValue), nil
