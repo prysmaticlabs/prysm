@@ -13,6 +13,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
@@ -35,16 +36,30 @@ const (
 	directoryPermissions = 0700
 )
 
+// BlobStorageOption is a functional option for configuring a BlobStorage.
+type BlobStorageOption func(*BlobStorage)
+
+// WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
+func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
+	return func(b *BlobStorage) {
+		b.retentionEpochs = e
+	}
+}
+
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string) (*BlobStorage, error) {
+func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
 		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	return &BlobStorage{fs: fs, retentionEpochs: MaxEpochsToPersistBlobs}, nil
+	b := &BlobStorage{fs: fs, retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest}
+	for _, o := range opts {
+		o(b)
+	}
+	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.

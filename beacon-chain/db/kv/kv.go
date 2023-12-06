@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	bolt "go.etcd.io/bbolt"
 )
@@ -90,6 +91,7 @@ type Store struct {
 	validatorEntryCache *ristretto.Cache
 	stateSummaryCache   *stateSummaryCache
 	ctx                 context.Context
+	blobRetentionEpochs primitives.Epoch
 }
 
 // StoreDatafilePath is the canonical construction of a full
@@ -133,10 +135,20 @@ var Buckets = [][]byte{
 	blobsBucket,
 }
 
+// KVStoreOption is a functional option that modifies a kv.Store.
+type KVStoreOption func(*Store)
+
+// WithBlobRetentionEpochs sets the variable configuring the blob retention window.
+func WithBlobRetentionEpochs(e primitives.Epoch) KVStoreOption {
+	return func(s *Store) {
+		s.blobRetentionEpochs = e
+	}
+}
+
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*Store, error) {
 	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -189,6 +201,9 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		stateSummaryCache:   newStateSummaryCache(),
 		ctx:                 ctx,
 	}
+	for _, o := range opts {
+		o(kv)
+	}
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, Buckets...)
 	}); err != nil {
@@ -202,10 +217,14 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		return nil, err
 	}
 
-	if err := checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
+	if err := kv.checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
 		return nil, errors.Wrap(err, "failed to check epochs for blob sidecars request bucket")
 	}
 
+	// set a default so that tests don't break
+	if kv.blobRetentionEpochs == 0 {
+		kv.blobRetentionEpochs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	}
 	return kv, nil
 }
 

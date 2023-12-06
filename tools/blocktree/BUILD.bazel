@@ -7,8 +7,8 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/tools/blocktree",
     visibility = ["//visibility:private"],
     deps = [
-        "//beacon-chain/db:go_default_library",
         "//beacon-chain/db/filters:go_default_library",
+        "//beacon-chain/db/kv:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "@com_github_emicklei_dot//:go_default_library",
     ],
