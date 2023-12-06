@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition/interop"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
@@ -23,7 +23,7 @@ func main() {
 	defer resetCfg()
 	flag.Parse()
 	fmt.Println("Starting process...")
-	d, err := db.NewDB(context.Background(), *datadir)
+	d, err := kv.NewKVStore(context.Background(), *datadir)
 	if err != nil {
 		panic(err)
 	}

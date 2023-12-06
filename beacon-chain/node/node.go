@@ -113,6 +113,7 @@ type BeaconNode struct {
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	blobRetentionEpochs     primitives.Epoch
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -153,9 +154,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := filesystem.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
 		return nil, err
 	}
 	configureFastSSZHashingAlgorithm()
@@ -380,7 +378,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 	if err != nil {
 		return err
 	}
@@ -402,7 +400,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+
+		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
