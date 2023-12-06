@@ -23,7 +23,7 @@ var requests = map[string]endpoint{
 		})),
 	"/beacon/states/{param1}/fork": newMetadata[beacon.GetStateForkResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
-			return []string{"finalized"}
+			return []string{"head"}
 		})),
 	"/beacon/states/{param1}/finality_checkpoints": newMetadata[beacon.GetFinalityCheckpointsResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
@@ -66,11 +66,8 @@ var requests = map[string]endpoint{
 		})),
 	"/beacon/blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v2PathTemplate,
 		withSsz(),
-		withParams(func(e primitives.Epoch) []string {
-			if e < 4 {
-				return []string{"head"}
-			}
-			return []string{"finalized"}
+		withParams(func(_ primitives.Epoch) []string {
+			return []string{"head"}
 		})),
 	"/beacon/blocks/{param1}/root": newMetadata[beacon.BlockRootResponse](v1PathTemplate,
 		withParams(func(_ primitives.Epoch) []string {
@@ -82,11 +79,8 @@ var requests = map[string]endpoint{
 		})),
 	"/beacon/blinded_blocks/{param1}": newMetadata[beacon.GetBlockV2Response](v1PathTemplate,
 		withSsz(),
-		withParams(func(e primitives.Epoch) []string {
-			if e < 4 {
-				return []string{"head"}
-			}
-			return []string{"finalized"}
+		withParams(func(_ primitives.Epoch) []string {
+			return []string{"head"}
 		})),
 	"/beacon/pool/attestations": newMetadata[beacon.ListAttestationsResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
@@ -173,11 +167,7 @@ var requests = map[string]endpoint{
 			return compareJSON(pResp, lhResp)
 		})),
 	"/config/deposit_contract": newMetadata[config.GetDepositContractResponse](v1PathTemplate),
-	"/debug/beacon/states/{param1}": newMetadata[debug.GetBeaconStateV2Response](v2PathTemplate,
-		withParams(func(_ primitives.Epoch) []string {
-			return []string{"head"}
-		})),
-	"/debug/beacon/heads": newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
+	"/debug/beacon/heads":      newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
 	"/node/identity": newMetadata[node.GetIdentityResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*node.GetIdentityResponse)
