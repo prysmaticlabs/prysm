@@ -273,8 +273,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
+	router := routesWithMiddleware(cliCtx)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -306,6 +305,14 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	beacon.collector = c
 
 	return beacon, nil
+}
+
+func routesWithMiddleware(cliCtx *cli.Context) *mux.Router {
+	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	router := mux.NewRouter()
+	router.Use(server.NormalizeQueryValuesHandler)
+	router.Use(server.CorsHandler(allowedOrigins))
+	return router
 }
 
 // StateFeed implements statefeed.Notifier.
