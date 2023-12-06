@@ -65,11 +65,11 @@ func buildBlobSidecars(blk interfaces.SignedBeaconBlock, blobs [][]byte, kzgproo
 	if err != nil {
 		return nil, err
 	}
-	clen := len(denebBlk.Block.Body.BlobKzgCommitments)
-	if clen != len(blobs) || clen != len(kzgproofs) {
+	cLen := len(denebBlk.Block.Body.BlobKzgCommitments)
+	if cLen != len(blobs) || cLen != len(kzgproofs) {
 		return nil, errors.New("blob KZG commitments don't match number of blobs or KZG proofs")
 	}
-	blobSidecars := make([]*ethpb.BlobSidecar, clen)
+	blobSidecars := make([]*ethpb.BlobSidecar, cLen)
 	header, err := blk.Header()
 	if err != nil {
 		return nil, err

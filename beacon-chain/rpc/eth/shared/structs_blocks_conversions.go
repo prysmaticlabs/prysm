@@ -1170,13 +1170,19 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 	if err != nil {
 		return nil, NewDecodeError(err, "SignedBlock")
 	}
-	proofs, err := DecodeHexArrayWithLength("KZG proofs", b.KzgProofs, 48)
-	if err != nil {
-		return nil, err
+	proofs := make([][]byte, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i], err = DecodeHexWithLength(proof, fieldparams.BLSPubkeyLength)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("KzgProofs[%d]", i))
+		}
 	}
-	blbs, err := DecodeHexArrayWithLength("Blobs", b.Blobs, fieldparams.BlobLength)
-	if err != nil {
-		return nil, err
+	blbs := make([][]byte, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i], err = DecodeHexWithLength(blob, fieldparams.BlobLength)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("Blobs[%d]", i))
+		}
 	}
 	blk := &eth.SignedBeaconBlockContentsDeneb{
 		Block:     signedDenebBlock,
@@ -1212,13 +1218,19 @@ func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockContentsDeneb,
 	if err != nil {
 		return nil, NewDecodeError(err, "Block")
 	}
-	proofs, err := DecodeHexArrayWithLength("KZG proofs", b.KzgProofs, 48)
-	if err != nil {
-		return nil, err
+	proofs := make([][]byte, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i], err = DecodeHexWithLength(proof, fieldparams.BLSPubkeyLength)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("KzgProofs[%d]", i))
+		}
 	}
-	blbs, err := DecodeHexArrayWithLength("Blobs", b.Blobs, fieldparams.BlobLength)
-	if err != nil {
-		return nil, err
+	blbs := make([][]byte, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i], err = DecodeHexWithLength(blob, fieldparams.BlobLength)
+		if err != nil {
+			return nil, NewDecodeError(err, fmt.Sprintf("Blobs[%d]", i))
+		}
 	}
 	return &eth.BeaconBlockContentsDeneb{
 		Block:     denebBlock,
