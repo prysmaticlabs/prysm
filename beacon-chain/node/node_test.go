@@ -125,7 +125,8 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	ctx, cancel := newCliContextWithCancel(&app, set)
 	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithExecutionChainOptions([]execution.Option{}))
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
