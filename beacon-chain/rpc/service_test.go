@@ -42,21 +42,21 @@ func TestServer_InitializeRoutes(t *testing.T) {
 			Router: mux.NewRouter(),
 		},
 	}
-	s.initializeRewardServer(&rewards.Server{})
-	s.initializeBuilderServer(&rpcBuilder.Server{})
-	s.initializeBlobServer(&blob.Server{})
-	s.initializeValidatorServer(&validator.Server{})
-	s.initializeNodeServer(&node.Server{})
-	s.initializeBeaconServer(&beacon.Server{})
+	s.initializeRewardServerRoutes(&rewards.Server{})
+	s.initializeBuilderServerRoutes(&rpcBuilder.Server{})
+	s.initializeBlobServerRoutes(&blob.Server{})
+	s.initializeValidatorServerRoutes(&validator.Server{})
+	s.initializeNodeServerRoutes(&node.Server{})
+	s.initializeBeaconServerRoutes(&beacon.Server{})
 	s.initializeConfigRoutes()
-	s.initializeEventsServer(&events.Server{})
-	s.initializeLightClientServer(&lightclient.Server{})
-	s.initializeDebugServer(&debug.Server{})
+	s.initializeEventsServerRoutes(&events.Server{})
+	s.initializeLightClientServerRoutes(&lightclient.Server{})
+	s.initializeDebugServerRoutes(&debug.Server{})
 
 	//prysm internal
-	s.initializePrysmBeaconServer(&beaconprysm.Server{})
-	s.initializePrysmNodeServer(&nodeprysm.Server{})
-	s.initializePrysmValidatorServer(&validatorprysm.Server{})
+	s.initializePrysmBeaconServerRoutes(&beaconprysm.Server{})
+	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{})
+	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{})
 
 	wantRouteList := map[string][]string{
 		"/eth/v1/beacon/rewards/blocks/{block_id}":                   {http.MethodGet},

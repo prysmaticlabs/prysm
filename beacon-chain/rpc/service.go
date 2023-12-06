@@ -194,21 +194,21 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 var _ stategen.CanonicalChecker = blockchain.ChainInfoFetcher(nil)
 var _ stategen.CurrentSlotter = blockchain.ChainInfoFetcher(nil)
 
-func (s *Service) initializeRewardServer(rewardsServer *rewards.Server) {
+func (s *Service) initializeRewardServerRoutes(rewardsServer *rewards.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/blocks/{block_id}", rewardsServer.BlockRewards).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/attestations/{epoch}", rewardsServer.AttestationRewards).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/rewards/sync_committee/{block_id}", rewardsServer.SyncCommitteeRewards).Methods(http.MethodPost)
 }
 
-func (s *Service) initializeBuilderServer(builderServer *rpcBuilder.Server) {
+func (s *Service) initializeBuilderServerRoutes(builderServer *rpcBuilder.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/builder/states/{state_id}/expected_withdrawals", builderServer.ExpectedWithdrawals).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeBlobServer(blobServer *blob.Server) {
+func (s *Service) initializeBlobServerRoutes(blobServer *blob.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/blob_sidecars/{block_id}", blobServer.Blobs).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeValidatorServer(validatorServer *validator.Server) {
+func (s *Service) initializeValidatorServerRoutes(validatorServer *validator.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_attestation", validatorServer.GetAggregateAttestation).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/contribution_and_proofs", validatorServer.SubmitContributionAndProofs).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/aggregate_and_proofs", validatorServer.SubmitAggregateAndProofs).Methods(http.MethodPost)
@@ -227,7 +227,7 @@ func (s *Service) initializeValidatorServer(validatorServer *validator.Server) {
 	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServer.ProduceBlockV3).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeNodeServer(nodeServer *node.Server) {
+func (s *Service) initializeNodeServerRoutes(nodeServer *node.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/node/syncing", nodeServer.GetSyncStatus).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/node/identity", nodeServer.GetIdentity).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/node/peers/{peer_id}", nodeServer.GetPeer).Methods(http.MethodGet)
@@ -237,7 +237,7 @@ func (s *Service) initializeNodeServer(nodeServer *node.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/node/health", nodeServer.GetHealth).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeBeaconServer(beaconServer *beacon.Server) {
+func (s *Service) initializeBeaconServerRoutes(beaconServer *beacon.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/committees", beaconServer.GetCommittees).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/fork", beaconServer.GetStateFork).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/root", beaconServer.GetStateRoot).Methods(http.MethodGet)
@@ -278,18 +278,18 @@ func (s *Service) initializeConfigRoutes() {
 	s.cfg.Router.HandleFunc("/eth/v1/config/spec", config.GetSpec).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeEventsServer(eventsServer *events.Server) {
+func (s *Service) initializeEventsServerRoutes(eventsServer *events.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/events", eventsServer.StreamEvents).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeLightClientServer(lightClientServer *lightclient.Server) {
+func (s *Service) initializeLightClientServerRoutes(lightClientServer *lightclient.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/bootstrap/{block_root}", lightClientServer.GetLightClientBootstrap).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/updates", lightClientServer.GetLightClientUpdatesByRange).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/finality_update", lightClientServer.GetLightClientFinalityUpdate).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/light_client/optimistic_update", lightClientServer.GetLightClientOptimisticUpdate).Methods(http.MethodGet)
 }
 
-func (s *Service) initializeDebugServer(debugServer *debug.Server) {
+func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServer.GetBeaconStateSSZ).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServer.GetBeaconStateV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/heads", debugServer.GetForkChoiceHeadsV2).Methods(http.MethodGet)
@@ -297,17 +297,17 @@ func (s *Service) initializeDebugServer(debugServer *debug.Server) {
 }
 
 // prysm internal routes
-func (s *Service) initializePrysmBeaconServer(beaconServerPrysm *beaconprysm.Server) {
+func (s *Service) initializePrysmBeaconServerRoutes(beaconServerPrysm *beaconprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/v1/beacon/weak_subjectivity", beaconServerPrysm.GetWeakSubjectivity).Methods(http.MethodGet)
 }
 
-func (s *Service) initializePrysmNodeServer(nodeServerPrysm *nodeprysm.Server) {
+func (s *Service) initializePrysmNodeServerRoutes(nodeServerPrysm *nodeprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.ListTrustedPeer).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers", nodeServerPrysm.AddTrustedPeer).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/prysm/node/trusted_peers/{peer_id}", nodeServerPrysm.RemoveTrustedPeer).Methods(http.MethodDelete)
 }
 
-func (s *Service) initializePrysmValidatorServer(validatorServerPrysm *validatorprysm.Server) {
+func (s *Service) initializePrysmValidatorServerRoutes(validatorServerPrysm *validatorprysm.Server) {
 	s.cfg.Router.HandleFunc("/prysm/validators/performance", validatorServerPrysm.GetValidatorPerformance).Methods(http.MethodPost)
 	// /eth/v1/beacon/states/{state_id}/validator_count is not a beacon API, it's a custom endpoint
 	s.cfg.Router.HandleFunc("/eth/v1/beacon/states/{state_id}/validator_count", validatorServerPrysm.GetValidatorCount).Methods(http.MethodGet)
@@ -336,7 +336,7 @@ func (s *Service) Start() {
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 
-	s.initializeRewardServer(&rewards.Server{
+	s.initializeRewardServerRoutes(&rewards.Server{
 		Blocker:               blocker,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
@@ -345,12 +345,12 @@ func (s *Service) Start() {
 		HeadFetcher:           s.cfg.HeadFetcher,
 		BlockRewardFetcher:    rewardFetcher,
 	})
-	s.initializeBuilderServer(&rpcBuilder.Server{
+	s.initializeBuilderServerRoutes(&rpcBuilder.Server{
 		FinalizationFetcher:   s.cfg.FinalizationFetcher,
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 		Stater:                stater,
 	})
-	s.initializeBlobServer(&blob.Server{
+	s.initializeBlobServerRoutes(&blob.Server{
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
 		BeaconDB:         s.cfg.BeaconDB,
 	})
@@ -404,7 +404,7 @@ func (s *Service) Start() {
 		ClockWaiter:            s.cfg.ClockWaiter,
 		CoreService:            coreService,
 	}
-	s.initializeValidatorServer(&validator.Server{
+	s.initializeValidatorServerRoutes(&validator.Server{
 		HeadFetcher:            s.cfg.HeadFetcher,
 		TimeFetcher:            s.cfg.GenesisTimeFetcher,
 		SyncChecker:            s.cfg.SyncService,
@@ -438,7 +438,7 @@ func (s *Service) Start() {
 		BeaconMonitoringHost: s.cfg.BeaconMonitoringHost,
 		BeaconMonitoringPort: s.cfg.BeaconMonitoringPort,
 	}
-	s.initializeNodeServer(&node.Server{
+	s.initializeNodeServerRoutes(&node.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
 		Server:                    s.grpcServer,
 		SyncChecker:               s.cfg.SyncService,
@@ -475,7 +475,7 @@ func (s *Service) Start() {
 		ReplayerBuilder:             ch,
 		CoreService:                 coreService,
 	}
-	s.initializeBeaconServer(&beacon.Server{
+	s.initializeBeaconServerRoutes(&beacon.Server{
 		CanonicalHistory:              ch,
 		BeaconDB:                      s.cfg.BeaconDB,
 		AttestationsPool:              s.cfg.AttestationsPool,
@@ -504,14 +504,14 @@ func (s *Service) Start() {
 
 	s.initializeConfigRoutes()
 
-	s.initializeEventsServer(&events.Server{
+	s.initializeEventsServerRoutes(&events.Server{
 		StateNotifier:     s.cfg.StateNotifier,
 		OperationNotifier: s.cfg.OperationNotifier,
 		HeadFetcher:       s.cfg.HeadFetcher,
 		ChainInfoFetcher:  s.cfg.ChainInfoFetcher,
 	})
 
-	s.initializeLightClientServer(&lightclient.Server{
+	s.initializeLightClientServerRoutes(&lightclient.Server{
 		Blocker:     blocker,
 		Stater:      stater,
 		HeadFetcher: s.cfg.HeadFetcher,
@@ -531,7 +531,7 @@ func (s *Service) Start() {
 			PeersFetcher:       s.cfg.PeersFetcher,
 			ReplayerBuilder:    ch,
 		}
-		s.initializeDebugServer(&debug.Server{
+		s.initializeDebugServerRoutes(&debug.Server{
 			BeaconDB:              s.cfg.BeaconDB,
 			HeadFetcher:           s.cfg.HeadFetcher,
 			Stater:                stater,
@@ -549,7 +549,7 @@ func (s *Service) Start() {
 
 	validatorServer.PruneBlobsBundleCacheRoutine()
 
-	s.initializePrysmBeaconServer(&beaconprysm.Server{
+	s.initializePrysmBeaconServerRoutes(&beaconprysm.Server{
 		SyncChecker:           s.cfg.SyncService,
 		HeadFetcher:           s.cfg.HeadFetcher,
 		TimeFetcher:           s.cfg.GenesisTimeFetcher,
@@ -558,7 +558,7 @@ func (s *Service) Start() {
 		BeaconDB:              s.cfg.BeaconDB,
 	})
 
-	s.initializePrysmNodeServer(&nodeprysm.Server{
+	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{
 		BeaconDB:                  s.cfg.BeaconDB,
 		SyncChecker:               s.cfg.SyncService,
 		OptimisticModeFetcher:     s.cfg.OptimisticModeFetcher,
@@ -570,7 +570,7 @@ func (s *Service) Start() {
 		ExecutionChainInfoFetcher: s.cfg.ExecutionChainInfoFetcher,
 	})
 
-	s.initializePrysmValidatorServer(&validatorprysm.Server{
+	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{
 		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
 		HeadFetcher:           s.cfg.HeadFetcher,
 		SyncChecker:           s.cfg.SyncService,
