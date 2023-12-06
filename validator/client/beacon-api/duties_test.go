@@ -1029,12 +1029,6 @@ func TestGetDuties_Valid(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			pubkeys := [][]byte{{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}, {11}, {12}}
-			validatorIndices := []primitives.ValidatorIndex{13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24}
-			committeeIndices := []primitives.CommitteeIndex{25, 26, 27}
-			committeeSlots := []primitives.Slot{28, 29, 30}
-			proposerSlots := []primitives.Slot{31, 32, 33, 34, 35, 36, 37, 38}
-
 			statuses := []ethpb.ValidatorStatus{
 				ethpb.ValidatorStatus_DEPOSITED,
 				ethpb.ValidatorStatus_PENDING,
@@ -1049,24 +1043,25 @@ func TestGetDuties_Valid(t *testing.T) {
 				ethpb.ValidatorStatus_PENDING,
 				ethpb.ValidatorStatus_ACTIVE,
 			}
+			pubkeys := make([][]byte, len(statuses))
+			validatorIndices := make([]primitives.ValidatorIndex, len(statuses))
+			for i := range statuses {
+				pubkeys[i] = []byte(strconv.Itoa(i))
+				validatorIndices[i] = primitives.ValidatorIndex(i)
+			}
 
+			committeeIndices := []primitives.CommitteeIndex{25, 26, 27}
+			committeeSlots := []primitives.Slot{28, 29, 30}
+			proposerSlots := []primitives.Slot{31, 32, 33, 34, 35, 36, 37, 38}
+
+			statusResps := make([]*ethpb.ValidatorStatusResponse, len(statuses))
+			for i, s := range statuses {
+				statusResps[i] = &ethpb.ValidatorStatusResponse{Status: s}
+			}
 			multipleValidatorStatus := &ethpb.MultipleValidatorStatusResponse{
 				PublicKeys: pubkeys,
 				Indices:    validatorIndices,
-				Statuses: []*ethpb.ValidatorStatusResponse{
-					{Status: statuses[0]},
-					{Status: statuses[1]},
-					{Status: statuses[2]},
-					{Status: statuses[3]},
-					{Status: statuses[4]},
-					{Status: statuses[5]},
-					{Status: statuses[6]},
-					{Status: statuses[7]},
-					{Status: statuses[8]},
-					{Status: statuses[9]},
-					{Status: statuses[10]},
-					{Status: statuses[11]},
-				},
+				Statuses:   statusResps,
 			}
 
 			ctrl := gomock.NewController(t)
@@ -1299,7 +1294,7 @@ func TestGetDuties_Valid(t *testing.T) {
 
 			duties, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{
 				Epoch:      testCase.epoch,
-				PublicKeys: pubkeys,
+				PublicKeys: append(pubkeys, []byte("0xunknown")),
 			})
 			require.NoError(t, err)
 
