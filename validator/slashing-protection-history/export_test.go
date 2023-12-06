@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
 )
@@ -18,7 +19,7 @@ func TestExportStandardProtectionJSON_EmptyGenesisRoot(t *testing.T) {
 	pubKeys := [][fieldparams.BLSPubkeyLength]byte{
 		{1},
 	}
-	validatorDB := dbtest.SetupDB(t, pubKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 	_, err := ExportStandardProtectionJSON(ctx, validatorDB)
 	require.ErrorContains(t, "genesis validators root is empty", err)
 	genesisValidatorsRoot := [32]byte{1}
@@ -34,7 +35,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 			{1},
 		}
 		ctx := context.Background()
-		validatorDB := dbtest.SetupDB(t, pubKeys)
+		validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 
 		// No attestation history stored should return empty.
 		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
@@ -77,7 +78,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 			{1},
 		}
 		ctx := context.Background()
-		validatorDB := dbtest.SetupDB(t, pubKeys)
+		validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 
 		// No attestation history stored should return empty.
 		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
@@ -119,7 +120,7 @@ func Test_getSignedAttestationsByPubKey(t *testing.T) {
 			{1},
 		}
 		ctx := context.Background()
-		validatorDB := dbtest.SetupDB(t, pubKeys)
+		validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 
 		// No attestation history stored should return empty.
 		signedAttestations, err := signedAttestationsByPubKey(ctx, validatorDB, pubKeys[0])
@@ -168,7 +169,7 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 		{1},
 	}
 	ctx := context.Background()
-	validatorDB := dbtest.SetupDB(t, pubKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 
 	// No highest and/or lowest signed blocks will return empty.
 	signedBlocks, err := signedBlocksByPubKey(ctx, validatorDB, pubKeys[0])

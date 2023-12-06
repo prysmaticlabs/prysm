@@ -34,6 +34,7 @@ import (
 	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
@@ -192,7 +193,7 @@ func TestWaitForChainStart_SetsGenesisInfo(t *testing.T) {
 	defer ctrl.Finish()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -238,7 +239,7 @@ func TestWaitForChainStart_SetsGenesisInfo_IncorrectSecondTry(t *testing.T) {
 	defer ctrl.Finish()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	v := validator{
 		validatorClient: client,
 		db:              db,
@@ -1027,7 +1028,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				km := genMockKeymanager(t, 10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
-				db := dbTest.SetupDB(t, keys)
+				db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				for _, k := range keys {
@@ -1059,7 +1060,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				km := genMockKeymanager(t, 10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
-				db := dbTest.SetupDB(t, keys)
+				db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
@@ -1093,7 +1094,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				km := genMockKeymanager(t, 10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
-				db := dbTest.SetupDB(t, keys)
+				db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				for i, k := range keys {
@@ -1127,7 +1128,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				km := genMockKeymanager(t, 10)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
-				db := dbTest.SetupDB(t, keys)
+				db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				attLimit := 5
@@ -1167,7 +1168,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				km := genMockKeymanager(t, 1)
 				keys, err := km.FetchValidatingPublicKeys(context.Background())
 				assert.NoError(t, err)
-				db := dbTest.SetupDB(t, keys)
+				db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 				resp := &ethpb.DoppelGangerResponse{Responses: []*ethpb.DoppelGangerResponse_ValidatorResponse{}}
 				req := &ethpb.DoppelGangerRequest{ValidatorRequests: []*ethpb.DoppelGangerRequest_ValidatorRequest{}}
 				for _, k := range keys {
@@ -1202,7 +1203,7 @@ func TestValidatorAttestationsAreOrdered(t *testing.T) {
 	km := genMockKeymanager(t, 10)
 	keys, err := km.FetchValidatingPublicKeys(context.Background())
 	assert.NoError(t, err)
-	db := dbTest.SetupDB(t, keys)
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: keys})
 
 	k := keys[0]
 	att := createAttestation(10, 14)
@@ -1292,7 +1293,7 @@ func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 
 func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	root := make([]byte, 32)
 	copy(root[2:], "a")
 	err := db.SaveGenesisValidatorsRoot(ctx, root)
@@ -1321,7 +1322,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 
 func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	root := make([]byte, 32)
 	copy(root[2:], "a")
 	err := db.SaveGenesisValidatorsRoot(ctx, root)
@@ -1351,7 +1352,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 
 func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	root := make([]byte, 32)
 	copy(root[2:], "a")
 	err := db.SaveGenesisValidatorsRoot(ctx, root)
@@ -1374,7 +1375,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 func TestValidator_PushProposerSettings(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	ctx := context.Background()
-	db := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	db := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	client := validatormock.NewMockValidatorClient(ctrl)
 	nodeClient := validatormock.NewMockNodeClient(ctrl)
 	defaultFeeHex := "0x046Fb65722E7b2455043BFEBf6177F1D2e9738D9"

@@ -22,6 +22,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
@@ -883,7 +884,7 @@ func TestProposerSettings(t *testing.T) {
 				set.Bool(flags.EnableBuilderFlag.Name, true, "")
 			}
 			cliCtx := cli.NewContext(&app, set, nil)
-			validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			validatorDB := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 			if tt.withdb != nil {
 				err := tt.withdb(validatorDB)
 				require.NoError(t, err)
@@ -910,7 +911,7 @@ func Test_ProposerSettingsWithOnlyBuilder_DoesNotSaveInDB(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
 	set.Bool(flags.EnableBuilderFlag.Name, true, "")
 	cliCtx := cli.NewContext(&app, set, nil)
-	validatorDB := dbTest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	validatorDB := dbTest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 	got, err := proposerSettings(cliCtx, validatorDB)
 	require.NoError(t, err)
 	_, err = validatorDB.ProposerSettings(cliCtx.Context)

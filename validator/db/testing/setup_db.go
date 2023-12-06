@@ -4,16 +4,13 @@ import (
 	"context"
 	"testing"
 
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 )
 
 // SetupDB instantiates and returns a DB instance for the validator client.
-func SetupDB(t testing.TB, pubkeys [][fieldparams.BLSPubkeyLength]byte) iface.ValidatorDB {
-	db, err := kv.NewKVStore(context.Background(), t.TempDir(), &kv.Config{
-		PubKeys: pubkeys,
-	})
+func SetupDB(t testing.TB, config *kv.Config) iface.ValidatorDB {
+	db, err := kv.NewKVStore(context.Background(), t.TempDir(), config)
 	if err != nil {
 		t.Fatalf("Failed to instantiate DB: %v", err)
 	}

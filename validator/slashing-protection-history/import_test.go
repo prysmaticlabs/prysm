@@ -50,7 +50,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	numValidators := 10
 	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -108,7 +108,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 	numValidators := 10
 	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -1046,7 +1046,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 			for pubKey := range tt.incomingAttsByPubKey {
 				pubKeys = append(pubKeys, pubKey)
 			}
-			validatorDB := dbtest.SetupDB(t, pubKeys)
+			validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
 				attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
 				require.NoError(t, err)

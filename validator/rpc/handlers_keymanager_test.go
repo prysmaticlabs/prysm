@@ -1052,7 +1052,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
 				ValDB:     validatorDB,
@@ -1239,7 +1239,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
 				ValDB:     validatorDB,
@@ -1698,7 +1698,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 
 			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
@@ -1808,7 +1808,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			m := &mock.Validator{}
 			err := m.SetProposerSettings(ctx, tt.proposerSettings)
 			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+			validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{}})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
 				ValDB:     validatorDB,

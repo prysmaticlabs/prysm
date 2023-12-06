@@ -59,7 +59,7 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
-	validatorDB := dbTest.SetupDB(t, pubKeys)
+	validatorDB := dbTest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
@@ -135,7 +135,7 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
-	validatorDB := dbTest.SetupDB(t, pubKeys)
+	validatorDB := dbTest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)

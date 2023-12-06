@@ -22,7 +22,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	numValidators := 10
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -84,7 +84,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	numValidators := 1
 	pubKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, pubKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: pubKeys})
 	wanted := &format.EIPSlashingProtectionFormat{
 		Metadata: struct {
 			InterchangeFormatVersion string `json:"interchange_format_version"`
@@ -143,7 +143,7 @@ func TestImportExport_FilterKeys(t *testing.T) {
 	numValidators := 10
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -181,7 +181,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	numValidators := 10
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -244,7 +244,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	numValidators := 3
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.
@@ -332,7 +332,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 	numValidators := 5
 	publicKeys, err := slashtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	validatorDB := dbtest.SetupDB(t, publicKeys)
+	validatorDB := dbtest.SetupDB(t, &kv.Config{PubKeys: publicKeys})
 
 	// First we setup some mock attesting and proposal histories and create a mock
 	// standard slashing protection format JSON struct.

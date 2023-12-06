@@ -25,6 +25,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	validatormock "github.com/prysmaticlabs/prysm/v4/testing/validator-mock"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	testing2 "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
@@ -76,7 +77,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 func setupWithParams(t *testing.T, p setupParams) (*validator, *mocks, bls.SecretKey, func()) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], p.validatorKey.PublicKey().Marshal())
-	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
+	valDB := testing2.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{pubKey}})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
@@ -960,7 +961,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 
 func TestGetGraffitiOrdered_Ok(t *testing.T) {
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
-	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
+	valDB := testing2.SetupDB(t, &kv.Config{PubKeys: [][fieldparams.BLSPubkeyLength]byte{pubKey}})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
