@@ -43,17 +43,17 @@ type eip3076TestCase struct {
 			} `json:"data"`
 		} `json:"interchange"`
 		Blocks []struct {
-			Pubkey        string `json:"pubkey"`
-			Slot          string `json:"slot"`
-			SigningRoot   string `json:"signing_root"`
-			ShouldSucceed bool   `json:"should_succeed"`
+			Pubkey                string `json:"pubkey"`
+			Slot                  string `json:"slot"`
+			SigningRoot           string `json:"signing_root"`
+			ShouldSucceedComplete bool   `json:"should_succeed_complete"`
 		} `json:"blocks"`
 		Attestations []struct {
-			Pubkey        string `json:"pubkey"`
-			SourceEpoch   string `json:"source_epoch"`
-			TargetEpoch   string `json:"target_epoch"`
-			SigningRoot   string `json:"signing_root"`
-			ShouldSucceed bool   `json:"should_succeed"`
+			Pubkey                string `json:"pubkey"`
+			SourceEpoch           string `json:"source_epoch"`
+			TargetEpoch           string `json:"target_epoch"`
+			SigningRoot           string `json:"signing_root"`
+			ShouldSucceedComplete bool   `json:"should_succeed_complete"`
 		} `json:"attestations"`
 	} `json:"steps"`
 }
@@ -82,11 +82,12 @@ func TestEIP3076SpecTests(t *testing.T) {
 			if tt.Name == "" {
 				t.Skip("Skipping eip3076TestCase with empty name")
 			}
-			for _, step := range tt.Steps {
-				// Set up validator client, one new validator client per eip3076TestCase.
-				// This ensures we initialize a new (empty) slashing protection database.
-				validator, _, _, _ := setup(t)
 
+			// Set up validator client, one new validator client per eip3076TestCase.
+			// This ensures we initialize a new (empty) slashing protection database.
+			validator, _, _, _ := setup(t)
+
+			for _, step := range tt.Steps {
 				if tt.GenesisValidatorsRoot != "" {
 					r, err := history.RootFromHex(tt.GenesisValidatorsRoot)
 					require.NoError(t, validator.db.SaveGenesisValidatorsRoot(context.Background(), r[:]))
@@ -127,7 +128,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 					wsb, err := blocks.NewSignedBeaconBlock(b)
 					require.NoError(t, err)
 					err = validator.slashableProposalCheck(context.Background(), pk, wsb, signingRoot)
-					if sb.ShouldSucceed {
+					if sb.ShouldSucceedComplete {
 						require.NoError(t, err)
 					} else {
 						require.NotEqual(t, nil, err, "pre validation should have failed for block")
@@ -159,14 +160,15 @@ func TestEIP3076SpecTests(t *testing.T) {
 					}
 
 					err = validator.slashableAttestationCheck(context.Background(), ia, pk, signingRoot)
-					if sa.ShouldSucceed {
+					if sa.ShouldSucceedComplete {
 						require.NoError(t, err)
 					} else {
 						require.NotNil(t, err, "pre validation should have failed for attestation")
 					}
 				}
-				require.NoError(t, err, validator.db.Close())
 			}
+
+			require.NoError(t, validator.db.Close(), "failed to close slashing protection database")
 		})
 	}
 }

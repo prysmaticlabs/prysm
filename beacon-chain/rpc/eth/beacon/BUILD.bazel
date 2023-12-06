@@ -87,7 +87,6 @@ go_test(
         "//beacon-chain/operations/synccommittee:go_default_library",
         "//beacon-chain/operations/voluntaryexits/mock:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
-        "//beacon-chain/rpc/apimiddleware:go_default_library",
         "//beacon-chain/rpc/core:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/eth/shared/testing:go_default_library",
