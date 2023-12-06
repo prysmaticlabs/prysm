@@ -3,11 +3,9 @@ package kv
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sort"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -64,7 +62,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.DeprecatedBlob
 	defer span.End()
 
 	first := scs[0]
-	newKey := blobSidecarKey(first)
+	newKey := s.blobSidecarKey(first)
 	prefix := newKey.BufferPrefix()
 	var prune []blobRotatingKey
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -236,7 +234,7 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 	defer span.End()
 
 	var enc []byte
-	sk := slotKey(slot)
+	sk := s.slotKey(slot)
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		c := tx.Bucket(blobsBucket).Cursor()
 		// Bucket size is bounded and bolt cursors are fast. Moreover, a thin caching layer can be added.
@@ -282,32 +280,37 @@ func (s *Store) DeleteBlobSidecars(ctx context.Context, beaconBlockRoot [32]byte
 
 // We define a blob sidecar key as: bytes(slot_to_rotating_buffer(blob.slot)) ++ bytes(blob.slot) ++ blob.block_root
 // where slot_to_rotating_buffer(slot) = slot % MAX_SLOTS_TO_PERSIST_BLOBS.
-func blobSidecarKey(blob *ethpb.DeprecatedBlobSidecar) blobRotatingKey {
-	key := slotKey(blob.Slot)
+func (s *Store) blobSidecarKey(blob *ethpb.DeprecatedBlobSidecar) blobRotatingKey {
+	key := s.slotKey(blob.Slot)
 	key = append(key, bytesutil.SlotToBytesBigEndian(blob.Slot)...)
 	key = append(key, blob.BlockRoot...)
 	return key
 }
 
-func slotKey(slot types.Slot) []byte {
-	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
-	maxSlotsToPersistBlobs := types.Slot(filesystem.MaxEpochsToPersistBlobs.Mul(uint64(slotsPerEpoch)))
-	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(maxSlotsToPersistBlobs))
+func (s *Store) slotKey(slot types.Slot) []byte {
+	return bytesutil.SlotToBytesBigEndian(slot.ModSlot(s.blobRetentionSlots()))
 }
 
-func checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
+func (s *Store) blobRetentionSlots() types.Slot {
+	return types.Slot(s.blobRetentionEpochs.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+}
+
+var errBlobRetentionEpochMismatch = errors.New("epochs for blobs request value in DB does not match runtime config")
+
+func (s *Store) checkEpochsForBlobSidecarsRequestBucket(db *bolt.DB) error {
+	uRetentionEpochs := uint64(s.blobRetentionEpochs)
 	if err := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket(chainMetadataBucket)
 		v := b.Get(blobRetentionEpochsKey)
 		if v == nil {
-			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uint64(filesystem.MaxEpochsToPersistBlobs))); err != nil {
+			if err := b.Put(blobRetentionEpochsKey, bytesutil.Uint64ToBytesBigEndian(uRetentionEpochs)); err != nil {
 				return err
 			}
 			return nil
 		}
 		e := bytesutil.BytesToUint64BigEndian(v)
-		if e != uint64(filesystem.MaxEpochsToPersistBlobs) {
-			return fmt.Errorf("epochs for blobs request value in DB %d does not match config value %d", e, filesystem.MaxEpochsToPersistBlobs)
+		if e != uRetentionEpochs {
+			return errors.Wrapf(errBlobRetentionEpochMismatch, "db=%d, config=%d", e, uRetentionEpochs)
 		}
 		return nil
 	}); err != nil {
