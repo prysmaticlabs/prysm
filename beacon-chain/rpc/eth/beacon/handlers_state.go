@@ -90,7 +90,7 @@ func (s *Server) GetRandao(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch", true)
 	if !ok {
 		return
 	}
@@ -156,7 +156,7 @@ func (s *Server) GetSyncCommittees(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch", true)
 	if !ok {
 		return
 	}

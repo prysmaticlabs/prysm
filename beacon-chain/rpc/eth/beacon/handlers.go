@@ -1602,15 +1602,15 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch")
+	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch", true)
 	if !ok {
 		return
 	}
-	ok, rawIndex, i := shared.UintFromQuery(w, r, "index")
+	ok, rawIndex, i := shared.UintFromQuery(w, r, "index", true)
 	if !ok {
 		return
 	}
-	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot")
+	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot", true)
 	if !ok {
 		return
 	}
@@ -1689,31 +1689,25 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
 	defer span.End()
 
-	rawSlot := r.URL.Query().Get("slot")
-	rawParentRoot := r.URL.Query().Get("parent_root")
+	ok, rawSlot, slot := shared.UintFromQuery(w, r, "slot", true)
+	if !ok {
+		return
+	}
+	ok, rawParentRoot, parentRoot := shared.HexFromQuery(w, r, "parent_root", fieldparams.RootLength, true)
 
 	var err error
 	var blks []interfaces.ReadOnlySignedBeaconBlock
 	var blkRoots [][32]byte
 
 	if rawParentRoot != "" {
-		parentRoot, valid := shared.ValidateHex(w, "parent_root", rawParentRoot, fieldparams.RootLength)
-		if !valid {
-			return
-		}
 		blks, blkRoots, err = s.BeaconDB.Blocks(ctx, filters.NewFilter().SetParentRoot(parentRoot))
 		if err != nil {
 			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blocks for parent root %s", parentRoot).Error(), http.StatusInternalServerError)
 			return
 		}
 	} else {
-		slot := uint64(s.ChainInfoFetcher.HeadSlot())
-		if rawSlot != "" {
-			var valid bool
-			slot, valid = shared.ValidateUint(w, "slot", rawSlot)
-			if !valid {
-				return
-			}
+		if rawSlot == "" {
+			slot = uint64(s.ChainInfoFetcher.HeadSlot())
 		}
 		blks, err = s.BeaconDB.BlocksBySlot(ctx, primitives.Slot(slot))
 		if err != nil {

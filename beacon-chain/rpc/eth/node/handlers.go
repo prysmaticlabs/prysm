@@ -110,7 +110,7 @@ func (s *Server) GetHealth(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "node.GetHealth")
 	defer span.End()
 
-	ok, rawSyncingStatus, syncingStatus := shared.UintFromQuery(w, r, "syncing_status")
+	ok, rawSyncingStatus, syncingStatus := shared.UintFromQuery(w, r, "syncing_status", true)
 	// lint:ignore uintcast -- custom syncing status being outside of range is harmless
 	intSyncingStatus := int(syncingStatus)
 	if !ok || (rawSyncingStatus != "" && http.StatusText(intSyncingStatus) == "") {

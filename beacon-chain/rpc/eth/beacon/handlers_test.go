@@ -2608,12 +2608,16 @@ func TestGetBlockHeaders(t *testing.T) {
 	t.Run("list headers", func(t *testing.T) {
 		wsb, err := blocks.NewSignedBeaconBlock(headBlock.Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block)
 		require.NoError(t, err)
+		st, err := util.NewBeaconState()
+		require.NoError(t, err)
+		require.NoError(t, st.SetSlot(30))
 		mockChainFetcher := &chainMock.ChainService{
 			DB:                  beaconDB,
 			Block:               wsb,
 			Root:                headBlock.BlockRoot,
 			FinalizedCheckPoint: &eth.Checkpoint{Root: blkContainers[64].BlockRoot},
 			FinalizedRoots:      map[[32]byte]bool{},
+			State:               st,
 		}
 		bs := &Server{
 			BeaconDB:              beaconDB,
@@ -2624,15 +2628,22 @@ func TestGetBlockHeaders(t *testing.T) {
 
 		tests := []struct {
 			name       string
-			slot       primitives.Slot
+			slot       string
 			parentRoot string
 			want       []*eth.SignedBeaconBlock
 			wantErr    bool
 		}{
 			{
-				name:       "slot",
-				slot:       primitives.Slot(30),
-				parentRoot: "",
+				name: "none",
+				want: []*eth.SignedBeaconBlock{
+					blkContainers[30].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
+					b1,
+					b2,
+				},
+			},
+			{
+				name: "slot",
+				slot: "30",
 				want: []*eth.SignedBeaconBlock{
 					blkContainers[30].Block.(*eth.BeaconBlockContainer_Phase0Block).Phase0Block,
 					b1,
@@ -2652,7 +2663,7 @@ func TestGetBlockHeaders(t *testing.T) {
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				urlWithParams := fmt.Sprintf("%s?slot=%d&parent_root=%s", url, tt.slot, tt.parentRoot)
+				urlWithParams := fmt.Sprintf("%s?slot=%s&parent_root=%s", url, tt.slot, tt.parentRoot)
 				request := httptest.NewRequest(http.MethodGet, urlWithParams, nil)
 				writer := httptest.NewRecorder()
 

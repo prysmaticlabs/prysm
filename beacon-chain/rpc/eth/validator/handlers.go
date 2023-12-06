@@ -13,7 +13,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -44,15 +43,13 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
 
-	attDataRoot := r.URL.Query().Get("attestation_data_root")
-	attDataRootBytes, valid := shared.ValidateHex(w, "attestation_data_root", attDataRoot, fieldparams.RootLength)
-	if !valid {
+	ok, _, attDataRoot := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, false)
+	if !ok {
 		return
 	}
 
-	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
-	if !valid {
+	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	if !ok {
 		return
 	}
 
@@ -70,7 +67,7 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 				httputil.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if bytes.Equal(root[:], attDataRootBytes) {
+			if bytes.Equal(root[:], attDataRoot) {
 				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
 					bestMatchingAtt = att
 				}
@@ -406,14 +403,12 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
-	if !valid {
+	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	if !ok {
 		return
 	}
-	rawCommitteeIndex := r.URL.Query().Get("committee_index")
-	committeeIndex, valid := shared.ValidateUint(w, "committee_index", rawCommitteeIndex)
-	if !valid {
+	ok, _, committeeIndex := shared.UintFromQuery(w, r, "committee_index", false)
+	if !ok {
 		return
 	}
 
@@ -450,14 +445,12 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
 
-	subIndex := r.URL.Query().Get("subcommittee_index")
-	index, valid := shared.ValidateUint(w, "subcommittee_index", subIndex)
-	if !valid {
+	ok, _, index := shared.UintFromQuery(w, r, "subcommittee_index", false)
+	if !ok {
 		return
 	}
-	rawSlot := r.URL.Query().Get("slot")
-	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
-	if !valid {
+	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	if !ok {
 		return
 	}
 	rawBlockRoot := r.URL.Query().Get("beacon_block_root")
@@ -621,9 +614,8 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
-	if !valid {
+	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	if !ok {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
@@ -751,9 +743,8 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
-	if !valid {
+	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	if !ok {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
@@ -882,9 +873,8 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
-	if !valid {
+	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	if !ok {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)
@@ -1012,9 +1002,8 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetLiveness")
 	defer span.End()
 
-	rawEpoch := mux.Vars(r)["epoch"]
-	requestedEpochUint, valid := shared.ValidateUint(w, "epoch", rawEpoch)
-	if !valid {
+	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	if !ok {
 		return
 	}
 	requestedEpoch := primitives.Epoch(requestedEpochUint)

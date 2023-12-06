@@ -8,25 +8,56 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
-func UintFromQuery(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, allowEmpty bool) (bool, string, uint64) {
 	raw := r.URL.Query().Get(name)
-	if raw != "" {
-		v, valid := ValidateUint(w, name, raw)
-		if !valid {
-			return false, "", 0
-		}
-		return true, raw, v
+	if raw == "" && allowEmpty {
+		return true, "", 0
 	}
-	return true, "", 0
+	v, valid := ValidateUint(w, name, raw)
+	if !valid {
+		return false, "", 0
+	}
+	return true, raw, v
 }
 
-func ValidateHex(w http.ResponseWriter, name string, s string, length int) ([]byte, bool) {
+func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+	raw := mux.Vars(r)[name]
+	v, valid := ValidateUint(w, name, raw)
+	if !valid {
+		return false, "", 0
+	}
+	return true, raw, v
+}
+
+func HexFromQuery(w http.ResponseWriter, r *http.Request, name string, length int, allowEmpty bool) (bool, string, []byte) {
+	raw := r.URL.Query().Get(name)
+	if raw == "" && allowEmpty {
+		return true, "", nil
+	}
+	v, valid := ValidateHex(w, name, raw, length)
+	if !valid {
+		return false, "", nil
+	}
+	return true, raw, v
+}
+
+func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length int) (bool, string, []byte) {
+	raw := mux.Vars(r)[name]
+	v, valid := ValidateHex(w, name, raw, length)
+	if !valid {
+		return false, "", nil
+	}
+	return true, raw, v
+}
+
+func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, bool) {
 	if s == "" {
 		errJson := &httputil.DefaultErrorJson{
 			Message: name + " is required",
@@ -51,7 +82,7 @@ func ValidateHex(w http.ResponseWriter, name string, s string, length int) ([]by
 	return hexBytes, true
 }
 
-func ValidateUint(w http.ResponseWriter, name string, s string) (uint64, bool) {
+func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	if s == "" {
 		errJson := &httputil.DefaultErrorJson{
 			Message: name + " is required",
