@@ -22,7 +22,7 @@ import (
 
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
@@ -34,7 +34,7 @@ func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -73,7 +73,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 }
 
 func TestSubmitAggregateAndProof_Ok(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -117,7 +117,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 }
 
 func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
-	validator, _, _, finish := setup(t)
+	validator, _, _, finish := setup(t, nil)
 	defer finish()
 	currentTime := time.Now()
 	numOfSlots := primitives.Slot(4)
@@ -132,7 +132,7 @@ func TestWaitForSlotTwoThird_WaitCorrectly(t *testing.T) {
 }
 
 func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
-	validator, _, _, finish := setup(t)
+	validator, _, _, finish := setup(t, nil)
 	defer finish()
 	currentTime := time.Now()
 	numOfSlots := primitives.Slot(4)
@@ -147,7 +147,7 @@ func TestWaitForSlotTwoThird_DoneContext_ReturnsImmediately(t *testing.T) {
 }
 
 func TestAggregateAndProofSignature_CanSignValidSignature(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte

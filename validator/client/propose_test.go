@@ -68,10 +68,14 @@ func testKeyFromBytes(t *testing.T, b []byte) keypair {
 	return keypair{pub: bytesutil.ToBytes48(pri.PublicKey().Marshal()), pri: pri}
 }
 
-func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
-	validatorKey, err := bls.RandKey()
-	require.NoError(t, err)
-	return setupWithParams(t, setupParams{validatorKey: validatorKey})
+func setup(t *testing.T, p *setupParams) (*validator, *mocks, bls.SecretKey, func()) {
+	if p != nil && p.validatorKey != nil {
+		return setupWithParams(t, *p)
+	} else {
+		validatorKey, err := bls.RandKey()
+		require.NoError(t, err)
+		return setupWithParams(t, setupParams{validatorKey: validatorKey})
+	}
 }
 
 func setupWithParams(t *testing.T, p setupParams) (*validator, *mocks, bls.SecretKey, func()) {
@@ -102,7 +106,7 @@ func setupWithParams(t *testing.T, p setupParams) (*validator, *mocks, bls.Secre
 
 func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -113,7 +117,7 @@ func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
 
 func TestProposeBlock_DomainDataFailed(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -129,7 +133,7 @@ func TestProposeBlock_DomainDataFailed(t *testing.T) {
 
 func TestProposeBlock_DomainDataIsNil(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -171,7 +175,7 @@ func TestProposeBlock_RequestBlockFailed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			validator, m, validatorKey, finish := setup(t)
+			validator, m, validatorKey, finish := setup(t, nil)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -226,7 +230,7 @@ func TestProposeBlock_ProposeBlockFailed(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			validator, m, validatorKey, finish := setup(t)
+			validator, m, validatorKey, finish := setup(t, nil)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -324,7 +328,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			validator, m, validatorKey, finish := setup(t)
+			validator, m, validatorKey, finish := setup(t, nil)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -370,7 +374,7 @@ func TestProposeBlock_BlocksDoubleProposal(t *testing.T) {
 
 func TestProposeBlock_BlocksDoubleProposal_After54KEpochs(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -446,7 +450,7 @@ func TestProposeBlock_AllowsPastProposals(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			validator, m, validatorKey, finish := setup(t)
+			validator, m, validatorKey, finish := setup(t, nil)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -618,7 +622,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			hook := logTest.NewGlobal()
-			validator, m, validatorKey, finish := setup(t)
+			validator, m, validatorKey, finish := setup(t, nil)
 			defer finish()
 			var pubKey [fieldparams.BLSPubkeyLength]byte
 			copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -666,7 +670,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 }
 
 func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	m.validatorClient.EXPECT().ValidatorIndex(
@@ -687,7 +691,7 @@ func TestProposeExit_ValidatorIndexFailed(t *testing.T) {
 }
 
 func TestProposeExit_DomainDataFailed(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -712,7 +716,7 @@ func TestProposeExit_DomainDataFailed(t *testing.T) {
 }
 
 func TestProposeExit_DomainDataIsNil(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -736,7 +740,7 @@ func TestProposeExit_DomainDataIsNil(t *testing.T) {
 }
 
 func TestProposeBlock_ProposeExitFailed(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -764,7 +768,7 @@ func TestProposeBlock_ProposeExitFailed(t *testing.T) {
 }
 
 func TestProposeExit_BroadcastsBlock(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	m.validatorClient.EXPECT().
@@ -789,7 +793,7 @@ func TestProposeExit_BroadcastsBlock(t *testing.T) {
 }
 
 func TestSignBlock(t *testing.T) {
-	validator, m, _, finish := setup(t)
+	validator, m, _, finish := setup(t, nil)
 	defer finish()
 
 	proposerDomain := make([]byte, 32)
@@ -823,7 +827,7 @@ func TestSignBlock(t *testing.T) {
 }
 
 func TestSignAltairBlock(t *testing.T) {
-	validator, m, _, finish := setup(t)
+	validator, m, _, finish := setup(t, nil)
 	defer finish()
 
 	kp := testKeyFromBytes(t, []byte{1})
@@ -850,7 +854,7 @@ func TestSignAltairBlock(t *testing.T) {
 }
 
 func TestSignBellatrixBlock(t *testing.T) {
-	validator, m, _, finish := setup(t)
+	validator, m, _, finish := setup(t, nil)
 	defer finish()
 
 	proposerDomain := make([]byte, 32)

@@ -13,7 +13,7 @@ import (
 )
 
 func Test_slashableAttestationCheck(t *testing.T) {
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -39,7 +39,7 @@ func Test_slashableAttestationCheck(t *testing.T) {
 }
 
 func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	ctx := context.Background()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -87,7 +87,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 
 func Test_slashableAttestationCheck_OK(t *testing.T) {
 	ctx := context.Background()
-	validator, _, _, finish := setup(t)
+	validator, _, _, finish := setup(t, nil)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},
@@ -114,7 +114,7 @@ func Test_slashableAttestationCheck_OK(t *testing.T) {
 
 func Test_slashableAttestationCheck_GenesisEpoch(t *testing.T) {
 	ctx := context.Background()
-	validator, _, _, finish := setup(t)
+	validator, _, _, finish := setup(t, nil)
 	defer finish()
 	att := &ethpb.IndexedAttestation{
 		AttestingIndices: []uint64{1, 2},

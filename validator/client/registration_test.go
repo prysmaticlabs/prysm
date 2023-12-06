@@ -17,7 +17,7 @@ import (
 )
 
 func TestSubmitValidatorRegistrations(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	ctx := context.Background()
@@ -94,7 +94,7 @@ func TestSubmitValidatorRegistrations(t *testing.T) {
 }
 
 func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	ctx := context.Background()
@@ -121,7 +121,7 @@ func TestSubmitValidatorRegistration_CantSign(t *testing.T) {
 }
 
 func Test_signValidatorRegistration(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	ctx := context.Background()
@@ -137,7 +137,7 @@ func Test_signValidatorRegistration(t *testing.T) {
 }
 
 func TestValidator_SignValidatorRegistrationRequest(t *testing.T) {
-	_, m, validatorKey, finish := setup(t)
+	_, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	ctx := context.Background()
 	byteval, err := hexutil.Decode("0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766")

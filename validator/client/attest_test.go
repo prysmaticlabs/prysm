@@ -31,7 +31,7 @@ import (
 
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
@@ -44,7 +44,7 @@ func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
@@ -62,7 +62,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
 		{
@@ -95,7 +95,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 }
 
 func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	hook := logTest.NewGlobal()
 	validatorIndex := primitives.ValidatorIndex(7)
@@ -169,7 +169,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
@@ -221,7 +221,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
@@ -273,7 +273,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 
 func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	validatorIndex := primitives.ValidatorIndex(7)
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -327,7 +327,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 }
 
 func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -354,7 +354,7 @@ func TestAttestToBlockHead_DoesNotAttestBeforeDelay(t *testing.T) {
 }
 
 func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	var wg sync.WaitGroup
@@ -399,7 +399,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 }
 
 func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	validatorIndex := primitives.ValidatorIndex(2)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
@@ -440,7 +440,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 }
 
 func TestSignAttestation(t *testing.T) {
-	validator, m, _, finish := setup(t)
+	validator, m, _, finish := setup(t, nil)
 	defer finish()
 
 	wantedFork := &ethpb.Fork{

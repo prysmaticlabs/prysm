@@ -85,7 +85,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 			// Set up validator client, one new validator client per eip3076TestCase.
 			// This ensures we initialize a new (empty) slashing protection database.
-			validator, _, _, _ := setup(t)
+			validator, _, _, _ := setup(t, nil)
 
 			for _, step := range tt.Steps {
 				if tt.GenesisValidatorsRoot != "" {

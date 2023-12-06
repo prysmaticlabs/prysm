@@ -15,7 +15,7 @@ import (
 
 func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 	ctx := context.Background()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 	lowestSignedSlot := primitives.Slot(10)
 	var pubKeyBytes [fieldparams.BLSPubkeyLength]byte
@@ -82,7 +82,7 @@ func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
 
 func Test_slashableProposalCheck(t *testing.T) {
 	ctx := context.Background()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
@@ -140,7 +140,7 @@ func Test_slashableProposalCheck(t *testing.T) {
 }
 
 func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())

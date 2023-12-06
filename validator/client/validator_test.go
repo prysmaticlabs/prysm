@@ -678,7 +678,7 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 }
 
 func TestRolesAt_OK(t *testing.T) {
-	v, m, validatorKey, finish := setup(t)
+	v, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	v.duties = &ethpb.DutiesResponse{
@@ -754,7 +754,7 @@ func TestRolesAt_OK(t *testing.T) {
 }
 
 func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
-	v, m, validatorKey, finish := setup(t)
+	v, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	v.duties = &ethpb.DutiesResponse{
@@ -1251,7 +1251,7 @@ func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestatio
 
 func TestIsSyncCommitteeAggregator_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	v, m, validatorKey, finish := setup(t)
+	v, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 
 	slot := primitives.Slot(1)

@@ -21,7 +21,7 @@ import (
 
 func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
@@ -39,7 +39,7 @@ func TestSubmitSyncCommitteeMessage_ValidatorDutiesRequestFailure(t *testing.T) 
 }
 
 func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	hook := logTest.NewGlobal()
 	validatorIndex := primitives.ValidatorIndex(7)
@@ -71,7 +71,7 @@ func TestSubmitSyncCommitteeMessage_BadDomainData(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	hook := logTest.NewGlobal()
 	validatorIndex := primitives.ValidatorIndex(7)
@@ -112,7 +112,7 @@ func TestSubmitSyncCommitteeMessage_CouldNotSubmit(t *testing.T) {
 }
 
 func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	defer finish()
 	hook := logTest.NewGlobal()
 	validatorIndex := primitives.ValidatorIndex(7)
@@ -160,7 +160,7 @@ func TestSubmitSyncCommitteeMessage_OK(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, _, validatorKey, finish := setup(t)
+	validator, _, validatorKey, finish := setup(t, nil)
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
@@ -172,7 +172,7 @@ func TestSubmitSignedContributionAndProof_ValidatorDutiesRequestFailure(t *testi
 
 func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -200,7 +200,7 @@ func TestSubmitSignedContributionAndProof_GetSyncSubcommitteeIndexFailure(t *tes
 
 func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -228,7 +228,7 @@ func TestSubmitSignedContributionAndProof_NothingToDo(t *testing.T) {
 
 func TestSubmitSignedContributionAndProof_BadDomain(t *testing.T) {
 	hook := logTest.NewGlobal()
-	validator, m, validatorKey, finish := setup(t)
+	validator, m, validatorKey, finish := setup(t, nil)
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
