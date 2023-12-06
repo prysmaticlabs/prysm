@@ -270,7 +270,7 @@ func TestSubmitSignedContributionAndProof_CouldNotGetContribution(t *testing.T) 
 	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
 	assert.NoError(t, err)
 
-	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
+	validator, m, validatorKey, finish := setupWithParams(t, setupParams{validatorKey: validatorKey})
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -320,7 +320,7 @@ func TestSubmitSignedContributionAndProof_CouldNotSubmitContribution(t *testing.
 	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
 	assert.NoError(t, err)
 
-	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
+	validator, m, validatorKey, finish := setupWithParams(t, setupParams{validatorKey: validatorKey})
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
@@ -398,7 +398,7 @@ func TestSubmitSignedContributionAndProof_Ok(t *testing.T) {
 	validatorKey, err := bls.SecretKeyFromBytes(rawKey)
 	assert.NoError(t, err)
 
-	validator, m, validatorKey, finish := setupWithKey(t, validatorKey)
+	validator, m, validatorKey, finish := setupWithParams(t, setupParams{validatorKey: validatorKey})
 	validatorIndex := primitives.ValidatorIndex(7)
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{

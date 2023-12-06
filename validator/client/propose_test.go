@@ -38,6 +38,10 @@ type mocks struct {
 
 type mockSignature struct{}
 
+type setupParams struct {
+	validatorKey bls.SecretKey
+}
+
 func (mockSignature) Verify(bls.PublicKey, []byte) bool {
 	return true
 }
@@ -66,12 +70,12 @@ func testKeyFromBytes(t *testing.T, b []byte) keypair {
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	validatorKey, err := bls.RandKey()
 	require.NoError(t, err)
-	return setupWithKey(t, validatorKey)
+	return setupWithParams(t, setupParams{validatorKey: validatorKey})
 }
 
-func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
+func setupWithParams(t *testing.T, p setupParams) (*validator, *mocks, bls.SecretKey, func()) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
-	copy(pubKey[:], validatorKey.PublicKey().Marshal())
+	copy(pubKey[:], p.validatorKey.PublicKey().Marshal())
 	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
 	ctrl := gomock.NewController(t)
 	m := &mocks{
@@ -85,14 +89,14 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 
 	validator := &validator{
 		db:                             valDB,
-		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
+		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: p.validatorKey}),
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
 		attLogs:                        make(map[[32]byte]*attSubmitted),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 
-	return validator, m, validatorKey, ctrl.Finish
+	return validator, m, p.validatorKey, ctrl.Finish
 }
 
 func TestProposeBlock_DoesNotProposeGenesisBlock(t *testing.T) {
