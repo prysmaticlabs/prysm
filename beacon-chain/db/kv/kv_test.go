@@ -16,7 +16,8 @@ import (
 
 // setupDB instantiates and returns a Store instance.
 func setupDB(t testing.TB) *Store {
-	db, err := NewKVStore(context.Background(), t.TempDir(), WithBlobRetentionEpochs(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest))
+	opt := WithBlobRetentionEpochs(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+	db, err := NewKVStore(context.Background(), t.TempDir(), opt)
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")
