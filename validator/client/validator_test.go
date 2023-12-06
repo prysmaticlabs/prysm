@@ -104,29 +104,6 @@ func (m *mockKeymanager) add(pairs ...keypair) error {
 	return nil
 }
 
-func (m *mockKeymanager) remove(pairs ...keypair) {
-	for _, kp := range pairs {
-		if _, exists := m.keysMap[kp.pub]; !exists {
-			continue
-		}
-		m.removeOne(kp)
-	}
-}
-
-func (m *mockKeymanager) removeOne(kp keypair) {
-	delete(m.keysMap, kp.pub)
-	if m.keys[0] == kp.pub {
-		m.keys = m.keys[1:]
-		return
-	}
-	for i := 1; i < len(m.keys); i++ {
-		if m.keys[i] == kp.pub {
-			m.keys = append(m.keys[0:i-1], m.keys[i:]...)
-			return
-		}
-	}
-}
-
 func (m *mockKeymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
