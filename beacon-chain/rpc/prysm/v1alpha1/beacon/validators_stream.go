@@ -325,7 +325,7 @@ func (is *infostream) generateValidatorInfo(
 	info.Status, info.TransitionTimestamp = is.calculateStatusAndTransition(validator, coreTime.CurrentEpoch(headState))
 
 	// Balance
-	info.Balance = headState.Balances()[info.Index]
+	info.Balance, _ = headState.BalanceAtIndex(info.Index)
 
 	// Effective balance (for attesting states)
 	if info.Status == ethpb.ValidatorStatus_ACTIVE ||
