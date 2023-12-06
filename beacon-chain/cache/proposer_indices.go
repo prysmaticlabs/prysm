@@ -5,6 +5,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
@@ -31,10 +32,17 @@ var (
 // epoch 2 we will compute this list after importing block 63. The "unsafe"
 // version is computed an epoch in advance, for example for epoch 3, it will be
 // computed after importing block 63.
+//
+// The cache also keeps a map from checkpoints to state roots so that one is
+// able to access the proposer indices list from a checkpoint instead. The
+// checkpoint is the checkpoint for the epoch previous to the requested
+// proposer indices. That is, for a slot in epoch 2 (eg. 65), the checkpoint
+// root would be for slot 32 if present.
 type ProposerIndicesCache struct {
 	sync.Mutex
 	indices       map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
 	unsafeIndices map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
+	rootMap       map[forkchoicetypes.Checkpoint][32]byte // A map from checkpoint root to state root
 }
 
 // NewProposerIndicesCache returns a newly created cache
@@ -42,6 +50,7 @@ func NewProposerIndicesCache() *ProposerIndicesCache {
 	return &ProposerIndicesCache{
 		indices:       make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
 		unsafeIndices: make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
+		rootMap:       make(map[forkchoicetypes.Checkpoint][32]byte),
 	}
 }
 
@@ -89,6 +98,11 @@ func (p *ProposerIndicesCache) Prune(epoch primitives.Epoch) {
 			delete(p.unsafeIndices, key)
 		}
 	}
+	for key := range p.rootMap {
+		if key.Epoch+1 < epoch {
+			delete(p.rootMap, key)
+		}
+	}
 }
 
 // Set sets the proposer indices for the given root as key
@@ -114,4 +128,23 @@ func (p *ProposerIndicesCache) SetUnsafe(epoch primitives.Epoch, root [32]byte, 
 		p.unsafeIndices[epoch] = inner
 	}
 	inner[root] = indices
+}
+
+// SetCheckpoint updates the map from checkpoints to state roots
+func (p *ProposerIndicesCache) SetCheckpoint(c forkchoicetypes.Checkpoint, root [32]byte) {
+	p.Lock()
+	defer p.Unlock()
+	p.rootMap[c] = root
+}
+
+// IndicesFromCheckpoint returns the proposer indices from a checkpoint rather than the state root
+func (p *ProposerIndicesCache) IndicesFromCheckpoint(c forkchoicetypes.Checkpoint) ([fieldparams.SlotsPerEpoch]primitives.ValidatorIndex, bool) {
+	p.Lock()
+	emptyIndices := [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}
+	root, ok := p.rootMap[c]
+	p.Unlock()
+	if !ok {
+		return emptyIndices, ok
+	}
+	return p.ProposerIndices(c.Epoch+1, root)
 }

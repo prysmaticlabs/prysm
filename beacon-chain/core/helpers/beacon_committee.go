@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -370,6 +371,23 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	copy(indicesArray[:], proposerIndices)
 	proposerIndicesCache.Prune(epoch - 2)
 	proposerIndicesCache.Set(epoch, [32]byte(root), indicesArray)
+	return nil
+}
+
+// UpdateCachedCheckpointToStateRoot updates the map from checkpoints to state root in the proposer indices cache
+func UpdateCachedCheckpointToStateRoot(state state.ReadOnlyBeaconState, cp *forkchoicetypes.Checkpoint) error {
+	if cp.Epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		return nil
+	}
+	slot, err := slots.EpochEnd(cp.Epoch - 1)
+	if err != nil {
+		return err
+	}
+	root, err := state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
+	if err != nil {
+		return err
+	}
+	proposerIndicesCache.SetCheckpoint(*cp, [32]byte(root))
 	return nil
 }
 
