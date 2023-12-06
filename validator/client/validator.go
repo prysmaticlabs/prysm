@@ -885,16 +885,15 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 
 	// Lock as we are about to perform an expensive request to the beacon node.
 	v.domainDataLock.Lock()
+	defer v.domainDataLock.Unlock()
 
 	// We check the cache again as in the event there are multiple inflight requests for
 	// the same domain data, the cache might have been filled while we were waiting
 	// to acquire the lock.
 	if val, ok := v.domainDataCache.Get(key); ok {
-		v.domainDataLock.Unlock()
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
 
-	defer v.domainDataLock.Unlock()
 	res, err := v.validatorClient.DomainData(ctx, req)
 	if err != nil {
 		return nil, err
