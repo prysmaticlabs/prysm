@@ -34,20 +34,32 @@ type committeeIndexSlotPair struct {
 }
 
 func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	multipleValidatorStatus, err := c.multipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{PublicKeys: in.PublicKeys})
+	all, err := c.multipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{PublicKeys: in.PublicKeys})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator status")
+	}
+	known := &ethpb.MultipleValidatorStatusResponse{
+		PublicKeys: make([][]byte, 0, len(all.PublicKeys)),
+		Statuses:   make([]*ethpb.ValidatorStatusResponse, 0, len(all.Statuses)),
+		Indices:    make([]primitives.ValidatorIndex, 0, len(all.Indices)),
+	}
+	for i, status := range all.Statuses {
+		if status.Status != ethpb.ValidatorStatus_UNKNOWN_STATUS {
+			known.PublicKeys = append(known.PublicKeys, all.PublicKeys[i])
+			known.Statuses = append(known.Statuses, all.Statuses[i])
+			known.Indices = append(known.Indices, all.Indices[i])
+		}
 	}
 
 	// Sync committees are an Altair feature
 	fetchSyncDuties := in.Epoch >= params.BeaconConfig().AltairForkEpoch
 
-	currentEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch, multipleValidatorStatus, fetchSyncDuties)
+	currentEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch, known, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for current epoch `%d`", in.Epoch)
 	}
 
-	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, multipleValidatorStatus, fetchSyncDuties)
+	nextEpochDuties, err := c.getDutiesForEpoch(ctx, in.Epoch+1, known, fetchSyncDuties)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get duties for next epoch `%d`", in.Epoch+1)
 	}
