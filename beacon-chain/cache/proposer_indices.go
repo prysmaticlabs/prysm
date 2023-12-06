@@ -1,3 +1,5 @@
+//go:build !fuzz
+
 package cache
 
 import (
@@ -118,7 +120,7 @@ func (p *ProposerIndicesCache) Set(epoch primitives.Epoch, root [32]byte, indice
 	inner[root] = indices
 }
 
-// Set sets the unsafe proposer indices for the given root as key
+// SetUnsafe sets the unsafe proposer indices for the given root as key
 func (p *ProposerIndicesCache) SetUnsafe(epoch primitives.Epoch, root [32]byte, indices [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex) {
 	p.Lock()
 	defer p.Unlock()
