@@ -180,7 +180,7 @@ var (
 	PubsubQueueSize = &cli.IntFlag{
 		Name:  "pubsub-queue-size",
 		Usage: "The size of the pubsub validation and outbound queue for the node.",
-		Value: 600,
+		Value: 1000,
 	}
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{
