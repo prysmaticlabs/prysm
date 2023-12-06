@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"testing"
 	"time"
 
@@ -142,6 +143,62 @@ func TestGetAttestationData_OK(t *testing.T) {
 	if !proto.Equal(res, expectedInfo) {
 		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
 	}
+}
+
+func BenchmarkGetAttestationDataConcurrent(b *testing.B) {
+	block := util.NewBeaconBlock()
+	block.Block.Slot = 3*params.BeaconConfig().SlotsPerEpoch + 1
+	targetBlock := util.NewBeaconBlock()
+	targetBlock.Block.Slot = 1 * params.BeaconConfig().SlotsPerEpoch
+	targetRoot, err := targetBlock.Block.HashTreeRoot()
+	require.NoError(b, err, "Could not get signing root for target block")
+
+	justifiedBlock := util.NewBeaconBlock()
+	justifiedBlock.Block.Slot = 2 * params.BeaconConfig().SlotsPerEpoch
+	blockRoot, err := block.Block.HashTreeRoot()
+	require.NoError(b, err, "Could not hash beacon block")
+	justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
+	require.NoError(b, err, "Could not get signing root for justified block")
+	slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
+	justifiedCheckpoint := &ethpb.Checkpoint{
+		Epoch: 2,
+		Root:  justifiedRoot[:],
+	}
+	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	attesterServer := &Server{
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		CoreService: &core.Service{
+			HeadFetcher: &mock.ChainService{TargetRoot: targetRoot, Root: blockRoot[:]},
+			GenesisTimeFetcher: &mock.ChainService{
+				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+			},
+			FinalizedFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+		},
+	}
+
+	req := &ethpb.AttestationDataRequest{
+		CommitteeIndex: 0,
+		Slot:           3*params.BeaconConfig().SlotsPerEpoch + 1,
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var wg sync.WaitGroup
+		wg.Add(1000) // for 1000 concurrent accesses
+
+		for j := 0; j < 1000; j++ {
+			go func() {
+				defer wg.Done()
+				_, err := attesterServer.GetAttestationData(context.Background(), req)
+				require.NoError(b, err, "Could not get attestation info at slot")
+			}()
+		}
+		wg.Wait() // Wait for all goroutines to finish
+	}
+
+	b.Log("Elapsed time:", b.Elapsed())
 }
 
 func TestGetAttestationData_SyncNotReady(t *testing.T) {
