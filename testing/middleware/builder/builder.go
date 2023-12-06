@@ -563,7 +563,7 @@ func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http
 
 	client := &http.Client{}
 	if p.cfg.secret != "" {
-		client = network.NewHttpClientWithSecret(p.cfg.secret)
+		client = network.NewHttpClientWithSecret(p.cfg.secret, "")
 	}
 	proxyRes, err := client.Do(proxyReq)
 	if err != nil {

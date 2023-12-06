@@ -24,6 +24,7 @@ type Endpoint struct {
 type AuthorizationData struct {
 	Method authorization.Method
 	Value  string
+	JwtId  string
 }
 
 // Equals compares two endpoints for equality.
@@ -37,7 +38,7 @@ func (e Endpoint) HttpClient() *http.Client {
 	if e.Auth.Method != authorization.Bearer {
 		return http.DefaultClient
 	}
-	return NewHttpClientWithSecret(e.Auth.Value)
+	return NewHttpClientWithSecret(e.Auth.Value, e.Auth.JwtId)
 }
 
 // Equals compares two authorization data objects for equality.
@@ -112,10 +113,11 @@ func Method(auth string) authorization.Method {
 
 // NewHttpClientWithSecret returns a http client that utilizes
 // jwt authentication.
-func NewHttpClientWithSecret(secret string) *http.Client {
+func NewHttpClientWithSecret(secret, id string) *http.Client {
 	authTransport := &jwtTransport{
 		underlyingTransport: http.DefaultTransport,
 		jwtSecret:           []byte(secret),
+		jwtId:               id,
 	}
 	return &http.Client{
 		Timeout:   DefaultRPCHTTPTimeout,
