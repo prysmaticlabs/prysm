@@ -40,7 +40,8 @@ func (v *validator) slashableProposalCheck(
 		// If the block slot is (strictly) less than the lowest signed proposal slot in the DB, we consider it slashable.
 		if blk.Slot() < lowestSignedProposalSlot {
 			return fmt.Errorf(
-				"could not sign block with slot < lowest signed slot in db, block slot: %d < lowest signed slot: %d",
+				"%s - could not sign block with slot < lowest signed slot in db, block slot: %d < lowest signed slot: %d",
+				failedBlockSignLocalErr,
 				blk.Slot(),
 				lowestSignedProposalSlot,
 			)
@@ -56,7 +57,8 @@ func (v *validator) slashableProposalCheck(
 		condition3 := proposalAtSlotExists && prevSigningRootExists && prevSigningRoot != signingRoot
 		if blk.Slot() == lowestSignedProposalSlot && (condition1 || condition2 || condition3) {
 			return fmt.Errorf(
-				"could not sign block with slot == lowest signed slot in db if it is not a repeat signing, block slot: %d == slowest signed slot: %d",
+				"%s - could not sign block with slot == lowest signed slot in db if it is not a repeat signing, block slot: %d == slowest signed slot: %d",
+				failedBlockSignLocalErr,
 				blk.Slot(),
 				lowestSignedProposalSlot,
 			)
