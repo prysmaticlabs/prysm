@@ -152,7 +152,7 @@ func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.Sig
 		KzgCommitment:     commitment,
 		KzgProof:          commitment,
 	}
-	if incProof == nil {
+	if len(incProof) == 0 {
 		incProof = fakeEmptyProof(t, pb)
 	}
 	pb.CommitmentInclusionProof = incProof
