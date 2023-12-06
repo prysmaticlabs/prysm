@@ -16,6 +16,7 @@ import (
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -132,17 +133,28 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 	justifiedRoots := make([][]byte, len(conns))
 	prevJustifiedRoots := make([][]byte, len(conns))
 	finalizedRoots := make([][]byte, len(conns))
+	chainHeads := make([]*eth.ChainHead, len(conns))
+	g, _ := errgroup.WithContext(context.Background())
+
 	for i, conn := range conns {
-		beaconClient := eth.NewBeaconChainClient(conn)
-		chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
-		if err != nil {
-			return errors.Wrapf(err, "connection number=%d", i)
-		}
-		headEpochs[i] = chainHead.HeadEpoch
-		justifiedRoots[i] = chainHead.JustifiedBlockRoot
-		prevJustifiedRoots[i] = chainHead.PreviousJustifiedBlockRoot
-		finalizedRoots[i] = chainHead.FinalizedBlockRoot
-		time.Sleep(connTimeDelay)
+		conIdx := i
+		currConn := conn
+		g.Go(func() error {
+			beaconClient := eth.NewBeaconChainClient(currConn)
+			chainHead, err := beaconClient.GetChainHead(context.Background(), &emptypb.Empty{})
+			if err != nil {
+				return errors.Wrapf(err, "connection number=%d", conIdx)
+			}
+			headEpochs[conIdx] = chainHead.HeadEpoch
+			justifiedRoots[conIdx] = chainHead.JustifiedBlockRoot
+			prevJustifiedRoots[conIdx] = chainHead.PreviousJustifiedBlockRoot
+			finalizedRoots[conIdx] = chainHead.FinalizedBlockRoot
+			chainHeads[conIdx] = chainHead
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	for i := 0; i < len(conns); i++ {
@@ -156,10 +168,12 @@ func allNodesHaveSameHead(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientCo
 		}
 		if !bytes.Equal(justifiedRoots[0], justifiedRoots[i]) {
 			return fmt.Errorf(
-				"received conflicting justified block roots on node %d, expected %#x, received %#x",
+				"received conflicting justified block roots on node %d, expected %#x, received %#x: %s and %s",
 				i,
 				justifiedRoots[0],
 				justifiedRoots[i],
+				chainHeads[0].String(),
+				chainHeads[i].String(),
 			)
 		}
 		if !bytes.Equal(prevJustifiedRoots[0], prevJustifiedRoots[i]) {

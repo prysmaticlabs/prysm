@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/api/gateway/apimiddleware"
+	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -17,12 +17,12 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 	testSuites := []struct {
 		name                 string
 		expectedErrorMessage string
-		expectedHttpError    *apimiddleware.DefaultErrorJson
+		expectedHttpError    *http2.DefaultErrorJson
 	}{
 		{
 			name:                 "error 202",
 			expectedErrorMessage: "block was successfully broadcasted but failed validation",
-			expectedHttpError: &apimiddleware.DefaultErrorJson{
+			expectedHttpError: &http2.DefaultErrorJson{
 				Code:    http.StatusAccepted,
 				Message: "202 error",
 			},
@@ -89,10 +89,10 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 				defer ctrl.Finish()
 
 				ctx := context.Background()
-				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 				headers := map[string]string{"Eth-Consensus-Version": testCase.consensusVersion}
-				jsonRestHandler.EXPECT().PostRestJson(
+				jsonRestHandler.EXPECT().Post(
 					ctx,
 					testCase.endpoint,
 					headers,

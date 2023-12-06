@@ -108,3 +108,10 @@ func WithFinalizedStateAtStartup(st state.BeaconState) Option {
 		return nil
 	}
 }
+
+func WithJwtId(jwtId string) Option {
+	return func(s *Service) error {
+		s.cfg.jwtId = jwtId
+		return nil
+	}
+}

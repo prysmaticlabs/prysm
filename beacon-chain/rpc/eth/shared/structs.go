@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
@@ -238,6 +239,11 @@ type SyncCommitteeMessage struct {
 	Signature       string `json:"signature"`
 }
 
+type SyncCommittee struct {
+	Pubkeys         []string `json:"pubkeys"`
+	AggregatePubkey string   `json:"aggregate_pubkey"`
+}
+
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
@@ -320,6 +326,14 @@ func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndPr
 	}, nil
 }
 
+func SignedContributionAndProofFromConsensus(c *eth.SignedContributionAndProof) *SignedContributionAndProof {
+	contribution := ContributionAndProofFromConsensus(c.Message)
+	return &SignedContributionAndProof{
+		Message:   contribution,
+		Signature: hexutil.Encode(c.Signature),
+	}
+}
+
 func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) {
 	contribution, err := c.Contribution.ToConsensus()
 	if err != nil {
@@ -339,6 +353,15 @@ func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) 
 		Contribution:    contribution,
 		SelectionProof:  selectionProof,
 	}, nil
+}
+
+func ContributionAndProofFromConsensus(c *eth.ContributionAndProof) *ContributionAndProof {
+	contribution := SyncCommitteeContributionFromConsensus(c.Contribution)
+	return &ContributionAndProof{
+		AggregatorIndex: fmt.Sprintf("%d", c.AggregatorIndex),
+		Contribution:    contribution,
+		SelectionProof:  hexutil.Encode(c.SelectionProof),
+	}
 }
 
 func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContribution, error) {
@@ -370,6 +393,16 @@ func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContributio
 		AggregationBits:   aggBits,
 		Signature:         sig,
 	}, nil
+}
+
+func SyncCommitteeContributionFromConsensus(c *eth.SyncCommitteeContribution) *SyncCommitteeContribution {
+	return &SyncCommitteeContribution{
+		Slot:              fmt.Sprintf("%d", c.Slot),
+		BeaconBlockRoot:   hexutil.Encode(c.BlockRoot),
+		SubcommitteeIndex: fmt.Sprintf("%d", c.SubcommitteeIndex),
+		AggregationBits:   hexutil.Encode(c.AggregationBits),
+		Signature:         hexutil.Encode(c.Signature),
+	}
 }
 
 func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregateAttestationAndProof, error) {
@@ -624,6 +657,37 @@ func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) 
 	}, nil
 }
 
+func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
+	var sPubKeys []string
+	for _, p := range sc.Pubkeys {
+		sPubKeys = append(sPubKeys, hexutil.Encode(p))
+	}
+
+	return &SyncCommittee{
+		Pubkeys:         sPubKeys,
+		AggregatePubkey: hexutil.Encode(sc.AggregatePubkey),
+	}
+}
+
+func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
+	var pubKeys [][]byte
+	for _, p := range sc.Pubkeys {
+		pubKey, err := hexutil.Decode(p)
+		if err != nil {
+			return nil, NewDecodeError(err, "Pubkeys")
+		}
+		pubKeys = append(pubKeys, pubKey)
+	}
+	aggPubKey, err := hexutil.Decode(sc.AggregatePubkey)
+	if err != nil {
+		return nil, NewDecodeError(err, "AggregatePubkey")
+	}
+	return &eth.SyncCommittee{
+		Pubkeys:         pubKeys,
+		AggregatePubkey: aggPubKey,
+	}, nil
+}
+
 // SyncDetails contains information about node sync status.
 type SyncDetails struct {
 	HeadSlot     string `json:"head_slot"`
@@ -636,4 +700,105 @@ type SyncDetails struct {
 // SyncDetailsContainer is a wrapper for Data.
 type SyncDetailsContainer struct {
 	Data *SyncDetails `json:"data"`
+}
+
+// ChainHead is the response for api endpoint /beacon/chainhead
+type ChainHead struct {
+	HeadSlot                   string `json:"head_slot"`
+	HeadEpoch                  string `json:"head_epoch"`
+	HeadBlockRoot              string `json:"head_block_root"`
+	FinalizedSlot              string `json:"finalized_slot"`
+	FinalizedEpoch             string `json:"finalized_epoch"`
+	FinalizedBlockRoot         string `json:"finalized_block_root"`
+	JustifiedSlot              string `json:"justified_slot"`
+	JustifiedEpoch             string `json:"justified_epoch"`
+	JustifiedBlockRoot         string `json:"justified_block_root"`
+	PreviousJustifiedSlot      string `json:"previous_justified_slot"`
+	PreviousJustifiedEpoch     string `json:"previous_justified_epoch"`
+	PreviousJustifiedBlockRoot string `json:"previous_justified_block_root"`
+	OptimisticStatus           bool   `json:"optimistic_status"`
+}
+
+func ChainHeadResponseFromConsensus(e *eth.ChainHead) *ChainHead {
+	return &ChainHead{
+		HeadSlot:                   fmt.Sprintf("%d", e.HeadSlot),
+		HeadEpoch:                  fmt.Sprintf("%d", e.HeadEpoch),
+		HeadBlockRoot:              hexutil.Encode(e.HeadBlockRoot),
+		FinalizedSlot:              fmt.Sprintf("%d", e.FinalizedSlot),
+		FinalizedEpoch:             fmt.Sprintf("%d", e.FinalizedEpoch),
+		FinalizedBlockRoot:         hexutil.Encode(e.FinalizedBlockRoot),
+		JustifiedSlot:              fmt.Sprintf("%d", e.JustifiedSlot),
+		JustifiedEpoch:             fmt.Sprintf("%d", e.JustifiedEpoch),
+		JustifiedBlockRoot:         hexutil.Encode(e.JustifiedBlockRoot),
+		PreviousJustifiedSlot:      fmt.Sprintf("%d", e.PreviousJustifiedSlot),
+		PreviousJustifiedEpoch:     fmt.Sprintf("%d", e.PreviousJustifiedEpoch),
+		PreviousJustifiedBlockRoot: hexutil.Encode(e.PreviousJustifiedBlockRoot),
+		OptimisticStatus:           e.OptimisticStatus,
+	}
+}
+
+func (m *ChainHead) ToConsensus() (*eth.ChainHead, error) {
+	headSlot, err := strconv.ParseUint(m.HeadSlot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "HeadSlot")
+	}
+	headEpoch, err := strconv.ParseUint(m.HeadEpoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "HeadEpoch")
+	}
+	headBlockRoot, err := DecodeHexWithLength(m.HeadBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "HeadBlockRoot")
+	}
+	finalizedSlot, err := strconv.ParseUint(m.FinalizedSlot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "FinalizedSlot")
+	}
+	finalizedEpoch, err := strconv.ParseUint(m.FinalizedEpoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "FinalizedEpoch")
+	}
+	finalizedBlockRoot, err := DecodeHexWithLength(m.FinalizedBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "FinalizedBlockRoot")
+	}
+	justifiedSlot, err := strconv.ParseUint(m.JustifiedSlot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "JustifiedSlot")
+	}
+	justifiedEpoch, err := strconv.ParseUint(m.JustifiedEpoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "JustifiedEpoch")
+	}
+	justifiedBlockRoot, err := DecodeHexWithLength(m.JustifiedBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "JustifiedBlockRoot")
+	}
+	previousjustifiedSlot, err := strconv.ParseUint(m.PreviousJustifiedSlot, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousJustifiedSlot")
+	}
+	previousjustifiedEpoch, err := strconv.ParseUint(m.PreviousJustifiedEpoch, 10, 64)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousJustifiedEpoch")
+	}
+	previousjustifiedBlockRoot, err := DecodeHexWithLength(m.PreviousJustifiedBlockRoot, fieldparams.RootLength)
+	if err != nil {
+		return nil, NewDecodeError(err, "PreviousJustifiedBlockRoot")
+	}
+	return &eth.ChainHead{
+		HeadSlot:                   primitives.Slot(headSlot),
+		HeadEpoch:                  primitives.Epoch(headEpoch),
+		HeadBlockRoot:              headBlockRoot,
+		FinalizedSlot:              primitives.Slot(finalizedSlot),
+		FinalizedEpoch:             primitives.Epoch(finalizedEpoch),
+		FinalizedBlockRoot:         finalizedBlockRoot,
+		JustifiedSlot:              primitives.Slot(justifiedSlot),
+		JustifiedEpoch:             primitives.Epoch(justifiedEpoch),
+		JustifiedBlockRoot:         justifiedBlockRoot,
+		PreviousJustifiedSlot:      primitives.Slot(previousjustifiedSlot),
+		PreviousJustifiedEpoch:     primitives.Epoch(previousjustifiedEpoch),
+		PreviousJustifiedBlockRoot: previousjustifiedBlockRoot,
+		OptimisticStatus:           m.OptimisticStatus,
+	}, nil
 }

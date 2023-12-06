@@ -48,10 +48,6 @@ var refreshRate = slots.DivideSlotBy(2)
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 
-// pubsubQueueSize is the size that we assign to our validation queue and outbound message queue for
-// gossipsub.
-const pubsubQueueSize = 600
-
 // maxDialTimeout is the timeout for a single peer dial.
 var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
 
@@ -69,7 +65,7 @@ type Service struct {
 	metaData              metadata.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
-	joinedTopicsLock      sync.Mutex
+	joinedTopicsLock      sync.RWMutex
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	initializationLock    sync.Mutex
@@ -97,6 +93,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
+
+	s.cfg = validateConfig(s.cfg)
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 

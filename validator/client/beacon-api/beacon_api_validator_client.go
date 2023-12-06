@@ -15,11 +15,11 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	genesisProvider         genesisProvider
+	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
-	stateValidatorsProvider stateValidatorsProvider
-	jsonRestHandler         jsonRestHandler
-	beaconBlockConverter    beaconBlockConverter
+	stateValidatorsProvider StateValidatorsProvider
+	jsonRestHandler         JsonRestHandler
+	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -24,8 +24,8 @@ func TestProposeExit_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonSignedVoluntaryExit := apimiddleware.SignedVoluntaryExitJson{
-		Exit: &apimiddleware.VoluntaryExitJson{
+	jsonSignedVoluntaryExit := shared.SignedVoluntaryExit{
+		Message: &shared.VoluntaryExit{
 			Epoch:          "1",
 			ValidatorIndex: "2",
 		},
@@ -37,8 +37,8 @@ func TestProposeExit_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		proposeExitTestEndpoint,
 		nil,
@@ -87,8 +87,8 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		proposeExitTestEndpoint,
 		nil,
@@ -109,6 +109,5 @@ func TestProposeExit_BadRequest(t *testing.T) {
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
-	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }

@@ -23,7 +23,6 @@ var (
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
 		Name:  "max-builder-epoch-missed-slots",
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
-		Value: 8,
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -54,6 +53,11 @@ var (
 			"fail, which will prevent your validators from performing their duties. " +
 			"This is not required if using an IPC connection.",
 		Value: "",
+	}
+	// JwtId is the id field of the JWT claims. The consensus layer client MAY use this to communicate a unique identifier for the individual consensus layer client
+	JwtId = &cli.StringFlag{
+		Name:  "jwt-id",
+		Usage: "JWT claims id. Could be used to identify the client",
 	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{

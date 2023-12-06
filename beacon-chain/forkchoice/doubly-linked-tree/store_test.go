@@ -82,7 +82,7 @@ func TestStore_Head_Itself(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(context.Background(), state, blkRoot))
 
-	// Since the justified node does not have a best descendant so the best node
+	// Since the justified node does not have a best descendant, the best node
 	// is itself.
 	f.store.justifiedCheckpoint = &forkchoicetypes.Checkpoint{Epoch: 0, Root: indexToHash(1)}
 	h, err := f.store.head(context.Background())
@@ -213,7 +213,7 @@ func TestStore_Prune_ReturnEarly(t *testing.T) {
 	require.Equal(t, nodeCount, f.NodeCount())
 }
 
-// This unit tests starts with a simple branch like this
+// This unit test starts with a simple branch like this
 //
 //   - 1
 //     /
@@ -434,4 +434,75 @@ func TestForkChoice_ReceivedBlocksLastEpoch(t *testing.T) {
 	count, err = f.ReceivedBlocksLastEpoch()
 	require.NoError(t, err)
 	require.Equal(t, uint64(0), count)
+}
+
+func TestStore_TargetRootForEpoch(t *testing.T) {
+	ctx := context.Background()
+	f := setup(1, 1)
+
+	state, blkRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'a'}, params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, blkRoot))
+	target, err := f.TargetRootForEpoch(blkRoot, 1)
+	require.NoError(t, err)
+	require.Equal(t, target, blkRoot)
+
+	state, root1, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'b'}, blkRoot, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root1))
+	target, err = f.TargetRootForEpoch(root1, 1)
+	require.NoError(t, err)
+	require.Equal(t, target, blkRoot)
+
+	// Insert a block for the next epoch (missed slot 0)
+
+	state, root2, err := prepareForkchoiceState(ctx, 2*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'c'}, root1, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root2))
+	target, err = f.TargetRootForEpoch(root2, 2)
+	require.NoError(t, err)
+	require.Equal(t, target, root1)
+
+	state, root3, err := prepareForkchoiceState(ctx, 2*params.BeaconConfig().SlotsPerEpoch+2, [32]byte{'d'}, root2, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root3))
+	target, err = f.TargetRootForEpoch(root2, 2)
+	require.NoError(t, err)
+	require.Equal(t, target, root1)
+
+	// Prune finalization
+	s := f.store
+	s.finalizedCheckpoint.Root = root1
+	require.NoError(t, s.prune(ctx))
+	target, err = f.TargetRootForEpoch(root1, 1)
+	require.NoError(t, err)
+	require.Equal(t, [32]byte{}, target)
+
+	// Insert a block for next epoch (slot 0 present)
+
+	state, root4, err := prepareForkchoiceState(ctx, 3*params.BeaconConfig().SlotsPerEpoch, [32]byte{'e'}, root1, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root4))
+	target, err = f.TargetRootForEpoch(root4, 3)
+	require.NoError(t, err)
+	require.Equal(t, target, root4)
+
+	state, root5, err := prepareForkchoiceState(ctx, 3*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'f'}, root4, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root5))
+	target, err = f.TargetRootForEpoch(root5, 3)
+	require.NoError(t, err)
+	require.Equal(t, target, root4)
+
+	// Target root where the target epoch is same or ahead of the block slot
+	target, err = f.TargetRootForEpoch(root5, 4)
+	require.NoError(t, err)
+	require.Equal(t, target, root5)
+
+	// Prune finalization
+	s.finalizedCheckpoint.Root = root4
+	require.NoError(t, s.prune(ctx))
+	target, err = f.TargetRootForEpoch(root4, 3)
+	require.NoError(t, err)
+	require.Equal(t, root4, target)
 }

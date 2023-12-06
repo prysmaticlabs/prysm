@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/monitor"
@@ -32,6 +33,12 @@ import (
 // Ensure BeaconNode implements interfaces.
 var _ statefeed.Notifier = (*BeaconNode)(nil)
 
+func newCliContextWithCancel(app *cli.App, set *flag.FlagSet) (*cli.Context, context.CancelFunc) {
+	context, cancel := context.WithCancel(context.Background())
+	parent := &cli.Context{Context: context}
+	return cli.NewContext(app, set, parent), cancel
+}
+
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -48,9 +55,9 @@ func TestNodeClose_OK(t *testing.T) {
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
-	ctx := cli.NewContext(&app, set, nil)
+	ctx, cancel := newCliContextWithCancel(&app, set)
 
-	node, err := New(ctx)
+	node, err := New(ctx, cancel)
 	require.NoError(t, err)
 
 	node.Close()
@@ -67,10 +74,11 @@ func TestNodeStart_Ok(t *testing.T) {
 	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 
-	ctx := cli.NewContext(&app, set, nil)
-	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
+	ctx, cancel := newCliContextWithCancel(&app, set)
+	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithExecutionChainOptions([]execution.Option{}))
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -79,7 +87,6 @@ func TestNodeStart_Ok(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
-
 }
 
 func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
@@ -115,8 +122,8 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile("genesis_ssz.json", genesisBytes, 0666))
 	set.String("genesis-state", "genesis_ssz.json", "")
-	ctx := cli.NewContext(&app, set, nil)
-	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
+	ctx, cancel := newCliContextWithCancel(&app, set)
+	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
 		WithExecutionChainOptions([]execution.Option{}))
 	require.NoError(t, err)
@@ -147,12 +154,13 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
-	context := cli.NewContext(&app, set, nil)
-	_, err = New(context, WithExecutionChainOptions([]execution.Option{
-		execution.WithHttpEndpoint(endpoint),
-	}))
+	context, cancel := newCliContextWithCancel(&app, set)
+	options := []Option{
+		WithExecutionChainOptions([]execution.Option{execution.WithHttpEndpoint(endpoint)}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
+	}
+	_, err = New(context, cancel, options...)
 	require.NoError(t, err)
-
 	require.LogsContain(t, hook, "Removing database")
 }
 

@@ -5,6 +5,19 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
+// HydrateSignedBlobSidecar hydrates a signed blob sidecar with correct field length sizes
+// to comply with SSZ marshalling and unmarshalling rules.
+func HydrateSignedBlobSidecar(b *ethpb.SignedBlobSidecar) *ethpb.SignedBlobSidecar {
+	if b.Signature == nil {
+		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Message == nil {
+		b.Message = &ethpb.DeprecatedBlobSidecar{}
+	}
+	b.Message = HydrateBlobSidecar(b.Message)
+	return b
+}
+
 // HydrateBlobSidecar hydrates a blob sidecar with correct field length sizes
 // to comply with SSZ marshalling and unmarshalling rules.
 func HydrateBlobSidecar(b *ethpb.DeprecatedBlobSidecar) *ethpb.DeprecatedBlobSidecar {
@@ -31,6 +44,9 @@ func HydrateBlobSidecar(b *ethpb.DeprecatedBlobSidecar) *ethpb.DeprecatedBlobSid
 func HydrateSignedBlindedBlobSidecar(b *ethpb.SignedBlindedBlobSidecar) *ethpb.SignedBlindedBlobSidecar {
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
+	}
+	if b.Message == nil {
+		b.Message = &ethpb.BlindedBlobSidecar{}
 	}
 	b.Message = HydrateBlindedBlobSidecar(b.Message)
 	return b

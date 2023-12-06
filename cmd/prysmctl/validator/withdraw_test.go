@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -52,7 +52,7 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 			} else if r.RequestURI == "/eth/v1/config/spec" {
 				m := make(map[string]string)
 				m["CAPELLA_FORK_EPOCH"] = "1350"
-				err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+				err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
 					Data: m,
 				})
 				require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestCallWithdrawalEndpoint(t *testing.T) {
 	assert.LogsContain(t, hook, "Successfully published")
 }
 
-func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
+func TestCallWithdrawalEndpoint_Multiple(t *testing.T) {
 	file := "./testdata/change-operations-multiple.json"
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)
@@ -122,7 +122,7 @@ func TestCallWithdrawalEndpoint_Mutiple(t *testing.T) {
 	assert.LogsDoNotContain(t, hook, "Set withdrawal address message not found in the node's operations pool.")
 }
 
-func TestCallWithdrawalEndpoint_Mutiple_stakingcli(t *testing.T) {
+func TestCallWithdrawalEndpoint_Multiple_stakingcli(t *testing.T) {
 	stakingcliFile := "./testdata/staking-cli-change-operations-multiple.json"
 	file := "./testdata/change-operations-multiple.json"
 	baseurl := "127.0.0.1:3500"
@@ -154,7 +154,7 @@ func TestCallWithdrawalEndpoint_Mutiple_stakingcli(t *testing.T) {
 	assert.LogsDoNotContain(t, hook, "Set withdrawal address message not found in the node's operations pool.")
 }
 
-func TestCallWithdrawalEndpoint_Mutiple_notfound(t *testing.T) {
+func TestCallWithdrawalEndpoint_Multiple_notfound(t *testing.T) {
 	respFile := "./testdata/change-operations-multiple_notfound.json"
 	file := "./testdata/change-operations-multiple.json"
 	baseurl := "127.0.0.1:3500"
@@ -220,8 +220,8 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 		if r.Method == http.MethodPost && r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
 			w.WriteHeader(400)
 			w.Header().Set("Content-Type", "application/json")
-			err = json.NewEncoder(w).Encode(&apimiddleware.IndexedVerificationFailureErrorJson{
-				Failures: []*apimiddleware.SingleIndexedVerificationFailureJson{
+			err = json.NewEncoder(w).Encode(&shared.IndexedVerificationFailureError{
+				Failures: []*shared.IndexedVerificationFailure{
 					{Index: 0, Message: "Could not validate SignedBLSToExecutionChange"},
 				},
 			})
@@ -245,7 +245,7 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				m := make(map[string]string)
 				m["CAPELLA_FORK_EPOCH"] = "1350"
-				err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+				err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
 					Data: m,
 				})
 				require.NoError(t, err)
@@ -301,7 +301,7 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 		} else if r.RequestURI == "/eth/v1/config/spec" {
 			m := make(map[string]string)
 			m["CAPELLA_FORK_EPOCH"] = "1350"
-			err := json.NewEncoder(w).Encode(&apimiddleware.SpecResponseJson{
+			err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
 				Data: m,
 			})
 			require.NoError(t, err)
@@ -324,10 +324,10 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 
 	err = setWithdrawalAddresses(cliCtx)
-	require.ErrorContains(t, "setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork.", err)
+	require.ErrorContains(t, "setting withdrawals using the BLStoExecutionChange endpoint is only available after the Capella/Shanghai hard fork", err)
 }
 
-func TestVerifyWithdrawal_Mutiple(t *testing.T) {
+func TestVerifyWithdrawal_Multiple(t *testing.T) {
 	file := "./testdata/change-operations-multiple.json"
 	baseurl := "127.0.0.1:3500"
 	l, err := net.Listen("tcp", baseurl)

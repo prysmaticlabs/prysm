@@ -18,8 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 )
 
-const kzgOffset = 54 * field_params.MaxBlobCommitmentsPerBlock
-
 // SingleMerkleProof is the format used to read spectest Merkle Proof test data.
 type SingleMerkleProof struct {
 	Leaf      string   `json:"leaf"`
@@ -83,10 +81,10 @@ func runSingleMerkleProofTests(t *testing.T, config, forkOrPhase string, unmarsh
 				if err != nil {
 					return
 				}
-				if index < kzgOffset || index > kzgOffset+field_params.MaxBlobsPerBlock {
+				if index < consensus_blocks.KZGOffset || index > consensus_blocks.KZGOffset+field_params.MaxBlobsPerBlock {
 					return
 				}
-				localProof, err := consensus_blocks.MerkleProofKZGCommitment(body, int(index-kzgOffset))
+				localProof, err := consensus_blocks.MerkleProofKZGCommitment(body, int(index-consensus_blocks.KZGOffset))
 				require.NoError(t, err)
 				require.Equal(t, len(branch), len(localProof))
 				for i, root := range localProof {

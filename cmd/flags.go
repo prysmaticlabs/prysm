@@ -177,6 +177,11 @@ var (
 			"192.168.0.0/16 would deny connections from peers on your local network only. The " +
 			"default is to accept all connections.",
 	}
+	PubsubQueueSize = &cli.IntFlag{
+		Name:  "pubsub-queue-size",
+		Usage: "The size of the pubsub validation and outbound queue for the node.",
+		Value: 600,
+	}
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{
 		Name:  "force-clear-db",

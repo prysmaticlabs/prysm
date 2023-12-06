@@ -61,7 +61,7 @@ func (s *Store) head(ctx context.Context) ([32]byte, error) {
 }
 
 // insert registers a new block node to the fork choice store's node list.
-// It then updates the new node's parent with best child and descendant node.
+// It then updates the new node's parent with the best child and descendant node.
 func (s *Store) insert(ctx context.Context,
 	slot primitives.Slot,
 	root, parentRoot, payloadHash [fieldparams.RootLength]byte,
@@ -75,7 +75,6 @@ func (s *Store) insert(ctx context.Context,
 	}
 
 	parent := s.nodeByRoot[parentRoot]
-
 	n := &Node{
 		slot:                     slot,
 		root:                     root,
@@ -87,6 +86,17 @@ func (s *Store) insert(ctx context.Context,
 		optimistic:               true,
 		payloadHash:              payloadHash,
 		timestamp:                uint64(time.Now().Unix()),
+	}
+
+	// Set the node's target checkpoint
+	if slot%params.BeaconConfig().SlotsPerEpoch == 0 {
+		n.target = n
+	} else if parent != nil {
+		if slots.ToEpoch(slot) == slots.ToEpoch(parent.slot) {
+			n.target = parent.target
+		} else {
+			n.target = parent
+		}
 	}
 
 	s.nodeByPayload[payloadHash] = n
@@ -145,6 +155,9 @@ func (s *Store) pruneFinalizedNodeByRootMap(ctx context.Context, node, finalized
 		return ctx.Err()
 	}
 	if node == finalizedNode {
+		if node.target != node {
+			node.target = nil
+		}
 		return nil
 	}
 	for _, child := range node.children {

@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConstructGenericBeaconBlock(t *testing.T) {
@@ -14,8 +14,8 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 
 	// Test when sBlk or sBlk.Block() is nil
 	t.Run("NilBlock", func(t *testing.T) {
-		_, err := vs.constructGenericBeaconBlock(nil, nil, nil)
-		require.ErrorContains(t, err, "block cannot be nil")
+		_, err := vs.constructGenericBeaconBlock(nil, nil)
+		require.ErrorContains(t, "block cannot be nil", err)
 	})
 
 	// Test for Deneb version
@@ -25,20 +25,11 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		require.NoError(t, err)
 		r1, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
-		scs := []*ethpb.DeprecatedBlobSidecar{
-			util.GenerateTestDenebBlobSidecar(r1, eb, 0, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 1, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 2, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 3, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 4, []byte{}),
-			util.GenerateTestDenebBlobSidecar(r1, eb, 5, []byte{}),
-		}
-		result, err := vs.constructGenericBeaconBlock(b, nil, scs)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
-		r2, err := result.GetDeneb().Block.HashTreeRoot()
+		r2, err := result.GetDeneb().HashTreeRoot()
 		require.NoError(t, err)
 		require.Equal(t, r1, r2)
-		require.Equal(t, len(result.GetDeneb().Blobs), len(scs))
 		require.Equal(t, result.IsBlinded, false)
 	})
 
@@ -48,13 +39,13 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 		require.NoError(t, err)
 		r1, err := b.Block().HashTreeRoot()
 		require.NoError(t, err)
-		scs := []*ethpb.BlindedBlobSidecar{{}, {}, {}, {}, {}, {}}
-		result, err := vs.constructGenericBeaconBlock(b, scs, nil)
+		scs := &enginev1.BlobsBundle{}
+		result, err := vs.constructGenericBeaconBlock(b, scs)
 		require.NoError(t, err)
 		r2, err := result.GetBlindedDeneb().Block.HashTreeRoot()
 		require.NoError(t, err)
 		require.Equal(t, r1, r2)
-		require.Equal(t, len(result.GetBlindedDeneb().Blobs), len(scs))
+		// TODO: update with kzg commit check after updating generic beacon block
 		require.Equal(t, result.IsBlinded, true)
 	})
 
@@ -62,7 +53,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("capella block", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		result, err := vs.constructGenericBeaconBlock(b, nil, nil)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
 		r1, err := result.GetCapella().HashTreeRoot()
 		require.NoError(t, err)
@@ -76,7 +67,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("blind capella block", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
-		result, err := vs.constructGenericBeaconBlock(b, nil, nil)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
 		r1, err := result.GetBlindedCapella().HashTreeRoot()
 		require.NoError(t, err)
@@ -90,7 +81,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("bellatrix block", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockBellatrix())
 		require.NoError(t, err)
-		result, err := vs.constructGenericBeaconBlock(b, nil, nil)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
 		r1, err := result.GetBellatrix().HashTreeRoot()
 		require.NoError(t, err)
@@ -104,7 +95,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("altair block", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockAltair())
 		require.NoError(t, err)
-		result, err := vs.constructGenericBeaconBlock(b, nil, nil)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
 		r1, err := result.GetAltair().HashTreeRoot()
 		require.NoError(t, err)
@@ -118,7 +109,7 @@ func TestConstructGenericBeaconBlock(t *testing.T) {
 	t.Run("phase0 block", func(t *testing.T) {
 		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
 		require.NoError(t, err)
-		result, err := vs.constructGenericBeaconBlock(b, nil, nil)
+		result, err := vs.constructGenericBeaconBlock(b, nil)
 		require.NoError(t, err)
 		r1, err := result.GetPhase0().HashTreeRoot()
 		require.NoError(t, err)

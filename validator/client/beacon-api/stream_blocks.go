@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -73,8 +72,12 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
 	signedBlockResponseJson := abstractSignedBlockResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson)
+	if err != nil {
+		return nil, errors.Wrapf(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		return nil, errJson
 	}
 
 	// Once we know what the consensus version is, we can go ahead and unmarshal into the specific structs unique to each version
@@ -85,7 +88,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 
 	switch signedBlockResponseJson.Version {
 	case "phase0":
-		jsonPhase0Block := apimiddleware.SignedBeaconBlockJson{}
+		jsonPhase0Block := shared.SignedBeaconBlock{}
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed phase0 block response json")
 		}
@@ -110,7 +113,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = phase0Block.Slot
 
 	case "altair":
-		jsonAltairBlock := apimiddleware.SignedBeaconBlockAltairJson{}
+		jsonAltairBlock := shared.SignedBeaconBlockAltair{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed altair block response json")
 		}
@@ -135,7 +138,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = altairBlock.Slot
 
 	case "bellatrix":
-		jsonBellatrixBlock := apimiddleware.SignedBeaconBlockBellatrixJson{}
+		jsonBellatrixBlock := shared.SignedBeaconBlockBellatrix{}
 		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed bellatrix block response json")
 		}
@@ -160,7 +163,7 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		slot = bellatrixBlock.Slot
 
 	case "capella":
-		jsonCapellaBlock := apimiddleware.SignedBeaconBlockCapellaJson{}
+		jsonCapellaBlock := shared.SignedBeaconBlockCapella{}
 		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed capella block response json")
 		}
