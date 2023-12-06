@@ -58,6 +58,6 @@ func TestConfigureBlobRetentionEpoch(t *testing.T) {
 	// Test case: Input epoch is less than spec value.
 	expectedChange = specMinEpochs - 1
 	require.NoError(t, set.Set(BlobRetentionEpochFlag.Name, fmt.Sprintf("%d", expectedChange)))
-	epochs, err = blobRetentionEpoch(cliCtx)
+	_, err = blobRetentionEpoch(cliCtx)
 	require.ErrorIs(t, err, errInvalidBlobRetentionEpochs)
 }
