@@ -53,7 +53,7 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 	srcbals := st.Balances()
 	bals := make([]string, len(srcbals))
 	for i, b := range srcbals {
-		bals[i] = strconv.FormatUint(b, 10)
+		bals[i] = fmt.Sprintf("%d", b)
 	}
 	srcrm := st.RandaoMixes()
 	rm := make([]string, len(srcrm))
@@ -63,7 +63,7 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 	srcslashings := st.Slashings()
 	slashings := make([]string, len(srcslashings))
 	for i, s := range srcslashings {
-		slashings[i] = strconv.FormatUint(s, 10)
+		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevAtts, err := st.PreviousEpochAttestations()
 	if err != nil {
@@ -83,9 +83,9 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 	}
 
 	return &BeaconState{
-		GenesisTime:                 strconv.FormatUint(st.GenesisTime(), 10),
+		GenesisTime:                 fmt.Sprintf("%d", st.GenesisTime()),
 		GenesisValidatorsRoot:       hexutil.Encode(st.GenesisValidatorsRoot()),
-		Slot:                        strconv.FormatUint(uint64(st.Slot()), 10),
+		Slot:                        fmt.Sprintf("%d", st.Slot()),
 		Fork:                        ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:           BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
 		BlockRoots:                  br,
@@ -93,7 +93,7 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 		HistoricalRoots:             hr,
 		Eth1Data:                    Eth1DataFromConsensus(st.Eth1Data()),
 		Eth1DataVotes:               votes,
-		Eth1DepositIndex:            strconv.FormatUint(st.Eth1DepositIndex(), 10),
+		Eth1DepositIndex:            fmt.Sprintf("%d", st.Eth1DepositIndex()),
 		Validators:                  vals,
 		Balances:                    bals,
 		RandaoMixes:                 rm,
@@ -139,7 +139,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	srcbals := st.Balances()
 	bals := make([]string, len(srcbals))
 	for i, b := range srcbals {
-		bals[i] = strconv.FormatUint(b, 10)
+		bals[i] = fmt.Sprintf("%d", b)
 	}
 	srcrm := st.RandaoMixes()
 	rm := make([]string, len(srcrm))
@@ -149,7 +149,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	srcslashings := st.Slashings()
 	slashings := make([]string, len(srcslashings))
 	for i, s := range srcslashings {
-		slashings[i] = strconv.FormatUint(s, 10)
+		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
@@ -157,7 +157,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = strconv.FormatUint(uint64(p), 10)
+		prevPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -165,7 +165,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = strconv.FormatUint(uint64(p), 10)
+		currPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -173,7 +173,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 	is := make([]string, len(srcis))
 	for i, s := range srcis {
-		is[i] = strconv.FormatUint(s, 10)
+		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
 	if err != nil {
@@ -185,9 +185,9 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	}
 
 	return &BeaconStateAltair{
-		GenesisTime:                 strconv.FormatUint(st.GenesisTime(), 10),
+		GenesisTime:                 fmt.Sprintf("%d", st.GenesisTime()),
 		GenesisValidatorsRoot:       hexutil.Encode(st.GenesisValidatorsRoot()),
-		Slot:                        strconv.FormatUint(uint64(st.Slot()), 10),
+		Slot:                        fmt.Sprintf("%d", st.Slot()),
 		Fork:                        ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:           BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
 		BlockRoots:                  br,
@@ -195,7 +195,7 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 		HistoricalRoots:             hr,
 		Eth1Data:                    Eth1DataFromConsensus(st.Eth1Data()),
 		Eth1DataVotes:               votes,
-		Eth1DepositIndex:            strconv.FormatUint(st.Eth1DepositIndex(), 10),
+		Eth1DepositIndex:            fmt.Sprintf("%d", st.Eth1DepositIndex()),
 		Validators:                  vals,
 		Balances:                    bals,
 		RandaoMixes:                 rm,
@@ -244,7 +244,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	srcbals := st.Balances()
 	bals := make([]string, len(srcbals))
 	for i, b := range srcbals {
-		bals[i] = strconv.FormatUint(b, 10)
+		bals[i] = fmt.Sprintf("%d", b)
 	}
 	srcrm := st.RandaoMixes()
 	rm := make([]string, len(srcrm))
@@ -254,7 +254,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	srcslashings := st.Slashings()
 	slashings := make([]string, len(srcslashings))
 	for i, s := range srcslashings {
-		slashings[i] = strconv.FormatUint(s, 10)
+		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
@@ -262,7 +262,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = strconv.FormatUint(uint64(p), 10)
+		prevPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -270,7 +270,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = strconv.FormatUint(uint64(p), 10)
+		currPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -278,7 +278,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 	is := make([]string, len(srcis))
 	for i, s := range srcis {
-		is[i] = strconv.FormatUint(s, 10)
+		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
 	if err != nil {
@@ -302,9 +302,9 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	}
 
 	return &BeaconStateBellatrix{
-		GenesisTime:                  strconv.FormatUint(st.GenesisTime(), 10),
+		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
 		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
-		Slot:                         strconv.FormatUint(uint64(st.Slot()), 10),
+		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
 		BlockRoots:                   br,
@@ -312,7 +312,7 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 		HistoricalRoots:              hr,
 		Eth1Data:                     Eth1DataFromConsensus(st.Eth1Data()),
 		Eth1DataVotes:                votes,
-		Eth1DepositIndex:             strconv.FormatUint(st.Eth1DepositIndex(), 10),
+		Eth1DepositIndex:             fmt.Sprintf("%d", st.Eth1DepositIndex()),
 		Validators:                   vals,
 		Balances:                     bals,
 		RandaoMixes:                  rm,
@@ -362,7 +362,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	srcbals := st.Balances()
 	bals := make([]string, len(srcbals))
 	for i, b := range srcbals {
-		bals[i] = strconv.FormatUint(b, 10)
+		bals[i] = fmt.Sprintf("%d", b)
 	}
 	srcrm := st.RandaoMixes()
 	rm := make([]string, len(srcrm))
@@ -372,7 +372,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	srcslashings := st.Slashings()
 	slashings := make([]string, len(srcslashings))
 	for i, s := range srcslashings {
-		slashings[i] = strconv.FormatUint(s, 10)
+		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
@@ -380,7 +380,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = strconv.FormatUint(uint64(p), 10)
+		prevPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -388,7 +388,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = strconv.FormatUint(uint64(p), 10)
+		currPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -396,7 +396,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 	is := make([]string, len(srcis))
 	for i, s := range srcis {
-		is[i] = strconv.FormatUint(s, 10)
+		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
 	if err != nil {
@@ -436,9 +436,9 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	}
 
 	return &BeaconStateCapella{
-		GenesisTime:                  strconv.FormatUint(st.GenesisTime(), 10),
+		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
 		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
-		Slot:                         strconv.FormatUint(uint64(st.Slot()), 10),
+		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
 		BlockRoots:                   br,
@@ -446,7 +446,7 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 		HistoricalRoots:              hr,
 		Eth1Data:                     Eth1DataFromConsensus(st.Eth1Data()),
 		Eth1DataVotes:                votes,
-		Eth1DepositIndex:             strconv.FormatUint(st.Eth1DepositIndex(), 10),
+		Eth1DepositIndex:             fmt.Sprintf("%d", st.Eth1DepositIndex()),
 		Validators:                   vals,
 		Balances:                     bals,
 		RandaoMixes:                  rm,
@@ -461,8 +461,8 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 		CurrentSyncCommittee:         SyncCommitteeFromConsensus(currSc),
 		NextSyncCommittee:            SyncCommitteeFromConsensus(nextSc),
 		LatestExecutionPayloadHeader: payload,
-		NextWithdrawalIndex:          strconv.FormatUint(nwi, 10),
-		NextWithdrawalValidatorIndex: strconv.FormatUint(uint64(nwvi), 10),
+		NextWithdrawalIndex:          fmt.Sprintf("%d", nwi),
+		NextWithdrawalValidatorIndex: fmt.Sprintf("%d", nwvi),
 		HistoricalSummaries:          hs,
 	}, nil
 }
@@ -499,7 +499,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	srcbals := st.Balances()
 	bals := make([]string, len(srcbals))
 	for i, b := range srcbals {
-		bals[i] = strconv.FormatUint(b, 10)
+		bals[i] = fmt.Sprintf("%d", b)
 	}
 	srcrm := st.RandaoMixes()
 	rm := make([]string, len(srcrm))
@@ -509,7 +509,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	srcslashings := st.Slashings()
 	slashings := make([]string, len(srcslashings))
 	for i, s := range srcslashings {
-		slashings[i] = strconv.FormatUint(s, 10)
+		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
 	if err != nil {
@@ -517,7 +517,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 	prevPart := make([]string, len(srcPrevPart))
 	for i, p := range srcPrevPart {
-		prevPart[i] = strconv.FormatUint(uint64(p), 10)
+		prevPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcCurrPart, err := st.CurrentEpochParticipation()
 	if err != nil {
@@ -525,7 +525,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 	currPart := make([]string, len(srcCurrPart))
 	for i, p := range srcCurrPart {
-		currPart[i] = strconv.FormatUint(uint64(p), 10)
+		currPart[i] = fmt.Sprintf("%d", p)
 	}
 	srcis, err := st.InactivityScores()
 	if err != nil {
@@ -533,7 +533,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 	is := make([]string, len(srcis))
 	for i, s := range srcis {
-		is[i] = strconv.FormatUint(s, 10)
+		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
 	if err != nil {
@@ -573,9 +573,9 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	}
 
 	return &BeaconStateDeneb{
-		GenesisTime:                  strconv.FormatUint(st.GenesisTime(), 10),
+		GenesisTime:                  fmt.Sprintf("%d", st.GenesisTime()),
 		GenesisValidatorsRoot:        hexutil.Encode(st.GenesisValidatorsRoot()),
-		Slot:                         strconv.FormatUint(uint64(st.Slot()), 10),
+		Slot:                         fmt.Sprintf("%d", st.Slot()),
 		Fork:                         ForkFromConsensus(st.Fork()),
 		LatestBlockHeader:            BeaconBlockHeaderFromConsensus(st.LatestBlockHeader()),
 		BlockRoots:                   br,
@@ -583,7 +583,7 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 		HistoricalRoots:              hr,
 		Eth1Data:                     Eth1DataFromConsensus(st.Eth1Data()),
 		Eth1DataVotes:                votes,
-		Eth1DepositIndex:             strconv.FormatUint(st.Eth1DepositIndex(), 10),
+		Eth1DepositIndex:             fmt.Sprintf("%d", st.Eth1DepositIndex()),
 		Validators:                   vals,
 		Balances:                     bals,
 		RandaoMixes:                  rm,
@@ -598,8 +598,8 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 		CurrentSyncCommittee:         SyncCommitteeFromConsensus(currSc),
 		NextSyncCommittee:            SyncCommitteeFromConsensus(nextSc),
 		LatestExecutionPayloadHeader: payload,
-		NextWithdrawalIndex:          strconv.FormatUint(nwi, 10),
-		NextWithdrawalValidatorIndex: strconv.FormatUint(uint64(nwvi), 10),
+		NextWithdrawalIndex:          fmt.Sprintf("%d", nwi),
+		NextWithdrawalValidatorIndex: fmt.Sprintf("%d", nwvi),
 		HistoricalSummaries:          hs,
 	}, nil
 }
@@ -608,12 +608,12 @@ func ValidatorFromConsensus(v *eth.Validator) *Validator {
 	return &Validator{
 		PublicKey:                  hexutil.Encode(v.PublicKey),
 		WithdrawalCredentials:      hexutil.Encode(v.WithdrawalCredentials),
-		EffectiveBalance:           strconv.FormatUint(v.EffectiveBalance, 10),
+		EffectiveBalance:           fmt.Sprintf("%d", v.EffectiveBalance),
 		Slashed:                    v.Slashed,
-		ActivationEligibilityEpoch: strconv.FormatUint(uint64(v.ActivationEligibilityEpoch), 10),
-		ActivationEpoch:            strconv.FormatUint(uint64(v.ActivationEpoch), 10),
-		ExitEpoch:                  strconv.FormatUint(uint64(v.ExitEpoch), 10),
-		WithdrawableEpoch:          strconv.FormatUint(uint64(v.WithdrawableEpoch), 10),
+		ActivationEligibilityEpoch: fmt.Sprintf("%d", v.ActivationEligibilityEpoch),
+		ActivationEpoch:            fmt.Sprintf("%d", v.ActivationEpoch),
+		ExitEpoch:                  fmt.Sprintf("%d", v.ExitEpoch),
+		WithdrawableEpoch:          fmt.Sprintf("%d", v.WithdrawableEpoch),
 	}
 }
 
@@ -621,8 +621,8 @@ func PendingAttestationFromConsensus(a *eth.PendingAttestation) *PendingAttestat
 	return &PendingAttestation{
 		AggregationBits: hexutil.Encode(a.AggregationBits),
 		Data:            AttDataFromConsensus(a.Data),
-		InclusionDelay:  strconv.FormatUint(uint64(a.InclusionDelay), 10),
-		ProposerIndex:   strconv.FormatUint(uint64(a.ProposerIndex), 10),
+		InclusionDelay:  fmt.Sprintf("%d", a.InclusionDelay),
+		ProposerIndex:   fmt.Sprintf("%d", a.ProposerIndex),
 	}
 }
 
@@ -670,7 +670,7 @@ func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) 
 
 func BLSChangeFromConsensus(ch *eth.BLSToExecutionChange) *BLSToExecutionChange {
 	return &BLSToExecutionChange{
-		ValidatorIndex:     strconv.FormatUint(uint64(ch.ValidatorIndex), 10),
+		ValidatorIndex:     fmt.Sprintf("%d", ch.ValidatorIndex),
 		FromBLSPubkey:      hexutil.Encode(ch.FromBlsPubkey),
 		ToExecutionAddress: hexutil.Encode(ch.ToExecutionAddress),
 	}
@@ -733,7 +733,7 @@ func ForkFromConsensus(f *eth.Fork) *Fork {
 	return &Fork{
 		PreviousVersion: hexutil.Encode(f.PreviousVersion),
 		CurrentVersion:  hexutil.Encode(f.CurrentVersion),
-		Epoch:           strconv.FormatUint(uint64(f.Epoch), 10),
+		Epoch:           fmt.Sprintf("%d", f.Epoch),
 	}
 }
 
@@ -780,8 +780,8 @@ func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, err
 func ValidatorRegistrationFromConsensus(vr *eth.ValidatorRegistrationV1) *ValidatorRegistration {
 	return &ValidatorRegistration{
 		FeeRecipient: hexutil.Encode(vr.FeeRecipient),
-		GasLimit:     strconv.FormatUint(vr.GasLimit, 10),
-		Timestamp:    strconv.FormatUint(vr.Timestamp, 10),
+		GasLimit:     fmt.Sprintf("%d", vr.GasLimit),
+		Timestamp:    fmt.Sprintf("%d", vr.Timestamp),
 		Pubkey:       hexutil.Encode(vr.Pubkey),
 	}
 }
@@ -841,7 +841,7 @@ func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) 
 func ContributionAndProofFromConsensus(c *eth.ContributionAndProof) *ContributionAndProof {
 	contribution := SyncCommitteeContributionFromConsensus(c.Contribution)
 	return &ContributionAndProof{
-		AggregatorIndex: strconv.FormatUint(uint64(c.AggregatorIndex), 10),
+		AggregatorIndex: fmt.Sprintf("%d", c.AggregatorIndex),
 		Contribution:    contribution,
 		SelectionProof:  hexutil.Encode(c.SelectionProof),
 	}
@@ -880,9 +880,9 @@ func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContributio
 
 func SyncCommitteeContributionFromConsensus(c *eth.SyncCommitteeContribution) *SyncCommitteeContribution {
 	return &SyncCommitteeContribution{
-		Slot:              strconv.FormatUint(uint64(c.Slot), 10),
+		Slot:              fmt.Sprintf("%d", c.Slot),
 		BeaconBlockRoot:   hexutil.Encode(c.BlockRoot),
-		SubcommitteeIndex: strconv.FormatUint(c.SubcommitteeIndex, 10),
+		SubcommitteeIndex: fmt.Sprintf("%d", c.SubcommitteeIndex),
 		AggregationBits:   hexutil.Encode(c.AggregationBits),
 		Signature:         hexutil.Encode(c.Signature),
 	}
@@ -986,8 +986,8 @@ func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 
 func AttDataFromConsensus(a *eth.AttestationData) *AttestationData {
 	return &AttestationData{
-		Slot:            strconv.FormatUint(uint64(a.Slot), 10),
-		CommitteeIndex:  strconv.FormatUint(uint64(a.CommitteeIndex), 10),
+		Slot:            fmt.Sprintf("%d", a.Slot),
+		CommitteeIndex:  fmt.Sprintf("%d", a.CommitteeIndex),
 		BeaconBlockRoot: hexutil.Encode(a.BeaconBlockRoot),
 		Source:          CheckpointFromConsensus(a.Source),
 		Target:          CheckpointFromConsensus(a.Target),
@@ -1012,7 +1012,7 @@ func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 
 func CheckpointFromConsensus(c *eth.Checkpoint) *Checkpoint {
 	return &Checkpoint{
-		Epoch: strconv.FormatUint(uint64(c.Epoch), 10),
+		Epoch: fmt.Sprintf("%d", c.Epoch),
 		Root:  hexutil.Encode(c.Root),
 	}
 }
@@ -1109,8 +1109,8 @@ func (e *VoluntaryExit) ToConsensus() (*eth.VoluntaryExit, error) {
 
 func ExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
 	return &VoluntaryExit{
-		Epoch:          strconv.FormatUint(uint64(e.Epoch), 10),
-		ValidatorIndex: strconv.FormatUint(uint64(e.ValidatorIndex), 10),
+		Epoch:          fmt.Sprintf("%d", e.Epoch),
+		ValidatorIndex: fmt.Sprintf("%d", e.ValidatorIndex),
 	}
 }
 
@@ -1174,7 +1174,7 @@ func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
 func Eth1DataFromConsensus(e1d *eth.Eth1Data) *Eth1Data {
 	return &Eth1Data{
 		DepositRoot:  hexutil.Encode(e1d.DepositRoot),
-		DepositCount: strconv.FormatUint(e1d.DepositCount, 10),
+		DepositCount: fmt.Sprintf("%d", e1d.DepositCount),
 		BlockHash:    hexutil.Encode(e1d.BlockHash),
 	}
 }
@@ -1289,10 +1289,10 @@ func WithdrawalsFromConsensus(ws []*enginev1.Withdrawal) []*Withdrawal {
 
 func WithdrawalFromConsensus(w *enginev1.Withdrawal) *Withdrawal {
 	return &Withdrawal{
-		WithdrawalIndex:  strconv.FormatUint(w.Index, 10),
-		ValidatorIndex:   strconv.FormatUint(uint64(w.ValidatorIndex), 10),
+		WithdrawalIndex:  fmt.Sprintf("%d", w.Index),
+		ValidatorIndex:   fmt.Sprintf("%d", w.ValidatorIndex),
 		ExecutionAddress: hexutil.Encode(w.Address),
-		Amount:           strconv.FormatUint(w.Amount, 10),
+		Amount:           fmt.Sprintf("%d", w.Amount),
 	}
 }
 
@@ -3272,8 +3272,8 @@ func (s *BlindedBlobSidecar) ToConsensus() (*eth.BlindedBlobSidecar, error) {
 
 func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader {
 	return &BeaconBlockHeader{
-		Slot:          strconv.FormatUint(uint64(h.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(h.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", h.Slot),
+		ProposerIndex: fmt.Sprintf("%d", h.ProposerIndex),
 		ParentRoot:    hexutil.Encode(h.ParentRoot),
 		StateRoot:     hexutil.Encode(h.StateRoot),
 		BodyRoot:      hexutil.Encode(h.BodyRoot),
@@ -3282,8 +3282,8 @@ func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader
 
 func BeaconBlockFromConsensus(b *eth.BeaconBlock) *BeaconBlock {
 	return &BeaconBlock{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBody{
@@ -3308,8 +3308,8 @@ func SignedBeaconBlockFromConsensus(b *eth.SignedBeaconBlock) *SignedBeaconBlock
 
 func BeaconBlockAltairFromConsensus(b *eth.BeaconBlockAltair) *BeaconBlockAltair {
 	return &BeaconBlockAltair{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyAltair{
@@ -3343,8 +3343,8 @@ func BlindedBeaconBlockBellatrixFromConsensus(b *eth.BlindedBeaconBlockBellatrix
 	}
 
 	return &BlindedBeaconBlockBellatrix{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyBellatrix{
@@ -3387,8 +3387,8 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 	}
 
 	return &BeaconBlockBellatrix{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyBellatrix{
@@ -3411,10 +3411,10 @@ func BeaconBlockBellatrixFromConsensus(b *eth.BeaconBlockBellatrix) (*BeaconBloc
 				ReceiptsRoot:  hexutil.Encode(b.Body.ExecutionPayload.ReceiptsRoot),
 				LogsBloom:     hexutil.Encode(b.Body.ExecutionPayload.LogsBloom),
 				PrevRandao:    hexutil.Encode(b.Body.ExecutionPayload.PrevRandao),
-				BlockNumber:   strconv.FormatUint(b.Body.ExecutionPayload.BlockNumber, 10),
-				GasLimit:      strconv.FormatUint(b.Body.ExecutionPayload.GasLimit, 10),
-				GasUsed:       strconv.FormatUint(b.Body.ExecutionPayload.GasUsed, 10),
-				Timestamp:     strconv.FormatUint(b.Body.ExecutionPayload.Timestamp, 10),
+				BlockNumber:   fmt.Sprintf("%d", b.Body.ExecutionPayload.BlockNumber),
+				GasLimit:      fmt.Sprintf("%d", b.Body.ExecutionPayload.GasLimit),
+				GasUsed:       fmt.Sprintf("%d", b.Body.ExecutionPayload.GasUsed),
+				Timestamp:     fmt.Sprintf("%d", b.Body.ExecutionPayload.Timestamp),
 				ExtraData:     hexutil.Encode(b.Body.ExecutionPayload.ExtraData),
 				BaseFeePerGas: baseFeePerGas,
 				BlockHash:     hexutil.Encode(b.Body.ExecutionPayload.BlockHash),
@@ -3442,8 +3442,8 @@ func BlindedBeaconBlockCapellaFromConsensus(b *eth.BlindedBeaconBlockCapella) (*
 	}
 
 	return &BlindedBeaconBlockCapella{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyCapella{
@@ -3488,16 +3488,16 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 	withdrawals := make([]*Withdrawal, len(b.Body.ExecutionPayload.Withdrawals))
 	for i, w := range b.Body.ExecutionPayload.Withdrawals {
 		withdrawals[i] = &Withdrawal{
-			WithdrawalIndex:  strconv.FormatUint(w.Index, 10),
-			ValidatorIndex:   strconv.FormatUint(uint64(w.ValidatorIndex), 10),
+			WithdrawalIndex:  fmt.Sprintf("%d", w.Index),
+			ValidatorIndex:   fmt.Sprintf("%d", w.ValidatorIndex),
 			ExecutionAddress: hexutil.Encode(w.Address),
-			Amount:           strconv.FormatUint(w.Amount, 10),
+			Amount:           fmt.Sprintf("%d", w.Amount),
 		}
 	}
 
 	return &BeaconBlockCapella{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyCapella{
@@ -3520,10 +3520,10 @@ func BeaconBlockCapellaFromConsensus(b *eth.BeaconBlockCapella) (*BeaconBlockCap
 				ReceiptsRoot:  hexutil.Encode(b.Body.ExecutionPayload.ReceiptsRoot),
 				LogsBloom:     hexutil.Encode(b.Body.ExecutionPayload.LogsBloom),
 				PrevRandao:    hexutil.Encode(b.Body.ExecutionPayload.PrevRandao),
-				BlockNumber:   strconv.FormatUint(b.Body.ExecutionPayload.BlockNumber, 10),
-				GasLimit:      strconv.FormatUint(b.Body.ExecutionPayload.GasLimit, 10),
-				GasUsed:       strconv.FormatUint(b.Body.ExecutionPayload.GasUsed, 10),
-				Timestamp:     strconv.FormatUint(b.Body.ExecutionPayload.Timestamp, 10),
+				BlockNumber:   fmt.Sprintf("%d", b.Body.ExecutionPayload.BlockNumber),
+				GasLimit:      fmt.Sprintf("%d", b.Body.ExecutionPayload.GasLimit),
+				GasUsed:       fmt.Sprintf("%d", b.Body.ExecutionPayload.GasUsed),
+				Timestamp:     fmt.Sprintf("%d", b.Body.ExecutionPayload.Timestamp),
 				ExtraData:     hexutil.Encode(b.Body.ExecutionPayload.ExtraData),
 				BaseFeePerGas: baseFeePerGas,
 				BlockHash:     hexutil.Encode(b.Body.ExecutionPayload.BlockHash),
@@ -3611,8 +3611,8 @@ func BlindedBeaconBlockDenebFromConsensus(b *eth.BlindedBeaconBlockDeneb) (*Blin
 	}
 
 	return &BlindedBeaconBlockDeneb{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BlindedBeaconBlockBodyDeneb{
@@ -3658,10 +3658,10 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 	withdrawals := make([]*Withdrawal, len(b.Body.ExecutionPayload.Withdrawals))
 	for i, w := range b.Body.ExecutionPayload.Withdrawals {
 		withdrawals[i] = &Withdrawal{
-			WithdrawalIndex:  strconv.FormatUint(w.Index, 10),
-			ValidatorIndex:   strconv.FormatUint(uint64(w.ValidatorIndex), 10),
+			WithdrawalIndex:  fmt.Sprintf("%d", w.Index),
+			ValidatorIndex:   fmt.Sprintf("%d", w.ValidatorIndex),
 			ExecutionAddress: hexutil.Encode(w.Address),
-			Amount:           strconv.FormatUint(w.Amount, 10),
+			Amount:           fmt.Sprintf("%d", w.Amount),
 		}
 	}
 	blobKzgCommitments := make([]string, len(b.Body.BlobKzgCommitments))
@@ -3670,8 +3670,8 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 	}
 
 	return &BeaconBlockDeneb{
-		Slot:          strconv.FormatUint(uint64(b.Slot), 10),
-		ProposerIndex: strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		Slot:          fmt.Sprintf("%d", b.Slot),
+		ProposerIndex: fmt.Sprintf("%d", b.ProposerIndex),
 		ParentRoot:    hexutil.Encode(b.ParentRoot),
 		StateRoot:     hexutil.Encode(b.StateRoot),
 		Body: &BeaconBlockBodyDeneb{
@@ -3694,17 +3694,17 @@ func BeaconBlockDenebFromConsensus(b *eth.BeaconBlockDeneb) (*BeaconBlockDeneb, 
 				ReceiptsRoot:  hexutil.Encode(b.Body.ExecutionPayload.ReceiptsRoot),
 				LogsBloom:     hexutil.Encode(b.Body.ExecutionPayload.LogsBloom),
 				PrevRandao:    hexutil.Encode(b.Body.ExecutionPayload.PrevRandao),
-				BlockNumber:   strconv.FormatUint(b.Body.ExecutionPayload.BlockNumber, 10),
-				GasLimit:      strconv.FormatUint(b.Body.ExecutionPayload.GasLimit, 10),
-				GasUsed:       strconv.FormatUint(b.Body.ExecutionPayload.GasUsed, 10),
-				Timestamp:     strconv.FormatUint(b.Body.ExecutionPayload.Timestamp, 10),
+				BlockNumber:   fmt.Sprintf("%d", b.Body.ExecutionPayload.BlockNumber),
+				GasLimit:      fmt.Sprintf("%d", b.Body.ExecutionPayload.GasLimit),
+				GasUsed:       fmt.Sprintf("%d", b.Body.ExecutionPayload.GasUsed),
+				Timestamp:     fmt.Sprintf("%d", b.Body.ExecutionPayload.Timestamp),
 				ExtraData:     hexutil.Encode(b.Body.ExecutionPayload.ExtraData),
 				BaseFeePerGas: baseFeePerGas,
 				BlockHash:     hexutil.Encode(b.Body.ExecutionPayload.BlockHash),
 				Transactions:  transactions,
 				Withdrawals:   withdrawals,
-				BlobGasUsed:   strconv.FormatUint(b.Body.ExecutionPayload.BlobGasUsed, 10),
-				ExcessBlobGas: strconv.FormatUint(b.Body.ExecutionPayload.ExcessBlobGas, 10),
+				BlobGasUsed:   fmt.Sprintf("%d", b.Body.ExecutionPayload.BlobGasUsed),
+				ExcessBlobGas: fmt.Sprintf("%d", b.Body.ExecutionPayload.ExcessBlobGas),
 			},
 			BLSToExecutionChanges: SignedBLSChangesFromConsensus(b.Body.BlsToExecutionChanges),
 			BlobKzgCommitments:    blobKzgCommitments,
@@ -3726,10 +3726,10 @@ func SignedBeaconBlockDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*Signed
 func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) *BlindedBlobSidecar {
 	return &BlindedBlobSidecar{
 		BlockRoot:       hexutil.Encode(b.BlockRoot),
-		Index:           strconv.FormatUint(b.Index, 10),
-		Slot:            strconv.FormatUint(uint64(b.Slot), 10),
+		Index:           fmt.Sprintf("%d", b.Index),
+		Slot:            fmt.Sprintf("%d", b.Slot),
 		BlockParentRoot: hexutil.Encode(b.BlockParentRoot),
-		ProposerIndex:   strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		ProposerIndex:   fmt.Sprintf("%d", b.ProposerIndex),
 		BlobRoot:        hexutil.Encode(b.BlobRoot),
 		KzgCommitment:   hexutil.Encode(b.KzgCommitment),
 		KzgProof:        hexutil.Encode(b.KzgProof),
@@ -3739,10 +3739,10 @@ func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) *BlindedBlobSide
 func BlobSidecarFromConsensus(b *eth.DeprecatedBlobSidecar) *BlobSidecar {
 	return &BlobSidecar{
 		BlockRoot:       hexutil.Encode(b.BlockRoot),
-		Index:           strconv.FormatUint(b.Index, 10),
-		Slot:            strconv.FormatUint(uint64(b.Slot), 10),
+		Index:           fmt.Sprintf("%d", b.Index),
+		Slot:            fmt.Sprintf("%d", b.Slot),
 		BlockParentRoot: hexutil.Encode(b.BlockParentRoot),
-		ProposerIndex:   strconv.FormatUint(uint64(b.ProposerIndex), 10),
+		ProposerIndex:   fmt.Sprintf("%d", b.ProposerIndex),
 		Blob:            hexutil.Encode(b.Blob),
 		KzgCommitment:   hexutil.Encode(b.KzgCommitment),
 		KzgProof:        hexutil.Encode(b.KzgProof),
@@ -3862,8 +3862,8 @@ func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) []*ProposerSlas
 		proposerSlashings[i] = &ProposerSlashing{
 			SignedHeader1: &SignedBeaconBlockHeader{
 				Message: &BeaconBlockHeader{
-					Slot:          strconv.FormatUint(uint64(s.Header_1.Header.Slot), 10),
-					ProposerIndex: strconv.FormatUint(uint64(s.Header_1.Header.ProposerIndex), 10),
+					Slot:          fmt.Sprintf("%d", s.Header_1.Header.Slot),
+					ProposerIndex: fmt.Sprintf("%d", s.Header_1.Header.ProposerIndex),
 					ParentRoot:    hexutil.Encode(s.Header_1.Header.ParentRoot),
 					StateRoot:     hexutil.Encode(s.Header_1.Header.StateRoot),
 					BodyRoot:      hexutil.Encode(s.Header_1.Header.BodyRoot),
@@ -3872,8 +3872,8 @@ func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) []*ProposerSlas
 			},
 			SignedHeader2: &SignedBeaconBlockHeader{
 				Message: &BeaconBlockHeader{
-					Slot:          strconv.FormatUint(uint64(s.Header_2.Header.Slot), 10),
-					ProposerIndex: strconv.FormatUint(uint64(s.Header_2.Header.ProposerIndex), 10),
+					Slot:          fmt.Sprintf("%d", s.Header_2.Header.Slot),
+					ProposerIndex: fmt.Sprintf("%d", s.Header_2.Header.ProposerIndex),
 					ParentRoot:    hexutil.Encode(s.Header_2.Header.ParentRoot),
 					StateRoot:     hexutil.Encode(s.Header_2.Header.StateRoot),
 					BodyRoot:      hexutil.Encode(s.Header_2.Header.BodyRoot),
@@ -3967,25 +3967,25 @@ func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) []*AttesterSlas
 	for i, s := range src {
 		a1AttestingIndices := make([]string, len(s.Attestation_1.AttestingIndices))
 		for j, ix := range s.Attestation_1.AttestingIndices {
-			a1AttestingIndices[j] = strconv.FormatUint(ix, 10)
+			a1AttestingIndices[j] = fmt.Sprintf("%d", ix)
 		}
 		a2AttestingIndices := make([]string, len(s.Attestation_2.AttestingIndices))
 		for j, ix := range s.Attestation_2.AttestingIndices {
-			a2AttestingIndices[j] = strconv.FormatUint(ix, 10)
+			a2AttestingIndices[j] = fmt.Sprintf("%d", ix)
 		}
 		attesterSlashings[i] = &AttesterSlashing{
 			Attestation1: &IndexedAttestation{
 				AttestingIndices: a1AttestingIndices,
 				Data: &AttestationData{
-					Slot:            strconv.FormatUint(uint64(s.Attestation_1.Data.Slot), 10),
-					CommitteeIndex:  strconv.FormatUint(uint64(s.Attestation_1.Data.CommitteeIndex), 10),
+					Slot:            fmt.Sprintf("%d", s.Attestation_1.Data.Slot),
+					CommitteeIndex:  fmt.Sprintf("%d", s.Attestation_1.Data.CommitteeIndex),
 					BeaconBlockRoot: hexutil.Encode(s.Attestation_1.Data.BeaconBlockRoot),
 					Source: &Checkpoint{
-						Epoch: strconv.FormatUint(uint64(s.Attestation_1.Data.Source.Epoch), 10),
+						Epoch: fmt.Sprintf("%d", s.Attestation_1.Data.Source.Epoch),
 						Root:  hexutil.Encode(s.Attestation_1.Data.Source.Root),
 					},
 					Target: &Checkpoint{
-						Epoch: strconv.FormatUint(uint64(s.Attestation_1.Data.Target.Epoch), 10),
+						Epoch: fmt.Sprintf("%d", s.Attestation_1.Data.Target.Epoch),
 						Root:  hexutil.Encode(s.Attestation_1.Data.Target.Root),
 					},
 				},
@@ -3994,15 +3994,15 @@ func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) []*AttesterSlas
 			Attestation2: &IndexedAttestation{
 				AttestingIndices: a2AttestingIndices,
 				Data: &AttestationData{
-					Slot:            strconv.FormatUint(uint64(s.Attestation_2.Data.Slot), 10),
-					CommitteeIndex:  strconv.FormatUint(uint64(s.Attestation_2.Data.CommitteeIndex), 10),
+					Slot:            fmt.Sprintf("%d", s.Attestation_2.Data.Slot),
+					CommitteeIndex:  fmt.Sprintf("%d", s.Attestation_2.Data.CommitteeIndex),
 					BeaconBlockRoot: hexutil.Encode(s.Attestation_2.Data.BeaconBlockRoot),
 					Source: &Checkpoint{
-						Epoch: strconv.FormatUint(uint64(s.Attestation_2.Data.Source.Epoch), 10),
+						Epoch: fmt.Sprintf("%d", s.Attestation_2.Data.Source.Epoch),
 						Root:  hexutil.Encode(s.Attestation_2.Data.Source.Root),
 					},
 					Target: &Checkpoint{
-						Epoch: strconv.FormatUint(uint64(s.Attestation_2.Data.Target.Epoch), 10),
+						Epoch: fmt.Sprintf("%d", s.Attestation_2.Data.Target.Epoch),
 						Root:  hexutil.Encode(s.Attestation_2.Data.Target.Root),
 					},
 				},
@@ -4108,7 +4108,7 @@ func DepositsFromConsensus(src []*eth.Deposit) []*Deposit {
 			Data: &DepositData{
 				Pubkey:                hexutil.Encode(d.Data.PublicKey),
 				WithdrawalCredentials: hexutil.Encode(d.Data.WithdrawalCredentials),
-				Amount:                strconv.FormatUint(d.Data.Amount, 10),
+				Amount:                fmt.Sprintf("%d", d.Data.Amount),
 				Signature:             hexutil.Encode(d.Data.Signature),
 			},
 		}
@@ -4140,8 +4140,8 @@ func SignedExitsFromConsensus(src []*eth.SignedVoluntaryExit) []*SignedVoluntary
 	for i, e := range src {
 		exits[i] = &SignedVoluntaryExit{
 			Message: &VoluntaryExit{
-				Epoch:          strconv.FormatUint(uint64(e.Exit.Epoch), 10),
-				ValidatorIndex: strconv.FormatUint(uint64(e.Exit.ValidatorIndex), 10),
+				Epoch:          fmt.Sprintf("%d", e.Exit.Epoch),
+				ValidatorIndex: fmt.Sprintf("%d", e.Exit.ValidatorIndex),
 			},
 			Signature: hexutil.Encode(e.Signature),
 		}
@@ -4162,10 +4162,10 @@ func ExecutionPayloadHeaderFromConsensus(payload *enginev1.ExecutionPayloadHeade
 		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
 		LogsBloom:        hexutil.Encode(payload.LogsBloom),
 		PrevRandao:       hexutil.Encode(payload.PrevRandao),
-		BlockNumber:      strconv.FormatUint(payload.BlockNumber, 10),
-		GasLimit:         strconv.FormatUint(payload.GasLimit, 10),
-		GasUsed:          strconv.FormatUint(payload.GasUsed, 10),
-		Timestamp:        strconv.FormatUint(payload.Timestamp, 10),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
 		ExtraData:        hexutil.Encode(payload.ExtraData),
 		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        hexutil.Encode(payload.BlockHash),
@@ -4186,10 +4186,10 @@ func ExecutionPayloadHeaderCapellaFromConsensus(payload *enginev1.ExecutionPaylo
 		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
 		LogsBloom:        hexutil.Encode(payload.LogsBloom),
 		PrevRandao:       hexutil.Encode(payload.PrevRandao),
-		BlockNumber:      strconv.FormatUint(payload.BlockNumber, 10),
-		GasLimit:         strconv.FormatUint(payload.GasLimit, 10),
-		GasUsed:          strconv.FormatUint(payload.GasUsed, 10),
-		Timestamp:        strconv.FormatUint(payload.Timestamp, 10),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
 		ExtraData:        hexutil.Encode(payload.ExtraData),
 		BaseFeePerGas:    baseFeePerGas,
 		BlockHash:        hexutil.Encode(payload.BlockHash),
@@ -4211,14 +4211,14 @@ func ExecutionPayloadHeaderDenebFromConsensus(payload *enginev1.ExecutionPayload
 		ReceiptsRoot:     hexutil.Encode(payload.ReceiptsRoot),
 		LogsBloom:        hexutil.Encode(payload.LogsBloom),
 		PrevRandao:       hexutil.Encode(payload.PrevRandao),
-		BlockNumber:      strconv.FormatUint(payload.BlockNumber, 10),
-		GasLimit:         strconv.FormatUint(payload.GasLimit, 10),
-		GasUsed:          strconv.FormatUint(payload.GasUsed, 10),
-		Timestamp:        strconv.FormatUint(payload.Timestamp, 10),
+		BlockNumber:      fmt.Sprintf("%d", payload.BlockNumber),
+		GasLimit:         fmt.Sprintf("%d", payload.GasLimit),
+		GasUsed:          fmt.Sprintf("%d", payload.GasUsed),
+		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
 		ExtraData:        hexutil.Encode(payload.ExtraData),
 		BaseFeePerGas:    baseFeePerGas,
-		BlobGasUsed:      strconv.FormatUint(payload.BlobGasUsed, 10),
-		ExcessBlobGas:    strconv.FormatUint(payload.ExcessBlobGas, 10),
+		BlobGasUsed:      fmt.Sprintf("%d", payload.BlobGasUsed),
+		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas),
 		BlockHash:        hexutil.Encode(payload.BlockHash),
 		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
 		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
