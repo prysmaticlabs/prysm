@@ -167,11 +167,7 @@ var requests = map[string]endpoint{
 			return compareJSON(pResp, lhResp)
 		})),
 	"/config/deposit_contract": newMetadata[config.GetDepositContractResponse](v1PathTemplate),
-	/*"/debug/beacon/states/{param1}": newMetadata[debug.GetBeaconStateV2Response](v2PathTemplate,
-	withParams(func(_ primitives.Epoch) []string {
-		return []string{"head"}
-	})),*/
-	"/debug/beacon/heads": newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
+	"/debug/beacon/heads":      newMetadata[debug.GetForkChoiceHeadsV2Response](v2PathTemplate),
 	"/node/identity": newMetadata[node.GetIdentityResponse](v1PathTemplate,
 		withCustomEval(func(p interface{}, _ interface{}) error {
 			pResp, ok := p.(*node.GetIdentityResponse)
