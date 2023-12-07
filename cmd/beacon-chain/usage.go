@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/storage"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -136,6 +137,9 @@ var appHelpFlagGroups = []flagGroup{
 			genesis.BeaconAPIURL,
 			storage.BlobStoragePathFlag,
 			storage.BlobRetentionEpochFlag,
+			backfill.EnableExperimentalBackfill,
+			backfill.BackfillWorkerCount,
+			backfill.BackfillBatchSize,
 		},
 	},
 	{

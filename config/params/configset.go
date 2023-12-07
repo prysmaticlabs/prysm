@@ -113,7 +113,7 @@ func (r *configset) replace(cfg *BeaconChainConfig) error {
 
 func (r *configset) replaceWithUndo(cfg *BeaconChainConfig) (func() error, error) {
 	name := cfg.ConfigName
-	prev := r.nameToConfig[name]
+	prev := r.nameToConfig[name].Copy()
 	if err := r.replace(cfg); err != nil {
 		return nil, err
 	}
@@ -142,7 +142,7 @@ func (r *configset) setActive(c *BeaconChainConfig) error {
 }
 
 func (r *configset) setActiveWithUndo(c *BeaconChainConfig) (func() error, error) {
-	active := r.active
+	active := r.active.Copy()
 	r.active = c
 	undo, err := r.replaceWithUndo(c)
 	if err != nil {

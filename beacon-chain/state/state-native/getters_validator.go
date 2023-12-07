@@ -181,6 +181,22 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 	return bytesutil.ToBytes48(v.PublicKey)
 }
 
+// PublicKeys builds a list of all validator public keys, with each key's index aligned to its validator index.
+func (b *BeaconState) PublicKeys() [][fieldparams.BLSPubkeyLength]byte {
+	b.lock.RLock()
+	defer b.lock.RLock()
+
+	res := make([][fieldparams.BLSPubkeyLength]byte, len(b.validators))
+	for i := 0; i < len(b.validators); i++ {
+		val := b.validators[i]
+		if val == nil {
+			continue
+		}
+		res[i] = bytesutil.ToBytes48(val.PublicKey)
+	}
+	return res
+}
+
 // NumValidators returns the size of the validator registry.
 func (b *BeaconState) NumValidators() int {
 	b.lock.RLock()
