@@ -335,6 +335,7 @@ func (s *Service) Start() {
 	blocker := &lookup.BeaconDbBlocker{
 		BeaconDB:         s.cfg.BeaconDB,
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		BlobStorage:      s.cfg.BlobStorage,
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 
@@ -353,9 +354,7 @@ func (s *Service) Start() {
 		Stater:                stater,
 	})
 	s.initializeBlobServerRoutes(&blob.Server{
-		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
-		BeaconDB:         s.cfg.BeaconDB,
-		BlobStorage:      s.cfg.BlobStorage,
+		Blocker: blocker,
 	})
 
 	coreService := &core.Service{

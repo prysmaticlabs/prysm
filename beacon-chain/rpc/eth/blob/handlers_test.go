@@ -14,6 +14,7 @@ import (
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
@@ -50,7 +51,10 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{}
+		blocker := &lookup.BeaconDbBlocker{}
+		s := &Server{
+			Blocker: blocker,
+		}
 
 		s.Blobs(writer, request)
 
@@ -58,17 +62,20 @@ func TestBlobs(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, "Blobs are not supported for Phase 0 fork", e.Message)
+		assert.StringContains(t, "blobs are not supported for Phase 0 fork", e.Message)
 	})
 	t.Run("head", func(t *testing.T) {
 		u := "http://foo.example/head"
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{Root: blockRoot[:]},
 			BeaconDB:         db,
 			BlobStorage:      bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -107,10 +114,13 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
 			BeaconDB:         db,
 			BlobStorage:      bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -125,10 +135,13 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
 			BeaconDB:         db,
 			BlobStorage:      bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -143,9 +156,12 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			BeaconDB:    db,
 			BlobStorage: bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -160,9 +176,12 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			BeaconDB:    db,
 			BlobStorage: bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -177,10 +196,13 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
 			BeaconDB:         db,
 			BlobStorage:      bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 
 		s.Blobs(writer, request)
@@ -201,7 +223,10 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{}
+		blocker := &lookup.BeaconDbBlocker{}
+		s := &Server{
+			Blocker: blocker,
+		}
 
 		s.Blobs(writer, request)
 
@@ -209,14 +234,17 @@ func TestBlobs(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, "Blobs are not supported before Deneb fork", e.Message)
+		assert.StringContains(t, "blobs are not supported before Deneb fork", e.Message)
 	})
 	t.Run("malformed block ID", func(t *testing.T) {
 		u := "http://foo.example/foo"
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{}
+		blocker := &lookup.BeaconDbBlocker{}
+		s := &Server{
+			Blocker: blocker,
+		}
 
 		s.Blobs(writer, request)
 
@@ -224,7 +252,7 @@ func TestBlobs(t *testing.T) {
 		e := &http2.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.Equal(t, true, strings.Contains(e.Message, "could not parse block ID"))
+		assert.Equal(t, true, strings.Contains(e.Message, "Invalid block ID"))
 	})
 	t.Run("ssz", func(t *testing.T) {
 		u := "http://foo.example/finalized?indices=0"
@@ -232,10 +260,13 @@ func TestBlobs(t *testing.T) {
 		request.Header.Add("Accept", "application/octet-stream")
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		s := &Server{
+		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
 			BeaconDB:         db,
 			BlobStorage:      bs,
+		}
+		s := &Server{
+			Blocker: blocker,
 		}
 		s.Blobs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)

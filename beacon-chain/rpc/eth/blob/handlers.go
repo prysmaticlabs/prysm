@@ -1,23 +1,17 @@
 package blob
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
 
@@ -25,115 +19,33 @@ import (
 func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.Blobs")
 	defer span.End()
-
 	var sidecars []*eth.BlobSidecar
-	var root []byte
 
 	indices := parseIndices(r.URL)
 	segments := strings.Split(r.URL.Path, "/")
 	blockId := segments[len(segments)-1]
-	switch blockId {
-	case "genesis":
-		httputil.HandleError(w, "Blobs are not supported for Phase 0 fork", http.StatusBadRequest)
-		return
-	case "head":
-		var err error
-		root, err = s.ChainInfoFetcher.HeadRoot(r.Context())
-		if err != nil {
-			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve head root").Error(), http.StatusInternalServerError)
+
+	verifiedBlobs, rpcErr := s.Blocker.Blobs(ctx, blockId, indices)
+	if rpcErr != nil {
+		code := core.ErrorReasonToHTTP(rpcErr.Reason)
+		switch code {
+		case http.StatusBadRequest:
+			httputil.HandleError(w, "Invalid block ID: "+rpcErr.Err.Error(), code)
 			return
-		}
-	case "finalized":
-		fcp := s.ChainInfoFetcher.FinalizedCheckpt()
-		if fcp == nil {
-			httputil.HandleError(w, "Received nil finalized checkpoint", http.StatusInternalServerError)
+		case http.StatusNotFound:
+			httputil.HandleError(w, "Block not found: "+rpcErr.Err.Error(), code)
 			return
-		}
-		root = fcp.Root
-	case "justified":
-		jcp := s.ChainInfoFetcher.CurrentJustifiedCheckpt()
-		if jcp == nil {
-			httputil.HandleError(w, "Received nil justified checkpoint", http.StatusInternalServerError)
+		case http.StatusInternalServerError:
+			httputil.HandleError(w, "Internal server error: "+rpcErr.Err.Error(), code)
 			return
-		}
-		root = jcp.Root
-	default:
-		if bytesutil.IsHex([]byte(blockId)) {
-			var err error
-			root, err = hexutil.Decode(blockId)
-			if err != nil {
-				httputil.HandleError(w, errors.Wrap(err, "Invalid block ID").Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			slot, err := strconv.ParseUint(blockId, 10, 64)
-			if err != nil {
-				httputil.HandleError(w, lookup.NewBlockIdParseError(err).Error(), http.StatusBadRequest)
-				return
-			}
-			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
-			if err != nil {
-				httputil.HandleError(w, errors.Wrap(err, "Could not calculate Deneb start slot").Error(), http.StatusInternalServerError)
-				return
-			}
-			if primitives.Slot(slot) < denebStart {
-				httputil.HandleError(w, "Blobs are not supported before Deneb fork", http.StatusBadRequest)
-				return
-			}
-			ok, roots, err := s.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
-			if !ok {
-				httputil.HandleError(w, fmt.Sprintf("Block not found: no block roots at slot %d", slot), http.StatusNotFound)
-				return
-			}
-			if err != nil {
-				httputil.HandleError(w, errors.Wrap(err, "Failed to get block roots by slot").Error(), http.StatusInternalServerError)
-				return
-			}
-			root = roots[0][:]
-			if len(roots) == 1 {
-				break
-			}
-			for _, blockRoot := range roots {
-				canonical, err := s.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
-				if err != nil {
-					httputil.HandleError(w, "Could not determine if block root is canonical: "+err.Error(), http.StatusInternalServerError)
-					return
-				}
-				if canonical {
-					root = blockRoot[:]
-					break
-				}
-			}
+		default:
+			httputil.HandleError(w, rpcErr.Err.Error(), code)
+			return
 		}
 	}
-
-	if len(indices) == 0 {
-		m, err := s.BlobStorage.Indices(bytesutil.ToBytes32(root))
-		if err != nil {
-			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blob indices for root %#x", root).Error(), http.StatusInternalServerError)
-			return
-		}
-		for k, v := range m {
-			if v {
-				indices = append(indices, uint64(k))
-			}
-		}
+	for i := range verifiedBlobs {
+		sidecars = append(sidecars, verifiedBlobs[i].BlobSidecar)
 	}
-
-	if len(indices) == 0 {
-		httputil.HandleError(w, "No blobs found", http.StatusNotFound)
-		return
-	}
-
-	for _, index := range indices {
-		sidecar, err := s.BlobStorage.Get(bytesutil.ToBytes32(root), index)
-		if err != nil {
-			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blob for block root %#x at index %d", root, index).Error(), http.StatusInternalServerError)
-			return
-		}
-		sidecars = append(sidecars, sidecar.ROBlob.BlobSidecar)
-	}
-
 	ssz := httputil.SszRequested(r)
 	if ssz {
 		sidecarResp := &eth.BlobSidecars{
