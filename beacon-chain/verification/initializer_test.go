@@ -17,7 +17,7 @@ func TestInitializerWaiter(t *testing.T) {
 	gen := time.Now()
 	c := startup.NewClock(gen, vr)
 	cs := startup.NewClockSynchronizer()
-	cs.SetClock(c)
+	require.NoError(t, cs.SetClock(c))
 
 	w := NewInitializerWaiter(cs, &mockForkchoicer{}, &mockStateByRooter{})
 	ini, err := w.WaitForInitializer(ctx)
