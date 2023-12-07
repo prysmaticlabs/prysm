@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beacon_api "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/v4/validator/db"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
@@ -1240,6 +1241,12 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 			"Perhaps the validator is not yet active.", pubkey)
 		return 0, false, nil
 	case err != nil:
+		notFoundErr := &beacon_api.IndexNotFoundError{}
+		if errors.As(err, &notFoundErr) {
+			log.Debugf("Could not find validator index for public key %#x. "+
+				"Perhaps the validator is not yet active.", pubkey)
+			return 0, false, nil
+		}
 		return 0, false, err
 	}
 	return resp.Index, true, nil
