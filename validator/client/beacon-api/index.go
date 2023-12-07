@@ -19,7 +19,7 @@ type IndexNotFoundError struct {
 // NewIndexNotFoundError creates a new error instance.
 func NewIndexNotFoundError(pubkey string) IndexNotFoundError {
 	return IndexNotFoundError{
-		message: fmt.Sprintf("could not find validator index for public key %s", pubkey),
+		message: fmt.Sprintf("could not find validator index for public key `%s`", pubkey),
 	}
 }
 
