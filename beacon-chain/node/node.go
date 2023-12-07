@@ -271,7 +271,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := routesWithMiddleware(cliCtx)
+	router := routes(cliCtx)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	return beacon, nil
 }
 
-func routesWithMiddleware(cliCtx *cli.Context) *mux.Router {
+func routes(cliCtx *cli.Context) *mux.Router {
 	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
 	router := mux.NewRouter()
 	router.Use(server.NormalizeQueryValuesHandler)

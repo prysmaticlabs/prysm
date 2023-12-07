@@ -128,16 +128,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	configureFastSSZHashingAlgorithm()
 
 	// initialize router used for endpoints
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
-	var allowedOrigins []string
-	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
-		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	} else {
-		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
-	}
-	router.Use(server.NormalizeQueryValuesHandler)
-	router.Use(server.CorsHandler(allowedOrigins))
+	router := routes(cliCtx)
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
@@ -157,6 +148,19 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	}
 
 	return validatorClient, nil
+}
+
+func routes(cliCtx *cli.Context) *mux.Router {
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
+	router := mux.NewRouter()
+	router.Use(server.NormalizeQueryValuesHandler)
+	router.Use(server.CorsHandler(allowedOrigins))
+	return router
 }
 
 // Start every service in the validator client.
