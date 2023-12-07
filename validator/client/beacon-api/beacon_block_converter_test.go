@@ -487,7 +487,7 @@ func TestGetBeaconBlockConverter_CapellaError(t *testing.T) {
 			expectedErrorMessage: "failed to get bls to execution changes",
 			generateData: func() *shared.BeaconBlockCapella {
 				beaconBlock := test_helpers.GenerateJsonCapellaBeaconBlock()
-				beaconBlock.Body.BlsToExecutionChanges[0] = nil
+				beaconBlock.Body.BLSToExecutionChanges[0] = nil
 				return beaconBlock
 			},
 		},
