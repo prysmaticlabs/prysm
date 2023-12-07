@@ -21,6 +21,7 @@ type ValidatorDB interface {
 	io.Closer
 	backup.Exporter
 	DatabasePath() string
+	SlashingProtectionType() kv.SlashingProtectionType
 	ClearDB() error
 	RunUpMigrations(ctx context.Context) error
 	RunDownMigrations(ctx context.Context) error
