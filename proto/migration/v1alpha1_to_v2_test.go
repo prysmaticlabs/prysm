@@ -158,17 +158,6 @@ func Test_V1Alpha1BeaconBlockCapellaToV2Blinded(t *testing.T) {
 	assert.DeepEqual(t, alphaRoot, v2Root)
 }
 
-func Test_V1Alpha1BlobSidecarsToV2(t *testing.T) {
-	sidecar := util.HydrateBlobSidecar(&ethpbalpha.DeprecatedBlobSidecar{})
-	blobs := []*ethpbalpha.DeprecatedBlobSidecar{
-		sidecar,
-	}
-	sidecars, err := V1Alpha1BlobSidecarsToV2(blobs)
-	require.NoError(t, err)
-	require.Equal(t, len(sidecars), len(blobs))
-	assert.DeepEqual(t, sidecars[0].Blob, blobs[0].Blob)
-}
-
 func TestBeaconStateAltairToProto(t *testing.T) {
 	source, err := util.NewBeaconStateAltair(util.FillRootsNaturalOptAltair, func(state *ethpbalpha.BeaconStateAltair) error {
 		state.GenesisTime = 1

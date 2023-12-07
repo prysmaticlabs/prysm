@@ -1,9 +1,6 @@
 package util
 
 import (
-	"fmt"
-
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	v2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
@@ -38,44 +35,17 @@ func NewBeaconBlockDeneb() *ethpb.SignedBeaconBlockDeneb {
 	return HydrateSignedBeaconBlockDeneb(&ethpb.SignedBeaconBlockDeneb{})
 }
 
+// NewBeaconBlockContentsDeneb creates a beacon block with minimum marshalable fields.
+func NewBeaconBlockContentsDeneb() *ethpb.SignedBeaconBlockContentsDeneb {
+	return HydrateSignedBeaconBlockContentsDeneb(&ethpb.SignedBeaconBlockContentsDeneb{})
+}
+
 // NewBlindedBeaconBlockDeneb creates a blinded beacon block with minimum marshalable fields.
 func NewBlindedBeaconBlockDeneb() *ethpb.SignedBlindedBeaconBlockDeneb {
 	return HydrateSignedBlindedBeaconBlockDeneb(&ethpb.SignedBlindedBeaconBlockDeneb{})
 }
 
-// NewBlindedBlobSidecar creates a signed blinded blob sidecar with minimum marshalable fields.
-func NewBlindedBlobSidecar() *ethpb.SignedBlindedBlobSidecar {
-	return HydrateSignedBlindedBlobSidecar(&ethpb.SignedBlindedBlobSidecar{})
-}
-
 // NewBlindedBeaconBlockCapellaV2 creates a blinded beacon block with minimum marshalable fields.
 func NewBlindedBeaconBlockCapellaV2() *v2.SignedBlindedBeaconBlockCapella {
 	return HydrateV2SignedBlindedBeaconBlockCapella(&v2.SignedBlindedBeaconBlockCapella{})
-}
-
-// NewBeaconBlockContentsDeneb creates a beacon block content including blobs with minimum marshalable fields.
-func NewBeaconBlockContentsDeneb(numOfBlobs uint64) (*v2.SignedBeaconBlockContentsDeneb, error) {
-	if numOfBlobs > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("declared too many blobs: %v", numOfBlobs)
-	}
-	blobs := make([]*v2.SignedBlobSidecar, numOfBlobs)
-	for i := range blobs {
-		blobs[i] = &v2.SignedBlobSidecar{
-			Message: &v2.BlobSidecar{
-				BlockRoot:       make([]byte, fieldparams.RootLength),
-				Index:           0,
-				Slot:            0,
-				BlockParentRoot: make([]byte, fieldparams.RootLength),
-				ProposerIndex:   0,
-				Blob:            make([]byte, fieldparams.BlobLength),
-				KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
-				KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
-			},
-			Signature: make([]byte, fieldparams.BLSSignatureLength),
-		}
-	}
-	return &v2.SignedBeaconBlockContentsDeneb{
-		SignedBlock:        HydrateV2SignedBeaconBlockDeneb(&v2.SignedBeaconBlockDeneb{}),
-		SignedBlobSidecars: blobs,
-	}, nil
 }

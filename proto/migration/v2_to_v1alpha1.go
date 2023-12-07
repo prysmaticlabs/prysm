@@ -2,7 +2,6 @@ package migration
 
 import (
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"google.golang.org/protobuf/proto"
@@ -111,35 +110,4 @@ func BlindedDenebToV1Alpha1SignedBlock(denebBlk *ethpbv2.SignedBlindedBeaconBloc
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}
 	return v1alpha1Block, nil
-}
-
-// SignedBlobsToV1Alpha1SignedBlobs converts an array of v2 SignedBlobSidecar objects to its v1alpha1 equivalent.
-func SignedBlobsToV1Alpha1SignedBlobs(sidecars []*ethpbv2.SignedBlobSidecar) []*ethpbalpha.SignedBlobSidecar {
-	result := make([]*ethpbalpha.SignedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = &ethpbalpha.SignedBlobSidecar{
-			Message: &ethpbalpha.DeprecatedBlobSidecar{
-				BlockRoot:       bytesutil.SafeCopyBytes(sc.Message.BlockRoot),
-				Index:           sc.Message.Index,
-				Slot:            sc.Message.Slot,
-				BlockParentRoot: bytesutil.SafeCopyBytes(sc.Message.BlockParentRoot),
-				ProposerIndex:   sc.Message.ProposerIndex,
-				Blob:            bytesutil.SafeCopyBytes(sc.Message.Blob),
-				KzgCommitment:   bytesutil.SafeCopyBytes(sc.Message.KzgCommitment),
-				KzgProof:        bytesutil.SafeCopyBytes(sc.Message.KzgProof),
-			},
-			Signature: bytesutil.SafeCopyBytes(sc.Signature),
-		}
-	}
-	return result
-}
-
-// DenebBlockContentsToV1Alpha1 converts signed deneb block contents to signed beacon block and blobs deneb
-func DenebBlockContentsToV1Alpha1(blockcontents *ethpbv2.SignedBeaconBlockContentsDeneb) (*ethpbalpha.SignedBeaconBlockAndBlobsDeneb, error) {
-	block, err := DenebToV1Alpha1SignedBlock(blockcontents.SignedBlock)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	blobs := SignedBlobsToV1Alpha1SignedBlobs(blockcontents.SignedBlobSidecars)
-	return &ethpbalpha.SignedBeaconBlockAndBlobsDeneb{Block: block, Blobs: blobs}, nil
 }

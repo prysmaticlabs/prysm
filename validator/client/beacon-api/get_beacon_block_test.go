@@ -423,8 +423,8 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	proto := test_helpers.GenerateProtoDenebBeaconBlockContents()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	bytes, err := json.Marshal(block)
 	require.NoError(t, err)
 
@@ -457,7 +457,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto.Block,
+			Deneb: proto,
 		},
 		IsBlinded: false,
 	}
@@ -568,8 +568,8 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	proto := test_helpers.GenerateProtoDenebBeaconBlockContents()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	blockBytes, err := json.Marshal(block)
 	require.NoError(t, err)
 
@@ -617,7 +617,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto.Block,
+			Deneb: proto,
 		},
 		IsBlinded: false,
 	}

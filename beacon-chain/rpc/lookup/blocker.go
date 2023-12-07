@@ -2,6 +2,7 @@ package lookup
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -9,9 +10,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 // BlockIdParseError represents an error scenario where a block ID could not be parsed.
@@ -34,12 +41,14 @@ func (e BlockIdParseError) Error() string {
 // Blocker is responsible for retrieving blocks.
 type Blocker interface {
 	Block(ctx context.Context, id []byte) (interfaces.ReadOnlySignedBeaconBlock, error)
+	Blobs(ctx context.Context, id string, indices []uint64) ([]*blocks.VerifiedROBlob, *core.RpcError)
 }
 
 // BeaconDbBlocker is an implementation of Blocker. It retrieves blocks from the beacon chain database.
 type BeaconDbBlocker struct {
 	BeaconDB         db.ReadOnlyDatabase
 	ChainInfoFetcher blockchain.ChainInfoFetcher
+	BlobStorage      *filesystem.BlobStorage
 }
 
 // Block returns the beacon block for a given identifier. The identifier can be one of:
@@ -119,4 +128,108 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 		}
 	}
 	return blk, nil
+}
+
+// Blobs returns the blobs for a given block id identifier and blob indices. The identifier can be one of:
+//   - "head" (canonical head in node's view)
+//   - "genesis"
+//   - "finalized"
+//   - "justified"
+//   - <slot>
+//   - <hex encoded block root with '0x' prefix>
+//   - <block root>
+func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64) ([]*blocks.VerifiedROBlob, *core.RpcError) {
+	var blobs []*blocks.VerifiedROBlob
+	var root []byte
+	switch id {
+	case "genesis":
+		return nil, &core.RpcError{Err: errors.New("blobs are not supported for Phase 0 fork"), Reason: core.BadRequest}
+	case "head":
+		var err error
+		root, err = p.ChainInfoFetcher.HeadRoot(ctx)
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve head root"), Reason: core.Internal}
+		}
+	case "finalized":
+		fcp := p.ChainInfoFetcher.FinalizedCheckpt()
+		if fcp == nil {
+			return nil, &core.RpcError{Err: errors.New("received nil finalized checkpoint"), Reason: core.Internal}
+		}
+		root = fcp.Root
+	case "justified":
+		jcp := p.ChainInfoFetcher.CurrentJustifiedCheckpt()
+		if jcp == nil {
+			return nil, &core.RpcError{Err: errors.New("received nil justified checkpoint"), Reason: core.Internal}
+		}
+		root = jcp.Root
+	default:
+		if bytesutil.IsHex([]byte(id)) {
+			var err error
+			root, err = hexutil.Decode(id)
+			if len(root) != fieldparams.RootLength {
+				return nil, &core.RpcError{Err: fmt.Errorf("invalid block root of length %d", len(root)), Reason: core.BadRequest}
+			}
+			if err != nil {
+				return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
+			}
+		} else {
+			slot, err := strconv.ParseUint(id, 10, 64)
+			if err != nil {
+				return nil, &core.RpcError{Err: NewBlockIdParseError(err), Reason: core.BadRequest}
+			}
+			denebStart, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
+			if err != nil {
+				return nil, &core.RpcError{Err: errors.Wrap(err, "could not calculate Deneb start slot"), Reason: core.Internal}
+			}
+			if primitives.Slot(slot) < denebStart {
+				return nil, &core.RpcError{Err: errors.New("blobs are not supported before Deneb fork"), Reason: core.BadRequest}
+			}
+			ok, roots, err := p.BeaconDB.BlockRootsBySlot(ctx, primitives.Slot(slot))
+			if !ok {
+				return nil, &core.RpcError{Err: fmt.Errorf("block not found: no block roots at slot %d", slot), Reason: core.NotFound}
+			}
+			if err != nil {
+				return nil, &core.RpcError{Err: errors.Wrap(err, "failed to get block roots by slot"), Reason: core.Internal}
+			}
+			root = roots[0][:]
+			if len(roots) == 1 {
+				break
+			}
+			for _, blockRoot := range roots {
+				canonical, err := p.ChainInfoFetcher.IsCanonical(ctx, blockRoot)
+				if err != nil {
+					return nil, &core.RpcError{Err: errors.Wrap(err, "could not determine if block root is canonical"), Reason: core.Internal}
+				}
+				if canonical {
+					root = blockRoot[:]
+					break
+				}
+			}
+		}
+	}
+
+	if len(indices) == 0 {
+		m, err := p.BlobStorage.Indices(bytesutil.ToBytes32(root))
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob indices for root %#x", root), Reason: core.Internal}
+		}
+		for k, v := range m {
+			if v {
+				indices = append(indices, uint64(k))
+			}
+		}
+	}
+
+	if len(indices) == 0 {
+		return nil, &core.RpcError{Err: errors.New("no blobs found"), Reason: core.Internal}
+	}
+
+	for _, index := range indices {
+		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
+		if err != nil {
+			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
+		}
+		blobs = append(blobs, &vblob)
+	}
+	return blobs, nil
 }

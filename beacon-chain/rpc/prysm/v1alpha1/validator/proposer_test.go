@@ -547,7 +547,7 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 
 	got, err := proposerServer.GetBeaconBlock(ctx, req)
 	require.NoError(t, err)
-	require.DeepEqual(t, got.GetDeneb().Body.BlobKzgCommitments, kc)
+	require.DeepEqual(t, got.GetDeneb().Block.Body.BlobKzgCommitments, kc)
 }
 
 func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
@@ -692,14 +692,13 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		{
 			name: "deneb block no blob",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				blockToPropose := util.NewBeaconBlockDeneb()
-				blockToPropose.Block.Slot = 5
-				blockToPropose.Block.ParentRoot = parent[:]
+				blockToPropose := util.NewBeaconBlockContentsDeneb()
+				blockToPropose.Block.Block.Slot = 5
+				blockToPropose.Block.Block.ParentRoot = parent[:]
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
-		//TODO: add deneb blocks
 	}
 
 	for _, tt := range tests {
