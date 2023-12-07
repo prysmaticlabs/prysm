@@ -93,12 +93,12 @@ type BlobSidecarEvent struct {
 	VersionedHash string `json:"versioned_hash"`
 }
 
-type LightClientFinalityUpdateResponseJson struct {
-	Version string                         `json:"version" enum:"true"`
-	Data    *LightClientFinalityUpdateJson `json:"data"`
+type LightClientFinalityUpdateEvent struct {
+	Version string                     `json:"version" enum:"true"`
+	Data    *LightClientFinalityUpdate `json:"data"`
 }
 
-type LightClientFinalityUpdateJson struct {
+type LightClientFinalityUpdate struct {
 	AttestedHeader  *shared.BeaconBlockHeader `json:"attested_header"`
 	FinalizedHeader *shared.BeaconBlockHeader `json:"finalized_header"`
 	FinalityBranch  []string                  `json:"finality_branch"  hex:"true"`
@@ -106,12 +106,12 @@ type LightClientFinalityUpdateJson struct {
 	SignatureSlot   string                    `json:"signature_slot"`
 }
 
-type LightClientOptimisticUpdateResponseJson struct {
-	Version string                           `json:"version" enum:"true"`
-	Data    *LightClientOptimisticUpdateJson `json:"data"`
+type LightClientOptimisticUpdateEvent struct {
+	Version string                       `json:"version" enum:"true"`
+	Data    *LightClientOptimisticUpdate `json:"data"`
 }
 
-type LightClientOptimisticUpdateJson struct {
+type LightClientOptimisticUpdate struct {
 	AttestedHeader *shared.BeaconBlockHeader `json:"attested_header"`
 	SyncAggregate  *shared.SyncAggregate     `json:"sync_aggregate"`
 	SignatureSlot  string                    `json:"signature_slot"`
