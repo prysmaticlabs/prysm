@@ -43,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -115,6 +114,7 @@ type BeaconNode struct {
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	blobRetentionEpochs     primitives.Epoch
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -155,9 +155,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := kv.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
 		return nil, err
 	}
 	configureFastSSZHashingAlgorithm()
@@ -382,7 +379,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 	if err != nil {
 		return err
 	}
@@ -404,7 +401,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+
+		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -677,6 +675,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		execution.WithStateGen(b.stateGen),
 		execution.WithBeaconNodeStatsUpdater(bs),
 		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		execution.WithJwtId(b.cliCtx.String(flags.JwtId.Name)),
 	)
 	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
@@ -940,9 +939,6 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
 		apigateway.WithAllowedOrigins(allowedOrigins),
 		apigateway.WithTimeout(uint64(timeout)),
-	}
-	if flags.EnableHTTPEthAPI(httpModules) {
-		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 	g, err := apigateway.New(b.ctx, opts...)
 	if err != nil {
