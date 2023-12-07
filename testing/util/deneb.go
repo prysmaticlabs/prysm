@@ -2,22 +2,58 @@ package util
 
 import (
 	"encoding/binary"
+	"math"
 	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int) (blocks.ROBlock, []blocks.ROBlob) {
-	// Start service with 160 as allowed blocks capacity (and almost zero capacity recovery).
+type DenebBlockGeneratorOption func(*denebBlockGenerator)
+
+type denebBlockGenerator struct {
+	parent   [32]byte
+	slot     primitives.Slot
+	nblobs   int
+	sign     bool
+	sk       bls.SecretKey
+	pk       bls.PublicKey
+	proposer primitives.ValidatorIndex
+	valRoot  []byte
+}
+
+func WithProposerSigning(idx primitives.ValidatorIndex, sk bls.SecretKey, pk bls.PublicKey, valRoot []byte) DenebBlockGeneratorOption {
+	return func(g *denebBlockGenerator) {
+		g.sign = true
+		g.proposer = idx
+		g.sk = sk
+		g.pk = pk
+		g.valRoot = valRoot
+	}
+}
+
+func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primitives.Slot, nblobs int, opts ...DenebBlockGeneratorOption) (blocks.ROBlock, []blocks.ROBlob) {
+	g := &denebBlockGenerator{
+		parent: parent,
+		slot:   slot,
+		nblobs: nblobs,
+	}
+	for _, o := range opts {
+		o(g)
+	}
 	stateRoot := bytesutil.PadTo([]byte("stateRoot"), fieldparams.RootLength)
 	receiptsRoot := bytesutil.PadTo([]byte("receiptsRoot"), fieldparams.RootLength)
 	logsBloom := bytesutil.PadTo([]byte("logs"), fieldparams.LogsBloomLength)
@@ -58,14 +94,35 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	}
 	block := NewBeaconBlockDeneb()
 	block.Block.Body.ExecutionPayload = payload
-	block.Block.Slot = slot
-	block.Block.ParentRoot = parent[:]
-	commitments := make([][48]byte, nblobs)
-	block.Block.Body.BlobKzgCommitments = make([][]byte, nblobs)
+	block.Block.Slot = g.slot
+	block.Block.ParentRoot = g.parent[:]
+	commitments := make([][48]byte, g.nblobs)
+	block.Block.Body.BlobKzgCommitments = make([][]byte, g.nblobs)
 	for i := range commitments {
 		binary.LittleEndian.PutUint16(commitments[i][0:16], uint16(i))
-		binary.LittleEndian.PutUint16(commitments[i][16:32], uint16(slot))
+		binary.LittleEndian.PutUint16(commitments[i][16:32], uint16(g.slot))
 		block.Block.Body.BlobKzgCommitments[i] = commitments[i][:]
+	}
+
+	body, err := blocks.NewBeaconBlockBody(block.Block.Body)
+	require.NoError(t, err)
+	inclusion := make([][][]byte, len(commitments))
+	for i := range commitments {
+		proof, err := blocks.MerkleProofKZGCommitment(body, i)
+		require.NoError(t, err)
+		inclusion[i] = proof
+	}
+	if g.sign {
+		epoch := slots.ToEpoch(block.Block.Slot)
+		schedule := forks.NewOrderedSchedule(params.BeaconConfig())
+		version, err := schedule.VersionForEpoch(epoch)
+		require.NoError(t, err)
+		fork, err := schedule.ForkFromVersion(version)
+		require.NoError(t, err)
+		domain := params.BeaconConfig().DomainBeaconProposer
+		sig, err := signing.ComputeDomainAndSignWithoutState(fork, epoch, domain, g.valRoot, block.Block, g.sk)
+		require.NoError(t, err)
+		block.Signature = sig
 	}
 
 	root, err := block.Block.HashTreeRoot()
@@ -78,7 +135,7 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	sh, err := sbb.Header()
 	require.NoError(t, err)
 	for i, c := range block.Block.Body.BlobKzgCommitments {
-		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sh, i, c)
+		sidecars[i] = GenerateTestDenebBlobSidecar(t, root, sh, i, c, inclusion[i])
 	}
 
 	rob, err := blocks.NewROBlock(sbb)
@@ -86,7 +143,7 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 	return rob, sidecars
 }
 
-func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.SignedBeaconBlockHeader, index int, commitment []byte) blocks.ROBlob {
+func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.SignedBeaconBlockHeader, index int, commitment []byte, incProof [][]byte) blocks.ROBlob {
 	blob := make([]byte, fieldparams.BlobSize)
 	binary.LittleEndian.PutUint64(blob, uint64(index))
 	pb := &ethpb.BlobSidecar{
@@ -96,7 +153,10 @@ func GenerateTestDenebBlobSidecar(t *testing.T, root [32]byte, header *ethpb.Sig
 		KzgCommitment:     commitment,
 		KzgProof:          commitment,
 	}
-	pb.CommitmentInclusionProof = fakeEmptyProof(t, pb)
+	if len(incProof) == 0 {
+		incProof = fakeEmptyProof(t, pb)
+	}
+	pb.CommitmentInclusionProof = incProof
 	r, err := blocks.NewROBlobWithRoot(pb, root)
 	require.NoError(t, err)
 	return r
@@ -126,4 +186,20 @@ func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blo
 	}
 
 	return blks, blobs
+}
+
+// HackDenebForkEpoch is helpful for tests that need to set up cases where the deneb fork has passed.
+// We have unit tests that assert our config matches the upstream config, where the next fork is always
+// set to MaxUint64 until the fork epoch is formally set. This creates an issue for tests that want to
+// work with slots that are defined to be after deneb because converting the max epoch to a slot leads
+// to multiplication overflow.
+// Monkey patching tests with this function is the simplest workaround in these cases.
+func HackDenebMaxuint(t *testing.T) func() {
+	bc := params.MainnetConfig().Copy()
+	bc.DenebForkEpoch = math.MaxUint32
+	undo, err := params.SetActiveWithUndo(bc)
+	require.NoError(t, err)
+	return func() {
+		require.NoError(t, undo())
+	}
 }

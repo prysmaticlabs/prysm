@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
@@ -35,16 +37,30 @@ const (
 	directoryPermissions = 0700
 )
 
+// BlobStorageOption is a functional option for configuring a BlobStorage.
+type BlobStorageOption func(*BlobStorage)
+
+// WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
+func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
+	return func(b *BlobStorage) {
+		b.retentionEpochs = e
+	}
+}
+
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string) (*BlobStorage, error) {
+func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
 		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	return &BlobStorage{fs: fs, retentionEpochs: MaxEpochsToPersistBlobs}, nil
+	b := &BlobStorage{fs: fs, retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest}
+	for _, o := range opts {
+		o(b)
+	}
+	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
@@ -203,26 +219,34 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	}
 	for _, folder := range folders {
 		if folder.IsDir() {
-			f, err := bs.fs.Open(folder.Name() + "/0." + sszExt)
-			if err != nil {
+			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
-			defer func(f afero.File) {
-				err := f.Close()
-				if err != nil {
-					log.WithError(err).Errorf("Could not close blob file")
-				}
-			}(f)
+		}
+	}
+	return nil
+}
 
-			slot, err := slotFromBlob(f)
-			if err != nil {
-				return err
-			}
-			if slot < (currentSlot - retentionSlots) {
-				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
-					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
-				}
-			}
+// processFolder will delete the folder of blobs if the blob slot is outside the
+// retention period. We determine the slot by looking at the first blob in the folder.
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
+	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.WithError(err).Errorf("Could not close blob file")
+		}
+	}()
+
+	slot, err := slotFromBlob(f)
+	if err != nil {
+		return err
+	}
+	if slot < (currentSlot - retentionSlots) {
+		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
+			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 		}
 	}
 	return nil

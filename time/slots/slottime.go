@@ -163,6 +163,12 @@ func ToTime(genesisTimeSec uint64, slot primitives.Slot) (time.Time, error) {
 	return time.Unix(int64(sTime), 0), nil // lint:ignore uintcast -- A timestamp will not exceed int64 in your lifetime.
 }
 
+// BeginsAt computes the timestamp where the given slot begins, relative to the genesis timestamp.
+func BeginsAt(slot primitives.Slot, genesis time.Time) time.Time {
+	sd := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slot)
+	return genesis.Add(sd)
+}
+
 // Since computes the number of time slots that have occurred since the given timestamp.
 func Since(time time.Time) primitives.Slot {
 	return CurrentSlot(uint64(time.Unix()))
