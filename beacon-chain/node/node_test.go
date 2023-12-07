@@ -233,7 +233,7 @@ func TestCORS(t *testing.T) {
 	cliCtx := cli.NewContext(&app, set, nil)
 	require.NoError(t, cliCtx.Set(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com"))
 
-	router := routes(cliCtx)
+	router := newRouter(cliCtx)
 
 	// Ensure a test route exists
 	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
