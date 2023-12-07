@@ -304,6 +304,39 @@ func (s *Store) SaveAttestationsForPubKey(
 	return s.saveAttestationRecords(ctx, records)
 }
 
+// SaveLowestSignedSourceEpochForPubKey modifies the lowest signed source epoch for a given pubkey.
+// The call to this function is allowd only for minimal slashing protection,
+// and allows only to save a higher epoch that already stored
+func (s *Store) SaveLowestSignedSourceEpochForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch) error {
+	if s.slashingProtectionType != Minimal {
+		return errors.New("SaveLowestSignedSourceEpochForPubKey is allowed only for minimal slashing protection")
+	}
+
+	return s.update(func(tx *bolt.Tx) error {
+		lowestSourceBucket, err := tx.CreateBucketIfNotExists(lowestSignedSourceBucket)
+		if err != nil {
+			return errors.New("could not create lowest source bucket")
+		}
+
+		lowestSignedSourceBytes := lowestSourceBucket.Get(pubKey[:])
+		var lowestSignedSourceEpoch primitives.Epoch
+
+		if len(lowestSignedSourceBytes) >= 8 {
+			lowestSignedSourceEpoch = bytesutil.BytesToEpochBigEndian(lowestSignedSourceBytes)
+		}
+
+		if len(lowestSignedSourceBytes) != 0 && epoch < lowestSignedSourceEpoch {
+			return errors.New("incoming epoch is lower than the lowest signed source epoch")
+		}
+
+		if err := lowestSourceBucket.Put(pubKey[:], bytesutil.EpochToBytesBigEndian(epoch)); err != nil {
+			return errors.Wrapf(err, "could not save lowest source epoch %d", epoch)
+		}
+
+		return nil
+	})
+}
+
 // SaveAttestationForPubKey saves an attestation for a validator public
 // key for local validator slashing protection.
 func (s *Store) SaveAttestationForPubKey(
