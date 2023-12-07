@@ -272,7 +272,6 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		send(w, flusher, FinalizedCheckpointTopic, checkpoint)
 	case statefeed.LightClientFinalityUpdate:
 		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
-			write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
 			return
 		}
 		update, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
