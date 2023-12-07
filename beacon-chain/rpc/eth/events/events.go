@@ -274,10 +274,39 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
 			return
 		}
-		update, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
+		updateData, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
 		if !ok {
 			write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
 			return
+		}
+
+		var finalityBranch []string
+		for _, b := range updateData.Data.FinalityBranch {
+			finalityBranch = append(finalityBranch, hexutil.Encode(b))
+		}
+		update := &LightClientFinalityUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &LightClientFinalityUpdate{
+				AttestedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				FinalizedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.StateRoot),
+				},
+				FinalityBranch: finalityBranch,
+				SyncAggregate: &shared.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
 		}
 		send(w, flusher, LightClientFinalityUpdateTopic, update)
 	case statefeed.LightClientOptimisticUpdate:
