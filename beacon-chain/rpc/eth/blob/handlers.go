@@ -128,7 +128,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	for _, index := range indices {
 		sidecar, err := s.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
-			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blobs with root %#x and index %d", root, index).Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errors.Wrapf(err, "Could not retrieve blob for block root %#x at index %d", root, index).Error(), http.StatusInternalServerError)
 			return
 		}
 		sidecars = append(sidecars, sidecar.ROBlob.BlobSidecar)
