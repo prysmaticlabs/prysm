@@ -1139,10 +1139,20 @@ func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.N
 // HydrateSignedBeaconBlockDeneb hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockDeneb(b *ethpb.SignedBeaconBlockDeneb) *ethpb.SignedBeaconBlockDeneb {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockDeneb{}
+	}
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateBeaconBlockDeneb(b.Block)
+	return b
+}
+
+// HydrateSignedBeaconBlockContentsDeneb hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDeneb) *ethpb.SignedBeaconBlockContentsDeneb {
+	b.Block = HydrateSignedBeaconBlockDeneb(b.Block)
 	return b
 }
 

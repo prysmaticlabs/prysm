@@ -15,6 +15,7 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	beaconprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
@@ -132,6 +133,7 @@ type Config struct {
 	BlockBuilder                  builder.BlockBuilder
 	Router                        *mux.Router
 	ClockWaiter                   startup.ClockWaiter
+	BlobStorage                   *filesystem.BlobStorage
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -333,6 +335,7 @@ func (s *Service) Start() {
 	blocker := &lookup.BeaconDbBlocker{
 		BeaconDB:         s.cfg.BeaconDB,
 		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
+		BlobStorage:      s.cfg.BlobStorage,
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 
@@ -351,8 +354,7 @@ func (s *Service) Start() {
 		Stater:                stater,
 	})
 	s.initializeBlobServerRoutes(&blob.Server{
-		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
-		BeaconDB:         s.cfg.BeaconDB,
+		Blocker: blocker,
 	})
 
 	coreService := &core.Service{

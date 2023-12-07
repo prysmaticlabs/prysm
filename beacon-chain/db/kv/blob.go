@@ -67,7 +67,7 @@ func (s *Store) SaveBlobSidecar(ctx context.Context, scs []*ethpb.DeprecatedBlob
 	var prune []blobRotatingKey
 	return s.db.Update(func(tx *bolt.Tx) error {
 		var existing []byte
-		sc := &ethpb.BlobSidecars{}
+		sc := &ethpb.DeprecatedBlobSidecars{}
 		bkt := tx.Bucket(blobsBucket)
 		c := bkt.Cursor()
 		for k, v := c.Seek(prefix); bytes.HasPrefix(k, prefix); k, v = c.Next() {
@@ -198,7 +198,7 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices .
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sc := &ethpb.BlobSidecars{}
+	sc := &ethpb.DeprecatedBlobSidecars{}
 	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
 	}
@@ -206,7 +206,7 @@ func (s *Store) BlobSidecarsByRoot(ctx context.Context, root [32]byte, indices .
 	return filterForIndices(sc, indices...)
 }
 
-func filterForIndices(sc *ethpb.BlobSidecars, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error) {
+func filterForIndices(sc *ethpb.DeprecatedBlobSidecars, indices ...uint64) ([]*ethpb.DeprecatedBlobSidecar, error) {
 	if len(indices) == 0 {
 		return sc.Sidecars, nil
 	}
@@ -252,7 +252,7 @@ func (s *Store) BlobSidecarsBySlot(ctx context.Context, slot types.Slot, indices
 	if enc == nil {
 		return nil, ErrNotFound
 	}
-	sc := &ethpb.BlobSidecars{}
+	sc := &ethpb.DeprecatedBlobSidecars{}
 	if err := decode(ctx, enc, sc); err != nil {
 		return nil, err
 	}

@@ -121,13 +121,31 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	genericSignedBlock, err := blk.PbGenericBlock()
-	if err != nil {
-		log.WithError(err).Error("Failed to create proposal request")
-		if v.emitAccountMetrics {
-			ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
+	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
+		denebBlock, err := blk.PbDenebBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to get deneb block")
+			return
 		}
-		return
+		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+				Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
+					Block:     denebBlock,
+					KzgProofs: b.GetDeneb().KzgProofs,
+					Blobs:     b.GetDeneb().Blobs,
+				},
+			},
+		}
+	} else {
+		genericSignedBlock, err = blk.PbGenericBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to create proposal request")
+			if v.emitAccountMetrics {
+				ValidatorProposeFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
 
 	blkResp, err := v.validatorClient.ProposeBeaconBlock(ctx, genericSignedBlock)

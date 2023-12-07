@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -179,18 +178,19 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
 			return
 		}
-		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
-		if !ok {
-			write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
-			return
-		}
-		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
+		// TODO: fix this when we fix p2p
+		//blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
+		//if !ok {
+		//	write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
+		//	return
+		//}
+		//versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
 		blobEvent := &BlobSidecarEvent{
-			BlockRoot:     hexutil.Encode(blobData.Blob.Message.BlockRoot),
-			Index:         fmt.Sprintf("%d", blobData.Blob.Message.Index),
-			Slot:          fmt.Sprintf("%d", blobData.Blob.Message.Slot),
-			VersionedHash: versionedHash.String(),
-			KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
+			//BlockRoot:     hexutil.Encode(blobData.Blob.Message.BlockRoot),
+			//Index:         fmt.Sprintf("%d", blobData.Blob.Message.Index),
+			//Slot:          fmt.Sprintf("%d", blobData.Blob.Message.Slot),
+			//VersionedHash: versionedHash.String(),
+			//KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
 		}
 		send(w, flusher, BlobSidecarTopic, blobEvent)
 	}
