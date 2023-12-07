@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//api/client:go_default_library",
+        "//api/server:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/config:go_default_library",

@@ -12,14 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 )
 
-func TestDecodeError(t *testing.T) {
-	e := errors.New("not a number")
-	de := NewDecodeError(e, "Z")
-	de = NewDecodeError(de, "Y")
-	de = NewDecodeError(de, "X")
-	assert.Equal(t, "could not decode X.Y.Z: not a number", de.Error())
-}
-
 // TestWriteStateFetchError tests the WriteStateFetchError function
 // to ensure that the correct error message and code are written to the response
 // as an expected JSON format.

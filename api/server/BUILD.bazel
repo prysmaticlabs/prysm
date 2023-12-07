@@ -14,6 +14,7 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
+        "error_test.go",
         "middleware_test.go",
         "util_test.go",
     ],
