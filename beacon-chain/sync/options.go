@@ -163,8 +163,8 @@ func WithBlobStorage(b *filesystem.BlobStorage) Option {
 	}
 }
 
-// WithVerifier gives the sync package direct access to the verifier.
-func WithVerifier(v *verification.InitializerWaiter) Option {
+// WithVerifierWaiter gives the sync package direct access to the verifier waiter.
+func WithVerifierWaiter(v *verification.InitializerWaiter) Option {
 	return func(s *Service) error {
 		s.verifierWaiter = v
 		return nil
