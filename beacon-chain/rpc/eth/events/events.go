@@ -313,10 +313,27 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
 			return
 		}
-		update, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateWithVersion)
+		updateData, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateWithVersion)
 		if !ok {
 			write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
 			return
+		}
+		update := &LightClientOptimisticUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &LightClientOptimisticUpdate{
+				AttestedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				SyncAggregate: &shared.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
 		}
 		send(w, flusher, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
