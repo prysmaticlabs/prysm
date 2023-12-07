@@ -9,14 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
-
-// Database represents the db methods that the verifiers need.
-type Database interface {
-	Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
-}
 
 // Forkchoicer represents the forkchoice methods that the verifiers need.
 // Note that forkchoice is used here in a lock-free fashion, assuming that a version of forkchoice
@@ -40,7 +34,6 @@ type sharedResources struct {
 	fc    Forkchoicer
 	sc    SignatureCache
 	pc    ProposerCache
-	db    Database
 	sr    StateByRooter
 }
 
@@ -71,12 +64,12 @@ type InitializerWaiter struct {
 }
 
 // NewInitializerWaiter creates an InitializerWaiter which can be used to obtain an Initializer once async dependencies are ready.
-func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sc SignatureCache, pc ProposerCache, db Database, sr StateByRooter) *InitializerWaiter {
+func NewInitializerWaiter(cw startup.ClockWaiter, fc Forkchoicer, sr StateByRooter) *InitializerWaiter {
+	pc := newPropCache()
+	// signature cache is initialized in WaitForInitializer, since we need the genesis validators root, which can be obtained from startup.Clock.
 	shared := &sharedResources{
 		fc: fc,
-		sc: sc,
 		pc: pc,
-		db: db,
 		sr: sr,
 	}
 	return &InitializerWaiter{cw: cw, ini: &Initializer{shared: shared}}
@@ -88,6 +81,10 @@ func (w *InitializerWaiter) WaitForInitializer(ctx context.Context) (*Initialize
 	if err := w.waitForReady(ctx); err != nil {
 		return nil, err
 	}
+	// We wait until this point to initialize the signature cache because here we have access to the genesis validator root.
+	vr := w.ini.shared.clock.GenesisValidatorsRoot()
+	sc := newSigCache(vr[:], DefaultSignatureCacheSize)
+	w.ini.shared.sc = sc
 	return w.ini, nil
 }
 
