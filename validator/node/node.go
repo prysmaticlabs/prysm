@@ -128,7 +128,7 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 	configureFastSSZHashingAlgorithm()
 
 	// initialize router used for endpoints
-	r := router(cliCtx)
+	router := newRouter(cliCtx)
 	// If the --web flag is enabled to administer the validator
 	// client via a web portal, we start the validator client in a different way.
 	// Change Web flag name to enable keymanager API, look at merging initializeFromCLI and initializeForWeb maybe after WebUI DEPRECATED.
@@ -137,20 +137,20 @@ func NewValidatorClient(cliCtx *cli.Context) (*ValidatorClient, error) {
 			log.Warn("Remote Keymanager API enabled. Prysm web does not properly support web3signer at this time")
 		}
 		log.Info("Enabling web portal to manage the validator client")
-		if err := validatorClient.initializeForWeb(cliCtx, r); err != nil {
+		if err := validatorClient.initializeForWeb(cliCtx, router); err != nil {
 			return nil, err
 		}
 		return validatorClient, nil
 	}
 
-	if err := validatorClient.initializeFromCLI(cliCtx, r); err != nil {
+	if err := validatorClient.initializeFromCLI(cliCtx, router); err != nil {
 		return nil, err
 	}
 
 	return validatorClient, nil
 }
 
-func router(cliCtx *cli.Context) *mux.Router {
+func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")

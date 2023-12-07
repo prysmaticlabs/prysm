@@ -271,13 +271,13 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	r := router(cliCtx)
-	if err := beacon.registerRPCService(r); err != nil {
+	router := newRouter(cliCtx)
+	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(r); err != nil {
+	if err := beacon.registerGRPCGateway(router); err != nil {
 		return nil, err
 	}
 
@@ -305,7 +305,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	return beacon, nil
 }
 
-func router(cliCtx *cli.Context) *mux.Router {
+func newRouter(cliCtx *cli.Context) *mux.Router {
 	var allowedOrigins []string
 	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
 		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
