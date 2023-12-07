@@ -229,7 +229,7 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetValidatorBalances returns a filterable list of validator balances.
-func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetValidatorBalances")
 	defer span.End()
 
@@ -238,13 +238,13 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
-	st, err := bs.Stater.State(ctx, []byte(stateId))
+	st, err := s.Stater.State(ctx, []byte(stateId))
 	if err != nil {
 		shared.WriteStateFetchError(w, err)
 		return
 	}
 
-	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), bs.OptimisticModeFetcher, bs.Stater, bs.ChainInfoFetcher, bs.BeaconDB)
+	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateId), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
 		httputil.HandleError(w, "Could not check optimistic status: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -254,7 +254,7 @@ func (bs *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	isFinalized := bs.FinalizationFetcher.IsFinalized(ctx, blockRoot)
+	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
 	var rawIds []string
 	if r.Method == http.MethodGet {

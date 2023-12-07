@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 type PerformanceRequest struct {
@@ -28,7 +29,10 @@ type PerformanceResponse struct {
 }
 
 // GetValidatorPerformance is an HTTP handler for GetValidatorPerformance.
-func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
+func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.GetValidatorPerformance")
+	defer span.End()
+
 	var req PerformanceRequest
 	if r.Body != http.NoBody {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -36,8 +40,8 @@ func (vs *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	computed, err := vs.CoreService.ComputeValidatorPerformance(
-		r.Context(),
+	computed, err := s.CoreService.ComputeValidatorPerformance(
+		ctx,
 		&ethpb.ValidatorPerformanceRequest{
 			PublicKeys: req.PublicKeys,
 			Indices:    req.Indices,

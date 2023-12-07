@@ -1371,8 +1371,8 @@ func (s *Server) publishBlock(ctx context.Context, w http.ResponseWriter, r *htt
 	httputil.HandleError(w, "Body does not represent a valid block type"+blockVersionError, http.StatusBadRequest)
 }
 
-func (bs *Server) proposeBlock(ctx context.Context, w http.ResponseWriter, blk *eth.GenericSignedBeaconBlock) {
-	_, err := bs.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, blk)
+func (s *Server) proposeBlock(ctx context.Context, w http.ResponseWriter, blk *eth.GenericSignedBeaconBlock) {
+	_, err := s.V1Alpha1ValidatorServer.ProposeBeaconBlock(ctx, blk)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
