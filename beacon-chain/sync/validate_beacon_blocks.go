@@ -144,7 +144,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	cp := s.cfg.chain.FinalizedCheckpt()
 	startSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
-		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate epoch start slot")
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not calculate finalized epoch start slot")
 		return pubsub.ValidationIgnore, nil
 	}
 	if startSlot >= blk.Block().Slot() {
@@ -188,6 +188,20 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		err := errors.Errorf("unknown parent for block with slot %d and parent root %#x", blk.Block().Slot(), blk.Block().ParentRoot())
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not identify parent for block")
 		return pubsub.ValidationIgnore, err
+	}
+
+	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
+		s.setBadBlock(ctx, blockRoot)
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not validate beacon block")
+		return pubsub.ValidationReject, blockchain.ErrNotDescendantOfFinalized
+	}
+
+	cp = s.cfg.chain.CurrentJustifiedCheckpt()
+	slot, err := s.cfg.chain.RecentBlockSlot(blk.Block().ParentRoot())
+	if err != nil {
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("could not get parent block's slot")
+	} else if slots.ToEpoch(slot) < cp.Epoch {
+		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: parent is older than justified block")
 	}
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
@@ -239,11 +253,6 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
 		s.setBadBlock(ctx, blockRoot)
 		return err
-	}
-
-	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
-		s.setBadBlock(ctx, blockRoot)
-		return blockchain.ErrNotDescendantOfFinalized
 	}
 
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
