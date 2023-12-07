@@ -94,8 +94,13 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 
 	// Ensure the partial file is deleted.
 	defer func() {
-		// Ignore return value, it's expected to fail if the save is successful.
-		_ = bs.fs.Remove(partPath)
+		// It's expected to error if the save is successful.
+		err = bs.fs.Remove(partPath)
+		if err == nil {
+			log.WithFields(log.Fields{
+				"partPath": partPath,
+			}).Debugf("removed partial file")
+		}
 	}()
 
 	// Create a partial file and write the serialized data to it.
