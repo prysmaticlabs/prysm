@@ -327,93 +327,48 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
 	}
 	if res != nil {
+		res.Slot = req.Slot
 		res.CommitteeIndex = req.CommitteeIndex
 		return res, nil
 	}
 
-	if err := s.AttestationCache.MarkInProgress(req); err != nil {
-		if errors.Is(err, cache.ErrAlreadyInProgress) {
-			res, err := s.AttestationCache.Get(ctx, req)
-			if err != nil {
-				return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
-			}
-			if res == nil {
-				return nil, &RpcError{Reason: Internal, Err: errors.New("a request was in progress and resolved to nil")}
-			}
-			res.CommitteeIndex = req.CommitteeIndex
-			return res, nil
-		}
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not mark attestation as in-progress: %v", err)}
-	}
-	defer func() {
-		if err := s.AttestationCache.MarkNotInProgress(req); err != nil {
-			log.WithError(err).Error("could not mark attestation as not-in-progress")
-		}
-	}()
-
-	headState, err := s.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve head state: %v", err)}
-	}
 	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
 	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve head root: %v", err)}
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get head root")}
 	}
-
-	// In the case that we receive an attestation request after a newer state/block has been processed.
-	if headState.Slot() > req.Slot {
-		headRoot, err = helpers.BlockRootAtSlot(headState, req.Slot)
-		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not get historical head root: %v", err)}
-		}
-		headState, err = s.StateGen.StateByRoot(ctx, bytesutil.ToBytes32(headRoot))
-		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not get historical head state: %v", err)}
-		}
-	}
-	if headState == nil || headState.IsNil() {
-		return nil, &RpcError{Reason: Internal, Err: errors.New("could not lookup parent state from head")}
-	}
-
-	if coreTime.CurrentEpoch(headState) < slots.ToEpoch(req.Slot) {
-		headState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, headState, headRoot, req.Slot)
-		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not process slots up to %d: %v", req.Slot, err)}
-		}
-	}
-
-	targetEpoch := coreTime.CurrentEpoch(headState)
-	epochStartSlot, err := slots.EpochStart(targetEpoch)
+	targetEpoch := slots.ToEpoch(req.Slot)
+	targetRoot, err := s.HeadFetcher.TargetRootForEpoch(bytesutil.ToBytes32(headRoot), targetEpoch)
 	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not calculate epoch start: %v", err)}
+		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
-	var targetRoot []byte
-	if epochStartSlot == headState.Slot() {
-		targetRoot = headRoot
-	} else {
-		targetRoot, err = helpers.BlockRootAtSlot(headState, epochStartSlot)
-		if err != nil {
-			return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not get target block for slot %d: %v", epochStartSlot, err)}
-		}
-		if bytesutil.ToBytes32(targetRoot) == params.BeaconConfig().ZeroHash {
-			targetRoot = headRoot
-		}
-	}
+	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
 
 	res = &ethpb.AttestationData{
-		Slot:            req.Slot,
-		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: headRoot,
-		Source:          headState.CurrentJustifiedCheckpoint(),
+		Source:          justifiedCheckpoint,
 		Target: &ethpb.Checkpoint{
 			Epoch: targetEpoch,
-			Root:  targetRoot,
+			Root:  targetRoot[:],
 		},
 	}
 
-	if err := s.AttestationCache.Put(ctx, req, res); err != nil {
-		log.WithError(err).Error("could not store attestation data in cache")
+	currentUnixTime := uint64(time.Now().Unix())
+	genesisTime := uint64(s.GenesisTimeFetcher.GenesisTime().Second())
+	reqSlotTime := uint64(req.Slot) * params.BeaconConfig().SecondsPerSlot
+	timeThreshold := genesisTime + reqSlotTime + 4
+
+	isCurrentOrPastSlot := s.HeadFetcher.HeadSlot() == req.Slot || currentUnixTime >= timeThreshold
+
+	if isCurrentOrPastSlot {
+		err := s.AttestationCache.Put(ctx, res)
+		if err != nil {
+			log.WithError(err).Error("Failed to put attestation data into cache")
+		}
 	}
+
+	res.Slot = req.Slot
+	res.CommitteeIndex = req.CommitteeIndex
+
 	return res, nil
 }
 
