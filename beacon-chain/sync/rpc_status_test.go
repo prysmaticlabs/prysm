@@ -321,7 +321,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, nil, nil, r.cfg.beaconDB, r.cfg.stateGen)
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
@@ -340,7 +340,7 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 	}
 	clock = startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, nil, nil, r2.cfg.beaconDB, r2.cfg.stateGen)
+	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, r2.cfg.stateGen)
 
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
@@ -847,7 +847,7 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 	}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, nil, nil, r.cfg.beaconDB, r.cfg.stateGen)
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 
 	go r.Start()
 

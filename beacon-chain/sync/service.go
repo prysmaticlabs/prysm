@@ -153,7 +153,7 @@ type Service struct {
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
-	verifier                         *verification.Initializer
+	verifier                         BlobVerifierInitializer
 }
 
 // NewService initializes new regular sync service.

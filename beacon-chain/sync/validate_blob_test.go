@@ -10,6 +10,7 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
@@ -22,9 +23,11 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 func TestValidateBlob_FromSelf(t *testing.T) {
@@ -63,7 +66,7 @@ func TestValidateBlob_InvalidMessageType(t *testing.T) {
 	s := &Service{cfg: &config{p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -93,7 +96,7 @@ func TestValidateBlob_InvalidIndex(t *testing.T) {
 	s := &Service{cfg: &config{p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -125,7 +128,7 @@ func TestValidateBlob_InvalidTopicIndex(t *testing.T) {
 	s := &Service{cfg: &config{p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -160,7 +163,7 @@ func TestValidateBlob_OlderThanFinalizedEpoch(t *testing.T) {
 		clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -197,7 +200,7 @@ func TestValidateBlob_HigherThanParentSlot(t *testing.T) {
 			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -247,7 +250,7 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
 	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -302,7 +305,7 @@ func TestValidateBlob_IncorrectProposerIndex(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
-	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
+	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db, ForkChoiceStore: doublylinkedtree.New()}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
 		seenBlobCache: lruwrpr.New(10),
@@ -313,8 +316,8 @@ func TestValidateBlob_IncorrectProposerIndex(t *testing.T) {
 			stateGen:    stateGen,
 			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
-	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
+	require.NoError(t, clock.SetClock(startup.NewClock(prysmTime.Now().Add(-1*time.Minute), [32]byte{})))
+	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, s.cfg.stateGen)
 	var err error
 	s.verifier, err = initWaiter.WaitForInitializer(ctx)
 	require.NoError(t, err)
@@ -354,7 +357,10 @@ func TestValidateBlob_EverythingPasses(t *testing.T) {
 	db := dbtest.SetupDB(t)
 	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
-	chainService := &mock.ChainService{Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db}
+	beaconState, priKeys := util.DeterministicGenesisState(t, 100)
+	vRoot := bytesutil.ToBytes32(beaconState.GenesisValidatorsRoot())
+	fc := doublylinkedtree.New()
+	chainService := &mock.ChainService{ValidatorsRoot: vRoot, Genesis: time.Now(), FinalizedCheckPoint: &eth.Checkpoint{}, DB: db, ForkChoiceStore: fc}
 	stateGen := stategen.New(db, doublylinkedtree.New())
 	s := &Service{
 		badBlockCache: lruwrpr.New(10),
@@ -366,13 +372,8 @@ func TestValidateBlob_EverythingPasses(t *testing.T) {
 			stateGen:    stateGen,
 			clock:       startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
 	clock := startup.NewClockSynchronizer()
-	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
-	initWaiter := verification.NewInitializerWaiter(clock, chainService.ForkChoiceStore, nil, nil, s.cfg.beaconDB, s.cfg.stateGen)
-	var err error
-	s.verifier, err = initWaiter.WaitForInitializer(ctx)
-	require.NoError(t, err)
-
-	beaconState, _ := util.DeterministicGenesisState(t, 100)
+	require.NoError(t, clock.SetClock(startup.NewClock(prysmTime.Now().Add(-1*time.Minute), vRoot)))
+	s.verifier = &mockBlobVerifierInitializer{}
 
 	parent := util.NewBeaconBlock()
 	parent.Block.Slot = 1
@@ -387,11 +388,15 @@ func TestValidateBlob_EverythingPasses(t *testing.T) {
 	child.Block.Slot = 2
 	child.Block.ParentRoot = parentRoot[:]
 	child.Block.ProposerIndex = 96
+
+	child.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, child.Block, params.BeaconConfig().DomainBeaconProposer, priKeys[child.Block.ProposerIndex])
 	signedChild, err := blocks.NewSignedBeaconBlock(child)
 	require.NoError(t, err)
 	childRoot, err := signedChild.Block().HashTreeRoot()
 	require.NoError(t, err)
 	b := generateTestSidecar(t, childRoot, signedChild, 0, make([]byte, 48)).BlobSidecar
+
+	require.NoError(t, fc.InsertNode(ctx, beaconState, childRoot))
 
 	buf := new(bytes.Buffer)
 	_, err = p.Encoding().EncodeGossip(buf, b)
