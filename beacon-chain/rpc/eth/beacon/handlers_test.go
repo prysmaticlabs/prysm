@@ -1725,7 +1725,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 		sszvalue, err := genericBlock.GetDeneb().MarshalSSZ()
 		require.NoError(t, err)
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
