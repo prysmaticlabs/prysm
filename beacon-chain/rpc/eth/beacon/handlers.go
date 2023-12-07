@@ -1694,6 +1694,9 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ok, rawParentRoot, parentRoot := shared.HexFromQuery(w, r, "parent_root", fieldparams.RootLength, true)
+	if !ok {
+		return
+	}
 
 	var err error
 	var blks []interfaces.ReadOnlySignedBeaconBlock
