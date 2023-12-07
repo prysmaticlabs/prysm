@@ -271,13 +271,13 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := routes(cliCtx)
-	if err := beacon.registerRPCService(router); err != nil {
+	r := router(cliCtx)
+	if err := beacon.registerRPCService(r); err != nil {
 		return nil, err
 	}
 
 	log.Debugln("Registering GRPC Gateway Service")
-	if err := beacon.registerGRPCGateway(router); err != nil {
+	if err := beacon.registerGRPCGateway(r); err != nil {
 		return nil, err
 	}
 
@@ -305,12 +305,17 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	return beacon, nil
 }
 
-func routes(cliCtx *cli.Context) *mux.Router {
-	allowedOrigins := strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
-	router.Use(server.CorsHandler(allowedOrigins))
-	return router
+func router(cliCtx *cli.Context) *mux.Router {
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
+	r := mux.NewRouter()
+	r.Use(server.NormalizeQueryValuesHandler)
+	r.Use(server.CorsHandler(allowedOrigins))
+	return r
 }
 
 // StateFeed implements statefeed.Notifier.
