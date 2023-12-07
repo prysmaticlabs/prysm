@@ -4,9 +4,13 @@ go_library(
     name = "go_default_library",
     srcs = [
         "conversions.go",
+        "conversions_block.go",
+        "conversions_state.go",
         "errors.go",
         "request.go",
         "structs.go",
+        "structs_block.go",
+        "structs_state.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared",
     visibility = ["//visibility:public"],
