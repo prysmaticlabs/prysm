@@ -53,7 +53,6 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		if err != nil {
 			return err
 		}
-		isOptimistic := false
 		for i := startSlot; i <= primitives.Slot(headSlot); i++ {
 			path = fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/%d", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex, i)
 			resp = beacon.GetBlockV2Response{}
@@ -78,10 +77,6 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			if !resp.ExecutionOptimistic {
 				return errors.New("expected block to be optimistic, but it is not")
 			}
-			isOptimistic = true
-		}
-		if !isOptimistic {
-			return errors.New("expected block to be optimistic, but it is not")
 		}
 	}
 	return nil

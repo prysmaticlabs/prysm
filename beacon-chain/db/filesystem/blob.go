@@ -1,19 +1,26 @@
 package filesystem
 
 import (
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -26,24 +33,40 @@ const (
 	sszExt  = "ssz"
 	partExt = "part"
 
+	bufferEpochs         = 2
 	directoryPermissions = 0700
 )
+
+// BlobStorageOption is a functional option for configuring a BlobStorage.
+type BlobStorageOption func(*BlobStorage)
+
+// WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
+func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
+	return func(b *BlobStorage) {
+		b.retentionEpochs = e
+	}
+}
 
 // NewBlobStorage creates a new instance of the BlobStorage object. Note that the implementation of BlobStorage may
 // attempt to hold a file lock to guarantee exclusive control of the blob storage directory, so this should only be
 // initialized once per beacon node.
-func NewBlobStorage(base string) (*BlobStorage, error) {
+func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error) {
 	base = path.Clean(base)
 	if err := file.MkdirAll(base); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
-	return &BlobStorage{fs: fs}, nil
+	b := &BlobStorage{fs: fs, retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest}
+	for _, o := range opts {
+		o(b)
+	}
+	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs afero.Fs
+	fs              afero.Fs
+	retentionEpochs primitives.Epoch
 }
 
 // Save saves blobs given a list of sidecars.
@@ -176,4 +199,76 @@ func (p blobNamer) partPath() string {
 
 func (p blobNamer) path() string {
 	return p.fname(sszExt)
+}
+
+// Prune prunes blobs in the base directory based on the retention epoch.
+// It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
+// This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
+func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
+	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
+	if err != nil {
+		return err
+	}
+	if currentSlot < retentionSlots {
+		return nil // Overflow would occur
+	}
+
+	folders, err := afero.ReadDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	for _, folder := range folders {
+		if folder.IsDir() {
+			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// processFolder will delete the folder of blobs if the blob slot is outside the
+// retention period. We determine the slot by looking at the first blob in the folder.
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
+	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.WithError(err).Errorf("Could not close blob file")
+		}
+	}()
+
+	slot, err := slotFromBlob(f)
+	if err != nil {
+		return err
+	}
+	if slot < (currentSlot - retentionSlots) {
+		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
+			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
+		}
+	}
+	return nil
+}
+
+// slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
+// which is calculated based on the size of the BlobSidecar struct and is based on the size of the fields
+// preceding the slot information within SignedBeaconBlockHeader.
+func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
+	b := make([]byte, 8)
+	_, err := at.ReadAt(b, 131176)
+	if err != nil {
+		return 0, err
+	}
+	rawSlot := binary.LittleEndian.Uint64(b)
+	return primitives.Slot(rawSlot), nil
+}
+
+// Delete removes the directory matching the provided block root and all the blobs it contains.
+func (bs *BlobStorage) Delete(root [32]byte) error {
+	if err := bs.fs.RemoveAll(hexutil.Encode(root[:])); err != nil {
+		return fmt.Errorf("failed to delete blobs for root %#x: %w", root, err)
+	}
+	return nil
 }

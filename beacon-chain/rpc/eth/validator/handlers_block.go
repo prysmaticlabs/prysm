@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -56,7 +57,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
@@ -65,7 +66,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
@@ -108,7 +109,7 @@ func (s *Server) ProduceBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
@@ -117,7 +118,7 @@ func (s *Server) ProduceBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return
@@ -164,7 +165,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	if rawSkipRandaoVerification == "true" {
 		randaoReveal = primitives.PointAtInfinity
 	} else {
-		rr, err := shared.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
+		rr, err := bytesutil.DecodeHexWithLength(rawRandaoReveal, fieldparams.BLSSignatureLength)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode randao reveal").Error(), http.StatusBadRequest)
 			return
@@ -173,7 +174,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	}
 	var graffiti []byte
 	if rawGraffiti != "" {
-		g, err := shared.DecodeHexWithLength(rawGraffiti, 32)
+		g, err := bytesutil.DecodeHexWithLength(rawGraffiti, 32)
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Unable to decode graffiti").Error(), http.StatusBadRequest)
 			return

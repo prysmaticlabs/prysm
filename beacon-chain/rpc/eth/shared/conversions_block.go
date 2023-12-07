@@ -6,8 +6,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -16,11 +18,11 @@ import (
 func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, error) {
 	msg, err := h.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
-	sig, err := DecodeHexWithLength(h.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(h.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.SignedBeaconBlockHeader{
@@ -32,23 +34,23 @@ func (h *SignedBeaconBlockHeader) ToConsensus() (*eth.SignedBeaconBlockHeader, e
 func (h *BeaconBlockHeader) ToConsensus() (*eth.BeaconBlockHeader, error) {
 	s, err := strconv.ParseUint(h.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	pi, err := strconv.ParseUint(h.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	pr, err := DecodeHexWithLength(h.ParentRoot, fieldparams.RootLength)
+	pr, err := bytesutil.DecodeHexWithLength(h.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	sr, err := DecodeHexWithLength(h.StateRoot, fieldparams.RootLength)
+	sr, err := bytesutil.DecodeHexWithLength(h.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	br, err := DecodeHexWithLength(h.BodyRoot, fieldparams.RootLength)
+	br, err := bytesutil.DecodeHexWithLength(h.BodyRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BodyRoot")
+		return nil, server.NewDecodeError(err, "BodyRoot")
 	}
 
 	return &eth.BeaconBlockHeader{
@@ -65,14 +67,14 @@ func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 
 	block := &eth.SignedBeaconBlock{
@@ -95,67 +97,67 @@ func (b *BeaconBlock) ToConsensus() (*eth.BeaconBlock, error) {
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
 
 	return &eth.BeaconBlock{
@@ -185,13 +187,13 @@ func (b *SignedBeaconBlockAltair) ToGeneric() (*eth.GenericSignedBeaconBlock, er
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	block := &eth.SignedBeaconBlockAltair{
 		Block:     bl,
@@ -213,78 +215,78 @@ func (b *BeaconBlockAltair) ToConsensus() (*eth.BeaconBlockAltair, error) {
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
 	return &eth.BeaconBlockAltair{
 		Slot:          primitives.Slot(slot),
@@ -317,13 +319,13 @@ func (b *SignedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock,
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	block := &eth.SignedBeaconBlockBellatrix{
 		Block:     bl,
@@ -345,143 +347,143 @@ func (b *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBlockBellatrix, error) 
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayload == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayload")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayload")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
-	err = VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
+	err = slice.VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Transactions")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Transactions")
 	}
 	payloadTxs := make([][]byte, len(b.Body.ExecutionPayload.Transactions))
 	for i, tx := range b.Body.ExecutionPayload.Transactions {
-		payloadTxs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		payloadTxs[i], err = bytesutil.DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
 		}
 	}
 
@@ -532,13 +534,13 @@ func (b *SignedBlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaco
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	block := &eth.SignedBlindedBeaconBlockBellatrix{
 		Block:     bl,
@@ -560,137 +562,137 @@ func (b *BlindedBeaconBlockBellatrix) ToConsensus() (*eth.BlindedBeaconBlockBell
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayloadHeader == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
 	return &eth.BlindedBeaconBlockBellatrix{
 		Slot:          primitives.Slot(slot),
@@ -739,13 +741,13 @@ func (b *SignedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, e
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	block := &eth.SignedBeaconBlockCapella{
 		Block:     bl,
@@ -767,166 +769,166 @@ func (b *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayload == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayload")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayload")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
-	err = VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
+	err = slice.VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Transactions")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Transactions")
 	}
 	payloadTxs := make([][]byte, len(b.Body.ExecutionPayload.Transactions))
 	for i, tx := range b.Body.ExecutionPayload.Transactions {
-		payloadTxs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		payloadTxs[i], err = bytesutil.DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
 		}
 	}
-	err = VerifyMaxLength(b.Body.ExecutionPayload.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	err = slice.VerifyMaxLength(b.Body.ExecutionPayload.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Withdrawals")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Withdrawals")
 	}
 	withdrawals := make([]*enginev1.Withdrawal, len(b.Body.ExecutionPayload.Withdrawals))
 	for i, w := range b.Body.ExecutionPayload.Withdrawals {
 		withdrawalIndex, err := strconv.ParseUint(w.WithdrawalIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i))
 		}
 		validatorIndex, err := strconv.ParseUint(w.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
 		}
-		address, err := DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
+		address, err := bytesutil.DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
 		}
 		amount, err := strconv.ParseUint(w.Amount, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].Amount", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].Amount", i))
 		}
 		withdrawals[i] = &enginev1.Withdrawal{
 			Index:          withdrawalIndex,
@@ -937,7 +939,7 @@ func (b *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 	}
 	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
+		return nil, server.NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 
 	return &eth.BeaconBlockCapella{
@@ -989,13 +991,13 @@ func (b *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconB
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bl, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	block := &eth.SignedBlindedBeaconBlockCapella{
 		Block:     bl,
@@ -1017,145 +1019,145 @@ func (b *BlindedBeaconBlockCapella) ToConsensus() (*eth.BlindedBeaconBlockCapell
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayloadHeader == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
-	payloadWithdrawalsRoot, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
+	payloadWithdrawalsRoot, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
 	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
+		return nil, server.NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
 
 	return &eth.BlindedBeaconBlockCapella{
@@ -1209,22 +1211,22 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 
 	var signedBlobSidecars []*eth.SignedBlobSidecar
 	if len(b.SignedBlobSidecars) != 0 {
-		err := VerifyMaxLength(b.SignedBlobSidecars, fieldparams.MaxBlobsPerBlock)
+		err := slice.VerifyMaxLength(b.SignedBlobSidecars, fieldparams.MaxBlobsPerBlock)
 		if err != nil {
-			return nil, NewDecodeError(err, "SignedBlobSidecars")
+			return nil, server.NewDecodeError(err, "SignedBlobSidecars")
 		}
 		signedBlobSidecars = make([]*eth.SignedBlobSidecar, len(b.SignedBlobSidecars))
 		for i := range b.SignedBlobSidecars {
 			signedBlob, err := b.SignedBlobSidecars[i].ToConsensus()
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("SignedBlobSidecars[%d]", i))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("SignedBlobSidecars[%d]", i))
 			}
 			signedBlobSidecars[i] = signedBlob
 		}
 	}
 	signedDenebBlock, err := b.SignedBlock.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "SignedBlock")
+		return nil, server.NewDecodeError(err, "SignedBlock")
 	}
 
 	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
@@ -1260,22 +1262,22 @@ func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb,
 
 	var blobSidecars []*eth.DeprecatedBlobSidecar
 	if len(b.BlobSidecars) != 0 {
-		err := VerifyMaxLength(b.BlobSidecars, fieldparams.MaxBlobsPerBlock)
+		err := slice.VerifyMaxLength(b.BlobSidecars, fieldparams.MaxBlobsPerBlock)
 		if err != nil {
-			return nil, NewDecodeError(err, "BlobSidecars")
+			return nil, server.NewDecodeError(err, "BlobSidecars")
 		}
 		blobSidecars = make([]*eth.DeprecatedBlobSidecar, len(b.BlobSidecars))
 		for i := range b.BlobSidecars {
 			blob, err := b.BlobSidecars[i].ToConsensus()
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("BlobSidecars[%d]", i))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("BlobSidecars[%d]", i))
 			}
 			blobSidecars[i] = blob
 		}
 	}
 	denebBlock, err := b.Block.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Block")
+		return nil, server.NewDecodeError(err, "Block")
 	}
 	return &eth.BeaconBlockAndBlobsDeneb{
 		Block: denebBlock,
@@ -1290,22 +1292,22 @@ func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedB
 
 	var signedBlindedBlobSidecars []*eth.SignedBlindedBlobSidecar
 	if len(b.SignedBlindedBlobSidecars) != 0 {
-		err := VerifyMaxLength(b.SignedBlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
+		err := slice.VerifyMaxLength(b.SignedBlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
 		if err != nil {
-			return nil, NewDecodeError(err, "SignedBlindedBlobSidecars")
+			return nil, server.NewDecodeError(err, "SignedBlindedBlobSidecars")
 		}
 		signedBlindedBlobSidecars = make([]*eth.SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
 		for i := range b.SignedBlindedBlobSidecars {
 			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConsensus()
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("SignedBlindedBlobSidecars[%d]", i))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("SignedBlindedBlobSidecars[%d]", i))
 			}
 			signedBlindedBlobSidecars[i] = signedBlob
 		}
 	}
 	signedBlindedBlock, err := b.SignedBlindedBlock.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "SignedBlindedBlock")
+		return nil, server.NewDecodeError(err, "SignedBlindedBlock")
 	}
 	block := &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
 		SignedBlindedBlock:        signedBlindedBlock,
@@ -1335,22 +1337,22 @@ func (b *BlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, 
 
 	var blindedBlobSidecars []*eth.BlindedBlobSidecar
 	if len(b.BlindedBlobSidecars) != 0 {
-		err := VerifyMaxLength(b.BlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
+		err := slice.VerifyMaxLength(b.BlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
 		if err != nil {
-			return nil, NewDecodeError(err, "BlindedBlobSidecars")
+			return nil, server.NewDecodeError(err, "BlindedBlobSidecars")
 		}
 		blindedBlobSidecars = make([]*eth.BlindedBlobSidecar, len(b.BlindedBlobSidecars))
 		for i := range b.BlindedBlobSidecars {
 			blob, err := b.BlindedBlobSidecars[i].ToConsensus()
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("BlindedBlobSidecars[%d]", i))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("BlindedBlobSidecars[%d]", i))
 			}
 			blindedBlobSidecars[i] = blob
 		}
 	}
 	blindedBlock, err := b.BlindedBlock.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "BlindedBlock")
+		return nil, server.NewDecodeError(err, "BlindedBlock")
 	}
 	block := &eth.BlindedBeaconBlockAndBlobsDeneb{
 		Block: blindedBlock,
@@ -1364,166 +1366,166 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayload == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayload")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayload")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayload.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayload.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayload.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayload.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayload.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayload.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayload.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlockHash")
 	}
-	err = VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
+	err = slice.VerifyMaxLength(b.Body.ExecutionPayload.Transactions, fieldparams.MaxTxsPerPayloadLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Transactions")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Transactions")
 	}
 	txs := make([][]byte, len(b.Body.ExecutionPayload.Transactions))
 	for i, tx := range b.Body.ExecutionPayload.Transactions {
-		txs[i], err = DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
+		txs[i], err = bytesutil.DecodeHexWithMaxLength(tx, fieldparams.MaxBytesPerTxLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Transactions[%d]", i))
 		}
 	}
-	err = VerifyMaxLength(b.Body.ExecutionPayload.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+	err = slice.VerifyMaxLength(b.Body.ExecutionPayload.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.Withdrawals")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.Withdrawals")
 	}
 	withdrawals := make([]*enginev1.Withdrawal, len(b.Body.ExecutionPayload.Withdrawals))
 	for i, w := range b.Body.ExecutionPayload.Withdrawals {
 		withdrawalIndex, err := strconv.ParseUint(w.WithdrawalIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].WithdrawalIndex", i))
 		}
 		validatorIndex, err := strconv.ParseUint(w.ValidatorIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ValidatorIndex", i))
 		}
-		address, err := DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
+		address, err := bytesutil.DecodeHexWithLength(w.ExecutionAddress, common.AddressLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].ExecutionAddress", i))
 		}
 		amount, err := strconv.ParseUint(w.Amount, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].Amount", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.ExecutionPayload.Withdrawals[%d].Amount", i))
 		}
 		withdrawals[i] = &enginev1.Withdrawal{
 			Index:          withdrawalIndex,
@@ -1535,25 +1537,25 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 
 	payloadBlobGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayload.BlobGasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
 	}
 	payloadExcessBlobGas, err := strconv.ParseUint(b.Body.ExecutionPayload.ExcessBlobGas, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
 	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
+		return nil, server.NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
-	err = VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
+	err = slice.VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlobKzgCommitments")
+		return nil, server.NewDecodeError(err, "Body.BlobKzgCommitments")
 	}
 	blobKzgCommitments := make([][]byte, len(b.Body.BlobKzgCommitments))
 	for i, b := range b.Body.BlobKzgCommitments {
-		kzg, err := DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
+		kzg, err := bytesutil.DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlobKzgCommitments[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.BlobKzgCommitments[%d]", i))
 		}
 		blobKzgCommitments[i] = kzg
 	}
@@ -1608,37 +1610,37 @@ func (s *BlobSidecar) ToConsensus() (*eth.DeprecatedBlobSidecar, error) {
 	if s == nil {
 		return nil, errNilValue
 	}
-	blockRoot, err := DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := bytesutil.DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BlockRoot")
+		return nil, server.NewDecodeError(err, "BlockRoot")
 	}
 	index, err := strconv.ParseUint(s.Index, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Index")
+		return nil, server.NewDecodeError(err, "Index")
 	}
 	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
-	blockParentRoot, err := DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BlockParentRoot")
+		return nil, server.NewDecodeError(err, "BlockParentRoot")
 	}
 	proposerIndex, err := strconv.ParseUint(s.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	blob, err := DecodeHexWithLength(s.Blob, fieldparams.BlobLength)
+	blob, err := bytesutil.DecodeHexWithLength(s.Blob, fieldparams.BlobLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Blob")
+		return nil, server.NewDecodeError(err, "Blob")
 	}
-	kzgCommitment, err := DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "KzgCommitment")
+		return nil, server.NewDecodeError(err, "KzgCommitment")
 	}
-	kzgProof, err := DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := bytesutil.DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "KzgProof")
+		return nil, server.NewDecodeError(err, "KzgProof")
 	}
 	bsc := &eth.DeprecatedBlobSidecar{
 		BlockRoot:       blockRoot,
@@ -1658,13 +1660,13 @@ func (b *SignedBeaconBlockDeneb) ToConsensus() (*eth.SignedBeaconBlockDeneb, err
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	block, err := b.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 	return &eth.SignedBeaconBlockDeneb{
 		Block:     block,
@@ -1677,44 +1679,44 @@ func (s *SignedBlobSidecar) ToConsensus() (*eth.SignedBlobSidecar, error) {
 		return nil, errNilValue
 	}
 	if s.Message == nil {
-		return nil, NewDecodeError(errNilValue, "Message")
+		return nil, server.NewDecodeError(errNilValue, "Message")
 	}
 
-	blobSig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	blobSig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
-	blockRoot, err := DecodeHexWithLength(s.Message.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := bytesutil.DecodeHexWithLength(s.Message.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.BlockRoot")
+		return nil, server.NewDecodeError(err, "Message.BlockRoot")
 	}
 	index, err := strconv.ParseUint(s.Message.Index, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.Index")
+		return nil, server.NewDecodeError(err, "Message.Index")
 	}
 	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.Slot")
+		return nil, server.NewDecodeError(err, "Message.Slot")
 	}
-	blockParentRoot, err := DecodeHexWithLength(s.Message.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.Message.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.BlockParentRoot")
+		return nil, server.NewDecodeError(err, "Message.BlockParentRoot")
 	}
 	proposerIndex, err := strconv.ParseUint(s.Message.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.ProposerIndex")
+		return nil, server.NewDecodeError(err, "Message.ProposerIndex")
 	}
-	blob, err := DecodeHexWithLength(s.Message.Blob, fieldparams.BlobLength)
+	blob, err := bytesutil.DecodeHexWithLength(s.Message.Blob, fieldparams.BlobLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.Blob")
+		return nil, server.NewDecodeError(err, "Message.Blob")
 	}
-	kzgCommitment, err := DecodeHexWithLength(s.Message.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.Message.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.KzgCommitment")
+		return nil, server.NewDecodeError(err, "Message.KzgCommitment")
 	}
-	kzgProof, err := DecodeHexWithLength(s.Message.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := bytesutil.DecodeHexWithLength(s.Message.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Message.KzgProof")
+		return nil, server.NewDecodeError(err, "Message.KzgProof")
 	}
 	bsc := &eth.DeprecatedBlobSidecar{
 		BlockRoot:       blockRoot,
@@ -1737,9 +1739,9 @@ func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconB
 		return nil, errNilValue
 	}
 
-	sig, err := DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	blindedBlock, err := b.Message.ToConsensus()
 	if err != nil {
@@ -1756,165 +1758,165 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 		return nil, errNilValue
 	}
 	if b.Body == nil {
-		return nil, NewDecodeError(errNilValue, "Body")
+		return nil, server.NewDecodeError(errNilValue, "Body")
 	}
 	if b.Body.Eth1Data == nil {
-		return nil, NewDecodeError(errNilValue, "Body.Eth1Data")
+		return nil, server.NewDecodeError(errNilValue, "Body.Eth1Data")
 	}
 	if b.Body.SyncAggregate == nil {
-		return nil, NewDecodeError(errNilValue, "Body.SyncAggregate")
+		return nil, server.NewDecodeError(errNilValue, "Body.SyncAggregate")
 	}
 	if b.Body.ExecutionPayloadHeader == nil {
-		return nil, NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
+		return nil, server.NewDecodeError(errNilValue, "Body.ExecutionPayloadHeader")
 	}
 
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	proposerIndex, err := strconv.ParseUint(b.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	parentRoot, err := DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
+	parentRoot, err := bytesutil.DecodeHexWithLength(b.ParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ParentRoot")
+		return nil, server.NewDecodeError(err, "ParentRoot")
 	}
-	stateRoot, err := DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
+	stateRoot, err := bytesutil.DecodeHexWithLength(b.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "StateRoot")
+		return nil, server.NewDecodeError(err, "StateRoot")
 	}
-	randaoReveal, err := DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
+	randaoReveal, err := bytesutil.DecodeHexWithLength(b.Body.RandaoReveal, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.RandaoReveal")
+		return nil, server.NewDecodeError(err, "Body.RandaoReveal")
 	}
-	depositRoot, err := DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
+	depositRoot, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.DepositRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositRoot")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositRoot")
 	}
 	depositCount, err := strconv.ParseUint(b.Body.Eth1Data.DepositCount, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.DepositCount")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.DepositCount")
 	}
-	blockHash, err := DecodeHexWithLength(b.Body.Eth1Data.BlockHash, fieldparams.RootLength)
+	blockHash, err := bytesutil.DecodeHexWithLength(b.Body.Eth1Data.BlockHash, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Eth1Data.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.Eth1Data.BlockHash")
 	}
-	graffiti, err := DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
+	graffiti, err := bytesutil.DecodeHexWithLength(b.Body.Graffiti, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Graffiti")
+		return nil, server.NewDecodeError(err, "Body.Graffiti")
 	}
 	proposerSlashings, err := ProposerSlashingsToConsensus(b.Body.ProposerSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ProposerSlashings")
+		return nil, server.NewDecodeError(err, "Body.ProposerSlashings")
 	}
 	attesterSlashings, err := AttesterSlashingsToConsensus(b.Body.AttesterSlashings)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.AttesterSlashings")
+		return nil, server.NewDecodeError(err, "Body.AttesterSlashings")
 	}
 	atts, err := AttsToConsensus(b.Body.Attestations)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Attestations")
+		return nil, server.NewDecodeError(err, "Body.Attestations")
 	}
 	deposits, err := DepositsToConsensus(b.Body.Deposits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.Deposits")
+		return nil, server.NewDecodeError(err, "Body.Deposits")
 	}
 	exits, err := SignedExitsToConsensus(b.Body.VoluntaryExits)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.VoluntaryExits")
+		return nil, server.NewDecodeError(err, "Body.VoluntaryExits")
 	}
-	syncCommitteeBits, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
+	syncCommitteeBits, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeBits, fieldparams.SyncAggregateSyncCommitteeBytesLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeBits")
 	}
-	syncCommitteeSig, err := DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
+	syncCommitteeSig, err := bytesutil.DecodeHexWithLength(b.Body.SyncAggregate.SyncCommitteeSignature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
+		return nil, server.NewDecodeError(err, "Body.SyncAggregate.SyncCommitteeSignature")
 	}
-	payloadParentHash, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
+	payloadParentHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ParentHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ParentHash")
 	}
-	payloadFeeRecipient, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
+	payloadFeeRecipient, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.FeeRecipient")
 	}
-	payloadStateRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
+	payloadStateRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.StateRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.StateRoot")
 	}
-	payloadReceiptsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
+	payloadReceiptsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.ReceiptsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ReceiptsRoot")
 	}
-	payloadLogsBloom, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
+	payloadLogsBloom, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.LogsBloom, fieldparams.LogsBloomLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.LogsBloom")
 	}
-	payloadPrevRandao, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
+	payloadPrevRandao, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.PrevRandao, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.PrevRandao")
 	}
 	payloadBlockNumber, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.BlockNumber, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockNumber")
 	}
 	payloadGasLimit, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasLimit")
 	}
 	payloadGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.GasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.GasUsed")
 	}
 	payloadTimestamp, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.Timestamp")
 	}
-	payloadExtraData, err := DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
+	payloadExtraData, err := bytesutil.DecodeHexWithMaxLength(b.Body.ExecutionPayloadHeader.ExtraData, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.ExtraData")
 	}
 	payloadBaseFeePerGas, err := bytesutil.Uint256ToSSZBytes(b.Body.ExecutionPayloadHeader.BaseFeePerGas)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BaseFeePerGas")
 	}
-	payloadBlockHash, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
+	payloadBlockHash, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.BlockHash, common.HashLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.BlockHash")
 	}
-	payloadTxsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
+	payloadTxsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.TransactionsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.TransactionsRoot")
 	}
-	payloadWithdrawalsRoot, err := DecodeHexWithLength(b.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
+	payloadWithdrawalsRoot, err := bytesutil.DecodeHexWithLength(b.Body.ExecutionPayloadHeader.WithdrawalsRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayloadHeader.WithdrawalsRoot")
 	}
 
 	payloadBlobGasUsed, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.BlobGasUsed, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.BlobGasUsed")
 	}
 	payloadExcessBlobGas, err := strconv.ParseUint(b.Body.ExecutionPayloadHeader.ExcessBlobGas, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
+		return nil, server.NewDecodeError(err, "Body.ExecutionPayload.ExcessBlobGas")
 	}
 
 	blsChanges, err := SignedBLSChangesToConsensus(b.Body.BLSToExecutionChanges)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BLSToExecutionChanges")
+		return nil, server.NewDecodeError(err, "Body.BLSToExecutionChanges")
 	}
-	err = VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
+	err = slice.VerifyMaxLength(b.Body.BlobKzgCommitments, fieldparams.MaxBlobCommitmentsPerBlock)
 	if err != nil {
-		return nil, NewDecodeError(err, "Body.BlobKzgCommitments")
+		return nil, server.NewDecodeError(err, "Body.BlobKzgCommitments")
 	}
 	blobKzgCommitments := make([][]byte, len(b.Body.BlobKzgCommitments))
 	for i, b := range b.Body.BlobKzgCommitments {
-		kzg, err := DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
+		kzg, err := bytesutil.DecodeHexWithLength(b, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("Body.BlobKzgCommitments[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Body.BlobKzgCommitments[%d]", i))
 		}
 		blobKzgCommitments[i] = kzg
 	}
@@ -1971,9 +1973,9 @@ func (s *SignedBlindedBlobSidecar) ToConsensus() (*eth.SignedBlindedBlobSidecar,
 		return nil, errNilValue
 	}
 
-	blobSig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	blobSig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	bsc, err := s.Message.ToConsensus()
 	if err != nil {
@@ -1989,37 +1991,37 @@ func (s *BlindedBlobSidecar) ToConsensus() (*eth.BlindedBlobSidecar, error) {
 	if s == nil {
 		return nil, errNilValue
 	}
-	blockRoot, err := DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
+	blockRoot, err := bytesutil.DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BlockRoot")
+		return nil, server.NewDecodeError(err, "BlockRoot")
 	}
 	index, err := strconv.ParseUint(s.Index, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Index")
+		return nil, server.NewDecodeError(err, "Index")
 	}
 	denebSlot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
-	blockParentRoot, err := DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
+	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BlockParentRoot")
+		return nil, server.NewDecodeError(err, "BlockParentRoot")
 	}
 	proposerIndex, err := strconv.ParseUint(s.ProposerIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ProposerIndex")
+		return nil, server.NewDecodeError(err, "ProposerIndex")
 	}
-	blobRoot, err := DecodeHexWithLength(s.BlobRoot, fieldparams.RootLength)
+	blobRoot, err := bytesutil.DecodeHexWithLength(s.BlobRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BlobRoot")
+		return nil, server.NewDecodeError(err, "BlobRoot")
 	}
-	kzgCommitment, err := DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
+	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "KzgCommitment")
+		return nil, server.NewDecodeError(err, "KzgCommitment")
 	}
-	kzgProof, err := DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
+	kzgProof, err := bytesutil.DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "KzgProof")
+		return nil, server.NewDecodeError(err, "KzgProof")
 	}
 	bsc := &eth.BlindedBlobSidecar{
 		BlockRoot:       blockRoot,

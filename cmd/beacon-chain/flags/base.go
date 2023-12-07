@@ -54,6 +54,11 @@ var (
 			"This is not required if using an IPC connection.",
 		Value: "",
 	}
+	// JwtId is the id field of the JWT claims. The consensus layer client MAY use this to communicate a unique identifier for the individual consensus layer client
+	JwtId = &cli.StringFlag{
+		Name:  "jwt-id",
+		Usage: "JWT claims id. Could be used to identify the client",
+	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
@@ -259,11 +264,5 @@ var (
 		Name:  "slasher-datadir",
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
-	}
-	BlobRetentionEpoch = &cli.Uint64Flag{
-		Name:    "blob-retention-epochs",
-		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
-		Value:   uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
-		Aliases: []string{"extend-blob-retention-epoch"},
 	}
 )

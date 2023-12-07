@@ -7,11 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/container/slice"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	bytesutil2 "github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -51,11 +53,11 @@ func HistoricalSummaryFromConsensus(s *eth.HistoricalSummary) *HistoricalSummary
 func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionChange, error) {
 	change, err := s.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	return &eth.SignedBLSToExecutionChange{
 		Message:   change,
@@ -66,15 +68,15 @@ func (s *SignedBLSToExecutionChange) ToConsensus() (*eth.SignedBLSToExecutionCha
 func (b *BLSToExecutionChange) ToConsensus() (*eth.BLSToExecutionChange, error) {
 	index, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
 	}
-	pubkey, err := DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
+	pubkey, err := bytesutil.DecodeHexWithLength(b.FromBLSPubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "FromBLSPubkey")
+		return nil, server.NewDecodeError(err, "FromBLSPubkey")
 	}
-	executionAddress, err := DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
+	executionAddress, err := bytesutil.DecodeHexWithLength(b.ToExecutionAddress, common.AddressLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "ToExecutionAddress")
+		return nil, server.NewDecodeError(err, "ToExecutionAddress")
 	}
 	return &eth.BLSToExecutionChange{
 		ValidatorIndex:     primitives.ValidatorIndex(index),
@@ -102,7 +104,7 @@ func SignedBLSChangesToConsensus(src []*SignedBLSToExecutionChange) ([]*eth.Sign
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 16)
+	err := slice.VerifyMaxLength(src, 16)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +112,7 @@ func SignedBLSChangesToConsensus(src []*SignedBLSToExecutionChange) ([]*eth.Sign
 	for i, ch := range src {
 		changes[i], err = ch.ToConsensus()
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d]", i))
 		}
 	}
 	return changes, nil
@@ -125,17 +127,17 @@ func SignedBLSChangesFromConsensus(src []*eth.SignedBLSToExecutionChange) []*Sig
 }
 
 func (s *Fork) ToConsensus() (*eth.Fork, error) {
-	previousVersion, err := DecodeHexWithLength(s.PreviousVersion, 4)
+	previousVersion, err := bytesutil.DecodeHexWithLength(s.PreviousVersion, 4)
 	if err != nil {
-		return nil, NewDecodeError(err, "PreviousVersion")
+		return nil, server.NewDecodeError(err, "PreviousVersion")
 	}
-	currentVersion, err := DecodeHexWithLength(s.CurrentVersion, 4)
+	currentVersion, err := bytesutil.DecodeHexWithLength(s.CurrentVersion, 4)
 	if err != nil {
-		return nil, NewDecodeError(err, "CurrentVersion")
+		return nil, server.NewDecodeError(err, "CurrentVersion")
 	}
 	epoch, err := strconv.ParseUint(s.Epoch, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
+		return nil, server.NewDecodeError(err, "Epoch")
 	}
 	return &eth.Fork{
 		PreviousVersion: previousVersion,
@@ -155,11 +157,11 @@ func ForkFromConsensus(f *eth.Fork) *Fork {
 func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistrationV1, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	return &eth.SignedValidatorRegistrationV1{
 		Message:   msg,
@@ -168,21 +170,21 @@ func (s *SignedValidatorRegistration) ToConsensus() (*eth.SignedValidatorRegistr
 }
 
 func (s *ValidatorRegistration) ToConsensus() (*eth.ValidatorRegistrationV1, error) {
-	feeRecipient, err := DecodeHexWithLength(s.FeeRecipient, fieldparams.FeeRecipientLength)
+	feeRecipient, err := bytesutil.DecodeHexWithLength(s.FeeRecipient, fieldparams.FeeRecipientLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "FeeRecipient")
+		return nil, server.NewDecodeError(err, "FeeRecipient")
 	}
-	pubKey, err := DecodeHexWithLength(s.Pubkey, fieldparams.BLSPubkeyLength)
+	pubKey, err := bytesutil.DecodeHexWithLength(s.Pubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Pubkey")
+		return nil, server.NewDecodeError(err, "Pubkey")
 	}
 	gasLimit, err := strconv.ParseUint(s.GasLimit, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "GasLimit")
+		return nil, server.NewDecodeError(err, "GasLimit")
 	}
 	timestamp, err := strconv.ParseUint(s.Timestamp, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Timestamp")
+		return nil, server.NewDecodeError(err, "Timestamp")
 	}
 	return &eth.ValidatorRegistrationV1{
 		FeeRecipient: feeRecipient,
@@ -211,11 +213,11 @@ func SignedValidatorRegistrationFromConsensus(vr *eth.SignedValidatorRegistratio
 func (s *SignedContributionAndProof) ToConsensus() (*eth.SignedContributionAndProof, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.SignedContributionAndProof{
@@ -235,15 +237,15 @@ func SignedContributionAndProofFromConsensus(c *eth.SignedContributionAndProof) 
 func (c *ContributionAndProof) ToConsensus() (*eth.ContributionAndProof, error) {
 	contribution, err := c.Contribution.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Contribution")
+		return nil, server.NewDecodeError(err, "Contribution")
 	}
 	aggregatorIndex, err := strconv.ParseUint(c.AggregatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "AggregatorIndex")
+		return nil, server.NewDecodeError(err, "AggregatorIndex")
 	}
-	selectionProof, err := DecodeHexWithLength(c.SelectionProof, 96)
+	selectionProof, err := bytesutil.DecodeHexWithLength(c.SelectionProof, 96)
 	if err != nil {
-		return nil, NewDecodeError(err, "SelectionProof")
+		return nil, server.NewDecodeError(err, "SelectionProof")
 	}
 
 	return &eth.ContributionAndProof{
@@ -265,23 +267,23 @@ func ContributionAndProofFromConsensus(c *eth.ContributionAndProof) *Contributio
 func (s *SyncCommitteeContribution) ToConsensus() (*eth.SyncCommitteeContribution, error) {
 	slot, err := strconv.ParseUint(s.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
-	bbRoot, err := DecodeHexWithLength(s.BeaconBlockRoot, fieldparams.RootLength)
+	bbRoot, err := bytesutil.DecodeHexWithLength(s.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
+		return nil, server.NewDecodeError(err, "BeaconBlockRoot")
 	}
 	subcommitteeIndex, err := strconv.ParseUint(s.SubcommitteeIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "SubcommitteeIndex")
+		return nil, server.NewDecodeError(err, "SubcommitteeIndex")
 	}
 	aggBits, err := hexutil.Decode(s.AggregationBits)
 	if err != nil {
-		return nil, NewDecodeError(err, "AggregationBits")
+		return nil, server.NewDecodeError(err, "AggregationBits")
 	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.SyncCommitteeContribution{
@@ -306,11 +308,11 @@ func SyncCommitteeContributionFromConsensus(c *eth.SyncCommitteeContribution) *S
 func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregateAttestationAndProof, error) {
 	msg, err := s.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
-	sig, err := DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.SignedAggregateAttestationAndProof{
@@ -322,15 +324,15 @@ func (s *SignedAggregateAttestationAndProof) ToConsensus() (*eth.SignedAggregate
 func (a *AggregateAttestationAndProof) ToConsensus() (*eth.AggregateAttestationAndProof, error) {
 	aggIndex, err := strconv.ParseUint(a.AggregatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "AggregatorIndex")
+		return nil, server.NewDecodeError(err, "AggregatorIndex")
 	}
 	agg, err := a.Aggregate.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Aggregate")
+		return nil, server.NewDecodeError(err, "Aggregate")
 	}
-	proof, err := DecodeHexWithLength(a.SelectionProof, 96)
+	proof, err := bytesutil.DecodeHexWithLength(a.SelectionProof, 96)
 	if err != nil {
-		return nil, NewDecodeError(err, "SelectionProof")
+		return nil, server.NewDecodeError(err, "SelectionProof")
 	}
 	return &eth.AggregateAttestationAndProof{
 		AggregatorIndex: primitives.ValidatorIndex(aggIndex),
@@ -342,15 +344,15 @@ func (a *AggregateAttestationAndProof) ToConsensus() (*eth.AggregateAttestationA
 func (a *Attestation) ToConsensus() (*eth.Attestation, error) {
 	aggBits, err := hexutil.Decode(a.AggregationBits)
 	if err != nil {
-		return nil, NewDecodeError(err, "AggregationBits")
+		return nil, server.NewDecodeError(err, "AggregationBits")
 	}
 	data, err := a.Data.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Data")
+		return nil, server.NewDecodeError(err, "Data")
 	}
-	sig, err := DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.Attestation{
@@ -371,23 +373,23 @@ func AttFromConsensus(a *eth.Attestation) *Attestation {
 func (a *AttestationData) ToConsensus() (*eth.AttestationData, error) {
 	slot, err := strconv.ParseUint(a.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 	committeeIndex, err := strconv.ParseUint(a.CommitteeIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "CommitteeIndex")
+		return nil, server.NewDecodeError(err, "CommitteeIndex")
 	}
-	bbRoot, err := DecodeHexWithLength(a.BeaconBlockRoot, fieldparams.RootLength)
+	bbRoot, err := bytesutil.DecodeHexWithLength(a.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
+		return nil, server.NewDecodeError(err, "BeaconBlockRoot")
 	}
 	source, err := a.Source.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Source")
+		return nil, server.NewDecodeError(err, "Source")
 	}
 	target, err := a.Target.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Target")
+		return nil, server.NewDecodeError(err, "Target")
 	}
 
 	return &eth.AttestationData{
@@ -412,11 +414,11 @@ func AttDataFromConsensus(a *eth.AttestationData) *AttestationData {
 func (c *Checkpoint) ToConsensus() (*eth.Checkpoint, error) {
 	epoch, err := strconv.ParseUint(c.Epoch, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
+		return nil, server.NewDecodeError(err, "Epoch")
 	}
-	root, err := DecodeHexWithLength(c.Root, fieldparams.RootLength)
+	root, err := bytesutil.DecodeHexWithLength(c.Root, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Root")
+		return nil, server.NewDecodeError(err, "Root")
 	}
 
 	return &eth.Checkpoint{
@@ -435,18 +437,18 @@ func CheckpointFromConsensus(c *eth.Checkpoint) *Checkpoint {
 func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubscription, error) {
 	index, err := strconv.ParseUint(s.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
 	}
 	scIndices := make([]uint64, len(s.SyncCommitteeIndices))
 	for i, ix := range s.SyncCommitteeIndices {
 		scIndices[i], err = strconv.ParseUint(ix, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("SyncCommitteeIndices[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("SyncCommitteeIndices[%d]", i))
 		}
 	}
 	epoch, err := strconv.ParseUint(s.UntilEpoch, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "UntilEpoch")
+		return nil, server.NewDecodeError(err, "UntilEpoch")
 	}
 
 	return &validator.SyncCommitteeSubscription{
@@ -459,19 +461,19 @@ func (s *SyncCommitteeSubscription) ToConsensus() (*validator.SyncCommitteeSubsc
 func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeSubscription, error) {
 	valIndex, err := strconv.ParseUint(b.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
 	}
 	committeeIndex, err := strconv.ParseUint(b.CommitteeIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "CommitteeIndex")
+		return nil, server.NewDecodeError(err, "CommitteeIndex")
 	}
 	committeesAtSlot, err := strconv.ParseUint(b.CommitteesAtSlot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "CommitteesAtSlot")
+		return nil, server.NewDecodeError(err, "CommitteesAtSlot")
 	}
 	slot, err := strconv.ParseUint(b.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
 
 	return &validator.BeaconCommitteeSubscription{
@@ -484,13 +486,13 @@ func (b *BeaconCommitteeSubscription) ToConsensus() (*validator.BeaconCommitteeS
 }
 
 func (e *SignedVoluntaryExit) ToConsensus() (*eth.SignedVoluntaryExit, error) {
-	sig, err := DecodeHexWithLength(e.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(e.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 	exit, err := e.Message.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Message")
+		return nil, server.NewDecodeError(err, "Message")
 	}
 
 	return &eth.SignedVoluntaryExit{
@@ -509,11 +511,11 @@ func SignedExitFromConsensus(e *eth.SignedVoluntaryExit) *SignedVoluntaryExit {
 func (e *VoluntaryExit) ToConsensus() (*eth.VoluntaryExit, error) {
 	epoch, err := strconv.ParseUint(e.Epoch, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Epoch")
+		return nil, server.NewDecodeError(err, "Epoch")
 	}
 	valIndex, err := strconv.ParseUint(e.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
 	}
 
 	return &eth.VoluntaryExit{
@@ -532,19 +534,19 @@ func ExitFromConsensus(e *eth.VoluntaryExit) *VoluntaryExit {
 func (m *SyncCommitteeMessage) ToConsensus() (*eth.SyncCommitteeMessage, error) {
 	slot, err := strconv.ParseUint(m.Slot, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "Slot")
+		return nil, server.NewDecodeError(err, "Slot")
 	}
-	root, err := DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
+	root, err := bytesutil.DecodeHexWithLength(m.BeaconBlockRoot, fieldparams.RootLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "BeaconBlockRoot")
+		return nil, server.NewDecodeError(err, "BeaconBlockRoot")
 	}
 	valIndex, err := strconv.ParseUint(m.ValidatorIndex, 10, 64)
 	if err != nil {
-		return nil, NewDecodeError(err, "ValidatorIndex")
+		return nil, server.NewDecodeError(err, "ValidatorIndex")
 	}
-	sig, err := DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(m.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.SyncCommitteeMessage{
@@ -570,15 +572,15 @@ func SyncCommitteeFromConsensus(sc *eth.SyncCommittee) *SyncCommittee {
 func (sc *SyncCommittee) ToConsensus() (*eth.SyncCommittee, error) {
 	var pubKeys [][]byte
 	for _, p := range sc.Pubkeys {
-		pubKey, err := DecodeHexWithLength(p, fieldparams.BLSPubkeyLength)
+		pubKey, err := bytesutil.DecodeHexWithLength(p, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, NewDecodeError(err, "Pubkeys")
+			return nil, server.NewDecodeError(err, "Pubkeys")
 		}
 		pubKeys = append(pubKeys, pubKey)
 	}
-	aggPubKey, err := DecodeHexWithLength(sc.AggregatePubkey, fieldparams.BLSPubkeyLength)
+	aggPubKey, err := bytesutil.DecodeHexWithLength(sc.AggregatePubkey, fieldparams.BLSPubkeyLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "AggregatePubkey")
+		return nil, server.NewDecodeError(err, "AggregatePubkey")
 	}
 	return &eth.SyncCommittee{
 		Pubkeys:         pubKeys,
@@ -597,11 +599,11 @@ func Eth1DataFromConsensus(e1d *eth.Eth1Data) *Eth1Data {
 func (s *ProposerSlashing) ToConsensus() (*eth.ProposerSlashing, error) {
 	h1, err := s.SignedHeader1.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "SignedHeader1")
+		return nil, server.NewDecodeError(err, "SignedHeader1")
 	}
 	h2, err := s.SignedHeader2.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "SignedHeader2")
+		return nil, server.NewDecodeError(err, "SignedHeader2")
 	}
 
 	return &eth.ProposerSlashing{
@@ -613,11 +615,11 @@ func (s *ProposerSlashing) ToConsensus() (*eth.ProposerSlashing, error) {
 func (s *AttesterSlashing) ToConsensus() (*eth.AttesterSlashing, error) {
 	att1, err := s.Attestation1.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Attestation1")
+		return nil, server.NewDecodeError(err, "Attestation1")
 	}
 	att2, err := s.Attestation2.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Attestation2")
+		return nil, server.NewDecodeError(err, "Attestation2")
 	}
 	return &eth.AttesterSlashing{Attestation_1: att1, Attestation_2: att2}, nil
 }
@@ -628,16 +630,16 @@ func (a *IndexedAttestation) ToConsensus() (*eth.IndexedAttestation, error) {
 	for i, ix := range a.AttestingIndices {
 		indices[i], err = strconv.ParseUint(ix, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("AttestingIndices[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("AttestingIndices[%d]", i))
 		}
 	}
 	data, err := a.Data.ToConsensus()
 	if err != nil {
-		return nil, NewDecodeError(err, "Data")
+		return nil, server.NewDecodeError(err, "Data")
 	}
-	sig, err := DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
+	sig, err := bytesutil.DecodeHexWithLength(a.Signature, fieldparams.BLSSignatureLength)
 	if err != nil {
-		return nil, NewDecodeError(err, "Signature")
+		return nil, server.NewDecodeError(err, "Signature")
 	}
 
 	return &eth.IndexedAttestation{
@@ -668,75 +670,75 @@ func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlash
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 16)
+	err := slice.VerifyMaxLength(src, 16)
 	if err != nil {
 		return nil, err
 	}
 	proposerSlashings := make([]*eth.ProposerSlashing, len(src))
 	for i, s := range src {
 		if s == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d]", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d]", i))
 		}
 		if s.SignedHeader1 == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader1", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader1", i))
 		}
 		if s.SignedHeader1.Message == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader1.Message", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader1.Message", i))
 		}
 		if s.SignedHeader2 == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader2", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader2", i))
 		}
 		if s.SignedHeader2.Message == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader2.Message", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].SignedHeader2.Message", i))
 		}
 
-		h1Sig, err := DecodeHexWithLength(s.SignedHeader1.Signature, fieldparams.BLSSignatureLength)
+		h1Sig, err := bytesutil.DecodeHexWithLength(s.SignedHeader1.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Signature", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Signature", i))
 		}
 		h1Slot, err := strconv.ParseUint(s.SignedHeader1.Message.Slot, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.Slot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.Slot", i))
 		}
 		h1ProposerIndex, err := strconv.ParseUint(s.SignedHeader1.Message.ProposerIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.ProposerIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.ProposerIndex", i))
 		}
-		h1ParentRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.ParentRoot, fieldparams.RootLength)
+		h1ParentRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader1.Message.ParentRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.ParentRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.ParentRoot", i))
 		}
-		h1StateRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.StateRoot, fieldparams.RootLength)
+		h1StateRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader1.Message.StateRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.StateRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.StateRoot", i))
 		}
-		h1BodyRoot, err := DecodeHexWithLength(s.SignedHeader1.Message.BodyRoot, fieldparams.RootLength)
+		h1BodyRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader1.Message.BodyRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.BodyRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader1.Message.BodyRoot", i))
 		}
-		h2Sig, err := DecodeHexWithLength(s.SignedHeader2.Signature, fieldparams.BLSSignatureLength)
+		h2Sig, err := bytesutil.DecodeHexWithLength(s.SignedHeader2.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Signature", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Signature", i))
 		}
 		h2Slot, err := strconv.ParseUint(s.SignedHeader2.Message.Slot, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.Slot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.Slot", i))
 		}
 		h2ProposerIndex, err := strconv.ParseUint(s.SignedHeader2.Message.ProposerIndex, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.ProposerIndex", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.ProposerIndex", i))
 		}
-		h2ParentRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.ParentRoot, fieldparams.RootLength)
+		h2ParentRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader2.Message.ParentRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.ParentRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.ParentRoot", i))
 		}
-		h2StateRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.StateRoot, fieldparams.RootLength)
+		h2StateRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader2.Message.StateRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.StateRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.StateRoot", i))
 		}
-		h2BodyRoot, err := DecodeHexWithLength(s.SignedHeader2.Message.BodyRoot, fieldparams.RootLength)
+		h2BodyRoot, err := bytesutil.DecodeHexWithLength(s.SignedHeader2.Message.BodyRoot, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.BodyRoot", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].SignedHeader2.Message.BodyRoot", i))
 		}
 		proposerSlashings[i] = &eth.ProposerSlashing{
 			Header_1: &eth.SignedBeaconBlockHeader{
@@ -797,7 +799,7 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlash
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 2)
+	err := slice.VerifyMaxLength(src, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -805,54 +807,54 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlash
 	attesterSlashings := make([]*eth.AttesterSlashing, len(src))
 	for i, s := range src {
 		if s == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d]", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d]", i))
 		}
 		if s.Attestation1 == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation1", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation1", i))
 		}
 		if s.Attestation2 == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation2", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].Attestation2", i))
 		}
 
-		a1Sig, err := DecodeHexWithLength(s.Attestation1.Signature, fieldparams.BLSSignatureLength)
+		a1Sig, err := bytesutil.DecodeHexWithLength(s.Attestation1.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Signature", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Signature", i))
 		}
-		err = VerifyMaxLength(s.Attestation1.AttestingIndices, 2048)
+		err = slice.VerifyMaxLength(s.Attestation1.AttestingIndices, 2048)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices", i))
 		}
 		a1AttestingIndices := make([]uint64, len(s.Attestation1.AttestingIndices))
 		for j, ix := range s.Attestation1.AttestingIndices {
 			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices[%d]", i, j))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.AttestingIndices[%d]", i, j))
 			}
 			a1AttestingIndices[j] = attestingIndex
 		}
 		a1Data, err := s.Attestation1.Data.ToConsensus()
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Data", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation1.Data", i))
 		}
-		a2Sig, err := DecodeHexWithLength(s.Attestation2.Signature, fieldparams.BLSSignatureLength)
+		a2Sig, err := bytesutil.DecodeHexWithLength(s.Attestation2.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Signature", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Signature", i))
 		}
-		err = VerifyMaxLength(s.Attestation2.AttestingIndices, 2048)
+		err = slice.VerifyMaxLength(s.Attestation2.AttestingIndices, 2048)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices", i))
 		}
 		a2AttestingIndices := make([]uint64, len(s.Attestation2.AttestingIndices))
 		for j, ix := range s.Attestation2.AttestingIndices {
 			attestingIndex, err := strconv.ParseUint(ix, 10, 64)
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices[%d]", i, j))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.AttestingIndices[%d]", i, j))
 			}
 			a2AttestingIndices[j] = attestingIndex
 		}
 		a2Data, err := s.Attestation2.Data.ToConsensus()
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Data", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Attestation2.Data", i))
 		}
 		attesterSlashings[i] = &eth.AttesterSlashing{
 			Attestation_1: &eth.IndexedAttestation{
@@ -925,7 +927,7 @@ func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 128)
+	err := slice.VerifyMaxLength(src, 128)
 	if err != nil {
 		return nil, err
 	}
@@ -934,7 +936,7 @@ func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {
 	for i, a := range src {
 		atts[i], err = a.ToConsensus()
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d]", i))
 		}
 	}
 	return atts, nil
@@ -952,7 +954,7 @@ func DepositsToConsensus(src []*Deposit) ([]*eth.Deposit, error) {
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 16)
+	err := slice.VerifyMaxLength(src, 16)
 	if err != nil {
 		return nil, err
 	}
@@ -960,36 +962,36 @@ func DepositsToConsensus(src []*Deposit) ([]*eth.Deposit, error) {
 	deposits := make([]*eth.Deposit, len(src))
 	for i, d := range src {
 		if d.Data == nil {
-			return nil, NewDecodeError(errNilValue, fmt.Sprintf("[%d].Data", i))
+			return nil, server.NewDecodeError(errNilValue, fmt.Sprintf("[%d].Data", i))
 		}
 
-		err = VerifyMaxLength(d.Proof, 33)
+		err = slice.VerifyMaxLength(d.Proof, 33)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Proof", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Proof", i))
 		}
 		proof := make([][]byte, len(d.Proof))
 		for j, p := range d.Proof {
 			var err error
-			proof[j], err = DecodeHexWithLength(p, fieldparams.RootLength)
+			proof[j], err = bytesutil.DecodeHexWithLength(p, fieldparams.RootLength)
 			if err != nil {
-				return nil, NewDecodeError(err, fmt.Sprintf("[%d].Proof[%d]", i, j))
+				return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Proof[%d]", i, j))
 			}
 		}
-		pubkey, err := DecodeHexWithLength(d.Data.Pubkey, fieldparams.BLSPubkeyLength)
+		pubkey, err := bytesutil.DecodeHexWithLength(d.Data.Pubkey, fieldparams.BLSPubkeyLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Pubkey", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Pubkey", i))
 		}
-		withdrawalCreds, err := DecodeHexWithLength(d.Data.WithdrawalCredentials, fieldparams.RootLength)
+		withdrawalCreds, err := bytesutil.DecodeHexWithLength(d.Data.WithdrawalCredentials, fieldparams.RootLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].WithdrawalCredentials", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].WithdrawalCredentials", i))
 		}
 		amount, err := strconv.ParseUint(d.Data.Amount, 10, 64)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Amount", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Amount", i))
 		}
-		sig, err := DecodeHexWithLength(d.Data.Signature, fieldparams.BLSSignatureLength)
+		sig, err := bytesutil.DecodeHexWithLength(d.Data.Signature, fieldparams.BLSSignatureLength)
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d].Signature", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d].Signature", i))
 		}
 		deposits[i] = &eth.Deposit{
 			Proof: proof,
@@ -1028,7 +1030,7 @@ func SignedExitsToConsensus(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryE
 	if src == nil {
 		return nil, errNilValue
 	}
-	err := VerifyMaxLength(src, 16)
+	err := slice.VerifyMaxLength(src, 16)
 	if err != nil {
 		return nil, err
 	}
@@ -1037,7 +1039,7 @@ func SignedExitsToConsensus(src []*SignedVoluntaryExit) ([]*eth.SignedVoluntaryE
 	for i, e := range src {
 		exits[i], err = e.ToConsensus()
 		if err != nil {
-			return nil, NewDecodeError(err, fmt.Sprintf("[%d]", i))
+			return nil, server.NewDecodeError(err, fmt.Sprintf("[%d]", i))
 		}
 	}
 	return exits, nil
@@ -1058,7 +1060,7 @@ func SignedExitsFromConsensus(src []*eth.SignedVoluntaryExit) []*SignedVoluntary
 }
 
 func sszBytesToUint256String(b []byte) (string, error) {
-	bi := bytesutil2.LittleEndianBytesToBigInt(b)
+	bi := bytesutil.LittleEndianBytesToBigInt(b)
 	if !math.IsValidUint256(bi) {
 		return "", fmt.Errorf("%s is not a valid Uint256", bi.String())
 	}
