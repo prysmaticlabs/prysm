@@ -37,8 +37,7 @@ func TestBlobs(t *testing.T) {
 	db := testDB.SetupDB(t)
 	denebBlock, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 123, 4)
 	require.NoError(t, db.SaveBlock(context.Background(), denebBlock))
-	_, bs, err := filesystem.NewEphemeralBlobStorageWithFs(t)
-	require.NoError(t, err)
+	bs := filesystem.NewEphemeralBlobStorage(t)
 	testSidecars, err := verification.BlobSidecarSliceNoop(blobs)
 	require.NoError(t, err)
 	for i := range testSidecars {
@@ -217,6 +216,26 @@ func TestBlobs(t *testing.T) {
 		assert.Equal(t, hexutil.Encode(blobs[2].Blob), sidecar.Blob)
 		assert.Equal(t, hexutil.Encode(blobs[2].KzgCommitment), sidecar.KzgCommitment)
 		assert.Equal(t, hexutil.Encode(blobs[2].KzgProof), sidecar.KzgProof)
+	})
+	t.Run("no blobs returns an empty array", func(t *testing.T) {
+		u := "http://foo.example/123"
+		request := httptest.NewRequest("GET", u, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
+			BeaconDB:         db,
+			BlobStorage:      filesystem.NewEphemeralBlobStorage(t), // new ephemeral storage
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+
+		s.Blobs(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &SidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, len(resp.Data), 0)
 	})
 	t.Run("slot before Deneb fork", func(t *testing.T) {
 		u := "http://foo.example/31"

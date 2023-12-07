@@ -267,4 +267,14 @@ func TestGetBlob(t *testing.T) {
 		assert.DeepEqual(t, blobs[2].KzgCommitment, sidecar.KzgCommitment)
 		assert.DeepEqual(t, blobs[2].KzgProof, sidecar.KzgProof)
 	})
+	t.Run("no blobs returns an empty array", func(t *testing.T) {
+		blocker := &BeaconDbBlocker{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &ethpbalpha.Checkpoint{Root: blockRoot[:]}},
+			BeaconDB:         db,
+			BlobStorage:      filesystem.NewEphemeralBlobStorage(t),
+		}
+		verifiedBlobs, rpcErr := blocker.Blobs(ctx, "123", nil)
+		assert.Equal(t, rpcErr == nil, true)
+		require.Equal(t, 0, len(verifiedBlobs))
+	})
 }
