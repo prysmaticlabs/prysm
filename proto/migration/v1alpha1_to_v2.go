@@ -96,100 +96,14 @@ func V1Alpha1SignedBeaconBlockDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBl
 	return v2Block, nil
 }
 
-// V1Alpha1BlobSidecarsToV2 converts an array of v1alpha1 blinded blob sidecars to its v2 equivalent.
-func V1Alpha1BlobSidecarsToV2(v1alpha1Blobs []*ethpbalpha.DeprecatedBlobSidecar) ([]*ethpbv2.BlobSidecar, error) {
-	v2Blobs := make([]*ethpbv2.BlobSidecar, len(v1alpha1Blobs))
-	for index, v1Blob := range v1alpha1Blobs {
-		marshaledBlob, err := proto.Marshal(v1Blob)
-		if err != nil {
-			return nil, errors.Wrap(err, "could not marshal blob sidecar")
-		}
-		v2Blob := &ethpbv2.BlobSidecar{}
-		if err := proto.Unmarshal(marshaledBlob, v2Blob); err != nil {
-			return nil, errors.Wrap(err, "could not unmarshal blob sidecar")
-		}
-		v2Blobs[index] = v2Blob
-	}
-	return v2Blobs, nil
-}
-
-// V1Alpha1SignedBlobsToV2 converts an array of v1alpha1 objects to its v2 SignedBlobSidecar equivalent.
-func V1Alpha1SignedBlobsToV2(sidecars []*ethpbalpha.SignedBlobSidecar) []*ethpbv2.SignedBlobSidecar {
-	result := make([]*ethpbv2.SignedBlobSidecar, len(sidecars))
-	for i, sc := range sidecars {
-		result[i] = V1Alpha1SignedBlobToV2(sc)
-	}
-	return result
-}
-
-// V1Alpha1SignedBlobToV2 converts a v1alpha1 object to its v2 SignedBlobSidecar equivalent.
-func V1Alpha1SignedBlobToV2(sidecar *ethpbalpha.SignedBlobSidecar) *ethpbv2.SignedBlobSidecar {
-	if sidecar == nil || sidecar.Message == nil {
-		return &ethpbv2.SignedBlobSidecar{}
-	}
-	return &ethpbv2.SignedBlobSidecar{
-		Message: &ethpbv2.BlobSidecar{
-			BlockRoot:       bytesutil.SafeCopyBytes(sidecar.Message.BlockRoot),
-			Index:           sidecar.Message.Index,
-			Slot:            sidecar.Message.Slot,
-			BlockParentRoot: bytesutil.SafeCopyBytes(sidecar.Message.BlockParentRoot),
-			ProposerIndex:   sidecar.Message.ProposerIndex,
-			Blob:            bytesutil.SafeCopyBytes(sidecar.Message.Blob),
-			KzgCommitment:   bytesutil.SafeCopyBytes(sidecar.Message.KzgCommitment),
-			KzgProof:        bytesutil.SafeCopyBytes(sidecar.Message.KzgProof),
-		},
-		Signature: bytesutil.SafeCopyBytes(sidecar.Signature),
-	}
-}
-
-// V1Alpha1BeaconBlockDenebAndBlobsToV2 converts a v1alpha1 Deneb beacon block and blobs to a v2
+// V1Alpha1SignedBeaconBlockContentsDenebToV2 converts a v1alpha1 signed Deneb beacon block to a v2
 // Deneb block.
-func V1Alpha1BeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.BeaconBlockAndBlobsDeneb) (*ethpbv2.BeaconBlockContentsDeneb, error) {
-	v2Block, err := V1Alpha1BeaconBlockDenebToV2(v1alpha1Block.Block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	v2Blobs, err := V1Alpha1BlobSidecarsToV2(v1alpha1Block.Blobs)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert blobs")
-	}
-	return &ethpbv2.BeaconBlockContentsDeneb{Block: v2Block, BlobSidecars: v2Blobs}, nil
-}
-
-// V1Alpha1SignedBeaconBlockDenebAndBlobsToV2 converts a signed v1alpha1 Deneb beacon block and blobs to a v2
-// Deneb block.
-func V1Alpha1SignedBeaconBlockDenebAndBlobsToV2(v1alpha1Block *ethpbalpha.SignedBeaconBlockAndBlobsDeneb) (*ethpbv2.SignedBeaconBlockContentsDeneb, error) {
-	v2Block, err := V1Alpha1SignedBeaconBlockDenebToV2(v1alpha1Block.Block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert block")
-	}
-	v2Blobs := V1Alpha1SignedBlobsToV2(v1alpha1Block.Blobs)
-	return &ethpbv2.SignedBeaconBlockContentsDeneb{
-		SignedBlock:        v2Block,
-		SignedBlobSidecars: v2Blobs,
-	}, nil
-}
-
-// V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded converts a v1alpha1 Blinded Bellatrix beacon block to a v2 Blinded Bellatrix block.
-func V1Alpha1BeaconBlockBlindedBellatrixToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockBellatrix) (*ethpbv2.BlindedBeaconBlockBellatrix, error) {
+func V1Alpha1SignedBeaconBlockContentsDenebToV2(v1alpha1Block *ethpbalpha.SignedBeaconBlockContentsDeneb) (*ethpbv2.SignedBeaconBlockContentsDeneb, error) {
 	marshaledBlk, err := proto.Marshal(v1alpha1Block)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	v2Block := &ethpbv2.BlindedBeaconBlockBellatrix{}
-	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
-		return nil, errors.Wrap(err, "could not unmarshal block")
-	}
-	return v2Block, nil
-}
-
-// V1Alpha1BeaconBlockBlindedCapellaToV2Blinded converts a v1alpha1 Blinded Capella beacon block to a v2 Blinded Capella block.
-func V1Alpha1BeaconBlockBlindedCapellaToV2Blinded(v1alpha1Block *ethpbalpha.BlindedBeaconBlockCapella) (*ethpbv2.BlindedBeaconBlockCapella, error) {
-	marshaledBlk, err := proto.Marshal(v1alpha1Block)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal block")
-	}
-	v2Block := &ethpbv2.BlindedBeaconBlockCapella{}
+	v2Block := &ethpbv2.SignedBeaconBlockContentsDeneb{}
 	if err := proto.Unmarshal(marshaledBlk, v2Block); err != nil {
 		return nil, errors.Wrap(err, "could not unmarshal block")
 	}

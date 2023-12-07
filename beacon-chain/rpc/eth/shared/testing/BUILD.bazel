@@ -6,5 +6,4 @@ go_library(
     srcs = ["json.go"],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing",
     visibility = ["//visibility:public"],
-    deps = ["@com_github_ethereum_go_ethereum//common/hexutil:go_default_library"],
 )

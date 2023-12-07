@@ -168,13 +168,15 @@ type BlindedBeaconBlockBodyCapella struct {
 }
 
 type SignedBeaconBlockContentsDeneb struct {
-	SignedBlock        *SignedBeaconBlockDeneb `json:"signed_block" validate:"required"`
-	SignedBlobSidecars []*SignedBlobSidecar    `json:"signed_blob_sidecars"  validate:"dive"`
+	SignedBlock *SignedBeaconBlockDeneb `json:"signed_block" `
+	KzgProofs   []string                `json:"kzg_proofs"`
+	Blobs       []string                `json:"blobs"`
 }
 
 type BeaconBlockContentsDeneb struct {
-	Block        *BeaconBlockDeneb `json:"block" validate:"required"`
-	BlobSidecars []*BlobSidecar    `json:"blob_sidecars" validate:"dive"`
+	Block     *BeaconBlockDeneb `json:"block" `
+	KzgProofs []string          `json:"kzg_proofs"`
+	Blobs     []string          `json:"blobs"`
 }
 
 type SignedBeaconBlockDeneb struct {
@@ -225,16 +227,6 @@ type ExecutionPayloadDeneb struct {
 	Withdrawals   []*Withdrawal `json:"withdrawals" validate:"required,dive"`
 }
 
-type SignedBlindedBeaconBlockContentsDeneb struct {
-	SignedBlindedBlock        *SignedBlindedBeaconBlockDeneb `json:"signed_blinded_block" validate:"required"`
-	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecar    `json:"signed_blinded_blob_sidecars" validate:"dive"`
-}
-
-type BlindedBeaconBlockContentsDeneb struct {
-	BlindedBlock        *BlindedBeaconBlockDeneb `json:"blinded_block" validate:"required"`
-	BlindedBlobSidecars []*BlindedBlobSidecar    `json:"blinded_blob_sidecars" validate:"dive"`
-}
-
 type BlindedBeaconBlockDeneb struct {
 	Slot          string                       `json:"slot" validate:"required"`
 	ProposerIndex string                       `json:"proposer_index" validate:"required"`
@@ -261,38 +253,6 @@ type BlindedBeaconBlockBodyDeneb struct {
 	ExecutionPayloadHeader *ExecutionPayloadHeaderDeneb  `json:"execution_payload_header" validate:"required"`
 	BlsToExecutionChanges  []*SignedBLSToExecutionChange `json:"bls_to_execution_changes" validate:"required,dive"`
 	BlobKzgCommitments     []string                      `json:"blob_kzg_commitments" validate:"required,dive,hexadecimal"`
-}
-
-type SignedBlindedBlobSidecar struct {
-	Message   *BlindedBlobSidecar `json:"message" validate:"required"`
-	Signature string              `json:"signature" validate:"required"`
-}
-
-type SignedBlobSidecar struct {
-	Message   *BlobSidecar `json:"message" validate:"required"`
-	Signature string       `json:"signature" validate:"required"`
-}
-
-type BlindedBlobSidecar struct {
-	BlockRoot       string `json:"block_root" validate:"required"`
-	Index           string `json:"index" validate:"required"`
-	Slot            string `json:"slot" validate:"required"`
-	BlockParentRoot string `json:"block_parent_root" validate:"required"`
-	ProposerIndex   string `json:"proposer_index" validate:"required"`
-	BlobRoot        string `json:"blob_root" validate:"required"`
-	KzgCommitment   string `json:"kzg_commitment" validate:"required"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-	KzgProof        string `json:"kzg_proof" validate:"required"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-}
-
-type BlobSidecar struct {
-	BlockRoot       string `json:"block_root" validate:"required"`
-	Index           string `json:"index" validate:"required"`
-	Slot            string `json:"slot" validate:"required"`
-	BlockParentRoot string `json:"block_parent_root" validate:"required"`
-	ProposerIndex   string `json:"proposer_index" validate:"required"`
-	Blob            string `json:"blob" validate:"required"`           // pattern: "^0x[a-fA-F0-9]{262144}$"
-	KzgCommitment   string `json:"kzg_commitment" validate:"required"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-	KzgProof        string `json:"kzg_proof" validate:"required"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
 }
 
 type Eth1Data struct {

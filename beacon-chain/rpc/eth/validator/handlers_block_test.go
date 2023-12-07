@@ -242,13 +242,13 @@ func TestProduceBlockV2(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		mockRewards := &rewards.BlockRewards{Total: "10"}
@@ -553,13 +553,13 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
@@ -826,15 +826,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
-		jsonBytes, err := json.Marshal(block.ToUnsigned())
+		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		mockRewards := &rewards.BlockRewards{Total: "10"}
@@ -1170,13 +1170,13 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
@@ -1193,7 +1193,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		g, err := block.ToUnsigned().ToGeneric()
+		g, err := block.Message.ToGeneric()
 		require.NoError(t, err)
 		bl, ok := g.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 		require.Equal(t, true, ok)
