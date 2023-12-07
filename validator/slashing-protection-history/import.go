@@ -119,13 +119,45 @@ func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams
 			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
 		)
 
-		for _, proposal := range proposalHistory.Proposals {
-			if err := bar.Add(1); err != nil {
-				log.WithError(err).Debug("Could not increase progress bar")
-			}
+		if validatorDB.SlashingProtectionType() == kv.Minimal {
+			for _, p := range proposalHistory.Proposals {
+				if err := bar.Add(1); err != nil {
+					log.WithError(err).Debug("Could not increase progress bar")
+				}
 
-			if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
-				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+				lss, lspExists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+				if err != nil {
+					return errors.Wrap(err, "could not retrieve lowest signed proposal from db")
+				}
+
+				hss, hspExists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
+				if err != nil {
+					return errors.Wrap(err, "could not retrieve highest signed proposal from db")
+				}
+
+				if lspExists != hspExists {
+					return errors.New("lowest signed proposal and highest signed proposal do not exist together")
+				}
+
+				if lss != hss {
+					return errors.New("lowest signed proposal and highest signed proposal do not match")
+				}
+
+				if !hspExists || hspExists && p.Slot > hss {
+					if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, p.Slot, p.SigningRoot); err != nil {
+						return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+					}
+				}
+			}
+		} else {
+			for _, proposal := range proposalHistory.Proposals {
+				if err := bar.Add(1); err != nil {
+					log.WithError(err).Debug("Could not increase progress bar")
+				}
+
+				if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+					return errors.Wrap(err, "could not save proposal history from imported JSON to database")
+				}
 			}
 		}
 	}
@@ -139,22 +171,59 @@ func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldpa
 		"Importing attesting history for validator public keys",
 	)
 
-	for pubKey, attestations := range attestingHistoryByPubKey {
-		if err := bar.Add(1); err != nil {
-			log.WithError(err).Debug("Could not increase progress bar")
+	if validatorDB.SlashingProtectionType() == kv.Minimal {
+		for pubKey, attestations := range attestingHistoryByPubKey {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
+
+			for _, attestation := range attestations {
+				lsse, lsseExists, err := validatorDB.LowestSignedSourceEpoch(ctx, pubKey)
+				if err != nil {
+					return errors.Wrap(err, "could not retrieve lowest signed source epoch from db")
+				}
+
+				lste, lsteExists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKey)
+				if err != nil {
+					return errors.Wrap(err, "could not retrieve lowest signed target epoch from db")
+				}
+
+				if !lsteExists || lsteExists && lste < attestation.Target {
+					if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, [][]byte{attestation.SigningRoot}, []*ethpb.IndexedAttestation{createAttestation(attestation.Source, attestation.Target)}); err != nil {
+						return errors.Wrap(err, "could not save attestations from imported JSON to database")
+					}
+				}
+
+				if lsseExists {
+					maxSource := lsse
+					if lsse < attestation.Source {
+						maxSource = attestation.Source
+					}
+
+					if err := validatorDB.SaveLowestSignedSourceEpochForPubKey(ctx, pubKey, maxSource); err != nil {
+						return errors.Wrap(err, "could not save lowest signed source epoch from imported JSON to database")
+					}
+				}
+			}
 		}
+	} else {
+		for pubKey, attestations := range attestingHistoryByPubKey {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
 
-		indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
-		signingRoots := make([][]byte, len(attestations))
+			indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
+			signingRoots := make([][]byte, len(attestations))
 
-		for i, att := range attestations {
-			indexedAtt := createAttestation(att.Source, att.Target)
-			indexedAtts[i] = indexedAtt
-			signingRoots[i] = att.SigningRoot
-		}
+			for i, att := range attestations {
+				indexedAtt := createAttestation(att.Source, att.Target)
+				indexedAtts[i] = indexedAtt
+				signingRoots[i] = att.SigningRoot
+			}
 
-		if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
-			return errors.Wrap(err, "could not save attestations from imported JSON to database")
+			if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
+				return errors.Wrap(err, "could not save attestations from imported JSON to database")
+			}
 		}
 	}
 
