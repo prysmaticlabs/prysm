@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
@@ -97,18 +98,18 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var validAttestations []*eth.Attestation
-	var attFailures []*shared.IndexedVerificationFailure
+	var attFailures []*server.IndexedVerificationFailure
 	for i, sourceAtt := range req.Data {
 		att, err := sourceAtt.ToConsensus()
 		if err != nil {
-			attFailures = append(attFailures, &shared.IndexedVerificationFailure{
+			attFailures = append(attFailures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not convert request attestation to consensus attestation: " + err.Error(),
 			})
 			continue
 		}
 		if _, err = bls.SignatureFromBytes(att.Signature); err != nil {
-			attFailures = append(attFailures, &shared.IndexedVerificationFailure{
+			attFailures = append(attFailures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Incorrect attestation signature: " + err.Error(),
 			})
@@ -165,7 +166,7 @@ func (s *Server) SubmitAttestations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(attFailures) > 0 {
-		failuresErr := &shared.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedVerificationFailureError{
 			Code:     http.StatusBadRequest,
 			Message:  "One or more attestations failed validation",
 			Failures: attFailures,
@@ -273,11 +274,11 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	var validMessages []*eth.SyncCommitteeMessage
-	var msgFailures []*shared.IndexedVerificationFailure
+	var msgFailures []*server.IndexedVerificationFailure
 	for i, sourceMsg := range req.Data {
 		msg, err := sourceMsg.ToConsensus()
 		if err != nil {
-			msgFailures = append(msgFailures, &shared.IndexedVerificationFailure{
+			msgFailures = append(msgFailures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not convert request message to consensus message: " + err.Error(),
 			})
@@ -294,7 +295,7 @@ func (s *Server) SubmitSyncCommitteeSignatures(w http.ResponseWriter, r *http.Re
 	}
 
 	if len(msgFailures) > 0 {
-		failuresErr := &shared.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedVerificationFailureError{
 			Code:     http.StatusBadRequest,
 			Message:  "One or more messages failed validation",
 			Failures: msgFailures,
@@ -313,7 +314,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 		httputil.HandleError(w, fmt.Sprintf("Could not get head state: %v", err), http.StatusInternalServerError)
 		return
 	}
-	var failures []*shared.IndexedVerificationFailure
+	var failures []*server.IndexedVerificationFailure
 	var toBroadcast []*eth.SignedBLSToExecutionChange
 
 	var req []*shared.SignedBLSToExecutionChange
@@ -334,7 +335,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	for i, change := range req {
 		sbls, err := change.ToConsensus()
 		if err != nil {
-			failures = append(failures, &shared.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Unable to decode SignedBLSToExecutionChange: " + err.Error(),
 			})
@@ -342,14 +343,14 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 		}
 		_, err = blocks.ValidateBLSToExecutionChange(st, sbls)
 		if err != nil {
-			failures = append(failures, &shared.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not validate SignedBLSToExecutionChange: " + err.Error(),
 			})
 			continue
 		}
 		if err := blocks.VerifyBLSChangeSignature(st, sbls); err != nil {
-			failures = append(failures, &shared.IndexedVerificationFailure{
+			failures = append(failures, &server.IndexedVerificationFailure{
 				Index:   i,
 				Message: "Could not validate signature: " + err.Error(),
 			})
@@ -368,7 +369,7 @@ func (s *Server) SubmitBLSToExecutionChanges(w http.ResponseWriter, r *http.Requ
 	}
 	go s.broadcastBLSChanges(ctx, toBroadcast)
 	if len(failures) > 0 {
-		failuresErr := &shared.IndexedVerificationFailureError{
+		failuresErr := &server.IndexedVerificationFailureError{
 			Code:     http.StatusBadRequest,
 			Message:  "One or more BLSToExecutionChange failed validation",
 			Failures: failures,

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
@@ -305,7 +306,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &shared.IndexedVerificationFailureError{}
+		e := &server.IndexedVerificationFailureError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		require.Equal(t, 1, len(e.Failures))
