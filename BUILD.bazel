@@ -85,6 +85,7 @@ workspace_binary(
 
 STATICCHECK_ANALYZERS = [
     # Enabled static checks. See https://staticcheck.dev/docs/checks/
+    # Please. keep this list sorted. Don't be a bad person by inserting stuff randomly.
     "sa1000",
     "sa1001",
     "sa1002",
