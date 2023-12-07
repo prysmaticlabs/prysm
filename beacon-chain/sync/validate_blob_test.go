@@ -239,7 +239,7 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	//_, scs := util.GenerateTestDenebBlockWithSidecar(t, r, chainService.CurrentSlot()+1, 1)
 	header, err := signedBb.Header()
 	require.NoError(t, err)
-	sc := util.GenerateTestDenebBlobSidecar(t, r, header, 0, make([]byte, 48))
+	sc := util.GenerateTestDenebBlobSidecar(t, r, header, 0, make([]byte, 48), make([][]byte, 0))
 	b := sc.BlobSidecar
 
 	buf := new(bytes.Buffer)

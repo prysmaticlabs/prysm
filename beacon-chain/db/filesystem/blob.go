@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -218,26 +219,34 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	}
 	for _, folder := range folders {
 		if folder.IsDir() {
-			f, err := bs.fs.Open(folder.Name() + "/0." + sszExt)
-			if err != nil {
+			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
-			defer func(f afero.File) {
-				err := f.Close()
-				if err != nil {
-					log.WithError(err).Errorf("Could not close blob file")
-				}
-			}(f)
+		}
+	}
+	return nil
+}
 
-			slot, err := slotFromBlob(f)
-			if err != nil {
-				return err
-			}
-			if slot < (currentSlot - retentionSlots) {
-				if err = bs.fs.RemoveAll(folder.Name()); err != nil {
-					return errors.Wrapf(err, "failed to delete blob %s", f.Name())
-				}
-			}
+// processFolder will delete the folder of blobs if the blob slot is outside the
+// retention period. We determine the slot by looking at the first blob in the folder.
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
+	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			log.WithError(err).Errorf("Could not close blob file")
+		}
+	}()
+
+	slot, err := slotFromBlob(f)
+	if err != nil {
+		return err
+	}
+	if slot < (currentSlot - retentionSlots) {
+		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
+			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
 		}
 	}
 	return nil
