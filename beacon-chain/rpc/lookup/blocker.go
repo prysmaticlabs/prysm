@@ -220,12 +220,12 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 	}
 	// returns empty slice if there are no indices
 	blobs := make([]*blocks.VerifiedROBlob, len(indices))
-	for _, index := range indices {
+	for i, index := range indices {
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
 			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
 		}
-		blobs = append(blobs, &vblob)
+		blobs[i] = &vblob
 	}
 	return blobs, nil
 }
