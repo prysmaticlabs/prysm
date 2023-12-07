@@ -80,7 +80,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 			}
 		}()
 		missingParentBlobSidecarCount.Inc()
-		return pubsub.ValidationIgnore, nil
+		return pubsub.ValidationIgnore, err
 	}
 
 	if err := vBlob.SidecarParentValid(s.hasBadBlock); err != nil {
