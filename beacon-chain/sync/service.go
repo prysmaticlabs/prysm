@@ -33,6 +33,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -151,6 +152,8 @@ type Service struct {
 	signatureChan                    chan *signatureVerifier
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
+	verifierWaiter                   *verification.InitializerWaiter
+	verifier                         *verification.Initializer
 }
 
 // NewService initializes new regular sync service.
@@ -203,6 +206,13 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 
 // Start the regular sync service.
 func (s *Service) Start() {
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.verifier = v
+
 	go s.verifierRoutine()
 	go s.registerHandlers()
 
