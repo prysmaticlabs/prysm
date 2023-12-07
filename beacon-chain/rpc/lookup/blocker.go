@@ -139,7 +139,6 @@ func (p *BeaconDbBlocker) Block(ctx context.Context, id []byte) (interfaces.Read
 //   - <hex encoded block root with '0x' prefix>
 //   - <block root>
 func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64) ([]*blocks.VerifiedROBlob, *core.RpcError) {
-	var blobs []*blocks.VerifiedROBlob
 	var root []byte
 	switch id {
 	case "genesis":
@@ -219,17 +218,14 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 			}
 		}
 	}
-
-	if len(indices) == 0 {
-		return nil, &core.RpcError{Err: errors.New("no blobs found"), Reason: core.Internal}
-	}
-
-	for _, index := range indices {
+	// returns empty slice if there are no indices
+	blobs := make([]*blocks.VerifiedROBlob, len(indices))
+	for i, index := range indices {
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
 			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
 		}
-		blobs = append(blobs, &vblob)
+		blobs[i] = &vblob
 	}
 	return blobs, nil
 }
