@@ -53,6 +53,11 @@ func (b *ROBlob) ParentRoot() [32]byte {
 	return bytesutil.ToBytes32(b.SignedBlockHeader.Header.ParentRoot)
 }
 
+// ParentRootSlice returns the parent root as a byte slice.
+func (b *ROBlob) ParentRootSlice() []byte {
+	return b.SignedBlockHeader.Header.ParentRoot
+}
+
 // BodyRoot returns the body root of the blob sidecar.
 func (b *ROBlob) BodyRoot() [32]byte {
 	return bytesutil.ToBytes32(b.SignedBlockHeader.Header.BodyRoot)

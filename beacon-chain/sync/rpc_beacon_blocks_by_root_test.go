@@ -437,8 +437,8 @@ func TestConstructPendingBlobsRequest(t *testing.T) {
 		Signature: bytesutil.PadTo([]byte{}, 96),
 	}
 	blobSidecars := []blocks.ROBlob{
-		util.GenerateTestDenebBlobSidecar(t, root, header, 0, bytesutil.PadTo([]byte{}, 48)),
-		util.GenerateTestDenebBlobSidecar(t, root, header, 2, bytesutil.PadTo([]byte{}, 48)),
+		util.GenerateTestDenebBlobSidecar(t, root, header, 0, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
+		util.GenerateTestDenebBlobSidecar(t, root, header, 2, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
 	}
 	vscs, err := verification.BlobSidecarSliceNoop(blobSidecars)
 	require.NoError(t, err)

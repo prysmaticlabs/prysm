@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg",
     visibility = ["//visibility:public"],
     deps = [
+        "//consensus-types/blocks:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_crate_crypto_go_kzg_4844//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
