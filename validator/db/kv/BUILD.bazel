@@ -55,6 +55,7 @@ go_test(
     srcs = [
         "attester_protection_test.go",
         "backup_test.go",
+        "db_test.go",
         "deprecated_attester_protection_test.go",
         "eip_blacklisted_keys_test.go",
         "genesis_test.go",

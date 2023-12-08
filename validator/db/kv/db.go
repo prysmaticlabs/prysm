@@ -224,8 +224,91 @@ func createBoltCollector(db *bolt.DB) prometheus.Collector {
 	return prombolt.New("boltDB", db, blockedBuckets...)
 }
 
+// emptyBucket deletes all keys in a bucket.
 func emptyBucket(bucket *bolt.Bucket) error {
 	return bucket.ForEach(func(k, _ []byte) error {
 		return bucket.Delete(k)
 	})
+}
+
+// isSlashingProtectionMinmal returns true if the slashing protection type is minimal, and false otherwise (as defined in EIP-3076).
+// The slashing protection type is minimal if:
+// 1. proposal-history-bucket-interchange -> <pubkey> -> <slot> contains only one <slot> per <pubkey>
+// 2. pubkeys-bucket --> <pubkey> --> att-signing-roots-bucket --> <target epoch> contains only one <target epoch> per <pubkey>, and
+// 3. pubkeys-bucket --> <pubkey> --> att-source-epochs-bucket --> <source epoch> contains only one <source epoch> per <pubkey>, and
+// 4. pubkeys-bucket --> <pubkey> --> att-target-epochs-bucket --> <target epoch> contains only one <target epoch> per <pubkey>
+// Otherwise, the slashing protection type is considered as complete.
+func IsSlashingProtectionMinimal(s *Store) (bool, error) {
+	isMinimalDatabase := true
+
+	if err := s.view(func(tx *bolt.Tx) error {
+		// Proposals
+		hpBucket := tx.Bucket(historicProposalsBucket)
+		if hpBucket == nil {
+			return errors.New("proposals bucket is nil")
+		}
+
+		if err := hpBucket.ForEach(func(pubKey, _ []byte) error {
+			pubkeyBucket := hpBucket.Bucket(pubKey)
+			if pubkeyBucket == nil {
+				return errors.New("pubkey bucket is nil")
+			}
+
+			stats := pubkeyBucket.Stats()
+			slotsCount := stats.KeyN
+
+			if slotsCount > 1 {
+				isMinimalDatabase = false
+
+				// Return an error to break the forEach loop.
+				return errors.New("non minimal database")
+			}
+
+			return nil
+		}); isMinimalDatabase && err != nil {
+			return errors.Wrapf(err, "failed to determine slashing protection type (proposals)")
+		}
+
+		if !isMinimalDatabase {
+			return nil
+		}
+
+		// Attestations
+		pksBucket := tx.Bucket(pubKeysBucket)
+		if pksBucket == nil {
+			return errors.New("pubkeys bucket is nil")
+		}
+
+		if err := pksBucket.ForEach(func(pubKey []byte, _ []byte) error {
+			pkBucket := pksBucket.Bucket(pubKey)
+			if pkBucket == nil {
+				return errors.New("pubkey bucket is nil")
+			}
+
+			for _, bucketName := range [][]byte{attestationSigningRootsBucket, attestationSourceEpochsBucket, attestationTargetEpochsBucket} {
+				bucket := pkBucket.Bucket(bucketName)
+				if bucket != nil {
+					stats := bucket.Stats()
+					epochs := stats.KeyN
+
+					if epochs > 1 {
+						isMinimalDatabase = false
+
+						// Return an error to break the forEach loop.
+						return errors.New("non minimal database")
+					}
+				}
+			}
+
+			return nil
+		}); isMinimalDatabase && err != nil {
+			return errors.Wrapf(err, "failed to determine slashing protection type")
+		}
+
+		return nil
+	}); err != nil {
+		return false, errors.Wrapf(err, "failed to determine slashing protection type (attestations)")
+	}
+
+	return isMinimalDatabase, nil
 }
