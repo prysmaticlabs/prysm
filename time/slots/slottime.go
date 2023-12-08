@@ -176,12 +176,12 @@ func Since(time time.Time) primitives.Slot {
 
 // CurrentSlot returns the current slot as determined by the local clock and
 // provided genesis time.
-func CurrentSlot(genesisTimeSec uint64) primitives.Slot {
+func CurrentSlot(genesisTime uint64) primitives.Slot {
 	now := uint64(prysmTime.Now().Unix())
-	if now < genesisTimeSec {
+	if now < genesisTime {
 		return 0
 	}
-	return primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
+	return primitives.Slot((now - genesisTime) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // Duration computes the span of time between two instants, represented as Slots.
