@@ -2081,6 +2081,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	// pubkey5 => Nothing       - Status: unknown (already in `v.validatorIndex`)
 	// pubkey6 => Nothing       - Status: pending (already in `v.validatorIndex`) - ActivationEpoch: 35 (current slot: 641 - current epoch: 20)
 	// pubkey7 => Nothing       - Status: pending (already in `v.validatorIndex`) - ActivationEpoch: 20 (current slot: 641 - current epoch: 20)
+	// pubkey8 => feeRecipient8 - Status: exiting (already in `v.validatorIndex`)
 
 	// Public keys
 	pubkey1 := getPubkeyFromString(t, "0x111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111")
@@ -2090,11 +2091,13 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 	pubkey5 := getPubkeyFromString(t, "0x555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555")
 	pubkey6 := getPubkeyFromString(t, "0x666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666")
 	pubkey7 := getPubkeyFromString(t, "0x777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777777")
+	pubkey8 := getPubkeyFromString(t, "0x888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888")
 
 	// Fee recipients
 	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
 	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
 	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+	feeRecipient8 := getFeeRecipientFromString(t, "0x8888888888888888888888888888888888888888")
 
 	defaultFeeRecipient := getFeeRecipientFromString(t, "0xdddddddddddddddddddddddddddddddddddddddd")
 
@@ -2106,6 +2109,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 		pubkey5: ethpb.ValidatorStatus_UNKNOWN_STATUS,
 		pubkey6: ethpb.ValidatorStatus_PENDING,
 		pubkey7: ethpb.ValidatorStatus_PENDING,
+		pubkey8: ethpb.ValidatorStatus_EXITING,
 	}
 
 	pubkeyToActivationEpoch := map[[fieldparams.BLSPubkeyLength]byte]primitives.Epoch{
@@ -2116,6 +2120,7 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 		pubkey5: 0,
 		pubkey6: 35,
 		pubkey7: 20,
+		pubkey8: 0,
 	}
 
 	ctrl := gomock.NewController(t)
@@ -2179,6 +2184,11 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 						FeeRecipient: feeRecipient3,
 					},
 				},
+				pubkey8: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient8,
+					},
+				},
 			},
 		},
 		pubkeyToValidatorIndex: map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex{
@@ -2187,10 +2197,20 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 			pubkey5: 5,
 			pubkey6: 6,
 			pubkey7: 7,
+			pubkey8: 8,
 		},
 	}
 
-	pubkeys := [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2, pubkey3, pubkey4, pubkey5, pubkey6, pubkey7}
+	pubkeys := [][fieldparams.BLSPubkeyLength]byte{
+		pubkey1,
+		pubkey2,
+		pubkey3,
+		pubkey4,
+		pubkey5,
+		pubkey6,
+		pubkey7,
+		pubkey8,
+	}
 
 	expected := []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
 		{
@@ -2208,6 +2228,10 @@ func TestValidator_buildPrepProposerReqs_WithDefaultConfig(t *testing.T) {
 		{
 			ValidatorIndex: 7,
 			FeeRecipient:   defaultFeeRecipient[:],
+		},
+		{
+			ValidatorIndex: 8,
+			FeeRecipient:   feeRecipient8[:],
 		},
 	}
 	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 641)

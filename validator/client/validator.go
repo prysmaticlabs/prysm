@@ -1093,19 +1093,20 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		return nil, err
 	}
 	for i, status := range resp.Statuses {
-		// skip registration creation if validator is not active status
-		nonActive := status.Status != ethpb.ValidatorStatus_ACTIVE
-		// Handle edge case at the start of the epoch with newly activated validators
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-		currActivated := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
-		if nonActive && !currActivated {
+		currActivating := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
+
+		active := status.Status == ethpb.ValidatorStatus_ACTIVE
+		exiting := status.Status == ethpb.ValidatorStatus_EXITING
+
+		if currActivating || active || exiting {
+			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
+		} else {
 			log.WithFields(logrus.Fields{
 				"publickey": hexutil.Encode(resp.PublicKeys[i]),
 				"status":    status.Status.String(),
 			}).Debugf("skipping non active status key.")
-			continue
 		}
-		filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
 	}
 
 	return filteredKeys, nil
