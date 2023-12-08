@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	errSszCast             = errors.New("SSZ response is not a byte array")
 	errEmptyPrysmData      = errors.New("Prysm data is empty")
 	errEmptyLighthouseData = errors.New("Lighthouse data is empty")
 )
