@@ -153,7 +153,8 @@ type Service struct {
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
-	verifier                         BlobVerifierInitializer
+	verificationInitializer          *verification.Initializer
+	verifier                         NewBlobVerifier
 }
 
 // NewService initializes new regular sync service.
@@ -204,6 +205,8 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	return r
 }
 
+type NewBlobVerifier func() BlobVerifier
+
 // Start the regular sync service.
 func (s *Service) Start() {
 	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
@@ -211,7 +214,7 @@ func (s *Service) Start() {
 		log.WithError(err).Error("Could not get verification initializer")
 		return
 	}
-	s.verifier = v
+	s.verificationInitializer = v
 
 	go s.verifierRoutine()
 	go s.registerHandlers()

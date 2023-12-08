@@ -15,6 +15,7 @@ go_library(
         "fuzz_exports.go",  # keep
         "log.go",
         "metrics.go",
+        "mock_blob_verifier.go",
         "options.go",
         "pending_attestations_queue.go",
         "pending_blocks_queue.go",

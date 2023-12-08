@@ -48,9 +48,12 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, errors.Wrap(err, "roblob conversion failure")
 	}
 
-	vBlob := s.verifier.NewBlobVerifier(blob, verification.GossipSidecarRequirements...)
+	f := func() BlobVerifier {
+		return s.verificationInitializer.NewBlobVerifier(blob, verification.GossipSidecarRequirements...)
+	}
+	s.verifier = f
 
-	if err := vBlob.BlobIndexInBounds(); err != nil {
+	if err := s.verifier().BlobIndexInBounds(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -61,19 +64,19 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
-	if err := vBlob.SlotNotTooEarly(); err != nil {
+	if err := s.verifier().SlotNotTooEarly(); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 
-	if err := vBlob.SlotAboveFinalized(); err != nil {
+	if err := s.verifier().SlotAboveFinalized(); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 
-	if err := vBlob.ValidProposerSignature(ctx); err != nil {
+	if err := s.verifier().ValidProposerSignature(ctx); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	if err := vBlob.SidecarParentSeen(s.hasBadBlock); err != nil {
+	if err := s.verifier().SidecarParentSeen(s.hasBadBlock); err != nil {
 		go func() {
 			if err := s.sendBatchRootRequest(context.Background(), [][32]byte{blob.ParentRoot()}, rand.NewGenerator()); err != nil {
 				log.WithError(err).WithFields(blobFields(blob)).Debug("Failed to send batch root request")
@@ -83,23 +86,23 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 
-	if err := vBlob.SidecarParentValid(s.hasBadBlock); err != nil {
+	if err := s.verifier().SidecarParentValid(s.hasBadBlock); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	if err := vBlob.SidecarParentSlotLower(); err != nil {
+	if err := s.verifier().SidecarParentSlotLower(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	if err := vBlob.SidecarDescendsFromFinalized(); err != nil {
+	if err := s.verifier().SidecarDescendsFromFinalized(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	if err := vBlob.SidecarInclusionProven(); err != nil {
+	if err := s.verifier().SidecarInclusionProven(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	if err := vBlob.SidecarKzgProofVerified(); err != nil {
+	if err := s.verifier().SidecarKzgProofVerified(); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -108,7 +111,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, nil
 	}
 
-	if err := vBlob.SidecarProposerExpected(ctx); err != nil {
+	if err := s.verifier().SidecarProposerExpected(ctx); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
@@ -124,7 +127,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 
 	blobSidecarArrivalGossipSummary.Observe(float64(sinceSlotStartTime.Milliseconds()))
 
-	vBlobData, err := vBlob.VerifiedROBlob()
+	vBlobData, err := s.verifier().VerifiedROBlob()
 	if err != nil {
 		return pubsub.ValidationReject, err
 	}
