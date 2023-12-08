@@ -137,11 +137,11 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		}
 	case version.String(version.Deneb):
 		if blinded {
-			jsonDenebBlockContents := shared.BlindedBeaconBlockContentsDeneb{}
-			if err := decoder.Decode(&jsonDenebBlockContents); err != nil {
+			jsonDenebBlock := shared.BlindedBeaconBlockDeneb{}
+			if err := decoder.Decode(&jsonDenebBlock); err != nil {
 				return nil, errors.Wrap(err, "failed to decode blinded deneb block response json")
 			}
-			genericBlock, err := jsonDenebBlockContents.ToGeneric()
+			genericBlock, err := jsonDenebBlock.ToGeneric()
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to get blinded deneb block")
 			}

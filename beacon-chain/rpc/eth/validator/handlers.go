@@ -381,15 +381,6 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 			cache.SubnetIDs.AddAggregatorSubnetID(sub.Slot, subnet)
 		}
 	}
-	for _, val := range validators {
-		valStatus, err := rpchelpers.ValidatorStatus(val, currEpoch)
-		if err != nil {
-			http2.HandleError(w, "Could not retrieve validator status: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		pubkey := val.PublicKey()
-		core.AssignValidatorToSubnet(pubkey[:], valStatus)
-	}
 }
 
 // GetAttestationData requests that the beacon node produces attestation data for

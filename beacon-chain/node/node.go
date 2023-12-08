@@ -113,6 +113,7 @@ type BeaconNode struct {
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	blobRetentionEpochs     primitives.Epoch
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -153,9 +154,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := filesystem.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
 		return nil, err
 	}
 	configureFastSSZHashingAlgorithm()
@@ -273,8 +271,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
+	router := newRouter(cliCtx)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -306,6 +303,19 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	beacon.collector = c
 
 	return beacon, nil
+}
+
+func newRouter(cliCtx *cli.Context) *mux.Router {
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
+	r := mux.NewRouter()
+	r.Use(server.NormalizeQueryValuesHandler)
+	r.Use(server.CorsHandler(allowedOrigins))
+	return r
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -380,7 +390,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 	if err != nil {
 		return err
 	}
@@ -402,7 +412,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+
+		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -875,6 +886,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,
+		BlobStorage:                   b.BlobStorage,
 	})
 
 	return b.services.RegisterService(rpcService)

@@ -482,8 +482,8 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 	validRoot := bytesutil.PadTo([]byte("valid"), 32)
 	invalidRoot := bytesutil.PadTo([]byte("invalid"), 32)
 	header := &ethpb.SignedBeaconBlockHeader{}
-	validb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(validRoot), header, 0, []byte{})
-	invalidb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(invalidRoot), header, 0, []byte{})
+	validb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(validRoot), header, 0, []byte{}, make([][]byte, 0))
+	invalidb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(invalidRoot), header, 0, []byte{}, make([][]byte, 0))
 	cases := []struct {
 		name     string
 		ids      []*ethpb.BlobIdentifier
@@ -584,7 +584,7 @@ func TestBlobValidatorFromRangeReq(t *testing.T) {
 			header := &ethpb.SignedBeaconBlockHeader{
 				Header: &ethpb.BeaconBlockHeader{Slot: c.responseSlot},
 			}
-			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{})
+			sc := util.GenerateTestDenebBlobSidecar(t, [32]byte{}, header, 0, []byte{}, make([][]byte, 0))
 			err := vf(sc)
 			if c.err != nil {
 				require.ErrorIs(t, err, c.err)

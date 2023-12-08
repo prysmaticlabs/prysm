@@ -314,7 +314,10 @@ func (dc *DepositCache) PruneProofs(ctx context.Context, untilDepositIndex int64
 
 // Deposits returns the cached internal deposit tree.
 func (fd *FinalizedDeposits) Deposits() cache.MerkleTree {
-	return fd.deposits
+	if fd.deposits != nil {
+		return fd.deposits
+	}
+	return nil
 }
 
 // MerkleTrieIndex represents the last finalized index in

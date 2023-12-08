@@ -120,7 +120,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	if coreTime.CurrentEpoch(postState) > currentEpoch {
+	if coreTime.CurrentEpoch(postState) > currentEpoch && s.cfg.ForkChoiceStore.IsCanonical(blockRoot) {
 		headSt, err := s.HeadState(ctx)
 		if err != nil {
 			return errors.Wrap(err, "could not get head state")
