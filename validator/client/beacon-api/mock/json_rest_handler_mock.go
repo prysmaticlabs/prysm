@@ -10,7 +10,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	http "github.com/prysmaticlabs/prysm/v4/network/http"
+	http "github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
 // MockJsonRestHandler is a mock of JsonRestHandler interface.

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
@@ -19,11 +19,11 @@ func (s *Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 
 	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http2.WriteJson(w, struct {
+	httputil.WriteJson(w, struct {
 		Beacon    string `json:"beacon"`
 		Validator string `json:"validator"`
 	}{
@@ -46,13 +46,13 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	// Flush helper function to ensure data is sent to client
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		httputil.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 	// TODO: StreamBeaconLogs grpc will need to be replaced in the future
 	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(ctx, &emptypb.Empty{})
 	if err != nil {
-		http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -67,12 +67,12 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 		default:
 			logResp, err := client.Recv()
 			if err != nil {
-				http2.HandleError(w, "could not receive beacon logs from stream: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "could not receive beacon logs from stream: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			jsonResp, err := json.Marshal(logResp)
 			if err != nil {
-				http2.HandleError(w, "could not encode log response into JSON: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "could not encode log response into JSON: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -80,7 +80,7 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 			// Assuming resp has a String() method for simplicity
 			_, err = fmt.Fprintf(w, "%s\n", jsonResp)
 			if err != nil {
-				http2.HandleError(w, err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			// Flush the data to the client immediately
@@ -97,7 +97,7 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	// Ensure that the writer supports flushing.
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		httputil.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
@@ -122,12 +122,12 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonLogs, err := json.Marshal(ls)
 	if err != nil {
-		http2.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	_, err = fmt.Fprintf(w, "%s\n", jsonLogs)
 	if err != nil {
-		http2.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	flusher.Flush()
@@ -141,12 +141,12 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 			}
 			jsonLogs, err = json.Marshal(ls)
 			if err != nil {
-				http2.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "Failed to marshal logs: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			_, err = fmt.Fprintf(w, "%s\n", jsonLogs)
 			if err != nil {
-				http2.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "Error sending data: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 
@@ -154,7 +154,7 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 		case <-s.ctx.Done():
 			return
 		case err := <-sub.Err():
-			http2.HandleError(w, "Subscriber error: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Subscriber error: "+err.Error(), http.StatusInternalServerError)
 			return
 		case <-ctx.Done():
 			return

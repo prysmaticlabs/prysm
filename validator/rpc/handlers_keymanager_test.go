@@ -728,7 +728,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		epoch     int
+		epoch     string
 		pubkey    string
 		w         want
 		wError    *wantError
@@ -736,7 +736,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	}{
 		{
 			name:   "Ok: with epoch",
-			epoch:  30000000,
+			epoch:  "30000000",
 			pubkey: hexutil.Encode(pubKeys[0][:]),
 			w: want{
 				epoch:          30000000,
@@ -755,15 +755,15 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		},
 		{
 			name:  "Error: Missing Public Key in URL Params",
-			epoch: 30000000,
+			epoch: "30000000",
 			wError: &wantError{
 				expectedStatusCode: http.StatusBadRequest,
-				expectedErrorMsg:   "pubkey is required in URL params",
+				expectedErrorMsg:   "pubkey is required",
 			},
 		},
 		{
 			name:   "Error: Invalid Public Key Length",
-			epoch:  30000000,
+			epoch:  "30000000",
 			pubkey: "0x1asd1231",
 			wError: &wantError{
 				expectedStatusCode: http.StatusBadRequest,
@@ -772,7 +772,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		},
 		{
 			name:   "Error: No Wallet Found",
-			epoch:  30000000,
+			epoch:  "30000000",
 			pubkey: hexutil.Encode(pubKeys[0][:]),
 			wError: &wantError{
 				expectedStatusCode: http.StatusServiceUnavailable,
@@ -790,7 +790,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			if tt.mockSetup != nil {
 				require.NoError(t, tt.mockSetup(s))
 			}
-			req := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%d", tt.epoch), nil)
+			req := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%s", tt.epoch), nil)
 			req = mux.SetURLVars(req, map[string]string{"pubkey": tt.pubkey})
 			w := httptest.NewRecorder()
 			w.Body = &bytes.Buffer{}
@@ -810,7 +810,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 				require.NoError(t, err)
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
-				req2 := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%d", tt.epoch), nil)
+				req2 := httptest.NewRequest("POST", fmt.Sprintf("/eth/v1/validator/{pubkey}/voluntary_exit?epoch=%s", tt.epoch), nil)
 				req2 = mux.SetURLVars(req2, map[string]string{"pubkey": hexutil.Encode(pubKeys[0][:])})
 				w2 := httptest.NewRecorder()
 				w2.Body = &bytes.Buffer{}
@@ -1764,7 +1764,7 @@ func TestServer_SetFeeRecipientByPubkey_InvalidFeeRecipient(t *testing.T) {
 	s.SetFeeRecipientByPubkey(w, req)
 	assert.NotEqual(t, http.StatusAccepted, w.Code)
 
-	require.StringContains(t, "Invalid Ethereum Address", w.Body.String())
+	require.StringContains(t, "Invalid ethaddress", w.Body.String())
 }
 
 func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {

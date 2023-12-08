@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
@@ -35,7 +35,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 			return err
 		}
 		if httpResp.StatusCode != http.StatusOK {
-			e := http2.DefaultErrorJson{}
+			e := httputil.DefaultErrorJson{}
 			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
 				return err
 			}
@@ -65,7 +65,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 				continue
 			}
 			if httpResp.StatusCode != http.StatusOK {
-				e := http2.DefaultErrorJson{}
+				e := httputil.DefaultErrorJson{}
 				if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
 					return err
 				}

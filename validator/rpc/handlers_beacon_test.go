@@ -11,7 +11,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -85,7 +84,7 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		Syncing:                true,
 		GenesisTime:            fmt.Sprintf("%d", time.Unix(0, 0).Unix()),
 		DepositContractAddress: "0x68656c6c6f",
-		ChainHead: &shared.ChainHead{
+		ChainHead: &ChainHead{
 			HeadSlot:                   "0",
 			HeadEpoch:                  "1",
 			HeadBlockRoot:              "0x",

@@ -764,7 +764,7 @@ func GenerateJsonCapellaBeaconBlock() *shared.BeaconBlockCapella {
 					},
 				},
 			},
-			BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
+			BLSToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 				{
 					Message: &shared.BLSToExecutionChange{
 						ValidatorIndex:     "135",
@@ -1013,7 +1013,7 @@ func GenerateJsonBlindedCapellaBeaconBlock() *shared.BlindedBeaconBlockCapella {
 				TransactionsRoot: FillEncodedByteSlice(32, 125),
 				WithdrawalsRoot:  FillEncodedByteSlice(32, 126),
 			},
-			BlsToExecutionChanges: []*shared.SignedBLSToExecutionChange{
+			BLSToExecutionChanges: []*shared.SignedBLSToExecutionChange{
 				{
 					Message: &shared.BLSToExecutionChange{
 						ValidatorIndex:     "135",

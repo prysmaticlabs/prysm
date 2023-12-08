@@ -705,7 +705,7 @@ func testSignedBlindedBeaconBlockCapella(t *testing.T) *eth.SignedBlindedBeaconB
 }
 
 func testSignedBlindedBeaconBlockDeneb(t *testing.T) *eth.SignedBlindedBeaconBlockDeneb {
-	basebytes, err := shared.Uint256ToSSZBytes("14074904626401341155369551180448584754667373453244490859944217516317499064576")
+	basebytes, err := bytesutil.Uint256ToSSZBytes("14074904626401341155369551180448584754667373453244490859944217516317499064576")
 	if err != nil {
 		log.Error(err)
 	}
