@@ -175,6 +175,8 @@ func TestSlotTickerWithIntervalsInputValidation(t *testing.T) {
 	require.PanicsWithValue(t, "zero genesis time", panicCall)
 	genesisTime = time.Now()
 	require.PanicsWithValue(t, "at least one interval has to be entered", panicCall)
+	intervals = []time.Duration{offset, -offset}
+	require.PanicsWithValue(t, "invalid decreasing offsets", panicCall)
 	intervals = []time.Duration{2 * offset, offset}
 	require.PanicsWithValue(t, "invalid decreasing offsets", panicCall)
 	intervals = []time.Duration{offset, 4 * offset}
