@@ -22,7 +22,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -308,46 +307,6 @@ func (s *Service) AggregatedSigAndAggregationBits(
 		aggregatedSig = bls.AggregateSignatures(uncompressedSigs).Marshal()
 	}
 	return aggregatedSig, bits, nil
-}
-
-// AssignValidatorToSubnet checks the status and pubkey of a particular validator
-// to discern whether persistent subnets need to be registered for them.
-func AssignValidatorToSubnet(pubkey []byte, status validator.Status) {
-	if status != validator.Active {
-		return
-	}
-	assignValidatorToSubnet(pubkey)
-}
-
-// AssignValidatorToSubnetProto checks the status and pubkey of a particular validator
-// to discern whether persistent subnets need to be registered for them.
-//
-// It has a Proto suffix because the status is a protobuf type.
-func AssignValidatorToSubnetProto(pubkey []byte, status ethpb.ValidatorStatus) {
-	if status != ethpb.ValidatorStatus_ACTIVE && status != ethpb.ValidatorStatus_EXITING {
-		return
-	}
-	assignValidatorToSubnet(pubkey)
-}
-
-func assignValidatorToSubnet(pubkey []byte) {
-	_, ok, expTime := cache.SubnetIDs.GetPersistentSubnets(pubkey)
-	if ok && expTime.After(prysmTime.Now()) {
-		return
-	}
-	epochDuration := time.Duration(params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot))
-	var assignedIdxs []uint64
-	randGen := rand.NewGenerator()
-	for i := uint64(0); i < params.BeaconConfig().RandomSubnetsPerValidator; i++ {
-		assignedIdx := randGen.Intn(int(params.BeaconNetworkConfig().AttestationSubnetCount))
-		assignedIdxs = append(assignedIdxs, uint64(assignedIdx))
-	}
-
-	assignedDuration := uint64(randGen.Intn(int(params.BeaconConfig().EpochsPerRandomSubnetSubscription)))
-	assignedDuration += params.BeaconConfig().EpochsPerRandomSubnetSubscription
-
-	totalDuration := epochDuration * time.Duration(assignedDuration)
-	cache.SubnetIDs.AddPersistentCommittee(pubkey, assignedIdxs, totalDuration*time.Second)
 }
 
 // GetAttestationData requests that the beacon node produces attestation data for

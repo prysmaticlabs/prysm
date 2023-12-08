@@ -42,6 +42,12 @@ func (s *Service) RefreshENR() {
 	if s.dv5Listener == nil || !s.isInitialized() {
 		return
 	}
+	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
+	if err := initializePersistentSubnets(s.dv5Listener.LocalNode().ID(), currEpoch); err != nil {
+		log.WithError(err).Error("Could not initialize persistent subnets")
+		return
+	}
+
 	bitV := bitfield.NewBitvector64()
 	committees := cache.SubnetIDs.GetAllSubnets()
 	for _, idx := range committees {
@@ -52,8 +58,8 @@ func (s *Service) RefreshENR() {
 		log.WithError(err).Error("Could not retrieve att bitfield")
 		return
 	}
+
 	// Compare current epoch with our fork epochs
-	currEpoch := slots.ToEpoch(slots.CurrentSlot(uint64(s.genesisTime.Unix())))
 	altairForkEpoch := params.BeaconConfig().AltairForkEpoch
 	switch {
 	// Altair Behaviour
