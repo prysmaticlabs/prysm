@@ -104,7 +104,7 @@ STATICCHECK_ANALYZERS = [
     "sa1016",
     "sa1017",
     "sa1018",
-    # "sa1019",
+    # "sa1019", # TODO: Fix all uses of deprecated things.
     "sa1020",
     "sa1021",
     "sa1023",
@@ -126,7 +126,7 @@ STATICCHECK_ANALYZERS = [
     "sa4003",
     "sa4004",
     "sa4005",
-    # "sa4006",
+    # "sa4006", # TODO: Fix violations of unused arguments.
     "sa4008",
     "sa4009",
     "sa4010",
