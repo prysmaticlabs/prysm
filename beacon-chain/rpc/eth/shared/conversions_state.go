@@ -1,6 +1,7 @@
 package shared
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -8,48 +9,50 @@ import (
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 )
 
+var errPayloadHeaderNotFound = errors.New("expected payload header not found")
+
 func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) {
-	srcbr := st.BlockRoots()
-	br := make([]string, len(srcbr))
-	for i, r := range srcbr {
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
 		br[i] = hexutil.Encode(r)
 	}
-	srcsr := st.StateRoots()
-	sr := make([]string, len(srcsr))
-	for i, r := range srcsr {
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
 		sr[i] = hexutil.Encode(r)
 	}
-	srchr, err := st.HistoricalRoots()
+	srcHr, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
-	hr := make([]string, len(srchr))
-	for i, r := range srchr {
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
 		hr[i] = hexutil.Encode(r)
 	}
-	srcvotes := st.Eth1DataVotes()
-	votes := make([]*Eth1Data, len(srcvotes))
-	for i, e := range srcvotes {
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcvals := st.Validators()
-	vals := make([]*Validator, len(srcvals))
-	for i, v := range srcvals {
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
 	}
-	srcbals := st.Balances()
-	bals := make([]string, len(srcbals))
-	for i, b := range srcbals {
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
 		bals[i] = fmt.Sprintf("%d", b)
 	}
-	srcrm := st.RandaoMixes()
-	rm := make([]string, len(srcrm))
-	for i, m := range srcrm {
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
 		rm[i] = hexutil.Encode(m)
 	}
-	srcslashings := st.Slashings()
-	slashings := make([]string, len(srcslashings))
-	for i, s := range srcslashings {
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevAtts, err := st.PreviousEpochAttestations()
@@ -95,47 +98,47 @@ func BeaconStateFromConsensus(st beaconState.BeaconState) (*BeaconState, error) 
 }
 
 func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAltair, error) {
-	srcbr := st.BlockRoots()
-	br := make([]string, len(srcbr))
-	for i, r := range srcbr {
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
 		br[i] = hexutil.Encode(r)
 	}
-	srcsr := st.StateRoots()
-	sr := make([]string, len(srcsr))
-	for i, r := range srcsr {
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
 		sr[i] = hexutil.Encode(r)
 	}
-	srchr, err := st.HistoricalRoots()
+	srcHr, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
-	hr := make([]string, len(srchr))
-	for i, r := range srchr {
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
 		hr[i] = hexutil.Encode(r)
 	}
-	srcvotes := st.Eth1DataVotes()
-	votes := make([]*Eth1Data, len(srcvotes))
-	for i, e := range srcvotes {
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcvals := st.Validators()
-	vals := make([]*Validator, len(srcvals))
-	for i, v := range srcvals {
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
 	}
-	srcbals := st.Balances()
-	bals := make([]string, len(srcbals))
-	for i, b := range srcbals {
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
 		bals[i] = fmt.Sprintf("%d", b)
 	}
-	srcrm := st.RandaoMixes()
-	rm := make([]string, len(srcrm))
-	for i, m := range srcrm {
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
 		rm[i] = hexutil.Encode(m)
 	}
-	srcslashings := st.Slashings()
-	slashings := make([]string, len(srcslashings))
-	for i, s := range srcslashings {
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
@@ -154,12 +157,12 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 	for i, p := range srcCurrPart {
 		currPart[i] = fmt.Sprintf("%d", p)
 	}
-	srcis, err := st.InactivityScores()
+	srcIs, err := st.InactivityScores()
 	if err != nil {
 		return nil, err
 	}
-	is := make([]string, len(srcis))
-	for i, s := range srcis {
+	is := make([]string, len(srcIs))
+	for i, s := range srcIs {
 		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
@@ -200,47 +203,47 @@ func BeaconStateAltairFromConsensus(st beaconState.BeaconState) (*BeaconStateAlt
 }
 
 func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconStateBellatrix, error) {
-	srcbr := st.BlockRoots()
-	br := make([]string, len(srcbr))
-	for i, r := range srcbr {
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
 		br[i] = hexutil.Encode(r)
 	}
-	srcsr := st.StateRoots()
-	sr := make([]string, len(srcsr))
-	for i, r := range srcsr {
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
 		sr[i] = hexutil.Encode(r)
 	}
-	srchr, err := st.HistoricalRoots()
+	srcHr, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
-	hr := make([]string, len(srchr))
-	for i, r := range srchr {
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
 		hr[i] = hexutil.Encode(r)
 	}
-	srcvotes := st.Eth1DataVotes()
-	votes := make([]*Eth1Data, len(srcvotes))
-	for i, e := range srcvotes {
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcvals := st.Validators()
-	vals := make([]*Validator, len(srcvals))
-	for i, v := range srcvals {
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
 	}
-	srcbals := st.Balances()
-	bals := make([]string, len(srcbals))
-	for i, b := range srcbals {
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
 		bals[i] = fmt.Sprintf("%d", b)
 	}
-	srcrm := st.RandaoMixes()
-	rm := make([]string, len(srcrm))
-	for i, m := range srcrm {
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
 		rm[i] = hexutil.Encode(m)
 	}
-	srcslashings := st.Slashings()
-	slashings := make([]string, len(srcslashings))
-	for i, s := range srcslashings {
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
@@ -259,12 +262,12 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 	for i, p := range srcCurrPart {
 		currPart[i] = fmt.Sprintf("%d", p)
 	}
-	srcis, err := st.InactivityScores()
+	srcIs, err := st.InactivityScores()
 	if err != nil {
 		return nil, err
 	}
-	is := make([]string, len(srcis))
-	for i, s := range srcis {
+	is := make([]string, len(srcIs))
+	for i, s := range srcIs {
 		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
@@ -318,47 +321,47 @@ func BeaconStateBellatrixFromConsensus(st beaconState.BeaconState) (*BeaconState
 }
 
 func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCapella, error) {
-	srcbr := st.BlockRoots()
-	br := make([]string, len(srcbr))
-	for i, r := range srcbr {
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
 		br[i] = hexutil.Encode(r)
 	}
-	srcsr := st.StateRoots()
-	sr := make([]string, len(srcsr))
-	for i, r := range srcsr {
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
 		sr[i] = hexutil.Encode(r)
 	}
-	srchr, err := st.HistoricalRoots()
+	srcHr, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
-	hr := make([]string, len(srchr))
-	for i, r := range srchr {
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
 		hr[i] = hexutil.Encode(r)
 	}
-	srcvotes := st.Eth1DataVotes()
-	votes := make([]*Eth1Data, len(srcvotes))
-	for i, e := range srcvotes {
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcvals := st.Validators()
-	vals := make([]*Validator, len(srcvals))
-	for i, v := range srcvals {
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
 	}
-	srcbals := st.Balances()
-	bals := make([]string, len(srcbals))
-	for i, b := range srcbals {
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
 		bals[i] = fmt.Sprintf("%d", b)
 	}
-	srcrm := st.RandaoMixes()
-	rm := make([]string, len(srcrm))
-	for i, m := range srcrm {
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
 		rm[i] = hexutil.Encode(m)
 	}
-	srcslashings := st.Slashings()
-	slashings := make([]string, len(srcslashings))
-	for i, s := range srcslashings {
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
@@ -377,12 +380,12 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	for i, p := range srcCurrPart {
 		currPart[i] = fmt.Sprintf("%d", p)
 	}
-	srcis, err := st.InactivityScores()
+	srcIs, err := st.InactivityScores()
 	if err != nil {
 		return nil, err
 	}
-	is := make([]string, len(srcis))
-	for i, s := range srcis {
+	is := make([]string, len(srcIs))
+	for i, s := range srcIs {
 		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
@@ -405,12 +408,12 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 	if err != nil {
 		return nil, err
 	}
-	srchs, err := st.HistoricalSummaries()
+	srcHs, err := st.HistoricalSummaries()
 	if err != nil {
 		return nil, err
 	}
-	hs := make([]*HistoricalSummary, len(srchs))
-	for i, s := range srchs {
+	hs := make([]*HistoricalSummary, len(srcHs))
+	for i, s := range srcHs {
 		hs[i] = HistoricalSummaryFromConsensus(s)
 	}
 	nwi, err := st.NextWithdrawalIndex()
@@ -455,47 +458,47 @@ func BeaconStateCapellaFromConsensus(st beaconState.BeaconState) (*BeaconStateCa
 }
 
 func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDeneb, error) {
-	srcbr := st.BlockRoots()
-	br := make([]string, len(srcbr))
-	for i, r := range srcbr {
+	srcBr := st.BlockRoots()
+	br := make([]string, len(srcBr))
+	for i, r := range srcBr {
 		br[i] = hexutil.Encode(r)
 	}
-	srcsr := st.StateRoots()
-	sr := make([]string, len(srcsr))
-	for i, r := range srcsr {
+	srcSr := st.StateRoots()
+	sr := make([]string, len(srcSr))
+	for i, r := range srcSr {
 		sr[i] = hexutil.Encode(r)
 	}
-	srchr, err := st.HistoricalRoots()
+	srcHr, err := st.HistoricalRoots()
 	if err != nil {
 		return nil, err
 	}
-	hr := make([]string, len(srchr))
-	for i, r := range srchr {
+	hr := make([]string, len(srcHr))
+	for i, r := range srcHr {
 		hr[i] = hexutil.Encode(r)
 	}
-	srcvotes := st.Eth1DataVotes()
-	votes := make([]*Eth1Data, len(srcvotes))
-	for i, e := range srcvotes {
+	srcVotes := st.Eth1DataVotes()
+	votes := make([]*Eth1Data, len(srcVotes))
+	for i, e := range srcVotes {
 		votes[i] = Eth1DataFromConsensus(e)
 	}
-	srcvals := st.Validators()
-	vals := make([]*Validator, len(srcvals))
-	for i, v := range srcvals {
+	srcVals := st.Validators()
+	vals := make([]*Validator, len(srcVals))
+	for i, v := range srcVals {
 		vals[i] = ValidatorFromConsensus(v)
 	}
-	srcbals := st.Balances()
-	bals := make([]string, len(srcbals))
-	for i, b := range srcbals {
+	srcBals := st.Balances()
+	bals := make([]string, len(srcBals))
+	for i, b := range srcBals {
 		bals[i] = fmt.Sprintf("%d", b)
 	}
-	srcrm := st.RandaoMixes()
-	rm := make([]string, len(srcrm))
-	for i, m := range srcrm {
+	srcRm := st.RandaoMixes()
+	rm := make([]string, len(srcRm))
+	for i, m := range srcRm {
 		rm[i] = hexutil.Encode(m)
 	}
-	srcslashings := st.Slashings()
-	slashings := make([]string, len(srcslashings))
-	for i, s := range srcslashings {
+	srcSlashings := st.Slashings()
+	slashings := make([]string, len(srcSlashings))
+	for i, s := range srcSlashings {
 		slashings[i] = fmt.Sprintf("%d", s)
 	}
 	srcPrevPart, err := st.PreviousEpochParticipation()
@@ -514,12 +517,12 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	for i, p := range srcCurrPart {
 		currPart[i] = fmt.Sprintf("%d", p)
 	}
-	srcis, err := st.InactivityScores()
+	srcIs, err := st.InactivityScores()
 	if err != nil {
 		return nil, err
 	}
-	is := make([]string, len(srcis))
-	for i, s := range srcis {
+	is := make([]string, len(srcIs))
+	for i, s := range srcIs {
 		is[i] = fmt.Sprintf("%d", s)
 	}
 	currSc, err := st.CurrentSyncCommittee()
@@ -542,12 +545,12 @@ func BeaconStateDenebFromConsensus(st beaconState.BeaconState) (*BeaconStateDene
 	if err != nil {
 		return nil, err
 	}
-	srchs, err := st.HistoricalSummaries()
+	srcHs, err := st.HistoricalSummaries()
 	if err != nil {
 		return nil, err
 	}
-	hs := make([]*HistoricalSummary, len(srchs))
-	for i, s := range srchs {
+	hs := make([]*HistoricalSummary, len(srcHs))
+	for i, s := range srcHs {
 		hs[i] = HistoricalSummaryFromConsensus(s)
 	}
 	nwi, err := st.NextWithdrawalIndex()

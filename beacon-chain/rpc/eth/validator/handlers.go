@@ -43,12 +43,12 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
 
-	ok, _, attDataRoot := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, false)
+	_, attDataRoot, ok := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, true)
 	if !ok {
 		return
 	}
 
-	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
 	if !ok {
 		return
 	}
@@ -403,11 +403,11 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
 	if !ok {
 		return
 	}
-	ok, _, committeeIndex := shared.UintFromQuery(w, r, "committee_index", false)
+	_, committeeIndex, ok := shared.UintFromQuery(w, r, "committee_index", true)
 	if !ok {
 		return
 	}
@@ -445,11 +445,11 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	ctx, span := trace.StartSpan(r.Context(), "validator.ProduceSyncCommitteeContribution")
 	defer span.End()
 
-	ok, _, index := shared.UintFromQuery(w, r, "subcommittee_index", false)
+	_, index, ok := shared.UintFromQuery(w, r, "subcommittee_index", true)
 	if !ok {
 		return
 	}
-	ok, _, slot := shared.UintFromQuery(w, r, "slot", false)
+	_, slot, ok := shared.UintFromQuery(w, r, "slot", true)
 	if !ok {
 		return
 	}
@@ -614,7 +614,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	_, requestedEpochUint, ok := shared.UintFromRoute(w, r, "epoch")
 	if !ok {
 		return
 	}
@@ -743,7 +743,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	_, requestedEpochUint, ok := shared.UintFromRoute(w, r, "epoch")
 	if !ok {
 		return
 	}
@@ -873,7 +873,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	_, requestedEpochUint, ok := shared.UintFromRoute(w, r, "epoch")
 	if !ok {
 		return
 	}
@@ -1002,7 +1002,7 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.GetLiveness")
 	defer span.End()
 
-	ok, _, requestedEpochUint := shared.UintFromRoute(w, r, "epoch")
+	_, requestedEpochUint, ok := shared.UintFromRoute(w, r, "epoch")
 	if !ok {
 		return
 	}

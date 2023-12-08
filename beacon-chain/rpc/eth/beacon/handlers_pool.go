@@ -37,11 +37,11 @@ func (s *Server) ListAttestations(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "beacon.ListAttestations")
 	defer span.End()
 
-	ok, rawSlot, slot := shared.UintFromQuery(w, r, "slot", true)
+	rawSlot, slot, ok := shared.UintFromQuery(w, r, "slot", false)
 	if !ok {
 		return
 	}
-	ok, rawCommitteeIndex, committeeIndex := shared.UintFromQuery(w, r, "committee_index", true)
+	rawCommitteeIndex, committeeIndex, ok := shared.UintFromQuery(w, r, "committee_index", false)
 	if !ok {
 		return
 	}

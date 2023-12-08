@@ -173,8 +173,8 @@ go_test(
         "@web3signer",
     ],
     eth_network = "mainnet",
-    # flaky = True,
-    # shard_count = 2,
+    flaky = True,
+    shard_count = 2,
     tags = [
         "e2e",
         "exclusive",

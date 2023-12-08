@@ -336,11 +336,11 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	ok, _, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
-	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch", true)
+	rawEpoch, e, ok := shared.UintFromQuery(w, r, "epoch", false)
 	if !ok {
 		return
 	}
@@ -546,7 +546,7 @@ func (s *Server) ListFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	ok, rawPubkey, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
@@ -588,7 +588,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	ok, _, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
@@ -672,7 +672,7 @@ func (s *Server) DeleteFeeRecipientByPubkey(w http.ResponseWriter, r *http.Reque
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	ok, _, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
@@ -745,7 +745,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	ok, _, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
@@ -815,7 +815,7 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	ok, rawPubkey, pubkey := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}

@@ -71,7 +71,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
 
 	// Adjust count based on configuration
-	gotCount, _, count := shared.UintFromQuery(w, req, "count", false)
+	_, count, gotCount := shared.UintFromQuery(w, req, "count", true)
 	if !gotCount {
 		return
 	} else if count == 0 {
@@ -80,7 +80,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	// Determine the start and end periods
-	gotStartPeriod, _, startPeriod := shared.UintFromQuery(w, req, "start_period", false)
+	_, startPeriod, gotStartPeriod := shared.UintFromQuery(w, req, "start_period", true)
 	if !gotStartPeriod {
 		return
 	}

@@ -1602,15 +1602,15 @@ func (s *Server) GetCommittees(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ok, rawEpoch, e := shared.UintFromQuery(w, r, "epoch", true)
+	rawEpoch, e, ok := shared.UintFromQuery(w, r, "epoch", false)
 	if !ok {
 		return
 	}
-	ok, rawIndex, i := shared.UintFromQuery(w, r, "index", true)
+	rawIndex, i, ok := shared.UintFromQuery(w, r, "index", false)
 	if !ok {
 		return
 	}
-	ok, rawSlot, sl := shared.UintFromQuery(w, r, "slot", true)
+	rawSlot, sl, ok := shared.UintFromQuery(w, r, "slot", false)
 	if !ok {
 		return
 	}
@@ -1689,11 +1689,11 @@ func (s *Server) GetBlockHeaders(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetBlockHeaders")
 	defer span.End()
 
-	ok, rawSlot, slot := shared.UintFromQuery(w, r, "slot", true)
+	rawSlot, slot, ok := shared.UintFromQuery(w, r, "slot", false)
 	if !ok {
 		return
 	}
-	ok, rawParentRoot, parentRoot := shared.HexFromQuery(w, r, "parent_root", fieldparams.RootLength, true)
+	rawParentRoot, parentRoot, ok := shared.HexFromQuery(w, r, "parent_root", fieldparams.RootLength, false)
 	if !ok {
 		return
 	}

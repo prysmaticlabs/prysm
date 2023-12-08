@@ -1,11 +1,5 @@
 package shared
 
-import (
-	"github.com/pkg/errors"
-)
-
-var errPayloadHeaderNotFound = errors.New("expected payload header not found")
-
 type Validator struct {
 	PublicKey                  string `json:"pubkey"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials"`

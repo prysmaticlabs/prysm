@@ -14,46 +14,46 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
-func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, allowEmpty bool) (bool, string, uint64) {
+func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, required bool) (string, uint64, bool) {
 	raw := r.URL.Query().Get(name)
-	if raw == "" && allowEmpty {
-		return true, "", 0
+	if raw == "" && !required {
+		return "", 0, true
 	}
 	v, valid := ValidateUint(w, name, raw)
 	if !valid {
-		return false, "", 0
+		return "", 0, false
 	}
-	return true, raw, v
+	return raw, v, true
 }
 
-func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (bool, string, uint64) {
+func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (string, uint64, bool) {
 	raw := mux.Vars(r)[name]
 	v, valid := ValidateUint(w, name, raw)
 	if !valid {
-		return false, "", 0
+		return "", 0, false
 	}
-	return true, raw, v
+	return raw, v, true
 }
 
-func HexFromQuery(w http.ResponseWriter, r *http.Request, name string, length int, allowEmpty bool) (bool, string, []byte) {
+func HexFromQuery(w http.ResponseWriter, r *http.Request, name string, length int, required bool) (string, []byte, bool) {
 	raw := r.URL.Query().Get(name)
-	if raw == "" && allowEmpty {
-		return true, "", nil
+	if raw == "" && !required {
+		return "", nil, true
 	}
 	v, valid := ValidateHex(w, name, raw, length)
 	if !valid {
-		return false, "", nil
+		return "", nil, false
 	}
-	return true, raw, v
+	return raw, v, true
 }
 
-func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length int) (bool, string, []byte) {
+func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length int) (string, []byte, bool) {
 	raw := mux.Vars(r)[name]
 	v, valid := ValidateHex(w, name, raw, length)
 	if !valid {
-		return false, "", nil
+		return "", nil, false
 	}
-	return true, raw, v
+	return raw, v, true
 }
 
 func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, bool) {
