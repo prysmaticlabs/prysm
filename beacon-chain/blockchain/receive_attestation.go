@@ -115,7 +115,7 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 // it should be saturated to 0 if it's the case
 func saturatingReorgInterval() time.Duration {
 	reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
-	if reorgInterval.Minutes() < 0 {
+	if reorgInterval.Seconds() < 0 {
 		reorgInterval = 0
 	}
 	return reorgInterval
