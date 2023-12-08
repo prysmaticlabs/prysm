@@ -125,7 +125,7 @@ STATICCHECK_ANALYZERS = [
     "sa4001",
     "sa4003",
     "sa4004",
-    # "sa4005",
+    "sa4005",
     # "sa4006",
     "sa4008",
     "sa4009",
