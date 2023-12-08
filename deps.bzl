@@ -2578,8 +2578,16 @@ def prysm_deps():
         version = "v0.27.8",
     )
     go_repository(
+        # This library accounts for a significant wall time in production builds. It is not used by
+        # Prysm at this time.
+        # See https://github.com/libp2p/go-libp2p/issues/2664
         name = "com_github_libp2p_go_libp2p_asn_util",
+        build_directives = [
+            "gazelle:exclude ipv6_asn_map.gen.go",
+        ],
         importpath = "github.com/libp2p/go-libp2p-asn-util",
+        patch_args = ["-p1"],
+        patches = ["//third_party:com_github_libp2p_go_libp2p_asn_util.patch"],
         sum = "h1:gMDcMyYiZKkocGXDQ5nsUQyquC9+H+iLEQHwOCZ7s8s=",
         version = "v0.3.0",
     )

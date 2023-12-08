@@ -1,0 +1,26 @@
+diff --git a/asn.go b/asn.go
+index 490b4a2..fcfb0da 100644
+--- a/asn.go
++++ b/asn.go
+@@ -51,20 +51,7 @@ func (a *asnStore) AsnForIPv6(ip net.IP) (string, error) {
+ }
+ 
+ func newAsnStore() (*asnStore, error) {
+-	cr := cidranger.NewPCTrieRanger()
+-
+-	for _, v := range ipv6CidrToAsnPairList {
+-		_, nn, err := net.ParseCIDR(v.cidr)
+-		if err != nil {
+-			return nil, fmt.Errorf("failed to parse CIDR %s: %w", v.cidr, err)
+-		}
+-
+-		if err := cr.Insert(&networkWithAsn{*nn, v.asn}); err != nil {
+-			return nil, fmt.Errorf("failed to insert CIDR %s in Trie store: %w", v.cidr, err)
+-		}
+-	}
+-
+-	return &asnStore{cr}, nil
++	return nil, errors.New("asnutil store is empty because it is never used and causes significant build delays")
+ }
+ 
+ // lazyAsnStore builds the underlying trie on first call to AsnForIPv6.
