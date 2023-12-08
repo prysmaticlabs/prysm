@@ -2,6 +2,7 @@ package beacon_api
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -9,6 +10,23 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
+
+// IndexNotFoundError represents an error scenario where no validator index matches a pubkey.
+type IndexNotFoundError struct {
+	message string
+}
+
+// NewIndexNotFoundError creates a new error instance.
+func NewIndexNotFoundError(pubkey string) IndexNotFoundError {
+	return IndexNotFoundError{
+		message: fmt.Sprintf("could not find validator index for public key `%s`", pubkey),
+	}
+}
+
+// Error returns the underlying error message.
+func (e *IndexNotFoundError) Error() string {
+	return e.message
+}
 
 func (c beaconApiValidatorClient) validatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
 	stringPubKey := hexutil.Encode(in.PublicKey)
@@ -19,7 +37,8 @@ func (c beaconApiValidatorClient) validatorIndex(ctx context.Context, in *ethpb.
 	}
 
 	if len(stateValidator.Data) == 0 {
-		return nil, errors.Errorf("could not find validator index for public key `%s`", stringPubKey)
+		e := NewIndexNotFoundError(stringPubKey)
+		return nil, &e
 	}
 
 	stringValidatorIndex := stateValidator.Data[0].Index
