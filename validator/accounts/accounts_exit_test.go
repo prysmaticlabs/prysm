@@ -3,18 +3,18 @@ package accounts
 import (
 	"encoding/json"
 	"fmt"
-	"path"
-	"testing"
-
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/build/bazel"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/sirupsen/logrus/hooks/test"
+	"path"
+	"testing"
 )
 
 func TestDisplayExitInfo(t *testing.T) {
@@ -22,6 +22,22 @@ func TestDisplayExitInfo(t *testing.T) {
 	key := []byte("0x123456")
 	displayExitInfo([][]byte{key}, []string{string(key)})
 	assert.LogsContain(t, logHook, "https://beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.GoerliName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://goerli.beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.PraterName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://goerli.beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.HoleskyName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://holesky.beaconcha.in/validator/3078313233343536")
+
+	params.BeaconConfig().ConfigName = params.SepoliaName
+	displayExitInfo([][]byte{key}, []string{string(key)})
+	assert.LogsContain(t, logHook, "https://sepolia.beaconcha.in/validator/3078313233343536")
 }
 
 func TestDisplayExitInfo_NoKeys(t *testing.T) {

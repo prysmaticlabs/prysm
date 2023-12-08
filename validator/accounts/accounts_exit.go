@@ -153,12 +153,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	if len(rawExitedKeys) > 0 {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
-			var baseUrl string
-			if params.BeaconConfig().ConfigName == params.PraterName || params.BeaconConfig().ConfigName == params.GoerliName {
-				baseUrl = "https://goerli.beaconcha.in/validator/"
-			} else {
-				baseUrl = "https://beaconcha.in/validator/"
-			}
+			baseUrl := getBeaconChaURL()
 			// Remove '0x' prefix
 			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
 		}
@@ -174,6 +169,19 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 		log.WithField("publicKeys", strings.Join(trimmedExitedKeys, ", ")).Info(info)
 	} else {
 		log.Info("No successful voluntary exits")
+	}
+}
+
+func getBeaconChaURL() string {
+	switch env := params.BeaconConfig().ConfigName; env {
+	case params.PraterName, params.GoerliName:
+		return "https://goerli.beaconcha.in/validator/"
+	case params.HoleskyName:
+		return "https://holesky.beaconcha.in/validator/"
+	case params.SepoliaName:
+		return "https://sepolia.beaconcha.in/validator/"
+	default:
+		return "https://beaconcha.in/validator/"
 	}
 }
 
