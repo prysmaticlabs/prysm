@@ -322,14 +322,22 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
-	res, err := s.AttestationCache.Get(ctx, req)
+	if req.Slot != s.GenesisTimeFetcher.CurrentSlot() {
+		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: slot %d is not the current slot %d", req.Slot, s.GenesisTimeFetcher.CurrentSlot())}
+	}
+
+	res, err := s.AttestationCache.Get(ctx)
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
 	}
-	if res != nil {
-		res.Slot = req.Slot
-		res.CommitteeIndex = req.CommitteeIndex
-		return res, nil
+	if res.Slot == req.Slot {
+		return &ethpb.AttestationData{
+			Slot:            res.Slot,
+			CommitteeIndex:  req.CommitteeIndex,
+			BeaconBlockRoot: res.HeadRoot[:],
+			Source:          res.SourceCheckpoint,
+			Target:          res.TargetCheckpoint,
+		}, nil
 	}
 
 	headRoot, err := s.HeadFetcher.HeadRoot(ctx)
@@ -341,35 +349,28 @@ func (s *Service) GetAttestationData(
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
+	targetCheckpoint := &ethpb.Checkpoint{
+		Epoch: targetEpoch,
+		Root:  targetRoot[:],
+	}
 	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
 
-	res = &ethpb.AttestationData{
-		BeaconBlockRoot: headRoot,
-		Source:          justifiedCheckpoint,
-		Target: &ethpb.Checkpoint{
-			Epoch: targetEpoch,
-			Root:  targetRoot[:],
-		},
+	if err = s.AttestationCache.Put(ctx, &cache.AttestationConsensusData{
+		Slot:             res.Slot,
+		HeadRoot:         headRoot,
+		TargetCheckpoint: targetCheckpoint,
+		SourceCheckpoint: justifiedCheckpoint,
+	}); err != nil {
+		log.WithError(err).Error("Failed to put attestation data into cache")
 	}
 
-	currentUnixTime := uint64(time.Now().Unix())
-	genesisTime := uint64(s.GenesisTimeFetcher.GenesisTime().Second())
-	reqSlotTime := uint64(req.Slot) * params.BeaconConfig().SecondsPerSlot
-	timeThreshold := genesisTime + reqSlotTime + 4
-
-	isCurrentOrPastSlot := s.HeadFetcher.HeadSlot() == req.Slot || currentUnixTime >= timeThreshold
-
-	if isCurrentOrPastSlot {
-		err := s.AttestationCache.Put(ctx, res)
-		if err != nil {
-			log.WithError(err).Error("Failed to put attestation data into cache")
-		}
-	}
-
-	res.Slot = req.Slot
-	res.CommitteeIndex = req.CommitteeIndex
-
-	return res, nil
+	return &ethpb.AttestationData{
+		Slot:            res.Slot,
+		CommitteeIndex:  req.CommitteeIndex,
+		BeaconBlockRoot: res.HeadRoot[:],
+		Source:          res.SourceCheckpoint,
+		Target:          res.TargetCheckpoint,
+	}, nil
 }
 
 // SubmitSyncMessage submits the sync committee message to the network.

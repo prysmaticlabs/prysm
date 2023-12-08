@@ -5,28 +5,20 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-const maxSize = 4
-
-var (
-	// Prometheus counters for cache hits and misses.
-	attestationCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_cache_miss",
-		Help: "Number of cache misses for attestation data requests.",
-	})
-	attestationCacheHit = promauto.NewCounter(prometheus.CounterOpts{
-		Name: "attestation_cache_hit",
-		Help: "Number of cache hits for attestation data requests.",
-	})
-)
+type AttestationConsensusData struct {
+	Slot             primitives.Slot
+	HeadRoot         []byte
+	TargetCheckpoint *ethpb.Checkpoint
+	SourceCheckpoint *ethpb.Checkpoint
+}
 
 // AttestationCache stores cached results of AttestationData requests.
 type AttestationCache struct {
-	a    *ethpb.AttestationData
+	a    *AttestationConsensusData
 	lock sync.RWMutex
 }
 
@@ -36,32 +28,23 @@ func NewAttestationCache() *AttestationCache {
 }
 
 // Get retrieves cached attestation data, recording a cache hit or miss.
-func (c *AttestationCache) Get(ctx context.Context, req *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if req == nil {
-		return nil, errors.New("request cannot be nil")
-	}
-
+func (c *AttestationCache) Get(ctx context.Context) (*AttestationConsensusData, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if req.Slot == c.a.Slot {
-		attestationCacheHit.Inc()
-		return ethpb.CopyAttestationData(c.a), nil
-	}
-	attestationCacheMiss.Inc()
-	return nil, nil
+	return c.a, nil
 }
 
 // Put adds a response to the cache.
-func (c *AttestationCache) Put(ctx context.Context, res *ethpb.AttestationData) error {
-	if res == nil {
+func (c *AttestationCache) Put(ctx context.Context, a *AttestationConsensusData) error {
+	if a == nil {
 		return errors.New("attestation cannot be nil")
 	}
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.a = res
+	c.a = a
 
 	return nil
 }
