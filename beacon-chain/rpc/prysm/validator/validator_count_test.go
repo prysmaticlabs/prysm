@@ -15,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 
 	"github.com/gorilla/mux"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
@@ -101,7 +101,7 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
-			var errJson http2.DefaultErrorJson
+			var errJson httputil.DefaultErrorJson
 			err = json.Unmarshal(body, &errJson)
 			require.NoError(t, err)
 			require.Equal(t, test.statusCode, errJson.Code)

@@ -19,7 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/derived"
@@ -216,7 +216,7 @@ func (s *Server) DeleteKeystores(w http.ResponseWriter, r *http.Request) {
 	}
 	bytePubKeys := make([][]byte, len(req.Pubkeys))
 	for i, pubkey := range req.Pubkeys {
-		key, ok := shared.ValidateHex(w, "Pubkey", pubkey, fieldparams.BLSPubkeyLength)
+		key, ok := shared.ValidateHex(w, fmt.Sprintf("pubkeys[%d]", i), pubkey, fieldparams.BLSPubkeyLength)
 		if !ok {
 			return
 		}
@@ -336,27 +336,17 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
-		return
-	}
-
-	var epoch primitives.Epoch
-	ok, _, e := shared.UintFromQuery(w, r, "epoch")
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
-		httputil.HandleError(w, "Invalid epoch", http.StatusBadRequest)
 		return
 	}
-	epoch = primitives.Epoch(e)
+	rawEpoch, e, ok := shared.UintFromQuery(w, r, "epoch", false)
+	if !ok {
+		return
+	}
+	epoch := primitives.Epoch(e)
 
-	if epoch == 0 {
+	if rawEpoch == "" {
 		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
@@ -556,15 +546,8 @@ func (s *Server) ListFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 	finalResp := &GetFeeRecipientByPubkeyResponse{
@@ -605,15 +588,8 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -627,8 +603,7 @@ func (s *Server) SetFeeRecipientByPubkey(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	ethAddress, valid := shared.ValidateHex(w, "Ethereum Address", req.Ethaddress, fieldparams.FeeRecipientLength)
+	ethAddress, valid := shared.ValidateHex(w, "ethaddress", req.Ethaddress, fieldparams.FeeRecipientLength)
 	if !valid {
 		return
 	}
@@ -697,18 +672,12 @@ func (s *Server) DeleteFeeRecipientByPubkey(w http.ResponseWriter, r *http.Reque
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
-		return
-	}
 	settings := s.validatorService.ProposerSettings()
-
 	if settings != nil && settings.ProposeConfig != nil {
 		proposerOption, found := settings.ProposeConfig[bytesutil.ToBytes48(pubkey)]
 		if found {
@@ -776,14 +745,8 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -798,7 +761,7 @@ func (s *Server) SetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gasLimit, valid := shared.ValidateUint(w, "Gas Limit", req.GasLimit)
+	gasLimit, valid := shared.ValidateUint(w, "gas_limit", req.GasLimit)
 	if !valid {
 		return
 	}
@@ -852,14 +815,8 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 
@@ -887,5 +844,5 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 	}
 	// Otherwise, either no proposerOption is found for the pubkey or proposerOption.BuilderConfig is not enabled at all,
 	// we respond "not found".
-	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey: %q", rawPubkey), http.StatusNotFound)
+	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey %q", rawPubkey), http.StatusNotFound)
 }

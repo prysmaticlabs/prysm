@@ -38,8 +38,7 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	a, err := shared.SignedValidatorRegistrationFromConsensus(svr)
-	require.NoError(t, err)
+	a := shared.SignedValidatorRegistrationFromConsensus(svr)
 	je, err := json.Marshal(a)
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields

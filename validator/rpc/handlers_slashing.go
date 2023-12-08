@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	slashing "github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history"
 	"go.opencensus.io/trace"
 )

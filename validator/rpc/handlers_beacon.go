@@ -13,7 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -53,7 +53,7 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 		Syncing:                syncStatus.Syncing,
 		GenesisTime:            fmt.Sprintf("%d", genesisTime),
 		DepositContractAddress: hexutil.Encode(address),
-		ChainHead:              shared.ChainHeadResponseFromConsensus(chainHead),
+		ChainHead:              ChainHeadResponseFromConsensus(chainHead),
 	})
 }
 
@@ -90,7 +90,7 @@ func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request)
 		httputil.HandleError(w, errors.Wrap(err, "GetValidatorPerformance call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, shared.ValidatorPerformanceResponseFromConsensus(validatorPerformance))
+	httputil.WriteJson(w, ValidatorPerformanceResponseFromConsensus(validatorPerformance))
 }
 
 // GetValidatorBalances is a wrapper around the /eth/v1alpha1 endpoint of the same name.
@@ -138,7 +138,7 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidatorBalances call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := shared.ValidatorBalancesResponseFromConsensus(listValidatorBalances)
+	response, err := ValidatorBalancesResponseFromConsensus(listValidatorBalances)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
 		return
@@ -187,7 +187,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, errors.Wrap(err, "ListValidators call failed").Error(), http.StatusInternalServerError)
 		return
 	}
-	response, err := shared.ValidatorsResponseFromConsensus(validators)
+	response, err := ValidatorsResponseFromConsensus(validators)
 	if err != nil {
 		httputil.HandleError(w, errors.Wrap(err, "Failed to convert to json").Error(), http.StatusInternalServerError)
 		return

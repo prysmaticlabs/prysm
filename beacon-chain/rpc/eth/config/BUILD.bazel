@@ -12,7 +12,7 @@ go_library(
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//config/params:go_default_library",
         "//network/forks:go_default_library",
-        "//network/http:go_default_library",
+        "//network/httputil:go_default_library",
         "@com_github_ethereum_go_ethereum//common/hexutil:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
     ],
