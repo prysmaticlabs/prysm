@@ -186,6 +186,9 @@ func NewSlotTickerWithIntervals(genesisTime time.Time, intervals []time.Duration
 	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
 	lastOffset := time.Duration(0)
 	for _, offset := range intervals {
+		if offset.Seconds() < 0 {
+			panic("invalid negative offset")
+		}
 		if offset < lastOffset {
 			panic("invalid decreasing offsets")
 		}
