@@ -36,6 +36,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -153,8 +154,7 @@ type Service struct {
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
-	verificationInitializer          *verification.Initializer
-	verifier                         NewBlobVerifier
+	newBlobVerifier                  NewBlobVerifier
 }
 
 // NewService initializes new regular sync service.
@@ -205,7 +205,13 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	return r
 }
 
-type NewBlobVerifier func() BlobVerifier
+type NewBlobVerifier func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier
+
+func newBlobVerifierFromInitializer(ini *verification.Initializer) NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs...)
+	}
+}
 
 // Start the regular sync service.
 func (s *Service) Start() {
@@ -214,7 +220,7 @@ func (s *Service) Start() {
 		log.WithError(err).Error("Could not get verification initializer")
 		return
 	}
-	s.verificationInitializer = v
+	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
 
 	go s.verifierRoutine()
 	go s.registerHandlers()
