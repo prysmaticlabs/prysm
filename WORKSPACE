@@ -244,8 +244,8 @@ filegroup(
     visibility = ["//visibility:public"],
 )
     """,
-    sha256 = "516d551cfb3e50e4ac2f42db0992f4ceb573a7cb1616d727a725c8161485329f",
-    url = "https://github.com/eth-clients/slashing-protection-interchange-tests/archive/refs/tags/v5.3.0.tar.gz",
+    sha256 = "0626b5e0969fb434135c15cb0843eaebe0475dcdf2736a2a7814bdc69c330cb2",
+    url = "https://nalepa-public.s3.eu-west-1.amazonaws.com/slashing-protection-interchange-tests-manu-3.tar.gz",
 )
 
 http_archive(
