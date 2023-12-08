@@ -158,7 +158,7 @@ func TestGetIdentity(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetIdentityResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		expectedID := peer.ID("foo").Pretty()
+		expectedID := peer.ID("foo").String()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
 		expectedEnr, err := p2p.SerializeENR(enrRecord)
 		require.NoError(t, err)
