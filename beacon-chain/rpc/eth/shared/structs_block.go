@@ -156,13 +156,15 @@ type BlindedBeaconBlockBodyCapella struct {
 }
 
 type SignedBeaconBlockContentsDeneb struct {
-	SignedBlock        *SignedBeaconBlockDeneb `json:"signed_block"`
-	SignedBlobSidecars []*SignedBlobSidecar    `json:"signed_blob_sidecars" `
+	SignedBlock *SignedBeaconBlockDeneb `json:"signed_block"`
+	KzgProofs   []string                `json:"kzg_proofs"`
+	Blobs       []string                `json:"blobs"`
 }
 
 type BeaconBlockContentsDeneb struct {
-	Block        *BeaconBlockDeneb `json:"block"`
-	BlobSidecars []*BlobSidecar    `json:"blob_sidecars"`
+	Block     *BeaconBlockDeneb `json:"block"`
+	KzgProofs []string          `json:"kzg_proofs"`
+	Blobs     []string          `json:"blobs"`
 }
 
 type SignedBeaconBlockDeneb struct {
@@ -193,16 +195,6 @@ type BeaconBlockBodyDeneb struct {
 	BlobKzgCommitments    []string                      `json:"blob_kzg_commitments"`
 }
 
-type SignedBlindedBeaconBlockContentsDeneb struct {
-	SignedBlindedBlock        *SignedBlindedBeaconBlockDeneb `json:"signed_blinded_block"`
-	SignedBlindedBlobSidecars []*SignedBlindedBlobSidecar    `json:"signed_blinded_blob_sidecars"`
-}
-
-type BlindedBeaconBlockContentsDeneb struct {
-	BlindedBlock        *BlindedBeaconBlockDeneb `json:"blinded_block"`
-	BlindedBlobSidecars []*BlindedBlobSidecar    `json:"blinded_blob_sidecars"`
-}
-
 type BlindedBeaconBlockDeneb struct {
 	Slot          string                       `json:"slot"`
 	ProposerIndex string                       `json:"proposer_index"`
@@ -229,38 +221,6 @@ type BlindedBeaconBlockBodyDeneb struct {
 	ExecutionPayloadHeader *ExecutionPayloadHeaderDeneb  `json:"execution_payload_header"`
 	BLSToExecutionChanges  []*SignedBLSToExecutionChange `json:"bls_to_execution_changes"`
 	BlobKzgCommitments     []string                      `json:"blob_kzg_commitments"`
-}
-
-type SignedBlindedBlobSidecar struct {
-	Message   *BlindedBlobSidecar `json:"message"`
-	Signature string              `json:"signature"`
-}
-
-type SignedBlobSidecar struct {
-	Message   *BlobSidecar `json:"message"`
-	Signature string       `json:"signature"`
-}
-
-type BlindedBlobSidecar struct {
-	BlockRoot       string `json:"block_root"`
-	Index           string `json:"index"`
-	Slot            string `json:"slot"`
-	BlockParentRoot string `json:"block_parent_root"`
-	ProposerIndex   string `json:"proposer_index"`
-	BlobRoot        string `json:"blob_root"`
-	KzgCommitment   string `json:"kzg_commitment"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-	KzgProof        string `json:"kzg_proof"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-}
-
-type BlobSidecar struct {
-	BlockRoot       string `json:"block_root"`
-	Index           string `json:"index"`
-	Slot            string `json:"slot"`
-	BlockParentRoot string `json:"block_parent_root"`
-	ProposerIndex   string `json:"proposer_index"`
-	Blob            string `json:"blob"`           // pattern: "^0x[a-fA-F0-9]{262144}$"
-	KzgCommitment   string `json:"kzg_commitment"` // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
-	KzgProof        string `json:"kzg_proof"`      // pattern: "^0x[a-fA-F0-9]{96}$" ssz-size:"48"
 }
 
 type SignedBeaconBlockHeaderContainer struct {

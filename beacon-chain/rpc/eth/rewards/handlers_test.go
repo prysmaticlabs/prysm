@@ -477,11 +477,9 @@ func TestAttestationRewards(t *testing.T) {
 		require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*3-1))
 		validators := make([]*eth.Validator, 0, valCount)
 		balances := make([]uint64, 0, valCount)
-		secretKeys := make([]bls.SecretKey, 0, valCount)
 		for i := 0; i < valCount; i++ {
 			blsKey, err := bls.RandKey()
 			require.NoError(t, err)
-			secretKeys = append(secretKeys, blsKey)
 			validators = append(validators, &eth.Validator{
 				PublicKey:         blsKey.PublicKey().Marshal(),
 				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,

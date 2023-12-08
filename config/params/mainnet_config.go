@@ -274,6 +274,13 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	BlobsidecarSubnetCount: 6,
 
 	MaxPerEpochActivationChurnLimit: 8,
+
+	// Values related to the new subnet backbone
+	EpochsPerSubnetSubscription: 256,
+	AttestationSubnetExtraBits:  0,
+	AttestationSubnetPrefixBits: 6,
+	SubnetsPerNode:              2,
+	NodeIdBits:                  256,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name

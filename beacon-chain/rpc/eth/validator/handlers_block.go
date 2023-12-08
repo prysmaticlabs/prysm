@@ -296,11 +296,10 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 	case *eth.GenericBeaconBlock_BlindedCapella:
 		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
 	case *eth.GenericBeaconBlock_Deneb:
-		// no need for sidecar
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockDeneb{Block: b.Deneb}})
+		// no need for blobs
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockContentsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
 	case *eth.GenericBeaconBlock_BlindedDeneb:
-		// no need for sidecar
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{SignedBlindedBlock: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb.Block}}})
+		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb}})
 	default:
 		return "", &httputil.DefaultErrorJson{
 			Message: fmt.Errorf("type %T is not supported", b).Error(),
@@ -537,12 +536,12 @@ func handleProduceBlindedDenebV3(
 		httputil.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
 		return
 	}
-	blockContents, err := shared.BlindedBeaconBlockContentsDenebFromConsensus(blk.BlindedDeneb)
+	blindedBlock, err := shared.BlindedBeaconBlockDenebFromConsensus(blk.BlindedDeneb)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	jsonBytes, err := json.Marshal(blockContents)
+	jsonBytes, err := json.Marshal(blindedBlock)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -573,8 +572,7 @@ func handleProduceDenebV3(
 		return
 	}
 
-	// TODO: We need to add blobs here for beacon api
-	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(&eth.BeaconBlockAndBlobsDeneb{Block: blk.Deneb})
+	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return

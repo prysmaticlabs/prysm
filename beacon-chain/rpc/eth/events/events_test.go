@@ -41,7 +41,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			OperationNotifier: &mockChain.MockOperationNotifier{},
 		}
 
-		topics := []string{AttestationTopic, VoluntaryExitTopic, SyncCommitteeContributionTopic, BLSToExecutionChangeTopic, BlobSidecarTopic}
+		topics := []string{AttestationTopic, VoluntaryExitTopic, SyncCommitteeContributionTopic, BLSToExecutionChangeTopic} // TODO: add blob sidecar back in later
 		for i, topic := range topics {
 			topics[i] = "topics=" + topic
 		}
@@ -115,12 +115,13 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				},
 			},
 		})
-		s.OperationNotifier.OperationFeed().Send(&feed.Event{
-			Type: operation.BlobSidecarReceived,
-			Data: &operation.BlobSidecarReceivedData{
-				Blob: util.HydrateSignedBlobSidecar(&eth.SignedBlobSidecar{}),
-			},
-		})
+		// TODO: update when P2P is updated for blobs
+		//s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		//	Type: operation.BlobSidecarReceived,
+		//	Data: &operation.BlobSidecarReceivedData{
+		//		Blob: util.HydrateSignedBlobSidecar(&eth.SignedBlobSidecar{}),
+		//	},
+		//})
 		// wait for feed
 		time.Sleep(1 * time.Second)
 		request.Context().Done()
@@ -320,10 +321,10 @@ data: {"message":{"aggregator_index":"0","contribution":{"slot":"0","beacon_bloc
 event: bls_to_execution_change
 data: {"message":{"validator_index":"0","from_bls_pubkey":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","to_execution_address":"0x0000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
 
-event: blob_sidecar
-data: {"block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","index":"0","slot":"0","kzg_commitment":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","versioned_hash":"0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"}
-
 `
+
+//event: blob_sidecar
+//data: {"block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","index":"0","slot":"0","kzg_commitment":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","versioned_hash":"0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"}
 
 const stateResult = `event: head
 data: {"slot":"0","block":"0x0000000000000000000000000000000000000000000000000000000000000000","state":"0x0000000000000000000000000000000000000000000000000000000000000000","epoch_transition":true,"execution_optimistic":false,"previous_duty_dependent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","current_duty_dependent_root":"0x0000000000000000000000000000000000000000000000000000000000000000"}

@@ -62,6 +62,19 @@ func (h *BeaconBlockHeader) ToConsensus() (*eth.BeaconBlockHeader, error) {
 	}, nil
 }
 
+func SignedBeaconBlockHeaderFromConsensus(src *eth.SignedBeaconBlockHeader) *SignedBeaconBlockHeader {
+	return &SignedBeaconBlockHeader{
+		Message: &BeaconBlockHeader{
+			Slot:          fmt.Sprintf("%d", src.Header.Slot),
+			ProposerIndex: fmt.Sprintf("%d", src.Header.ProposerIndex),
+			ParentRoot:    hexutil.Encode(src.Header.ParentRoot),
+			StateRoot:     hexutil.Encode(src.Header.StateRoot),
+			BodyRoot:      hexutil.Encode(src.Header.BodyRoot),
+		},
+		Signature: hexutil.Encode(src.Signature),
+	}
+}
+
 func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 	if b == nil {
 		return nil, errNilValue
@@ -1209,40 +1222,37 @@ func (b *SignedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBl
 		return nil, errNilValue
 	}
 
-	var signedBlobSidecars []*eth.SignedBlobSidecar
-	if len(b.SignedBlobSidecars) != 0 {
-		err := slice.VerifyMaxLength(b.SignedBlobSidecars, fieldparams.MaxBlobsPerBlock)
-		if err != nil {
-			return nil, server.NewDecodeError(err, "SignedBlobSidecars")
-		}
-		signedBlobSidecars = make([]*eth.SignedBlobSidecar, len(b.SignedBlobSidecars))
-		for i := range b.SignedBlobSidecars {
-			signedBlob, err := b.SignedBlobSidecars[i].ToConsensus()
-			if err != nil {
-				return nil, server.NewDecodeError(err, fmt.Sprintf("SignedBlobSidecars[%d]", i))
-			}
-			signedBlobSidecars[i] = signedBlob
-		}
-	}
 	signedDenebBlock, err := b.SignedBlock.ToConsensus()
 	if err != nil {
 		return nil, server.NewDecodeError(err, "SignedBlock")
 	}
-
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: signedDenebBlock}}, nil
+	proofs := make([][]byte, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i], err = bytesutil.DecodeHexWithLength(proof, fieldparams.BLSPubkeyLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("KzgProofs[%d]", i))
+		}
+	}
+	blbs := make([][]byte, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i], err = bytesutil.DecodeHexWithLength(blob, fieldparams.BlobLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Blobs[%d]", i))
+		}
+	}
+	blk := &eth.SignedBeaconBlockContentsDeneb{
+		Block:     signedDenebBlock,
+		KzgProofs: proofs,
+		Blobs:     blbs,
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: blk}}, nil
 }
 
 func (b *SignedBeaconBlockContentsDeneb) ToUnsigned() *BeaconBlockContentsDeneb {
-	var blobSidecars []*BlobSidecar
-	if len(b.SignedBlobSidecars) != 0 {
-		blobSidecars = make([]*BlobSidecar, len(b.SignedBlobSidecars))
-		for i, s := range b.SignedBlobSidecars {
-			blobSidecars[i] = s.Message
-		}
-	}
 	return &BeaconBlockContentsDeneb{
-		Block:        b.SignedBlock.Message,
-		BlobSidecars: blobSidecars,
+		Block:     b.SignedBlock.Message,
+		KzgProofs: b.KzgProofs,
+		Blobs:     b.Blobs,
 	}
 }
 
@@ -1252,113 +1262,37 @@ func (b *BeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) 
 		return nil, err
 	}
 
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block.Block}}, nil
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_Deneb{Deneb: block}}, nil
 }
 
-func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockAndBlobsDeneb, error) {
+func (b *BeaconBlockContentsDeneb) ToConsensus() (*eth.BeaconBlockContentsDeneb, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
 
-	var blobSidecars []*eth.DeprecatedBlobSidecar
-	if len(b.BlobSidecars) != 0 {
-		err := slice.VerifyMaxLength(b.BlobSidecars, fieldparams.MaxBlobsPerBlock)
-		if err != nil {
-			return nil, server.NewDecodeError(err, "BlobSidecars")
-		}
-		blobSidecars = make([]*eth.DeprecatedBlobSidecar, len(b.BlobSidecars))
-		for i := range b.BlobSidecars {
-			blob, err := b.BlobSidecars[i].ToConsensus()
-			if err != nil {
-				return nil, server.NewDecodeError(err, fmt.Sprintf("BlobSidecars[%d]", i))
-			}
-			blobSidecars[i] = blob
-		}
-	}
 	denebBlock, err := b.Block.ToConsensus()
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Block")
 	}
-	return &eth.BeaconBlockAndBlobsDeneb{
-		Block: denebBlock,
-		Blobs: blobSidecars,
+	proofs := make([][]byte, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i], err = bytesutil.DecodeHexWithLength(proof, fieldparams.BLSPubkeyLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("KzgProofs[%d]", i))
+		}
+	}
+	blbs := make([][]byte, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i], err = bytesutil.DecodeHexWithLength(blob, fieldparams.BlobLength)
+		if err != nil {
+			return nil, server.NewDecodeError(err, fmt.Sprintf("Blobs[%d]", i))
+		}
+	}
+	return &eth.BeaconBlockContentsDeneb{
+		Block:     denebBlock,
+		KzgProofs: proofs,
+		Blobs:     blbs,
 	}, nil
-}
-
-func (b *SignedBlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	if b == nil {
-		return nil, errNilValue
-	}
-
-	var signedBlindedBlobSidecars []*eth.SignedBlindedBlobSidecar
-	if len(b.SignedBlindedBlobSidecars) != 0 {
-		err := slice.VerifyMaxLength(b.SignedBlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
-		if err != nil {
-			return nil, server.NewDecodeError(err, "SignedBlindedBlobSidecars")
-		}
-		signedBlindedBlobSidecars = make([]*eth.SignedBlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
-		for i := range b.SignedBlindedBlobSidecars {
-			signedBlob, err := b.SignedBlindedBlobSidecars[i].ToConsensus()
-			if err != nil {
-				return nil, server.NewDecodeError(err, fmt.Sprintf("SignedBlindedBlobSidecars[%d]", i))
-			}
-			signedBlindedBlobSidecars[i] = signedBlob
-		}
-	}
-	signedBlindedBlock, err := b.SignedBlindedBlock.ToConsensus()
-	if err != nil {
-		return nil, server.NewDecodeError(err, "SignedBlindedBlock")
-	}
-	block := &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-		SignedBlindedBlock:        signedBlindedBlock,
-		SignedBlindedBlobSidecars: signedBlindedBlobSidecars,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
-}
-
-func (b *SignedBlindedBeaconBlockContentsDeneb) ToUnsigned() *BlindedBeaconBlockContentsDeneb {
-	var blobSidecars []*BlindedBlobSidecar
-	if len(b.SignedBlindedBlobSidecars) != 0 {
-		blobSidecars = make([]*BlindedBlobSidecar, len(b.SignedBlindedBlobSidecars))
-		for i := range b.SignedBlindedBlobSidecars {
-			blobSidecars[i] = b.SignedBlindedBlobSidecars[i].Message
-		}
-	}
-	return &BlindedBeaconBlockContentsDeneb{
-		BlindedBlock:        b.SignedBlindedBlock.Message,
-		BlindedBlobSidecars: blobSidecars,
-	}
-}
-
-func (b *BlindedBeaconBlockContentsDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) {
-	if b == nil {
-		return nil, errNilValue
-	}
-
-	var blindedBlobSidecars []*eth.BlindedBlobSidecar
-	if len(b.BlindedBlobSidecars) != 0 {
-		err := slice.VerifyMaxLength(b.BlindedBlobSidecars, fieldparams.MaxBlobsPerBlock)
-		if err != nil {
-			return nil, server.NewDecodeError(err, "BlindedBlobSidecars")
-		}
-		blindedBlobSidecars = make([]*eth.BlindedBlobSidecar, len(b.BlindedBlobSidecars))
-		for i := range b.BlindedBlobSidecars {
-			blob, err := b.BlindedBlobSidecars[i].ToConsensus()
-			if err != nil {
-				return nil, server.NewDecodeError(err, fmt.Sprintf("BlindedBlobSidecars[%d]", i))
-			}
-			blindedBlobSidecars[i] = blob
-		}
-	}
-	blindedBlock, err := b.BlindedBlock.ToConsensus()
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlindedBlock")
-	}
-	block := &eth.BlindedBeaconBlockAndBlobsDeneb{
-		Block: blindedBlock,
-		Blobs: blindedBlobSidecars,
-	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
 }
 
 func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
@@ -1606,55 +1540,6 @@ func (b *BeaconBlockDeneb) ToConsensus() (*eth.BeaconBlockDeneb, error) {
 	}, nil
 }
 
-func (s *BlobSidecar) ToConsensus() (*eth.DeprecatedBlobSidecar, error) {
-	if s == nil {
-		return nil, errNilValue
-	}
-	blockRoot, err := bytesutil.DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlockRoot")
-	}
-	index, err := strconv.ParseUint(s.Index, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Index")
-	}
-	slot, err := strconv.ParseUint(s.Slot, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Slot")
-	}
-	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlockParentRoot")
-	}
-	proposerIndex, err := strconv.ParseUint(s.ProposerIndex, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "ProposerIndex")
-	}
-	blob, err := bytesutil.DecodeHexWithLength(s.Blob, fieldparams.BlobLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Blob")
-	}
-	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "KzgCommitment")
-	}
-	kzgProof, err := bytesutil.DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "KzgProof")
-	}
-	bsc := &eth.DeprecatedBlobSidecar{
-		BlockRoot:       blockRoot,
-		Index:           index,
-		Slot:            primitives.Slot(slot),
-		BlockParentRoot: blockParentRoot,
-		ProposerIndex:   primitives.ValidatorIndex(proposerIndex),
-		Blob:            blob,
-		KzgCommitment:   kzgCommitment,
-		KzgProof:        kzgProof,
-	}
-	return bsc, nil
-}
-
 func (b *SignedBeaconBlockDeneb) ToConsensus() (*eth.SignedBeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errNilValue
@@ -1671,66 +1556,6 @@ func (b *SignedBeaconBlockDeneb) ToConsensus() (*eth.SignedBeaconBlockDeneb, err
 	return &eth.SignedBeaconBlockDeneb{
 		Block:     block,
 		Signature: sig,
-	}, nil
-}
-
-func (s *SignedBlobSidecar) ToConsensus() (*eth.SignedBlobSidecar, error) {
-	if s == nil {
-		return nil, errNilValue
-	}
-	if s.Message == nil {
-		return nil, server.NewDecodeError(errNilValue, "Message")
-	}
-
-	blobSig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Signature")
-	}
-	blockRoot, err := bytesutil.DecodeHexWithLength(s.Message.BlockRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.BlockRoot")
-	}
-	index, err := strconv.ParseUint(s.Message.Index, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.Index")
-	}
-	slot, err := strconv.ParseUint(s.Message.Slot, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.Slot")
-	}
-	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.Message.BlockParentRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.BlockParentRoot")
-	}
-	proposerIndex, err := strconv.ParseUint(s.Message.ProposerIndex, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.ProposerIndex")
-	}
-	blob, err := bytesutil.DecodeHexWithLength(s.Message.Blob, fieldparams.BlobLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.Blob")
-	}
-	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.Message.KzgCommitment, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.KzgCommitment")
-	}
-	kzgProof, err := bytesutil.DecodeHexWithLength(s.Message.KzgProof, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Message.KzgProof")
-	}
-	bsc := &eth.DeprecatedBlobSidecar{
-		BlockRoot:       blockRoot,
-		Index:           index,
-		Slot:            primitives.Slot(slot),
-		BlockParentRoot: blockParentRoot,
-		ProposerIndex:   primitives.ValidatorIndex(proposerIndex),
-		Blob:            blob,
-		KzgCommitment:   kzgCommitment,
-		KzgProof:        kzgProof,
-	}
-	return &eth.SignedBlobSidecar{
-		Message:   bsc,
-		Signature: blobSig,
 	}, nil
 }
 
@@ -1751,6 +1576,24 @@ func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconB
 		Message:   blindedBlock,
 		Signature: sig,
 	}, nil
+}
+
+func (b *SignedBlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	if b == nil {
+		return nil, errNilValue
+	}
+	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
+	if err != nil {
+		return nil, server.NewDecodeError(err, "Signature")
+	}
+	blindedBlock, err := b.Message.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{
+		Message:   blindedBlock,
+		Signature: sig,
+	}}, IsBlinded: true}, nil
 }
 
 func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, error) {
@@ -1968,72 +1811,16 @@ func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, e
 	}, nil
 }
 
-func (s *SignedBlindedBlobSidecar) ToConsensus() (*eth.SignedBlindedBlobSidecar, error) {
-	if s == nil {
+func (b *BlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericBeaconBlock, error) {
+	if b == nil {
 		return nil, errNilValue
 	}
 
-	blobSig, err := bytesutil.DecodeHexWithLength(s.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Signature")
-	}
-	bsc, err := s.Message.ToConsensus()
+	blindedBlock, err := b.ToConsensus()
 	if err != nil {
 		return nil, err
 	}
-	return &eth.SignedBlindedBlobSidecar{
-		Message:   bsc,
-		Signature: blobSig,
-	}, nil
-}
-
-func (s *BlindedBlobSidecar) ToConsensus() (*eth.BlindedBlobSidecar, error) {
-	if s == nil {
-		return nil, errNilValue
-	}
-	blockRoot, err := bytesutil.DecodeHexWithLength(s.BlockRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlockRoot")
-	}
-	index, err := strconv.ParseUint(s.Index, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Index")
-	}
-	denebSlot, err := strconv.ParseUint(s.Slot, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Slot")
-	}
-	blockParentRoot, err := bytesutil.DecodeHexWithLength(s.BlockParentRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlockParentRoot")
-	}
-	proposerIndex, err := strconv.ParseUint(s.ProposerIndex, 10, 64)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "ProposerIndex")
-	}
-	blobRoot, err := bytesutil.DecodeHexWithLength(s.BlobRoot, fieldparams.RootLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "BlobRoot")
-	}
-	kzgCommitment, err := bytesutil.DecodeHexWithLength(s.KzgCommitment, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "KzgCommitment")
-	}
-	kzgProof, err := bytesutil.DecodeHexWithLength(s.KzgProof, fieldparams.BLSPubkeyLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "KzgProof")
-	}
-	bsc := &eth.BlindedBlobSidecar{
-		BlockRoot:       blockRoot,
-		Index:           index,
-		Slot:            primitives.Slot(denebSlot),
-		BlockParentRoot: blockParentRoot,
-		ProposerIndex:   primitives.ValidatorIndex(proposerIndex),
-		BlobRoot:        blobRoot,
-		KzgCommitment:   kzgCommitment,
-		KzgProof:        kzgProof,
-	}
-	return bsc, nil
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedDeneb{BlindedDeneb: blindedBlock}, IsBlinded: true}, nil
 }
 
 func BeaconBlockHeaderFromConsensus(h *eth.BeaconBlockHeader) *BeaconBlockHeader {
@@ -2312,57 +2099,46 @@ func SignedBeaconBlockCapellaFromConsensus(b *eth.SignedBeaconBlockCapella) (*Si
 	}, nil
 }
 
-func BlindedBeaconBlockContentsDenebFromConsensus(b *eth.BlindedBeaconBlockAndBlobsDeneb) (*BlindedBeaconBlockContentsDeneb, error) {
-	var blindedBlobSidecars []*BlindedBlobSidecar
-	if len(b.Blobs) != 0 {
-		blindedBlobSidecars = make([]*BlindedBlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
-			blindedBlobSidecars[i] = BlindedBlobSidecarFromConsensus(s)
-		}
-	}
-	blindedBlock, err := BlindedBeaconBlockDenebFromConsensus(b.Block)
-	if err != nil {
-		return nil, err
-	}
-	return &BlindedBeaconBlockContentsDeneb{
-		BlindedBlock:        blindedBlock,
-		BlindedBlobSidecars: blindedBlobSidecars,
-	}, nil
-}
-
-func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockAndBlobsDeneb) (*BeaconBlockContentsDeneb, error) {
-	var blobSidecars []*BlobSidecar
-	if len(b.Blobs) != 0 {
-		blobSidecars = make([]*BlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
-			blobSidecars[i] = BlobSidecarFromConsensus(s)
-		}
-	}
+func BeaconBlockContentsDenebFromConsensus(b *eth.BeaconBlockContentsDeneb) (*BeaconBlockContentsDeneb, error) {
 	block, err := BeaconBlockDenebFromConsensus(b.Block)
 	if err != nil {
 		return nil, err
 	}
+	proofs := make([]string, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i] = hexutil.Encode(proof)
+	}
+	blbs := make([]string, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i] = hexutil.Encode(blob)
+	}
 	return &BeaconBlockContentsDeneb{
-		Block:        block,
-		BlobSidecars: blobSidecars,
+		Block:     block,
+		KzgProofs: proofs,
+		Blobs:     blbs,
 	}, nil
 }
 
-func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockAndBlobsDeneb) (*SignedBeaconBlockContentsDeneb, error) {
-	var blobSidecars []*SignedBlobSidecar
-	if len(b.Blobs) != 0 {
-		blobSidecars = make([]*SignedBlobSidecar, len(b.Blobs))
-		for i, s := range b.Blobs {
-			blobSidecars[i] = SignedBlobSidecarFromConsensus(s)
-		}
-	}
+func SignedBeaconBlockContentsDenebFromConsensus(b *eth.SignedBeaconBlockContentsDeneb) (*SignedBeaconBlockContentsDeneb, error) {
 	block, err := SignedBeaconBlockDenebFromConsensus(b.Block)
 	if err != nil {
 		return nil, err
 	}
+
+	proofs := make([]string, len(b.KzgProofs))
+	for i, proof := range b.KzgProofs {
+		proofs[i] = hexutil.Encode(proof)
+	}
+
+	blbs := make([]string, len(b.Blobs))
+	for i, blob := range b.Blobs {
+		blbs[i] = hexutil.Encode(blob)
+	}
+
 	return &SignedBeaconBlockContentsDeneb{
-		SignedBlock:        block,
-		SignedBlobSidecars: blobSidecars,
+		SignedBlock: block,
+		KzgProofs:   proofs,
+		Blobs:       blbs,
 	}, nil
 }
 
@@ -2487,39 +2263,6 @@ func SignedBeaconBlockDenebFromConsensus(b *eth.SignedBeaconBlockDeneb) (*Signed
 		Message:   block,
 		Signature: hexutil.Encode(b.Signature),
 	}, nil
-}
-
-func BlindedBlobSidecarFromConsensus(b *eth.BlindedBlobSidecar) *BlindedBlobSidecar {
-	return &BlindedBlobSidecar{
-		BlockRoot:       hexutil.Encode(b.BlockRoot),
-		Index:           fmt.Sprintf("%d", b.Index),
-		Slot:            fmt.Sprintf("%d", b.Slot),
-		BlockParentRoot: hexutil.Encode(b.BlockParentRoot),
-		ProposerIndex:   fmt.Sprintf("%d", b.ProposerIndex),
-		BlobRoot:        hexutil.Encode(b.BlobRoot),
-		KzgCommitment:   hexutil.Encode(b.KzgCommitment),
-		KzgProof:        hexutil.Encode(b.KzgProof),
-	}
-}
-
-func BlobSidecarFromConsensus(b *eth.DeprecatedBlobSidecar) *BlobSidecar {
-	return &BlobSidecar{
-		BlockRoot:       hexutil.Encode(b.BlockRoot),
-		Index:           fmt.Sprintf("%d", b.Index),
-		Slot:            fmt.Sprintf("%d", b.Slot),
-		BlockParentRoot: hexutil.Encode(b.BlockParentRoot),
-		ProposerIndex:   fmt.Sprintf("%d", b.ProposerIndex),
-		Blob:            hexutil.Encode(b.Blob),
-		KzgCommitment:   hexutil.Encode(b.KzgCommitment),
-		KzgProof:        hexutil.Encode(b.KzgProof),
-	}
-}
-
-func SignedBlobSidecarFromConsensus(b *eth.SignedBlobSidecar) *SignedBlobSidecar {
-	return &SignedBlobSidecar{
-		Message:   BlobSidecarFromConsensus(b.Message),
-		Signature: hexutil.Encode(b.Signature),
-	}
 }
 
 func ExecutionPayloadHeaderFromConsensus(payload *enginev1.ExecutionPayloadHeader) (*ExecutionPayloadHeader, error) {

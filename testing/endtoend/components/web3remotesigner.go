@@ -262,11 +262,7 @@ func createTestnetDir() (string, error) {
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
 	rawYaml = append(rawYaml, params.NetworkConfigToYaml(params.BeaconNetworkConfig())...)
 
-	rawYaml = append(rawYaml, []byte("\nEPOCHS_PER_SUBNET_SUBSCRIPTION: 256\n")...)
 	rawYaml = append(rawYaml, []byte("\nMIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024\n")...)
-	rawYaml = append(rawYaml, []byte("\nSUBNETS_PER_NODE: 2\n")...)
-	rawYaml = append(rawYaml, []byte("\nATTESTATION_SUBNET_EXTRA_BITS: 0\n")...)
-	rawYaml = append(rawYaml, []byte("\nATTESTATION_SUBNET_PREFIX_BITS: 6\n")...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err

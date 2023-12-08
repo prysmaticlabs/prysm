@@ -212,7 +212,7 @@ func (r *testRunner) testDepositsAndTx(ctx context.Context, g *errgroup.Group,
 				// for further deposit testing.
 				err := r.depositor.SendAndMine(ctx, minGenesisActiveCount, int(e2e.DepositCount), e2etypes.PostGenesisDepositBatch, false)
 				if err != nil {
-					r.t.Fatal(err)
+					r.t.Error(err)
 				}
 			}
 			r.testTxGeneration(ctx, g, keystorePath, []e2etypes.ComponentRunner{})
@@ -380,6 +380,10 @@ func (r *testRunner) testBeaconChainSync(ctx context.Context, g *errgroup.Group,
 	// Sleep a slot to make sure the synced state is made.
 	time.Sleep(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	syncEvaluators := []e2etypes.Evaluator{ev.FinishedSyncing, ev.AllNodesHaveSameHead}
+	// Only execute in the middle of an epoch to prevent race conditions around slot 0.
+	ticker := helpers.NewEpochTicker(tickingStartTime, secondsPerEpoch)
+	<-ticker.C()
+	ticker.Done()
 	for _, evaluator := range syncEvaluators {
 		t.Run(evaluator.Name, func(t *testing.T) {
 			assert.NoError(t, evaluator.Evaluation(nil, conns...), "Evaluation failed for sync node")

@@ -992,11 +992,11 @@ func (s *Server) publishBlindedBlockSSZ(ctx context.Context, w http.ResponseWrit
 		httputil.HandleError(w, "Could not read request body: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	denebBlockContents := &eth.SignedBlindedBeaconBlockAndBlobsDeneb{}
-	if err := denebBlockContents.UnmarshalSSZ(body); err == nil {
+	denebBlock := &eth.SignedBlindedBeaconBlockDeneb{}
+	if err := denebBlock.UnmarshalSSZ(body); err == nil {
 		genericBlock := &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{
-				BlindedDeneb: denebBlockContents,
+				BlindedDeneb: denebBlock,
 			},
 		}
 		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {
@@ -1075,9 +1075,9 @@ func (s *Server) publishBlindedBlock(ctx context.Context, w http.ResponseWriter,
 	}
 	versionHeader := r.Header.Get(api.VersionHeader)
 	var blockVersionError string
-	var denebBlockContents *shared.SignedBlindedBeaconBlockContentsDeneb
-	if err = unmarshalStrict(body, &denebBlockContents); err == nil {
-		consensusBlock, err := denebBlockContents.ToGeneric()
+	var denebBlock *shared.SignedBlindedBeaconBlockDeneb
+	if err = unmarshalStrict(body, &denebBlock); err == nil {
+		consensusBlock, err := denebBlock.ToGeneric()
 		if err == nil {
 			if err = s.validateBroadcast(ctx, r, consensusBlock); err != nil {
 				httputil.HandleError(w, err.Error(), http.StatusBadRequest)
@@ -1209,11 +1209,11 @@ func (s *Server) publishBlockSSZ(ctx context.Context, w http.ResponseWriter, r *
 		httputil.HandleError(w, "Could not read request body", http.StatusInternalServerError)
 		return
 	}
-	denebBlockContents := &eth.SignedBeaconBlockDeneb{}
-	if err := denebBlockContents.UnmarshalSSZ(body); err == nil {
+	denebBlock := &eth.SignedBeaconBlockContentsDeneb{}
+	if err := denebBlock.UnmarshalSSZ(body); err == nil {
 		genericBlock := &eth.GenericSignedBeaconBlock{
 			Block: &eth.GenericSignedBeaconBlock_Deneb{
-				Deneb: denebBlockContents,
+				Deneb: denebBlock,
 			},
 		}
 		if err = s.validateBroadcast(ctx, r, genericBlock); err != nil {

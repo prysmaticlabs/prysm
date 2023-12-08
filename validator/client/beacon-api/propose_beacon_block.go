@@ -96,10 +96,7 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to compute block root for deneb beacon block")
 		}
-		// TODO: Fix this as part of beacon API PR
-		signedBlock, err := shared.SignedBeaconBlockContentsDenebFromConsensus(&ethpb.SignedBeaconBlockAndBlobsDeneb{
-			Block: blockType.Deneb,
-		})
+		signedBlock, err := shared.SignedBeaconBlockContentsDenebFromConsensus(blockType.Deneb)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to convert deneb beacon block contents")
 		}
@@ -110,19 +107,18 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
 		blinded = true
 		consensusVersion = "deneb"
-		//TODO: update for beaocn API
-		//beaconBlockRoot, err = blockType.BlindedDeneb.SignedBlindedBlock.HashTreeRoot()
-		//if err != nil {
-		//	return nil, errors.Wrap(err, "failed to compute block root for blinded deneb beacon block")
-		//}
-		//signedBlock, err := shared.SignedBlindedBeaconBlockContentsDenebFromConsensus(blockType.BlindedDeneb)
-		//if err != nil {
-		//	return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block contents")
-		//}
-		//marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
-		//if err != nil {
-		//	return nil, errors.Wrap(err, "failed to marshal blinded deneb beacon block contents")
-		//}
+		beaconBlockRoot, err = blockType.BlindedDeneb.HashTreeRoot()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute block root for blinded deneb beacon block")
+		}
+		signedBlock, err := shared.SignedBlindedBeaconBlockDenebFromConsensus(blockType.BlindedDeneb)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert blinded deneb beacon block contents")
+		}
+		marshalledSignedBeaconBlockJson, err = json.Marshal(signedBlock)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to marshal blinded deneb beacon block contents")
+		}
 	default:
 		return nil, errors.Errorf("unsupported block type %T", in.Block)
 	}

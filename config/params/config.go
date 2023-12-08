@@ -225,6 +225,13 @@ type BeaconChainConfig struct {
 
 	// Values introduced in Deneb hard fork
 	MaxPerEpochActivationChurnLimit uint64 `yaml:"MAX_PER_EPOCH_ACTIVATION_CHURN_LIMIT" spec:"true"` // MaxPerEpochActivationChurnLimit is the maximum amount of churn allotted for validator activation.
+
+	// Values related to the new subnet backbone
+	EpochsPerSubnetSubscription uint64 `yaml:"EPOCHS_PER_SUBNET_SUBSCRIPTION" spec:"true"` // EpochsPerSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
+	AttestationSubnetExtraBits  uint64 `yaml:"ATTESTATION_SUBNET_EXTRA_BITS" spec:"true"`  // AttestationSubnetExtraBits is the number of extra bits of a NodeId to use when mapping to a subscribed subnet.
+	AttestationSubnetPrefixBits uint64 `yaml:"ATTESTATION_SUBNET_PREFIX_BITS" spec:"true"` // AttestationSubnetPrefixBits is defined as (ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS).
+	SubnetsPerNode              uint64 `yaml:"SUBNETS_PER_NODE" spec:"true"`               // SubnetsPerNode is the number of long-lived subnets a beacon node should be subscribed to.
+	NodeIdBits                  uint64 `yaml:"NODE_ID_BITS" spec:"true"`                   // NodeIdBits defines the bit length of a node id.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.
