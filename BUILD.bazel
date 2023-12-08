@@ -142,7 +142,7 @@ STATICCHECK_ANALYZERS = [
     "sa4020",
     "sa4021",
     "sa4022",
-    # "sa4023",
+    "sa4023",
     "sa4024",
     "sa4025",
     "sa4026",
