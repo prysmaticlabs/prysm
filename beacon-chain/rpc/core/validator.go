@@ -334,7 +334,7 @@ func (s *Service) GetAttestationData(
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
 			CommitteeIndex:  req.CommitteeIndex,
-			BeaconBlockRoot: res.HeadRoot[:],
+			BeaconBlockRoot: res.HeadRoot,
 			Source:          res.SourceCheckpoint,
 			Target:          res.TargetCheckpoint,
 		}, nil
@@ -367,7 +367,7 @@ func (s *Service) GetAttestationData(
 	return &ethpb.AttestationData{
 		Slot:            res.Slot,
 		CommitteeIndex:  req.CommitteeIndex,
-		BeaconBlockRoot: res.HeadRoot[:],
+		BeaconBlockRoot: res.HeadRoot,
 		Source:          res.SourceCheckpoint,
 		Target:          res.TargetCheckpoint,
 	}, nil
