@@ -4,6 +4,7 @@ load("@com_github_atlassian_bazel_tools//goimports:def.bzl", "goimports")
 load("@io_kubernetes_build//defs:run_in_workspace.bzl", "workspace_binary")
 load("@io_bazel_rules_go//go:def.bzl", "nogo")
 load("@bazel_skylib//rules:common_settings.bzl", "string_setting")
+load("@prysm//tools/nogo_config:def.bzl", "nogo_config_exclude")
 
 prefix = "github.com/prysmaticlabs/prysm"
 
@@ -82,9 +83,115 @@ workspace_binary(
     cmd = "@com_github_golang_lint//golint",
 )
 
+STATICCHECK_ANALYZERS = [
+    # Enabled static checks. See https://staticcheck.dev/docs/checks/
+    # Please. keep this list sorted. Don't be a bad person by inserting stuff randomly.
+    "sa1000",
+    "sa1001",
+    "sa1002",
+    "sa1003",
+    "sa1004",
+    "sa1005",
+    "sa1006",
+    "sa1007",
+    "sa1008",
+    "sa1010",
+    "sa1011",
+    "sa1012",
+    "sa1013",
+    "sa1014",
+    "sa1015",
+    "sa1016",
+    "sa1017",
+    "sa1018",
+    # "sa1019",
+    "sa1020",
+    "sa1021",
+    "sa1023",
+    "sa1024",
+    "sa1025",
+    "sa1026",
+    "sa1027",
+    "sa1028",
+    "sa1029",
+    "sa1030",
+    "sa2000",
+    "sa2001",
+    # "sa2002",
+    "sa2003",
+    "sa3000",
+    "sa3001",
+    "sa4000",
+    "sa4001",
+    "sa4003",
+    "sa4004",
+    # "sa4005",
+    # "sa4006",
+    "sa4008",
+    "sa4009",
+    # "sa4010",
+    "sa4011",
+    "sa4012",
+    "sa4013",
+    "sa4014",
+    "sa4015",
+    "sa4016",
+    "sa4017",
+    "sa4018",
+    "sa4019",
+    "sa4020",
+    "sa4021",
+    "sa4022",
+    # "sa4023",
+    "sa4024",
+    "sa4025",
+    "sa4026",
+    "sa4027",
+    "sa4028",
+    "sa4029",
+    "sa4030",
+    "sa4031",
+    "sa4032",
+    "sa5000",
+    "sa5001",
+    "sa5002",
+    "sa5003",
+    "sa5004",
+    "sa5005",
+    "sa5007",
+    "sa5008",
+    "sa5009",
+    "sa5010",
+    "sa5011",
+    "sa5012",
+    "sa6000",
+    "sa6001",
+    "sa6002",
+    "sa6003",
+    "sa6005",
+    "sa6006",
+    "sa9001",
+    "sa9002",
+    #"sa9003", # Doesn't build
+    "sa9004",
+    "sa9005",
+    "sa9006",
+    "sa9007",
+    "sa9008",
+]
+
+nogo_config_exclude(
+    name = "nogo_config_with_excludes",
+    checks = [sa.upper() for sa in STATICCHECK_ANALYZERS],
+    exclude_files = [
+        "external/.*",
+    ],
+    input = "nogo_config.json",
+)
+
 nogo(
     name = "nogo",
-    config = "nogo_config.json",
+    config = ":nogo_config_with_excludes",
     visibility = ["//visibility:public"],
     deps = [
         "@org_golang_x_tools//go/analysis/passes/unsafeptr:go_default_library",
@@ -136,7 +243,7 @@ nogo(
             "@org_golang_x_tools//go/analysis/passes/composite:go_default_library",
             "@org_golang_x_tools//go/analysis/passes/lostcancel:go_default_library",
         ],
-    }),
+    }) + ["@co_honnef_go_tools//staticcheck/%s:go_default_library" % c for c in STATICCHECK_ANALYZERS],
 )
 
 config_setting(
