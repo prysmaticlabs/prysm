@@ -88,7 +88,7 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			return
 		}
 
-		reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
+		reorgInterval := saturatingReorgInterval()
 		ticker := slots.NewSlotTickerWithIntervals(s.genesisTime, []time.Duration{0, reorgInterval})
 		for {
 			select {
@@ -109,6 +109,16 @@ func (s *Service) spawnProcessAttestationsRoutine() {
 			}
 		}
 	}()
+}
+
+// saturatingReorgInterval makes sure that the reorg interval cannot be a negative number
+// it should be saturated to 0 if it's the case
+func saturatingReorgInterval() time.Duration {
+	reorgInterval := time.Second*time.Duration(params.BeaconConfig().SecondsPerSlot) - reorgLateBlockCountAttestations
+	if reorgInterval.Minutes() < 0 {
+		reorgInterval = 0
+	}
+	return reorgInterval
 }
 
 // UpdateHead updates the canonical head of the chain based on information from fork-choice attestations and votes.
