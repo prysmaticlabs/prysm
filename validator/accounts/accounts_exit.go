@@ -23,6 +23,10 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+const (
+	beaconChaDomain = "beaconcha.in"
+)
+
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
 	ValidatorClient  iface.ValidatorClient
@@ -173,15 +177,16 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 }
 
 func getBeaconChaURL() string {
+	baseURL := "https://%s%s/validator/"
 	switch env := params.BeaconConfig().ConfigName; env {
 	case params.PraterName, params.GoerliName:
-		return "https://goerli.beaconcha.in/validator/"
+		return fmt.Sprintf(baseURL, "prater.", beaconChaDomain)
 	case params.HoleskyName:
-		return "https://holesky.beaconcha.in/validator/"
+		return fmt.Sprintf(baseURL, "holesky.", beaconChaDomain)
 	case params.SepoliaName:
-		return "https://sepolia.beaconcha.in/validator/"
+		return fmt.Sprintf(baseURL, "sepolia.", beaconChaDomain)
 	default:
-		return "https://beaconcha.in/validator/"
+		return fmt.Sprintf(baseURL, "", beaconChaDomain)
 	}
 }
 
