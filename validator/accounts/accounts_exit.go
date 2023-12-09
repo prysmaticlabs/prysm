@@ -23,10 +23,6 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-const (
-	beaconChaDomain = "beaconcha.in"
-)
-
 // PerformExitCfg for account voluntary exits.
 type PerformExitCfg struct {
 	ValidatorClient  iface.ValidatorClient
@@ -157,9 +153,7 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	if len(rawExitedKeys) > 0 {
 		urlFormattedPubKeys := make([]string, len(rawExitedKeys))
 		for i, key := range rawExitedKeys {
-			baseUrl := getBeaconChaURL()
-			// Remove '0x' prefix
-			urlFormattedPubKeys[i] = baseUrl + hexutil.Encode(key)[2:]
+			urlFormattedPubKeys[i] = formatBeaconChaURL(key)
 		}
 
 		ifaceKeys := make([]interface{}, len(urlFormattedPubKeys))
@@ -176,17 +170,19 @@ func displayExitInfo(rawExitedKeys [][]byte, trimmedExitedKeys []string) {
 	}
 }
 
-func getBeaconChaURL() string {
-	baseURL := "https://%s%s/validator/"
+func formatBeaconChaURL(key []byte) string {
+	baseURL := "https://%sbeaconcha.in/validator/%s"
+	keyWithout0x := hexutil.Encode(key)[2:]
+
 	switch env := params.BeaconConfig().ConfigName; env {
 	case params.PraterName, params.GoerliName:
-		return fmt.Sprintf(baseURL, "prater.", beaconChaDomain)
+		return fmt.Sprintf(baseURL, "prater.", keyWithout0x)
 	case params.HoleskyName:
-		return fmt.Sprintf(baseURL, "holesky.", beaconChaDomain)
+		return fmt.Sprintf(baseURL, "holesky.", keyWithout0x)
 	case params.SepoliaName:
-		return fmt.Sprintf(baseURL, "sepolia.", beaconChaDomain)
+		return fmt.Sprintf(baseURL, "sepolia.", keyWithout0x)
 	default:
-		return fmt.Sprintf(baseURL, "", beaconChaDomain)
+		return fmt.Sprintf(baseURL, "", keyWithout0x)
 	}
 }
 
