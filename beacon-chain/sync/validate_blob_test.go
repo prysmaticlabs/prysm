@@ -9,6 +9,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/pkg/errors"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
@@ -53,12 +54,6 @@ func TestValidateBlob_InvalidTopic(t *testing.T) {
 	})
 	require.ErrorIs(t, errInvalidTopic, err)
 	require.Equal(t, result, pubsub.ValidationReject)
-}
-
-func testNewBlobVerifier() NewBlobVerifier {
-	return func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-		return &mockBlobVerifier{}
-	}
 }
 
 func TestValidateBlob_InvalidMessageType(t *testing.T) {
@@ -123,7 +118,6 @@ func TestValidateBlob_AlreadySeenInCache(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, db.SaveState(ctx, beaconState, r))
 
-	//_, scs := util.GenerateTestDenebBlockWithSidecar(t, r, chainService.CurrentSlot()+1, 1)
 	header, err := signedBb.Header()
 	require.NoError(t, err)
 	sc := util.GenerateTestDenebBlobSidecar(t, r, header, 0, make([]byte, 48), make([][]byte, 0))
@@ -172,4 +166,127 @@ func TestValidateBlob_InvalidTopicIndex(t *testing.T) {
 		}})
 	require.ErrorContains(t, "/eth2/f5a5fd42/blob_sidecar_1", err)
 	require.Equal(t, result, pubsub.ValidationReject)
+}
+
+func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
+	tests := []struct {
+		name     string
+		error    error
+		verifier NewBlobVerifier
+		result   pubsub.ValidationResult
+	}{
+		{
+			error: errors.New("blob index out of bound"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errBlobIndexInBounds: errors.New("blob index out of bound")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("slot too early"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSlotTooEarly: errors.New("slot too early")}
+			},
+			result: pubsub.ValidationIgnore,
+		},
+		{
+			error: errors.New("slot above finalized"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSlotAboveFinalized: errors.New("slot above finalized")}
+			},
+			result: pubsub.ValidationIgnore,
+		},
+		{
+			error: errors.New("valid proposer signature"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errValidProposerSignature: errors.New("valid proposer signature")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("sidecar parent seen"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarParentSeen: errors.New("sidecar parent seen")}
+			},
+			result: pubsub.ValidationIgnore,
+		},
+		{
+			error: errors.New("sidecar parent valid"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarParentValid: errors.New("sidecar parent valid")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("sidecar parent slot lower"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarParentSlotLower: errors.New("sidecar parent slot lower")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("descends from finalized"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarDescendsFromFinalized: errors.New("descends from finalized")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("inclusion proven"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarInclusionProven: errors.New("inclusion proven")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("kzg proof verified"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarKzgProofVerified: errors.New("kzg proof verified")}
+			},
+			result: pubsub.ValidationReject,
+		},
+		{
+			error: errors.New("sidecar proposer expected"),
+			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+				return &mockBlobVerifier{errSidecarProposerExpected: errors.New("sidecar proposer expected")}
+			},
+			result: pubsub.ValidationReject,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.error.Error(), func(t *testing.T) {
+			ctx := context.Background()
+			p := p2ptest.NewTestP2P(t)
+			chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0)}
+			s := &Service{
+				seenBlobCache:     lruwrpr.New(10),
+				seenPendingBlocks: make(map[[32]byte]bool),
+				cfg:               &config{chain: chainService, p2p: p, initialSync: &mockSync.Sync{}, clock: startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)}}
+			s.newBlobVerifier = tt.verifier
+
+			_, scs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, chainService.CurrentSlot()+1, 1)
+			msg := scs[0].BlobSidecar
+			buf := new(bytes.Buffer)
+			_, err := p.Encoding().EncodeGossip(buf, msg)
+			require.NoError(t, err)
+
+			topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+			digest, err := s.currentForkDigest()
+			require.NoError(t, err)
+			topic = s.addDigestAndIndexToTopic(topic, digest, 0)
+			result, err := s.validateBlob(ctx, "", &pubsub.Message{
+				Message: &pb.Message{
+					Data:  buf.Bytes(),
+					Topic: &topic,
+				}})
+			require.ErrorContains(t, tt.error.Error(), err)
+			require.Equal(t, result, tt.result)
+		})
+	}
+}
+
+func testNewBlobVerifier() NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
+		return &mockBlobVerifier{}
+	}
 }

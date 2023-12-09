@@ -3,19 +3,8 @@ package sync
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 )
-
-type BlobVerifierInitializer interface {
-	NewBlobVerifier(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier
-}
-
-type mockBlobVerifierInitializer struct{}
-
-func (m *mockBlobVerifierInitializer) NewBlobVerifier(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-	return nil
-}
 
 type BlobVerifier interface {
 	VerifiedROBlob() (blocks.VerifiedROBlob, error)
@@ -32,52 +21,64 @@ type BlobVerifier interface {
 	SidecarProposerExpected(ctx context.Context) (err error)
 }
 
-type mockBlobVerifier struct{}
+type mockBlobVerifier struct {
+	errBlobIndexInBounds            error
+	errSlotTooEarly                 error
+	errSlotAboveFinalized           error
+	errValidProposerSignature       error
+	errSidecarParentSeen            error
+	errSidecarParentValid           error
+	errSidecarParentSlotLower       error
+	errSidecarDescendsFromFinalized error
+	errSidecarInclusionProven       error
+	errSidecarKzgProofVerified      error
+	errSidecarProposerExpected      error
+}
 
 func (m *mockBlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
 	return blocks.VerifiedROBlob{}, nil
 }
 
 func (m *mockBlobVerifier) BlobIndexInBounds() (err error) {
-	return nil
+	return m.errBlobIndexInBounds
 }
 
 func (m *mockBlobVerifier) SlotNotTooEarly() (err error) {
-	return nil
+	return m.errSlotTooEarly
 }
 
 func (m *mockBlobVerifier) SlotAboveFinalized() (err error) {
-	return nil
+	return m.errSlotAboveFinalized
 }
 
 func (m *mockBlobVerifier) ValidProposerSignature(ctx context.Context) (err error) {
-	return nil
+	return m.errValidProposerSignature
 }
 
 func (m *mockBlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err error) {
-	return nil
+	return m.errSidecarParentSeen
 }
 
 func (m *mockBlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err error) {
-	return nil
+	return m.errSidecarParentValid
 }
 
 func (m *mockBlobVerifier) SidecarParentSlotLower() (err error) {
-	return nil
+	return m.errSidecarParentSlotLower
 }
 
 func (m *mockBlobVerifier) SidecarDescendsFromFinalized() (err error) {
-	return nil
+	return m.errSidecarDescendsFromFinalized
 }
 
 func (m *mockBlobVerifier) SidecarInclusionProven() (err error) {
-	return nil
+	return m.errSidecarInclusionProven
 }
 
 func (m *mockBlobVerifier) SidecarKzgProofVerified() (err error) {
-	return nil
+	return m.errSidecarKzgProofVerified
 }
 
 func (m *mockBlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
-	return nil
+	return m.errSidecarProposerExpected
 }
