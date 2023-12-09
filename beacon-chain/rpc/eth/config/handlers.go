@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"go.opencensus.io/trace"
 )
 
@@ -20,7 +20,7 @@ func GetDepositContract(w http.ResponseWriter, r *http.Request) {
 	_, span := trace.StartSpan(r.Context(), "config.GetDepositContract")
 	defer span.End()
 
-	http2.WriteJson(w, &GetDepositContractResponse{
+	httputil.WriteJson(w, &GetDepositContractResponse{
 		Data: &DepositContractData{
 			ChainId: strconv.FormatUint(params.BeaconConfig().DepositChainID, 10),
 			Address: params.BeaconConfig().DepositContractAddress,
@@ -35,7 +35,7 @@ func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
 
 	schedule := params.BeaconConfig().ForkVersionSchedule
 	if len(schedule) == 0 {
-		http2.WriteJson(w, &GetForkScheduleResponse{
+		httputil.WriteJson(w, &GetForkScheduleResponse{
 			Data: make([]*shared.Fork, 0),
 		})
 		return
@@ -59,7 +59,7 @@ func GetForkSchedule(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http2.WriteJson(w, &GetForkScheduleResponse{
+	httputil.WriteJson(w, &GetForkScheduleResponse{
 		Data: chainForks,
 	})
 }
@@ -74,10 +74,10 @@ func GetSpec(w http.ResponseWriter, r *http.Request) {
 
 	data, err := prepareConfigSpec()
 	if err != nil {
-		http2.HandleError(w, "Could not prepare config spec: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not prepare config spec: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteJson(w, &GetSpecResponse{Data: data})
+	httputil.WriteJson(w, &GetSpecResponse{Data: data})
 }
 
 func prepareConfigSpec() (map[string]string, error) {

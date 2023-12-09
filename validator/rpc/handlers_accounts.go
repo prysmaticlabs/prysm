@@ -18,7 +18,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"

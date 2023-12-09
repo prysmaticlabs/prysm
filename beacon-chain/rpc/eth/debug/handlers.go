@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
 )
@@ -27,7 +27,7 @@ func (s *Server) GetBeaconStateSSZ(w http.ResponseWriter, r *http.Request) {
 
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
-		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
 	st, err := s.Stater.State(ctx, []byte(stateId))
@@ -37,10 +37,10 @@ func (s *Server) GetBeaconStateSSZ(w http.ResponseWriter, r *http.Request) {
 	}
 	sszState, err := st.MarshalSSZ()
 	if err != nil {
-		http2.HandleError(w, "Could not marshal state into SSZ: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not marshal state into SSZ: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http2.WriteSsz(w, sszState, "beacon_state.ssz")
+	httputil.WriteSsz(w, sszState, "beacon_state.ssz")
 }
 
 // GetBeaconStateV2 returns the full beacon state for a given state ID.
@@ -50,11 +50,11 @@ func (s *Server) GetBeaconStateV2(w http.ResponseWriter, r *http.Request) {
 
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
-		http2.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
+		httputil.HandleError(w, "state_id is required in URL params", http.StatusBadRequest)
 		return
 	}
 
-	if http2.SszRequested(r) {
+	if httputil.SszRequested(r) {
 		s.getBeaconStateSSZV2(ctx, w, []byte(stateId))
 	} else {
 		s.getBeaconStateV2(ctx, w, []byte(stateId))
@@ -71,12 +71,12 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, id, s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
-		http2.HandleError(w, "Could not check if state is optimistic: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not check if state is optimistic: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		http2.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not calculate root of latest block header: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
@@ -84,43 +84,43 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 
 	switch st.Version() {
 	case version.Phase0:
-		respSt, err = BeaconStateFromConsensus(st)
+		respSt, err = shared.BeaconStateFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Altair:
-		respSt, err = BeaconStateAltairFromConsensus(st)
+		respSt, err = shared.BeaconStateAltairFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Bellatrix:
-		respSt, err = BeaconStateBellatrixFromConsensus(st)
+		respSt, err = shared.BeaconStateBellatrixFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Capella:
-		respSt, err = BeaconStateCapellaFromConsensus(st)
+		respSt, err = shared.BeaconStateCapellaFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Deneb:
-		respSt, err = BeaconStateDenebFromConsensus(st)
+		respSt, err = shared.BeaconStateDenebFromConsensus(st)
 		if err != nil {
-			http2.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
-		http2.HandleError(w, "Unsupported state version", http.StatusInternalServerError)
+		httputil.HandleError(w, "Unsupported state version", http.StatusInternalServerError)
 		return
 	}
 
 	jsonBytes, err := json.Marshal(respSt)
 	if err != nil {
-		http2.HandleError(w, "Could not marshal state into JSON: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not marshal state into JSON: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	ver := version.String(st.Version())
@@ -131,7 +131,7 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 		Data:                jsonBytes,
 	}
 	w.Header().Set(api.VersionHeader, ver)
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }
 
 // getBeaconStateSSZV2 returns the SSZ-serialized version of the full beacon state object for given state ID.
@@ -143,11 +143,11 @@ func (s *Server) getBeaconStateSSZV2(ctx context.Context, w http.ResponseWriter,
 	}
 	sszState, err := st.MarshalSSZ()
 	if err != nil {
-		http2.HandleError(w, "Could not marshal state into SSZ: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not marshal state into SSZ: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set(api.VersionHeader, version.String(st.Version()))
-	http2.WriteSsz(w, sszState, "beacon_state.ssz")
+	httputil.WriteSsz(w, sszState, "beacon_state.ssz")
 }
 
 // GetForkChoiceHeadsV2 retrieves the leaves of the current fork choice tree.
@@ -162,7 +162,7 @@ func (s *Server) GetForkChoiceHeadsV2(w http.ResponseWriter, r *http.Request) {
 	for i := range headRoots {
 		isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, headRoots[i])
 		if err != nil {
-			http2.HandleError(w, "Could not check if head is optimistic: "+err.Error(), http.StatusInternalServerError)
+			httputil.HandleError(w, "Could not check if head is optimistic: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 		resp.Data[i] = &ForkChoiceHead{
@@ -172,7 +172,7 @@ func (s *Server) GetForkChoiceHeadsV2(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }
 
 // GetForkChoice returns a dump fork choice store.
@@ -182,7 +182,7 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 
 	dump, err := s.ForkchoiceFetcher.ForkChoiceDump(ctx)
 	if err != nil {
-		http2.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get forkchoice dump: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -218,5 +218,5 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 			HeadRoot:                      hexutil.Encode(dump.HeadRoot),
 		},
 	}
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }

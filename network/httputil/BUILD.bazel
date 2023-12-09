@@ -7,7 +7,7 @@ go_library(
         "reader.go",
         "writer.go",
     ],
-    importpath = "github.com/prysmaticlabs/prysm/v4/network/http",
+    importpath = "github.com/prysmaticlabs/prysm/v4/network/httputil",
     visibility = ["//visibility:public"],
     deps = [
         "//api:go_default_library",

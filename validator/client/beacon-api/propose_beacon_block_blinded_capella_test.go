@@ -65,7 +65,7 @@ func TestProposeBeaconBlock_BlindedCapella(t *testing.T) {
 					TransactionsRoot: hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.ExecutionPayloadHeader.TransactionsRoot),
 					WithdrawalsRoot:  hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot),
 				},
-				BlsToExecutionChanges: jsonifyBlsToExecutionChanges(blindedCapellaBlock.BlindedCapella.Block.Body.BlsToExecutionChanges),
+				BLSToExecutionChanges: jsonifyBlsToExecutionChanges(blindedCapellaBlock.BlindedCapella.Block.Body.BlsToExecutionChanges),
 			},
 		},
 	}

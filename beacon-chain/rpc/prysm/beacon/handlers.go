@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -27,27 +27,27 @@ func (s *Server) GetWeakSubjectivity(w http.ResponseWriter, r *http.Request) {
 
 	hs, err := s.HeadFetcher.HeadStateReadOnly(ctx)
 	if err != nil {
-		http2.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	wsEpoch, err := helpers.LatestWeakSubjectivityEpoch(ctx, hs, params.BeaconConfig())
 	if err != nil {
-		http2.HandleError(w, "Could not get weak subjectivity epoch: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get weak subjectivity epoch: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	wsSlot, err := slots.EpochStart(wsEpoch)
 	if err != nil {
-		http2.HandleError(w, "Could not get weak subjectivity slot: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "Could not get weak subjectivity slot: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	cbr, err := s.CanonicalHistory.BlockRootForSlot(ctx, wsSlot)
 	if err != nil {
-		http2.HandleError(w, fmt.Sprintf("Could not find highest block below slot %d: %s", wsSlot, err.Error()), http.StatusInternalServerError)
+		httputil.HandleError(w, fmt.Sprintf("Could not find highest block below slot %d: %s", wsSlot, err.Error()), http.StatusInternalServerError)
 		return
 	}
 	cb, err := s.BeaconDB.Block(ctx, cbr)
 	if err != nil {
-		http2.HandleError(
+		httputil.HandleError(
 			w,
 			fmt.Sprintf("Block with root %#x from slot index %d not found in db: %s", cbr, wsSlot, err.Error()),
 			http.StatusInternalServerError,
@@ -66,5 +66,5 @@ func (s *Server) GetWeakSubjectivity(w http.ResponseWriter, r *http.Request) {
 			StateRoot: hexutil.Encode(stateRoot[:]),
 		},
 	}
-	http2.WriteJson(w, resp)
+	httputil.WriteJson(w, resp)
 }

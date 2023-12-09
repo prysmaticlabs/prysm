@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
@@ -34,7 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpbv1alpha1 "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -275,7 +276,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -290,7 +291,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -305,7 +306,7 @@ func TestSubmitAttestations(t *testing.T) {
 
 		s.SubmitAttestations(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &shared.IndexedVerificationFailureError{}
+		e := &server.IndexedVerificationFailureError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		require.Equal(t, 1, len(e.Failures))
@@ -433,7 +434,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -449,7 +450,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 		s := &Server{}
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 	})
@@ -466,7 +467,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Invalid exit"))
@@ -495,7 +496,7 @@ func TestSubmitVoluntaryExit(t *testing.T) {
 
 		s.SubmitVoluntaryExit(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not get validator"))
@@ -590,7 +591,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 		require.NoError(t, err)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		msgsInPool, err := s.CoreService.SyncCommitteePool.SyncCommitteeMessages(1)
@@ -610,7 +611,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -624,7 +625,7 @@ func TestSubmitSyncCommitteeSignatures(t *testing.T) {
 
 		s.SubmitSyncCommitteeSignatures(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "No data submitted"))
@@ -659,15 +660,11 @@ func TestListBLSToExecutionChanges(t *testing.T) {
 	s.ListBLSToExecutionChanges(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
 
-	json1, err := shared.SignedBlsToExecutionChangeFromConsensus(change1)
-	require.NoError(t, err)
-	json2, err := shared.SignedBlsToExecutionChangeFromConsensus(change2)
-	require.NoError(t, err)
 	resp := &BLSToExecutionChangesPoolResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, 2, len(resp.Data))
-	assert.DeepEqual(t, json1, resp.Data[0])
-	assert.DeepEqual(t, json2, resp.Data[1])
+	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change1), resp.Data[0])
+	assert.DeepEqual(t, shared.SignedBLSChangeFromConsensus(change2), resp.Data[1])
 }
 
 func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
@@ -729,10 +726,8 @@ func TestSubmitSignedBLSToExecutionChanges_Ok(t *testing.T) {
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
-		m, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
 		signed := &shared.SignedBLSToExecutionChange{
-			Message:   m,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 		signedChanges[i] = signed
@@ -844,11 +839,8 @@ func TestSubmitSignedBLSToExecutionChanges_Bellatrix(t *testing.T) {
 		signature, err := signing.ComputeDomainAndSign(stc, prysmtime.CurrentEpoch(stc), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
 
-		bl, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
-
 		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   bl,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -946,14 +938,11 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	for i, message := range blsChanges {
 		signature, err := signing.ComputeDomainAndSign(st, prysmtime.CurrentEpoch(st), message, params.BeaconConfig().DomainBLSToExecutionChange, privKeys[i])
 		require.NoError(t, err)
-
-		bl, err := shared.BlsToExecutionChangeFromConsensus(message)
-		require.NoError(t, err)
 		if i == 1 {
 			signature[0] = 0x00
 		}
 		signedChanges[i] = &shared.SignedBLSToExecutionChange{
-			Message:   bl,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		}
 	}
@@ -986,15 +975,10 @@ func TestSubmitSignedBLSToExecutionChanges_Failures(t *testing.T) {
 	poolChanges, err := s.BLSChangesPool.PendingBLSToExecChanges()
 	require.Equal(t, len(poolChanges)+1, len(signedChanges))
 	require.NoError(t, err)
-
-	v2Change, err := shared.SignedBlsToExecutionChangeFromConsensus(poolChanges[0])
-	require.NoError(t, err)
-	require.DeepEqual(t, v2Change, signedChanges[0])
+	require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[0]), signedChanges[0])
 
 	for i := 2; i < numValidators; i++ {
-		v2Change, err := shared.SignedBlsToExecutionChangeFromConsensus(poolChanges[i-1])
-		require.NoError(t, err)
-		require.DeepEqual(t, v2Change, signedChanges[i])
+		require.DeepEqual(t, shared.SignedBLSChangeFromConsensus(poolChanges[i-1]), signedChanges[i])
 	}
 }
 
@@ -1358,7 +1342,7 @@ func TestSubmitAttesterSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitAttesterSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &http2.DefaultErrorJson{}
+	e := &httputil.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid attester slashing", e.Message)
@@ -1549,7 +1533,7 @@ func TestSubmitProposerSlashing_InvalidSlashing(t *testing.T) {
 
 	s.SubmitProposerSlashing(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &http2.DefaultErrorJson{}
+	e := &httputil.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Invalid proposer slashing", e.Message)
