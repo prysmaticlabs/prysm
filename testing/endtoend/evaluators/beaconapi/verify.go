@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
@@ -76,28 +77,16 @@ func run(nodeIdx int) error {
 		}
 	}
 
-	return postEvaluation(requests)
+	return postEvaluation(requests, currentEpoch)
 }
 
 // postEvaluation performs additional evaluation after all requests have been completed.
 // It is useful for things such as checking if specific fields match between endpoints.
-func postEvaluation(requests map[string]endpoint) error {
+func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error {
 	// verify that block SSZ responses have the correct structure
-	forkData := requests["/beacon/states/{param1}/fork"]
-	fork, ok := forkData.getPResp().(*beacon.GetStateForkResponse)
-	if !ok {
-		return fmt.Errorf(msgWrongJson, &beacon.GetStateForkResponse{}, forkData.getPResp())
-	}
-	finalizedEpoch, err := strconv.ParseUint(fork.Data.Epoch, 10, 64)
-	if err != nil {
-		return err
-	}
 	blockData := requests["/beacon/blocks/{param1}"]
 	blindedBlockData := requests["/beacon/blinded_blocks/{param1}"]
-	if !ok {
-		return errSszCast
-	}
-	if finalizedEpoch < helpers.AltairE2EForkEpoch+2 {
+	if epoch < helpers.AltairE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlock{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -106,7 +95,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.AltairE2EForkEpoch+2 && finalizedEpoch < helpers.BellatrixE2EForkEpoch {
+	} else if epoch < helpers.BellatrixE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -115,7 +104,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.BellatrixE2EForkEpoch && finalizedEpoch < helpers.CapellaE2EForkEpoch {
+	} else if epoch < helpers.CapellaE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -124,7 +113,7 @@ func postEvaluation(requests map[string]endpoint) error {
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if finalizedEpoch >= helpers.CapellaE2EForkEpoch && finalizedEpoch < helpers.DenebE2EForkEpoch {
+	} else if epoch < helpers.DenebE2EForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
