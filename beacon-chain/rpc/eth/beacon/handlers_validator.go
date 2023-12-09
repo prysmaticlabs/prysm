@@ -113,7 +113,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			}
 			balance, err := st.BalanceAtIndex(id)
 			if err != nil {
-				http2.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			containers[i] = valContainerFromReadOnlyVal(val, id, balance, valStatus)
@@ -156,7 +156,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			}
 			balance, err := st.BalanceAtIndex(id)
 			if err != nil {
-				http2.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				httputil.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
 			container = valContainerFromReadOnlyVal(val, id, balance, valSubStatus)
