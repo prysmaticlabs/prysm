@@ -97,7 +97,6 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	epoch := slots.ToEpoch(st.Slot())
-	allBalances := st.Balances()
 
 	// Exit early if no matching validators were found or we don't want to further filter validators by status.
 	if len(readOnlyVals) == 0 || len(statuses) == 0 {
@@ -108,11 +107,16 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 				httputil.HandleError(w, "Could not get validator status: "+err.Error(), http.StatusInternalServerError)
 				return
 			}
-			if len(ids) == 0 {
-				containers[i] = valContainerFromReadOnlyVal(val, primitives.ValidatorIndex(i), allBalances[i], valStatus)
-			} else {
-				containers[i] = valContainerFromReadOnlyVal(val, ids[i], allBalances[ids[i]], valStatus)
+			id := primitives.ValidatorIndex(i)
+			if len(ids) > 0 {
+				id = ids[i]
 			}
+			balance, err := st.BalanceAtIndex(id)
+			if err != nil {
+				httputil.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			containers[i] = valContainerFromReadOnlyVal(val, id, balance, valStatus)
 		}
 		resp := &GetValidatorsResponse{
 			Data:                containers,
@@ -146,11 +150,16 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		}
 		if filteredStatuses[valStatus] || filteredStatuses[valSubStatus] {
 			var container *ValidatorContainer
-			if len(ids) == 0 {
-				container = valContainerFromReadOnlyVal(val, primitives.ValidatorIndex(i), allBalances[i], valSubStatus)
-			} else {
-				container = valContainerFromReadOnlyVal(val, ids[i], allBalances[ids[i]], valSubStatus)
+			id := primitives.ValidatorIndex(i)
+			if len(ids) > 0 {
+				id = ids[i]
 			}
+			balance, err := st.BalanceAtIndex(id)
+			if err != nil {
+				httputil.HandleError(w, "Could not get validator balance: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			container = valContainerFromReadOnlyVal(val, id, balance, valSubStatus)
 			valContainers = append(valContainers, container)
 		}
 	}
