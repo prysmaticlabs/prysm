@@ -307,7 +307,7 @@ func (s *Store) SaveAttestationsForPubKey(
 // SaveLowestSignedSourceEpochForPubKey modifies the lowest signed source epoch for a given pubkey.
 // The call to this function is allowd only for minimal slashing protection,
 // and allows only to save a higher epoch that already stored
-func (s *Store) SaveLowestSignedSourceEpochForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch) error {
+func (s *Store) SaveLowestSignedSourceEpochForPubKey(pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch) error {
 	if s.slashingProtectionType != Minimal {
 		return errors.New("SaveLowestSignedSourceEpochForPubKey is allowed only for minimal slashing protection")
 	}

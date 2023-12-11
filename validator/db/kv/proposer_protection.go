@@ -123,53 +123,22 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 		}
 
 		lowestSignedBkt := tx.Bucket(lowestSignedProposalsBucket)
-
-		if s.slashingProtectionType == Minimal {
-			if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
-				return errors.Wrapf(err, "could not put lowest signed proposal for slot %d", slot)
-			}
-		} else {
-			// If the incoming slot is lower than the lowest signed proposal slot, override.
-			lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
-			var lowestSignedProposalSlot primitives.Slot
-
-			if len(lowestSignedProposalBytes) >= 8 {
-				lowestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(lowestSignedProposalBytes)
-			}
-
-			if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
-				if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
-					return errors.Wrapf(err, "could not put lowest signed proposal for slot %d", slot)
-				}
-			}
+		if lowestSignedBkt == nil {
+			return fmt.Errorf("could not find lowest signed proposals bucket")
 		}
 
 		highestSignedBkt := tx.Bucket(highestSignedProposalsBucket)
-
-		if s.slashingProtectionType == Minimal {
-			if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
-				return errors.Wrapf(err, "could not put highest signed proposal for slot %d", slot)
-			}
-		} else {
-			// If the incoming slot is higher than the highest signed proposal slot, override.
-			highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
-			var highestSignedProposalSlot primitives.Slot
-
-			if len(highestSignedProposalBytes) >= 8 {
-				highestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(highestSignedProposalBytes)
-			}
-
-			if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
-				if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
-					return err
-				}
-			}
+		if highestSignedBkt == nil {
+			return fmt.Errorf("could not find highest signed proposals bucket")
 		}
 
+		saveProposalHisroryForSlotType := saveProposalHistoryForSlotComplete
 		if s.slashingProtectionType == Minimal {
-			if err := emptyBucket(valBucket); err != nil {
-				return errors.Wrapf(err, "could not empty pubkey bucket")
-			}
+			saveProposalHisroryForSlotType = saveProposalHistoryForSlotMinimal
+		}
+
+		if err := saveProposalHisroryForSlotType(lowestSignedBkt, highestSignedBkt, valBucket, pubKey, slot); err != nil {
+			return errors.Wrapf(err, "could not save proposal history for slot %d", slot)
 		}
 
 		if err := valBucket.Put(bytesutil.SlotToBytesBigEndian(slot), signingRoot); err != nil {
@@ -185,6 +154,66 @@ func (s *Store) SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldpar
 		return nil
 	})
 	return err
+}
+
+func saveProposalHistoryForSlotMinimal(
+	lowestSignedBkt *bolt.Bucket,
+	highestSignedBkt *bolt.Bucket,
+	valBucket *bolt.Bucket,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	slot primitives.Slot,
+) error {
+	if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+		return errors.Wrapf(err, "could not put lowest signed proposal for slot %d", slot)
+	}
+
+	if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+		return errors.Wrapf(err, "could not put highest signed proposal for slot %d", slot)
+	}
+
+	if err := emptyBucket(valBucket); err != nil {
+		return errors.Wrapf(err, "could not empty pubkey bucket")
+	}
+
+	return nil
+}
+
+func saveProposalHistoryForSlotComplete(
+	lowestSignedBkt *bolt.Bucket,
+	highestSignedBkt *bolt.Bucket,
+	_ *bolt.Bucket,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	slot primitives.Slot,
+) error {
+	// If the incoming slot is lower than the lowest signed proposal slot, override.
+	lowestSignedProposalBytes := lowestSignedBkt.Get(pubKey[:])
+	var lowestSignedProposalSlot primitives.Slot
+
+	if len(lowestSignedProposalBytes) >= 8 {
+		lowestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(lowestSignedProposalBytes)
+	}
+
+	if len(lowestSignedProposalBytes) == 0 || slot < lowestSignedProposalSlot {
+		if err := lowestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+			return errors.Wrapf(err, "could not put lowest signed proposal for slot %d", slot)
+		}
+	}
+
+	// If the incoming slot is higher than the highest signed proposal slot, override.
+	highestSignedProposalBytes := highestSignedBkt.Get(pubKey[:])
+	var highestSignedProposalSlot primitives.Slot
+
+	if len(highestSignedProposalBytes) >= 8 {
+		highestSignedProposalSlot = bytesutil.BytesToSlotBigEndian(highestSignedProposalBytes)
+	}
+
+	if len(highestSignedProposalBytes) == 0 || slot > highestSignedProposalSlot {
+		if err := highestSignedBkt.Put(pubKey[:], bytesutil.SlotToBytesBigEndian(slot)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // LowestSignedProposal returns the lowest signed proposal slot for a validator public key.

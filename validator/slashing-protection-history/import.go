@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/db"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/validator/slashing-protection-history/format"
+	"github.com/schollz/progressbar/v3"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -113,52 +114,79 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 }
 
 func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey, validatorDB db.Database) error {
+	saveProposalsType := saveProposalsComplete
+	if validatorDB.SlashingProtectionType() == kv.Minimal {
+		saveProposalsType = saveProposalsMinimal
+	}
+
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
 		bar := initializeProgressBar(
 			len(proposalHistory.Proposals),
 			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
 		)
 
-		if validatorDB.SlashingProtectionType() == kv.Minimal {
-			for _, p := range proposalHistory.Proposals {
-				if err := bar.Add(1); err != nil {
-					log.WithError(err).Debug("Could not increase progress bar")
-				}
+		if err := saveProposalsType(ctx, bar, pubKey, proposalHistory, validatorDB); err != nil {
+			return errors.Wrap(err, "could not save proposals")
+		}
+	}
 
-				lss, lspExists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
-				if err != nil {
-					return errors.Wrap(err, "could not retrieve lowest signed proposal from db")
-				}
+	return nil
+}
 
-				hss, hspExists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
-				if err != nil {
-					return errors.Wrap(err, "could not retrieve highest signed proposal from db")
-				}
+func saveProposalsMinimal(
+	ctx context.Context,
+	bar *progressbar.ProgressBar,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	proposalHistory kv.ProposalHistoryForPubkey,
+	validatorDB db.Database,
+) error {
+	for _, p := range proposalHistory.Proposals {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
 
-				if lspExists != hspExists {
-					return errors.New("lowest signed proposal and highest signed proposal do not exist together")
-				}
+		lss, lspExists, err := validatorDB.LowestSignedProposal(ctx, pubKey)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve lowest signed proposal from db")
+		}
 
-				if lss != hss {
-					return errors.New("lowest signed proposal and highest signed proposal do not match")
-				}
+		hss, hspExists, err := validatorDB.HighestSignedProposal(ctx, pubKey)
+		if err != nil {
+			return errors.Wrap(err, "could not retrieve highest signed proposal from db")
+		}
 
-				if !hspExists || hspExists && p.Slot > hss {
-					if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, p.Slot, p.SigningRoot); err != nil {
-						return errors.Wrap(err, "could not save proposal history from imported JSON to database")
-					}
-				}
+		if lspExists != hspExists {
+			return errors.New("lowest signed proposal and highest signed proposal do not exist together")
+		}
+
+		if lss != hss {
+			return errors.New("lowest signed proposal and highest signed proposal do not match")
+		}
+
+		if !hspExists || hspExists && p.Slot > hss {
+			if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, p.Slot, p.SigningRoot); err != nil {
+				return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 			}
-		} else {
-			for _, proposal := range proposalHistory.Proposals {
-				if err := bar.Add(1); err != nil {
-					log.WithError(err).Debug("Could not increase progress bar")
-				}
+		}
+	}
 
-				if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
-					return errors.Wrap(err, "could not save proposal history from imported JSON to database")
-				}
-			}
+	return nil
+}
+
+func saveProposalsComplete(
+	ctx context.Context,
+	bar *progressbar.ProgressBar,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	proposalHistory kv.ProposalHistoryForPubkey,
+	validatorDB db.Database,
+) error {
+	for _, proposal := range proposalHistory.Proposals {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
+		if err := validatorDB.SaveProposalHistoryForSlot(ctx, pubKey, proposal.Slot, proposal.SigningRoot); err != nil {
+			return errors.Wrap(err, "could not save proposal history from imported JSON to database")
 		}
 	}
 
@@ -171,59 +199,84 @@ func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldpa
 		"Importing attesting history for validator public keys",
 	)
 
+	saveAttestationsType := saveAttestationsComplete
 	if validatorDB.SlashingProtectionType() == kv.Minimal {
-		for pubKey, attestations := range attestingHistoryByPubKey {
-			if err := bar.Add(1); err != nil {
-				log.WithError(err).Debug("Could not increase progress bar")
+		saveAttestationsType = saveAttestationsMinimal
+	}
+
+	if err := saveAttestationsType(ctx, bar, attestingHistoryByPubKey, validatorDB); err != nil {
+		return errors.Wrap(err, "could not save attestations")
+	}
+
+	return nil
+}
+
+func saveAttestationsMinimal(
+	ctx context.Context,
+	bar *progressbar.ProgressBar,
+	attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord,
+	validatorDB db.Database,
+) error {
+	for pubKey, attestations := range attestingHistoryByPubKey {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
+		for _, attestation := range attestations {
+			lsse, lsseExists, err := validatorDB.LowestSignedSourceEpoch(ctx, pubKey)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve lowest signed source epoch from db")
 			}
 
-			for _, attestation := range attestations {
-				lsse, lsseExists, err := validatorDB.LowestSignedSourceEpoch(ctx, pubKey)
-				if err != nil {
-					return errors.Wrap(err, "could not retrieve lowest signed source epoch from db")
+			lste, lsteExists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKey)
+			if err != nil {
+				return errors.Wrap(err, "could not retrieve lowest signed target epoch from db")
+			}
+
+			if !lsteExists || lsteExists && lste < attestation.Target {
+				if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, [][]byte{attestation.SigningRoot}, []*ethpb.IndexedAttestation{createAttestation(attestation.Source, attestation.Target)}); err != nil {
+					return errors.Wrap(err, "could not save attestations from imported JSON to database")
+				}
+			}
+
+			if lsseExists {
+				maxSource := lsse
+				if lsse < attestation.Source {
+					maxSource = attestation.Source
 				}
 
-				lste, lsteExists, err := validatorDB.LowestSignedTargetEpoch(ctx, pubKey)
-				if err != nil {
-					return errors.Wrap(err, "could not retrieve lowest signed target epoch from db")
-				}
-
-				if !lsteExists || lsteExists && lste < attestation.Target {
-					if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, [][]byte{attestation.SigningRoot}, []*ethpb.IndexedAttestation{createAttestation(attestation.Source, attestation.Target)}); err != nil {
-						return errors.Wrap(err, "could not save attestations from imported JSON to database")
-					}
-				}
-
-				if lsseExists {
-					maxSource := lsse
-					if lsse < attestation.Source {
-						maxSource = attestation.Source
-					}
-
-					if err := validatorDB.SaveLowestSignedSourceEpochForPubKey(ctx, pubKey, maxSource); err != nil {
-						return errors.Wrap(err, "could not save lowest signed source epoch from imported JSON to database")
-					}
+				if err := validatorDB.SaveLowestSignedSourceEpochForPubKey(pubKey, maxSource); err != nil {
+					return errors.Wrap(err, "could not save lowest signed source epoch from imported JSON to database")
 				}
 			}
 		}
-	} else {
-		for pubKey, attestations := range attestingHistoryByPubKey {
-			if err := bar.Add(1); err != nil {
-				log.WithError(err).Debug("Could not increase progress bar")
-			}
+	}
 
-			indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
-			signingRoots := make([][]byte, len(attestations))
+	return nil
+}
 
-			for i, att := range attestations {
-				indexedAtt := createAttestation(att.Source, att.Target)
-				indexedAtts[i] = indexedAtt
-				signingRoots[i] = att.SigningRoot
-			}
+func saveAttestationsComplete(
+	ctx context.Context,
+	bar *progressbar.ProgressBar,
+	attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord,
+	validatorDB db.Database,
+) error {
+	for pubKey, attestations := range attestingHistoryByPubKey {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
 
-			if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
-				return errors.Wrap(err, "could not save attestations from imported JSON to database")
-			}
+		indexedAtts := make([]*ethpb.IndexedAttestation, len(attestations))
+		signingRoots := make([][]byte, len(attestations))
+
+		for i, att := range attestations {
+			indexedAtt := createAttestation(att.Source, att.Target)
+			indexedAtts[i] = indexedAtt
+			signingRoots[i] = att.SigningRoot
+		}
+
+		if err := validatorDB.SaveAttestationsForPubKey(ctx, pubKey, signingRoots, indexedAtts); err != nil {
+			return errors.Wrap(err, "could not save attestations from imported JSON to database")
 		}
 	}
 

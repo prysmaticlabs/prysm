@@ -71,7 +71,7 @@ type Store struct {
 	databasePath                       string
 }
 
-// Slashing protection type, as defined in EIP-3076.
+// SlashingProtectionType defines slashing protection type, as defined in EIP-3076.
 // https://eips.ethereum.org/EIPS/eip-3076
 type SlashingProtectionType uint8
 
@@ -236,7 +236,7 @@ func emptyBucket(bucket *bolt.Bucket) error {
 	})
 }
 
-// isSlashingProtectionMinmal returns true if the slashing protection type is minimal, and false otherwise (as defined in EIP-3076).
+// IsSlashingProtectionMinimal returns true if the slashing protection type is minimal, and false otherwise (as defined in EIP-3076).
 // The slashing protection type is minimal if:
 // 1. proposal-history-bucket-interchange -> <pubkey> -> <slot> contains only one <slot> per <pubkey>
 // 2. pubkeys-bucket --> <pubkey> --> att-signing-roots-bucket --> <target epoch> contains only one <target epoch> per <pubkey>, and

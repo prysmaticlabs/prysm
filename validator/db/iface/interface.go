@@ -57,7 +57,7 @@ type ValidatorDB interface {
 	SaveAttestationsForPubKey(
 		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoots [][]byte, atts []*ethpb.IndexedAttestation,
 	) error
-	SaveLowestSignedSourceEpochForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch) error
+	SaveLowestSignedSourceEpochForPubKey(pubKey [fieldparams.BLSPubkeyLength]byte, epoch primitives.Epoch) error
 	AttestationHistoryForPubKey(
 		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte,
 	) ([]*kv.AttestationRecord, error)
