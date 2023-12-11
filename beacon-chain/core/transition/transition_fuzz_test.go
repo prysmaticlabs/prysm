@@ -109,7 +109,7 @@ func TestFuzzprocessOperationsNoVerify_1000(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		if bb == nil || bb.Body == nil {
+		if bb.Body == nil {
 			continue
 		}
 		wb, err := blocks.NewBeaconBlock(bb)
@@ -132,7 +132,7 @@ func TestFuzzverifyOperationLengths_10000(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		fuzzer.Fuzz(state)
 		fuzzer.Fuzz(bb)
-		if bb == nil || bb.Body == nil {
+		if bb.Body == nil {
 			continue
 		}
 		wb, err := blocks.NewBeaconBlock(bb)
