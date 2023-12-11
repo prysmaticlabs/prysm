@@ -112,6 +112,11 @@ func (s *Store) SlashingProtectionType() SlashingProtectionType {
 	return s.slashingProtectionType
 }
 
+// SaveSlashingProtectionType saves the slashing protection type.
+func (s *Store) SaveSlashingProtectionType(spt SlashingProtectionType) {
+	s.slashingProtectionType = spt
+}
+
 func createBuckets(tx *bolt.Tx, buckets ...[]byte) error {
 	for _, bucket := range buckets {
 		if _, err := tx.CreateBucketIfNotExists(bucket); err != nil {
