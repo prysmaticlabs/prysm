@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"math"
 	"reflect"
 	"testing"
 	"time"
@@ -72,6 +73,11 @@ func setupValidExit(t *testing.T) (*ethpb.SignedVoluntaryExit, state.BeaconState
 }
 
 func TestValidateVoluntaryExit_ValidExit(t *testing.T) {
+	cfg := params.BeaconConfig().Copy()
+	cfg.DenebForkEpoch = math.MaxUint64
+	params.OverrideBeaconConfig(cfg)
+	params.SetupTestConfigCleanup(t)
+
 	p := p2ptest.NewTestP2P(t)
 	ctx := context.Background()
 
