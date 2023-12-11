@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -276,6 +275,7 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 }
 
+<<<<<<< Updated upstream
 func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *httputil.DefaultErrorJson) {
 	var wrapper interfaces.ReadOnlySignedBeaconBlock
 	var err error
@@ -306,6 +306,10 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 			Code:    http.StatusInternalServerError,
 		}
 	}
+=======
+func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *http2.DefaultErrorJson) {
+	bb, err := blocks.NewBeaconBlock(i)
+>>>>>>> Stashed changes
 	if err != nil {
 		return "", &httputil.DefaultErrorJson{
 			Message: err.Error(),
@@ -314,7 +318,7 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 	}
 
 	//get consensus payload value which is the same as the total from the block rewards api
-	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, wrapper)
+	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
 		return "", httpError
 	}
