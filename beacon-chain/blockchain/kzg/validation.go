@@ -32,9 +32,26 @@ func IsDataAvailable(commitments [][]byte, sidecars []*ethpb.DeprecatedBlobSidec
 	return kzgContext.VerifyBlobKZGProofBatch(blobs, cmts, proofs)
 }
 
-// VerifyROBlobCommitment is a helper that massages the fields of an ROBlob into the types needed to call VerifyBlobKZGProof.
-func VerifyROBlobCommitment(sc blocks.ROBlob) error {
-	return kzgContext.VerifyBlobKZGProof(bytesToBlob(sc.Blob), bytesToCommitment(sc.KzgCommitment), bytesToKZGProof(sc.KzgProof))
+// Verify performs single or batch verification of commitments depending on the number of given BlobSidecars.
+func Verify(sidecars ...blocks.ROBlob) error {
+	if len(sidecars) == 0 {
+		return nil
+	}
+	if len(sidecars) == 1 {
+		return kzgContext.VerifyBlobKZGProof(
+			bytesToBlob(sidecars[0].Blob),
+			bytesToCommitment(sidecars[0].KzgCommitment),
+			bytesToKZGProof(sidecars[0].KzgProof))
+	}
+	blobs := make([]GoKZG.Blob, len(sidecars))
+	cmts := make([]GoKZG.KZGCommitment, len(sidecars))
+	proofs := make([]GoKZG.KZGProof, len(sidecars))
+	for i, sidecar := range sidecars {
+		blobs[i] = bytesToBlob(sidecar.Blob)
+		cmts[i] = bytesToCommitment(sidecar.KzgCommitment)
+		proofs[i] = bytesToKZGProof(sidecar.KzgProof)
+	}
+	return kzgContext.VerifyBlobKZGProofBatch(blobs, cmts, proofs)
 }
 
 func bytesToBlob(blob []byte) (ret GoKZG.Blob) {

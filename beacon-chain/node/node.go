@@ -115,6 +115,7 @@ type BeaconNode struct {
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
 	blobRetentionEpochs     primitives.Epoch
+	verifyInitWaiter        *verification.InitializerWaiter
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -226,6 +227,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
+	beacon.verifyInitWaiter = verification.NewInitializerWaiter(beacon.clockWaiter, beacon.forkChoicer, beacon.stateGen)
 	if beacon.finalizedStateAtStartUp != nil {
 		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
 			return nil, err
@@ -743,7 +745,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
-		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
+		regularsync.WithVerifierWaiter(b.verifyInitWaiter),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -754,6 +756,9 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		return err
 	}
 
+	opts := []initialsync.Option{
+		initialsync.WithVerifierWaiter(b.verifyInitWaiter),
+	}
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:                  b.db,
 		Chain:               chainService,
@@ -763,7 +768,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
 		BlobStorage:         b.BlobStorage,
-	})
+	}, opts...)
 	return b.services.RegisterService(is)
 }
 

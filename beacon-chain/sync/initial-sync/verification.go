@@ -1,0 +1,115 @@
+package initialsync
+
+import (
+	"context"
+
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+)
+
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
+	}
+}
+
+func newBlobBatchVerifier(newVerifier verification.NewBlobVerifier) *BlobBatchVerifier {
+	return &BlobBatchVerifier{
+		verified:    make(map[[32]byte]primitives.Slot),
+		verifyKzg:   kzg.Verify,
+		newVerifier: newVerifier,
+	}
+}
+
+type kzgVerifier func(b ...blocks.ROBlob) error
+
+// BlobBatchVerifier solves problems that come from verifying batches of blobs from RPC.
+// First: we only update forkchoice after the entire batch has completed, so the n+1 elements in the batch
+// won't be in forkchoice yet.
+// Second: it is more efficient to batch some verifications, like kzg commitment verification. Batch adds an additional
+// method to BlobVerifier to verify the kzg commitments of all blob sidecars for a block together, then using the cached
+// result of the batch verification when verifying the individual blobs.
+type BlobBatchVerifier struct {
+	verifyKzg   kzgVerifier
+	newVerifier verification.NewBlobVerifier
+	verified    map[[32]byte]primitives.Slot
+}
+
+var _ das.BlobBatchVerifier = &BlobBatchVerifier{}
+
+func (kb *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+	if err := kb.verifyKzg(scs...); err != nil {
+		return nil, err
+	}
+	vs := make([]blocks.VerifiedROBlob, len(scs))
+	for i := range scs {
+		vb, err := kb.verifyOneBlob(ctx, scs[i])
+		if err != nil {
+			return nil, err
+		}
+		vs[i] = vb
+	}
+	return vs, nil
+}
+
+func (kb *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob) (blocks.VerifiedROBlob, error) {
+	vb := blocks.VerifiedROBlob{}
+	bv := kb.newVerifier(sc, verification.InitsyncSidecarRequirements)
+	// We can satisfy this immediately because VerifiedROBlobs always verifies commitments for all blobs in the batch
+	// before calling verifyOneBlob.
+	bv.SatisfyRequirement(verification.RequireSidecarKzgProofVerified)
+
+	if err := bv.BlobIndexInBounds(); err != nil {
+		return vb, err
+	}
+	if err := bv.NotFromFutureSlot(); err != nil {
+		return vb, err
+	}
+	if err := bv.SlotAboveFinalized(); err != nil {
+		return vb, err
+	}
+	if err := bv.ValidProposerSignature(ctx); err != nil {
+		return vb, err
+	}
+
+	// Since we are processing in batches, it is not possible to use these methods which will only succeed after
+	// forkchoice has been updated to include the previous block in the batch. So we keep track of previous successful
+	// verifications in the batch and pinky swear to the verifier that these conditions are valid.
+	parentSlot, verified := kb.verified[sc.ParentRoot()]
+	if verified && parentSlot < sc.Slot() {
+		bv.SatisfyRequirement(verification.RequireSidecarParentSeen)
+		bv.SatisfyRequirement(verification.RequireSidecarParentValid)
+		bv.SatisfyRequirement(verification.RequireSidecarParentSlotLower)
+		bv.SatisfyRequirement(verification.RequireSidecarDescendsFromFinalized)
+	} else {
+		if err := bv.SidecarParentSeen(nil); err != nil {
+			return vb, err
+		}
+		if err := bv.SidecarParentValid(nil); err != nil {
+			return vb, err
+		}
+		if err := bv.SidecarParentSlotLower(); err != nil {
+			return vb, err
+		}
+		if err := bv.SidecarDescendsFromFinalized(); err != nil {
+			return vb, err
+		}
+	}
+
+	if err := bv.SidecarInclusionProven(); err != nil {
+		return vb, err
+	}
+
+	if err := bv.SidecarProposerExpected(ctx); err != nil {
+		return vb, err
+	}
+
+	vb, err := bv.VerifiedROBlob()
+	if err == nil {
+		kb.verified[sc.BlockRoot()] = sc.Slot()
+	}
+	return vb, err
+}

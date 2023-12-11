@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
@@ -47,19 +48,32 @@ type Config struct {
 
 // Service service.
 type Service struct {
-	cfg          *Config
-	ctx          context.Context
-	cancel       context.CancelFunc
-	synced       *abool.AtomicBool
-	chainStarted *abool.AtomicBool
-	counter      *ratecounter.RateCounter
-	genesisChan  chan time.Time
-	clock        *startup.Clock
+	cfg             *Config
+	ctx             context.Context
+	cancel          context.CancelFunc
+	synced          *abool.AtomicBool
+	chainStarted    *abool.AtomicBool
+	counter         *ratecounter.RateCounter
+	genesisChan     chan time.Time
+	clock           *startup.Clock
+	verifierWaiter  *verification.InitializerWaiter
+	newBlobVerifier verification.NewBlobVerifier
+}
+
+// Option is a functional option for the initial-sync Service.
+type Option func(*Service)
+
+// WithVerifierWaiter sets the verification.InitializerWaiter
+// for the initial-sync Service.
+func WithVerifierWaiter(viw *verification.InitializerWaiter) Option {
+	return func(s *Service) {
+		s.verifierWaiter = viw
+	}
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config, opts ...Option) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Service{
 		cfg:          cfg,
@@ -71,7 +85,9 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		genesisChan:  make(chan time.Time),
 		clock:        startup.NewClock(time.Unix(0, 0), [32]byte{}), // default clock to prevent panic
 	}
-
+	for _, o := range opts {
+		o(s)
+	}
 	return s
 }
 
@@ -85,6 +101,13 @@ func (s *Service) Start() {
 	}
 	s.clock = clock
 	log.Info("Received state initialized event")
+
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
 
 	gt := clock.GenesisTime()
 	if gt.IsZero() {

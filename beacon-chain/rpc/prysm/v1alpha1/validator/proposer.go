@@ -257,7 +257,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		}
 	}
 
-	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root); err != nil {
+	if err := vs.BlockReceiver.ReceiveBlock(ctx, blk, root, nil); err != nil {
 		return nil, fmt.Errorf("could not process beacon block: %v", err)
 	}
 

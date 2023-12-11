@@ -172,83 +172,83 @@ func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
 	tests := []struct {
 		name     string
 		error    error
-		verifier NewBlobVerifier
+		verifier verification.NewBlobVerifier
 		result   pubsub.ValidationResult
 	}{
 		{
 			error: errors.New("blob index out of bound"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errBlobIndexInBounds: errors.New("blob index out of bound")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrBlobIndexInBounds: errors.New("blob index out of bound")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("slot too early"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSlotTooEarly: errors.New("slot too early")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSlotTooEarly: errors.New("slot too early")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("slot above finalized"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSlotAboveFinalized: errors.New("slot above finalized")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSlotAboveFinalized: errors.New("slot above finalized")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("valid proposer signature"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errValidProposerSignature: errors.New("valid proposer signature")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrValidProposerSignature: errors.New("valid proposer signature")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("sidecar parent seen"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarParentSeen: errors.New("sidecar parent seen")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarParentSeen: errors.New("sidecar parent seen")}
 			},
 			result: pubsub.ValidationIgnore,
 		},
 		{
 			error: errors.New("sidecar parent valid"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarParentValid: errors.New("sidecar parent valid")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarParentValid: errors.New("sidecar parent valid")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("sidecar parent slot lower"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarParentSlotLower: errors.New("sidecar parent slot lower")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarParentSlotLower: errors.New("sidecar parent slot lower")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("descends from finalized"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarDescendsFromFinalized: errors.New("descends from finalized")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarDescendsFromFinalized: errors.New("descends from finalized")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("inclusion proven"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarInclusionProven: errors.New("inclusion proven")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarInclusionProven: errors.New("inclusion proven")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("kzg proof verified"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarKzgProofVerified: errors.New("kzg proof verified")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarKzgProofVerified: errors.New("kzg proof verified")}
 			},
 			result: pubsub.ValidationReject,
 		},
 		{
 			error: errors.New("sidecar proposer expected"),
-			verifier: func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-				return &mockBlobVerifier{errSidecarProposerExpected: errors.New("sidecar proposer expected")}
+			verifier: func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+				return &verification.MockBlobVerifier{ErrSidecarProposerExpected: errors.New("sidecar proposer expected")}
 			},
 			result: pubsub.ValidationReject,
 		},
@@ -285,8 +285,8 @@ func TestValidateBlob_ErrorPathsWithMock(t *testing.T) {
 	}
 }
 
-func testNewBlobVerifier() NewBlobVerifier {
-	return func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-		return &mockBlobVerifier{}
+func testNewBlobVerifier() verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return &verification.MockBlobVerifier{}
 	}
 }

@@ -46,7 +46,7 @@ type stateMachine struct {
 	start   primitives.Slot
 	state   stateID
 	pid     peer.ID
-	bwb     []blocks.BlockWithVerifiedBlobs
+	bwb     []blocks.BlockWithROBlobs
 	updated time.Time
 }
 
@@ -78,7 +78,7 @@ func (smm *stateMachineManager) addStateMachine(startSlot primitives.Slot) *stat
 		smm:     smm,
 		start:   startSlot,
 		state:   stateNew,
-		bwb:     []blocks.BlockWithVerifiedBlobs{},
+		bwb:     []blocks.BlockWithROBlobs{},
 		updated: prysmTime.Now(),
 	}
 	smm.recalculateMachineAttribs()
