@@ -52,6 +52,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -734,6 +735,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
+		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
 	)
 	return b.services.RegisterService(rs)
 }
