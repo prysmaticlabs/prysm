@@ -754,6 +754,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
+		BlobStorage:         b.BlobStorage,
 	})
 	return b.services.RegisterService(is)
 }
