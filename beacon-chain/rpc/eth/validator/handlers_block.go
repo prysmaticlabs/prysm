@@ -275,41 +275,8 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 }
 
-<<<<<<< Updated upstream
 func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *httputil.DefaultErrorJson) {
-	var wrapper interfaces.ReadOnlySignedBeaconBlock
-	var err error
-
-	// TODO: we should not require this fake signed wrapper and fix associated functions in the future.
-	switch b := i.(type) {
-	case *eth.GenericBeaconBlock_Phase0:
-		//ignore for phase0
-		return "", nil
-	case *eth.GenericBeaconBlock_Altair:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
-	case *eth.GenericBeaconBlock_Bellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
-	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
-	case *eth.GenericBeaconBlock_Capella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
-	case *eth.GenericBeaconBlock_BlindedCapella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
-	case *eth.GenericBeaconBlock_Deneb:
-		// no need for blobs
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockContentsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
-	case *eth.GenericBeaconBlock_BlindedDeneb:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb}})
-	default:
-		return "", &httputil.DefaultErrorJson{
-			Message: fmt.Errorf("type %T is not supported", b).Error(),
-			Code:    http.StatusInternalServerError,
-		}
-	}
-=======
-func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *http2.DefaultErrorJson) {
 	bb, err := blocks.NewBeaconBlock(i)
->>>>>>> Stashed changes
 	if err != nil {
 		return "", &httputil.DefaultErrorJson{
 			Message: err.Error(),
