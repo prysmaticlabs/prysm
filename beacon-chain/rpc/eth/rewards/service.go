@@ -17,13 +17,8 @@ import (
 
 // BlockRewardsFetcher is a interface that provides access to reward related responses
 type BlockRewardsFetcher interface {
-<<<<<<< Updated upstream
-	GetBlockRewardsData(context.Context, interfaces.ReadOnlySignedBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson)
-	GetStateForRewards(context.Context, interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson)
-=======
-	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *http2.DefaultErrorJson)
-	GetStateForRewards(context.Context, interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *http2.DefaultErrorJson)
->>>>>>> Stashed changes
+	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson)
+	GetStateForRewards(context.Context, interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson)
 }
 
 // BlockRewardService implements BlockRewardsFetcher and can be declared to access the underlying functions
@@ -32,18 +27,14 @@ type BlockRewardService struct {
 }
 
 // GetBlockRewardsData returns the BlockRewards Object which is used for the BlockRewardsResponse and ProduceBlockV3
-<<<<<<< Updated upstream
-func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson) {
-=======
-func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *http2.DefaultErrorJson) {
+func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson) {
 	if blk == nil || blk.IsNil() {
-		return nil, &http2.DefaultErrorJson{
+		return nil, &httputil.DefaultErrorJson{
 			Message: consensusblocks.ErrNilBeaconBlock.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 
->>>>>>> Stashed changes
 	st, httpErr := rs.GetStateForRewards(ctx, blk)
 	if httpErr != nil {
 		return nil, httpErr
@@ -126,11 +117,7 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 }
 
 // GetStateForRewards returns the state replayed up to the block's slot
-<<<<<<< Updated upstream
-func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson) {
-=======
-func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *http2.DefaultErrorJson) {
->>>>>>> Stashed changes
+func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson) {
 	// We want to run several block processing functions that update the proposer's balance.
 	// This will allow us to calculate proposer rewards for each operation (atts, slashings etc).
 	// To do this, we replay the state up to the block's slot, but before processing the block.
