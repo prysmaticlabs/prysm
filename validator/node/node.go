@@ -260,12 +260,28 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
 
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
+	isMinimalSlashingProtectionTypeRequested := features.Get().EnableMinimalSlashingProtectionDatabase
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
+
+	slashingProtectionType := kv.Complete
+	if isMinimalSlashingProtectionTypeRequested {
+		isSlashingProtectionTypeCurrentlyMinimal, err := kv.IsSlashingProtectionMinimal(valDB)
+		if err != nil {
+			return errors.Wrap(err, "could not determine slashing protection type")
+		}
+
+		if isSlashingProtectionTypeCurrentlyMinimal {
+			slashingProtectionType = kv.Minimal
+		} else {
+			log.Warning("Minimal slashing protection database requested, while complete slashing protection database currently used. Will continue to use complete slashing protection database.")
+		}
+	}
+
+	valDB.SaveSlashingProtectionType(slashingProtectionType)
+
 	c.db = valDB
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
@@ -336,12 +352,29 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 		}
 	}
 	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
+
+	isMinimalSlashingProtectionTypeRequested := features.Get().EnableMinimalSlashingProtectionDatabase
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, nil)
 	if err != nil {
 		return errors.Wrap(err, "could not initialize db")
 	}
+
+	slashingProtectionType := kv.Complete
+	if isMinimalSlashingProtectionTypeRequested {
+		isSlashingProtectionTypeCurrentlyMinimal, err := kv.IsSlashingProtectionMinimal(valDB)
+		if err != nil {
+			return errors.Wrap(err, "could not determine slashing protection type")
+		}
+
+		if isSlashingProtectionTypeCurrentlyMinimal {
+			slashingProtectionType = kv.Minimal
+		} else {
+			log.Warning("Minimal slashing protection database requested, while complete slashing protection database currently used. Will continue to use complete slashing protection database.")
+		}
+	}
+
+	valDB.SaveSlashingProtectionType(slashingProtectionType)
+
 	c.db = valDB
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
