@@ -283,7 +283,10 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
+	if bb.Version() == version.Phase0 {
+		// ignore for phase 0
+		return "", nil
+	}
 	//get consensus payload value which is the same as the total from the block rewards api
 	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
