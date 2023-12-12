@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -71,6 +72,7 @@ type BlobStorage struct {
 
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
+	startTime := time.Now()
 	fname := namerForSidecar(sidecar)
 	sszPath := fname.path()
 	exists, err := afero.Exists(bs.fs, sszPath)
@@ -127,6 +129,8 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
+	blobsTotalCounter.Inc()
+	blobSaveLatency.Observe(time.Since(startTime).Seconds())
 	return nil
 }
 
@@ -134,6 +138,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // Since BlobStorage only writes blobs that have undergone full verification, the return
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
+	startTime := time.Now()
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.path())
 	var v blocks.VerifiedROBlob
@@ -148,6 +153,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	if err != nil {
 		return blocks.VerifiedROBlob{}, err
 	}
+	blobFetchLatency.Observe(time.Since(startTime).Seconds())
 	return verification.BlobSidecarNoop(ro)
 }
 
@@ -234,6 +240,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
+			blobsPrunedCounter.Inc()
 		}
 	}
 	return nil
