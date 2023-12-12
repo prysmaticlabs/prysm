@@ -135,7 +135,7 @@ func TestShouldPrune(t *testing.T) {
 	require.Equal(t, false, p1)
 
 	// Slot is after the midpoint of the epoch, but same epoch as last pruning
-	slot2 := primitives.Slot(160)
+	slot2 := primitives.Slot(178)
 	p2 := bs.shouldPrune(slot2)
 	require.Equal(t, false, p2)
 
