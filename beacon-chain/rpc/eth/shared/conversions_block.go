@@ -76,6 +76,14 @@ func SignedBeaconBlockHeaderFromConsensus(src *eth.SignedBeaconBlockHeader) *Sig
 }
 
 func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: block}}, nil
+}
+
+func (b *SignedBeaconBlock) ToConsensus() (*eth.SignedBeaconBlock, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
@@ -90,11 +98,10 @@ func (b *SignedBeaconBlock) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
 		return nil, server.NewDecodeError(err, "Message")
 	}
 
-	block := &eth.SignedBeaconBlock{
+	return &eth.SignedBeaconBlock{
 		Block:     bl,
 		Signature: sig,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Phase0{Phase0: block}}, nil
+	}, nil
 }
 
 func (b *BeaconBlock) ToGeneric() (*eth.GenericBeaconBlock, error) {
@@ -196,6 +203,14 @@ func (b *BeaconBlock) ToConsensus() (*eth.BeaconBlock, error) {
 }
 
 func (b *SignedBeaconBlockAltair) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Altair{Altair: block}}, nil
+}
+
+func (b *SignedBeaconBlockAltair) ToConsensus() (*eth.SignedBeaconBlockAltair, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
@@ -208,11 +223,11 @@ func (b *SignedBeaconBlockAltair) ToGeneric() (*eth.GenericSignedBeaconBlock, er
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Message")
 	}
-	block := &eth.SignedBeaconBlockAltair{
+
+	return &eth.SignedBeaconBlockAltair{
 		Block:     bl,
 		Signature: sig,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_Altair{Altair: block}}, nil
+	}, nil
 }
 
 func (b *BeaconBlockAltair) ToGeneric() (*eth.GenericBeaconBlock, error) {
@@ -543,6 +558,14 @@ func (b *BeaconBlockBellatrix) ToConsensus() (*eth.BeaconBlockBellatrix, error) 
 }
 
 func (b *SignedBlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+}
+
+func (b *SignedBlindedBeaconBlockBellatrix) ToConsensus() (*eth.SignedBlindedBeaconBlockBellatrix, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
@@ -555,11 +578,11 @@ func (b *SignedBlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericSignedBeaco
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Message")
 	}
-	block := &eth.SignedBlindedBeaconBlockBellatrix{
+
+	return &eth.SignedBlindedBeaconBlockBellatrix{
 		Block:     bl,
 		Signature: sig,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+	}, nil
 }
 
 func (b *BlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericBeaconBlock, error) {
@@ -1000,6 +1023,14 @@ func (b *BeaconBlockCapella) ToConsensus() (*eth.BeaconBlockCapella, error) {
 }
 
 func (b *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+}
+
+func (b *SignedBlindedBeaconBlockCapella) ToConsensus() (*eth.SignedBlindedBeaconBlockCapella, error) {
 	if b == nil {
 		return nil, errNilValue
 	}
@@ -1012,11 +1043,11 @@ func (b *SignedBlindedBeaconBlockCapella) ToGeneric() (*eth.GenericSignedBeaconB
 	if err != nil {
 		return nil, server.NewDecodeError(err, "Message")
 	}
-	block := &eth.SignedBlindedBeaconBlockCapella{
+
+	return &eth.SignedBlindedBeaconBlockCapella{
 		Block:     bl,
 		Signature: sig,
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+	}, nil
 }
 
 func (b *BlindedBeaconBlockCapella) ToGeneric() (*eth.GenericBeaconBlock, error) {
@@ -1559,6 +1590,14 @@ func (b *SignedBeaconBlockDeneb) ToConsensus() (*eth.SignedBeaconBlockDeneb, err
 	}, nil
 }
 
+func (b *SignedBlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
+	block, err := b.ToConsensus()
+	if err != nil {
+		return nil, err
+	}
+	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+}
+
 func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconBlockDeneb, error) {
 	if b == nil {
 		return nil, errNilValue
@@ -1572,28 +1611,11 @@ func (b *SignedBlindedBeaconBlockDeneb) ToConsensus() (*eth.SignedBlindedBeaconB
 	if err != nil {
 		return nil, err
 	}
+
 	return &eth.SignedBlindedBeaconBlockDeneb{
 		Message:   blindedBlock,
 		Signature: sig,
 	}, nil
-}
-
-func (b *SignedBlindedBeaconBlockDeneb) ToGeneric() (*eth.GenericSignedBeaconBlock, error) {
-	if b == nil {
-		return nil, errNilValue
-	}
-	sig, err := bytesutil.DecodeHexWithLength(b.Signature, fieldparams.BLSSignatureLength)
-	if err != nil {
-		return nil, server.NewDecodeError(err, "Signature")
-	}
-	blindedBlock, err := b.Message.ToConsensus()
-	if err != nil {
-		return nil, err
-	}
-	return &eth.GenericSignedBeaconBlock{Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{
-		Message:   blindedBlock,
-		Signature: sig,
-	}}, IsBlinded: true}, nil
 }
 
 func (b *BlindedBeaconBlockDeneb) ToConsensus() (*eth.BlindedBeaconBlockDeneb, error) {

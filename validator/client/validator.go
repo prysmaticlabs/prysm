@@ -89,7 +89,7 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	highestValidSlot                   primitives.Slot
 	genesisTime                        uint64
-	blockFeed                          *event.Feed
+	blockSlotFeed                      *event.Feed
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
@@ -368,7 +368,7 @@ func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel ch
 			v.highestValidSlot = blk.Block().Slot()
 		}
 		v.highestValidSlotLock.Unlock()
-		v.blockFeed.Send(blk)
+		v.blockSlotFeed.Send(blk.Block().Slot())
 	}
 }
 

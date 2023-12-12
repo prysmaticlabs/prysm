@@ -29,10 +29,10 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		gomock.Any(),
-		&abstractSignedBlockResponseJson{},
+		&abstractSignedBlindedBlockResponseJson{},
 	).SetArg(
 		2,
-		abstractSignedBlockResponseJson{Version: "foo"},
+		abstractSignedBlindedBlockResponseJson{Version: "foo"},
 	).Return(
 		nil,
 		nil,
@@ -152,10 +152,10 @@ func TestStreamBlocks_Error(t *testing.T) {
 					jsonRestHandler.EXPECT().Get(
 						ctx,
 						gomock.Any(),
-						&abstractSignedBlockResponseJson{},
+						&abstractSignedBlindedBlockResponseJson{},
 					).SetArg(
 						2,
-						abstractSignedBlockResponseJson{
+						abstractSignedBlindedBlockResponseJson{
 							Version: testSuite.consensusVersion,
 							Data:    testCase.generateData(testSuite.consensusVersion),
 						},
@@ -199,7 +199,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 
 			ctx := context.Background()
 
-			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
@@ -224,7 +224,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "phase0",
 					ExecutionOptimistic: false,
 					Data:                marshalledSignedBeaconBlockContainer1,
@@ -262,7 +262,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "phase0",
 					ExecutionOptimistic: true,
 					Data:                marshalledSignedBeaconBlockContainer2,
@@ -290,7 +290,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 					nil,
 				).SetArg(
 					2,
-					abstractSignedBlockResponseJson{
+					abstractSignedBlindedBlockResponseJson{
 						Version:             "phase0",
 						ExecutionOptimistic: false,
 						Data:                marshalledSignedBeaconBlockContainer2,
@@ -363,7 +363,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 
 			ctx := context.Background()
 
-			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
@@ -388,7 +388,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "altair",
 					ExecutionOptimistic: false,
 					Data:                marshalledSignedBeaconBlockContainer1,
@@ -426,7 +426,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "altair",
 					ExecutionOptimistic: true,
 					Data:                marshalledSignedBeaconBlockContainer2,
@@ -454,7 +454,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 					nil,
 				).SetArg(
 					2,
-					abstractSignedBlockResponseJson{
+					abstractSignedBlindedBlockResponseJson{
 						Version:             "altair",
 						ExecutionOptimistic: false,
 						Data:                marshalledSignedBeaconBlockContainer2,
@@ -527,7 +527,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 
 			ctx := context.Background()
 
-			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
@@ -552,7 +552,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "bellatrix",
 					ExecutionOptimistic: false,
 					Data:                marshalledSignedBeaconBlockContainer1,
@@ -590,7 +590,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "bellatrix",
 					ExecutionOptimistic: true,
 					Data:                marshalledSignedBeaconBlockContainer2,
@@ -618,7 +618,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 					nil,
 				).SetArg(
 					2,
-					abstractSignedBlockResponseJson{
+					abstractSignedBlindedBlockResponseJson{
 						Version:             "bellatrix",
 						ExecutionOptimistic: false,
 						Data:                marshalledSignedBeaconBlockContainer2,
@@ -691,7 +691,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 
 			ctx := context.Background()
 
-			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
@@ -716,7 +716,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "capella",
 					ExecutionOptimistic: false,
 					Data:                marshalledSignedBeaconBlockContainer1,
@@ -754,7 +754,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "capella",
 					ExecutionOptimistic: true,
 					Data:                marshalledSignedBeaconBlockContainer2,
@@ -782,7 +782,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 					nil,
 				).SetArg(
 					2,
-					abstractSignedBlockResponseJson{
+					abstractSignedBlindedBlockResponseJson{
 						Version:             "capella",
 						ExecutionOptimistic: false,
 						Data:                marshalledSignedBeaconBlockContainer2,
@@ -855,7 +855,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			ctx := context.Background()
 
-			signedBlockResponseJson := abstractSignedBlockResponseJson{}
+			signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
@@ -880,7 +880,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "deneb",
 					ExecutionOptimistic: false,
 					Data:                marshalledSignedBeaconBlockContainer1,
@@ -910,7 +910,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				abstractSignedBlockResponseJson{
+				abstractSignedBlindedBlockResponseJson{
 					Version:             "deneb",
 					ExecutionOptimistic: true,
 					Data:                marshalledSignedBeaconBlockContainer2,
@@ -928,7 +928,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 					nil,
 				).SetArg(
 					2,
-					abstractSignedBlockResponseJson{
+					abstractSignedBlindedBlockResponseJson{
 						Version:             "deneb",
 						ExecutionOptimistic: false,
 						Data:                marshalledSignedBeaconBlockContainer2,

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -14,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-type abstractSignedBlockResponseJson struct {
+type abstractSignedBlindedBlockResponseJson struct {
 	Version             string          `json:"version" enum:"true"`
 	ExecutionOptimistic bool            `json:"execution_optimistic"`
 	Finalized           bool            `json:"finalized"`
@@ -71,8 +70,8 @@ func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {
 func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) (*headSignedBeaconBlockResult, error) {
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
-	signedBlockResponseJson := abstractSignedBlockResponseJson{}
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v2/beacon/blocks/head", &signedBlockResponseJson)
+	signedBlockResponseJson := abstractSignedBlindedBlockResponseJson{}
+	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blinded_blocks/head", &signedBlockResponseJson)
 	if err != nil {
 		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}
@@ -92,106 +91,81 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		if err := decoder.Decode(&jsonPhase0Block); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed phase0 block response json")
 		}
-
-		phase0Block, err := c.beaconBlockConverter.ConvertRESTPhase0BlockToProto(jsonPhase0Block.Message)
+		phase0Block, err := jsonPhase0Block.ToConsensus()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get signed phase0 block")
 		}
-
-		decodedSignature, err := hexutil.Decode(jsonPhase0Block.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode phase0 block signature `%s`", jsonPhase0Block.Signature)
-		}
-
 		response.Block = &ethpb.StreamBlocksResponse_Phase0Block{
 			Phase0Block: &ethpb.SignedBeaconBlock{
-				Signature: decodedSignature,
-				Block:     phase0Block,
+				Signature: phase0Block.Signature,
+				Block:     &ethpb.BeaconBlock{Slot: phase0Block.Block.Slot},
 			},
 		}
 
-		slot = phase0Block.Slot
+		slot = phase0Block.Block.Slot
 
 	case "altair":
 		jsonAltairBlock := shared.SignedBeaconBlockAltair{}
 		if err := decoder.Decode(&jsonAltairBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed altair block response json")
 		}
-
-		altairBlock, err := c.beaconBlockConverter.ConvertRESTAltairBlockToProto(jsonAltairBlock.Message)
+		altairBlock, err := jsonAltairBlock.ToConsensus()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get signed altair block")
 		}
 
-		decodedSignature, err := hexutil.Decode(jsonAltairBlock.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode altair block signature `%s`", jsonAltairBlock.Signature)
-		}
-
 		response.Block = &ethpb.StreamBlocksResponse_AltairBlock{
 			AltairBlock: &ethpb.SignedBeaconBlockAltair{
-				Signature: decodedSignature,
-				Block:     altairBlock,
+				Signature: altairBlock.Signature,
+				Block:     &ethpb.BeaconBlockAltair{Slot: altairBlock.Block.Slot},
 			},
 		}
 
-		slot = altairBlock.Slot
+		slot = altairBlock.Block.Slot
 
 	case "bellatrix":
-		jsonBellatrixBlock := shared.SignedBeaconBlockBellatrix{}
+		jsonBellatrixBlock := shared.SignedBlindedBeaconBlockBellatrix{}
 		if err := decoder.Decode(&jsonBellatrixBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed bellatrix block response json")
 		}
-
-		bellatrixBlock, err := c.beaconBlockConverter.ConvertRESTBellatrixBlockToProto(jsonBellatrixBlock.Message)
+		bellatrixBlock, err := jsonBellatrixBlock.ToConsensus()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get signed bellatrix block")
 		}
 
-		decodedSignature, err := hexutil.Decode(jsonBellatrixBlock.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode bellatrix block signature `%s`", jsonBellatrixBlock.Signature)
-		}
-
 		response.Block = &ethpb.StreamBlocksResponse_BellatrixBlock{
 			BellatrixBlock: &ethpb.SignedBeaconBlockBellatrix{
-				Signature: decodedSignature,
-				Block:     bellatrixBlock,
+				Signature: bellatrixBlock.Signature,
+				Block:     &ethpb.BeaconBlockBellatrix{Slot: bellatrixBlock.Block.Slot},
 			},
 		}
 
-		slot = bellatrixBlock.Slot
+		slot = bellatrixBlock.Block.Slot
 
 	case "capella":
-		jsonCapellaBlock := shared.SignedBeaconBlockCapella{}
+		jsonCapellaBlock := shared.SignedBlindedBeaconBlockCapella{}
 		if err := decoder.Decode(&jsonCapellaBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed capella block response json")
 		}
-
-		capellaBlock, err := c.beaconBlockConverter.ConvertRESTCapellaBlockToProto(jsonCapellaBlock.Message)
+		capellaBlock, err := jsonCapellaBlock.ToConsensus()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get signed capella block")
 		}
 
-		decodedSignature, err := hexutil.Decode(jsonCapellaBlock.Signature)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode capella block signature `%s`", jsonCapellaBlock.Signature)
-		}
-
 		response.Block = &ethpb.StreamBlocksResponse_CapellaBlock{
 			CapellaBlock: &ethpb.SignedBeaconBlockCapella{
-				Signature: decodedSignature,
-				Block:     capellaBlock,
+				Signature: capellaBlock.Signature,
+				Block:     &ethpb.BeaconBlockCapella{Slot: capellaBlock.Block.Slot},
 			},
 		}
 
-		slot = capellaBlock.Slot
+		slot = capellaBlock.Block.Slot
+
 	case "deneb":
-		jsonDenebBlock := shared.SignedBeaconBlockDeneb{}
+		jsonDenebBlock := shared.SignedBlindedBeaconBlockDeneb{}
 		if err := decoder.Decode(&jsonDenebBlock); err != nil {
 			return nil, errors.Wrap(err, "failed to decode signed deneb block response json")
 		}
-
 		denebBlock, err := jsonDenebBlock.ToConsensus()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get signed deneb block")
@@ -200,14 +174,14 @@ func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) 
 		response.Block = &ethpb.StreamBlocksResponse_DenebBlock{
 			DenebBlock: &ethpb.SignedBeaconBlockDeneb{
 				Signature: denebBlock.Signature,
-				Block:     denebBlock.Block,
+				Block:     &ethpb.BeaconBlockDeneb{Slot: denebBlock.Message.Slot},
 			},
 		}
 
-		slot = denebBlock.Block.Slot
+		slot = denebBlock.Message.Slot
 
 	default:
-		return nil, errors.Errorf("unsupported consensus version `%s`", signedBlockResponseJson.Version)
+		return nil, errors.Errorf("unsupported block version `%s`", signedBlockResponseJson.Version)
 	}
 
 	return &headSignedBeaconBlockResult{
