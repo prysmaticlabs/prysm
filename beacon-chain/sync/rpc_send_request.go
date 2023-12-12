@@ -158,7 +158,7 @@ func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle,
 	}
 	defer closeStream(stream, log)
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	max := params.BeaconConfig().MaxRequestBlobSidecars
 	if max > req.Count*fieldparams.MaxBlobsPerBlock {
 		max = req.Count * fieldparams.MaxBlobsPerBlock
 	}
@@ -169,7 +169,7 @@ func SendBlobSidecarByRoot(
 	ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.P2P, pid peer.ID,
 	ctxMap ContextByteVersions, req *p2ptypes.BlobSidecarsByRootReq,
 ) ([]blocks.ROBlob, error) {
-	if uint64(len(*req)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+	if uint64(len(*req)) > params.BeaconConfig().MaxRequestBlobSidecars {
 		return nil, errors.Wrapf(p2ptypes.ErrMaxBlobReqExceeded, "length=%d", len(*req))
 	}
 
@@ -184,7 +184,7 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	max := params.BeaconConfig().MaxRequestBlobSidecars
 	if max > uint64(len(*req))*fieldparams.MaxBlobsPerBlock {
 		max = uint64(len(*req)) * fieldparams.MaxBlobsPerBlock
 	}
