@@ -3,6 +3,7 @@ package filesystem
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/spf13/afero"
 )
 
@@ -34,6 +35,6 @@ func (bs *BlobStorage) CollectTotalBlobMetric() error {
 	if err != nil {
 		return err
 	}
-	blobsTotalGauge.Set(float64(len(folders) * 6))
+	blobsTotalGauge.Set(float64(len(folders) * field_params.MaxBlobsPerBlock))
 	return nil
 }
