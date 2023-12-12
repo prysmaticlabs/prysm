@@ -2,11 +2,13 @@ package filesystem
 
 import (
 	"bytes"
+	"os"
 	"path"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -89,11 +91,35 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
 
-		time.Sleep(3 * time.Second)
-		remainingFolders, err := afero.ReadDir(fs, ".")
+		var remainingFolders []os.FileInfo
+		// Define the condition function for polling
+		conditionFunc := func() bool {
+			remainingFolders, err = afero.ReadDir(fs, ".")
+			require.NoError(t, err)
+			return len(remainingFolders) == 1
+		}
+
+		// Poll until the condition is met or a timeout is reached
+		err = pollUntil(conditionFunc, 30*time.Second)
 		require.NoError(t, err)
 		require.Equal(t, 1, len(remainingFolders))
 	})
+
+}
+
+// pollUntil polls a condition function until it returns true or a timeout is reached.
+func pollUntil(conditionFunc func() bool, timeout time.Duration) error {
+	startTime := time.Now()
+	for {
+		if conditionFunc() {
+			break // Condition met, exit the loop
+		}
+		if time.Since(startTime) > timeout {
+			return errors.New("timeout")
+		}
+		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
+	}
+	return nil
 }
 
 func TestBlobIndicesBounds(t *testing.T) {
