@@ -231,6 +231,9 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
 			return nil, err
 		}
+		if err = beacon.BlobStorage.CollectTotalBlobMetric(); err != nil {
+			return nil, err
+		}
 	} else {
 		log.Warn("No finalized beacon state at startup, cannot prune blobs")
 	}

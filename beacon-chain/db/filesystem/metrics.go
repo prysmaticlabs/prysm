@@ -3,17 +3,18 @@ package filesystem
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/spf13/afero"
 )
 
 var (
 	blobSaveLatency = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "blob_storage_save_latency_seconds",
-		Help:    "Latency of blob storage save operations",
+		Name:    "blob_storage_save_latency",
+		Help:    "Latency of blob storage save operations in milliseconds",
 		Buckets: prometheus.DefBuckets,
 	})
 	blobFetchLatency = promauto.NewHistogram(prometheus.HistogramOpts{
-		Name:    "blob_storage_get_latency_seconds",
-		Help:    "Latency of blob storage get operations",
+		Name:    "blob_storage_get_latency",
+		Help:    "Latency of blob storage get operations in milliseconds",
 		Buckets: prometheus.DefBuckets,
 	})
 	blobsPrunedCounter = promauto.NewCounter(prometheus.CounterOpts{
@@ -25,3 +26,14 @@ var (
 		Help: "Total number of blobs in filesystem.",
 	})
 )
+
+// CollectTotalBlobMetric set the number of blobs currently present in the filesystem
+// to the blobsTotalGauge metric.
+func (bs *BlobStorage) CollectTotalBlobMetric() error {
+	folders, err := afero.ReadDir(bs.fs, ".")
+	if err != nil {
+		return err
+	}
+	blobsTotalGauge.Set(float64(len(folders) * 6))
+	return nil
+}
