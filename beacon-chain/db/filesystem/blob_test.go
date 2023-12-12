@@ -79,6 +79,8 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
+		// Slot in first half of epoch therefore should not prune
+		require.Equal(t, false, bs.shouldPrune(testSidecars[0].Slot()))
 
 		expected := testSidecars[0]
 		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
@@ -90,6 +92,8 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
+		// Slot in second half of epoch therefore should prune
+		require.Equal(t, true, bs.shouldPrune(testSidecars[0].Slot()))
 
 		var remainingFolders []os.FileInfo
 		// Define the condition function for polling
@@ -104,7 +108,6 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, len(remainingFolders))
 	})
-
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
@@ -120,6 +123,26 @@ func pollUntil(conditionFunc func() bool, timeout time.Duration) error {
 		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
 	}
 	return nil
+}
+
+func TestShouldPrune(t *testing.T) {
+	bs := NewEphemeralBlobStorage(t)
+	bs.lastPrunedEpoch = 5
+
+	// Slot is before the midpoint of the epoch
+	slot1 := primitives.Slot(100)
+	p1 := bs.shouldPrune(slot1)
+	require.Equal(t, false, p1)
+
+	// Slot is after the midpoint of the epoch, but same epoch as last pruning
+	slot2 := primitives.Slot(160)
+	p2 := bs.shouldPrune(slot2)
+	require.Equal(t, false, p2)
+
+	// Slot is after the midpoint of the epoch
+	slot3 := primitives.Slot(8018)
+	p3 := bs.shouldPrune(slot3)
+	require.Equal(t, true, p3)
 }
 
 func TestBlobIndicesBounds(t *testing.T) {
