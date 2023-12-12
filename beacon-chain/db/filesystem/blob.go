@@ -129,7 +129,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
-	blobsTotalCounter.Inc()
+	blobsTotalGauge.Inc()
 	blobSaveLatency.Observe(time.Since(startTime).Seconds())
 	return nil
 }
@@ -241,6 +241,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 				return err
 			}
 			blobsPrunedCounter.Inc()
+			blobsTotalGauge.Dec()
 		}
 	}
 	return nil

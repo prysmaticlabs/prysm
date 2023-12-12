@@ -20,7 +20,7 @@ var (
 		Name: "blob_pruned_blobs_total",
 		Help: "Total number of pruned blobs.",
 	})
-	blobsTotalCounter = promauto.NewCounter(prometheus.CounterOpts{
+	blobsTotalGauge = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "blob_total_number",
 		Help: "Total number of blobs in filesystem.",
 	})
