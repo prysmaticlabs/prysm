@@ -77,51 +77,69 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 	t.Run("check pruning", func(t *testing.T) {
 		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
 		require.NoError(t, err)
-		err = bs.Save(testSidecars[0])
-		require.NoError(t, err)
+
 		// Slot in first half of epoch therefore should not prune
 		require.Equal(t, false, bs.shouldPrune(testSidecars[0].Slot()))
-
-		expected := testSidecars[0]
-		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
+		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
-		require.DeepSSZEqual(t, expected, actual)
+		actual, err := bs.Get(testSidecars[0].BlockRoot(), testSidecars[0].Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, testSidecars[0], actual)
+		err = pollUntil(t, fs, 1)
+		require.NoError(t, err)
+
+		_, sidecars = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 33, fieldparams.MaxBlobsPerBlock)
+		testSidecars1, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+		// Slot in first half of epoch therefore should not prune
+		require.Equal(t, false, bs.shouldPrune(testSidecars1[0].Slot()))
+		err = bs.Save(testSidecars1[0])
+		require.NoError(t, err)
+		// Check previous saved sidecar was not pruned
+		actual, err = bs.Get(testSidecars[0].BlockRoot(), testSidecars[0].Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, testSidecars[0], actual)
+		// Check latest sidecar exists
+		actual, err = bs.Get(testSidecars1[0].BlockRoot(), testSidecars1[0].Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, testSidecars1[0], actual)
+		err = pollUntil(t, fs, 2) // Check correct number of files
+		require.NoError(t, err)
 
 		_, sidecars = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 131187, fieldparams.MaxBlobsPerBlock)
 		testSidecars, err = verification.BlobSidecarSliceNoop(sidecars)
+		// Slot in second half of epoch therefore should prune
+		require.Equal(t, true, bs.shouldPrune(testSidecars[0].Slot()))
 		require.NoError(t, err)
 		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
-		// Slot in second half of epoch therefore should prune
-		require.Equal(t, true, bs.shouldPrune(testSidecars[0].Slot()))
-
-		var remainingFolders []os.FileInfo
-		// Define the condition function for polling
-		conditionFunc := func() bool {
-			remainingFolders, err = afero.ReadDir(fs, ".")
-			require.NoError(t, err)
-			return len(remainingFolders) == 1
-		}
-
-		// Poll until the condition is met or a timeout is reached
-		err = pollUntil(conditionFunc, 30*time.Second)
+		err = pollUntil(t, fs, 1)
 		require.NoError(t, err)
-		require.Equal(t, 1, len(remainingFolders))
 	})
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.
-func pollUntil(conditionFunc func() bool, timeout time.Duration) error {
+func pollUntil(t *testing.T, fs afero.Fs, expected int) error {
+	var remainingFolders []os.FileInfo
+	var err error
+	// Define the condition function for polling
+	conditionFunc := func() bool {
+		remainingFolders, err = afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		return len(remainingFolders) == expected
+	}
+
 	startTime := time.Now()
 	for {
 		if conditionFunc() {
 			break // Condition met, exit the loop
 		}
-		if time.Since(startTime) > timeout {
+		if time.Since(startTime) > 30*time.Second {
 			return errors.New("timeout")
 		}
 		time.Sleep(1 * time.Second) // Adjust the sleep interval as needed
 	}
+	require.Equal(t, expected, len(remainingFolders))
 	return nil
 }
 
