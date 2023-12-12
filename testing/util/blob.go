@@ -24,11 +24,16 @@ func HydrateBlobSidecar(b *ethpb.BlobSidecar) *ethpb.BlobSidecar {
 	}
 
 	if b.CommitmentInclusionProof == nil {
-		r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-		for i := range r {
-			r[i] = make([]byte, fieldparams.RootLength)
-		}
-		b.CommitmentInclusionProof = r
+		b.CommitmentInclusionProof = HydrateCommitmentInclusionProofs()
 	}
 	return b
+}
+
+// HydrateCommitmentInclusionProofs returns 2d byte slice of Commitment Inclusion Proofs
+func HydrateCommitmentInclusionProofs() [][]byte {
+	r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
+	for i := range r {
+		r[i] = make([]byte, fieldparams.RootLength)
+	}
+	return r
 }

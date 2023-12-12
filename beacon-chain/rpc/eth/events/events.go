@@ -180,9 +180,8 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			return
 		}
 		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
-		blockRoot := blobData.Blob.BlockRoot()
 		blobEvent := &BlobSidecarEvent{
-			BlockRoot:     hexutil.Encode(blockRoot[:]),
+			BlockRoot:     hexutil.Encode(blobData.Blob.BlockRootSlice()),
 			Index:         fmt.Sprintf("%d", blobData.Blob.Index),
 			Slot:          fmt.Sprintf("%d", blobData.Blob.Slot()),
 			VersionedHash: versionedHash.String(),
