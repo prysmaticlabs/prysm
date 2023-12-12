@@ -481,8 +481,8 @@ func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
 	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	v := &validator{
-		genesisTime:   genesisTime,
-		blockSlotFeed: new(event.Feed),
+		genesisTime: genesisTime,
+		blockFeed:   new(event.Feed),
 	}
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
@@ -501,7 +501,7 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 
 	v := &validator{
 		genesisTime:      genesisTime,
-		blockSlotFeed:    new(event.Feed),
+		blockFeed:        new(event.Feed),
 		highestValidSlot: currentSlot,
 	}
 
@@ -521,8 +521,8 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 	genesisTime := currentTime - uint64(currentSlot.Mul(params.BeaconConfig().SecondsPerSlot))
 
 	v := &validator{
-		genesisTime:   genesisTime,
-		blockSlotFeed: new(event.Feed),
+		genesisTime: genesisTime,
+		blockFeed:   new(event.Feed),
 	}
 
 	wg := &sync.WaitGroup{}
@@ -534,7 +534,7 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 				Block: &ethpb.BeaconBlock{Slot: currentSlot, Body: &ethpb.BeaconBlockBody{}},
 			})
 		require.NoError(t, err)
-		v.blockSlotFeed.Send(wsb)
+		v.blockFeed.Send(wsb)
 		wg.Done()
 	}()
 

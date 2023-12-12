@@ -906,7 +906,7 @@ func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
 	defer ctrl.Finish()
 	valClient := validatormock.NewMockValidatorClient(ctrl)
 	v := validator{
-		blockSlotFeed:   new(event.Feed),
+		blockFeed:       new(event.Feed),
 		validatorClient: valClient,
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
@@ -935,7 +935,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		blockSlotFeed:   new(event.Feed),
+		blockFeed:       new(event.Feed),
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -966,7 +966,7 @@ func TestService_ReceiveBlocks_SetHighestDeneb(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		blockSlotFeed:   new(event.Feed),
+		blockFeed:       new(event.Feed),
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())

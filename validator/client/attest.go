@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -273,15 +274,15 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	sChannel := make(chan primitives.Slot, 1)
-	sub := v.blockSlotFeed.Subscribe(sChannel)
+	bChannel := make(chan interfaces.ReadOnlySignedBeaconBlock, 1)
+	sub := v.blockFeed.Subscribe(bChannel)
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case s := <-sChannel:
+		case b := <-bChannel:
 			if features.Get().AttestTimely {
-				if slot <= s {
+				if slot <= b.Block().Slot() {
 					return
 				}
 			}
