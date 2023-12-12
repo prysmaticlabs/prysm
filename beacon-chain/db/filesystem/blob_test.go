@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -70,6 +71,28 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
 		require.NoError(t, err)
 		require.DeepSSZEqual(t, expected, actual)
+	})
+	t.Run("check pruning", func(t *testing.T) {
+		fs, bs, err := NewEphemeralBlobStorageWithFs(t)
+		require.NoError(t, err)
+		err = bs.Save(testSidecars[0])
+		require.NoError(t, err)
+
+		expected := testSidecars[0]
+		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, expected, actual)
+
+		_, sidecars = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 131187, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err = verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+		err = bs.Save(testSidecars[0])
+		require.NoError(t, err)
+
+		time.Sleep(3 * time.Second)
+		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		require.Equal(t, 1, len(remainingFolders))
 	})
 }
 
