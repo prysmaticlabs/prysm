@@ -41,7 +41,7 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			OperationNotifier: &mockChain.MockOperationNotifier{},
 		}
 
-		topics := []string{AttestationTopic, VoluntaryExitTopic, SyncCommitteeContributionTopic, BLSToExecutionChangeTopic, BlobSidecarTopic} // TODO: add blob sidecar back in later
+		topics := []string{AttestationTopic, VoluntaryExitTopic, SyncCommitteeContributionTopic, BLSToExecutionChangeTopic, BlobSidecarTopic}
 		for i, topic := range topics {
 			topics[i] = "topics=" + topic
 		}
