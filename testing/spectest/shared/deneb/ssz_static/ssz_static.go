@@ -130,7 +130,7 @@ func UnmarshalledSSZ(t *testing.T, serializedBytes []byte, folderName string) (i
 	case "BlobIdentifier":
 		obj = &ethpb.BlobIdentifier{}
 	case "BlobSidecar":
-		obj = &ethpb.DeprecatedBlobSidecar{}
+		obj = &ethpb.BlobSidecar{}
 	case "SignedBlobSidecar":
 		obj = &ethpb.SignedBlobSidecar{}
 	case "PowBlock":

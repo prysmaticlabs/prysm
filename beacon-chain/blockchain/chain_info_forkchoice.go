@@ -22,6 +22,13 @@ func (s *Service) GetProposerHead() [32]byte {
 	return s.cfg.ForkChoiceStore.GetProposerHead()
 }
 
+// ShouldOverrideFCU returns the corresponding value from forkchoice
+func (s *Service) ShouldOverrideFCU() bool {
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	return s.cfg.ForkChoiceStore.ShouldOverrideFCU()
+}
+
 // SetForkChoiceGenesisTime sets the genesis time in Forkchoice
 func (s *Service) SetForkChoiceGenesisTime(timestamp uint64) {
 	s.cfg.ForkChoiceStore.Lock()

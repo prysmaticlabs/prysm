@@ -136,11 +136,7 @@ func generateTestSidecar(t *testing.T, root [32]byte, block interfaces.ReadOnlyS
 }
 
 func fakeEmptyProof(_ *testing.T, _ interfaces.ReadOnlySignedBeaconBlock, _ *ethpb.BlobSidecar) [][]byte {
-	r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-	for i := range r {
-		r[i] = make([]byte, fieldparams.RootLength)
-	}
-	return r
+	return util.HydrateCommitmentInclusionProofs()
 }
 
 type expectedBlobChunk struct {

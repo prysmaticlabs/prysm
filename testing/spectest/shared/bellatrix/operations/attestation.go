@@ -35,7 +35,7 @@ func RunAttestationTest(t *testing.T, config string) {
 
 			body := &ethpb.BeaconBlockBodyBellatrix{Attestations: []*ethpb.Attestation{att}}
 			processAtt := func(ctx context.Context, st state.BeaconState, blk interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-				st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
+				st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk.Block())
 				if err != nil {
 					return nil, err
 				}
