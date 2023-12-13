@@ -13,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -277,44 +276,19 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 }
 
 func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.BlockRewardsFetcher, i interface{} /* block as argument */) (string, *httputil.DefaultErrorJson) {
-	var wrapper interfaces.ReadOnlySignedBeaconBlock
-	var err error
-
-	// TODO: we should not require this fake signed wrapper and fix associated functions in the future.
-	switch b := i.(type) {
-	case *eth.GenericBeaconBlock_Phase0:
-		//ignore for phase0
-		return "", nil
-	case *eth.GenericBeaconBlock_Altair:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Altair{Altair: &eth.SignedBeaconBlockAltair{Block: b.Altair}})
-	case *eth.GenericBeaconBlock_Bellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Bellatrix{Bellatrix: &eth.SignedBeaconBlockBellatrix{Block: b.Bellatrix}})
-	case *eth.GenericBeaconBlock_BlindedBellatrix:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedBellatrix{BlindedBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{Block: b.BlindedBellatrix}})
-	case *eth.GenericBeaconBlock_Capella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Capella{Capella: &eth.SignedBeaconBlockCapella{Block: b.Capella}})
-	case *eth.GenericBeaconBlock_BlindedCapella:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: &eth.SignedBlindedBeaconBlockCapella{Block: b.BlindedCapella}})
-	case *eth.GenericBeaconBlock_Deneb:
-		// no need for blobs
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockContentsDeneb{Block: &eth.SignedBeaconBlockDeneb{Block: b.Deneb.Block}}})
-	case *eth.GenericBeaconBlock_BlindedDeneb:
-		wrapper, err = blocks.NewSignedBeaconBlock(&eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockDeneb{Message: b.BlindedDeneb}})
-	default:
-		return "", &httputil.DefaultErrorJson{
-			Message: fmt.Errorf("type %T is not supported", b).Error(),
-			Code:    http.StatusInternalServerError,
-		}
-	}
+	bb, err := blocks.NewBeaconBlock(i)
 	if err != nil {
 		return "", &httputil.DefaultErrorJson{
 			Message: err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
-
+	if bb.Version() == version.Phase0 {
+		// ignore for phase 0
+		return "", nil
+	}
 	//get consensus payload value which is the same as the total from the block rewards api
-	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, wrapper)
+	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
 		return "", httpError
 	}

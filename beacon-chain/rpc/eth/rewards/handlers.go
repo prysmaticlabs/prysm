@@ -47,7 +47,7 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not get block root: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	blockRewards, httpError := s.BlockRewardFetcher.GetBlockRewardsData(ctx, blk)
+	blockRewards, httpError := s.BlockRewardFetcher.GetBlockRewardsData(ctx, blk.Block())
 	if httpError != nil {
 		httputil.WriteError(w, httpError)
 		return
@@ -120,7 +120,7 @@ func (s *Server) SyncCommitteeRewards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	st, httpErr := s.BlockRewardFetcher.GetStateForRewards(ctx, blk)
+	st, httpErr := s.BlockRewardFetcher.GetStateForRewards(ctx, blk.Block())
 	if httpErr != nil {
 		httputil.WriteError(w, httpErr)
 		return
