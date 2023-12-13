@@ -92,16 +92,11 @@ func TestWallet_InitializeKeymanager_web3Signer_nilConfig(t *testing.T) {
 
 func TestOpenOrCreateNewWallet(t *testing.T) {
 	walletDir := filepath.Join(t.TempDir(), "wallet")
+	newDir := filepath.Join(t.TempDir(), "new")
 	passwordFileDir := filepath.Join(t.TempDir(), "passwordFile")
 	require.NoError(t, os.MkdirAll(passwordFileDir, params.BeaconIoConfig().ReadWriteExecutePermissions))
-	passwordFilePath := filepath.Join(passwordFileDir, "password.txt")
-	require.NoError(t, os.WriteFile(passwordFilePath, []byte("existing"), os.ModePerm))
-
-	app := cli.App{}
-	set := flag.NewFlagSet("test", 0)
-	set.String(flags.WalletDirFlag.Name, walletDir, "")
-	set.String(flags.KeymanagerKindFlag.Name, keymanager.Local.String(), "")
-	set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath, "")
+	passwordFilePath1 := filepath.Join(passwordFileDir, "password1.txt")
+	passwordFilePath2 := filepath.Join(passwordFileDir, "password2.txt")
 
 	type args struct {
 		cliCtx *cli.Context
@@ -116,22 +111,34 @@ func TestOpenOrCreateNewWallet(t *testing.T) {
 			name: "New Wallet",
 			args: args{
 				cliCtx: func() *cli.Context {
-					assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
+					app := cli.App{}
+					set := flag.NewFlagSet("test", 0)
+					require.NoError(t, os.MkdirAll(newDir, 0700))
+					require.NoError(t, os.WriteFile(passwordFilePath1, []byte("newnewnew"), os.ModePerm))
+					set.String(flags.WalletDirFlag.Name, newDir, "") // don't set it
+					set.String(flags.KeymanagerKindFlag.Name, keymanager.Local.String(), "")
+					set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath1, "")
 					assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanager.Local.String()))
-					assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
+					assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath1))
 					return cli.NewContext(&app, set, nil)
 				}(),
 			},
 			want: wallet.New(&wallet.Config{
-				WalletDir:      walletDir,
+				WalletDir:      newDir,
 				KeymanagerKind: keymanager.Local,
-				WalletPassword: "existing",
+				WalletPassword: "newnewnew",
 			}),
 		},
 		{
 			name: "Existing Wallet",
 			args: args{
 				cliCtx: func() *cli.Context {
+					app := cli.App{}
+					set := flag.NewFlagSet("test", 0)
+					set.String(flags.WalletDirFlag.Name, walletDir, "")
+					set.String(flags.KeymanagerKindFlag.Name, keymanager.Local.String(), "")
+					set.String(flags.WalletPasswordFileFlag.Name, passwordFilePath2, "")
+					require.NoError(t, os.WriteFile(passwordFilePath2, []byte("existing"), os.ModePerm))
 					w := wallet.New(&wallet.Config{
 						WalletDir:      walletDir,
 						KeymanagerKind: keymanager.Local,
@@ -140,7 +147,7 @@ func TestOpenOrCreateNewWallet(t *testing.T) {
 					require.NoError(t, w.SaveWallet())
 					assert.NoError(t, set.Set(flags.WalletDirFlag.Name, walletDir))
 					assert.NoError(t, set.Set(flags.KeymanagerKindFlag.Name, keymanager.Local.String()))
-					assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath))
+					assert.NoError(t, set.Set(flags.WalletPasswordFileFlag.Name, passwordFilePath2))
 					return cli.NewContext(&app, set, nil)
 				}(),
 			},
