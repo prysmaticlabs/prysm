@@ -48,6 +48,8 @@ const (
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
 
+const chanBuffer = 1000
+
 var casesHandled = map[string]bool{
 	HeadTopic:                      true,
 	BlockTopic:                     true,
@@ -90,9 +92,9 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
-	opsChan := make(chan *feed.Event, 1)
+	opsChan := make(chan *feed.Event, chanBuffer)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
-	stateChan := make(chan *feed.Event, 1)
+	stateChan := make(chan *feed.Event, chanBuffer)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
