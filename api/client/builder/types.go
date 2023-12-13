@@ -1021,6 +1021,16 @@ type BlobsBundle struct {
 
 // ToProto returns a BlobsBundle Proto.
 func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
+	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
+	}
+	if len(b.Commitments) != len(b.Blobs) {
+		return nil, fmt.Errorf("commitments length %d does not equal blobs length %d", len(b.Commitments), len(b.Blobs))
+	}
+	if len(b.Proofs) != len(b.Blobs) {
+		return nil, fmt.Errorf("proofs length %d does not equal blobs length %d", len(b.Proofs), len(b.Blobs))
+	}
+
 	commitments := make([][]byte, len(b.Commitments))
 	for i := range b.Commitments {
 		if len(b.Commitments[i]) != fieldparams.BLSPubkeyLength {
@@ -1034,9 +1044,6 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 			return nil, fmt.Errorf("proof length %d is not %d", len(b.Proofs[i]), fieldparams.BLSPubkeyLength)
 		}
 		proofs[i] = bytesutil.SafeCopyBytes(b.Proofs[i])
-	}
-	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
 	}
 	blobs := make([][]byte, len(b.Blobs))
 	for i := range b.Blobs {

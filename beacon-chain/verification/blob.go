@@ -103,7 +103,7 @@ func (bv *BlobVerifier) recordResult(req Requirement, err *error) {
 func (bv *BlobVerifier) BlobIndexInBounds() (err error) {
 	defer bv.recordResult(RequireBlobIndexInBounds, &err)
 	if bv.blob.Index >= fieldparams.MaxBlobsPerBlock {
-		log.WithFields(logging.BlobFields(bv.blob)).Debug("Sidecar index > MAX_BLOBS_PER_BLOCK")
+		log.WithFields(logging.BlobFields(bv.blob)).Debug("Sidecar index >= MAX_BLOBS_PER_BLOCK")
 		return ErrBlobIndexInvalid
 	}
 	return nil
@@ -117,7 +117,7 @@ func (bv *BlobVerifier) SlotNotTooEarly() (err error) {
 	if bv.clock.CurrentSlot() == bv.blob.Slot() {
 		return nil
 	}
-	// subtract the max clock disparity from the start slot time
+	// Subtract the max clock disparity from the start slot time.
 	validAfter := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconNetworkConfig().MaximumGossipClockDisparity)
 	// If the difference between now and gt is greater than maximum clock disparity, the block is too far in the future.
 	if bv.clock.Now().Before(validAfter) {
@@ -158,14 +158,14 @@ func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) 
 		return nil
 	}
 
-	// retrieve the parent state to fallback to full verification
+	// Retrieve the parent state to fallback to full verification.
 	parent, err := bv.parentState(ctx)
 	if err != nil {
 		log.WithFields(logging.BlobFields(bv.blob)).WithError(err).Debug("could not replay parent state for blob signature verification")
 		return ErrInvalidProposerSignature
 	}
 	// Full verification, which will subsequently be cached for anything sharing the signature cache.
-	if err := bv.sc.VerifySignature(sd, parent); err != nil {
+	if err = bv.sc.VerifySignature(sd, parent); err != nil {
 		log.WithFields(logging.BlobFields(bv.blob)).WithError(err).Debug("signature verification failed")
 		return ErrInvalidProposerSignature
 	}
@@ -225,7 +225,7 @@ func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
 // [REJECT] The sidecar's inclusion proof is valid as verified by verify_blob_sidecar_inclusion_proof(blob_sidecar).
 func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 	defer bv.recordResult(RequireSidecarInclusionProven, &err)
-	if err := blocks.VerifyKZGInclusionProof(bv.blob); err != nil {
+	if err = blocks.VerifyKZGInclusionProof(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("sidecar inclusion proof verification failed")
 		return ErrSidecarInclusionProofInvalid
 	}
@@ -237,7 +237,7 @@ func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 // verify_blob_kzg_proof(blob_sidecar.blob, blob_sidecar.kzg_commitment, blob_sidecar.kzg_proof).
 func (bv *BlobVerifier) SidecarKzgProofVerified() (err error) {
 	defer bv.recordResult(RequireSidecarKzgProofVerified, &err)
-	if err := bv.verifyBlobCommitment(bv.blob); err != nil {
+	if err = bv.verifyBlobCommitment(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("kzg commitment proof verification failed")
 		return ErrSidecarKzgProofInvalid
 	}

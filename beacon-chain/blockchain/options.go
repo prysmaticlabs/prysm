@@ -165,7 +165,7 @@ func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	}
 }
 
-// WithClockSychronizer sets the ClockSetter/ClockWaiter values to be used by services that need to block until
+// WithClockSynchronizer sets the ClockSetter/ClockWaiter values to be used by services that need to block until
 // the genesis timestamp is known (ClockWaiter) or which determine the genesis timestamp (ClockSetter).
 func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
 	return func(s *Service) error {
