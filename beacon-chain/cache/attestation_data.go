@@ -6,14 +6,15 @@ import (
 	"sync"
 
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type AttestationConsensusData struct {
-	Slot             primitives.Slot
-	HeadRoot         []byte
-	TargetCheckpoint *ethpb.Checkpoint
-	SourceCheckpoint *ethpb.Checkpoint
+	Slot        primitives.Slot
+	HeadRoot    []byte
+	TargetRoot  []byte
+	TargetEpoch primitives.Epoch
+	SourceRoot  []byte
+	SourceEpoch primitives.Epoch
 }
 
 // AttestationCache stores cached results of AttestationData requests.

@@ -335,8 +335,14 @@ func (s *Service) GetAttestationData(
 			Slot:            res.Slot,
 			CommitteeIndex:  req.CommitteeIndex,
 			BeaconBlockRoot: res.HeadRoot,
-			Source:          res.SourceCheckpoint,
-			Target:          res.TargetCheckpoint,
+			Source: &ethpb.Checkpoint{
+				Epoch: res.SourceEpoch,
+				Root:  res.SourceRoot,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: res.TargetEpoch,
+				Root:  res.TargetRoot,
+			},
 		}, nil
 	}
 
@@ -349,17 +355,14 @@ func (s *Service) GetAttestationData(
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
-	targetCheckpoint := &ethpb.Checkpoint{
-		Epoch: targetEpoch,
-		Root:  targetRoot[:],
-	}
 	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
-
 	if err = s.AttestationCache.Put(ctx, &cache.AttestationConsensusData{
-		Slot:             res.Slot,
-		HeadRoot:         headRoot,
-		TargetCheckpoint: targetCheckpoint,
-		SourceCheckpoint: justifiedCheckpoint,
+		Slot:        res.Slot,
+		HeadRoot:    headRoot,
+		TargetRoot:  targetRoot[:],
+		TargetEpoch: targetEpoch,
+		SourceRoot:  justifiedCheckpoint.Root,
+		SourceEpoch: justifiedCheckpoint.Epoch,
 	}); err != nil {
 		log.WithError(err).Error("Failed to put attestation data into cache")
 	}
@@ -368,8 +371,14 @@ func (s *Service) GetAttestationData(
 		Slot:            res.Slot,
 		CommitteeIndex:  req.CommitteeIndex,
 		BeaconBlockRoot: res.HeadRoot,
-		Source:          res.SourceCheckpoint,
-		Target:          res.TargetCheckpoint,
+		Source: &ethpb.Checkpoint{
+			Epoch: justifiedCheckpoint.Epoch,
+			Root:  justifiedCheckpoint.Root,
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: targetEpoch,
+			Root:  targetRoot[:],
+		},
 	}, nil
 }
 
