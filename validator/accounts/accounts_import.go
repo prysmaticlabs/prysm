@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -81,52 +80,16 @@ func (acm *CLIManager) Import(ctx context.Context) error {
 	if !ok {
 		return errors.New("keymanager cannot import keystores")
 	}
-
+	log.Info("importing validator keystores...")
 	// Check if the user wishes to import a one-off, private key directly
 	// as an account into the Prysm validator.
 	if acm.importPrivateKeys {
 		return importPrivateKeyAsAccount(ctx, acm.wallet, k, acm.privateKeyFile)
 	}
 
-	// Consider that the keysDir might be a path to a specific file and handle accordingly.
-	isDir, err := file.HasDir(acm.keysDir)
+	keystoresImported, err := processDirectory(ctx, acm.keysDir, 0)
 	if err != nil {
-		return errors.Wrap(err, "could not determine if path is a directory")
-	}
-	keystoresImported := make([]*keymanager.Keystore, 0)
-	if isDir {
-		files, err := os.ReadDir(acm.keysDir)
-		if err != nil {
-			return errors.Wrap(err, "could not read dir")
-		}
-		if len(files) == 0 {
-			return fmt.Errorf("directory %s has no files, cannot import from it", acm.keysDir)
-		}
-		filesInDir := make([]string, 0)
-		for i := 0; i < len(files); i++ {
-			if files[i].IsDir() {
-				continue
-			}
-			filesInDir = append(filesInDir, files[i].Name())
-		}
-		// Sort the imported keystores by derivation path if they
-		// specify this value in their filename.
-		sort.Sort(byDerivationPath(filesInDir))
-		for _, name := range filesInDir {
-			keystore, err := readKeystoreFile(ctx, filepath.Join(acm.keysDir, name))
-			if err != nil && strings.Contains(err.Error(), "could not decode keystore json") {
-				continue
-			} else if err != nil {
-				return errors.Wrapf(err, "could not import keystore at path: %s", name)
-			}
-			keystoresImported = append(keystoresImported, keystore)
-		}
-	} else {
-		keystore, err := readKeystoreFile(ctx, acm.keysDir)
-		if err != nil {
-			return errors.Wrap(err, "could not import keystore")
-		}
-		keystoresImported = append(keystoresImported, keystore)
+		return errors.Wrap(err, "unable to process directory and import keys")
 	}
 
 	var accountsPassword string
@@ -174,6 +137,59 @@ func (acm *CLIManager) Import(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// Recursive function to process directories and files.
+func processDirectory(ctx context.Context, dir string, depth int) ([]*keymanager.Keystore, error) {
+	maxdepth := 2
+	if depth > maxdepth {
+		log.Infof("stopped checking folders for keystores after max depth of %d was reached", maxdepth)
+		return nil, nil // Stop recursion after two levels.
+	}
+	log.Infof("checking directory for keystores: %s", dir)
+	isDir, err := file.HasDir(dir)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not determine if path is a directory")
+	}
+
+	keystoresImported := make([]*keymanager.Keystore, 0)
+
+	if isDir {
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not read dir")
+		}
+		if len(files) == 0 {
+			return nil, fmt.Errorf("directory %s has no files, cannot import from it", dir)
+		}
+		for _, f := range files {
+			fullPath := filepath.Join(dir, f.Name())
+			if f.IsDir() {
+				subKeystores, err := processDirectory(ctx, fullPath, depth+1)
+				if err != nil {
+					return nil, err
+				}
+				keystoresImported = append(keystoresImported, subKeystores...)
+			} else {
+				keystore, err := readKeystoreFile(ctx, fullPath)
+				if err != nil {
+					if strings.Contains(err.Error(), "could not decode keystore json") {
+						continue
+					}
+					return nil, errors.Wrapf(err, "could not import keystore at path: %s", fullPath)
+				}
+				keystoresImported = append(keystoresImported, keystore)
+			}
+		}
+	} else {
+		keystore, err := readKeystoreFile(ctx, dir)
+		if err != nil {
+			return nil, errors.Wrap(err, "could not import keystore")
+		}
+		keystoresImported = append(keystoresImported, keystore)
+	}
+
+	return keystoresImported, nil
 }
 
 // ImportAccounts can import external, EIP-2335 compliant keystore.json files as
