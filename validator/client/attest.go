@@ -258,7 +258,10 @@ func (v *validator) highestSlot() primitives.Slot {
 func (v *validator) setHighestSlot(slot primitives.Slot) {
 	v.highestValidSlotLock.Lock()
 	defer v.highestValidSlotLock.Unlock()
-	v.highestValidSlot = slot
+	if slot > v.highestValidSlot {
+		v.highestValidSlot = slot
+		v.slotFeed.Send(slot)
+	}
 }
 
 // waitOneThirdOrValidBlock waits until (a) or (b) whichever comes first:

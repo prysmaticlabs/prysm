@@ -340,10 +340,7 @@ func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel cha
 		if res == nil {
 			continue
 		}
-		if res.Slot > v.highestSlot() {
-			v.setHighestSlot(res.Slot)
-		}
-		v.slotFeed.Send(res.Slot)
+		v.setHighestSlot(res.Slot)
 	}
 }
 
