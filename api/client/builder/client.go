@@ -427,22 +427,22 @@ func non200Err(response *http.Response) error {
 		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
 	case 400:
+		log.WithError(ErrBadRequest).Debug(msg)
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
-		log.WithError(ErrBadRequest).Debug(msg)
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
 	case 404:
+		log.WithError(ErrNotFound).Debug(msg)
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
-		log.WithError(ErrNotFound).Debug(msg)
 		return errors.Wrap(ErrNotFound, errMessage.Message)
 	case 500:
+		log.WithError(ErrNotOK).Debug(msg)
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
-		log.WithError(ErrNotOK).Debug(msg)
 		return errors.Wrap(ErrNotOK, errMessage.Message)
 	default:
 		log.WithError(ErrNotOK).Debug(msg)

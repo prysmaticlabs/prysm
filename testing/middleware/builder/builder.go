@@ -50,10 +50,14 @@ const (
 	ForkchoiceUpdatedMethod = "engine_forkchoiceUpdatedV1"
 	// ForkchoiceUpdatedMethodV2 v2 request string for JSON-RPC.
 	ForkchoiceUpdatedMethodV2 = "engine_forkchoiceUpdatedV2"
+	// ForkchoiceUpdatedMethodV3 v3 request string for JSON-RPC.
+	ForkchoiceUpdatedMethodV3 = "engine_forkchoiceUpdatedV3"
 	// GetPayloadMethod v1 request string for JSON-RPC.
 	GetPayloadMethod = "engine_getPayloadV1"
 	// GetPayloadMethodV2 v2 request string for JSON-RPC.
 	GetPayloadMethodV2 = "engine_getPayloadV2"
+	// GetPayloadMethodV3 v3 request string for JSON-RPC.
+	GetPayloadMethodV3 = "engine_getPayloadV3"
 )
 
 var (
@@ -93,12 +97,21 @@ type ExecHeaderResponseCapella struct {
 	} `json:"data"`
 }
 
+type ExecHeaderResponseDeneb struct {
+	Version string `json:"version"`
+	Data    struct {
+		Signature hexutil.Bytes               `json:"signature"`
+		Message   *builderAPI.BuilderBidDeneb `json:"message"`
+	} `json:"data"`
+}
+
 type Builder struct {
 	cfg          *config
 	address      string
 	execClient   *gethRPC.Client
 	currId       *v1.PayloadIDBytes
 	currPayload  interfaces.ExecutionData
+	blobBundle   *v1.BlobsBundle
 	mux          *gMux.Router
 	validatorMap map[string]*eth.ValidatorRegistrationV1
 	srv          *http.Server
@@ -226,7 +239,7 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 	}
 	p.cfg.logger.Infof("Received engine call %s", rpcObj.Method)
 	switch rpcObj.Method {
-	case ForkchoiceUpdatedMethod, ForkchoiceUpdatedMethodV2:
+	case ForkchoiceUpdatedMethod, ForkchoiceUpdatedMethodV2, ForkchoiceUpdatedMethodV3:
 		result := &ForkchoiceUpdatedResponse{}
 		err = json.Unmarshal(resp, result)
 		if err != nil {
@@ -279,6 +292,11 @@ func (p *Builder) handleHeaderRequest(w http.ResponseWriter, req *http.Request) 
 	}
 	ax := types.Slot(slot)
 	currEpoch := types.Epoch(ax / params.BeaconConfig().SlotsPerEpoch)
+	if currEpoch >= params.BeaconConfig().DenebForkEpoch {
+		p.handleHeaderRequestDeneb(w)
+		return
+	}
+
 	if currEpoch >= params.BeaconConfig().CapellaForkEpoch {
 		p.handleHeaderRequestCapella(w)
 		return
@@ -439,6 +457,96 @@ func (p *Builder) handleHeaderRequestCapella(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusOK)
 }
 
+func (p *Builder) handleHeaderRequestDeneb(w http.ResponseWriter) {
+	b, err := p.retrievePendingBlockDeneb()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve pending block")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	secKey, err := bls.RandKey()
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not retrieve secret key")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	v := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
+	v = v.Mul(v, big.NewInt(2))
+	// Is used as the helper modifies the big.Int
+	weiVal := big.NewInt(0).SetBytes(bytesutil.ReverseByteOrder(b.Value))
+	// we set the payload value as twice its actual one so that it always chooses builder payloads vs local payloads
+	weiVal = weiVal.Mul(weiVal, big.NewInt(2))
+	wObj, err := blocks.WrappedExecutionPayloadDeneb(b.Payload, math.WeiToGwei(weiVal))
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not wrap execution payload")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	hdr, err := blocks.PayloadToHeaderDeneb(wObj)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not make payload into header")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	val := builderAPI.Uint256{Int: v}
+	commitments := []hexutil.Bytes{}
+	for _, c := range b.BlobsBundle.KzgCommitments {
+		copiedC := c
+		commitments = append(commitments, copiedC)
+	}
+	wrappedHdr := &builderAPI.ExecutionPayloadHeaderDeneb{ExecutionPayloadHeaderDeneb: hdr}
+	bid := &builderAPI.BuilderBidDeneb{
+		Header:             wrappedHdr,
+		BlobKzgCommitments: commitments,
+		Value:              val,
+		Pubkey:             secKey.PublicKey().Marshal(),
+	}
+	sszBid := &eth.BuilderBidDeneb{
+		Header:             hdr,
+		BlobKzgCommitments: b.BlobsBundle.KzgCommitments,
+		Value:              val.SSZBytes(),
+		Pubkey:             secKey.PublicKey().Marshal(),
+	}
+	d, err := signing.ComputeDomain(params.BeaconConfig().DomainApplicationBuilder,
+		nil, /* fork version */
+		nil /* genesis val root */)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the domain")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rt, err := signing.ComputeSigningRoot(sszBid, d)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not compute the signing root")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	sig := secKey.Sign(rt[:])
+	hdrResp := &ExecHeaderResponseDeneb{
+		Version: "deneb",
+		Data: struct {
+			Signature hexutil.Bytes               `json:"signature"`
+			Message   *builderAPI.BuilderBidDeneb `json:"message"`
+		}{
+			Signature: sig.Marshal(),
+			Message:   bid,
+		},
+	}
+
+	err = json.NewEncoder(w).Encode(hdrResp)
+	if err != nil {
+		p.cfg.logger.WithError(err).Error("Could not encode response")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	p.currPayload = wObj
+	p.blobBundle = b.BlobsBundle
+	w.WriteHeader(http.StatusOK)
+}
+
 func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 	sb := &builderAPI.SignedBlindedBeaconBlockBellatrix{
 		SignedBlindedBeaconBlockBellatrix: &eth.SignedBlindedBeaconBlockBellatrix{},
@@ -451,6 +559,29 @@ func (p *Builder) handleBlindedBlock(w http.ResponseWriter, req *http.Request) {
 	if p.currPayload == nil {
 		p.cfg.logger.Error("No payload is cached")
 		http.Error(w, "payload not found", http.StatusInternalServerError)
+		return
+	}
+	if payload, err := p.currPayload.PbDeneb(); err == nil {
+		convertedPayload, err := builderAPI.FromProtoDeneb(payload)
+		if err != nil {
+			p.cfg.logger.WithError(err).Error("Could not convert the payload")
+			http.Error(w, "payload not found", http.StatusInternalServerError)
+			return
+		}
+		execResp := &builderAPI.ExecPayloadResponseDeneb{
+			Version: "deneb",
+			Data: &builderAPI.ExecutionPayloadDenebAndBlobsBundle{
+				ExecutionPayload: &convertedPayload,
+				BlobsBundle:      builderAPI.FromBundleProto(p.blobBundle),
+			},
+		}
+		err = json.NewEncoder(w).Encode(execResp)
+		if err != nil {
+			p.cfg.logger.WithError(err).Error("Could not encode full payload response")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 	if payload, err := p.currPayload.PbCapella(); err == nil {
@@ -544,6 +675,31 @@ func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWith
 		return nil, err
 	}
 	return capellaPayload, nil
+}
+
+func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValueAndBlobsBundle, error) {
+	result := &engine.ExecutionPayloadEnvelope{}
+	if p.currId == nil {
+		return nil, errors.New("no payload id is cached")
+	}
+	err := p.execClient.CallContext(context.Background(), result, GetPayloadMethodV3, *p.currId)
+	if err != nil {
+		return nil, err
+	}
+	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue)
+	if err != nil {
+		return nil, err
+	}
+	payloadEnv.BlobsBundle = result.BlobsBundle
+	marshalledOutput, err := payloadEnv.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	denebPayload := &v1.ExecutionPayloadDenebWithValueAndBlobsBundle{}
+	if err = json.Unmarshal(marshalledOutput, denebPayload); err != nil {
+		return nil, err
+	}
+	return denebPayload, nil
 }
 
 func (p *Builder) sendHttpRequest(req *http.Request, requestBytes []byte) (*http.Response, error) {
@@ -647,6 +803,8 @@ func executableDataToBlock(params engine.ExecutableData) (*gethTypes.Block, erro
 		Extra:           []byte("prysm-builder"), // add in extra data
 		MixDigest:       params.Random,
 		WithdrawalsHash: withdrawalsRoot,
+		BlobGasUsed:     params.BlobGasUsed,
+		ExcessBlobGas:   params.ExcessBlobGas,
 	}
 	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
 	return block, nil
