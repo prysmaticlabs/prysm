@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
@@ -231,6 +232,7 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
+	t := time.Now()
 	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
 	if err != nil {
 		return err
@@ -250,6 +252,13 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			}
 		}
 	}
+	pruneTime := time.Since(t)
+
+	log.WithFields(log.Fields{
+		"lastPrunedEpoch": slots.ToEpoch(currentSlot - retentionSlots),
+		"pruneTime":       pruneTime,
+	}).Debug("Pruned blobs")
+
 	return nil
 }
 
