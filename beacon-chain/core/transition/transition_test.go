@@ -191,7 +191,7 @@ func TestProcessBlock_IncorrectProcessExits(t *testing.T) {
 	require.NoError(t, beaconState.AppendCurrentEpochAttestations(&ethpb.PendingAttestation{}))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(block)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), beaconState, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), beaconState, wsb.Block())
 	wanted := "number of voluntary exits (17) in block body exceeds allowed threshold of 16"
 	assert.ErrorContains(t, wanted, err)
 }
@@ -414,7 +414,7 @@ func TestProcessBlock_OverMaxProposerSlashings(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb.Block())
 	assert.ErrorContains(t, want, err)
 }
 
@@ -433,7 +433,7 @@ func TestProcessBlock_OverMaxAttesterSlashings(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb.Block())
 	assert.ErrorContains(t, want, err)
 }
 
@@ -451,7 +451,7 @@ func TestProcessBlock_OverMaxAttestations(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb.Block())
 	assert.ErrorContains(t, want, err)
 }
 
@@ -470,7 +470,7 @@ func TestProcessBlock_OverMaxVoluntaryExits(t *testing.T) {
 	require.NoError(t, err)
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb.Block())
 	assert.ErrorContains(t, want, err)
 }
 
@@ -492,7 +492,7 @@ func TestProcessBlock_IncorrectDeposits(t *testing.T) {
 		s.Eth1Data().DepositCount-s.Eth1DepositIndex(), len(b.Block.Body.Deposits))
 	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
 	require.NoError(t, err)
-	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb)
+	_, err = transition.VerifyOperationLengths(context.Background(), s, wsb.Block())
 	assert.ErrorContains(t, want, err)
 }
 
