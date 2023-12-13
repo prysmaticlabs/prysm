@@ -275,7 +275,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		}
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb)
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb.Block())
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}

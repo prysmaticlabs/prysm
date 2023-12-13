@@ -24,12 +24,12 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.ReadOnlySignedBeaconBlock,
+	b interfaces.ReadOnlyBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b == nil || b.IsNil() {
+		return nil, consensusblocks.ErrNilBeaconBlock
 	}
-	body := b.Block().Body()
+	body := b.Body()
 	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	if err != nil {
 		return nil, err
