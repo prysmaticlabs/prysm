@@ -33,6 +33,7 @@ go_library(
         "//tools:__subpackages__",
     ],
     deps = [
+        "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//cache/lru:go_default_library",
         "//config/fieldparams:go_default_library",
@@ -78,6 +79,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/forkchoice/types:go_default_library",
         "//beacon-chain/state:go_default_library",
         "//beacon-chain/state/state-native:go_default_library",
         "//config/fieldparams:go_default_library",

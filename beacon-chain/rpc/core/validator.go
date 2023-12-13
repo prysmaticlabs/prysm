@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	beaconState "github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -326,7 +327,36 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: slot %d is not the current slot %d", req.Slot, s.GenesisTimeFetcher.CurrentSlot())}
 	}
 
+	s.AttestationCache.RLock()
 	res, err := s.AttestationCache.Get(ctx)
+	if err != nil {
+		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
+	}
+	if res != nil && res.Slot == req.Slot {
+		s.AttestationCache.RUnlock()
+		return &ethpb.AttestationData{
+			Slot:            res.Slot,
+			CommitteeIndex:  req.CommitteeIndex,
+			BeaconBlockRoot: res.HeadRoot,
+			Source: &ethpb.Checkpoint{
+				Epoch: res.Source.Epoch,
+				Root:  res.Source.Root[:],
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: res.Target.Epoch,
+				Root:  res.Target.Root[:],
+			},
+		}, nil
+	}
+	s.AttestationCache.RUnlock()
+
+	s.AttestationCache.Lock()
+	defer s.AttestationCache.Unlock()
+
+	// We check the cache again as in the event there are multiple inflight requests for
+	// the same attestation data, the cache might have been filled while we were waiting
+	// to acquire the lock.
+	res, err = s.AttestationCache.Get(ctx)
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
 	}
@@ -336,12 +366,12 @@ func (s *Service) GetAttestationData(
 			CommitteeIndex:  req.CommitteeIndex,
 			BeaconBlockRoot: res.HeadRoot,
 			Source: &ethpb.Checkpoint{
-				Epoch: res.SourceEpoch,
-				Root:  res.SourceRoot,
+				Epoch: res.Source.Epoch,
+				Root:  res.Source.Root[:],
 			},
 			Target: &ethpb.Checkpoint{
-				Epoch: res.TargetEpoch,
-				Root:  res.TargetRoot,
+				Epoch: res.Target.Epoch,
+				Root:  res.Target.Root[:],
 			},
 		}, nil
 	}
@@ -357,12 +387,16 @@ func (s *Service) GetAttestationData(
 	}
 	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
 	if err = s.AttestationCache.Put(ctx, &cache.AttestationConsensusData{
-		Slot:        req.Slot,
-		HeadRoot:    headRoot,
-		TargetRoot:  targetRoot[:],
-		TargetEpoch: targetEpoch,
-		SourceRoot:  justifiedCheckpoint.Root,
-		SourceEpoch: justifiedCheckpoint.Epoch,
+		Slot:     req.Slot,
+		HeadRoot: headRoot,
+		Target: forkchoicetypes.Checkpoint{
+			Epoch: targetEpoch,
+			Root:  targetRoot,
+		},
+		Source: forkchoicetypes.Checkpoint{
+			Epoch: justifiedCheckpoint.Epoch,
+			Root:  bytesutil.ToBytes32(justifiedCheckpoint.Root),
+		},
 	}); err != nil {
 		log.WithError(err).Error("Failed to put attestation data into cache")
 	}
