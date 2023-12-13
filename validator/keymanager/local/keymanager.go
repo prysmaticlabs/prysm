@@ -325,6 +325,8 @@ func CreateAccountsKeystoreRepresentation(
 
 // CreateEmptyKeyStoreRepresentationForNewWallet creates a placeholder accounts keystore for a new Prysm Local Wallet.
 func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPassword string) (*AccountsKeystoreRepresentation, error) {
+	// make sure everything is clean when creating this.
+	ResetCaches()
 	return CreateAccountsKeystoreRepresentation(ctx, &accountStore{}, walletPassword)
 }
 
