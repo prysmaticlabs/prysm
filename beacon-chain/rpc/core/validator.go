@@ -330,7 +330,7 @@ func (s *Service) GetAttestationData(
 	if err != nil {
 		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
 	}
-	if res.Slot == req.Slot {
+	if res != nil && res.Slot == req.Slot {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
 			CommitteeIndex:  req.CommitteeIndex,
@@ -357,7 +357,7 @@ func (s *Service) GetAttestationData(
 	}
 	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
 	if err = s.AttestationCache.Put(ctx, &cache.AttestationConsensusData{
-		Slot:        res.Slot,
+		Slot:        req.Slot,
 		HeadRoot:    headRoot,
 		TargetRoot:  targetRoot[:],
 		TargetEpoch: targetEpoch,
@@ -368,9 +368,9 @@ func (s *Service) GetAttestationData(
 	}
 
 	return &ethpb.AttestationData{
-		Slot:            res.Slot,
+		Slot:            req.Slot,
 		CommitteeIndex:  req.CommitteeIndex,
-		BeaconBlockRoot: res.HeadRoot,
+		BeaconBlockRoot: headRoot,
 		Source: &ethpb.Checkpoint{
 			Epoch: justifiedCheckpoint.Epoch,
 			Root:  justifiedCheckpoint.Root,

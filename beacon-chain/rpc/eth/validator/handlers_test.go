@@ -835,6 +835,7 @@ func TestGetAttestationData(t *testing.T) {
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
 				FinalizedFetcher:   chain,
+				AttestationCache:   cache.NewAttestationCache(),
 			},
 		}
 
@@ -914,6 +915,7 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
+				AttestationCache:   cache.NewAttestationCache(),
 				GenesisTimeFetcher: chain,
 				HeadFetcher:        chain,
 				FinalizedFetcher:   chain,
@@ -977,7 +979,7 @@ func TestGetAttestationData(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "invalid request"))
 	})
 
-	t.Run("head state slot greater than request slot", func(t *testing.T) {
+	t.Run("request slot is not current slot", func(t *testing.T) {
 		ctx := context.Background()
 		db := dbutil.SetupDB(t)
 
@@ -1029,28 +1031,7 @@ func TestGetAttestationData(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		s.GetAttestationData(writer, request)
-
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
-				Slot:            strconv.FormatUint(uint64(slot-1), 10),
-				CommitteeIndex:  strconv.FormatUint(0, 10),
-				BeaconBlockRoot: hexutil.Encode(blockRoot[:]),
-				Source: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(2, 10),
-					Root:  hexutil.Encode(justifiedRoot[:]),
-				},
-				Target: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(3, 10),
-					Root:  hexutil.Encode(blockRoot2[:]),
-				},
-			},
-		}
-
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttestationDataResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		assert.DeepEqual(t, expectedResponse, resp)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
 	})
 
 	t.Run("succeeds in first epoch", func(t *testing.T) {
@@ -1085,6 +1066,7 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
+				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
 				FinalizedFetcher:   chain,
@@ -1170,6 +1152,7 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
+				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
 				FinalizedFetcher:   chain,

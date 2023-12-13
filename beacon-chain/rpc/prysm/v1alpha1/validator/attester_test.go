@@ -117,6 +117,7 @@ func TestGetAttestationData_OK(t *testing.T) {
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
 			FinalizedFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			AttestationCache: cache.NewAttestationCache(),
 		},
 	}
 
@@ -223,6 +224,7 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		CoreService: &core.Service{
 			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
 			HeadFetcher:        &mock.ChainService{},
+			AttestationCache:   cache.NewAttestationCache(),
 		},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -238,9 +240,10 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
+			AttestationCache:   cache.NewAttestationCache(),
 			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
 			HeadFetcher:        &mock.ChainService{Optimistic: false, State: beaconState},
-			FinalizedFetcher:   &mock.ChainService{},
+			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: &ethpb.Checkpoint{}},
 		},
 	}
 	_, err = as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
@@ -268,11 +271,7 @@ func TestServer_GetAttestationData_InvalidRequestSlot(t *testing.T) {
 	assert.ErrorContains(t, "invalid request", err)
 }
 
-func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testing.T) {
-	// There exists a rare scenario where the validator may request an attestation for a slot less
-	// than the head state's slot. The Ethereum consensus spec constraints require the block root the
-	// attestation is referencing to be less than or equal to the attestation data slot.
-	// See: https://github.com/prysmaticlabs/prysm/issues/5164
+func TestServer_GetAttestationData_RequestSlotIsDifferentThanCurrentSlot(t *testing.T) {
 	ctx := context.Background()
 	db := dbutil.SetupDB(t)
 
@@ -314,25 +313,8 @@ func TestServer_GetAttestationData_HeadStateSlotGreaterThanRequestSlot(t *testin
 		CommitteeIndex: 0,
 		Slot:           slot - 1,
 	}
-	res, err := attesterServer.GetAttestationData(ctx, req)
-	require.NoError(t, err, "Could not get attestation info at slot")
-
-	expectedInfo := &ethpb.AttestationData{
-		Slot:            slot - 1,
-		BeaconBlockRoot: blockRoot[:],
-		Source: &ethpb.Checkpoint{
-			Epoch: 2,
-			Root:  justifiedRoot[:],
-		},
-		Target: &ethpb.Checkpoint{
-			Epoch: 3,
-			Root:  blockRoot2[:],
-		},
-	}
-
-	if !proto.Equal(res, expectedInfo) {
-		t.Errorf("Expected attestation info to match, received %v, wanted %v", res, expectedInfo)
-	}
+	_, err = attesterServer.GetAttestationData(ctx, req)
+	require.ErrorContains(t, "invalid request: slot 24 is not the current slot 25", err)
 }
 
 func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
@@ -360,6 +342,7 @@ func TestGetAttestationData_SucceedsInFirstEpoch(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: prysmTime.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
+			AttestationCache: cache.NewAttestationCache(),
 			HeadFetcher: &mock.ChainService{
 				TargetRoot: targetRoot, Root: blockRoot[:],
 			},
