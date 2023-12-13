@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
@@ -126,9 +127,33 @@ func unblindBlobsSidecars(block interfaces.SignedBeaconBlock, bundle *enginev1.B
 	if err != nil {
 		return nil, err
 	}
+	body := block.Block().Body()
+	blockCommitments, err := body.BlobKzgCommitments()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there are equal counts of blobs/commitments/proofs.
+	if len(bundle.KzgCommitments) != len(bundle.Blobs) {
+		return nil, errors.New("mismatch commitments count")
+	}
+	if len(bundle.Proofs) != len(bundle.Blobs) {
+		return nil, errors.New("mismatch proofs count")
+	}
+
+	// Verify that commitments in the bundle match the block.
+	if len(bundle.KzgCommitments) != len(blockCommitments) {
+		return nil, errors.New("commitment count doesn't match block")
+	}
+	for i, commitment := range blockCommitments {
+		if !bytes.Equal(bundle.KzgCommitments[i], commitment) {
+			return nil, errors.New("commitment value doesn't match block")
+		}
+	}
+
 	sidecars := make([]*ethpb.BlobSidecar, len(bundle.Blobs))
 	for i, b := range bundle.Blobs {
-		proof, err := consensusblocks.MerkleProofKZGCommitment(block.Block().Body(), i)
+		proof, err := consensusblocks.MerkleProofKZGCommitment(body, i)
 		if err != nil {
 			return nil, err
 		}
