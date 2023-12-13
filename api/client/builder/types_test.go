@@ -20,7 +20,6 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	log "github.com/sirupsen/logrus"
 )
 
 func ezDecode(t *testing.T, s string) []byte {
@@ -670,16 +669,15 @@ var testExampleExecutionPayloadDenebTooManyBlobs = fmt.Sprintf(`{
       "blobs": %s
     }
   }
-}`, morethanMaxBlobs())
+}`, beyondMaxEmptyBlobs())
 
-func morethanMaxBlobs() string {
+func beyondMaxEmptyBlobs() string {
 	moreThanMax := fieldparams.MaxBlobCommitmentsPerBlock + 2
 	blobs := make([]string, moreThanMax)
-	for i := range blobs {
-		blobs[i] = hexutil.Encode(make([]byte, fieldparams.BlobLength))
-	}
 	b, err := json.Marshal(blobs)
-	log.Error(err)
+	if err != nil {
+		panic(err)
+	}
 	return string(b)
 }
 
