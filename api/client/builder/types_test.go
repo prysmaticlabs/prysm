@@ -1245,14 +1245,14 @@ func TestExecutionPayloadResponseDenebToProtoDifferentCommitmentCount(t *testing
 	hr := &ExecPayloadResponseDeneb{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebDifferentCommitmentCount), hr))
 	_, _, err := hr.ToProto()
-	require.ErrorContains(t, "commitments length 2 does equal blobs length 1", err)
+	require.ErrorContains(t, "commitments length 2 does not equal blobs length 1", err)
 }
 
 func TestExecutionPayloadResponseDenebToProtoDifferentProofCount(t *testing.T) {
 	hr := &ExecPayloadResponseDeneb{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebDifferentProofCount), hr))
 	_, _, err := hr.ToProto()
-	require.ErrorContains(t, "proofs length 2 does equal blobs length 1", err)
+	require.ErrorContains(t, "proofs length 2 does not equal blobs length 1", err)
 }
 
 func pbEth1Data() *eth.Eth1Data {

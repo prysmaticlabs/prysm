@@ -1025,10 +1025,10 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
 	}
 	if len(b.Commitments) != len(b.Blobs) {
-		return nil, fmt.Errorf("commitments length %d does equal blobs length %d", len(b.Commitments), len(b.Blobs))
+		return nil, fmt.Errorf("commitments length %d does not equal blobs length %d", len(b.Commitments), len(b.Blobs))
 	}
 	if len(b.Proofs) != len(b.Blobs) {
-		return nil, fmt.Errorf("proofs length %d does equal blobs length %d", len(b.Proofs), len(b.Blobs))
+		return nil, fmt.Errorf("proofs length %d does not equal blobs length %d", len(b.Proofs), len(b.Blobs))
 	}
 
 	commitments := make([][]byte, len(b.Commitments))
