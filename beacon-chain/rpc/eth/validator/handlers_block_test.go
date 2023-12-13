@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -140,7 +140,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -203,14 +203,12 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
-
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -265,7 +263,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -448,7 +446,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -513,13 +511,12 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -576,7 +573,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -790,8 +787,6 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
-
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)

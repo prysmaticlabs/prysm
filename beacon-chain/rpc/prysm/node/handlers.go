@@ -12,23 +12,27 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 // ListTrustedPeer retrieves data about the node's trusted peers.
 func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "node.ListTrustedPeer")
+	defer span.End()
+
 	peerStatus := s.PeersFetcher.Peers()
 	allIds := s.PeersFetcher.Peers().GetTrustedPeers()
 	allPeers := make([]*Peer, 0, len(allIds))
 	for _, id := range allIds {
 		p, err := httpPeerInfo(peerStatus, id)
 		if err != nil {
-			errJson := &http2.DefaultErrorJson{
+			errJson := &httputil.DefaultErrorJson{
 				Message: errors.Wrapf(err, "Could not get peer info").Error(),
 				Code:    http.StatusInternalServerError,
 			}
-			http2.WriteError(w, errJson)
+			httputil.WriteError(w, errJson)
 			return
 		}
 		// peers added into trusted set but never connected should also be listed
@@ -44,37 +48,40 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		allPeers = append(allPeers, p)
 	}
 	response := &PeersResponse{Peers: allPeers}
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 // AddTrustedPeer adds a new peer into node's trusted peer set by Multiaddr
 func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "node.AddTrustedPeer")
+	defer span.End()
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultErrorJson{
 			Message: errors.Wrapf(err, "Could not read request body").Error(),
 			Code:    http.StatusInternalServerError,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return
 	}
 	var addrRequest *AddrRequest
 	err = json.Unmarshal(body, &addrRequest)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultErrorJson{
 			Message: errors.Wrapf(err, "Could not decode request body into peer address").Error(),
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return
 	}
 	info, err := peer.AddrInfoFromString(addrRequest.Addr)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultErrorJson{
 			Message: errors.Wrapf(err, "Could not derive peer info from multiaddress").Error(),
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return
 	}
 
@@ -86,23 +93,26 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		s.PeersFetcher.Peers().Add(nil, info.ID, info.Addrs[0], direction)
 	}
 
-	var peers []peer.ID
-	peers = append(peers, info.ID)
-	s.PeersFetcher.Peers().SetTrustedPeers(peers)
+	var ids []peer.ID
+	ids = append(ids, info.ID)
+	s.PeersFetcher.Peers().SetTrustedPeers(ids)
 	w.WriteHeader(http.StatusOK)
 }
 
 // RemoveTrustedPeer removes peer from our trusted peer set but does not close connection.
 func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
+	_, span := trace.StartSpan(r.Context(), "node.RemoveTrustedPeer")
+	defer span.End()
+
 	segments := strings.Split(r.URL.Path, "/")
 	id := segments[len(segments)-1]
 	peerId, err := peer.Decode(id)
 	if err != nil {
-		errJson := &http2.DefaultErrorJson{
+		errJson := &httputil.DefaultErrorJson{
 			Message: errors.Wrapf(err, "Could not decode peer id").Error(),
 			Code:    http.StatusBadRequest,
 		}
-		http2.WriteError(w, errJson)
+		httputil.WriteError(w, errJson)
 		return
 	}
 
@@ -112,9 +122,9 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var peers []peer.ID
-	peers = append(peers, peerId)
-	s.PeersFetcher.Peers().DeleteTrustedPeers(peers)
+	var ids []peer.ID
+	ids = append(ids, peerId)
+	s.PeersFetcher.Peers().DeleteTrustedPeers(ids)
 	w.WriteHeader(http.StatusOK)
 }
 

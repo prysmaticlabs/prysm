@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -14,7 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -47,6 +48,8 @@ const (
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
 
+const chanBuffer = 1000
+
 var casesHandled = map[string]bool{
 	HeadTopic:                      true,
 	BlockTopic:                     true,
@@ -70,28 +73,28 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		http2.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
+		httputil.HandleError(w, "Streaming unsupported!", http.StatusInternalServerError)
 		return
 	}
 
 	topics := r.URL.Query()["topics"]
 	if len(topics) == 0 {
-		http2.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
+		httputil.HandleError(w, "No topics specified to subscribe to", http.StatusBadRequest)
 		return
 	}
 	topicsMap := make(map[string]bool)
 	for _, topic := range topics {
 		if _, ok := casesHandled[topic]; !ok {
-			http2.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
+			httputil.HandleError(w, fmt.Sprintf("Invalid topic: %s", topic), http.StatusBadRequest)
 			return
 		}
 		topicsMap[topic] = true
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
-	opsChan := make(chan *feed.Event, 1)
+	opsChan := make(chan *feed.Event, chanBuffer)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
-	stateChan := make(chan *feed.Event, 1)
+	stateChan := make(chan *feed.Event, chanBuffer)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
@@ -124,7 +127,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 			return
 		}
-		att := shared.AttestationFromConsensus(attData.Attestation.Aggregate)
+		att := shared.AttFromConsensus(attData.Attestation.Aggregate)
 		send(w, flusher, AttestationTopic, att)
 	case operation.UnaggregatedAttReceived:
 		if _, ok := requestedTopics[AttestationTopic]; !ok {
@@ -135,7 +138,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, AttestationTopic)
 			return
 		}
-		att := shared.AttestationFromConsensus(attData.Attestation)
+		att := shared.AttFromConsensus(attData.Attestation)
 		send(w, flusher, AttestationTopic, att)
 	case operation.ExitReceived:
 		if _, ok := requestedTopics[VoluntaryExitTopic]; !ok {
@@ -146,7 +149,7 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, VoluntaryExitTopic)
 			return
 		}
-		exit := shared.SignedVoluntaryExitFromConsensus(exitData.Exit)
+		exit := shared.SignedExitFromConsensus(exitData.Exit)
 		send(w, flusher, VoluntaryExitTopic, exit)
 	case operation.SyncCommitteeContributionReceived:
 		if _, ok := requestedTopics[SyncCommitteeContributionTopic]; !ok {
@@ -168,29 +171,23 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			write(w, flusher, topicDataMismatch, event.Data, BLSToExecutionChangeTopic)
 			return
 		}
-		change, err := shared.SignedBlsToExecutionChangeFromConsensus(changeData.Change)
-		if err != nil {
-			write(w, flusher, err.Error())
-			return
-		}
-		send(w, flusher, BLSToExecutionChangeTopic, change)
+		send(w, flusher, BLSToExecutionChangeTopic, shared.SignedBLSChangeFromConsensus(changeData.Change))
 	case operation.BlobSidecarReceived:
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
 			return
 		}
-		// TODO: fix this when we fix p2p
-		//blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
-		//if !ok {
-		//	write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
-		//	return
-		//}
-		//versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
+		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
+			return
+		}
+		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
 		blobEvent := &BlobSidecarEvent{
-			//BlockRoot:     hexutil.Encode(blobData.Blob.Message.BlockRoot),
-			//Index:         fmt.Sprintf("%d", blobData.Blob.Message.Index),
-			//Slot:          fmt.Sprintf("%d", blobData.Blob.Message.Slot),
-			//VersionedHash: versionedHash.String(),
-			//KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
+			BlockRoot:     hexutil.Encode(blobData.Blob.BlockRootSlice()),
+			Index:         fmt.Sprintf("%d", blobData.Blob.Index),
+			Slot:          fmt.Sprintf("%d", blobData.Blob.Slot()),
+			VersionedHash: versionedHash.String(),
+			KzgCommitment: hexutil.Encode(blobData.Blob.KzgCommitment),
 		}
 		send(w, flusher, BlobSidecarTopic, blobEvent)
 	}

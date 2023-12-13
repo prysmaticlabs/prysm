@@ -268,11 +268,7 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 	}
 	vs := make([]*shared.SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
-		svrJson, err := shared.SignedValidatorRegistrationFromConsensus(svr[i])
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to encode to SignedValidatorRegistration at index %d", i))
-		}
-		vs[i] = svrJson
+		vs[i] = shared.SignedValidatorRegistrationFromConsensus(svr[i])
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -41,7 +41,7 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
 	resp, httpError, err := genesisProvider.GetGenesis(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, (*http2.DefaultErrorJson)(nil), httpError)
+	assert.Equal(t, (*httputil.DefaultErrorJson)(nil), httpError)
 	require.NotNil(t, resp)
 	assert.Equal(t, "1234", resp.GenesisTime)
 	assert.Equal(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2", resp.GenesisValidatorsRoot)
@@ -69,7 +69,7 @@ func TestGetGenesis_NilData(t *testing.T) {
 
 	genesisProvider := &beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
 	_, httpError, err := genesisProvider.GetGenesis(ctx)
-	assert.Equal(t, (*http2.DefaultErrorJson)(nil), httpError)
+	assert.Equal(t, (*httputil.DefaultErrorJson)(nil), httpError)
 	assert.ErrorContains(t, "genesis data is nil", err)
 }
 
@@ -79,7 +79,7 @@ func TestGetGenesis_JsonResponseError(t *testing.T) {
 
 	ctx := context.Background()
 
-	expectedHttpErrorJson := &http2.DefaultErrorJson{
+	expectedHttpErrorJson := &httputil.DefaultErrorJson{
 		Message: "http error message",
 		Code:    999,
 	}

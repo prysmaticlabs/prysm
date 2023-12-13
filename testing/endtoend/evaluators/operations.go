@@ -616,13 +616,9 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 			return err
 		}
 		signature := privKeys[idx].Sign(sigRoot[:]).Marshal()
-		change, err := shared.BlsToExecutionChangeFromConsensus(message)
-		if err != nil {
-			return err
-		}
 
 		changes = append(changes, &shared.SignedBLSToExecutionChange{
-			Message:   change,
+			Message:   shared.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		})
 	}

@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -17,12 +17,12 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 	testSuites := []struct {
 		name                 string
 		expectedErrorMessage string
-		expectedHttpError    *http2.DefaultErrorJson
+		expectedHttpError    *httputil.DefaultErrorJson
 	}{
 		{
 			name:                 "error 202",
 			expectedErrorMessage: "block was successfully broadcasted but failed validation",
-			expectedHttpError: &http2.DefaultErrorJson{
+			expectedHttpError: &httputil.DefaultErrorJson{
 				Code:    http.StatusAccepted,
 				Message: "202 error",
 			},

@@ -9,12 +9,12 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 type GenesisProvider interface {
-	GetGenesis(ctx context.Context) (*beacon.Genesis, *http2.DefaultErrorJson, error)
+	GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error)
 }
 
 type beaconApiGenesisProvider struct {
@@ -61,7 +61,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *http2.DefaultErrorJson, error) {
+func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error) {
 	genesisJson := &beacon.GetGenesisResponse{}
 	errorJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson)
 	if err != nil {

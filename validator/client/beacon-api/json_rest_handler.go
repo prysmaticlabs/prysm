@@ -9,12 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
 type JsonRestHandler interface {
-	Get(ctx context.Context, query string, resp interface{}) (*http2.DefaultErrorJson, error)
-	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*http2.DefaultErrorJson, error)
+	Get(ctx context.Context, query string, resp interface{}) (*httputil.DefaultErrorJson, error)
+	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*httputil.DefaultErrorJson, error)
 }
 
 type beaconApiJsonRestHandler struct {
@@ -24,7 +24,7 @@ type beaconApiJsonRestHandler struct {
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object and returned as the first return value.
-func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) (*http2.DefaultErrorJson, error) {
+func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) (*httputil.DefaultErrorJson, error) {
 	if resp == nil {
 		return nil, errors.New("resp is nil")
 	}
@@ -56,7 +56,7 @@ func (c beaconApiJsonRestHandler) Post(
 	headers map[string]string,
 	data *bytes.Buffer,
 	resp interface{},
-) (*http2.DefaultErrorJson, error) {
+) (*httputil.DefaultErrorJson, error) {
 	if data == nil {
 		return nil, errors.New("data is nil")
 	}
@@ -85,7 +85,7 @@ func (c beaconApiJsonRestHandler) Post(
 	return decodeResp(httpResp, resp)
 }
 
-func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJson, error) {
+func decodeResp(httpResp *http.Response, resp interface{}) (*httputil.DefaultErrorJson, error) {
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
@@ -95,12 +95,12 @@ func decodeResp(httpResp *http.Response, resp interface{}) (*http2.DefaultErrorJ
 		if httpResp.StatusCode == http.StatusOK {
 			return nil, nil
 		}
-		return &http2.DefaultErrorJson{Code: httpResp.StatusCode, Message: string(body)}, nil
+		return &httputil.DefaultErrorJson{Code: httpResp.StatusCode, Message: string(body)}, nil
 	}
 
 	decoder := json.NewDecoder(bytes.NewBuffer(body))
 	if httpResp.StatusCode != http.StatusOK {
-		errorJson := &http2.DefaultErrorJson{}
+		errorJson := &httputil.DefaultErrorJson{}
 		if err = decoder.Decode(errorJson); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode response body into error json for %s", httpResp.Request.URL)
 		}

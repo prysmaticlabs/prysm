@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
@@ -151,7 +151,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
-		&http2.DefaultErrorJson{
+		&httputil.DefaultErrorJson{
 			Code:    http.StatusNotFound,
 			Message: "404 error",
 		},
