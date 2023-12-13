@@ -901,33 +901,6 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 	}
 }
 
-func TestService_ReceiveBlocks_NilBlock(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	valClient := validatormock.NewMockValidatorClient(ctrl)
-	v := validator{
-		blockFeed:       new(event.Feed),
-		validatorClient: valClient,
-	}
-	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
-	ctx, cancel := context.WithCancel(context.Background())
-	valClient.EXPECT().StreamBlocksAltair(
-		gomock.Any(),
-		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
-	).Return(stream, nil)
-	stream.EXPECT().Context().Return(ctx).AnyTimes()
-	stream.EXPECT().Recv().Return(
-		&ethpb.StreamBlocksResponse{Block: &ethpb.StreamBlocksResponse_Phase0Block{
-			Phase0Block: &ethpb.SignedBeaconBlock{}}},
-		nil,
-	).Do(func() {
-		cancel()
-	})
-	connectionErrorChannel := make(chan error)
-	v.ReceiveBlocks(ctx, connectionErrorChannel)
-	require.Equal(t, primitives.Slot(0), v.highestValidSlot)
-}
-
 func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -935,11 +908,11 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		blockFeed:       new(event.Feed),
+		slotFeed:        new(event.Feed),
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocksAltair(
+	client.EXPECT().StreamSlots(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)
@@ -966,11 +939,11 @@ func TestService_ReceiveBlocks_SetHighestDeneb(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		blockFeed:       new(event.Feed),
+		slotFeed:        new(event.Feed),
 	}
 	stream := mock2.NewMockBeaconNodeValidatorAltair_StreamBlocksClient(ctrl)
 	ctx, cancel := context.WithCancel(context.Background())
-	client.EXPECT().StreamBlocksAltair(
+	client.EXPECT().StreamSlots(
 		gomock.Any(),
 		&ethpb.StreamBlocksRequest{VerifiedOnly: true},
 	).Return(stream, nil)

@@ -215,7 +215,7 @@ func (v *ValidatorService) Start() {
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
 		walletInitializedFeed:          v.walletInitializedFeed,
-		blockFeed:                      new(event.Feed),
+		slotFeed:                       new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
@@ -232,7 +232,7 @@ func (v *ValidatorService) Start() {
 	// during future accesses, there will be no panics here
 	// from type incompatibility.
 	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
-	sub := valStruct.blockFeed.Subscribe(tempChan)
+	sub := valStruct.slotFeed.Subscribe(tempChan)
 	sub.Unsubscribe()
 	close(tempChan)
 
