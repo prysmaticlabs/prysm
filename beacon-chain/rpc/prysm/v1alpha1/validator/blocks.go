@@ -47,6 +47,7 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 	}
 }
 
+// StreamSlots sends a block's slot to clients every single time a block is received by the beacon node.
 func (vs *Server) StreamSlots(req *ethpb.StreamSlotsRequest, stream ethpb.BeaconNodeValidator_StreamSlotsServer) error {
 	ch := make(chan *feed.Event, 1)
 	var sub event.Subscription
@@ -63,20 +64,20 @@ func (vs *Server) StreamSlots(req *ethpb.StreamSlotsRequest, stream ethpb.Beacon
 			var s primitives.Slot
 			if req.VerifiedOnly {
 				if ev.Type != statefeed.BlockProcessed {
-					return nil
+					continue
 				}
 				data, ok := ev.Data.(*statefeed.BlockProcessedData)
 				if !ok || data == nil {
-					return nil
+					continue
 				}
 				s = data.Slot
 			} else {
 				if ev.Type != blockfeed.ReceivedBlock {
-					return nil
+					continue
 				}
 				data, ok := ev.Data.(*blockfeed.ReceivedBlockData)
 				if !ok || data == nil {
-					return nil
+					continue
 				}
 				s = data.SignedBlock.Block().Slot()
 			}
