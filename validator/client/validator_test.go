@@ -928,7 +928,7 @@ func TestService_ReceiveBlocks_SetHighest(t *testing.T) {
 		cancel()
 	})
 	connectionErrorChannel := make(chan error)
-	v.ReceiveBlocks(ctx, connectionErrorChannel)
+	v.ReceiveSlots(ctx, connectionErrorChannel)
 	require.Equal(t, slot, v.highestValidSlot)
 }
 
@@ -959,7 +959,7 @@ func TestService_ReceiveBlocks_SetHighestDeneb(t *testing.T) {
 		cancel()
 	})
 	connectionErrorChannel := make(chan error)
-	v.ReceiveBlocks(ctx, connectionErrorChannel)
+	v.ReceiveSlots(ctx, connectionErrorChannel)
 	require.Equal(t, slot, v.highestValidSlot)
 }
 

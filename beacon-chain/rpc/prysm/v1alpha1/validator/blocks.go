@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"google.golang.org/grpc/codes"
@@ -37,6 +38,52 @@ func (vs *Server) StreamBlocksAltair(req *ethpb.StreamBlocksRequest, stream ethp
 				}
 			}
 		case <-blockSub.Err():
+			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
+		case <-vs.Ctx.Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		case <-stream.Context().Done():
+			return status.Error(codes.Canceled, "Context canceled")
+		}
+	}
+}
+
+func (vs *Server) StreamSlots(req *ethpb.StreamSlotsRequest, stream ethpb.BeaconNodeValidator_StreamSlotsServer) error {
+	ch := make(chan *feed.Event, 1)
+	var sub event.Subscription
+	if req.VerifiedOnly {
+		sub = vs.StateNotifier.StateFeed().Subscribe(ch)
+	} else {
+		sub = vs.BlockNotifier.BlockFeed().Subscribe(ch)
+	}
+	defer sub.Unsubscribe()
+
+	for {
+		select {
+		case ev := <-ch:
+			var s primitives.Slot
+			if req.VerifiedOnly {
+				if ev.Type != statefeed.BlockProcessed {
+					return nil
+				}
+				data, ok := ev.Data.(*statefeed.BlockProcessedData)
+				if !ok || data == nil {
+					return nil
+				}
+				s = data.Slot
+			} else {
+				if ev.Type != blockfeed.ReceivedBlock {
+					return nil
+				}
+				data, ok := ev.Data.(*blockfeed.ReceivedBlockData)
+				if !ok || data == nil {
+					return nil
+				}
+				s = data.SignedBlock.Block().Slot()
+			}
+			if err := stream.Send(&ethpb.StreamSlotsResponse{Slot: s}); err != nil {
+				return status.Errorf(codes.Unavailable, "Could not send over stream: %v", err)
+			}
+		case <-sub.Err():
 			return status.Error(codes.Aborted, "Subscriber closed, exiting goroutine")
 		case <-vs.Ctx.Done():
 			return status.Error(codes.Canceled, "Context canceled")

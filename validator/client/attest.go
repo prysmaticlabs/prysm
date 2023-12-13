@@ -284,13 +284,13 @@ func (v *validator) waitOneThirdOrValidBlock(ctx context.Context, slot primitive
 	t := time.NewTimer(wait)
 	defer t.Stop()
 
-	bChannel := make(chan primitives.Slot, 1)
-	sub := v.slotFeed.Subscribe(bChannel)
+	ch := make(chan primitives.Slot, 1)
+	sub := v.slotFeed.Subscribe(ch)
 	defer sub.Unsubscribe()
 
 	for {
 		select {
-		case s := <-bChannel:
+		case s := <-ch:
 			if features.Get().AttestTimely {
 				if slot <= s {
 					return

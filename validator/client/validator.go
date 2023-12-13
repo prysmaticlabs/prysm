@@ -315,10 +315,10 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// ReceiveBlocks starts a gRPC client stream listener to obtain
+// ReceiveSlots starts a gRPC client stream listener to obtain
 // slots from the beacon node when it imports a block. Upon receiving a slot, the service
 // broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
+func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
 	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
