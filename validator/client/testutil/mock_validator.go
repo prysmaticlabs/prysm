@@ -217,7 +217,7 @@ func (_ *FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
-// ReceiveBlocks for mocking
+// ReceiveSlots for mocking
 func (fv *FakeValidator) ReceiveSlots(_ context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
