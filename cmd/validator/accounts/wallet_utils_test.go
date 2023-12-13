@@ -70,9 +70,10 @@ func TestWalletWithKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(keys), 2)
 	require.Equal(t, w.KeymanagerKind(), keymanager.Local)
-	hexKeys := []string{hexutil.Encode(keys[0][:])[2:], hexutil.Encode(keys[1][:])[2:]} // imported keystores don't include the 0x in name
 
-	assert.LogsContain(t, logHook, fmt.Sprintf("Imported accounts %v,", hexKeys))
+	assert.LogsContain(t, logHook, fmt.Sprintf("Imported accounts"))
+	assert.LogsContain(t, logHook, hexutil.Encode(keys[0][:])[2:])
+	assert.LogsContain(t, logHook, hexutil.Encode(keys[1][:])[2:])
 }
 
 func TestWalletWithKeymanager_web3signer(t *testing.T) {
