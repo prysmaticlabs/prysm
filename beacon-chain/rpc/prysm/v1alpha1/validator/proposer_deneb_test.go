@@ -3,6 +3,8 @@ package validator
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -44,16 +46,16 @@ func TestPrune(t *testing.T) {
 
 func TestServer_buildBlobSidecars(t *testing.T) {
 	kzgCommitments := [][]byte{bytesutil.PadTo([]byte{'a'}, 48), bytesutil.PadTo([]byte{'b'}, 48)}
-	bundle := &enginev1.BlobsBundle{
-		KzgCommitments: kzgCommitments,
-		Proofs:         [][]byte{{0x03}, {0x04}},
-		Blobs:          [][]byte{{0x05}, {0x06}},
-	}
-	bundleCache.add(0, bundle)
 	blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 	require.NoError(t, err)
 	require.NoError(t, blk.SetBlobKzgCommitments(kzgCommitments))
-	scs, err := buildBlobSidecars(blk)
+	proof, err := hexutil.Decode("0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a")
+	require.NoError(t, err)
+	scs, err := buildBlobSidecars(blk, [][]byte{
+		make([]byte, fieldparams.BlobLength), make([]byte, fieldparams.BlobLength),
+	}, [][]byte{
+		proof, proof,
+	})
 	require.NoError(t, err)
 	require.Equal(t, 2, len(scs))
 

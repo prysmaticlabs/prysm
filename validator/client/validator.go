@@ -35,6 +35,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	accountsiface "github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beacon_api "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	vdb "github.com/prysmaticlabs/prysm/v4/validator/db"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
@@ -68,7 +69,7 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
-	domainDataLock                     sync.Mutex
+	domainDataLock                     sync.RWMutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	highestValidSlotLock               sync.Mutex
@@ -856,6 +857,9 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot primitives.
 		params.BeaconConfig().DomainBeaconProposer[:],
 		params.BeaconConfig().DomainSelectionProof[:],
 		params.BeaconConfig().DomainAggregateAndProof[:],
+		params.BeaconConfig().DomainSyncCommittee[:],
+		params.BeaconConfig().DomainSyncCommitteeSelectionProof[:],
+		params.BeaconConfig().DomainContributionAndProof[:],
 	} {
 		_, err := v.domainData(ctx, slots.ToEpoch(slot), d)
 		if err != nil {
@@ -865,8 +869,7 @@ func (v *validator) UpdateDomainDataCaches(ctx context.Context, slot primitives.
 }
 
 func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, domain []byte) (*ethpb.DomainResponse, error) {
-	v.domainDataLock.Lock()
-	defer v.domainDataLock.Unlock()
+	v.domainDataLock.RLock()
 
 	req := &ethpb.DomainRequest{
 		Epoch:  epoch,
@@ -875,6 +878,19 @@ func (v *validator) domainData(ctx context.Context, epoch primitives.Epoch, doma
 
 	key := strings.Join([]string{strconv.FormatUint(uint64(req.Epoch), 10), hex.EncodeToString(req.Domain)}, ",")
 
+	if val, ok := v.domainDataCache.Get(key); ok {
+		v.domainDataLock.RUnlock()
+		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
+	}
+	v.domainDataLock.RUnlock()
+
+	// Lock as we are about to perform an expensive request to the beacon node.
+	v.domainDataLock.Lock()
+	defer v.domainDataLock.Unlock()
+
+	// We check the cache again as in the event there are multiple inflight requests for
+	// the same domain data, the cache might have been filled while we were waiting
+	// to acquire the lock.
 	if val, ok := v.domainDataCache.Get(key); ok {
 		return proto.Clone(val.(proto.Message)).(*ethpb.DomainResponse), nil
 	}
@@ -1077,19 +1093,20 @@ func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fie
 		return nil, err
 	}
 	for i, status := range resp.Statuses {
-		// skip registration creation if validator is not active status
-		nonActive := status.Status != ethpb.ValidatorStatus_ACTIVE
-		// Handle edge case at the start of the epoch with newly activated validators
 		currEpoch := primitives.Epoch(slot / params.BeaconConfig().SlotsPerEpoch)
-		currActivated := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
-		if nonActive && !currActivated {
+		currActivating := status.Status == ethpb.ValidatorStatus_PENDING && currEpoch >= status.ActivationEpoch
+
+		active := status.Status == ethpb.ValidatorStatus_ACTIVE
+		exiting := status.Status == ethpb.ValidatorStatus_EXITING
+
+		if currActivating || active || exiting {
+			filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
+		} else {
 			log.WithFields(logrus.Fields{
 				"publickey": hexutil.Encode(resp.PublicKeys[i]),
 				"status":    status.Status.String(),
 			}).Debugf("skipping non active status key.")
-			continue
 		}
-		filteredKeys = append(filteredKeys, bytesutil.ToBytes48(resp.PublicKeys[i]))
 	}
 
 	return filteredKeys, nil
@@ -1225,6 +1242,12 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 			"Perhaps the validator is not yet active.", pubkey)
 		return 0, false, nil
 	case err != nil:
+		notFoundErr := &beacon_api.IndexNotFoundError{}
+		if errors.As(err, &notFoundErr) {
+			log.Debugf("Could not find validator index for public key %#x. "+
+				"Perhaps the validator is not yet active.", pubkey)
+			return 0, false, nil
+		}
 		return 0, false, err
 	}
 	return resp.Index, true, nil

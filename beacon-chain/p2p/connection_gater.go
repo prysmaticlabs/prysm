@@ -21,7 +21,7 @@ const (
 
 	// High watermark buffer signifies the buffer till which
 	// we will handle inbound requests.
-	highWatermarkBuffer = 10
+	highWatermarkBuffer = 20
 )
 
 // InterceptPeerDial tests whether we're permitted to Dial the specified peer.

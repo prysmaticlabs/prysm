@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -57,7 +59,7 @@ func TestNodeClose_OK(t *testing.T) {
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
 	ctx, cancel := newCliContextWithCancel(&app, set)
 
-	node, err := New(ctx, cancel)
+	node, err := New(ctx, cancel, WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 
 	node.Close()
@@ -125,7 +127,8 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	ctx, cancel := newCliContextWithCancel(&app, set)
 	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithExecutionChainOptions([]execution.Option{}))
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -218,6 +221,53 @@ func Test_hasNetworkFlag(t *testing.T) {
 
 			if got := hasNetworkFlag(cliCtx); got != tt.want {
 				t.Errorf("hasNetworkFlag() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCORS(t *testing.T) {
+	// Mock CLI context with a test CORS domain
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com", "")
+	cliCtx := cli.NewContext(&app, set, nil)
+	require.NoError(t, cliCtx.Set(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com"))
+
+	router := newRouter(cliCtx)
+
+	// Ensure a test route exists
+	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods(http.MethodGet)
+
+	// Define test cases
+	tests := []struct {
+		name        string
+		origin      string
+		expectAllow bool
+	}{
+		{"AllowedOrigin", "http://allowed-example.com", true},
+		{"DisallowedOrigin", "http://disallowed-example.com", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			// Create a request and response recorder
+			req := httptest.NewRequest("GET", "http://example.com/some-path", nil)
+			req.Header.Set("Origin", tc.origin)
+			rr := httptest.NewRecorder()
+
+			// Serve HTTP
+			router.ServeHTTP(rr, req)
+
+			// Check the CORS headers based on the expected outcome
+			if tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != tc.origin {
+				t.Errorf("Expected Access-Control-Allow-Origin header to be %v, got %v", tc.origin, rr.Header().Get("Access-Control-Allow-Origin"))
+			}
+			if !tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != "" {
+				t.Errorf("Expected Access-Control-Allow-Origin header to be empty for disallowed origin, got %v", rr.Header().Get("Access-Control-Allow-Origin"))
 			}
 		})
 	}

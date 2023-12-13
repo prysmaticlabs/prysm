@@ -77,19 +77,6 @@ func NewBeaconBlock() *ethpb.SignedBeaconBlock {
 	}
 }
 
-func NewBlobsidecar() *ethpb.SignedBlobSidecar {
-	return &ethpb.SignedBlobSidecar{
-		Message: &ethpb.DeprecatedBlobSidecar{
-			BlockRoot:       make([]byte, fieldparams.RootLength),
-			BlockParentRoot: make([]byte, fieldparams.RootLength),
-			Blob:            make([]byte, fieldparams.BlobLength),
-			KzgCommitment:   make([]byte, fieldparams.BLSPubkeyLength),
-			KzgProof:        make([]byte, fieldparams.BLSPubkeyLength),
-		},
-		Signature: make([]byte, fieldparams.BLSSignatureLength),
-	}
-}
-
 // GenerateFullBlock generates a fully valid block with the requested parameters.
 // Use BlockGenConfig to declare the conditions you would like the block generated under.
 func GenerateFullBlock(
@@ -1139,10 +1126,20 @@ func SaveBlock(tb assertions.AssertionTestingTB, ctx context.Context, db iface.N
 // HydrateSignedBeaconBlockDeneb hydrates a signed beacon block with correct field length sizes
 // to comply with fssz marshalling and unmarshalling rules.
 func HydrateSignedBeaconBlockDeneb(b *ethpb.SignedBeaconBlockDeneb) *ethpb.SignedBeaconBlockDeneb {
+	if b == nil {
+		b = &ethpb.SignedBeaconBlockDeneb{}
+	}
 	if b.Signature == nil {
 		b.Signature = make([]byte, fieldparams.BLSSignatureLength)
 	}
 	b.Block = HydrateBeaconBlockDeneb(b.Block)
+	return b
+}
+
+// HydrateSignedBeaconBlockContentsDeneb hydrates a signed beacon block with correct field length sizes
+// to comply with fssz marshalling and unmarshalling rules.
+func HydrateSignedBeaconBlockContentsDeneb(b *ethpb.SignedBeaconBlockContentsDeneb) *ethpb.SignedBeaconBlockContentsDeneb {
+	b.Block = HydrateSignedBeaconBlockDeneb(b.Block)
 	return b
 }
 

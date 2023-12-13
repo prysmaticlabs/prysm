@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	types "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
 
@@ -29,7 +29,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 	// Get the block
 	blockRootParam, err := hexutil.Decode(mux.Vars(req)["block_root"])
 	if err != nil {
-		http2.HandleError(w, "invalid block root: "+err.Error(), http.StatusBadRequest)
+		httputil.HandleError(w, "invalid block root: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -42,13 +42,13 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 	// Get the state
 	state, err := s.Stater.StateBySlot(ctx, blk.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	bootstrap, err := createLightClientBootstrap(ctx, state)
 	if err != nil {
-		http2.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get light client bootstrap: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -57,7 +57,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		Data:    bootstrap,
 	}
 
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 // GetLightClientUpdatesByRange - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/updates.yaml
@@ -71,16 +71,16 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	slotsPerPeriod := uint64(config.EpochsPerSyncCommitteePeriod) * uint64(config.SlotsPerEpoch)
 
 	// Adjust count based on configuration
-	gotCount, _, count := shared.UintFromQuery(w, req, "count")
+	_, count, gotCount := shared.UintFromQuery(w, req, "count", true)
 	if !gotCount {
 		return
 	} else if count == 0 {
-		http2.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%d': count must be greater than 0", count), http.StatusInternalServerError)
+		httputil.HandleError(w, fmt.Sprintf("got invalid 'count' query variable '%d': count must be greater than 0", count), http.StatusInternalServerError)
 		return
 	}
 
 	// Determine the start and end periods
-	gotStartPeriod, _, startPeriod := shared.UintFromQuery(w, req, "start_period")
+	_, startPeriod, gotStartPeriod := shared.UintFromQuery(w, req, "start_period", true)
 	if !gotStartPeriod {
 		return
 	}
@@ -92,7 +92,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	// max possible slot is current head
 	headState, err := s.HeadFetcher.HeadState(ctx)
 	if err != nil {
-		http2.HandleError(w, "could not get head state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get head state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -215,7 +215,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	if len(updates) == 0 {
-		http2.HandleError(w, "no updates found", http.StatusNotFound)
+		httputil.HandleError(w, "no updates found", http.StatusNotFound)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		Updates: updates,
 	}
 
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml
@@ -243,7 +243,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 
 	state, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -251,14 +251,14 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
 	if err != nil || attestedBlock == nil {
-		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		http2.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -281,7 +281,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		finalizedBlock,
 	)
 	if err != nil {
-		http2.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get light client finality update: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -290,7 +290,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		Data:    update,
 	}
 
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 // GetLightClientOptimisticUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/optimistic_update.yaml
@@ -308,7 +308,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 
 	state, err := s.Stater.StateBySlot(ctx, block.Block().Slot())
 	if err != nil {
-		http2.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -316,18 +316,18 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 	attestedRoot := block.Block().ParentRoot()
 	attestedBlock, err := s.Blocker.Block(ctx, attestedRoot[:])
 	if err != nil {
-		http2.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get attested block: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if attestedBlock == nil {
-		http2.HandleError(w, "attested block is nil", http.StatusInternalServerError)
+		httputil.HandleError(w, "attested block is nil", http.StatusInternalServerError)
 		return
 	}
 
 	attestedSlot := attestedBlock.Block().Slot()
 	attestedState, err := s.Stater.StateBySlot(ctx, attestedSlot)
 	if err != nil {
-		http2.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get attested state: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -338,7 +338,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 		attestedState,
 	)
 	if err != nil {
-		http2.HandleError(w, "could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, "could not get light client optimistic update: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -347,7 +347,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 		Data:    update,
 	}
 
-	http2.WriteJson(w, response)
+	httputil.WriteJson(w, response)
 }
 
 // getLightClientEventBlock - returns the block that should be used for light client events, which satisfies the minimum number of signatures from sync committee

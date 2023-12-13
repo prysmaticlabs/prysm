@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -96,7 +96,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 
 			s.ExpectedWithdrawals(writer, request)
 			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &http2.DefaultErrorJson{}
+			e := &httputil.DefaultErrorJson{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusBadRequest, e.Code)
 			assert.StringContains(t, testCase.errorMessage, e.Message)

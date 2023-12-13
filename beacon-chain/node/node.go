@@ -52,6 +52,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -113,6 +114,7 @@ type BeaconNode struct {
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
+	blobRetentionEpochs     primitives.Epoch
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -153,9 +155,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 	if err := configureExecutionSetting(cliCtx); err != nil {
-		return nil, err
-	}
-	if err := kv.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
 		return nil, err
 	}
 	configureFastSSZHashingAlgorithm()
@@ -227,6 +226,15 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
+	if beacon.finalizedStateAtStartUp != nil {
+		log.Debugln("Pruning old blobs")
+		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
+			return nil, err
+		}
+	} else {
+		log.Warn("No finalized beacon state at startup, cannot prune blobs")
+	}
+
 	log.Debugln("Registering P2P Service")
 	if err := beacon.registerP2P(cliCtx); err != nil {
 		return nil, err
@@ -273,8 +281,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
+	router := newRouter(cliCtx)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -306,6 +313,19 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	beacon.collector = c
 
 	return beacon, nil
+}
+
+func newRouter(cliCtx *cli.Context) *mux.Router {
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
+	r := mux.NewRouter()
+	r.Use(server.NormalizeQueryValuesHandler)
+	r.Use(server.CorsHandler(allowedOrigins))
+	return r
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -380,7 +400,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 	if err != nil {
 		return err
 	}
@@ -402,7 +422,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+
+		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -675,6 +696,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		execution.WithStateGen(b.stateGen),
 		execution.WithBeaconNodeStatsUpdater(bs),
 		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		execution.WithJwtId(b.cliCtx.String(flags.JwtId.Name)),
 	)
 	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
@@ -722,6 +744,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
+		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -740,6 +763,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
+		BlobStorage:         b.BlobStorage,
 	})
 	return b.services.RegisterService(is)
 }
@@ -874,6 +898,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,
+		BlobStorage:                   b.BlobStorage,
 	})
 
 	return b.services.RegisterService(rpcService)

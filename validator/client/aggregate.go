@@ -3,14 +3,17 @@ package client
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -71,11 +74,17 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		SlotSignature:  slotSig,
 	})
 	if err != nil {
+		// handle grpc not found
 		s, ok := status.FromError(err)
-		if ok && s.Code() == codes.NotFound {
+		grpcNotFound := ok && s.Code() == codes.NotFound
+		// handle http not found
+		jsonErr := &httputil.DefaultErrorJson{}
+		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
+
+		if grpcNotFound || httpNotFound {
 			log.WithField("slot", slot).WithError(err).Warn("No attestations to aggregate")
 		} else {
-			log.WithField("slot", slot).WithError(err).Error("Could not submit slot signature to beacon node")
+			log.WithField("slot", slot).WithError(err).Error("Could not submit aggregate selection proof to beacon node")
 			if v.emitAccountMetrics {
 				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
 			}

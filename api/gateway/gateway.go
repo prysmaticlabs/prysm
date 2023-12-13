@@ -11,8 +11,8 @@ import (
 	"github.com/gorilla/mux"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
-	"github.com/rs/cors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials"
@@ -104,7 +104,7 @@ func (g *Gateway) Start() {
 		}
 	}
 
-	corsMux := g.corsMiddleware(g.cfg.router)
+	corsMux := server.CorsHandler(g.cfg.allowedOrigins).Middleware(g.cfg.router)
 
 	if g.cfg.muxHandler != nil {
 		g.cfg.router.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -156,17 +156,6 @@ func (g *Gateway) Stop() error {
 		g.cancel()
 	}
 	return nil
-}
-
-func (g *Gateway) corsMiddleware(h http.Handler) http.Handler {
-	c := cors.New(cors.Options{
-		AllowedOrigins:   g.cfg.allowedOrigins,
-		AllowedMethods:   []string{http.MethodPost, http.MethodGet, http.MethodDelete, http.MethodOptions},
-		AllowCredentials: true,
-		MaxAge:           600,
-		AllowedHeaders:   []string{"*"},
-	})
-	return c.Handler(h)
 }
 
 // dial the gRPC server.

@@ -3,6 +3,7 @@ package filesystem
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/spf13/afero"
 )
 
@@ -15,9 +16,10 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 
 // NewEphemeralBlobStorageWithFs can be used by tests that want access to the virtual filesystem
 // in order to interact with it outside the parameters of the BlobStorage api.
-func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage) {
+func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	return fs, &BlobStorage{fs: fs}
+	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	return fs, &BlobStorage{fs: fs, retentionEpochs: retentionEpoch}, nil
 }
 
 type BlobMocker struct {
@@ -44,7 +46,7 @@ func (bm *BlobMocker) CreateFakeIndices(root [32]byte, indices []uint64) error {
 	return nil
 }
 
-// NewEpehmeralBlobStorageWithMocker returns a *BlobMocker value in addition to the BlobStorage value.
+// NewEphemeralBlobStorageWithMocker returns a *BlobMocker value in addition to the BlobStorage value.
 // BlockMocker encapsulates things blob path construction to avoid leaking implementation details.
 func NewEphemeralBlobStorageWithMocker(_ testing.TB) (*BlobMocker, *BlobStorage) {
 	fs := afero.NewMemMapFs()

@@ -17,7 +17,6 @@ package ethereum.eth.v1alpha1;
 
 import "proto/eth/ext/options.proto";
 import "proto/prysm/v1alpha1/attestation.proto";
-import "proto/prysm/v1alpha1/blobs.proto";
 import "proto/prysm/v1alpha1/withdrawals.proto";
 import "proto/engine/v1/execution_engine.proto";
 
@@ -49,10 +48,9 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockCapella blinded_capella = 6;
 
         // Representing a signed, post-Deneb fork beacon block content.
-        SignedBeaconBlockDeneb deneb  = 7;
+        SignedBeaconBlockContentsDeneb deneb  = 7;
 
-        // Representing a signed, post-Deneb fork blinded beacon block content.
-        SignedBlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
+        SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
     uint64 payload_value = 101;
@@ -79,10 +77,9 @@ message GenericBeaconBlock {
         BlindedBeaconBlockCapella blinded_capella = 6;
 
         // Representing a signed, post-Deneb fork beacon block content.
-        BeaconBlockDeneb deneb  = 7;
+        BeaconBlockContentsDeneb deneb  = 7;
 
-        // Representing a signed, post-Deneb fork blinded beacon block content.
-        BlindedBeaconBlockAndBlobsDeneb blinded_deneb  = 8;
+        BlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
     uint64 payload_value = 101;
@@ -453,9 +450,16 @@ message BlindedBeaconBlockBodyBellatrix {
     ethereum.engine.v1.ExecutionPayloadHeader execution_payload_header = 10;
 }
 
-message SignedBeaconBlockAndBlobsDeneb {
+message SignedBeaconBlockContentsDeneb {
     SignedBeaconBlockDeneb block = 1;
-    repeated SignedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
+    repeated bytes kzg_proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4096"];
+    repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max)  = "4096"];
+}
+
+message BeaconBlockContentsDeneb {
+    BeaconBlockDeneb block = 1;
+    repeated bytes kzg_proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max)  = "4096"];
+    repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,blob.size", (ethereum.eth.ext.ssz_max)  = "4096"];
 }
 
 message SignedBeaconBlockDeneb {
@@ -464,11 +468,6 @@ message SignedBeaconBlockDeneb {
 
     // 96 byte BLS signature from the validator that produced this block.
     bytes signature = 2 [(ethereum.eth.ext.ssz_size) = "96"];
-}
-
-message BeaconBlockAndBlobsDeneb {
-    BeaconBlockDeneb block = 1;
-    repeated DeprecatedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }
 
 message BeaconBlockDeneb {
@@ -654,16 +653,6 @@ message BlindedBeaconBlockBodyCapella {
     repeated SignedBLSToExecutionChange bls_to_execution_changes = 11 [(ethereum.eth.ext.ssz_max) = "16"];
 }
 
-message SignedBlindedBeaconBlockAndBlobsDeneb {
-    SignedBlindedBeaconBlockDeneb signed_blinded_block = 1;
-    repeated SignedBlindedBlobSidecar signed_blinded_blob_sidecars = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
-message BlindedBeaconBlockAndBlobsDeneb {
-    BlindedBeaconBlockDeneb block = 1;
-    repeated BlindedBlobSidecar blobs = 2 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
-}
-
 message SignedBlindedBeaconBlockDeneb {
     // The unsigned blinded beacon block itself.
     BlindedBeaconBlockDeneb message = 1;
@@ -784,4 +773,8 @@ message BlobSidecar {
     bytes kzg_proof = 4 [(ethereum.eth.ext.ssz_size) = "48"];
     SignedBeaconBlockHeader signed_block_header = 5;
     repeated bytes commitment_inclusion_proof = 6  [(ethereum.eth.ext.ssz_size) = "kzg_commitment_inclusion_proof_depth.size,32"];
+}
+
+message BlobSidecars {
+    repeated BlobSidecar sidecars = 1 [(ethereum.eth.ext.ssz_max) = "max_blobs_per_block.size"];
 }

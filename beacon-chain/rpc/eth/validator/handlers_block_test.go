@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
@@ -140,7 +140,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -203,14 +203,12 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
-
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -242,13 +240,13 @@ func TestProduceBlockV2(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		mockRewards := &rewards.BlockRewards{Total: "10"}
@@ -265,7 +263,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -448,7 +446,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -513,13 +511,12 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -553,13 +550,13 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
@@ -576,7 +573,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is blinded", e.Message)
@@ -790,8 +787,6 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
-		t.Skip("TODO: Skip deneb until beacon api changes")
-
 		var block *shared.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
@@ -826,15 +821,15 @@ func TestProduceBlockV3(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
-		jsonBytes, err := json.Marshal(block.ToUnsigned())
+		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		mockRewards := &rewards.BlockRewards{Total: "10"}
@@ -1170,13 +1165,13 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
-		var block *shared.SignedBlindedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlockContents), &block)
+		var block *shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
@@ -1193,7 +1188,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		g, err := block.ToUnsigned().ToGeneric()
+		g, err := block.Message.ToGeneric()
 		require.NoError(t, err)
 		bl, ok := g.Block.(*eth.GenericBeaconBlock_BlindedDeneb)
 		require.Equal(t, true, ok)

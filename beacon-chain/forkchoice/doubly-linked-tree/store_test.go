@@ -499,6 +499,22 @@ func TestStore_TargetRootForEpoch(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, target, root5)
 
+	// Target root where the target epoch is two epochs ago
+	target, err = f.TargetRootForEpoch(root5, 2)
+	require.NoError(t, err)
+	require.Equal(t, root1, target) // the parent of root4 in epoch 3 is root 1 in epoch 1
+
+	// Target root where the target is two epochs ago, slot 0 was missed
+	state, root6, err := prepareForkchoiceState(ctx, 4*params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'g'}, root5, params.BeaconConfig().ZeroHash, 1, 1)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, state, root6))
+	target, err = f.TargetRootForEpoch(root6, 4)
+	require.NoError(t, err)
+	require.Equal(t, target, root5)
+	target, err = f.TargetRootForEpoch(root6, 2)
+	require.NoError(t, err)
+	require.Equal(t, target, root1)
+
 	// Prune finalization
 	s.finalizedCheckpoint.Root = root4
 	require.NoError(t, s.prune(ctx))

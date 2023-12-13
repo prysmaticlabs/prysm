@@ -20,7 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -216,7 +216,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		require.StringContains(t, "Epoch is out of range for the randao mixes of the state", e.Message)
@@ -230,7 +230,7 @@ func TestGetRandao(t *testing.T) {
 
 		s.GetRandao(writer, request)
 		require.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultErrorJson{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		require.StringContains(t, "Epoch is out of range for the randao mixes of the state", e.Message)
@@ -617,7 +617,7 @@ func TestGetSyncCommittees_Future(t *testing.T) {
 	writer.Body = &bytes.Buffer{}
 	s.GetSyncCommittees(writer, request)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	e := &http2.DefaultErrorJson{}
+	e := &httputil.DefaultErrorJson{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 	assert.Equal(t, http.StatusBadRequest, e.Code)
 	assert.StringContains(t, "Could not fetch sync committee too far in the future", e.Message)

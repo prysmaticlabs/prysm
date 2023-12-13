@@ -227,9 +227,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
-		// Assign relevant validator to subnet.
-		core.AssignValidatorToSubnetProto(pubKey, assignment.Status)
-		core.AssignValidatorToSubnetProto(pubKey, nextAssignment.Status)
 	}
 	// Prune payload ID cache for any slots before request slot.
 	vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
@@ -244,6 +241,5 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 // AssignValidatorToSubnet checks the status and pubkey of a particular validator
 // to discern whether persistent subnets need to be registered for them.
 func (vs *Server) AssignValidatorToSubnet(_ context.Context, req *ethpb.AssignValidatorToSubnetRequest) (*emptypb.Empty, error) {
-	core.AssignValidatorToSubnetProto(req.PublicKey, req.Status)
 	return &emptypb.Empty{}, nil
 }

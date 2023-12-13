@@ -12,7 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -423,8 +423,8 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	proto := test_helpers.GenerateProtoDenebBeaconBlockContents()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	bytes, err := json.Marshal(block)
 	require.NoError(t, err)
 
@@ -457,7 +457,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto.Block,
+			Deneb: proto,
 		},
 		IsBlinded: false,
 	}
@@ -532,7 +532,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
-		&http2.DefaultErrorJson{Code: http.StatusNotFound},
+		&httputil.DefaultErrorJson{Code: http.StatusNotFound},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
@@ -568,8 +568,8 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	proto := test_helpers.GenerateProtoDenebBeaconBlock()
-	block := test_helpers.GenerateJsonDenebBeaconBlock()
+	proto := test_helpers.GenerateProtoDenebBeaconBlockContents()
+	block := test_helpers.GenerateJsonDenebBeaconBlockContents()
 	blockBytes, err := json.Marshal(block)
 	require.NoError(t, err)
 
@@ -585,7 +585,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
-		&http2.DefaultErrorJson{Code: http.StatusNotFound},
+		&httputil.DefaultErrorJson{Code: http.StatusNotFound},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
@@ -593,7 +593,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&abstractProduceBlockResponseJson{},
 	).Return(
-		&http2.DefaultErrorJson{Code: http.StatusInternalServerError},
+		&httputil.DefaultErrorJson{Code: http.StatusInternalServerError},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
@@ -617,7 +617,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
 		Block: &ethpb.GenericBeaconBlock_Deneb{
-			Deneb: proto.Block,
+			Deneb: proto,
 		},
 		IsBlinded: false,
 	}

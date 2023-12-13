@@ -153,6 +153,37 @@ func TestEpochStartSlot_OK(t *testing.T) {
 	}
 }
 
+func TestBeginsAtOK(t *testing.T) {
+	cases := []struct {
+		name     string
+		genesis  int64
+		slot     primitives.Slot
+		slotTime time.Time
+	}{
+		{
+			name:     "genesis",
+			slotTime: time.Unix(0, 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     1,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot), 0),
+		},
+		{
+			name:     "slot 1",
+			slot:     32,
+			slotTime: time.Unix(int64(params.BeaconConfig().SecondsPerSlot)*32, 0),
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			genesis := time.Unix(c.genesis, 0)
+			st := BeginsAt(c.slot, genesis)
+			require.Equal(t, c.slotTime, st)
+		})
+	}
+}
+
 func TestEpochEndSlot_OK(t *testing.T) {
 	tests := []struct {
 		epoch     primitives.Epoch

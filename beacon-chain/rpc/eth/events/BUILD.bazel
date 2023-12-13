@@ -18,7 +18,7 @@ go_library(
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
-        "//network/http:go_default_library",
+        "//network/httputil:go_default_library",
         "//proto/eth/v1:go_default_library",
         "//runtime/version:go_default_library",
         "//time/slots:go_default_library",

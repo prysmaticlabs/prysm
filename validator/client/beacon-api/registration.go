@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -17,11 +16,7 @@ func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Cont
 	jsonRegistration := make([]*shared.SignedValidatorRegistration, len(registrations))
 
 	for index, registration := range registrations {
-		outMessage, err := shared.SignedValidatorRegistrationFromConsensus(registration)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to encode to SignedValidatorRegistration at index %d", index))
-		}
-		jsonRegistration[index] = outMessage
+		jsonRegistration[index] = shared.SignedValidatorRegistrationFromConsensus(registration)
 	}
 
 	marshalledJsonRegistration, err := json.Marshal(jsonRegistration)
