@@ -126,7 +126,7 @@ STATICCHECK_ANALYZERS = [
     "sa4003",
     "sa4004",
     "sa4005",
-    # "sa4006", # TODO: Fix violations of unused arguments.
+    "sa4006",
     "sa4008",
     "sa4009",
     "sa4010",
@@ -172,7 +172,7 @@ STATICCHECK_ANALYZERS = [
     "sa6006",
     "sa9001",
     "sa9002",
-    #"sa9003", # Doesn't build
+    #"sa9003", # Doesn't build. See https://github.com/dominikh/go-tools/pull/1483
     "sa9004",
     "sa9005",
     "sa9006",

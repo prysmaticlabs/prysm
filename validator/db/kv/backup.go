@@ -17,7 +17,7 @@ const backupsDirectoryName = "backups"
 // Backup the database to the datadir backup directory.
 // Example for backup: $DATADIR/backups/prysm_validatordb_1029019.backup
 func (s *Store) Backup(ctx context.Context, outputDir string, permissionOverride bool) error {
-	ctx, span := trace.StartSpan(ctx, "ValidatorDB.Backup")
+	_, span := trace.StartSpan(ctx, "ValidatorDB.Backup")
 	defer span.End()
 
 	var backupsDir string

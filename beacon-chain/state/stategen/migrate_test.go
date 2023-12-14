@@ -187,7 +187,7 @@ func TestMigrateToCold_ParallelCalls(t *testing.T) {
 	require.NoError(t, err)
 	wB7, err := consensusblocks.NewSignedBeaconBlock(b7)
 	require.NoError(t, err)
-	beaconState, err = executeStateTransitionStateGen(ctx, beaconState, wB7)
+	_, err = executeStateTransitionStateGen(ctx, beaconState, wB7)
 	assert.NoError(t, err)
 	r7, err := b7.Block.HashTreeRoot()
 	require.NoError(t, err)
