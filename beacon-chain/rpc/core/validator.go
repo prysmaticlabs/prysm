@@ -330,6 +330,7 @@ func (s *Service) GetAttestationData(
 	s.AttestationCache.RLock()
 	res, err := s.AttestationCache.Get(ctx)
 	if err != nil {
+		s.AttestationCache.RUnlock()
 		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
 	}
 	if res != nil && res.Slot == req.Slot {
