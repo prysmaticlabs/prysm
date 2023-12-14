@@ -132,7 +132,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.SlashingProtection != "" {
 		if err := slashingprotection.ImportStandardProtectionJSON(
-			ctx, s.valDB, bytes.NewBuffer([]byte(req.SlashingProtection)),
+			ctx, s.valDB, bytes.NewBufferString(req.SlashingProtection),
 		); err != nil {
 			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
 			for i := 0; i < len(req.Keystores); i++ {
