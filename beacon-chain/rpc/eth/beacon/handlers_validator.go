@@ -340,7 +340,7 @@ func decodeIds(w http.ResponseWriter, st state.BeaconState, rawIds []string, ign
 				if ignoreUnknown {
 					continue
 				}
-				httputil.HandleError(w, fmt.Sprintf("Unknown pubkey %s", pubkey), http.StatusBadRequest)
+				httputil.HandleError(w, fmt.Sprintf("Unknown pubkey %s", hexutil.Encode(pubkey)), http.StatusBadRequest)
 				return nil, false
 			}
 			ids = append(ids, valIndex)
