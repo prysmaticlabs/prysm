@@ -91,6 +91,12 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	batcher, err := newBlockRangeBatcher(rp, s.cfg.beaconDB, s.rateLimiter, s.cfg.chain.IsCanonical, ticker)
+	if err != nil {
+		log.WithError(err).Info("error in BlobSidecarsByRange batch")
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return err
+	}
 
 	var batch blockBatch
 	wQuota := params.BeaconNetworkConfig().MaxRequestBlobSidecars
@@ -107,7 +113,7 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 	}
 	if err := batch.error(); err != nil {
-		log.WithError(err).Debug("error in BlocksByRange batch")
+		log.WithError(err).Debug("error in BlobSidecarsByRange batch")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return err
@@ -153,7 +159,7 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 	}
 
 	var err error
-	rp.end, err = rp.start.SafeAdd((rp.size - 1))
+	rp.end, err = rp.start.SafeAdd(rp.size - 1)
 	if err != nil {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow start + count -1")
 	}
