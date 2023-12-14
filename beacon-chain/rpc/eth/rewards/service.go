@@ -17,8 +17,8 @@ import (
 
 // BlockRewardsFetcher is a interface that provides access to reward related responses
 type BlockRewardsFetcher interface {
-	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson)
-	GetStateForRewards(context.Context, interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson)
+	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultJsonError)
+	GetStateForRewards(context.Context, interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultJsonError)
 }
 
 // BlockRewardService implements BlockRewardsFetcher and can be declared to access the underlying functions
@@ -27,9 +27,9 @@ type BlockRewardService struct {
 }
 
 // GetBlockRewardsData returns the BlockRewards Object which is used for the BlockRewardsResponse and ProduceBlockV3
-func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultErrorJson) {
+func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultJsonError) {
 	if blk == nil || blk.IsNil() {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: consensusblocks.ErrNilBeaconBlock.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -43,56 +43,56 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 	proposerIndex := blk.ProposerIndex()
 	initBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get proposer's balance: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	st, err = altair.ProcessAttestationsNoVerifySignature(ctx, st, blk)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get attestation rewards: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	attBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get proposer's balance: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	st, err = coreblocks.ProcessAttesterSlashings(ctx, st, blk.Body().AttesterSlashings(), validators.SlashValidator)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get attester slashing rewards: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	attSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get proposer's balance: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	st, err = coreblocks.ProcessProposerSlashings(ctx, st, blk.Body().ProposerSlashings(), validators.SlashValidator)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get proposer slashing rewards: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	proposerSlashingsBalance, err := st.BalanceAtIndex(proposerIndex)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get proposer's balance: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
 	}
 	sa, err := blk.Body().SyncAggregate()
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get sync aggregate: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -100,7 +100,7 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 	var syncCommitteeReward uint64
 	_, syncCommitteeReward, err = altair.ProcessSyncAggregate(ctx, st, sa)
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get sync aggregate rewards: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -117,13 +117,13 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 }
 
 // GetStateForRewards returns the state replayed up to the block's slot
-func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson) {
+func (rs *BlockRewardService) GetStateForRewards(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultJsonError) {
 	// We want to run several block processing functions that update the proposer's balance.
 	// This will allow us to calculate proposer rewards for each operation (atts, slashings etc).
 	// To do this, we replay the state up to the block's slot, but before processing the block.
 	st, err := rs.Replayer.ReplayerForSlot(blk.Slot()-1).ReplayToSlot(ctx, blk.Slot())
 	if err != nil {
-		return nil, &httputil.DefaultErrorJson{
+		return nil, &httputil.DefaultJsonError{
 			Message: "Could not get state: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}

@@ -107,7 +107,7 @@ type EngineCaller interface {
 	GetTerminalBlockHash(ctx context.Context, transitionTime uint64) ([]byte, bool, error)
 }
 
-var EmptyBlockHash = errors.New("Block hash is empty 0x0000...")
+var ErrEmptyBlockHash = errors.New("Block hash is empty 0x0000...")
 
 // NewPayload calls the engine_newPayloadVX method via JSON-RPC.
 func (s *Service) NewPayload(ctx context.Context, payload interfaces.ExecutionData, versionedHashes []common.Hash, parentBlockRoot *common.Hash) ([]byte, error) {
@@ -641,7 +641,7 @@ func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executio
 		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
 	}
 	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
-		return nil, EmptyBlockHash
+		return nil, ErrEmptyBlockHash
 	}
 
 	executionBlock.Version = version

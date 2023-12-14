@@ -21,6 +21,7 @@ linters:
     - nilerr
     - whitespace
     - misspell
+    - errname
 
 linters-settings:
   gocognit:

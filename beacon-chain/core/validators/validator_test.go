@@ -49,7 +49,7 @@ func TestInitiateValidatorExit_AlreadyExited(t *testing.T) {
 	state, err := state_native.InitializeFromProtoPhase0(base)
 	require.NoError(t, err)
 	newState, epoch, err := InitiateValidatorExit(context.Background(), state, 0, 199, 1)
-	require.ErrorIs(t, err, ValidatorAlreadyExitedErr)
+	require.ErrorIs(t, err, ErrValidatorAlreadyExited)
 	require.Equal(t, exitEpoch, epoch)
 	v, err := newState.ValidatorAtIndex(0)
 	require.NoError(t, err)
