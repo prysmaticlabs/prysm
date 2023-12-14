@@ -24,7 +24,7 @@ var (
 	errInvalidInclusionProof = errors.New("invalid KZG commitment inclusion proof")
 )
 
-// VerifyKZGIncusionProof verifies the Merkle proof in a Blob sidecar against
+// VerifyKZGInclusionProof verifies the Merkle proof in a Blob sidecar against
 // the beacon block body root.
 func VerifyKZGInclusionProof(blob ROBlob) error {
 	if blob.SignedBlockHeader == nil {

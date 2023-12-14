@@ -27,6 +27,8 @@ func Test_unblindBuilderBlock(t *testing.T) {
 	pDeneb.BlobGasUsed = 789
 
 	denebblk, denebsidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, fieldparams.MaxBlobsPerBlock)
+	denebCommitments, err := denebblk.Block().Body().BlobKzgCommitments()
+	require.NoError(t, err)
 	execution, err := denebblk.Block().Body().Execution()
 	require.NoError(t, err)
 	denebPayload, err := execution.PbDeneb()
@@ -278,7 +280,7 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				HasConfigured: true,
 				PayloadDeneb:  denebPayload,
 				BlobBundle: &v1.BlobsBundle{
-					KzgCommitments: [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}, {'c', 5}},
+					KzgCommitments: denebCommitments,
 					Proofs:         [][]byte{{'d', 0}, {'d', 1}, {'d', 2}, {'d', 3}, {'d', 4}, {'d', 5}},
 					Blobs:          blobs,
 				},
@@ -291,6 +293,94 @@ func Test_unblindBuilderBlock(t *testing.T) {
 				return wb
 			}(),
 			returnedBlobSidecars: denebsidecars,
+		},
+		{
+			name: "deneb mismatch commitments count",
+			blk: func() interfaces.SignedBeaconBlock {
+				blindedBlock, err := denebblk.ToBlinded()
+				require.NoError(t, err)
+				b, err := blindedBlock.PbBlindedDenebBlock()
+				require.NoError(t, err)
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				PayloadDeneb:  denebPayload,
+				BlobBundle: &v1.BlobsBundle{
+					KzgCommitments: [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}},
+					Proofs:         [][]byte{{'d', 0}, {'d', 1}, {'d', 2}, {'d', 3}, {'d', 4}, {'d', 5}},
+					Blobs:          blobs,
+				},
+			},
+			err: "mismatch commitments count",
+		},
+		{
+			name: "deneb mismatch proofs count",
+			blk: func() interfaces.SignedBeaconBlock {
+				blindedBlock, err := denebblk.ToBlinded()
+				require.NoError(t, err)
+				b, err := blindedBlock.PbBlindedDenebBlock()
+				require.NoError(t, err)
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				PayloadDeneb:  denebPayload,
+				BlobBundle: &v1.BlobsBundle{
+					KzgCommitments: [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}, {'c', 5}},
+					Proofs:         [][]byte{{'d', 0}, {'d', 1}, {'d', 2}, {'d', 3}, {'d', 4}},
+					Blobs:          blobs,
+				},
+			},
+			err: "mismatch proofs count",
+		},
+		{
+			name: "deneb different count commitments bundle vs block",
+			blk: func() interfaces.SignedBeaconBlock {
+				blindedBlock, err := denebblk.ToBlinded()
+				require.NoError(t, err)
+				b, err := blindedBlock.PbBlindedDenebBlock()
+				require.NoError(t, err)
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				PayloadDeneb:  denebPayload,
+				BlobBundle: &v1.BlobsBundle{
+					KzgCommitments: [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}},
+					Proofs:         [][]byte{{'d', 0}, {'d', 1}, {'d', 2}, {'d', 3}, {'d', 4}},
+					Blobs:          blobs[:5],
+				},
+			},
+			err: "commitment count doesn't match block",
+		},
+		{
+			name: "deneb different value commitments bundle vs block",
+			blk: func() interfaces.SignedBeaconBlock {
+				blindedBlock, err := denebblk.ToBlinded()
+				require.NoError(t, err)
+				b, err := blindedBlock.PbBlindedDenebBlock()
+				require.NoError(t, err)
+				wb, err := blocks.NewSignedBeaconBlock(b)
+				require.NoError(t, err)
+				return wb
+			}(),
+			mock: &builderTest.MockBuilderService{
+				HasConfigured: true,
+				PayloadDeneb:  denebPayload,
+				BlobBundle: &v1.BlobsBundle{
+					KzgCommitments: [][]byte{{'c', 0}, {'c', 1}, {'c', 2}, {'c', 3}, {'c', 4}, {'c', 5}},
+					Proofs:         [][]byte{{'d', 0}, {'d', 1}, {'d', 2}, {'d', 3}, {'d', 4}, {'d', 5}},
+					Blobs:          blobs,
+				},
+			},
+			err: "commitment value doesn't match block",
 		},
 	}
 	for _, tc := range tests {

@@ -170,7 +170,7 @@ func (m *Validator) Keymanager() (keymanager.IKeymanager, error) {
 	return m.Km, nil
 }
 
-func (_ *Validator) ReceiveBlocks(_ context.Context, _ chan<- error) {
+func (_ *Validator) ReceiveSlots(_ context.Context, _ chan<- error) {
 	panic("implement me")
 }
 

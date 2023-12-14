@@ -323,6 +323,13 @@ func CreateAccountsKeystoreRepresentation(
 	}, nil
 }
 
+// CreateEmptyKeyStoreRepresentationForNewWallet creates a placeholder accounts keystore for a new Prysm Local Wallet.
+func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPassword string) (*AccountsKeystoreRepresentation, error) {
+	// make sure everything is clean when creating this.
+	ResetCaches()
+	return CreateAccountsKeystoreRepresentation(ctx, &accountStore{}, walletPassword)
+}
+
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
 // This function DOES NOT save the accounts store to disk.
 func (km *Keymanager) CreateOrUpdateInMemoryAccountsStore(_ context.Context, privateKeys, publicKeys [][]byte) error {
@@ -425,13 +432,10 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 func CreatePrintoutOfKeys(keys [][]byte) string {
 	var keysStr string
 	for i, k := range keys {
-		if i == 0 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else if i == len(keys)-1 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else {
-			keysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
+		if i != 0 {
+			keysStr += "," // Add a comma before each key except the first one
 		}
+		keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
 	}
 	return keysStr
 }

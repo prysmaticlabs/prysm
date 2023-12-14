@@ -227,7 +227,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	if beacon.finalizedStateAtStartUp != nil {
-		log.Debugln("Pruning old blobs")
 		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
 			return nil, err
 		}
