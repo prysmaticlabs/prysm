@@ -107,11 +107,11 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		return err
 	}
 
-	daWaitTime := time.Now()
+	daStartTime := time.Now()
 	if err := s.isDataAvailable(ctx, blockRoot, blockCopy); err != nil {
 		return errors.Wrap(err, "could not validate blob data availability")
 	}
-	daWaitedTime := time.Since(daWaitTime)
+	daWaitedTime := time.Since(daStartTime)
 
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
