@@ -77,7 +77,7 @@ func (s *Server) ProduceBlockV2(w http.ResponseWriter, r *http.Request) {
 		Slot:         primitives.Slot(slot),
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		SkipMevBoost: true,
 	}, full)
 }
 
@@ -185,7 +185,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 		Slot:         primitives.Slot(slot),
 		RandaoReveal: randaoReveal,
 		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		SkipMevBoost: true,
 	}, any)
 }
 
