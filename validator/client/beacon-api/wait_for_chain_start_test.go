@@ -41,7 +41,7 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := BeaconApiValidatorClient{genesisProvider: genesisProvider}
 	resp, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.NoError(t, err)
 
@@ -106,7 +106,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 			).Times(1)
 
 			genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-			validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+			validatorClient := BeaconApiValidatorClient{genesisProvider: genesisProvider}
 			_, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 			assert.ErrorContains(t, testCase.errorMessage, err)
 		})
@@ -130,7 +130,7 @@ func TestWaitForChainStart_JsonResponseError(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := BeaconApiValidatorClient{genesisProvider: genesisProvider}
 	_, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.ErrorContains(t, "failed to get genesis data", err)
 	assert.ErrorContains(t, "some specific json error", err)
@@ -177,7 +177,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 	).Times(1)
 
 	genesisProvider := beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler}
-	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := BeaconApiValidatorClient{genesisProvider: genesisProvider}
 	resp, err := validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	assert.NoError(t, err)
 

@@ -1,6 +1,8 @@
 package rpc
 
 import (
+	"net/http"
+
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
@@ -9,6 +11,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
@@ -53,6 +56,10 @@ func (s *Server) registerBeaconClient() error {
 
 	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
 	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
-	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, conn.GetBeaconApiUrl())
+	s.beaconNodeValidatorClient, err = validatorClientFactory.NewValidatorClient(s.ctx, conn, beaconApi.WithEventHandler(evHandler))
+	if err != nil {
+		return errors.Wrap(err, "could not create the validator client")
+	}
 	return nil
 }

@@ -64,7 +64,7 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 		Signature:      decodedSignature,
 	}
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	res, err := validatorClient.SubmitSyncMessage(context.Background(), &protoSyncCommiteeMessage)
 
 	assert.DeepEqual(t, new(empty.Empty), res)
@@ -87,7 +87,7 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.SubmitSyncMessage(context.Background(), &ethpb.SyncCommitteeMessage{})
 	assert.ErrorContains(t, "foo error", err)
 }
@@ -153,7 +153,7 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 				test.endpointError,
 			).Times(1)
 
-			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			actualResponse, err := validatorClient.getSyncMessageBlockRoot(ctx)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)
@@ -241,7 +241,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 				test.endpointErr,
 			).Times(1)
 
-			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			actualResponse, err := validatorClient.getSyncCommitteeContribution(ctx, request)
 			if test.expectedErrMsg != "" {
 				require.ErrorContains(t, test.expectedErrMsg, err)
@@ -372,7 +372,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			pubkey, err := hexutil.Decode(pubkeyStr)
 			require.NoError(t, err)
 
-			validatorClient := &beaconApiValidatorClient{
+			validatorClient := &BeaconApiValidatorClient{
 				jsonRestHandler: jsonRestHandler,
 				stateValidatorsProvider: beaconApiStateValidatorsProvider{
 					jsonRestHandler: jsonRestHandler,

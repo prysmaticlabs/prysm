@@ -12,7 +12,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-func (c beaconApiValidatorClient) getAttestationData(
+func (c BeaconApiValidatorClient) getAttestationData(
 	ctx context.Context,
 	reqSlot primitives.Slot,
 	reqCommitteeIndex primitives.CommitteeIndex,

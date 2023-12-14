@@ -82,7 +82,7 @@ func TestProposeBeaconBlock_Bellatrix(t *testing.T) {
 		nil,
 	)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	proposeResponse, err := validatorClient.proposeBeaconBlock(ctx, genericSignedBlock)
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)

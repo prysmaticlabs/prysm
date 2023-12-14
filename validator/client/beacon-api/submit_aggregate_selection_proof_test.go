@@ -266,7 +266,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				},
 			}
 
-			validatorClient := &beaconApiValidatorClient{
+			validatorClient := &BeaconApiValidatorClient{
 				jsonRestHandler: jsonRestHandler,
 				stateValidatorsProvider: beaconApiStateValidatorsProvider{
 					jsonRestHandler: jsonRestHandler,

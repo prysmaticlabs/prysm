@@ -63,20 +63,20 @@ func TestProposeExit_Valid(t *testing.T) {
 	expectedExitRoot, err := protoSignedVoluntaryExit.Exit.HashTreeRoot()
 	require.NoError(t, err)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	exitResponse, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	require.NoError(t, err)
 	assert.DeepEqual(t, expectedExitRoot[:], exitResponse.ExitRoot)
 }
 
 func TestProposeExit_NilSignedVoluntaryExit(t *testing.T) {
-	validatorClient := &beaconApiValidatorClient{}
+	validatorClient := &BeaconApiValidatorClient{}
 	_, err := validatorClient.proposeExit(context.Background(), nil)
 	assert.ErrorContains(t, "signed voluntary exit is nil", err)
 }
 
 func TestProposeExit_NilExit(t *testing.T) {
-	validatorClient := &beaconApiValidatorClient{}
+	validatorClient := &BeaconApiValidatorClient{}
 	_, err := validatorClient.proposeExit(context.Background(), &ethpb.SignedVoluntaryExit{})
 	assert.ErrorContains(t, "exit is nil", err)
 }
@@ -107,7 +107,7 @@ func TestProposeExit_BadRequest(t *testing.T) {
 		Signature: []byte{3},
 	}
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.proposeExit(ctx, protoSignedVoluntaryExit)
 	assert.ErrorContains(t, "foo error", err)
 }

@@ -737,7 +737,7 @@ func TestGetDutiesForEpoch_Error(t *testing.T) {
 				testCase.fetchCommitteesError,
 			).AnyTimes()
 
-			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
+			validatorClient := &BeaconApiValidatorClient{dutiesProvider: dutiesProvider}
 			_, err := validatorClient.getDutiesForEpoch(
 				ctx,
 				epoch,
@@ -999,7 +999,7 @@ func TestGetDutiesForEpoch_Valid(t *testing.T) {
 				},
 			}
 
-			validatorClient := &beaconApiValidatorClient{dutiesProvider: dutiesProvider}
+			validatorClient := &BeaconApiValidatorClient{dutiesProvider: dutiesProvider}
 			duties, err := validatorClient.getDutiesForEpoch(
 				ctx,
 				epoch,
@@ -1264,7 +1264,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			).MinTimes(1)
 
 			// Make sure that our values are equal to what would be returned by calling getDutiesForEpoch individually
-			validatorClient := &beaconApiValidatorClient{
+			validatorClient := &BeaconApiValidatorClient{
 				dutiesProvider:          dutiesProvider,
 				stateValidatorsProvider: stateValidatorsProvider,
 				prysmBeaconChainCLient:  prysmBeaconChainClient,
@@ -1320,7 +1320,7 @@ func TestGetDuties_GetValidatorStatusFailed(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{
+	validatorClient := &BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 	}
 
@@ -1371,7 +1371,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		iface.ErrNotSupported,
 	).MinTimes(1)
 
-	validatorClient := &beaconApiValidatorClient{
+	validatorClient := &BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		dutiesProvider:          dutiesProvider,
 		prysmBeaconChainCLient:  prysmBeaconChainClient,

@@ -10,7 +10,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Context, registrations []*ethpb.SignedValidatorRegistrationV1) error {
+func (c *BeaconApiValidatorClient) submitValidatorRegistrations(ctx context.Context, registrations []*ethpb.SignedValidatorRegistrationV1) error {
 	const endpoint = "/eth/v1/validator/register_validator"
 
 	jsonRegistration := make([]*shared.SignedValidatorRegistration, len(registrations))

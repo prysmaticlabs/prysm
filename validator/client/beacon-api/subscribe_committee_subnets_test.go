@@ -103,7 +103,7 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{
+	validatorClient := &BeaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 		dutiesProvider:  dutiesProvider,
 	}
@@ -285,7 +285,7 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &beaconApiValidatorClient{
+			validatorClient := &BeaconApiValidatorClient{
 				jsonRestHandler: jsonRestHandler,
 				dutiesProvider:  dutiesProvider,
 			}

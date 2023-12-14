@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
@@ -100,7 +101,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	defer stateSub.Unsubscribe()
 
 	// Set up SSE response headers
-	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Connection", "keep-alive")
 
 	// Handle each event received and context cancellation.

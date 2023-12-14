@@ -381,7 +381,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := beaconApiValidatorClient{
+			validatorClient := BeaconApiValidatorClient{
 				jsonRestHandler:         jsonRestHandler,
 				stateValidatorsProvider: stateValidatorsProvider,
 			}
@@ -821,7 +821,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				}
 			}
 
-			validatorClient := beaconApiValidatorClient{
+			validatorClient := BeaconApiValidatorClient{
 				jsonRestHandler:         jsonRestHandler,
 				stateValidatorsProvider: stateValidatorsProvider,
 			}

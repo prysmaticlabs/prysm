@@ -55,7 +55,7 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 	).Times(1)
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	validatorClient := beaconApiValidatorClient{
+	validatorClient := BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
@@ -109,7 +109,7 @@ func TestValidatorStatus_Error(t *testing.T) {
 		errors.New("a specific error"),
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	validatorClient := BeaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 	_, err := validatorClient.ValidatorStatus(
 		ctx,
@@ -183,7 +183,7 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		iface.ErrNotSupported,
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{
+	validatorClient := BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
@@ -237,7 +237,7 @@ func TestMultipleValidatorStatus_Error(t *testing.T) {
 		errors.New("a specific error"),
 	).Times(1)
 
-	validatorClient := beaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
+	validatorClient := BeaconApiValidatorClient{stateValidatorsProvider: stateValidatorsProvider}
 
 	_, err := validatorClient.MultipleValidatorStatus(
 		ctx,
@@ -433,7 +433,7 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		},
 	}
 
-	validatorClient := beaconApiValidatorClient{
+	validatorClient := BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
@@ -504,7 +504,7 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		},
 	}
 
-	validatorClient := beaconApiValidatorClient{
+	validatorClient := BeaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		prysmBeaconChainCLient: prysmBeaconChainClient{
 			nodeClient: &beaconApiNodeClient{
@@ -735,7 +735,7 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					iface.ErrNotSupported,
 				).Times(testCase.validatorCountCalled)
 
-				validatorClient := beaconApiValidatorClient{
+				validatorClient := BeaconApiValidatorClient{
 					stateValidatorsProvider: stateValidatorsProvider,
 					prysmBeaconChainCLient: prysmBeaconChainClient{
 						nodeClient: &beaconApiNodeClient{

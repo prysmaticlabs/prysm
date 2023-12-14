@@ -17,7 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
+func (c *BeaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMessage *ethpb.SyncCommitteeMessage) error {
 	const endpoint = "/eth/v1/beacon/pool/sync_committees"
 
 	jsonSyncCommitteeMessage := &shared.SyncCommitteeMessage{
@@ -43,7 +43,7 @@ func (c *beaconApiValidatorClient) submitSyncMessage(ctx context.Context, syncMe
 	return nil
 }
 
-func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
+func (c *BeaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) (*ethpb.SyncMessageBlockRootResponse, error) {
 	// Get head beacon block root.
 	var resp beacon.BlockRootResponse
 	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/blocks/head/root", &resp)
@@ -78,7 +78,7 @@ func (c *beaconApiValidatorClient) getSyncMessageBlockRoot(ctx context.Context) 
 	}, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
+func (c *BeaconApiValidatorClient) getSyncCommitteeContribution(
 	ctx context.Context,
 	req *ethpb.SyncCommitteeContributionRequest,
 ) (*ethpb.SyncCommitteeContribution, error) {
@@ -108,7 +108,7 @@ func (c *beaconApiValidatorClient) getSyncCommitteeContribution(
 	return convertSyncContributionJsonToProto(resp.Data)
 }
 
-func (c *beaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
+func (c *BeaconApiValidatorClient) getSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
 	validatorIndexResponse, err := c.validatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: in.PublicKey})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator index")

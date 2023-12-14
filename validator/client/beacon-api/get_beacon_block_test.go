@@ -36,7 +36,7 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 	assert.ErrorContains(t, "failed to query GET REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
@@ -141,7 +141,7 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 				nil,
 			).Times(1)
 
-			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
@@ -178,7 +178,7 @@ func TestGetBeaconBlock_Phase0Valid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -222,7 +222,7 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -267,7 +267,7 @@ func TestGetBeaconBlock_BellatrixValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -313,7 +313,7 @@ func TestGetBeaconBlock_BlindedBellatrixValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -359,7 +359,7 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -405,7 +405,7 @@ func TestGetBeaconBlock_BlindedCapellaValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -451,7 +451,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -497,7 +497,7 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -550,7 +550,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 
@@ -611,7 +611,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
 	require.NoError(t, err)
 

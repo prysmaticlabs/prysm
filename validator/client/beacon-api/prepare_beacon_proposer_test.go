@@ -80,7 +80,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 		},
 	}
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	err = validatorClient.prepareBeaconProposer(ctx, protoRecipients)
 	require.NoError(t, err)
 }
@@ -103,7 +103,7 @@ func TestPrepareBeaconProposer_BadRequest(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	err := validatorClient.prepareBeaconProposer(ctx, nil)
 	assert.ErrorContains(t, "foo error", err)
 }

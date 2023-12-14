@@ -38,7 +38,7 @@ func TestProposeBeaconBlock_BlindedDeneb(t *testing.T) {
 		nil,
 	)
 
-	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	proposeResponse, err := validatorClient.proposeBeaconBlock(context.Background(), genericSignedBlock)
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)

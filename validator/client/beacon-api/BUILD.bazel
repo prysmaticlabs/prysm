@@ -16,6 +16,7 @@ go_library(
         "doppelganger.go",
         "duties.go",
         "errors.go",
+        "event_handler.go",
         "genesis.go",
         "get_beacon_block.go",
         "index.go",
