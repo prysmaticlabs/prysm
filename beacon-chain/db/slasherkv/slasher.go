@@ -217,35 +217,33 @@ func (s *Store) SaveAttestationRecordsForValidators(
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveAttestationRecordsForValidators")
 	defer span.End()
-	encodedTargetEpoch := make([][]byte, len(attestations))
+	var err error
+	const encodedEpochSize = 8
+	const encodedValidatorSize = 5
+	const keySize = encodedEpochSize + encodedValidatorSize
+	keys := make([][][keySize]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
-	encodedIndices := make([][]byte, len(attestations))
 	for i, att := range attestations {
 		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
-		value, err := encodeAttestationRecord(att)
+		keys[i] = make([][keySize]byte, len(att.IndexedAttestation.AttestingIndices))
+		for j, idx := range att.IndexedAttestation.AttestingIndices {
+			encodedIdx := encodeValidatorIndex(primitives.ValidatorIndex(idx))
+			copy(keys[i][j][:], append(encEpoch, encodedIdx...))
+		}
+		encodedRecords[i], err = encodeAttestationRecord(att)
 		if err != nil {
 			return err
 		}
-		indicesBytes := make([]byte, len(att.IndexedAttestation.AttestingIndices)*8)
-		for _, idx := range att.IndexedAttestation.AttestingIndices {
-			encodedIdx := encodeValidatorIndex(primitives.ValidatorIndex(idx))
-			indicesBytes = append(indicesBytes, encodedIdx...)
-		}
-		encodedIndices[i] = indicesBytes
-		encodedTargetEpoch[i] = encEpoch
-		encodedRecords[i] = value
 	}
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 		for i, att := range attestations {
-			if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
+			if err = attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
-			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-				encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
-				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
+			for j := range att.IndexedAttestation.AttestingIndices {
+				if err = signingRootsBkt.Put(keys[i][j][:], att.SigningRoot[:]); err != nil {
 					return err
 				}
 			}
