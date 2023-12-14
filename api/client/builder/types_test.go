@@ -666,25 +666,20 @@ var testExampleExecutionPayloadDenebTooManyBlobs = fmt.Sprintf(`{
       "proofs": [
         "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"
       ],
-      "blobs": [
-        "%s",
-        "%s",
-        "%s",
-        "%s",
-        "%s",
-        "%s",
-        "%s"
-      ]
+      "blobs": %s
     }
   }
-}`, hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 1
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 2
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 3
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 4
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 5
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 6
-	hexutil.Encode(make([]byte, fieldparams.BlobLength)), // 7
-)
+}`, beyondMaxEmptyBlobs())
+
+func beyondMaxEmptyBlobs() string {
+	moreThanMax := fieldparams.MaxBlobCommitmentsPerBlock + 2
+	blobs := make([]string, moreThanMax)
+	b, err := json.Marshal(blobs)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
 
 var testExampleExecutionPayloadDenebDifferentCommitmentCount = fmt.Sprintf(`{
   "version": "deneb",
@@ -1238,7 +1233,7 @@ func TestExecutionPayloadResponseDenebToProtoInvalidBlobCount(t *testing.T) {
 	hr := &ExecPayloadResponseDeneb{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebTooManyBlobs), hr))
 	_, _, err := hr.ToProto()
-	require.ErrorContains(t, "blobs length 7 is more than max 6", err)
+	require.ErrorContains(t, fmt.Sprintf("blobs length %d is more than max %d", fieldparams.MaxBlobCommitmentsPerBlock+2, fieldparams.MaxBlobCommitmentsPerBlock), err)
 }
 
 func TestExecutionPayloadResponseDenebToProtoDifferentCommitmentCount(t *testing.T) {
