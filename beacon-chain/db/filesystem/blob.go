@@ -240,8 +240,12 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
-			blobsPrunedCounter.Add(fieldparams.MaxBlobsPerBlock)
-			blobsTotalGauge.Add(-fieldparams.MaxBlobsPerBlock)
+			num, err := bs.countFiles(folder.Name())
+			if err != nil {
+				return err
+			}
+			blobsPrunedCounter.Add(float64(num))
+			blobsTotalGauge.Add(-float64(num))
 		}
 	}
 	return nil

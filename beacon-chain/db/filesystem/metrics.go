@@ -3,7 +3,6 @@ package filesystem
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	field_params "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/spf13/afero"
 )
 
@@ -31,10 +30,27 @@ var (
 // CollectTotalBlobMetric set the number of blobs currently present in the filesystem
 // to the blobsTotalGauge metric.
 func (bs *BlobStorage) CollectTotalBlobMetric() error {
+	totalBlobs := 0
 	folders, err := afero.ReadDir(bs.fs, ".")
 	if err != nil {
 		return err
 	}
-	blobsTotalGauge.Set(float64(len(folders) * field_params.MaxBlobsPerBlock))
+	for _, folder := range folders {
+		num, err := bs.countFiles(folder.Name())
+		if err != nil {
+			return err
+		}
+		totalBlobs = totalBlobs + num
+	}
+	blobsTotalGauge.Set(float64(totalBlobs))
 	return nil
+}
+
+// countFiles returns the length of blob files for a given directory.
+func (bs *BlobStorage) countFiles(folderName string) (int, error) {
+	files, err := afero.ReadDir(bs.fs, folderName)
+	if err != nil {
+		return 0, err
+	}
+	return len(files), nil
 }
