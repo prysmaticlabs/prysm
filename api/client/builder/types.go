@@ -1021,8 +1021,8 @@ type BlobsBundle struct {
 
 // ToProto returns a BlobsBundle Proto.
 func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
-	if len(b.Blobs) > fieldparams.MaxBlobsPerBlock {
-		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobsPerBlock)
+	if len(b.Blobs) > fieldparams.MaxBlobCommitmentsPerBlock {
+		return nil, fmt.Errorf("blobs length %d is more than max %d", len(b.Blobs), fieldparams.MaxBlobCommitmentsPerBlock)
 	}
 	if len(b.Commitments) != len(b.Blobs) {
 		return nil, fmt.Errorf("commitments length %d does not equal blobs length %d", len(b.Commitments), len(b.Blobs))

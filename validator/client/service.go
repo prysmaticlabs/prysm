@@ -17,7 +17,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
@@ -215,7 +214,7 @@ func (v *ValidatorService) Start() {
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
 		walletInitializedFeed:          v.walletInitializedFeed,
-		blockFeed:                      new(event.Feed),
+		slotFeed:                       new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
@@ -225,16 +224,6 @@ func (v *ValidatorService) Start() {
 		prysmBeaconClient:              prysmBeaconClient,
 		validatorRegBatchSize:          v.validatorRegBatchSize,
 	}
-
-	// To resolve a race condition at startup due to the interface
-	// nature of the abstracted block type. We initialize
-	// the inner type of the feed before hand. So that
-	// during future accesses, there will be no panics here
-	// from type incompatibility.
-	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
-	sub := valStruct.blockFeed.Subscribe(tempChan)
-	sub.Unsubscribe()
-	close(tempChan)
 
 	v.validator = valStruct
 	go run(v.ctx, v.validator)
