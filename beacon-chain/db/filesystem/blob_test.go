@@ -15,8 +15,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/spf13/afero"
 )
 
@@ -161,6 +163,23 @@ func TestShouldPrune(t *testing.T) {
 	slot3 := primitives.Slot(8018)
 	p3 := bs.shouldPrune(slot3)
 	require.Equal(t, true, p3)
+}
+
+func TestPruneOlderThan(t *testing.T) {
+	bs := NewEphemeralBlobStorage(t)
+	slot := primitives.Slot(200)
+
+	err := bs.pruneOlderThan(slot)
+	require.NoError(t, err)
+	// Check that lastPrunedEpoch and atomic value were updated to 6
+	assert.Equal(t, uint64(slots.ToEpoch(slot)), bs.atomicPrunedEpoch.Load())
+	assert.Equal(t, slots.ToEpoch(slot), bs.lastPrunedEpoch)
+
+	bs.lastPrunedEpoch = 3
+	err = bs.pruneOlderThan(slot)
+	require.NoError(t, err)
+	// Check that nothing happens
+	assert.NotEqual(t, bs.atomicPrunedEpoch.Load(), bs.lastPrunedEpoch)
 }
 
 func TestBlobIndicesBounds(t *testing.T) {
