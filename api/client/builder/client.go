@@ -423,22 +423,22 @@ func non200Err(response *http.Response) error {
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
-	case 204:
+	case http.StatusNoContent:
 		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
-	case 400:
+	case http.StatusBadRequest:
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
 		log.WithError(ErrBadRequest).Debug(msg)
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
-	case 404:
+	case http.StatusNotFound:
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
 		log.WithError(ErrNotFound).Debug(msg)
 		return errors.Wrap(ErrNotFound, errMessage.Message)
-	case 500:
+	case http.StatusInternalServerError:
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
