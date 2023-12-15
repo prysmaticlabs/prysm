@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -46,6 +47,8 @@ const (
 )
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
+
+const chanBuffer = 1000
 
 var casesHandled = map[string]bool{
 	HeadTopic:                      true,
@@ -89,9 +92,9 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Subscribe to event feeds from information received in the beacon node runtime.
-	opsChan := make(chan *feed.Event, 1)
+	opsChan := make(chan *feed.Event, chanBuffer)
 	opsSub := s.OperationNotifier.OperationFeed().Subscribe(opsChan)
-	stateChan := make(chan *feed.Event, 1)
+	stateChan := make(chan *feed.Event, chanBuffer)
 	stateSub := s.StateNotifier.StateFeed().Subscribe(stateChan)
 	defer opsSub.Unsubscribe()
 	defer stateSub.Unsubscribe()
@@ -173,19 +176,18 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 		if _, ok := requestedTopics[BlobSidecarTopic]; !ok {
 			return
 		}
-		// TODO: fix this when we fix p2p
-		//blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
-		//if !ok {
-		//	write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
-		//	return
-		//}
-		//versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.Message.KzgCommitment)
+		blobData, ok := event.Data.(*operation.BlobSidecarReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, BlobSidecarTopic)
+			return
+		}
+		versionedHash := blockchain.ConvertKzgCommitmentToVersionedHash(blobData.Blob.KzgCommitment)
 		blobEvent := &BlobSidecarEvent{
-			//BlockRoot:     hexutil.Encode(blobData.Blob.Message.BlockRoot),
-			//Index:         fmt.Sprintf("%d", blobData.Blob.Message.Index),
-			//Slot:          fmt.Sprintf("%d", blobData.Blob.Message.Slot),
-			//VersionedHash: versionedHash.String(),
-			//KzgCommitment: hexutil.Encode(blobData.Blob.Message.KzgCommitment),
+			BlockRoot:     hexutil.Encode(blobData.Blob.BlockRootSlice()),
+			Index:         fmt.Sprintf("%d", blobData.Blob.Index),
+			Slot:          fmt.Sprintf("%d", blobData.Blob.Slot()),
+			VersionedHash: versionedHash.String(),
+			KzgCommitment: hexutil.Encode(blobData.Blob.KzgCommitment),
 		}
 		send(w, flusher, BlobSidecarTopic, blobEvent)
 	}

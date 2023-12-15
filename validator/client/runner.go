@@ -42,7 +42,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 
 	connectionErrorChannel := make(chan error, 1)
-	go v.ReceiveBlocks(ctx, connectionErrorChannel)
+	go v.ReceiveSlots(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
@@ -81,10 +81,10 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case blocksError := <-connectionErrorChannel:
-			if blocksError != nil {
-				log.WithError(blocksError).Warn("block stream interrupted")
-				go v.ReceiveBlocks(ctx, connectionErrorChannel)
+		case slotsError := <-connectionErrorChannel:
+			if slotsError != nil {
+				log.WithError(slotsError).Warn("slots stream interrupted")
+				go v.ReceiveSlots(ctx, connectionErrorChannel)
 				continue
 			}
 		case currentKeys := <-accountsChangedChan:
