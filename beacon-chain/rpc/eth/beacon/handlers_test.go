@@ -2793,7 +2793,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 			bs.GetBlockHeaders(writer, request)
 			require.Equal(t, http.StatusNotFound, writer.Code)
-			e := &httputil.DefaultErrorJson{}
+			e := &httputil.DefaultJsonError{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusNotFound, e.Code)
 			assert.StringContains(t, "No blocks found", e.Message)
@@ -2849,7 +2849,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 		s.GetBlockHeader(writer, request)
 		require.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "block_id is required in URL params", e.Message)
@@ -2988,7 +2988,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		s.GetFinalityCheckpoints(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "state_id is required in URL params", e.Message)
@@ -3001,7 +3001,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		s.GetFinalityCheckpoints(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "State not found", e.Message)
@@ -3106,7 +3106,7 @@ func TestGetGenesis(t *testing.T) {
 
 		s.GetGenesis(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
@@ -3127,7 +3127,7 @@ func TestGetGenesis(t *testing.T) {
 
 		s.GetGenesis(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)

@@ -37,10 +37,10 @@ func (m *MockJsonRestHandler) EXPECT() *MockJsonRestHandlerMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockJsonRestHandler) Get(ctx context.Context, query string, resp interface{}) (*httputil.DefaultErrorJson, error) {
+func (m *MockJsonRestHandler) Get(ctx context.Context, query string, resp interface{}) (*httputil.DefaultJsonError, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, query, resp)
-	ret0, _ := ret[0].(*httputil.DefaultErrorJson)
+	ret0, _ := ret[0].(*httputil.DefaultJsonError)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -52,10 +52,10 @@ func (mr *MockJsonRestHandlerMockRecorder) Get(ctx, query, resp interface{}) *go
 }
 
 // Post mocks base method.
-func (m *MockJsonRestHandler) Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*httputil.DefaultErrorJson, error) {
+func (m *MockJsonRestHandler) Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*httputil.DefaultJsonError, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Post", ctx, endpoint, headers, data, resp)
-	ret0, _ := ret[0].(*httputil.DefaultErrorJson)
+	ret0, _ := ret[0].(*httputil.DefaultJsonError)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
