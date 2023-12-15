@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	errIndexOutOfBounds = errors.New("blob index in file name > MaxBlobsPerBlock")
+	errIndexOutOfBounds = errors.New("blob index in file name >= MaxBlobsPerBlock")
 )
 
 const (
