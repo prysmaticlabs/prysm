@@ -173,11 +173,11 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 
 func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) {
 	cfg := params.BeaconConfig()
-	repositionFutureEpochs(cfg)
-	undo, err := params.SetActiveWithUndo(cfg)
-	require.NoError(t, err)
+	copiedCfg := cfg.Copy()
+	repositionFutureEpochs(copiedCfg)
+	params.OverrideBeaconConfig(copiedCfg)
 	cleanup := func() {
-		require.NoError(t, undo())
+		params.OverrideBeaconConfig(cfg)
 	}
 	maxBlobs := fieldparams.MaxBlobsPerBlock
 	chain, clock := defaultMockChain(t)
