@@ -78,7 +78,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		s, ok := status.FromError(err)
 		grpcNotFound := ok && s.Code() == codes.NotFound
 		// handle http not found
-		jsonErr := &httputil.DefaultErrorJson{}
+		jsonErr := &httputil.DefaultJsonError{}
 		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
 
 		if grpcNotFound || httpNotFound {

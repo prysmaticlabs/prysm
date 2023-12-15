@@ -13,8 +13,8 @@ import (
 )
 
 type JsonRestHandler interface {
-	Get(ctx context.Context, query string, resp interface{}) (*httputil.DefaultErrorJson, error)
-	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*httputil.DefaultErrorJson, error)
+	Get(ctx context.Context, query string, resp interface{}) (*httputil.DefaultJsonError, error)
+	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) (*httputil.DefaultJsonError, error)
 }
 
 type beaconApiJsonRestHandler struct {
@@ -23,8 +23,8 @@ type beaconApiJsonRestHandler struct {
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
-// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object and returned as the first return value.
-func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) (*httputil.DefaultErrorJson, error) {
+// If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
+func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) (*httputil.DefaultJsonError, error) {
 	if resp == nil {
 		return nil, errors.New("resp is nil")
 	}
@@ -49,14 +49,14 @@ func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 }
 
 // Post sends a POST request and decodes the response body as a JSON object into the passed in object.
-// If an HTTP error is returned, the body is decoded as a DefaultErrorJson JSON object and returned as the first return value.
+// If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
 func (c beaconApiJsonRestHandler) Post(
 	ctx context.Context,
 	apiEndpoint string,
 	headers map[string]string,
 	data *bytes.Buffer,
 	resp interface{},
-) (*httputil.DefaultErrorJson, error) {
+) (*httputil.DefaultJsonError, error) {
 	if data == nil {
 		return nil, errors.New("data is nil")
 	}
@@ -85,7 +85,7 @@ func (c beaconApiJsonRestHandler) Post(
 	return decodeResp(httpResp, resp)
 }
 
-func decodeResp(httpResp *http.Response, resp interface{}) (*httputil.DefaultErrorJson, error) {
+func decodeResp(httpResp *http.Response, resp interface{}) (*httputil.DefaultJsonError, error) {
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read response body for %s", httpResp.Request.URL)
@@ -95,12 +95,12 @@ func decodeResp(httpResp *http.Response, resp interface{}) (*httputil.DefaultErr
 		if httpResp.StatusCode == http.StatusOK {
 			return nil, nil
 		}
-		return &httputil.DefaultErrorJson{Code: httpResp.StatusCode, Message: string(body)}, nil
+		return &httputil.DefaultJsonError{Code: httpResp.StatusCode, Message: string(body)}, nil
 	}
 
 	decoder := json.NewDecoder(bytes.NewBuffer(body))
 	if httpResp.StatusCode != http.StatusOK {
-		errorJson := &httputil.DefaultErrorJson{}
+		errorJson := &httputil.DefaultJsonError{}
 		if err = decoder.Decode(errorJson); err != nil {
 			return nil, errors.Wrapf(err, "failed to decode response body into error json for %s", httpResp.Request.URL)
 		}

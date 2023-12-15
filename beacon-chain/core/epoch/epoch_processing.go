@@ -114,7 +114,7 @@ func ProcessRegistryUpdates(ctx context.Context, state state.BeaconState) (state
 			// barely happen
 			maxExitEpoch, churn := validators.MaxExitEpochAndChurn(state)
 			state, _, err = validators.InitiateValidatorExit(ctx, state, primitives.ValidatorIndex(idx), maxExitEpoch, churn)
-			if err != nil && !errors.Is(err, validators.ValidatorAlreadyExitedErr) {
+			if err != nil && !errors.Is(err, validators.ErrValidatorAlreadyExited) {
 				return nil, errors.Wrapf(err, "could not initiate exit for validator %d", idx)
 			}
 		}

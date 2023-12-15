@@ -441,7 +441,7 @@ func verifyAndPopulateBlobs(bwb []blocks2.BlockWithVerifiedBlobs, blobs []blocks
 }
 
 func missingCommitError(root [32]byte, slot primitives.Slot, missing [][]byte) error {
-	missStr := make([]string, len(missing))
+	missStr := make([]string, 0, len(missing))
 	for k := range missing {
 		missStr = append(missStr, fmt.Sprintf("%#x", k))
 	}

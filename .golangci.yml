@@ -22,6 +22,7 @@ linters:
     - whitespace
     - misspell
     - mirror
+    - errname
 
 linters-settings:
   gocognit:
