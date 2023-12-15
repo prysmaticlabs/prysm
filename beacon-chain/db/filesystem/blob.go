@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -71,9 +72,10 @@ func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs              afero.Fs
-	retentionEpochs primitives.Epoch
-	lastPrunedEpoch primitives.Epoch
+	fs                afero.Fs
+	retentionEpochs   primitives.Epoch
+	lastPrunedEpoch   primitives.Epoch
+	atomicPrunedEpoch atomic.Uint64
 }
 
 // Save saves blobs given a list of sidecars.
@@ -323,11 +325,13 @@ func (bs *BlobStorage) shouldPrune(slot primitives.Slot) bool {
 
 // pruneOlderThan prunes blobs in the base directory based on the retention epoch and current slot.
 func (bs *BlobStorage) pruneOlderThan(slot primitives.Slot) error {
-	err := bs.Prune(slot)
-	if err != nil {
-		return err
+	v := bs.atomicPrunedEpoch.CompareAndSwap(uint64(bs.lastPrunedEpoch), uint64(slots.ToEpoch(slot)))
+	if v {
+		err := bs.Prune(slot)
+		if err != nil {
+			return err
+		}
+		bs.lastPrunedEpoch = slots.ToEpoch(slot)
 	}
-	// Update lastPrunedEpoch to the current epoch.
-	bs.lastPrunedEpoch = slots.ToEpoch(slot)
 	return nil
 }
