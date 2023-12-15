@@ -21,6 +21,7 @@ linters:
     - nilerr
     - whitespace
     - misspell
+    - usestdlibvars
     - errname
 
 linters-settings:
