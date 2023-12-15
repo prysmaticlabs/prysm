@@ -327,7 +327,6 @@ func (bs *BlobStorage) shouldPrune(slot primitives.Slot) bool {
 func (bs *BlobStorage) pruneOlderThan(slot primitives.Slot) error {
 	v := bs.atomicPrunedEpoch.CompareAndSwap(uint64(bs.lastPrunedEpoch), uint64(slots.ToEpoch(slot)))
 	if v {
-		log.Debug("Compare and Swap")
 		defer func() {
 			bs.lastPrunedEpoch = slots.ToEpoch(slot)
 		}()
