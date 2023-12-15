@@ -96,7 +96,7 @@ func TestExpectedWithdrawals_BadRequest(t *testing.T) {
 
 			s.ExpectedWithdrawals(writer, request)
 			assert.Equal(t, http.StatusBadRequest, writer.Code)
-			e := &httputil.DefaultErrorJson{}
+			e := &httputil.DefaultJsonError{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 			assert.Equal(t, http.StatusBadRequest, e.Code)
 			assert.StringContains(t, testCase.errorMessage, e.Message)

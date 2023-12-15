@@ -65,7 +65,7 @@ func TestGetPeer(t *testing.T) {
 
 		s.GetPeer(writer, request)
 		require.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Invalid peer ID", e.Message)
@@ -79,7 +79,7 @@ func TestGetPeer(t *testing.T) {
 
 		s.GetPeer(writer, request)
 		require.Equal(t, http.StatusNotFound, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Peer not found", e.Message)

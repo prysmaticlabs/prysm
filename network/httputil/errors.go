@@ -5,7 +5,7 @@ import (
 )
 
 func HandleError(w http.ResponseWriter, message string, code int) {
-	errJson := &DefaultErrorJson{
+	errJson := &DefaultJsonError{
 		Message: message,
 		Code:    code,
 	}

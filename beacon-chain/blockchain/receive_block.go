@@ -106,9 +106,13 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	if err := eg.Wait(); err != nil {
 		return err
 	}
+
+	daStartTime := time.Now()
 	if err := s.isDataAvailable(ctx, blockRoot, blockCopy); err != nil {
 		return errors.Wrap(err, "could not validate blob data availability")
 	}
+	daWaitedTime := time.Since(daStartTime)
+
 	// The rest of block processing takes a lock on forkchoice.
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
@@ -171,7 +175,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 	// Log block sync status.
 	cp = s.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	justified := &ethpb.Checkpoint{Epoch: cp.Epoch, Root: bytesutil.SafeCopyBytes(cp.Root[:])}
-	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix())); err != nil {
+	if err := logBlockSyncStatus(blockCopy.Block(), blockRoot, justified, finalized, receivedTime, uint64(s.genesisTime.Unix()), daWaitedTime); err != nil {
 		log.WithError(err).Error("Unable to log block sync status")
 	}
 	// Log payload data
@@ -183,7 +187,8 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		log.WithError(err).Error("Unable to log state transition data")
 	}
 
-	chainServiceProcessingTime.Observe(float64(time.Since(receivedTime).Milliseconds()))
+	timeWithoutDaWait := time.Since(receivedTime) - daWaitedTime
+	chainServiceProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
 
 	return nil
 }
