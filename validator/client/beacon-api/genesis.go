@@ -14,7 +14,7 @@ import (
 )
 
 type GenesisProvider interface {
-	GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error)
+	GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultJsonError, error)
 }
 
 type beaconApiGenesisProvider struct {
@@ -61,7 +61,7 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error) {
+func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultJsonError, error) {
 	genesisJson := &beacon.GetGenesisResponse{}
 	errorJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson)
 	if err != nil {

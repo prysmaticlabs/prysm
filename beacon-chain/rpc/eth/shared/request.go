@@ -58,7 +58,7 @@ func HexFromRoute(w http.ResponseWriter, r *http.Request, name string, length in
 
 func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, bool) {
 	if s == "" {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
@@ -67,7 +67,7 @@ func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, boo
 	}
 	hexBytes, err := hexutil.Decode(s)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -83,7 +83,7 @@ func ValidateHex(w http.ResponseWriter, name, s string, length int) ([]byte, boo
 
 func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	if s == "" {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is required",
 			Code:    http.StatusBadRequest,
 		}
@@ -92,7 +92,7 @@ func ValidateUint(w http.ResponseWriter, name, s string) (uint64, bool) {
 	}
 	v, err := strconv.ParseUint(s, 10, 64)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: name + " is invalid: " + err.Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -118,7 +118,7 @@ func IsSyncing(
 	headSlot := headFetcher.HeadSlot()
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -139,7 +139,7 @@ func IsSyncing(
 	if err == nil {
 		msg += " Details: " + string(details)
 	}
-	errJson := &httputil.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Message: msg,
 		Code:    http.StatusServiceUnavailable}
 	httputil.WriteError(w, errJson)
@@ -154,7 +154,7 @@ func IsOptimistic(
 ) (bool, error) {
 	isOptimistic, err := optimisticModeFetcher.IsOptimistic(ctx)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: "Could not check optimistic status: " + err.Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -164,7 +164,7 @@ func IsOptimistic(
 	if !isOptimistic {
 		return false, nil
 	}
-	errJson := &httputil.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Code:    http.StatusServiceUnavailable,
 		Message: "Beacon node is currently optimistic and not serving validators",
 	}

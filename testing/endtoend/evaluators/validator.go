@@ -139,7 +139,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 			return err
 		}
 		if httpResp.StatusCode != http.StatusOK {
-			e := httputil.DefaultErrorJson{}
+			e := httputil.DefaultJsonError{}
 			if err = json.NewDecoder(httpResp.Body).Decode(&e); err != nil {
 				return err
 			}
