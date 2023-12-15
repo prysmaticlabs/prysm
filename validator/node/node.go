@@ -63,7 +63,7 @@ type ValidatorClient struct {
 	cliCtx            *cli.Context
 	ctx               context.Context
 	cancel            context.CancelFunc
-	db                *kv.Store
+	db                iface.ValidatorDB
 	services          *runtime.ServiceRegistry // Lifecycle and service store.
 	lock              sync.RWMutex
 	wallet            *wallet.Wallet
