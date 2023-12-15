@@ -24,7 +24,7 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	if wQuota == 0 {
 		return 0, nil
 	}
-	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
+	_, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	for _, b := range batch.canonical() {
 		root := b.Root()

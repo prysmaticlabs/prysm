@@ -22,6 +22,7 @@ linters:
     - whitespace
     - misspell
     - mirror
+    - usestdlibvars
     - errname
 
 linters-settings:
