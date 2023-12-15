@@ -22,12 +22,19 @@ func WithEventHandler(h *EventHandler) ValidatorClientOpt {
 	}
 }
 
+func WithEventErrorChannel(ch chan error) ValidatorClientOpt {
+	return func(c *BeaconApiValidatorClient) {
+		c.eventErrCh = ch
+	}
+}
+
 type BeaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
 	eventHandler            *EventHandler
+	eventErrCh              chan error
 	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
@@ -53,15 +60,6 @@ func NewBeaconApiValidatorClient(host string, timeout time.Duration, opts ...Val
 		o(c)
 	}
 	return c
-}
-
-func (c *BeaconApiValidatorClient) Start(ctx context.Context) error {
-	if c.eventHandler != nil {
-		if err := c.eventHandler.get(ctx, []string{"head"}); err != nil {
-			return errors.Wrapf(err, "event handler stopped working")
-		}
-	}
-	return nil
 }
 
 func (c *BeaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -176,4 +174,16 @@ func (c *BeaconApiValidatorClient) WaitForActivation(ctx context.Context, in *et
 // Deprecated: Do not use.
 func (c *BeaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
 	return c.waitForChainStart(ctx)
+}
+
+func (c *BeaconApiValidatorClient) StartEventStream(ctx context.Context) error {
+	if c.eventHandler != nil {
+		if c.eventErrCh == nil {
+			return errors.New("event handler cannot be initialized without an event error channel")
+		}
+		if err := c.eventHandler.get(ctx, []string{"head"}, c.eventErrCh); err != nil {
+			return errors.Wrapf(err, "event handler stopped working")
+		}
+	}
+	return nil
 }

@@ -45,6 +45,7 @@ go_library(
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/rpc/eth/beacon:go_default_library",
         "//beacon-chain/rpc/eth/config:go_default_library",
+        "//beacon-chain/rpc/eth/events:go_default_library",
         "//beacon-chain/rpc/eth/node:go_default_library",
         "//beacon-chain/rpc/eth/shared:go_default_library",
         "//beacon-chain/rpc/eth/validator:go_default_library",

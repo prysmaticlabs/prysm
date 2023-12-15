@@ -16,7 +16,7 @@ func NewValidatorClient(ctx context.Context, validatorConn validatorHelpers.Node
 
 	if featureFlags.EnableBeaconRESTApi {
 		c := beaconApi.NewBeaconApiValidatorClient(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout(), opt...)
-		if err := c.Start(ctx); err != nil {
+		if err := c.StartEventStream(ctx); err != nil {
 			return nil, errors.Wrap(err, "could not start the validator client")
 		}
 		return c, nil

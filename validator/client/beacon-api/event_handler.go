@@ -14,30 +14,37 @@ const eventByteLimit = 512
 type EventHandler struct {
 	httpClient *http.Client
 	host       string
-	subs       []chan<- []byte
+	subs       []chan<- event
+}
+
+type event struct {
+	eventType string
+	data      string
 }
 
 func NewEventHandler(httpClient *http.Client, host string) *EventHandler {
 	return &EventHandler{
 		httpClient: httpClient,
 		host:       host,
-		subs:       make([]chan<- []byte, 0),
+		subs:       make([]chan<- event, 0),
 	}
 }
 
-func (h *EventHandler) subscribe(ch chan<- []byte) {
+func (h *EventHandler) subscribe(ch chan<- event) {
 	h.subs = append(h.subs, ch)
 }
 
-func (h *EventHandler) get(ctx context.Context, topics []string) error {
+func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan<- error) error {
 	if len(topics) == 0 {
 		return errors.New("no topics provided")
 	}
 
-	url := h.host + "/eth/v1/events?topics=" + strings.Join(topics, ",")
+	allTopics := strings.Join(topics, ",")
+	log.Info("Starting listening to Beacon API events on topics " + allTopics)
+	url := h.host + "/eth/v1/events?topics=" + allTopics
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to create request")
+		return errors.Wrap(err, "failed to create HTTP request")
 	}
 
 	req.Header.Set("Cache-Control", "no-cache")
@@ -50,22 +57,25 @@ func (h *EventHandler) get(ctx context.Context, topics []string) error {
 	}
 	go func() {
 		for {
-			data := make([]byte, eventByteLimit)
-			_, err = httpResp.Body.Read(data)
+			rawData := make([]byte, eventByteLimit)
+			_, err = httpResp.Body.Read(rawData)
 			if err != nil {
-				// TODO error channel? cancel context?
-				log.WithError(err).Error("Failed to read response body")
 				if err = httpResp.Body.Close(); err != nil {
 					log.WithError(err).Error("Failed to close events response body")
 				}
+				eventErrCh <- err
 				return
 			}
 
-			// TODO: remove
-			log.Info(string(data))
+			e := strings.Split(string(rawData), "\n")
+			// we expect: event type, newline, event data, newline, newline
+			if len(e) != 4 {
+				log.Error("Event does not have the correct format")
+				continue
+			}
 
 			for _, ch := range h.subs {
-				ch <- data
+				ch <- event{eventType: e[0], data: e[1]}
 			}
 		}
 	}()

@@ -192,10 +192,20 @@ func (v *ValidatorService) Start() {
 	}
 
 	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
-	validatorClient, err := validatorClientFactory.NewValidatorClient(v.ctx, v.conn, beaconApi.WithEventHandler(evHandler))
+	evErrCh := make(chan error)
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
+	validatorClient, err := validatorClientFactory.NewValidatorClient(v.ctx, v.conn, opts...)
 	if err != nil {
-		log.WithError(err).Fatal("Could not create the validator client")
+		log.WithError(err).Fatal("Could not create the API validator client")
 	}
+	go func() {
+		select {
+		case e := <-evErrCh:
+			log.WithError(e).Error("Event streaming failed")
+			v.cancel()
+		}
+	}()
+
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
 	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
 
