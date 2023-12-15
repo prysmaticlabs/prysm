@@ -315,6 +315,9 @@ func (s *Service) AggregatedSigAndAggregationBits(
 func (s *Service) GetAttestationData(
 	ctx context.Context, req *ethpb.AttestationDataRequest,
 ) (*ethpb.AttestationData, *RpcError) {
+	if req.Slot != s.GenesisTimeFetcher.CurrentSlot() {
+		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: slot %d is not the current slot %d", req.Slot, s.GenesisTimeFetcher.CurrentSlot())}
+	}
 	if err := helpers.ValidateAttestationTime(
 		req.Slot,
 		s.GenesisTimeFetcher.GenesisTime(),
@@ -323,16 +326,8 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}
 
-	if req.Slot != s.GenesisTimeFetcher.CurrentSlot() {
-		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: slot %d is not the current slot %d", req.Slot, s.GenesisTimeFetcher.CurrentSlot())}
-	}
-
 	s.AttestationCache.RLock()
-	res, err := s.AttestationCache.Get(ctx)
-	if err != nil {
-		s.AttestationCache.RUnlock()
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
-	}
+	res := s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		s.AttestationCache.RUnlock()
 		return &ethpb.AttestationData{
@@ -357,10 +352,7 @@ func (s *Service) GetAttestationData(
 	// We check the cache again as in the event there are multiple inflight requests for
 	// the same attestation data, the cache might have been filled while we were waiting
 	// to acquire the lock.
-	res, err = s.AttestationCache.Get(ctx)
-	if err != nil {
-		return nil, &RpcError{Reason: Internal, Err: errors.Errorf("could not retrieve data from attestation cache: %v", err)}
-	}
+	res = s.AttestationCache.Get()
 	if res != nil && res.Slot == req.Slot {
 		return &ethpb.AttestationData{
 			Slot:            res.Slot,
@@ -387,7 +379,7 @@ func (s *Service) GetAttestationData(
 		return nil, &RpcError{Reason: Internal, Err: errors.Wrap(err, "could not get target root")}
 	}
 	justifiedCheckpoint := s.FinalizedFetcher.CurrentJustifiedCheckpt()
-	if err = s.AttestationCache.Put(ctx, &cache.AttestationConsensusData{
+	if err = s.AttestationCache.Put(&cache.AttestationConsensusData{
 		Slot:     req.Slot,
 		HeadRoot: headRoot,
 		Target: forkchoicetypes.Checkpoint{

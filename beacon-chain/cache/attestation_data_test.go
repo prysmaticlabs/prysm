@@ -1,7 +1,6 @@
 package cache_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -10,11 +9,9 @@ import (
 )
 
 func TestAttestationCache_RoundTrip(t *testing.T) {
-	ctx := context.Background()
 	c := cache.NewAttestationCache()
 
-	a, err := c.Get(ctx)
-	require.NoError(t, err)
+	a := c.Get()
 	require.Nil(t, a)
 
 	insert := &cache.AttestationConsensusData{
@@ -29,11 +26,10 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 			Root:  [32]byte{5},
 		},
 	}
-	err = c.Put(ctx, insert)
+	err := c.Put(insert)
 	require.NoError(t, err)
 
-	a, err = c.Get(ctx)
-	require.NoError(t, err)
+	a = c.Get()
 	require.Equal(t, insert, a)
 
 	insert = &cache.AttestationConsensusData{
@@ -49,10 +45,9 @@ func TestAttestationCache_RoundTrip(t *testing.T) {
 		},
 	}
 
-	err = c.Put(ctx, insert)
+	err = c.Put(insert)
 	require.NoError(t, err)
 
-	a, err = c.Get(ctx)
-	require.NoError(t, err)
+	a = c.Get()
 	require.Equal(t, insert, a)
 }

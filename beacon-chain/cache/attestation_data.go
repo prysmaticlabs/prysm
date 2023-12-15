@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"context"
 	"errors"
 	"sync"
 
@@ -18,8 +17,8 @@ type AttestationConsensusData struct {
 
 // AttestationCache stores cached results of AttestationData requests.
 type AttestationCache struct {
-	a    *AttestationConsensusData
-	lock sync.RWMutex
+	a *AttestationConsensusData
+	sync.RWMutex
 }
 
 // NewAttestationCache creates a new instance of AttestationCache.
@@ -28,35 +27,15 @@ func NewAttestationCache() *AttestationCache {
 }
 
 // Get retrieves cached attestation data, recording a cache hit or miss. This method is lock free.
-func (c *AttestationCache) Get(ctx context.Context) (*AttestationConsensusData, error) {
-	return c.a, nil
+func (c *AttestationCache) Get() *AttestationConsensusData {
+	return c.a
 }
 
 // Put adds a response to the cache. This method is lock free.
-func (c *AttestationCache) Put(ctx context.Context, a *AttestationConsensusData) error {
+func (c *AttestationCache) Put(a *AttestationConsensusData) error {
 	if a == nil {
 		return errors.New("attestation cannot be nil")
 	}
 	c.a = a
 	return nil
-}
-
-// Lock locks the cache for writing.
-func (c *AttestationCache) Lock() {
-	c.lock.Lock()
-}
-
-// Unlock unlocks the cache for writing.
-func (c *AttestationCache) Unlock() {
-	c.lock.Unlock()
-}
-
-// RLock locks the cache for reading.
-func (c *AttestationCache) RLock() {
-	c.lock.RLock()
-}
-
-// RUnlock unlocks the cache for reading.
-func (c *AttestationCache) RUnlock() {
-	c.lock.RUnlock()
 }
