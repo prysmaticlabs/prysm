@@ -1,8 +1,10 @@
+//go:build !develop
+
+//go:test !develop
+
 package params
 
-import (
-	"testing"
-)
+import "testing"
 
 // SetupTestConfigCleanup preserves configurations allowing to modify them within tests without any
 // restrictions, everything is restored after the test.
