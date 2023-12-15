@@ -167,7 +167,9 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	if err != nil {
 		return blocks.VerifiedROBlob{}, err
 	}
-	defer blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
+	defer func() {
+		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
+	}()
 	return verification.BlobSidecarNoop(ro)
 }
 
