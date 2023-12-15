@@ -79,7 +79,6 @@ linters:
     - tagliatelle
     - thelper
     - unparam
-    - usestdlibvars
     - varnamelen
     - wastedassign
     - wrapcheck
