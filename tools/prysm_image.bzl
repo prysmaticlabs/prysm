@@ -26,6 +26,9 @@ def prysm_image_upload(
             "//tools:bash_tar",
             ":binary_tar",
         ],
+        labels = {
+          "org.opencontainers.image.source": "https://github.com/prysmaticlabs/prysm",
+        },
         tags = tags,
     )
 
