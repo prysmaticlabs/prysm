@@ -37,11 +37,11 @@ func (m *MockGenesisProvider) EXPECT() *MockGenesisProviderMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error) {
+func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultJsonError, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGenesis", ctx)
 	ret0, _ := ret[0].(*beacon.Genesis)
-	ret1, _ := ret[1].(*httputil.DefaultErrorJson)
+	ret1, _ := ret[1].(*httputil.DefaultJsonError)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }

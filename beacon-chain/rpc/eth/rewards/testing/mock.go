@@ -11,18 +11,18 @@ import (
 
 type MockBlockRewardFetcher struct {
 	Rewards *rewards.BlockRewards
-	Error   *httputil.DefaultErrorJson
+	Error   *httputil.DefaultJsonError
 	State   state.BeaconState
 }
 
-func (m *MockBlockRewardFetcher) GetBlockRewardsData(_ context.Context, _ interfaces.ReadOnlyBeaconBlock) (*rewards.BlockRewards, *httputil.DefaultErrorJson) {
+func (m *MockBlockRewardFetcher) GetBlockRewardsData(_ context.Context, _ interfaces.ReadOnlyBeaconBlock) (*rewards.BlockRewards, *httputil.DefaultJsonError) {
 	if m.Error != nil {
 		return nil, m.Error
 	}
 	return m.Rewards, nil
 }
 
-func (m *MockBlockRewardFetcher) GetStateForRewards(_ context.Context, _ interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultErrorJson) {
+func (m *MockBlockRewardFetcher) GetStateForRewards(_ context.Context, _ interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultJsonError) {
 	if m.Error != nil {
 		return nil, m.Error
 	}

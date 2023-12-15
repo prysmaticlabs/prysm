@@ -146,7 +146,7 @@ func decodeRespTest(t *testing.T) {
 	})
 	t.Run("non-200 JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
-		b, err := json.Marshal(&httputil.DefaultErrorJson{Code: http.StatusInternalServerError, Message: "error"})
+		b, err := json.Marshal(&httputil.DefaultJsonError{Code: http.StatusInternalServerError, Message: "error"})
 		require.NoError(t, err)
 		body.Write(b)
 		r := &http.Response{StatusCode: http.StatusInternalServerError, Body: io.NopCloser(&body), Header: map[string][]string{"Content-Type": {api.JsonMediaType}}}

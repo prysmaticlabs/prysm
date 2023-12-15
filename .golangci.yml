@@ -22,6 +22,7 @@ linters:
     - whitespace
     - misspell
     - usestdlibvars
+    - errname
 
 linters-settings:
   gocognit:

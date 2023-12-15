@@ -73,7 +73,7 @@ func logStateTransitionData(b interfaces.ReadOnlyBeaconBlock) error {
 	return nil
 }
 
-func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte, justified, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64) error {
+func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte, justified, finalized *ethpb.Checkpoint, receivedTime time.Time, genesisTime uint64, daWaitedTime time.Duration) error {
 	startTime, err := slots.ToTime(genesisTime, block.Slot())
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func logBlockSyncStatus(block interfaces.ReadOnlyBeaconBlock, blockRoot [32]byte
 			"parentRoot":                fmt.Sprintf("0x%s...", hex.EncodeToString(parentRoot[:])[:8]),
 			"version":                   version.String(block.Version()),
 			"sinceSlotStartTime":        prysmTime.Now().Sub(startTime),
-			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime),
+			"chainServiceProcessedTime": prysmTime.Now().Sub(receivedTime) - daWaitedTime,
 			"deposits":                  len(block.Body().Deposits()),
 		}
 		log.WithFields(lf).Debug("Synced new block")
