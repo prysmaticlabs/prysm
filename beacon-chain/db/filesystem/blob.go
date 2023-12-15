@@ -254,11 +254,11 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	}
 	for _, folder := range folders {
 		if folder.IsDir() {
-			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
-				return err
-			}
 			num, err := bs.countFiles(folder.Name())
 			if err != nil {
+				return err
+			}
+			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
 			blobsPrunedCounter.Add(float64(num))
