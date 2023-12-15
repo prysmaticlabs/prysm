@@ -106,15 +106,16 @@ type ExecHeaderResponseDeneb struct {
 }
 
 type Builder struct {
-	cfg          *config
-	address      string
-	execClient   *gethRPC.Client
-	currId       *v1.PayloadIDBytes
-	currPayload  interfaces.ExecutionData
-	blobBundle   *v1.BlobsBundle
-	mux          *gMux.Router
-	validatorMap map[string]*eth.ValidatorRegistrationV1
-	srv          *http.Server
+	cfg            *config
+	address        string
+	execClient     *gethRPC.Client
+	currId         *v1.PayloadIDBytes
+	prevBeaconRoot []byte
+	currPayload    interfaces.ExecutionData
+	blobBundle     *v1.BlobsBundle
+	mux            *gMux.Router
+	validatorMap   map[string]*eth.ValidatorRegistrationV1
+	srv            *http.Server
 }
 
 // New creates a proxy server forwarding requests from a consensus client to an execution client.
@@ -247,6 +248,19 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 			return
 		}
 		p.currId = result.Result.PayloadId
+		if rpcObj.Method == ForkchoiceUpdatedMethodV3 {
+			attr := &v1.PayloadAttributesV3{}
+			obj, err := json.Marshal(rpcObj.Params[1])
+			if err != nil {
+				p.cfg.logger.Errorf("Could not marshal attr: %v", err)
+				return
+			}
+			if err := json.Unmarshal(obj, attr); err != nil {
+				p.cfg.logger.Errorf("Could not unmarshal attr: %v", err)
+				return
+			}
+			p.prevBeaconRoot = attr.ParentBeaconBlockRoot
+		}
 		p.cfg.logger.Infof("Received payload id of %#x", result.Result.PayloadId)
 	}
 }
@@ -638,7 +652,7 @@ func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
 	if err != nil {
 		return nil, err
 	}
-	payloadEnv, err := modifyExecutionPayload(*result, big.NewInt(0))
+	payloadEnv, err := modifyExecutionPayload(*result, big.NewInt(0), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -662,7 +676,7 @@ func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWith
 	if err != nil {
 		return nil, err
 	}
-	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue)
+	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -686,7 +700,10 @@ func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValu
 	if err != nil {
 		return nil, err
 	}
-	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue)
+	if p.prevBeaconRoot == nil {
+		p.cfg.logger.Errorf("previous root is nil")
+	}
+	payloadEnv, err := modifyExecutionPayload(*result.ExecutionPayload, result.BlockValue, p.prevBeaconRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -764,8 +781,8 @@ func unmarshalRPCObject(b []byte) (*jsonRPCObject, error) {
 	return r, nil
 }
 
-func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int) (*engine.ExecutionPayloadEnvelope, error) {
-	modifiedBlock, err := executableDataToBlock(execPayload)
+func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int, prevBeaconRoot []byte) (*engine.ExecutionPayloadEnvelope, error) {
+	modifiedBlock, err := executableDataToBlock(execPayload, prevBeaconRoot)
 	if err != nil {
 		return &engine.ExecutionPayloadEnvelope{}, err
 	}
@@ -773,7 +790,7 @@ func modifyExecutionPayload(execPayload engine.ExecutableData, fees *big.Int) (*
 }
 
 // This modifies the provided payload to imprint the builder's extra data
-func executableDataToBlock(params engine.ExecutableData) (*gethTypes.Block, error) {
+func executableDataToBlock(params engine.ExecutableData, prevBeaconRoot []byte) (*gethTypes.Block, error) {
 	txs, err := decodeTransactions(params.Transactions)
 	if err != nil {
 		return nil, err
@@ -805,6 +822,10 @@ func executableDataToBlock(params engine.ExecutableData) (*gethTypes.Block, erro
 		WithdrawalsHash: withdrawalsRoot,
 		BlobGasUsed:     params.BlobGasUsed,
 		ExcessBlobGas:   params.ExcessBlobGas,
+	}
+	if prevBeaconRoot != nil {
+		pRoot := common.Hash(prevBeaconRoot)
+		header.ParentBeaconRoot = &pRoot
 	}
 	block := gethTypes.NewBlockWithHeader(header).WithBody(txs, nil /* uncles */).WithWithdrawals(params.Withdrawals)
 	return block, nil
