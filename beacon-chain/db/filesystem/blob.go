@@ -232,8 +232,6 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	log.Debug("Pruning old blobs")
-
 	t := time.Now()
 	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
 	if err != nil {
@@ -242,6 +240,8 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	if currentSlot < retentionSlots {
 		return nil // Overflow would occur
 	}
+
+	log.Debug("Pruning old blobs")
 
 	folders, err := afero.ReadDir(bs.fs, ".")
 	if err != nil {
