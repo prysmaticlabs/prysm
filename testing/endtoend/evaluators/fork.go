@@ -56,7 +56,7 @@ var CapellaForkTransition = types.Evaluator{
 var DenebForkTransition = types.Evaluator{
 	Name: "deneb_fork_transition_%d",
 	Policy: func(e primitives.Epoch) bool {
-		fEpoch := params.BeaconConfig().CapellaForkEpoch
+		fEpoch := params.BeaconConfig().DenebForkEpoch
 		return policies.OnEpoch(fEpoch)(e)
 	},
 	Evaluation: denebForkOccurs,
