@@ -696,7 +696,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
@@ -728,7 +728,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
@@ -760,7 +760,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
@@ -826,7 +826,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
@@ -895,7 +895,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Prepared block is not blinded", e.Message)
