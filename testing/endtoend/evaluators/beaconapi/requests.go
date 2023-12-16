@@ -12,7 +12,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 )
 
 var requests = map[string]endpoint{
@@ -47,7 +46,7 @@ var requests = map[string]endpoint{
 			return []string{"head"}
 		})),
 	"/beacon/states/{param1}/sync_committees": newMetadata[beacon.GetSyncCommitteeResponse](v1PathTemplate,
-		withStart(helpers.AltairE2EForkEpoch),
+		withStart(params.BeaconConfig().AltairForkEpoch),
 		withParams(func(_ primitives.Epoch) []string {
 			return []string{"head"}
 		})),
