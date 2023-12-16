@@ -276,7 +276,7 @@ func repositionFutureEpochs(cfg *params.BeaconChainConfig) {
 		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 100
 	}
 	if cfg.DenebForkEpoch == math.MaxUint64 {
-		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 10000
+		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + 100
 	}
 }
 
