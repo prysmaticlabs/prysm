@@ -19,6 +19,9 @@ import (
 func ComputeFieldRootsWithHasher(ctx context.Context, state *BeaconState) ([][]byte, error) {
 	ctx, span := trace.StartSpan(ctx, "ComputeFieldRootsWithHasher")
 	defer span.End()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 
 	if state == nil {
 		return nil, errors.New("nil state")

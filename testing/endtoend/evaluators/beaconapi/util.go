@@ -83,7 +83,7 @@ func doSSZGetRequest(template string, requestPath string, beaconNodeIdx int, bnT
 
 	basePath := fmt.Sprintf(template, port+beaconNodeIdx)
 
-	req, err := http.NewRequest("GET", basePath+requestPath, nil)
+	req, err := http.NewRequest(http.MethodGet, basePath+requestPath, nil)
 	if err != nil {
 		return nil, err
 	}
