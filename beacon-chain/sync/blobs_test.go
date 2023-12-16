@@ -175,6 +175,7 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) 
 	cfg := params.BeaconConfig()
 	copiedCfg := cfg.Copy()
 	repositionFutureEpochs(copiedCfg)
+	copiedCfg.InitializeForkSchedule()
 	params.OverrideBeaconConfig(copiedCfg)
 	cleanup := func() {
 		params.OverrideBeaconConfig(cfg)
@@ -275,7 +276,7 @@ func repositionFutureEpochs(cfg *params.BeaconChainConfig) {
 		cfg.CapellaForkEpoch = cfg.BellatrixForkEpoch + 100
 	}
 	if cfg.DenebForkEpoch == math.MaxUint64 {
-		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + 100
+		cfg.DenebForkEpoch = cfg.CapellaForkEpoch + params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 10000
 	}
 }
 
