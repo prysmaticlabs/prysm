@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +17,27 @@ var failedBlockSignLocalErr = "attempted to sign a double proposal, block reject
 // block proposals history for the given public key in our DB. If it is not, we then update the history
 // with new values and save it to the database.
 func (v *validator) slashableProposalCheck(
-	ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signedBlock interfaces.ReadOnlySignedBeaconBlock, signingRoot [32]byte,
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [32]byte,
+) error {
+	switch v.db.(type) {
+	case *kv.Store:
+		return v.slashableProposalCheckComplete(ctx, pubKey, signedBlock, signingRoot)
+	default:
+		return errors.New("unknown database type")
+	}
+}
+
+// slashableProposalCheckComplete checks if a block proposal is slashable by comparing it with the
+// block proposals history for the given public key in our complete slashing protection database defined by EIP-3076.
+// If it is not, we then update the history.
+func (v *validator) slashableProposalCheckComplete(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [32]byte,
 ) error {
 	fmtKey := fmt.Sprintf("%#x", pubKey[:])
 
