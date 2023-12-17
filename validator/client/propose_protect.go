@@ -3,10 +3,12 @@ package client
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	"github.com/sirupsen/logrus"
 )
@@ -25,6 +27,8 @@ func (v *validator) slashableProposalCheck(
 	switch v.db.(type) {
 	case *kv.Store:
 		return v.slashableProposalCheckComplete(ctx, pubKey, signedBlock, signingRoot)
+	case *filesystem.Store:
+		return v.slashableProposalCheckMinimal(ctx, pubKey, signedBlock, signingRoot)
 	default:
 		return errors.New("unknown database type")
 	}
@@ -118,4 +122,26 @@ func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.Rea
 		fields["signature"] = fmt.Sprintf("%#x", sig)
 	}
 	return fields
+}
+
+// slashableProposalCheckMinimal checks if a block proposal is slashable by comparing it with the
+// block proposals history for the given public key in our minimal slashing protection database defined by EIP-3076.
+// If it is not, it update the database.
+func (v *validator) slashableProposalCheckMinimal(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [32]byte,
+) error {
+	// Check if the proposal is potentially slashable regarding EIP-3076 minimal conditions.
+	// If not, save the new proposal into the database.
+	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, signedBlock.Block().Slot(), signingRoot[:]); err != nil {
+		if strings.Contains(err.Error(), "could not sign block") {
+			return errors.Wrapf(err, failedBlockSignLocalErr)
+		}
+
+		return errors.Wrap(err, "failed to save updated proposal history")
+	}
+
+	return nil
 }
