@@ -25,6 +25,7 @@ var Commands = &cli.Command{
 				features.PraterTestnet,
 				features.SepoliaTestnet,
 				features.HoleskyTestnet,
+				features.EnableMinimalSlashingProtection,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
