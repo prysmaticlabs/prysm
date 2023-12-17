@@ -15,10 +15,27 @@ import (
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
 
-// Checks if an attestation is slashable by comparing it with the attesting
-// history for the given public key in our DB. If it is not, we then update the history
+// slashableAttestationCheck checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our DB. If it is not, it updates the history
 // with new values and save it to the database.
 func (v *validator) slashableAttestationCheck(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signingRoot32 [32]byte,
+) error {
+	switch v.db.(type) {
+	case *kv.Store:
+		return v.slashableAttestationCheckComplete(ctx, indexedAtt, pubKey, signingRoot32)
+	default:
+		return errors.New("unknown database type")
+	}
+}
+
+// slashableAttestationCheckComplete checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our complete slashing protection database defined by EIP-3076.
+// If it is not, it updates the history.
+func (v *validator) slashableAttestationCheckComplete(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
@@ -29,7 +46,7 @@ func (v *validator) slashableAttestationCheck(
 
 	signingRoot := signingRoot32[:]
 
-	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
+	// Based on EIP-3076, validator should refuse to sign any attestation with source epoch less
 	// than the minimum source epoch present in that signer’s attestations.
 	lowestSourceEpoch, exists, err := v.db.LowestSignedSourceEpoch(ctx, pubKey)
 	if err != nil {
@@ -48,7 +65,7 @@ func (v *validator) slashableAttestationCheck(
 	}
 	signingRootsDiffer := slashings.SigningRootsDiffer(existingSigningRoot, signingRoot)
 
-	// Based on EIP3076, validator should refuse to sign any attestation with target epoch less
+	// Based on EIP-3076, validator should refuse to sign any attestation with target epoch less
 	// than or equal to the minimum target epoch present in that signer’s attestations, except
 	// if it is a repeat signing as determined by the signingRoot.
 	lowestTargetEpoch, exists, err := v.db.LowestSignedTargetEpoch(ctx, pubKey)
