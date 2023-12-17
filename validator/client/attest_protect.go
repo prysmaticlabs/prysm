@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	"go.opencensus.io/trace"
 )
@@ -27,6 +29,8 @@ func (v *validator) slashableAttestationCheck(
 	switch v.db.(type) {
 	case *kv.Store:
 		return v.slashableAttestationCheckComplete(ctx, indexedAtt, pubKey, signingRoot32)
+	case *filesystem.Store:
+		return v.slashableAttestationCheckMinimal(ctx, indexedAtt, pubKey, signingRoot32)
 	default:
 		return errors.New("unknown database type")
 	}
@@ -97,6 +101,31 @@ func (v *validator) slashableAttestationCheckComplete(
 	}
 
 	if err := v.db.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
+		return errors.Wrap(err, "could not save attestation history for validator public key")
+	}
+
+	return nil
+}
+
+// slashableAttestationCheckMinimal checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our minimal slashing protection database defined by EIP-3076.
+// If it is not, it updates the database.
+func (v *validator) slashableAttestationCheckMinimal(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signingRoot32 [32]byte,
+) error {
+	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
+	defer span.End()
+
+	// Check if the attestation is potentially slashable regarding EIP-3076 minimal conditions.
+	// If not, save the new attestation into the database.
+	if err := v.db.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
+		if strings.Contains(err.Error(), "could not sign attestation") {
+			return errors.Wrap(err, failedAttLocalProtectionErr)
+		}
+
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
