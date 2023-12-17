@@ -23,6 +23,18 @@ import (
 // protection in the validator client's database. For more information, see the EIP document here:
 // https://eips.ethereum.org/EIPS/eip-3076.
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
+	switch validatorDB.(type) {
+	case *kv.Store:
+		return importStandardProtectionJSONComplete(ctx, validatorDB, r)
+	default:
+		return fmt.Errorf("unsupported database type")
+	}
+}
+
+// importStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
+// by Ethereum validators and imports its data into Prysm's internal complete representation of slashing
+// protection in the validator client's database.
+func importStandardProtectionJSONComplete(ctx context.Context, validatorDB db.Database, r io.Reader) error {
 	encodedJSON, err := io.ReadAll(r)
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
