@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "db.go",
         "genesis.go",
+        "graffiti.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/db/filesystem",
     visibility = ["//visibility:public"],
@@ -24,6 +25,7 @@ go_test(
     srcs = [
         "db_test.go",
         "genesis_test.go",
+        "graffiti_test.go",
     ],
     embed = [":go_default_library"],
     deps = [
