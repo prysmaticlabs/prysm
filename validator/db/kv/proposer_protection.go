@@ -26,6 +26,7 @@ type Proposal struct {
 }
 
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
+// Warning: A public key in this bucket does not necessarily mean it has signed a block.
 func (s *Store) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	_, span := trace.StartSpan(ctx, "Validator.ProposedPublicKeys")
 	defer span.End()
