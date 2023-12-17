@@ -8,6 +8,7 @@ go_library(
     visibility = [
         "//config:__subpackages__",
         "//validator:__subpackages__",
+        "//cmd/validator/slashing-protection:__subpackages__"
     ],
     deps = [
         "//config/fieldparams:go_default_library",
