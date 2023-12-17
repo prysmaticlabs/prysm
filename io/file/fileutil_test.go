@@ -290,40 +290,43 @@ func TestDirFiles(t *testing.T) {
 
 func TestRecursiveFileFind(t *testing.T) {
 	tmpDir, _ := tmpDirWithContentsForRecursiveFind(t)
+	/*
+		 tmpDir
+		 ├── file3
+		 ├── subfolder1
+		 │   └── subfolder11
+		 │       └── file1
+		 └── subfolder2
+			 └── file2
+	*/
 	tests := []struct {
 		name  string
 		root  string
-		path  string
 		found bool
 	}{
 		{
 			name:  "file1",
 			root:  tmpDir,
-			path:  "subfolder1/subfolder11/file1",
 			found: true,
 		},
 		{
 			name:  "file2",
 			root:  tmpDir,
-			path:  "subfolder2/file2",
 			found: true,
 		},
 		{
 			name:  "file1",
 			root:  tmpDir + "/subfolder1",
-			path:  "subfolder11/file1",
 			found: true,
 		},
 		{
 			name:  "file3",
 			root:  tmpDir,
-			path:  "file3",
 			found: true,
 		},
 		{
 			name:  "file4",
 			root:  tmpDir,
-			path:  "",
 			found: false,
 		},
 	}
@@ -331,6 +334,61 @@ func TestRecursiveFileFind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			found, _, err := file.RecursiveFileFind(tt.name, tt.root)
+			require.NoError(t, err)
+
+			assert.DeepEqual(t, tt.found, found)
+		})
+	}
+}
+
+func TestRecursiveDirFind(t *testing.T) {
+	tmpDir, _ := tmpDirWithContentsForRecursiveFind(t)
+
+	/*
+		 tmpDir
+		 ├── file3
+		 ├── subfolder1
+		 │   └── subfolder11
+		 │       └── file1
+		 └── subfolder2
+			 └── file2
+	*/
+
+	tests := []struct {
+		name  string
+		root  string
+		found bool
+	}{
+		{
+			name:  "subfolder11",
+			root:  tmpDir,
+			found: true,
+		},
+		{
+			name:  "subfolder2",
+			root:  tmpDir,
+			found: true,
+		},
+		{
+			name:  "subfolder11",
+			root:  tmpDir + "/subfolder1",
+			found: true,
+		},
+		{
+			name:  "file3",
+			root:  tmpDir,
+			found: false,
+		},
+		{
+			name:  "file4",
+			root:  tmpDir,
+			found: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			found, _, err := file.RecursiveDirFind(tt.name, tt.root)
 			require.NoError(t, err)
 
 			assert.DeepEqual(t, tt.found, found)

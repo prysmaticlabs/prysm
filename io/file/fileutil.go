@@ -183,6 +183,40 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 	return found, fpath, nil
 }
 
+// RecursiveDirFind searches for directory in a directory and its subdirectories.
+func RecursiveDirFind(dirname, dir string) (bool, string, error) {
+	var (
+		found bool
+		fpath string
+	)
+
+	dir = filepath.Clean(dir)
+	found = false
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.Wrapf(err, "error walking directory %s", dir)
+		}
+
+		// Checks if its a file  and has the exact name as the dirname
+		// need to break the walk function by using a non-fatal error
+		if info.IsDir() && dirname == info.Name() {
+			found = true
+			fpath = path
+			return errStopWalk
+		}
+
+		// No errors or file found
+		return nil
+	})
+
+	if err != nil && err != errStopWalk {
+		return false, "", errors.Wrapf(err, "error walking directory %s", dir)
+	}
+
+	return found, fpath, nil
+}
+
 // ReadFileAsBytes expands a file name's absolute path and reads it as bytes from disk.
 func ReadFileAsBytes(filename string) ([]byte, error) {
 	filePath, err := ExpandPath(filename)
