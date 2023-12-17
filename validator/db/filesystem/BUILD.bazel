@@ -2,7 +2,10 @@ load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["db.go"],
+    srcs = [
+        "db.go",
+        "genesis.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/db/filesystem",
     visibility = ["//visibility:public"],
     deps = [
@@ -18,7 +21,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["db_test.go"],
+    srcs = [
+        "db_test.go",
+        "genesis_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//config/fieldparams:go_default_library",
