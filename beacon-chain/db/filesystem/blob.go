@@ -144,7 +144,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
 	blobsTotalGauge.Inc()
-	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
+	blobSaveLatency.Observe(time.Since(startTime).Seconds())
 	return nil
 }
 
@@ -168,7 +168,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 		return blocks.VerifiedROBlob{}, err
 	}
 	defer func() {
-		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
+		blobFetchLatency.Observe(time.Since(startTime).Seconds())
 	}()
 	return verification.BlobSidecarNoop(ro)
 }

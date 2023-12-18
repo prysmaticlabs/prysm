@@ -3,18 +3,19 @@ package filesystem
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/spf13/afero"
 )
 
 var (
 	blobSaveLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "blob_storage_save_latency",
-		Help:    "Latency of blob storage save operations in milliseconds",
+		Help:    "Latency of blob storage save operations in seconds",
 		Buckets: prometheus.DefBuckets,
 	})
 	blobFetchLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "blob_storage_get_latency",
-		Help:    "Latency of blob storage get operations in milliseconds",
+		Help:    "Latency of blob storage get operations in seconds",
 		Buckets: prometheus.DefBuckets,
 	})
 	blobsPrunedCounter = promauto.NewCounter(prometheus.CounterOpts{
@@ -27,9 +28,19 @@ var (
 	})
 )
 
+func (bs *BlobStorage) Initialize(lastFinalizedSlot primitives.Slot) error {
+	if err := bs.Prune(lastFinalizedSlot); err != nil {
+		return err
+	}
+	if err := bs.collectTotalBlobMetric(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // CollectTotalBlobMetric set the number of blobs currently present in the filesystem
 // to the blobsTotalGauge metric.
-func (bs *BlobStorage) CollectTotalBlobMetric() error {
+func (bs *BlobStorage) collectTotalBlobMetric() error {
 	totalBlobs := 0
 	folders, err := afero.ReadDir(bs.fs, ".")
 	if err != nil {
