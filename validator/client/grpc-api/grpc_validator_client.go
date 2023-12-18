@@ -71,6 +71,10 @@ func (c *grpcValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedV
 	return c.beaconNodeValidatorClient.ProposeExit(ctx, in)
 }
 
+func (c *grpcValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
+	return c.beaconNodeValidatorClient.StreamSlots(ctx, in)
+}
+
 func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
 	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
 }

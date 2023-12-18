@@ -53,6 +53,8 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 			ver = produceBlindedBlockResponseJson.Version
 			blinded = true
 			decoder = json.NewDecoder(bytes.NewReader(produceBlindedBlockResponseJson.Data))
+		} else if errJson == nil {
+			return nil, errors.Wrap(err, "failed to query GET REST endpoint: nil result")
 		} else {
 			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
 			produceBlockResponseJson := abstractProduceBlockResponseJson{}
@@ -60,6 +62,8 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 			errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockResponseJson)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+			} else if errJson != nil {
+				return nil, errors.Wrap(errJson, "failed to query GET REST endpoint")
 			}
 			ver = produceBlockResponseJson.Version
 			blinded = false

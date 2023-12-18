@@ -216,6 +216,7 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 			c.wallet = wallet.NewWalletForWeb3Signer()
 		} else {
+			fmt.Println("initializeFromCLI asking for wallet")
 			w, err := wallet.OpenWalletOrElseCli(cliCtx, func(cliCtx *cli.Context) (*wallet.Wallet, error) {
 				return nil, wallet.ErrNoWalletFound
 			})

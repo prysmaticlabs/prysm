@@ -67,7 +67,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 
 	isOptimistic, err := helpers.IsOptimistic(ctx, []byte(stateID), s.OptimisticModeFetcher, s.Stater, s.ChainInfoFetcher, s.BeaconDB)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("could not check if slot's block is optimistic: %v", err),
 			Code:    http.StatusInternalServerError,
 		}
@@ -83,7 +83,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 
 	blockRoot, err := st.LatestBlockHeader().HashTreeRoot()
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("could not calculate root of latest block header: %v", err),
 			Code:    http.StatusInternalServerError,
 		}
@@ -97,7 +97,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	for _, status := range r.URL.Query()["status"] {
 		statusVal, ok := ethpb.ValidatorStatus_value[strings.ToUpper(status)]
 		if !ok {
-			errJson := &httputil.DefaultErrorJson{
+			errJson := &httputil.DefaultJsonError{
 				Message: fmt.Sprintf("invalid status query parameter: %v", status),
 				Code:    http.StatusBadRequest,
 			}
@@ -118,7 +118,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 	epoch := slots.ToEpoch(st.Slot())
 	valCount, err := validatorCountByStatus(st.Validators(), statusVals, epoch)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("could not get validator count: %v", err),
 			Code:    http.StatusInternalServerError,
 		}

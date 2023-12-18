@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// NoProposerSettingsFound is an error thrown when no settings are found in bucket
-var NoProposerSettingsFound = errors.New("no proposer settings found in bucket")
+// ErrNoProposerSettingsFound is an error thrown when no settings are found in bucket
+var ErrNoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // UpdateProposerSettingsForPubkey updates the existing settings for an internal representation of the proposers settings file at a particular public key
 func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *validatorServiceConfig.ProposerOption) error {
@@ -61,7 +61,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
 		if len(b) == 0 {
-			return NoProposerSettingsFound
+			return ErrNoProposerSettingsFound
 		}
 		to := &validatorpb.ProposerSettingsPayload{}
 		if err := proto.Unmarshal(b, to); err != nil {
@@ -90,7 +90,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
 		if len(b) == 0 {
-			return NoProposerSettingsFound
+			return ErrNoProposerSettingsFound
 		}
 		if err := proto.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
@@ -106,7 +106,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 	ps, err := s.ProposerSettings(ctx)
 	if err != nil {
-		if errors.Is(err, NoProposerSettingsFound) {
+		if errors.Is(err, ErrNoProposerSettingsFound) {
 			return false, nil
 		}
 		return false, err

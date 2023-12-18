@@ -36,7 +36,7 @@ func RunBLSToExecutionChangeTest(t *testing.T, config string) {
 				BlsToExecutionChanges: []*ethpb.SignedBLSToExecutionChange{change},
 			}
 			RunBlockOperationTest(t, folderPath, body, func(ctx context.Context, s state.BeaconState, b interfaces.SignedBeaconBlock) (state.BeaconState, error) {
-				st, err := blocks.ProcessBLSToExecutionChanges(s, b)
+				st, err := blocks.ProcessBLSToExecutionChanges(s, b.Block())
 				if err != nil {
 					return nil, err
 				}

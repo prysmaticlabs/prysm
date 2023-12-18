@@ -39,7 +39,7 @@ func (c *blobsTestCase) filterExpectedByRoot(t *testing.T, scs []blocks.ROBlob, 
 		panic("unexpected request type in filterExpectedByRoot")
 	}
 	req := *rp
-	if uint64(len(req)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+	if uint64(len(req)) > params.BeaconConfig().MaxRequestBlobSidecars {
 		return []*expectedBlobChunk{{
 			code:    responseCodeInvalidRequest,
 			message: p2pTypes.ErrBlobLTMinRequest.Error(),
@@ -169,7 +169,7 @@ func readChunkEncodedBlobsAsStreamReader(t *testing.T, s *Service, expect []*exp
 		return nil
 	}
 	return func(stream network.Stream) {
-		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, params.BeaconNetworkConfig().MaxRequestBlobSidecars)
+		scs, err := readChunkEncodedBlobs(stream, encoding, ctxMap, vf, params.BeaconConfig().MaxRequestBlobSidecars)
 		require.NoError(t, err)
 		require.Equal(t, len(expect), len(scs))
 		for i, sc := range scs {
@@ -227,7 +227,7 @@ func TestBlobsByRootValidation(t *testing.T) {
 		},
 		{
 			name:    "exceeds req max",
-			nblocks: int(params.BeaconNetworkConfig().MaxRequestBlobSidecars) + 1,
+			nblocks: int(params.BeaconConfig().MaxRequestBlobSidecars) + 1,
 			err:     p2pTypes.ErrMaxBlobReqExceeded,
 		},
 	}
@@ -261,7 +261,7 @@ func TestBlobsByRootOK(t *testing.T) {
 }
 
 func TestBlobsByRootMinReqEpoch(t *testing.T) {
-	winMin := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	winMin := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	cases := []struct {
 		name      string
 		finalized types.Epoch

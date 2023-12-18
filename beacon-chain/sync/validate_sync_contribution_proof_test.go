@@ -28,6 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -854,6 +855,8 @@ func TestService_ValidateSyncContributionAndProof(t *testing.T) {
 			var clock *startup.Clock
 			svc, clock = tt.setupSvc(svc, tt.args.msg)
 			require.NoError(t, cw.SetClock(clock))
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+
 			go svc.Start()
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
 			assert.NoError(t, err)

@@ -26,8 +26,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -89,7 +87,7 @@ type validator struct {
 	domainDataCache                    *ristretto.Cache
 	highestValidSlot                   primitives.Slot
 	genesisTime                        uint64
-	blockFeed                          *event.Feed
+	slotFeed                           *event.Feed
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
@@ -317,58 +315,32 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// ReceiveBlocks starts a gRPC client stream listener to obtain
-// blocks from the beacon node. Upon receiving a block, the service
+// ReceiveSlots starts a gRPC client stream listener to obtain
+// slots from the beacon node when it imports a block. Upon receiving a slot, the service
 // broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.validatorClient.StreamBlocksAltair(ctx, &ethpb.StreamBlocksRequest{VerifiedOnly: true})
+func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
+	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
-		log.WithError(err).Error("Failed to retrieve blocks stream, " + iface.ErrConnectionIssue.Error())
+		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
 		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 		return
 	}
 
 	for {
 		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("Context canceled - shutting down blocks receiver")
+			log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
 			return
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive blocks from beacon node, " + iface.ErrConnectionIssue.Error())
+			log.WithError(err).Error("Could not receive slots from beacon node, " + iface.ErrConnectionIssue.Error())
 			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 			return
 		}
-		if res == nil || res.Block == nil {
+		if res == nil {
 			continue
 		}
-		var blk interfaces.ReadOnlySignedBeaconBlock
-		switch b := res.Block.(type) {
-		case *ethpb.StreamBlocksResponse_Phase0Block:
-			blk, err = blocks.NewSignedBeaconBlock(b.Phase0Block)
-		case *ethpb.StreamBlocksResponse_AltairBlock:
-			blk, err = blocks.NewSignedBeaconBlock(b.AltairBlock)
-		case *ethpb.StreamBlocksResponse_BellatrixBlock:
-			blk, err = blocks.NewSignedBeaconBlock(b.BellatrixBlock)
-		case *ethpb.StreamBlocksResponse_CapellaBlock:
-			blk, err = blocks.NewSignedBeaconBlock(b.CapellaBlock)
-		case *ethpb.StreamBlocksResponse_DenebBlock:
-			blk, err = blocks.NewSignedBeaconBlock(b.DenebBlock)
-		}
-		if err != nil {
-			log.WithError(err).Error("Failed to wrap signed block")
-			continue
-		}
-		if blk == nil || blk.IsNil() {
-			log.Error("Received nil block")
-			continue
-		}
-		v.highestValidSlotLock.Lock()
-		if blk.Block().Slot() > v.highestValidSlot {
-			v.highestValidSlot = blk.Block().Slot()
-		}
-		v.highestValidSlotLock.Unlock()
-		v.blockFeed.Send(blk)
+		v.setHighestSlot(res.Slot)
 	}
 }
 

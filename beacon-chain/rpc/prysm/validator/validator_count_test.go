@@ -101,7 +101,7 @@ func TestGetValidatorCountInvalidRequest(t *testing.T) {
 			body, err := io.ReadAll(resp.Body)
 			require.NoError(t, err)
 
-			var errJson httputil.DefaultErrorJson
+			var errJson httputil.DefaultJsonError
 			err = json.Unmarshal(body, &errJson)
 			require.NoError(t, err)
 			require.Equal(t, test.statusCode, errJson.Code)

@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -430,6 +431,8 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				tt.clock = startup.NewClock(time.Now(), [32]byte{})
 			}
 			require.NoError(t, cw.SetClock(tt.clock))
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
 			assert.NoError(t, err)
 			marshalledObj = snappy.Encode(nil, marshalledObj)

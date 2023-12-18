@@ -21,6 +21,15 @@ type abstractSignedBlockResponseJson struct {
 	Data                json.RawMessage `json:"data"`
 }
 
+type streamSlotsClient struct {
+	grpc.ClientStream
+	ctx                context.Context
+	beaconApiClient    beaconApiValidatorClient
+	streamSlotsRequest *ethpb.StreamSlotsRequest
+	prevBlockSlot      primitives.Slot
+	pingDelay          time.Duration
+}
+
 type streamBlocksAltairClient struct {
 	grpc.ClientStream
 	ctx                 context.Context
@@ -36,6 +45,15 @@ type headSignedBeaconBlockResult struct {
 	slot                 primitives.Slot
 }
 
+func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
+	return &streamSlotsClient{
+		ctx:                ctx,
+		beaconApiClient:    c,
+		streamSlotsRequest: in,
+		pingDelay:          pingDelay,
+	}
+}
+
 func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
 	return &streamBlocksAltairClient{
 		ctx:                 ctx,
@@ -43,6 +61,31 @@ func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.St
 		streamBlocksRequest: in,
 		pingDelay:           pingDelay,
 	}
+}
+
+func (c *streamSlotsClient) Recv() (*ethpb.StreamSlotsResponse, error) {
+	result, err := c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest signed block")
+	}
+
+	// We keep querying the beacon chain for the latest block until we receive a new slot
+	for (c.streamSlotsRequest.VerifiedOnly && result.executionOptimistic) || c.prevBlockSlot == result.slot {
+		select {
+		case <-time.After(c.pingDelay):
+			result, err = c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get latest signed block")
+			}
+		case <-c.ctx.Done():
+			return nil, errors.New("context canceled")
+		}
+	}
+
+	c.prevBlockSlot = result.slot
+	return &ethpb.StreamSlotsResponse{
+		Slot: result.slot,
+	}, nil
 }
 
 func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {

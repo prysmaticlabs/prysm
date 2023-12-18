@@ -173,7 +173,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "state_id is required in URL params", e.Message)
@@ -373,7 +373,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "No data submitted", e.Message)
@@ -403,7 +403,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Could not decode request body", e.Message)
@@ -713,7 +713,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "state_id is required in URL params", e.Message)
@@ -733,7 +733,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "validator_id is required in URL params", e.Message)
@@ -753,7 +753,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Invalid validator index", e.Message)
@@ -773,7 +773,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Unknown pubkey", e.Message)
@@ -1021,7 +1021,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "state_id is required in URL params", e.Message)
@@ -1141,7 +1141,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "No data submitted", e.Message)
@@ -1171,7 +1171,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.StringContains(t, "Could not decode request body", e.Message)

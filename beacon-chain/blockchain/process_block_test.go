@@ -2050,7 +2050,7 @@ func driftGenesisTime(s *Service, slot, delay int64) {
 }
 
 func Test_commitmentsToCheck(t *testing.T) {
-	windowSlots, err := slots.EpochEnd(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+	windowSlots, err := slots.EpochEnd(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
 	require.NoError(t, err)
 	commits := [][]byte{
 		bytesutil.PadTo([]byte("a"), 48),

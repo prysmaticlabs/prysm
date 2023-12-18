@@ -52,6 +52,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -223,6 +224,14 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
 		}
 		return nil, err
+	}
+
+	if beacon.finalizedStateAtStartUp != nil {
+		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
+			return nil, err
+		}
+	} else {
+		log.Warn("No finalized beacon state at startup, cannot prune blobs")
 	}
 
 	log.Debugln("Registering P2P Service")
@@ -734,6 +743,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
+		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -752,6 +762,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
+		BlobStorage:         b.BlobStorage,
 	})
 	return b.services.RegisterService(is)
 }

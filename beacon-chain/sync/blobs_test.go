@@ -136,11 +136,7 @@ func generateTestSidecar(t *testing.T, root [32]byte, block interfaces.ReadOnlyS
 }
 
 func fakeEmptyProof(_ *testing.T, _ interfaces.ReadOnlySignedBeaconBlock, _ *ethpb.BlobSidecar) [][]byte {
-	r := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
-	for i := range r {
-		r[i] = make([]byte, fieldparams.RootLength)
-	}
-	return r
+	return util.HydrateCommitmentInclusionProofs()
 }
 
 type expectedBlobChunk struct {
@@ -177,11 +173,12 @@ func (r *expectedBlobChunk) requireExpected(t *testing.T, s *Service, stream net
 
 func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) {
 	cfg := params.BeaconConfig()
-	repositionFutureEpochs(cfg)
-	undo, err := params.SetActiveWithUndo(cfg)
-	require.NoError(t, err)
+	copiedCfg := cfg.Copy()
+	repositionFutureEpochs(copiedCfg)
+	copiedCfg.InitializeForkSchedule()
+	params.OverrideBeaconConfig(copiedCfg)
 	cleanup := func() {
-		require.NoError(t, undo())
+		params.OverrideBeaconConfig(cfg)
 	}
 	maxBlobs := fieldparams.MaxBlobsPerBlock
 	chain, clock := defaultMockChain(t)
@@ -221,8 +218,8 @@ func (c *blobsTestCase) setup(t *testing.T) (*Service, []blocks.ROBlob, func()) 
 		rateLimiter: newRateLimiter(client),
 	}
 
-	byRootRate := params.BeaconNetworkConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
-	byRangeRate := params.BeaconNetworkConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
+	byRootRate := params.BeaconConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
+	byRangeRate := params.BeaconConfig().MaxRequestBlobSidecars * fieldparams.MaxBlobsPerBlock
 	s.setRateCollector(p2p.RPCBlobSidecarsByRootTopicV1, leakybucket.NewCollector(0.000001, int64(byRootRate), time.Second, false))
 	s.setRateCollector(p2p.RPCBlobSidecarsByRangeTopicV1, leakybucket.NewCollector(0.000001, int64(byRangeRate), time.Second, false))
 
@@ -287,7 +284,7 @@ func defaultMockChain(t *testing.T) (*mock.ChainService, *startup.Clock) {
 	de := params.BeaconConfig().DenebForkEpoch
 	df, err := forks.Fork(de)
 	require.NoError(t, err)
-	denebBuffer := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1000
+	denebBuffer := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1000
 	ce := de + denebBuffer
 	fe := ce - 2
 	cs, err := slots.EpochStart(ce)

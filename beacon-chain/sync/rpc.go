@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"runtime/debug"
+	"strings"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -206,7 +207,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				logStreamErrors(err, topic)
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -226,7 +227,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				logStreamErrors(err, topic)
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -240,4 +241,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 		}
 	})
+}
+
+func logStreamErrors(err error, topic string) {
+	if strings.Contains(topic, p2p.RPCGoodByeTopicV1) {
+		log.WithError(err).WithField("topic", topic).Trace("Could not decode goodbye stream message")
+		return
+	}
+	log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
 }

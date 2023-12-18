@@ -294,6 +294,16 @@ service BeaconNodeValidator {
         };
     }
 
+    // Server-side stream of all slots of valid blocks as they are received by
+    // the beacon chain node.
+    // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
+    rpc StreamSlots(StreamSlotsRequest) returns (stream StreamSlotsResponse) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/validator/blocks/stream_slots"
+        };
+        option deprecated = true;
+    }
+
     // Server-side stream of all signed blocks as they are received by
     // the beacon chain node.
     // DEPRECATED: This endpoint is superseded by the /eth/v1/events Beacon API endpoint
@@ -355,6 +365,13 @@ message SyncSubcommitteeIndexResponse {
     // If the total validator count is not sufficient, there could be more than one index.
     repeated uint64 indices = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.CommitteeIndex"];
 }
+
+// DEPRECATED: This endpoint StreamSlots is superseded by the /eth/v1/events Beacon API endpoint
+message StreamSlotsResponse {
+    option deprecated = true;
+    uint64 slot = 1 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives.Slot"];
+}
+
 
 // DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
 message StreamBlocksResponse {
@@ -740,8 +757,16 @@ message DoppelGangerResponse {
     repeated ValidatorResponse responses = 1;
 }
 
+// Request to only return slots with blocks that where verified by the beacon node.
+// DEPRECATED: This endpoint StreamSlots is superseded by the /eth/v1/events Beacon API endpoint.
+message StreamSlotsRequest {
+    option deprecated = true;
+    bool verified_only = 1;
+}
+
+
 // Request to only return blocks that is verified by the beacon node.
-// DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint, there is an internal GRPC endpoint /internal/eth/v1/events, this message will no longer be needed.
+// DEPRECATED: This endpoint StreamBlocks is superseded by the /eth/v1/events Beacon API endpoint
 message StreamBlocksRequest {
     option deprecated = true;
     bool verified_only = 1;
