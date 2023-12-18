@@ -128,9 +128,10 @@ func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) ([]blocks.ROBlob, e
 			continue
 		}
 		log.WithField("block_root", root).
-			WithField("index", i).
+		  WithField("block_commitments", len(blkCmts)).
+			WithField("sidecar_index", i).
 			WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
-			Warn("Evicting BlobSidecar with index > maximum blob commitment")
+			Warn("Evicting BlobSidecar without commitment in block")
 		e.scs[i] = nil
 	}
 	// Generate a MissingIndicesError for any missing indices.
