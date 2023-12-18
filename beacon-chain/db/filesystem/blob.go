@@ -60,7 +60,7 @@ func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	b := &BlobStorage{
 		fs:              fs,
-		retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+		retentionEpochs: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 		lastPrunedEpoch: firstPruneEpoch,
 	}
 	for _, o := range opts {

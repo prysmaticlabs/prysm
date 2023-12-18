@@ -5,11 +5,11 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -23,7 +23,7 @@ var startingFork = version.Phase0
 var AltairForkTransition = types.Evaluator{
 	Name: "altair_fork_transition_%d",
 	Policy: func(e primitives.Epoch) bool {
-		altair := policies.OnEpoch(helpers.AltairE2EForkEpoch)
+		altair := policies.OnEpoch(params.BeaconConfig().AltairForkEpoch)
 		// TODO (11750): modify policies to take an end to end config
 		if startingFork == version.Phase0 {
 			return altair(e)
@@ -35,21 +35,30 @@ var AltairForkTransition = types.Evaluator{
 
 // BellatrixForkTransition ensures that the Bellatrix hard fork has occurred successfully.
 var BellatrixForkTransition = types.Evaluator{
-	Name:       "bellatrix_fork_transition_%d",
-	Policy:     policies.OnEpoch(helpers.BellatrixE2EForkEpoch),
+	Name: "bellatrix_fork_transition_%d",
+	Policy: func(e primitives.Epoch) bool {
+		fEpoch := params.BeaconConfig().BellatrixForkEpoch
+		return policies.OnEpoch(fEpoch)(e)
+	},
 	Evaluation: bellatrixForkOccurs,
 }
 
 // CapellaForkTransition ensures that the Capella hard fork has occurred successfully.
 var CapellaForkTransition = types.Evaluator{
-	Name:       "capella_fork_transition_%d",
-	Policy:     policies.OnEpoch(helpers.CapellaE2EForkEpoch),
+	Name: "capella_fork_transition_%d",
+	Policy: func(e primitives.Epoch) bool {
+		fEpoch := params.BeaconConfig().CapellaForkEpoch
+		return policies.OnEpoch(fEpoch)(e)
+	},
 	Evaluation: capellaForkOccurs,
 }
 
 var DenebForkTransition = types.Evaluator{
-	Name:       "deneb_fork_transition_%d",
-	Policy:     policies.OnEpoch(helpers.DenebE2EForkEpoch),
+	Name: "deneb_fork_transition_%d",
+	Policy: func(e primitives.Epoch) bool {
+		fEpoch := params.BeaconConfig().DenebForkEpoch
+		return policies.OnEpoch(fEpoch)(e)
+	},
 	Evaluation: denebForkOccurs,
 }
 
@@ -62,7 +71,7 @@ func altairForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) err
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+	fSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 	if err != nil {
 		return err
 	}
@@ -104,7 +113,7 @@ func bellatrixForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) 
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
+	fSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 	if err != nil {
 		return err
 	}
@@ -149,7 +158,7 @@ func capellaForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) er
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := slots.EpochStart(helpers.CapellaE2EForkEpoch)
+	fSlot, err := slots.EpochStart(params.BeaconConfig().CapellaForkEpoch)
 	if err != nil {
 		return err
 	}
@@ -192,7 +201,7 @@ func denebForkOccurs(_ *types.EvaluationContext, conns ...*grpc.ClientConn) erro
 	if err != nil {
 		return errors.Wrap(err, "failed to get stream")
 	}
-	fSlot, err := slots.EpochStart(helpers.DenebE2EForkEpoch)
+	fSlot, err := slots.EpochStart(params.BeaconConfig().DenebForkEpoch)
 	if err != nil {
 		return err
 	}
