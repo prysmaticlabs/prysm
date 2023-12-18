@@ -8,15 +8,16 @@ import (
 )
 
 var (
+	BlobBuckets     = []float64{0.00003, 0.00005, 0.00007, 0.00009, 0.00011, 0.00013, 0.00015}
 	blobSaveLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "blob_storage_save_latency",
 		Help:    "Latency of blob storage save operations in seconds",
-		Buckets: prometheus.DefBuckets,
+		Buckets: BlobBuckets,
 	})
 	blobFetchLatency = promauto.NewHistogram(prometheus.HistogramOpts{
 		Name:    "blob_storage_get_latency",
 		Help:    "Latency of blob storage get operations in seconds",
-		Buckets: prometheus.DefBuckets,
+		Buckets: BlobBuckets,
 	})
 	blobsPrunedCounter = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "blob_pruned_blobs_total",
