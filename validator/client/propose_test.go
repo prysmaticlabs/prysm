@@ -67,13 +67,16 @@ func testKeyFromBytes(t *testing.T, b []byte) keypair {
 func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 	validatorKey, err := bls.RandKey()
 	require.NoError(t, err)
-	return setupWithKey(t, validatorKey)
+	return setupWithKey(t, validatorKey, false)
 }
 
-func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
+// setupWithKey sets up a validator instance with a given key.
+// The `isSlashingProtectionMinimal` flag indicates whether the DB should be instantiated with minimal, filesystem
+// slashing protection database.
+func setupWithKey(t *testing.T, validatorKey bls.SecretKey, isSlashingProtectionMinimal bool) (*validator, *mocks, bls.SecretKey, func()) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, false)
+	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, isSlashingProtectionMinimal)
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
