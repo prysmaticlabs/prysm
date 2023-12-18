@@ -214,16 +214,28 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get blob kzg commitments")
 		}
+		if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
+			return nil, nil, fmt.Errorf("builder returned too many kzg commitments: %d", len(kzgCommitments))
+		}
+		for _, c := range kzgCommitments {
+			if len(c) != fieldparams.BLSPubkeyLength {
+				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment lenth: %d", len(c))
+			}
+		}
 	}
 
-	log.WithFields(logrus.Fields{
+	l := log.WithFields(logrus.Fields{
 		"value":              v.String(),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,
 		"validator":          idx,
 		"sinceSlotStartTime": time.Since(t),
-	}).Info("Received header with bid")
+	})
+	if len(kzgCommitments) > 0 {
+		l = l.WithField("kzgCommitmentCount", len(kzgCommitments))
+	}
+	l.Info("Received header with bid")
 
 	span.AddAttributes(
 		trace.StringAttribute("value", v.String()),
