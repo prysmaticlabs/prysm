@@ -35,6 +35,11 @@ func setupCliCtx(
 	return cli.NewContext(&app, set, nil)
 }
 
+// TestImportExportSlashingProtectionCli_RoundTrip imports a EIP-3076 interchange format JSON file,
+// and exports it back to disk. It then compare the exported file to the original file.
+// This test is only suitable for complete slashing protection history database, since minimal
+// slashing protection history database will keep only the latest signed block slot / attestations,
+// and thus will not be able to export the same data as the original file.
 func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
@@ -59,7 +64,8 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
-	validatorDB := dbTest.SetupDB(t, pubKeys)
+	isSlashingProtectionMinimal := false
+	validatorDB := dbTest.SetupDB(t, pubKeys, isSlashingProtectionMinimal)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)
@@ -108,6 +114,11 @@ func TestImportExportSlashingProtectionCli_RoundTrip(t *testing.T) {
 	}
 }
 
+// TestImportExportSlashingProtectionCli_EmptyData imports a EIP-3076 interchange format JSON file,
+// and exports it back to disk. It then compare the exported file to the original file.
+// This test is only suitable for complete slashing protection history database, since minimal
+// slashing protection history database will keep only the latest signed block slot / attestations,
+// and thus will not be able to export the same data as the original file.
 func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	numValidators := 10
 	outputPath := filepath.Join(t.TempDir(), "slashing-exports")
@@ -135,7 +146,8 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	require.NoError(t, err)
 
 	// We create a CLI context with the required values, such as the database datadir and output directory.
-	validatorDB := dbTest.SetupDB(t, pubKeys)
+	isSlashingProtectionMinimal := false
+	validatorDB := dbTest.SetupDB(t, pubKeys, isSlashingProtectionMinimal)
 	dbPath := validatorDB.DatabasePath()
 	require.NoError(t, validatorDB.Close())
 	cliCtx := setupCliCtx(t, dbPath, protectionFilePath, outputPath)

@@ -119,6 +119,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 				sourceDatabase, targetDatabase iface.ValidatorDB
 				err                            error
 			)
+
 			if minimalToComplete {
 				sourceDatabase, err = filesystem.NewStore(datadir, &filesystem.Config{
 					PubKeys: [][fieldparams.BLSPubkeyLength]byte{pubkey1, pubkey2},
@@ -148,10 +149,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 			require.NoError(t, err, "could not save graffiti ordered index")
 
 			// Save the proposer settings.
-			relays := []string{}
-			if minimalToComplete {
-				relays = nil
-			}
+			var relays []string = nil
 
 			expectedProposerSettings := &proposer.Settings{
 				ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.Option{

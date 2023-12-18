@@ -1047,56 +1047,58 @@ func TestServer_SetGasLimit(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
-			err := m.SetProposerSettings(ctx, tt.proposerSettings)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-			vs, err := client.NewValidatorService(ctx, &client.Config{
-				Validator: m,
-				ValDB:     validatorDB,
-			})
-			require.NoError(t, err)
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
+				m := &mock.Validator{}
+				err := m.SetProposerSettings(ctx, tt.proposerSettings)
+				require.NoError(t, err)
+				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
+				vs, err := client.NewValidatorService(ctx, &client.Config{
+					Validator: m,
+					ValDB:     validatorDB,
+				})
+				require.NoError(t, err)
 
-			s := &Server{
-				validatorService:          vs,
-				beaconNodeValidatorClient: beaconClient,
-				valDB:                     validatorDB,
-			}
-
-			if tt.beaconReturn != nil {
-				beaconClient.EXPECT().GetFeeRecipientByPubKey(
-					gomock.Any(),
-					gomock.Any(),
-				).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
-			}
-
-			request := &SetGasLimitRequest{
-				GasLimit: fmt.Sprintf("%d", tt.newGasLimit),
-			}
-
-			var buf bytes.Buffer
-			err = json.NewEncoder(&buf).Encode(request)
-			require.NoError(t, err)
-
-			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), &buf)
-			req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(tt.pubkey)})
-			w := httptest.NewRecorder()
-			w.Body = &bytes.Buffer{}
-
-			s.SetGasLimit(w, req)
-
-			if tt.wantErr != "" {
-				assert.NotEqual(t, http.StatusOK, w.Code)
-				require.StringContains(t, tt.wantErr, w.Body.String())
-			} else {
-				assert.Equal(t, http.StatusAccepted, w.Code)
-				for _, wantObj := range tt.w {
-					assert.Equal(t, wantObj.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(wantObj.pubkey)].BuilderConfig.GasLimit))
+				s := &Server{
+					validatorService:          vs,
+					beaconNodeValidatorClient: beaconClient,
+					valDB:                     validatorDB,
 				}
-			}
-		})
+
+				if tt.beaconReturn != nil {
+					beaconClient.EXPECT().GetFeeRecipientByPubKey(
+						gomock.Any(),
+						gomock.Any(),
+					).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
+				}
+
+				request := &SetGasLimitRequest{
+					GasLimit: fmt.Sprintf("%d", tt.newGasLimit),
+				}
+
+				var buf bytes.Buffer
+				err = json.NewEncoder(&buf).Encode(request)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), &buf)
+				req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(tt.pubkey)})
+				w := httptest.NewRecorder()
+				w.Body = &bytes.Buffer{}
+
+				s.SetGasLimit(w, req)
+
+				if tt.wantErr != "" {
+					assert.NotEqual(t, http.StatusOK, w.Code)
+					require.StringContains(t, tt.wantErr, w.Body.String())
+				} else {
+					assert.Equal(t, http.StatusAccepted, w.Code)
+					for _, wantObj := range tt.w {
+						assert.Equal(t, wantObj.gaslimit, uint64(s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(wantObj.pubkey)].BuilderConfig.GasLimit))
+					}
+				}
+			})
+		}
 	}
 }
 
@@ -1234,40 +1236,42 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			w:         []want{},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
-			err := m.SetProposerSettings(ctx, tt.proposerSettings)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-			vs, err := client.NewValidatorService(ctx, &client.Config{
-				Validator: m,
-				ValDB:     validatorDB,
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
+				m := &mock.Validator{}
+				err := m.SetProposerSettings(ctx, tt.proposerSettings)
+				require.NoError(t, err)
+				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
+				vs, err := client.NewValidatorService(ctx, &client.Config{
+					Validator: m,
+					ValDB:     validatorDB,
+				})
+				require.NoError(t, err)
+				s := &Server{
+					validatorService: vs,
+					valDB:            validatorDB,
+				}
+				// Set up global default value for builder gas limit.
+				params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
+
+				req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), nil)
+				req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(tt.pubkey)})
+				w := httptest.NewRecorder()
+				w.Body = &bytes.Buffer{}
+
+				s.DeleteGasLimit(w, req)
+
+				if tt.wantError != nil {
+					assert.StringContains(t, tt.wantError.Error(), w.Body.String())
+				} else {
+					assert.Equal(t, http.StatusNoContent, w.Code)
+				}
+				for _, wantedObj := range tt.w {
+					assert.Equal(t, wantedObj.gaslimit, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(wantedObj.pubkey)].BuilderConfig.GasLimit)
+				}
 			})
-			require.NoError(t, err)
-			s := &Server{
-				validatorService: vs,
-				valDB:            validatorDB,
-			}
-			// Set up global default value for builder gas limit.
-			params.BeaconConfig().DefaultBuilderGasLimit = uint64(globalDefaultGasLimit)
-
-			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/gas_limit"), nil)
-			req = mux.SetURLVars(req, map[string]string{"pubkey": hexutil.Encode(tt.pubkey)})
-			w := httptest.NewRecorder()
-			w.Body = &bytes.Buffer{}
-
-			s.DeleteGasLimit(w, req)
-
-			if tt.wantError != nil {
-				assert.StringContains(t, tt.wantError.Error(), w.Body.String())
-			} else {
-				assert.Equal(t, http.StatusNoContent, w.Code)
-			}
-			for _, wantedObj := range tt.w {
-				assert.Equal(t, wantedObj.gaslimit, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(wantedObj.pubkey)].BuilderConfig.GasLimit)
-			}
-		})
+		}
 	}
 }
 
@@ -1693,41 +1697,43 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
-			err := m.SetProposerSettings(ctx, tt.proposerSettings)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
+				m := &mock.Validator{}
+				err := m.SetProposerSettings(ctx, tt.proposerSettings)
+				require.NoError(t, err)
+				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
 
-			// save a default here
-			vs, err := client.NewValidatorService(ctx, &client.Config{
-				Validator: m,
-				ValDB:     validatorDB,
+				// save a default here
+				vs, err := client.NewValidatorService(ctx, &client.Config{
+					Validator: m,
+					ValDB:     validatorDB,
+				})
+				require.NoError(t, err)
+				s := &Server{
+					validatorService:          vs,
+					beaconNodeValidatorClient: beaconClient,
+					valDB:                     validatorDB,
+				}
+				request := &SetFeeRecipientByPubkeyRequest{
+					Ethaddress: tt.args,
+				}
+
+				var buf bytes.Buffer
+				err = json.NewEncoder(&buf).Encode(request)
+				require.NoError(t, err)
+
+				req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), &buf)
+				req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+				w := httptest.NewRecorder()
+				w.Body = &bytes.Buffer{}
+				s.SetFeeRecipientByPubkey(w, req)
+				assert.Equal(t, http.StatusAccepted, w.Code)
+
+				assert.Equal(t, tt.want.valEthAddress, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig.FeeRecipient.Hex())
 			})
-			require.NoError(t, err)
-			s := &Server{
-				validatorService:          vs,
-				beaconNodeValidatorClient: beaconClient,
-				valDB:                     validatorDB,
-			}
-			request := &SetFeeRecipientByPubkeyRequest{
-				Ethaddress: tt.args,
-			}
-
-			var buf bytes.Buffer
-			err = json.NewEncoder(&buf).Encode(request)
-			require.NoError(t, err)
-
-			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), &buf)
-			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
-			w := httptest.NewRecorder()
-			w.Body = &bytes.Buffer{}
-			s.SetFeeRecipientByPubkey(w, req)
-			assert.Equal(t, http.StatusAccepted, w.Code)
-
-			assert.Equal(t, tt.want.valEthAddress, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig.FeeRecipient.Hex())
-		})
+		}
 	}
 }
 
@@ -1803,29 +1809,31 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			m := &mock.Validator{}
-			err := m.SetProposerSettings(ctx, tt.proposerSettings)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
-			vs, err := client.NewValidatorService(ctx, &client.Config{
-				Validator: m,
-				ValDB:     validatorDB,
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		for _, tt := range tests {
+			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal:%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
+				m := &mock.Validator{}
+				err := m.SetProposerSettings(ctx, tt.proposerSettings)
+				require.NoError(t, err)
+				validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{}, isSlashingProtectionMinimal)
+				vs, err := client.NewValidatorService(ctx, &client.Config{
+					Validator: m,
+					ValDB:     validatorDB,
+				})
+				require.NoError(t, err)
+				s := &Server{
+					validatorService: vs,
+					valDB:            validatorDB,
+				}
+				req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
+				req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+				w := httptest.NewRecorder()
+				w.Body = &bytes.Buffer{}
+				s.DeleteFeeRecipientByPubkey(w, req)
+				assert.Equal(t, http.StatusNoContent, w.Code)
+				assert.Equal(t, true, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig == nil)
 			})
-			require.NoError(t, err)
-			s := &Server{
-				validatorService: vs,
-				valDB:            validatorDB,
-			}
-			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/feerecipient"), nil)
-			req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
-			w := httptest.NewRecorder()
-			w.Body = &bytes.Buffer{}
-			s.DeleteFeeRecipientByPubkey(w, req)
-			assert.Equal(t, http.StatusNoContent, w.Code)
-			assert.Equal(t, true, s.validatorService.ProposerSettings().ProposeConfig[bytesutil.ToBytes48(byteval)].FeeRecipientConfig == nil)
-		})
+		}
 	}
 }
 

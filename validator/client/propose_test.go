@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -72,7 +73,7 @@ func setup(t *testing.T) (*validator, *mocks, bls.SecretKey, func()) {
 func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks, bls.SecretKey, func()) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
+	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, false)
 	ctrl := gomock.NewController(t)
 	m := &mocks{
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
@@ -956,28 +957,32 @@ func TestGetGraffiti_Ok(t *testing.T) {
 }
 
 func TestGetGraffitiOrdered_Ok(t *testing.T) {
-	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
-	valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey})
-	ctrl := gomock.NewController(t)
-	m := &mocks{
-		validatorClient: validatormock.NewMockValidatorClient(ctrl),
-	}
-	m.validatorClient.EXPECT().
-		ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
-		Times(5).
-		Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
+	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
+		t.Run(fmt.Sprintf("SlashingProtectionMinimal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+			valDB := testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}, isSlashingProtectionMinimal)
+			ctrl := gomock.NewController(t)
+			m := &mocks{
+				validatorClient: validatormock.NewMockValidatorClient(ctrl),
+			}
+			m.validatorClient.EXPECT().
+				ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
+				Times(5).
+				Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
 
-	v := &validator{
-		db:              valDB,
-		validatorClient: m.validatorClient,
-		graffitiStruct: &graffiti.Graffiti{
-			Ordered: []string{"a", "b", "c"},
-			Default: "d",
-		},
-	}
-	for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
-		got, err := v.getGraffiti(context.Background(), pubKey)
-		require.NoError(t, err)
-		require.DeepEqual(t, want, got)
+			v := &validator{
+				db:              valDB,
+				validatorClient: m.validatorClient,
+				graffitiStruct: &graffiti.Graffiti{
+					Ordered: []string{"a", "b", "c"},
+					Default: "d",
+				},
+			}
+			for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
+				got, err := v.getGraffiti(context.Background(), pubKey)
+				require.NoError(t, err)
+				require.DeepEqual(t, want, got)
+			}
+		})
 	}
 }
