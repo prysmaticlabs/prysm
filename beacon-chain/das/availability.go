@@ -82,7 +82,7 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 
 	key := keyFromBlock(b)
 	entry := s.cache.ensure(key)
-	// holding the lock over the course of the DA check simplifies everything
+	// Holding the lock over the course of the DA check simplifies everything.
 	entry.Lock()
 	defer entry.Unlock()
 	if err := s.daCheck(ctx, b.Root(), blockCommitments, entry); err != nil {
@@ -100,7 +100,7 @@ func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, bloc
 	if cacheErr == nil {
 		vscs, err := s.verifier.VerifiedROBlobs(ctx, sidecars)
 		if err != nil {
-			// bail out asap if verification fails
+			// Bail out asap if verification fails.
 			s.cache.delete(keyFromSidecar(sidecars[0]))
 			return errors.Wrapf(err, "invalid BlobSidecars received for block %#x", root)
 		}
