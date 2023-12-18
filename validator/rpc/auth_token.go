@@ -137,16 +137,16 @@ func logValidatorWebAuth(validatorWebAddr, token string, tokenPath string) {
 func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 	hashFilePath := filepath.Join(walletDirPath, AuthTokenFileName)
 	bytesBuf := new(bytes.Buffer)
-	if _, err := bytesBuf.Write([]byte(fmt.Sprintf("%x", jwtKey))); err != nil {
+	if _, err := bytesBuf.WriteString(fmt.Sprintf("%x", jwtKey)); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+	if _, err := bytesBuf.WriteString("\n"); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte(token)); err != nil {
+	if _, err := bytesBuf.WriteString(token); err != nil {
 		return err
 	}
-	if _, err := bytesBuf.Write([]byte("\n")); err != nil {
+	if _, err := bytesBuf.WriteString("\n"); err != nil {
 		return err
 	}
 	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
