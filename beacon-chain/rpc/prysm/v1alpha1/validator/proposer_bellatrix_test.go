@@ -391,6 +391,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.DeepEqual(t, bid.BlobKzgCommitments, got)
 	})
 }
+
 func TestServer_getPayloadHeader(t *testing.T) {
 	genesis := time.Now().Add(-time.Duration(params.BeaconConfig().SlotsPerEpoch) * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
 	params.SetupTestConfigCleanup(t)
