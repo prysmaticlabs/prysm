@@ -367,6 +367,7 @@ func (s *Service) Start() {
 		AttestationCache:   cache.NewAttestationCache(),
 		StateGen:           s.cfg.StateGen,
 		P2P:                s.cfg.Broadcaster,
+		FinalizedFetcher:   s.cfg.FinalizationFetcher,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{
