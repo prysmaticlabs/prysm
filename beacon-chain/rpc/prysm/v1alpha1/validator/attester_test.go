@@ -188,7 +188,7 @@ func BenchmarkGetAttestationDataConcurrent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
-		wg.Add(5000) // for 1000 concurrent accesses
+		wg.Add(5000) // for 5000 concurrent accesses
 
 		for j := 0; j < 5000; j++ {
 			go func() {
