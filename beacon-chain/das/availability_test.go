@@ -263,9 +263,10 @@ func TestLazyPersistOnceCommitted(t *testing.T) {
 }
 
 type mockBlobBatchVerifier struct {
-	t   *testing.T
-	scs []blocks.ROBlob
-	err error
+	t        *testing.T
+	scs      []blocks.ROBlob
+	err      error
+	verified map[[32]byte]primitives.Slot
 }
 
 var _ BlobBatchVerifier = &mockBlobBatchVerifier{}
@@ -277,4 +278,11 @@ func (m *mockBlobBatchVerifier) VerifiedROBlobs(_ context.Context, scs []blocks.
 	}
 	vscs := verification.FakeVerifySliceForTest(m.t, scs)
 	return vscs, m.err
+}
+
+func (m *mockBlobBatchVerifier) MarkVerified(root [32]byte, slot primitives.Slot) {
+	if m.verified == nil {
+		m.verified = make(map[[32]byte]primitives.Slot)
+	}
+	m.verified[root] = slot
 }

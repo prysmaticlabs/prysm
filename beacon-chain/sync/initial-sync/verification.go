@@ -38,15 +38,22 @@ type BlobBatchVerifier struct {
 	verified    map[[32]byte]primitives.Slot
 }
 
+// MarkVerified is exported so that blobs without commitments can be marked valid.
+// This allows a user of the BlobBatchVerifier to early return while still keeping
+// track of previous blocks in the batch.
+func (batch *BlobBatchVerifier) MarkVerified(root [32]byte, slot primitives.Slot) {
+	batch.verified[root] = slot
+}
+
 var _ das.BlobBatchVerifier = &BlobBatchVerifier{}
 
-func (kb *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
-	if err := kb.verifyKzg(scs...); err != nil {
+func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+	if err := batch.verifyKzg(scs...); err != nil {
 		return nil, err
 	}
 	vs := make([]blocks.VerifiedROBlob, len(scs))
 	for i := range scs {
-		vb, err := kb.verifyOneBlob(ctx, scs[i])
+		vb, err := batch.verifyOneBlob(ctx, scs[i])
 		if err != nil {
 			return nil, err
 		}
@@ -55,9 +62,9 @@ func (kb *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.R
 	return vs, nil
 }
 
-func (kb *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob) (blocks.VerifiedROBlob, error) {
+func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob) (blocks.VerifiedROBlob, error) {
 	vb := blocks.VerifiedROBlob{}
-	bv := kb.newVerifier(sc, verification.InitsyncSidecarRequirements)
+	bv := batch.newVerifier(sc, verification.InitsyncSidecarRequirements)
 	// We can satisfy this immediately because VerifiedROBlobs always verifies commitments for all blobs in the batch
 	// before calling verifyOneBlob.
 	bv.SatisfyRequirement(verification.RequireSidecarKzgProofVerified)
@@ -78,7 +85,7 @@ func (kb *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob
 	// Since we are processing in batches, it is not possible to use these methods which will only succeed after
 	// forkchoice has been updated to include the previous block in the batch. So we keep track of previous successful
 	// verifications in the batch and pinky swear to the verifier that these conditions are valid.
-	parentSlot, verified := kb.verified[sc.ParentRoot()]
+	parentSlot, verified := batch.verified[sc.ParentRoot()]
 	if verified && parentSlot < sc.Slot() {
 		bv.SatisfyRequirement(verification.RequireSidecarParentSeen)
 		bv.SatisfyRequirement(verification.RequireSidecarParentValid)
@@ -109,7 +116,7 @@ func (kb *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob
 
 	vb, err := bv.VerifiedROBlob()
 	if err == nil {
-		kb.verified[sc.BlockRoot()] = sc.Slot()
+		batch.MarkVerified(sc.BlockRoot(), sc.Slot())
 	}
 	return vb, err
 }

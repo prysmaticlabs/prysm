@@ -32,6 +32,7 @@ var _ AvailabilityStore = &LazilyPersistentStore{}
 // batch verification.
 type BlobBatchVerifier interface {
 	VerifiedROBlobs(ctx context.Context, sc []blocks.ROBlob) ([]blocks.VerifiedROBlob, error)
+	MarkVerified(root [32]byte, slot primitives.Slot)
 }
 
 // NewLazilyPersistentStore creates a new LazilyPersistentStore. This constructor should always be used
@@ -77,6 +78,11 @@ func (s *LazilyPersistentStore) Persist(current primitives.Slot, sc ...blocks.RO
 func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
 	blockCommitments := commitmentsToCheck(b, current)
 	if len(blockCommitments) == 0 {
+		// If blockchain processing calls IsDataAvailable for a block it is valid as far as the verifier is concerned.
+		// This func will early return for blocks that are pre-deneb or which do not have any commitments.
+		// But first, we'll mark the block as verified for the rest of the batch
+		// so that subsequent blocks can pass the parent-based validity checks.
+		s.verifier.MarkVerified(b.Root(), b.Block().Slot())
 		return nil
 	}
 
