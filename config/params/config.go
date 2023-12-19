@@ -240,6 +240,7 @@ type BeaconChainConfig struct {
 	MaximumGossipClockDisparity     uint64          `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY" spec:"true"`     // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
 	MessageDomainInvalidSnappy      [4]byte         `yaml:"MESSAGE_DOMAIN_INVALID_SNAPPY" spec:"true"`      // MessageDomainInvalidSnappy is the 4-byte domain for gossip message-id isolation of invalid snappy messages.
 	MessageDomainValidSnappy        [4]byte         `yaml:"MESSAGE_DOMAIN_VALID_SNAPPY" spec:"true"`        // MessageDomainValidSnappy is the 4-byte domain for gossip message-id isolation of valid snappy messages.
+	MinEpochsForBlockRequests       uint64          `yaml:"MIN_EPOCHS_FOR_BLOCK_REQUESTS" spec:"true"`      // MinEpochsForBlockRequests represents the minimum number of epochs for which we can serve block requests.
 	EpochsPerSubnetSubscription     uint64          `yaml:"EPOCHS_PER_SUBNET_SUBSCRIPTION" spec:"true"`     // EpochsPerSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
 	AttestationSubnetExtraBits      uint64          `yaml:"ATTESTATION_SUBNET_EXTRA_BITS" spec:"true"`      // AttestationSubnetExtraBits is the number of extra bits of a NodeId to use when mapping to a subscribed subnet.
 	AttestationSubnetPrefixBits     uint64          `yaml:"ATTESTATION_SUBNET_PREFIX_BITS" spec:"true"`     // AttestationSubnetPrefixBits is defined as (ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS).
