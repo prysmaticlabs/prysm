@@ -8,12 +8,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -275,41 +274,22 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
+	_ context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
-	defer span.End()
-	var feeRecipients []common.Address
 	var validatorIndices []primitives.ValidatorIndex
 
 	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
-		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
-		switch {
-		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-			newRecipients = append(newRecipients, r)
-		case err != nil:
-			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
-		default:
-			if common.BytesToAddress(r.FeeRecipient) != f {
-				newRecipients = append(newRecipients, r)
-			}
+		val := cache.TrackedValidator{
+			Active:       true, // TODO: either check or add the field in the request
+			Index:        r.ValidatorIndex,
+			FeeRecipient: primitives.ExecutionAddress(r.FeeRecipient),
 		}
+		vs.TrackedValidatorsCache.Set(val)
+		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
 	if len(newRecipients) == 0 {
 		return &emptypb.Empty{}, nil
-	}
-
-	for _, recipientContainer := range newRecipients {
-		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
-		if !common.IsHexAddress(recipient) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
-		}
-		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
-		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
-	}
-	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
 	}
 	log.WithFields(logrus.Fields{
 		"validatorIndices": validatorIndices,

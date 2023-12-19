@@ -38,9 +38,13 @@ func (p *PayloadIDCache) PayloadID(slot primitives.Slot, root [32]byte) (primiti
 }
 
 // SetPayloadID updates the payload ID for the given slot and headroot
+// it also prunes older entries in the cache
 func (p *PayloadIDCache) Set(slot primitives.Slot, root [32]byte, pid primitives.PayloadID) {
 	p.Lock()
 	defer p.Unlock()
+	if slot > 1 {
+		p.prune(slot - 2)
+	}
 	inner, ok := p.slotToPayloadID[slot]
 	if !ok {
 		inner = make(RootToPayloadIDMap)
@@ -49,10 +53,8 @@ func (p *PayloadIDCache) Set(slot primitives.Slot, root [32]byte, pid primitives
 	inner[root] = pid
 }
 
-// Prune prunes old payload IDs
-func (p *PayloadIDCache) Prune(slot primitives.Slot) {
-	p.Lock()
-	defer p.Unlock()
+// Prune prunes old payload IDs. Requires a Lock in the cache
+func (p *PayloadIDCache) prune(slot primitives.Slot) {
 	for key := range p.slotToPayloadID {
 		if key < slot {
 			delete(p.slotToPayloadID, key)

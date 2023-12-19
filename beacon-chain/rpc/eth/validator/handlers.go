@@ -11,14 +11,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	rpchelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
@@ -543,9 +541,6 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 
 // PrepareBeaconProposer endpoint saves the fee recipient given a validator index, this is used when proposing a block.
 func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.PrepareBeaconProposer")
-	defer span.End()
-
 	var jsonFeeRecipients []*shared.FeeRecipient
 	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
 	switch {
@@ -556,7 +551,6 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	var feeRecipients []common.Address
 	var validatorIndices []primitives.ValidatorIndex
 	// filter for found fee recipients
 	for _, r := range jsonFeeRecipients {
@@ -568,26 +562,15 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 		if !valid {
 			return
 		}
-		f, err := s.BeaconDB.FeeRecipientByValidatorID(ctx, primitives.ValidatorIndex(validatorIndex))
-		switch {
-		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-			feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
-			validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
-		case err != nil:
-			httputil.HandleError(w, fmt.Sprintf("Could not get fee recipient by validator index: %v", err), http.StatusInternalServerError)
-			return
-		default:
-			if common.BytesToAddress(feeRecipientBytes) != f {
-				feeRecipients = append(feeRecipients, common.BytesToAddress(bytesutil.SafeCopyBytes(feeRecipientBytes)))
-				validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
-			}
+		val := cache.TrackedValidator{
+			Active:       true, // TODO: either check or add the field in the request
+			Index:        primitives.ValidatorIndex(validatorIndex),
+			FeeRecipient: primitives.ExecutionAddress(feeRecipientBytes),
 		}
+		s.TrackedValidatorsCache.Set(val)
+		validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))
 	}
 	if len(validatorIndices) == 0 {
-		return
-	}
-	if err := s.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
-		httputil.HandleError(w, fmt.Sprintf("Could not save fee recipients: %v", err), http.StatusInternalServerError)
 		return
 	}
 	log.WithFields(log.Fields{
