@@ -243,7 +243,7 @@ func (s *Service) ProcessChainStart(genesisTime uint64, eth1BlockHash [32]byte, 
 	s.chainStartData.Chainstarted = true
 	s.chainStartData.GenesisBlock = blockNumber.Uint64()
 
-	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time wont exceed int64 in your lifetime.
+	chainStartTime := time.Unix(int64(genesisTime), 0) // lint:ignore uintcast -- Genesis time won't exceed int64 in your lifetime.
 
 	for i := range s.chainStartData.ChainstartDeposits {
 		proof, err := s.depositTrie.MerkleProof(i)

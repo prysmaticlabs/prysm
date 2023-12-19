@@ -106,7 +106,7 @@ func TestProposerCache(t *testing.T) {
 	// should not be cached yet
 	require.Equal(t, false, cached)
 
-	// If this test breaks due to changes in the determinstic state gen, just replace '2' with whatever the right index is.
+	// If this test breaks due to changes in the deterministic state gen, just replace '2' with whatever the right index is.
 	expectedIdx := 2
 	idx, err := pc.ComputeProposer(ctx, [32]byte{}, 1, st)
 	require.NoError(t, err)
