@@ -406,6 +406,8 @@ func (s *Service) Start() {
 		BLSChangesPool:         s.cfg.BLSChangesPool,
 		ClockWaiter:            s.cfg.ClockWaiter,
 		CoreService:            coreService,
+		TrackedValidatorsCache: s.cfg.TrackedValidatorsCache,
+		PayloadIDCache:         s.cfg.PayloadIDCache,
 	}
 	s.initializeValidatorServerRoutes(&validator.Server{
 		HeadFetcher:            s.cfg.HeadFetcher,
