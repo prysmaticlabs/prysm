@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -2226,9 +2225,10 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, url, &body)
 			writer := httptest.NewRecorder()
 			db := dbutil.SetupDB(t)
-			ctx := context.Background()
 			server := &Server{
-				BeaconDB: db,
+				BeaconDB:               db,
+				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+				PayloadIDCache:         cache.NewPayloadIDCache(),
 			}
 			server.PrepareBeaconProposer(writer, request)
 			require.Equal(t, tt.code, writer.Code)
@@ -2236,11 +2236,13 @@ func TestPrepareBeaconProposer(t *testing.T) {
 				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
 			} else {
 				require.NoError(t, err)
-				address, err := server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
-				require.NoError(t, err)
 				feebytes, err := hexutil.Decode(tt.request[0].FeeRecipient)
 				require.NoError(t, err)
-				require.Equal(t, common.BytesToAddress(feebytes), address)
+				index, err := strconv.ParseUint(tt.request[0].ValidatorIndex, 10, 64)
+				require.NoError(t, err)
+				val, tracked := server.TrackedValidatorsCache.Validator(primitives.ValidatorIndex(index))
+				require.Equal(t, true, tracked)
+				require.Equal(t, primitives.ExecutionAddress(feebytes), val.FeeRecipient)
 			}
 		})
 	}
@@ -2251,7 +2253,11 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
 	// New validator
-	proposerServer := &Server{BeaconDB: db}
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+		PayloadIDCache:         cache.NewPayloadIDCache(),
+	}
 	req := []*shared.FeeRecipient{{
 		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
 		ValidatorIndex: "1",
@@ -2277,7 +2283,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 
 	// Same validator with different fee recipient
 	hook.Reset()
@@ -2327,13 +2333,16 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 }
 
 func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	db := dbutil.SetupDB(b)
-	proposerServer := &Server{BeaconDB: db}
-
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+		PayloadIDCache:         cache.NewPayloadIDCache(),
+	}
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*shared.FeeRecipient, 0)
 	for i := 0; i < 10000; i++ {
