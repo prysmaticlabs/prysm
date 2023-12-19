@@ -78,9 +78,6 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 	if err := bv.SlotAboveFinalized(); err != nil {
 		return vb, err
 	}
-	if err := bv.ValidProposerSignature(ctx); err != nil {
-		return vb, err
-	}
 
 	// Since we are processing in batches, it is not possible to use these methods which will only succeed after
 	// forkchoice has been updated to include the previous block in the batch. So we keep track of previous successful
@@ -106,6 +103,9 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 		}
 	}
 
+	if err := bv.ValidProposerSignature(ctx); err != nil {
+		return vb, err
+	}
 	if err := bv.SidecarInclusionProven(); err != nil {
 		return vb, err
 	}
