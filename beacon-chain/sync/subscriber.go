@@ -90,7 +90,7 @@ func (s *Service) registerSubscribers(epoch primitives.Epoch, digest [4]byte) {
 			s.validateCommitteeIndexBeaconAttestation,   /* validator */
 			s.committeeIndexBeaconAttestationSubscriber, /* message handler */
 			digest,
-			params.BeaconNetworkConfig().AttestationSubnetCount,
+			params.BeaconConfig().AttestationSubnetCount,
 		)
 	} else {
 		s.subscribeDynamicWithSubnets(

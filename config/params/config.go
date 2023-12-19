@@ -229,12 +229,22 @@ type BeaconChainConfig struct {
 	MaxRequestBlobSidecars           uint64           `yaml:"MAX_REQUEST_BLOB_SIDECARS" spec:"true"`             // MaxRequestBlobSidecars is the maximum number of blobs to request in a single request.
 	MaxRequestBlocksDeneb            uint64           `yaml:"MAX_REQUEST_BLOCKS_DENEB" spec:"true"`              // MaxRequestBlocksDeneb is the maximum number of blocks in a single request after the deneb epoch.
 
-	// Values related to the new subnet backbone
-	EpochsPerSubnetSubscription uint64 `yaml:"EPOCHS_PER_SUBNET_SUBSCRIPTION" spec:"true"` // EpochsPerSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
-	AttestationSubnetExtraBits  uint64 `yaml:"ATTESTATION_SUBNET_EXTRA_BITS" spec:"true"`  // AttestationSubnetExtraBits is the number of extra bits of a NodeId to use when mapping to a subscribed subnet.
-	AttestationSubnetPrefixBits uint64 `yaml:"ATTESTATION_SUBNET_PREFIX_BITS" spec:"true"` // AttestationSubnetPrefixBits is defined as (ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS).
-	SubnetsPerNode              uint64 `yaml:"SUBNETS_PER_NODE" spec:"true"`               // SubnetsPerNode is the number of long-lived subnets a beacon node should be subscribed to.
-	NodeIdBits                  uint64 `yaml:"NODE_ID_BITS" spec:"true"`                   // NodeIdBits defines the bit length of a node id.
+	// Networking Specific Parameters
+	GossipMaxSize                   uint64          `yaml:"GOSSIP_MAX_SIZE" spec:"true"`                    // GossipMaxSize is the maximum allowed size of uncompressed gossip messages.
+	MaxChunkSize                    uint64          `yaml:"MAX_CHUNK_SIZE" spec:"true"`                     // MaxChunkSize is the maximum allowed size of uncompressed req/resp chunked responses.
+	AttestationSubnetCount          uint64          `yaml:"ATTESTATION_SUBNET_COUNT" spec:"true"`           // AttestationSubnetCount is the number of attestation subnets used in the gossipsub protocol.
+	AttestationPropagationSlotRange primitives.Slot `yaml:"ATTESTATION_PROPAGATION_SLOT_RANGE" spec:"true"` // AttestationPropagationSlotRange is the maximum number of slots during which an attestation can be propagated.
+	MaxRequestBlocks                uint64          `yaml:"MAX_REQUEST_BLOCKS" spec:"true"`                 // MaxRequestBlocks is the maximum number of blocks in a single request.
+	TtfbTimeout                     uint64          `yaml:"TTFB_TIMEOUT" spec:"true"`                       // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
+	RespTimeout                     uint64          `yaml:"RESP_TIMEOUT" spec:"true"`                       // RespTimeout is the maximum time for complete response transfer.
+	MaximumGossipClockDisparity     time.Duration   `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY" spec:"true"`     // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
+	MessageDomainInvalidSnappy      [4]byte         `yaml:"MESSAGE_DOMAIN_INVALID_SNAPPY" spec:"true"`      // MessageDomainInvalidSnappy is the 4-byte domain for gossip message-id isolation of invalid snappy messages.
+	MessageDomainValidSnappy        [4]byte         `yaml:"MESSAGE_DOMAIN_VALID_SNAPPY" spec:"true"`        // MessageDomainValidSnappy is the 4-byte domain for gossip message-id isolation of valid snappy messages.
+	EpochsPerSubnetSubscription     uint64          `yaml:"EPOCHS_PER_SUBNET_SUBSCRIPTION" spec:"true"`     // EpochsPerSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
+	AttestationSubnetExtraBits      uint64          `yaml:"ATTESTATION_SUBNET_EXTRA_BITS" spec:"true"`      // AttestationSubnetExtraBits is the number of extra bits of a NodeId to use when mapping to a subscribed subnet.
+	AttestationSubnetPrefixBits     uint64          `yaml:"ATTESTATION_SUBNET_PREFIX_BITS" spec:"true"`     // AttestationSubnetPrefixBits is defined as (ceillog2(ATTESTATION_SUBNET_COUNT) + ATTESTATION_SUBNET_EXTRA_BITS).
+	SubnetsPerNode                  uint64          `yaml:"SUBNETS_PER_NODE" spec:"true"`                   // SubnetsPerNode is the number of long-lived subnets a beacon node should be subscribed to.
+	NodeIdBits                      uint64          `yaml:"NODE_ID_BITS" spec:"true"`                       // NodeIdBits defines the bit length of a node id.
 }
 
 // InitializeForkSchedule initializes the schedules forks baked into the config.

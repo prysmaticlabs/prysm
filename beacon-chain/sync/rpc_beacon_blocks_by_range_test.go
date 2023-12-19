@@ -581,7 +581,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 		{
 			name: "Over limit Count",
 			req: &ethpb.BeaconBlocksByRangeRequest{
-				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
+				Count: params.BeaconConfig().MaxRequestBlocks + 1,
 				Step:  1,
 			},
 			expectedError: p2ptypes.ErrInvalidRequest,
@@ -590,7 +590,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 		{
 			name: "Correct Count",
 			req: &ethpb.BeaconBlocksByRangeRequest{
-				Count: params.BeaconNetworkConfig().MaxRequestBlocks - 1,
+				Count: params.BeaconConfig().MaxRequestBlocks - 1,
 				Step:  1,
 			},
 			errorToLog: "validation failed with correct count",
@@ -633,7 +633,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 			name: "Over Limit End Slot",
 			req: &ethpb.BeaconBlocksByRangeRequest{
 				Step:  1,
-				Count: params.BeaconNetworkConfig().MaxRequestBlocks + 1,
+				Count: params.BeaconConfig().MaxRequestBlocks + 1,
 			},
 			expectedError: p2ptypes.ErrInvalidRequest,
 			errorToLog:    "validation did not fail with bad end slot",
@@ -650,7 +650,7 @@ func TestRPCBeaconBlocksByRange_validateRangeRequest(t *testing.T) {
 			name: "Valid Request",
 			req: &ethpb.BeaconBlocksByRangeRequest{
 				Step:      1,
-				Count:     params.BeaconNetworkConfig().MaxRequestBlocks - 1,
+				Count:     params.BeaconConfig().MaxRequestBlocks - 1,
 				StartSlot: 50,
 			},
 			errorToLog: "validation failed with valid params",

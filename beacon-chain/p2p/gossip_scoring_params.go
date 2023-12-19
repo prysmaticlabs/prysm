@@ -284,7 +284,7 @@ func defaultSyncContributionTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
-	subnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
+	subnetCount := params.BeaconConfig().AttestationSubnetCount
 	// Get weight for each specific subnet.
 	topicWeight := attestationTotalWeight / float64(subnetCount)
 	subnetWeight := activeValidators / subnetCount
