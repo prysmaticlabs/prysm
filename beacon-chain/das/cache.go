@@ -71,6 +71,9 @@ type dbidx [fieldparams.MaxBlobsPerBlock]bool
 // missing compares the set of BlobSidecars observed in the backing store to the set of commitments
 // observed in a block - cmts is the BlobKzgCommitments field from a block.
 func (idx dbidx) missing(expected int) []uint64 {
+	if expected > fieldparams.MaxBlobsPerBlock {
+		expected = fieldparams.MaxBlobsPerBlock
+	}
 	m := make([]uint64, 0, expected)
 	for i := 0; i < expected; i++ {
 		if !idx[i] {

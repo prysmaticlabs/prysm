@@ -8,6 +8,7 @@ import (
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -32,6 +33,7 @@ func Test_commitmentsToCheck(t *testing.T) {
 		commits [][]byte
 		block   func(*testing.T) blocks.ROBlock
 		slot    primitives.Slot
+		err     error
 	}{
 		{
 			name: "pre deneb",
@@ -73,11 +75,37 @@ func Test_commitmentsToCheck(t *testing.T) {
 			},
 			slot: windowSlots + 1,
 		},
+		{
+			name: "excessive commitments",
+			block: func(t *testing.T) blocks.ROBlock {
+				d := util.NewBeaconBlockDeneb()
+				d.Block.Slot = 100
+				// block is from slot 0, "current slot" is window size +1 (so outside the window)
+				d.Block.Body.BlobKzgCommitments = commits
+				// Double the number of commitments, assert that this is over the limit
+				d.Block.Body.BlobKzgCommitments = append(commits, d.Block.Body.BlobKzgCommitments...)
+				sb, err := blocks.NewSignedBeaconBlock(d)
+				require.NoError(t, err)
+				rb, err := blocks.NewROBlock(sb)
+				require.NoError(t, err)
+				c, err := rb.Block().Body().BlobKzgCommitments()
+				require.NoError(t, err)
+				require.Equal(t, true, len(c) > fieldparams.MaxBlobsPerBlock)
+				return rb
+			},
+			slot: windowSlots + 1,
+			err:  errIndexOutOfBounds,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			b := c.block(t)
-			co := commitmentsToCheck(b, c.slot)
+			co, err := commitmentsToCheck(b, c.slot)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, len(c.commits), len(co))
 			for i := 0; i < len(c.commits); i++ {
 				require.Equal(t, true, bytes.Equal(c.commits[i], co[i]))

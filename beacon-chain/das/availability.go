@@ -6,6 +6,7 @@ import (
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -76,7 +77,10 @@ func (s *LazilyPersistentStore) Persist(current primitives.Slot, sc ...blocks.RO
 // IsDataAvailable returns nil if all the commitments in the given block are persisted to the db and have been verified.
 // BlobSidecars already in the db are assumed to have been previously verified against the block.
 func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current primitives.Slot, b blocks.ROBlock) error {
-	blockCommitments := commitmentsToCheck(b, current)
+	blockCommitments, err := commitmentsToCheck(b, current)
+	if err != nil {
+		return errors.Wrapf(err, "could check data availability for block %#x", b.Root())
+	}
 	if len(blockCommitments) == 0 {
 		// If blockchain processing calls IsDataAvailable for a block it is valid as far as the verifier is concerned.
 		// This func will early return for blocks that are pre-deneb or which do not have any commitments.
@@ -151,19 +155,22 @@ func (s *LazilyPersistentStore) persisted(root [32]byte, entry *cacheEntry) (dbi
 	return entry.ensureDbidx(idx), nil
 }
 
-func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) [][]byte {
+func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) ([][]byte, error) {
 	if b.Version() < version.Deneb {
-		return nil
+		return nil, nil
 	}
 	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
 	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(current)) {
-		return nil
+		return nil, nil
 	}
 	kzgCommitments, err := b.Block().Body().BlobKzgCommitments()
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return kzgCommitments
+	if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
+		return nil, errIndexOutOfBounds
+	}
+	return kzgCommitments, nil
 }
 
 func header(s blocks.ROBlob) *ethpb.BeaconBlockHeader {
