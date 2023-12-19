@@ -196,11 +196,9 @@ func (v *ValidatorService) Start() {
 	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, opts...)
 	go func() {
-		select {
-		case e := <-evErrCh:
-			log.WithError(e).Error("Event streaming failed")
-			v.cancel()
-		}
+		e := <-evErrCh
+		log.WithError(e).Error("Event streaming failed")
+		v.cancel()
 	}()
 
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
