@@ -24,12 +24,17 @@ func TestEventHandler(t *testing.T) {
 	defer server.Close()
 
 	handler := NewEventHandler(http.DefaultClient, server.URL)
-	sub := make(chan event, 1)
-	handler.subscribe(sub)
+	sub1 := make(chan event, 1)
+	sub2 := make(chan event, 1)
+	handler.subscribe(sub1)
+	handler.subscribe(sub2)
 
 	require.NoError(t, handler.get(context.Background(), []string{"head"}, make(chan error)))
 
-	e := <-sub
+	e := <-sub1
+	assert.Equal(t, "head", e.eventType)
+	assert.Equal(t, "data", e.data)
+	e = <-sub2
 	assert.Equal(t, "head", e.eventType)
 	assert.Equal(t, "data", e.data)
 }
