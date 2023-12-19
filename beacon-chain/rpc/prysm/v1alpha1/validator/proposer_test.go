@@ -2608,16 +2608,19 @@ func TestProposer_PrepareBeaconProposer(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			db := dbutil.SetupDB(t)
 			ctx := context.Background()
-			proposerServer := &Server{BeaconDB: db}
+			proposerServer := &Server{
+				BeaconDB:               db,
+				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+			}
 			_, err := proposerServer.PrepareBeaconProposer(ctx, tt.args.request)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, tt.wantErr, err)
 				return
 			}
 			require.NoError(t, err)
-			address, err := proposerServer.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
-			require.NoError(t, err)
-			require.Equal(t, common.BytesToAddress(tt.args.request.Recipients[0].FeeRecipient), address)
+			val, tracked := proposerServer.TrackedValidatorsCache.Validator(1)
+			require.Equal(t, true, tracked)
+			require.Equal(t, primitives.ExecutionAddress(tt.args.request.Recipients[0].FeeRecipient), val.FeeRecipient)
 
 		})
 	}
@@ -2627,7 +2630,10 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	hook := logTest.NewGlobal()
 	db := dbutil.SetupDB(t)
 	ctx := context.Background()
-	proposerServer := &Server{BeaconDB: db}
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+	}
 
 	// New validator
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
@@ -2644,7 +2650,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	hook.Reset()
 	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
 	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
 
 	// Same validator with different fee recipient
 	hook.Reset()
@@ -2675,14 +2681,16 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	hook.Reset()
 	_, err = proposerServer.PrepareBeaconProposer(ctx, req)
 	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses for validator indices")
+	require.LogsContain(t, hook, "Updated fee recipient addresses for validator indices")
 }
 
 func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	db := dbutil.SetupDB(b)
 	ctx := context.Background()
-	proposerServer := &Server{BeaconDB: db}
-
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+	}
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0)
 	for i := 0; i < 10000; i++ {

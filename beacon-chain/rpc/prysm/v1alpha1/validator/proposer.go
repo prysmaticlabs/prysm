@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
@@ -278,8 +280,11 @@ func (vs *Server) PrepareBeaconProposer(
 ) (*emptypb.Empty, error) {
 	var validatorIndices []primitives.ValidatorIndex
 
-	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
+		recipient := hexutil.Encode(r.FeeRecipient)
+		if !common.IsHexAddress(recipient) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
+		}
 		val := cache.TrackedValidator{
 			Active:       true, // TODO: either check or add the field in the request
 			Index:        r.ValidatorIndex,
@@ -288,7 +293,7 @@ func (vs *Server) PrepareBeaconProposer(
 		vs.TrackedValidatorsCache.Set(val)
 		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
-	if len(newRecipients) == 0 {
+	if len(validatorIndices) == 0 {
 		return &emptypb.Empty{}, nil
 	}
 	log.WithFields(logrus.Fields{
