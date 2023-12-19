@@ -49,7 +49,7 @@ var refreshRate = slots.DivideSlotBy(2)
 const maxBadResponses = 5
 
 // maxDialTimeout is the timeout for a single peer dial.
-var maxDialTimeout = time.Duration(params.BeaconConfig().RespTimeout) * time.Second
+var maxDialTimeout = params.BeaconConfig().RespTimeoutDuration()
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -218,7 +218,7 @@ func (s *Service) Start() {
 	s.RefreshENR()
 
 	// Periodic functions.
-	async.RunEvery(s.ctx, time.Duration(params.BeaconConfig().TtfbTimeout)*time.Second, func() {
+	async.RunEvery(s.ctx, params.BeaconConfig().TtfbTimeoutDuration(), func() {
 		ensurePeerConnections(s.ctx, s.host, s.peers, relayNodes...)
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)

@@ -90,7 +90,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	params.OverrideBeaconConfig(cfg)
 	params.SetupTestConfigCleanup(t)
 
-	if params.BeaconConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
+	if params.BeaconConfig().MaximumGossipClockDisparityDuration() < 200*time.Millisecond {
 		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
 	}
 
@@ -205,7 +205,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime,
-				params.BeaconConfig().MaximumGossipClockDisparity)
+				params.BeaconConfig().MaximumGossipClockDisparityDuration())
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

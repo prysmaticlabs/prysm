@@ -271,7 +271,7 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlocks:                1 << 10, // 1024
 	TtfbTimeout:                     5,
 	RespTimeout:                     10,
-	MaximumGossipClockDisparity:     500 * time.Millisecond,
+	MaximumGossipClockDisparity:     500,
 	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
 	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
 	EpochsPerSubnetSubscription:     256,

@@ -66,7 +66,7 @@ var (
 	// time to allow processing early blocks.
 	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
-	earlyAttestationProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparity
+	earlyAttestationProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	errWrongMessage                     = errors.New("wrong pubsub message")
 	errNilMessage                       = errors.New("nil pubsub message")
 )

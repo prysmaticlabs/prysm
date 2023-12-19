@@ -237,7 +237,7 @@ type BeaconChainConfig struct {
 	MaxRequestBlocks                uint64          `yaml:"MAX_REQUEST_BLOCKS" spec:"true"`                 // MaxRequestBlocks is the maximum number of blocks in a single request.
 	TtfbTimeout                     uint64          `yaml:"TTFB_TIMEOUT" spec:"true"`                       // TtfbTimeout is the maximum time to wait for first byte of request response (time-to-first-byte).
 	RespTimeout                     uint64          `yaml:"RESP_TIMEOUT" spec:"true"`                       // RespTimeout is the maximum time for complete response transfer.
-	MaximumGossipClockDisparity     time.Duration   `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY" spec:"true"`     // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
+	MaximumGossipClockDisparity     uint64          `yaml:"MAXIMUM_GOSSIP_CLOCK_DISPARITY" spec:"true"`     // MaximumGossipClockDisparity is the maximum milliseconds of clock disparity assumed between honest nodes.
 	MessageDomainInvalidSnappy      [4]byte         `yaml:"MESSAGE_DOMAIN_INVALID_SNAPPY" spec:"true"`      // MessageDomainInvalidSnappy is the 4-byte domain for gossip message-id isolation of invalid snappy messages.
 	MessageDomainValidSnappy        [4]byte         `yaml:"MESSAGE_DOMAIN_VALID_SNAPPY" spec:"true"`        // MessageDomainValidSnappy is the 4-byte domain for gossip message-id isolation of valid snappy messages.
 	EpochsPerSubnetSubscription     uint64          `yaml:"EPOCHS_PER_SUBNET_SUBSCRIPTION" spec:"true"`     // EpochsPerSubnetSubscription specifies the minimum duration a validator is connected to their subnet.
@@ -303,6 +303,21 @@ func (b *BeaconChainConfig) PreviousEpochAttestationsLength() uint64 {
 // BeaconChainConfig.
 func (b *BeaconChainConfig) CurrentEpochAttestationsLength() uint64 {
 	return uint64(b.SlotsPerEpoch.Mul(b.MaxAttestations))
+}
+
+// TtfbTimeoutDuration returns the time duration of the timeout.
+func (b *BeaconChainConfig) TtfbTimeoutDuration() time.Duration {
+	return time.Duration(b.TtfbTimeout) * time.Second
+}
+
+// RespTimeoutDuration returns the time duration of the timeout.
+func (b *BeaconChainConfig) RespTimeoutDuration() time.Duration {
+	return time.Duration(b.RespTimeout) * time.Second
+}
+
+// MaximumGossipClockDisparityDuration returns the time duration of the clock disparity.
+func (b *BeaconChainConfig) MaximumGossipClockDisparityDuration() time.Duration {
+	return time.Duration(b.MaximumGossipClockDisparity) * time.Millisecond
 }
 
 // DenebEnabled centralizes the check to determine if code paths
