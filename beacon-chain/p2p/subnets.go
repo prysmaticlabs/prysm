@@ -25,7 +25,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-var attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 var syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 var attSubnetEnrKey = params.BeaconNetworkConfig().AttSubnetKey
@@ -237,7 +237,7 @@ func computeSubscribedSubnet(nodeID enode.ID, epoch primitives.Epoch, index uint
 	if err != nil {
 		return 0, err
 	}
-	subnet := (uint64(permutatedPrefix) + index) % params.BeaconNetworkConfig().AttestationSubnetCount
+	subnet := (uint64(permutatedPrefix) + index) % params.BeaconConfig().AttestationSubnetCount
 	return subnet, nil
 }
 

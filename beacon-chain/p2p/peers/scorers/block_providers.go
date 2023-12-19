@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/crypto/rand"
-	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 )
 
 var _ Scorer = (*BlockProviderScorer)(nil)
@@ -155,7 +154,7 @@ func (s *BlockProviderScorer) touch(pid peer.ID, t ...time.Time) {
 	if len(t) == 1 {
 		peerData.BlockProviderUpdated = t[0]
 	} else {
-		peerData.BlockProviderUpdated = prysmTime.Now()
+		peerData.BlockProviderUpdated = time.Now()
 	}
 }
 

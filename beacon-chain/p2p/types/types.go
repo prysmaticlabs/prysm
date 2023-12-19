@@ -47,8 +47,8 @@ func (r *BeaconBlockByRootsReq) MarshalSSZTo(dst []byte) ([]byte, error) {
 
 // MarshalSSZ Marshals the block by roots request type into the serialized object.
 func (r *BeaconBlockByRootsReq) MarshalSSZ() ([]byte, error) {
-	if len(*r) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-		return nil, errors.Errorf("beacon block by roots request exceeds max size: %d > %d", len(*r), params.BeaconNetworkConfig().MaxRequestBlocks)
+	if len(*r) > int(params.BeaconConfig().MaxRequestBlocks) {
+		return nil, errors.Errorf("beacon block by roots request exceeds max size: %d > %d", len(*r), params.BeaconConfig().MaxRequestBlocks)
 	}
 	buf := make([]byte, 0, r.SizeSSZ())
 	for _, r := range *r {
@@ -66,7 +66,7 @@ func (r *BeaconBlockByRootsReq) SizeSSZ() int {
 // block by roots request object.
 func (r *BeaconBlockByRootsReq) UnmarshalSSZ(buf []byte) error {
 	bufLen := len(buf)
-	maxLength := int(params.BeaconNetworkConfig().MaxRequestBlocks * rootLength)
+	maxLength := int(params.BeaconConfig().MaxRequestBlocks * rootLength)
 	if bufLen > maxLength {
 		return errors.Errorf("expected buffer with length of up to %d but received length %d", maxLength, bufLen)
 	}

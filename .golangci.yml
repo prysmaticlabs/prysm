@@ -9,21 +9,80 @@ run:
   go: '1.19'
 
 linters:
-  disable-all: true
-  enable:
-    - gofmt
-    - goimports
-    - unused
-    - errcheck
-    - gosimple
-    - gocognit
-    - dupword
-    - nilerr
-    - whitespace
-    - misspell
-    - mirror
-    - usestdlibvars
-    - errname
+  enable-all: true
+  disable:
+    # Deprecated linters:
+    - deadcode
+    - exhaustivestruct
+    - golint
+    - govet
+    - ifshort
+    - interfacer
+    - maligned
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - varcheck
+
+    # Disabled for now:
+    - asasalint
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - cyclop
+    - depguard
+    - dogsled
+    - dupl
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - exhaustruct
+    - forbidigo
+    - forcetypeassert
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goerr113
+    - gofumpt
+    - gomnd
+    - gomoddirectives
+    - inamedparam
+    - interfacebloat
+    - ireturn
+    - lll
+    - maintidx
+    - makezero
+    - musttag
+    - nakedret
+    - nestif
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - revive
+    - staticcheck
+    - stylecheck
+    - tagalign
+    - tagliatelle
+    - thelper
+    - unparam
+    - varnamelen
+    - wastedassign
+    - wrapcheck
+    - wsl
 
 linters-settings:
   gocognit:
