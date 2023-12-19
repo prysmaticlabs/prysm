@@ -33,7 +33,7 @@ type committeeIndexSlotPair struct {
 	slot           primitives.Slot
 }
 
-func (c BeaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
+func (c beaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
 	all, err := c.multipleValidatorStatus(ctx, &ethpb.MultipleValidatorStatusRequest{PublicKeys: in.PublicKeys})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get validator status")
@@ -71,7 +71,7 @@ func (c BeaconApiValidatorClient) getDuties(ctx context.Context, in *ethpb.Dutie
 	}, nil
 }
 
-func (c BeaconApiValidatorClient) getDutiesForEpoch(
+func (c beaconApiValidatorClient) getDutiesForEpoch(
 	ctx context.Context,
 	epoch primitives.Epoch,
 	multipleValidatorStatus *ethpb.MultipleValidatorStatusResponse,

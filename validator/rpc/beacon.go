@@ -54,6 +54,5 @@ func (s *Server) registerBeaconClient() error {
 	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
 	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
 	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
-
 	return nil
 }

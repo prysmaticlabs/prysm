@@ -53,7 +53,7 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 	req.Header.Set("Accept", api.EventStreamMediaType)
 	req.Header.Set("Connection", "keep-alive")
 
-	httpResp, err := h.httpClient.Do(req)
+	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		return errors.Wrap(err, "failed to perform HTTP request")
 	}
@@ -68,14 +68,14 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			}
 
 			rawData := make([]byte, eventByteLimit)
-			_, err = httpResp.Body.Read(rawData)
+			_, err = resp.Body.Read(rawData)
 			if err != nil {
 				if strings.Contains(err.Error(), "EOF") {
 					log.Error("Received EOF while reading events response body")
 					eof = true
 				} else {
-					if err = httpResp.Body.Close(); err != nil {
-						log.WithError(err).Error("Failed to close events response body")
+					if closeErr := resp.Body.Close(); closeErr != nil {
+						log.WithError(closeErr).Error("Failed to close events response body")
 					}
 					eventErrCh <- err
 					return
@@ -83,9 +83,13 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			}
 
 			e := strings.Split(string(rawData), "\n")
-			// we expect: event type, newline, event data, newline, newline
-			if len(e) != 4 {
+			// We expect that the event format will contain event type and data separated with a newline
+			if len(e) < 2 {
+				// We reached EOF and there is no event to send
 				if eof {
+					if closeErr := resp.Body.Close(); closeErr != nil {
+						log.WithError(closeErr).Error("Failed to close events response body")
+					}
 					return
 				}
 				continue
@@ -94,7 +98,11 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			for _, ch := range h.subs {
 				ch <- event{eventType: e[0], data: e[1]}
 			}
+			// We reached EOF and sent the last event
 			if eof {
+				if closeErr := resp.Body.Close(); closeErr != nil {
+					log.WithError(closeErr).Error("Failed to close events response body")
+				}
 				return
 			}
 		}

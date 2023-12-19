@@ -43,7 +43,7 @@ func TestGetDomainData_ValidDomainData(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
 	resp, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.NoError(t, err)
 	require.NotNil(t, resp)
@@ -69,7 +69,7 @@ func TestGetDomainData_GenesisError(t *testing.T) {
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(nil, nil, errors.New("foo error")).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
 	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "failed to get genesis info", err)
 	assert.ErrorContains(t, "foo error", err)
@@ -92,7 +92,7 @@ func TestGetDomainData_InvalidGenesisRoot(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := &beaconApiValidatorClient{genesisProvider: genesisProvider}
 	_, err := validatorClient.getDomainData(ctx, epoch, domainType)
 	assert.ErrorContains(t, "invalid genesis validators root: foo", err)
 }

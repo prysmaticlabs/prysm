@@ -153,7 +153,7 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},
@@ -256,7 +256,7 @@ func TestActivation_InvalidData(t *testing.T) {
 					},
 				).Times(1)
 
-				validatorClient := BeaconApiValidatorClient{
+				validatorClient := beaconApiValidatorClient{
 					stateValidatorsProvider: beaconApiStateValidatorsProvider{
 						jsonRestHandler: jsonRestHandler,
 					},
@@ -293,7 +293,7 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},

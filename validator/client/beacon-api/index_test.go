@@ -65,7 +65,7 @@ func TestIndex_Nominal(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},
@@ -108,7 +108,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},
@@ -159,7 +159,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},
@@ -196,7 +196,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,
 		},

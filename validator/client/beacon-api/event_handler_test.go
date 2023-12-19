@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -28,9 +27,7 @@ func TestEventHandler(t *testing.T) {
 	sub := make(chan event, 1)
 	handler.subscribe(sub)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-	require.NoError(t, handler.get(ctx, []string{"head"}, make(chan error)))
+	require.NoError(t, handler.get(context.Background(), []string{"head"}, make(chan error)))
 
 	e := <-sub
 	assert.Equal(t, "head", e.eventType)

@@ -44,7 +44,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
 	).Times(2)
 
-	validatorClient := BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(
@@ -57,7 +57,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 }
 
 func TestBeaconApiValidatorClient_GetAttestationDataNilInput(t *testing.T) {
-	validatorClient := BeaconApiValidatorClient{}
+	validatorClient := beaconApiValidatorClient{}
 	_, err := validatorClient.GetAttestationData(context.Background(), nil)
 	assert.ErrorContains(t, "GetAttestationData received nil argument `in`", err)
 }
@@ -85,7 +85,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
 	).Times(2)
 
-	validatorClient := BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 
 	resp, err := validatorClient.GetAttestationData(
@@ -99,7 +99,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 
 func TestBeaconApiValidatorClient_GetFeeRecipientByPubKey(t *testing.T) {
 	ctx := context.Background()
-	validatorClient := BeaconApiValidatorClient{}
+	validatorClient := beaconApiValidatorClient{}
 	var expected *ethpb.FeeRecipientByPubKeyResponse = nil
 
 	resp, err := validatorClient.GetFeeRecipientByPubKey(ctx, nil)
@@ -124,7 +124,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 		nil,
 	).Times(2)
 
-	validatorClient := BeaconApiValidatorClient{genesisProvider: genesisProvider}
+	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}
 	resp, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
 
 	domainTypeArray := bytesutil.ToBytes4(domainType)
@@ -136,7 +136,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 func TestBeaconApiValidatorClient_DomainDataError(t *testing.T) {
 	epoch := params.BeaconConfig().AltairForkEpoch
 	domainType := make([]byte, 3)
-	validatorClient := BeaconApiValidatorClient{}
+	validatorClient := beaconApiValidatorClient{}
 	_, err := validatorClient.DomainData(context.Background(), &ethpb.DomainRequest{Epoch: epoch, Domain: domainType})
 	assert.ErrorContains(t, fmt.Sprintf("invalid domain type: %s", hexutil.Encode(domainType)), err)
 }
@@ -159,7 +159,7 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 		nil,
 	).Times(2)
 
-	validatorClient := BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.proposeBeaconBlock(
 		ctx,
 		&ethpb.GenericSignedBeaconBlock{
@@ -196,7 +196,7 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 		errors.New("foo error"),
 	).Times(2)
 
-	validatorClient := BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	expectedResp, expectedErr := validatorClient.proposeBeaconBlock(
 		ctx,
 		&ethpb.GenericSignedBeaconBlock{

@@ -71,7 +71,7 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 		Signature: []byte{8},
 	}
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	err = validatorClient.submitSignedContributionAndProof(ctx, contributionAndProof)
 	require.NoError(t, err)
 }
@@ -133,7 +133,7 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			err := validatorClient.submitSignedContributionAndProof(ctx, testCase.data)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})

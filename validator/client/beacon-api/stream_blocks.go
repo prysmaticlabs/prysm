@@ -26,7 +26,7 @@ type abstractSignedBlockResponseJson struct {
 type streamSlotsClient struct {
 	grpc.ClientStream
 	ctx                context.Context
-	beaconApiClient    BeaconApiValidatorClient
+	beaconApiClient    beaconApiValidatorClient
 	streamSlotsRequest *ethpb.StreamSlotsRequest
 	pingDelay          time.Duration
 	ch                 chan event
@@ -35,7 +35,7 @@ type streamSlotsClient struct {
 type streamBlocksAltairClient struct {
 	grpc.ClientStream
 	ctx                 context.Context
-	beaconApiClient     BeaconApiValidatorClient
+	beaconApiClient     beaconApiValidatorClient
 	streamBlocksRequest *ethpb.StreamBlocksRequest
 	prevBlockSlot       primitives.Slot
 	pingDelay           time.Duration
@@ -47,7 +47,7 @@ type headSignedBeaconBlockResult struct {
 	slot                 primitives.Slot
 }
 
-func (c BeaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
+func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
 	ch := make(chan event, 1)
 	c.eventHandler.subscribe(ch)
 	return &streamSlotsClient{
@@ -59,7 +59,7 @@ func (c BeaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.Str
 	}
 }
 
-func (c BeaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
+func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
 	return &streamBlocksAltairClient{
 		ctx:                 ctx,
 		beaconApiClient:     c,
@@ -115,7 +115,7 @@ func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {
 	return result.streamBlocksResponse, nil
 }
 
-func (c BeaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) (*headSignedBeaconBlockResult, error) {
+func (c beaconApiValidatorClient) getHeadSignedBeaconBlock(ctx context.Context) (*headSignedBeaconBlockResult, error) {
 	// Since we don't know yet what the json looks like, we unmarshal into an abstract structure that has only a version
 	// and a blob of data
 	signedBlockResponseJson := abstractSignedBlockResponseJson{}

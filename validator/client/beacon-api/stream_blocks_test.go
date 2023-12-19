@@ -38,7 +38,7 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{}, time.Millisecond*100)
 	_, err := streamBlocksClient.Recv()
 	assert.ErrorContains(t, "unsupported consensus version `foo`", err)
@@ -165,7 +165,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 					).Times(1)
 
 					beaconBlockConverter := testSuite.generateBeaconBlockConverter(ctrl, testCase.conversionError)
-					validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+					validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 					streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{}, time.Millisecond*100)
 
 					_, err := streamBlocksClient.Recv()
@@ -305,7 +305,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
 
 			// Get the first block
@@ -469,7 +469,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
 
 			// Get the first block
@@ -633,7 +633,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
 
 			// Get the first block
@@ -797,7 +797,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
 
 			// Get the first block
@@ -936,7 +936,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 				).Times(1)
 			}
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler, beaconBlockConverter: beaconBlockConverter}
 			streamBlocksClient := validatorClient.streamBlocks(ctx, &eth.StreamBlocksRequest{VerifiedOnly: testCase.verifiedOnly}, time.Millisecond*100)
 
 			// Get the first block

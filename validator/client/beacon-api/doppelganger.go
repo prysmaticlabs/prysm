@@ -20,7 +20,7 @@ type DoppelGangerInfo struct {
 	response       *ethpb.DoppelGangerResponse_ValidatorResponse
 }
 
-func (c *BeaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
+func (c *beaconApiValidatorClient) checkDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
 	// Check if there is any doppelganger validator for the last 2 epochs.
 	// - Check if the beacon node is synced
 	// - If we are in Phase0, we consider there is no doppelganger.
@@ -218,7 +218,7 @@ func buildResponse(
 	}
 }
 
-func (c *BeaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch primitives.Epoch, indexes []string) (map[string]bool, error) {
+func (c *beaconApiValidatorClient) getIndexToLiveness(ctx context.Context, epoch primitives.Epoch, indexes []string) (map[string]bool, error) {
 	livenessResponse, err := c.getLiveness(ctx, epoch, indexes)
 	if err != nil || livenessResponse.Data == nil {
 		return nil, errors.Wrapf(err, fmt.Sprintf("failed to get liveness for epoch %d", epoch))

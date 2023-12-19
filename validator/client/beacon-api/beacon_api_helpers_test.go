@@ -123,7 +123,7 @@ func TestGetFork_Nominal(t *testing.T) {
 		expected,
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 
@@ -149,7 +149,7 @@ func TestGetFork_Invalid(t *testing.T) {
 		errors.New("custom error"),
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 
@@ -192,7 +192,7 @@ func TestGetHeaders_Nominal(t *testing.T) {
 		expected,
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 
@@ -218,7 +218,7 @@ func TestGetHeaders_Invalid(t *testing.T) {
 		errors.New("custom error"),
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 
@@ -268,7 +268,7 @@ func TestGetLiveness_Nominal(t *testing.T) {
 		nil,
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	liveness, err := validatorClient.getLiveness(ctx, 42, indexes)
 
 	require.NoError(t, err)
@@ -293,7 +293,7 @@ func TestGetLiveness_Invalid(t *testing.T) {
 		errors.New("custom error"),
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getLiveness(ctx, 42, nil)
 
 	require.ErrorContains(t, "custom error", err)
@@ -344,7 +344,7 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 				expected,
 			).Times(1)
 
-			validatorClient := BeaconApiValidatorClient{
+			validatorClient := beaconApiValidatorClient{
 				jsonRestHandler: jsonRestHandler,
 			}
 
@@ -373,7 +373,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 		errors.New("custom error"),
 	).Times(1)
 
-	validatorClient := BeaconApiValidatorClient{
+	validatorClient := beaconApiValidatorClient{
 		jsonRestHandler: jsonRestHandler,
 	}
 

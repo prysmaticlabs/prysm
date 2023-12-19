@@ -136,7 +136,7 @@ func TestProposeAttestation(t *testing.T) {
 				test.endpointError,
 			).Times(test.endpointCall)
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			proposeResponse, err := validatorClient.proposeAttestation(ctx, test.attestation)
 			if test.expectedErrorMessage != "" {
 				require.ErrorContains(t, test.expectedErrorMessage, err)

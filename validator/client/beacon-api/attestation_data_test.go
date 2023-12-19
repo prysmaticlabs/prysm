@@ -59,7 +59,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 		},
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	resp, err := validatorClient.getAttestationData(ctx, primitives.Slot(expectedSlot), primitives.CommitteeIndex(expectedCommitteeIndex))
 	assert.NoError(t, err)
 
@@ -196,7 +196,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 				testCase.generateData(),
 			).Times(1)
 
-			validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 			_, err := validatorClient.getAttestationData(ctx, 1, 2)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
@@ -223,7 +223,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 		errors.New("some specific json response error"),
 	).Times(1)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getAttestationData(ctx, slot, committeeIndex)
 	assert.ErrorContains(t, "some specific json response error", err)
 }

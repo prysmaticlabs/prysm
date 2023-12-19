@@ -65,7 +65,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 		nil,
 	)
 
-	validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	proposeResponse, err := validatorClient.proposeBeaconBlock(ctx, genericSignedBlock)
 	assert.NoError(t, err)
 	require.NotNil(t, proposeResponse)

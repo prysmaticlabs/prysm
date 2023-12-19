@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-func (c *BeaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
+func (c *beaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
 	isOptimistic, err := c.isOptimistic(ctx)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ func (c *BeaconApiValidatorClient) submitAggregateSelectionProof(ctx context.Con
 	}, nil
 }
 
-func (c *BeaconApiValidatorClient) getAggregateAttestation(
+func (c *beaconApiValidatorClient) getAggregateAttestation(
 	ctx context.Context,
 	slot primitives.Slot,
 	attestationDataRoot []byte,

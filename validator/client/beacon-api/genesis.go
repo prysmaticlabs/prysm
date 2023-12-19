@@ -21,7 +21,7 @@ type beaconApiGenesisProvider struct {
 	jsonRestHandler JsonRestHandler
 }
 
-func (c BeaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
+func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
 	genesis, httpError, err := c.genesisProvider.GetGenesis(ctx)
 
 	for err != nil {

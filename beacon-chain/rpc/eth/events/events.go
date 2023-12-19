@@ -106,12 +106,6 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Connection", "keep-alive")
 
-	_, err := fmt.Fprint(w, "\n")
-	if err != nil {
-		log.WithError(err).Error("Could not write to response writer")
-	}
-	flusher.Flush()
-
 	// Handle each event received and context cancellation.
 	// We send a keepalive dummy message immediately to prevent clients
 	// stalling while waiting for the first response chunk.

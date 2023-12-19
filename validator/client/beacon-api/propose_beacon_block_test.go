@@ -103,7 +103,7 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 					errors.New("foo error"),
 				).Times(1)
 
-				validatorClient := &BeaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
+				validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 				_, err := validatorClient.proposeBeaconBlock(ctx, testCase.block)
 				assert.ErrorContains(t, testSuite.expectedErrorMessage, err)
 				assert.ErrorContains(t, "foo error", err)
@@ -113,7 +113,7 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 }
 
 func TestProposeBeaconBlock_UnsupportedBlockType(t *testing.T) {
-	validatorClient := &BeaconApiValidatorClient{}
+	validatorClient := &beaconApiValidatorClient{}
 	_, err := validatorClient.proposeBeaconBlock(context.Background(), &ethpb.GenericSignedBeaconBlock{})
 	assert.ErrorContains(t, "unsupported block type", err)
 }
