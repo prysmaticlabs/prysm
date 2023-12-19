@@ -93,8 +93,6 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	key := keyFromBlock(b)
 	entry := s.cache.ensure(key)
 	// Holding the lock over the course of the DA check simplifies everything.
-	entry.Lock()
-	defer entry.Unlock()
 	if err := s.daCheck(ctx, b.Root(), blockCommitments, entry); err != nil {
 		return err
 	}

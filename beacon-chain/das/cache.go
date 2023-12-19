@@ -3,7 +3,6 @@ package das
 import (
 	"bytes"
 	"fmt"
-	"sync"
 
 	errors "github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -84,7 +83,6 @@ func (idx dbidx) missing(expected int) []uint64 {
 // dbx is a compact representation of BlobSidecars observed in the backing store.
 // dbx assumes that all writes to the backing store go through the same cache.
 type cacheEntry struct {
-	sync.RWMutex
 	scs    [fieldparams.MaxBlobsPerBlock]*blocks.ROBlob
 	dbx    dbidx
 	dbRead bool
