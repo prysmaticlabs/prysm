@@ -26,7 +26,6 @@ type cacheKey struct {
 }
 
 type cache struct {
-	sync.RWMutex
 	entries map[cacheKey]*cacheEntry
 }
 
@@ -46,8 +45,6 @@ func keyFromBlock(b blocks.ROBlock) cacheKey {
 
 // ensure returns the entry for the given key, creating it if it isn't already present.
 func (c *cache) ensure(key cacheKey) *cacheEntry {
-	c.Lock()
-	defer c.Unlock()
 	e, ok := c.entries[key]
 	if !ok {
 		e = &cacheEntry{}
@@ -58,8 +55,6 @@ func (c *cache) ensure(key cacheKey) *cacheEntry {
 
 // delete removes the cache entry from the cache.
 func (c *cache) delete(key cacheKey) {
-	c.Lock()
-	defer c.Unlock()
 	delete(c.entries, key)
 }
 
