@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -31,7 +30,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -814,29 +812,18 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
-		targetRoot, err := targetBlock.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root for target block")
 		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetSlot(slot))
-		err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		justifiedCheckpoint := &ethpbalpha.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
-		})
-		require.NoError(t, err)
-
-		blockRoots := beaconState.BlockRoots()
-		blockRoots[1] = blockRoot[:]
-		blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-		blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-		require.NoError(t, beaconState.SetBlockRoots(blockRoots))
+		}
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
-			Optimistic: false,
-			Genesis:    time.Now().Add(time.Duration(-1*offset) * time.Second),
-			State:      beaconState,
-			Root:       blockRoot[:],
+			Optimistic:                 false,
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Root:                       blockRoot[:],
+			CurrentJustifiedCheckPoint: justifiedCheckpoint,
+			TargetRoot:                 blockRoot,
 		}
 
 		s := &Server{
@@ -845,9 +832,10 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
+				FinalizedFetcher:   chain,
+				AttestationCache:   cache.NewAttestationCache(),
 			},
 		}
 
@@ -915,9 +903,10 @@ func TestGetAttestationData(t *testing.T) {
 		beaconState, err := util.NewBeaconState()
 		require.NoError(t, err)
 		chain := &mockChain.ChainService{
-			Optimistic: true,
-			State:      beaconState,
-			Genesis:    time.Now(),
+			Optimistic:                 true,
+			State:                      beaconState,
+			Genesis:                    time.Now(),
+			CurrentJustifiedCheckPoint: &ethpbalpha.Checkpoint{},
 		}
 
 		s := &Server{
@@ -929,6 +918,7 @@ func TestGetAttestationData(t *testing.T) {
 				AttestationCache:   cache.NewAttestationCache(),
 				GenesisTimeFetcher: chain,
 				HeadFetcher:        chain,
+				FinalizedFetcher:   chain,
 			},
 		}
 
@@ -955,97 +945,13 @@ func TestGetAttestationData(t *testing.T) {
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 
-	t.Run("handles in progress request", func(t *testing.T) {
-		state, err := state_native.InitializeFromProtoPhase0(&ethpbalpha.BeaconState{Slot: 100})
-		require.NoError(t, err)
-		ctx := context.Background()
-		slot := primitives.Slot(2)
-		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-		chain := &mockChain.ChainService{
-			Optimistic: false,
-			Genesis:    time.Now().Add(time.Duration(-1*offset) * time.Second),
-			State:      state,
-		}
-
-		s := &Server{
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			HeadFetcher:           chain,
-			TimeFetcher:           chain,
-			OptimisticModeFetcher: chain,
-			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-			},
-		}
-
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
-				Slot:            strconv.FormatUint(uint64(slot), 10),
-				CommitteeIndex:  strconv.FormatUint(1, 10),
-				BeaconBlockRoot: hexutil.Encode(make([]byte, 32)),
-				Source: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(42, 10),
-					Root:  hexutil.Encode(make([]byte, 32)),
-				},
-				Target: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(55, 10),
-					Root:  hexutil.Encode(make([]byte, 32)),
-				},
-			},
-		}
-
-		expectedResponsePb := &ethpbalpha.AttestationData{
-			Slot:            slot,
-			CommitteeIndex:  1,
-			BeaconBlockRoot: make([]byte, 32),
-			Source:          &ethpbalpha.Checkpoint{Epoch: 42, Root: make([]byte, 32)},
-			Target:          &ethpbalpha.Checkpoint{Epoch: 55, Root: make([]byte, 32)},
-		}
-
-		url := fmt.Sprintf("http://example.com?slot=%d&committee_index=%d", slot, 1)
-		request := httptest.NewRequest(http.MethodGet, url, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		requestPb := &ethpbalpha.AttestationDataRequest{
-			CommitteeIndex: 1,
-			Slot:           slot,
-		}
-
-		require.NoError(t, s.CoreService.AttestationCache.MarkInProgress(requestPb))
-
-		var wg sync.WaitGroup
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			s.GetAttestationData(writer, request)
-
-			assert.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetAttestationDataResponse{}
-			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-			require.NotNil(t, resp)
-			assert.DeepEqual(t, expectedResponse, resp)
-		}()
-
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			assert.NoError(t, s.CoreService.AttestationCache.Put(ctx, requestPb, expectedResponsePb))
-			assert.NoError(t, s.CoreService.AttestationCache.MarkNotInProgress(requestPb))
-		}()
-
-		wg.Wait()
-	})
-
 	t.Run("invalid slot", func(t *testing.T) {
 		slot := 3*params.BeaconConfig().SlotsPerEpoch + 1
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
-			Optimistic: false,
-			Genesis:    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Optimistic:                 false,
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			CurrentJustifiedCheckPoint: &ethpbalpha.Checkpoint{},
 		}
 
 		s := &Server{
@@ -1055,6 +961,7 @@ func TestGetAttestationData(t *testing.T) {
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
 				GenesisTimeFetcher: chain,
+				FinalizedFetcher:   chain,
 			},
 		}
 
@@ -1072,7 +979,7 @@ func TestGetAttestationData(t *testing.T) {
 		assert.Equal(t, true, strings.Contains(e.Message, "invalid request"))
 	})
 
-	t.Run("head state slot greater than request slot", func(t *testing.T) {
+	t.Run("request slot is not current slot", func(t *testing.T) {
 		ctx := context.Background()
 		db := dbutil.SetupDB(t)
 
@@ -1092,37 +999,17 @@ func TestGetAttestationData(t *testing.T) {
 		util.SaveBlock(t, ctx, db, block2)
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
-		targetRoot, err := targetBlock.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root for target block")
-
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetSlot(slot))
-		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-		require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix()-offset)))
-		err = beaconState.SetLatestBlockHeader(util.HydrateBeaconHeader(&ethpbalpha.BeaconBlockHeader{
-			ParentRoot: blockRoot2[:],
-		}))
-		require.NoError(t, err)
-		err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		justifiedCheckpoint := &ethpbalpha.Checkpoint{
 			Epoch: 2,
 			Root:  justifiedRoot[:],
-		})
-		require.NoError(t, err)
-		blockRoots := beaconState.BlockRoots()
-		blockRoots[1] = blockRoot[:]
-		blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-		blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-		blockRoots[3*params.BeaconConfig().SlotsPerEpoch] = blockRoot2[:]
-		require.NoError(t, beaconState.SetBlockRoots(blockRoots))
+		}
 
-		beaconstate := beaconState.Copy()
-		require.NoError(t, beaconstate.SetSlot(beaconstate.Slot()-1))
-		require.NoError(t, db.SaveState(ctx, beaconstate, blockRoot2))
+		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
-			State:   beaconState,
-			Root:    blockRoot[:],
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Root:                       blockRoot[:],
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			CurrentJustifiedCheckPoint: justifiedCheckpoint,
+			TargetRoot:                 blockRoot2,
 		}
 
 		s := &Server{
@@ -1131,16 +1018,12 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
 				StateGen:           stategen.New(db, doublylinkedtree.New()),
+				FinalizedFetcher:   chain,
 			},
 		}
-
-		require.NoError(t, db.SaveState(ctx, beaconState, blockRoot))
-		util.SaveBlock(t, ctx, db, block)
-		require.NoError(t, db.SaveHeadBlockRoot(ctx, blockRoot))
 
 		url := fmt.Sprintf("http://example.com?slot=%d&committee_index=%d", slot-1, 0)
 		request := httptest.NewRequest(http.MethodGet, url, nil)
@@ -1148,28 +1031,7 @@ func TestGetAttestationData(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		s.GetAttestationData(writer, request)
-
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
-				Slot:            strconv.FormatUint(uint64(slot-1), 10),
-				CommitteeIndex:  strconv.FormatUint(0, 10),
-				BeaconBlockRoot: hexutil.Encode(blockRoot2[:]),
-				Source: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(2, 10),
-					Root:  hexutil.Encode(justifiedRoot[:]),
-				},
-				Target: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(3, 10),
-					Root:  hexutil.Encode(blockRoot2[:]),
-				},
-			},
-		}
-
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttestationDataResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.NotNil(t, resp)
-		assert.DeepEqual(t, expectedResponse, resp)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
 	})
 
 	t.Run("succeeds in first epoch", func(t *testing.T) {
@@ -1184,27 +1046,18 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not get signing root for justified block")
-		targetRoot, err := targetBlock.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not get signing root for target block")
 
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetSlot(slot))
-		err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: 0,
 			Root:  justifiedRoot[:],
-		})
+		}
 		require.NoError(t, err)
-		blockRoots := beaconState.BlockRoots()
-		blockRoots[1] = blockRoot[:]
-		blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = targetRoot[:]
-		blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedRoot[:]
-		require.NoError(t, beaconState.SetBlockRoots(blockRoots))
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
-			State:   beaconState,
-			Root:    blockRoot[:],
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Root:                       blockRoot[:],
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			CurrentJustifiedCheckPoint: justifiedCheckpt,
+			TargetRoot:                 blockRoot,
 		}
 
 		s := &Server{
@@ -1216,6 +1069,7 @@ func TestGetAttestationData(t *testing.T) {
 				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
+				FinalizedFetcher:   chain,
 			},
 		}
 
@@ -1279,28 +1133,17 @@ func TestGetAttestationData(t *testing.T) {
 		require.NoError(t, err, "Could not hash beacon block")
 		justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 		require.NoError(t, err, "Could not hash justified block")
-		epochBoundaryRoot, err := epochBoundaryBlock.Block.HashTreeRoot()
-		require.NoError(t, err, "Could not hash justified block")
-		slot := primitives.Slot(10000)
-
-		beaconState, err := util.NewBeaconState()
-		require.NoError(t, err)
-		require.NoError(t, beaconState.SetSlot(slot))
-		err = beaconState.SetCurrentJustifiedCheckpoint(&ethpbalpha.Checkpoint{
+		justifiedCheckpt := &ethpbalpha.Checkpoint{
 			Epoch: slots.ToEpoch(1500),
 			Root:  justifiedBlockRoot[:],
-		})
-		require.NoError(t, err)
-		blockRoots := beaconState.BlockRoots()
-		blockRoots[1] = blockRoot[:]
-		blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-		blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-		require.NoError(t, beaconState.SetBlockRoots(blockRoots))
+		}
+		slot := primitives.Slot(10000)
 		offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 		chain := &mockChain.ChainService{
-			State:   beaconState,
-			Root:    blockRoot[:],
-			Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
+			Root:                       blockRoot[:],
+			Genesis:                    time.Now().Add(time.Duration(-1*offset) * time.Second),
+			CurrentJustifiedCheckPoint: justifiedCheckpt,
+			TargetRoot:                 blockRoot,
 		}
 
 		s := &Server{
@@ -1312,6 +1155,7 @@ func TestGetAttestationData(t *testing.T) {
 				AttestationCache:   cache.NewAttestationCache(),
 				HeadFetcher:        chain,
 				GenesisTimeFetcher: chain,
+				FinalizedFetcher:   chain,
 			},
 		}
 

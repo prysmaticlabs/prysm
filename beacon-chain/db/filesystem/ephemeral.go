@@ -18,7 +18,7 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 // in order to interact with it outside the parameters of the BlobStorage api.
 func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	retentionEpoch := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	retentionEpoch := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	return fs, &BlobStorage{fs: fs, retentionEpochs: retentionEpoch}, nil
 }
 

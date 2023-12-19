@@ -64,7 +64,7 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 		{
 			name:    "before",
 			block:   0,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest + 1,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest + 1,
 			within:  false,
 		},
 		{
@@ -76,13 +76,13 @@ func TestConfig_WithinDAPeriod(t *testing.T) {
 		{
 			name:    "boundary",
 			block:   0,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 			within:  true,
 		},
 		{
 			name:    "one less",
-			block:   params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest - 1,
-			current: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+			block:   params.BeaconConfig().MinEpochsForBlobsSidecarsRequest - 1,
+			current: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 			within:  true,
 		},
 	}

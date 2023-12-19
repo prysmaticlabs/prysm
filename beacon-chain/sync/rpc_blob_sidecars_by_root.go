@@ -23,8 +23,8 @@ func blobMinReqEpoch(finalized, current primitives.Epoch) primitives.Epoch {
 	// max(finalized_epoch, current_epoch - MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS, DENEB_FORK_EPOCH)
 	denebFork := params.BeaconConfig().DenebForkEpoch
 	var reqWindow primitives.Epoch
-	if current > params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest {
-		reqWindow = current - params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	if current > params.BeaconConfig().MinEpochsForBlobsSidecarsRequest {
+		reqWindow = current - params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	}
 	if finalized >= reqWindow && finalized > denebFork {
 		return finalized
@@ -109,7 +109,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 }
 
 func validateBlobByRootRequest(blobIdents types.BlobSidecarsByRootReq) error {
-	if uint64(len(blobIdents)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+	if uint64(len(blobIdents)) > params.BeaconConfig().MaxRequestBlobSidecars {
 		return types.ErrMaxBlobReqExceeded
 	}
 	return nil

@@ -357,6 +357,45 @@ func FromProtoCapella(payload *v1.ExecutionPayloadCapella) (ExecutionPayloadCape
 	}, nil
 }
 
+func FromProtoDeneb(payload *v1.ExecutionPayloadDeneb) (ExecutionPayloadDeneb, error) {
+	bFee, err := sszBytesToUint256(payload.BaseFeePerGas)
+	if err != nil {
+		return ExecutionPayloadDeneb{}, err
+	}
+	txs := make([]hexutil.Bytes, len(payload.Transactions))
+	for i := range payload.Transactions {
+		txs[i] = bytesutil.SafeCopyBytes(payload.Transactions[i])
+	}
+	withdrawals := make([]Withdrawal, len(payload.Withdrawals))
+	for i, w := range payload.Withdrawals {
+		withdrawals[i] = Withdrawal{
+			Index:          Uint256{Int: big.NewInt(0).SetUint64(w.Index)},
+			ValidatorIndex: Uint256{Int: big.NewInt(0).SetUint64(uint64(w.ValidatorIndex))},
+			Address:        bytesutil.SafeCopyBytes(w.Address),
+			Amount:         Uint256{Int: big.NewInt(0).SetUint64(w.Amount)},
+		}
+	}
+	return ExecutionPayloadDeneb{
+		ParentHash:    bytesutil.SafeCopyBytes(payload.ParentHash),
+		FeeRecipient:  bytesutil.SafeCopyBytes(payload.FeeRecipient),
+		StateRoot:     bytesutil.SafeCopyBytes(payload.StateRoot),
+		ReceiptsRoot:  bytesutil.SafeCopyBytes(payload.ReceiptsRoot),
+		LogsBloom:     bytesutil.SafeCopyBytes(payload.LogsBloom),
+		PrevRandao:    bytesutil.SafeCopyBytes(payload.PrevRandao),
+		BlockNumber:   Uint64String(payload.BlockNumber),
+		GasLimit:      Uint64String(payload.GasLimit),
+		GasUsed:       Uint64String(payload.GasUsed),
+		Timestamp:     Uint64String(payload.Timestamp),
+		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas: bFee,
+		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
+		Transactions:  txs,
+		Withdrawals:   withdrawals,
+		BlobGasUsed:   Uint64String(payload.BlobGasUsed),
+		ExcessBlobGas: Uint64String(payload.ExcessBlobGas),
+	}, nil
+}
+
 // ExecHeaderResponseCapella is the response of builder API /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey} for Capella.
 type ExecHeaderResponseCapella struct {
 	Data struct {
@@ -1057,6 +1096,28 @@ func (b BlobsBundle) ToProto() (*v1.BlobsBundle, error) {
 		Proofs:         proofs,
 		Blobs:          blobs,
 	}, nil
+}
+
+// FromBundleProto converts the proto bundle type to the builder
+// type.
+func FromBundleProto(bundle *v1.BlobsBundle) *BlobsBundle {
+	commitments := make([]hexutil.Bytes, len(bundle.KzgCommitments))
+	for i := range bundle.KzgCommitments {
+		commitments[i] = bytesutil.SafeCopyBytes(bundle.KzgCommitments[i])
+	}
+	proofs := make([]hexutil.Bytes, len(bundle.Proofs))
+	for i := range bundle.Proofs {
+		proofs[i] = bytesutil.SafeCopyBytes(bundle.Proofs[i])
+	}
+	blobs := make([]hexutil.Bytes, len(bundle.Blobs))
+	for i := range bundle.Blobs {
+		blobs[i] = bytesutil.SafeCopyBytes(bundle.Blobs[i])
+	}
+	return &BlobsBundle{
+		Commitments: commitments,
+		Proofs:      proofs,
+		Blobs:       blobs,
+	}
 }
 
 // ToProto returns ExecutionPayloadDeneb Proto and BlobsBundle Proto separately.
