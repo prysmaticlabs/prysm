@@ -86,6 +86,7 @@ go_test(
         "domain_data_test.go",
         "doppelganger_test.go",
         "duties_test.go",
+        "event_handler_test.go",
         "genesis_test.go",
         "get_beacon_block_test.go",
         "index_test.go",

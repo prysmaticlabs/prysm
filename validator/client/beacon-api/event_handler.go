@@ -11,6 +11,8 @@ import (
 
 const eventByteLimit = 512
 
+// EventHandler is responsible for subscribing to the Beacon API events endpoint
+// and dispatching received events to subscribers.
 type EventHandler struct {
 	httpClient *http.Client
 	host       string
@@ -22,6 +24,7 @@ type event struct {
 	data      string
 }
 
+// NewEventHandler returns a new handler.
 func NewEventHandler(httpClient *http.Client, host string) *EventHandler {
 	return &EventHandler{
 		httpClient: httpClient,
@@ -55,25 +58,44 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 		return errors.Wrap(err, "failed to perform HTTP request")
 	}
 	go func() {
+		// We signal an EOF error in a special way. When we get this error while reading the response body,
+		// there might still be an event received in the body that we should handle.
+		eof := false
 		for {
+			if ctx.Err() != nil {
+				eventErrCh <- ctx.Err()
+				return
+			}
+
 			rawData := make([]byte, eventByteLimit)
 			_, err = httpResp.Body.Read(rawData)
 			if err != nil {
-				if err = httpResp.Body.Close(); err != nil {
-					log.WithError(err).Error("Failed to close events response body")
+				if strings.Contains(err.Error(), "EOF") {
+					log.Error("Received EOF while reading events response body")
+					eof = true
+				} else {
+					if err = httpResp.Body.Close(); err != nil {
+						log.WithError(err).Error("Failed to close events response body")
+					}
+					eventErrCh <- err
+					return
 				}
-				eventErrCh <- err
-				return
 			}
 
 			e := strings.Split(string(rawData), "\n")
 			// we expect: event type, newline, event data, newline, newline
 			if len(e) != 4 {
+				if eof {
+					return
+				}
 				continue
 			}
 
 			for _, ch := range h.subs {
 				ch <- event{eventType: e[0], data: e[1]}
+			}
+			if eof {
+				return
 			}
 		}
 	}()
