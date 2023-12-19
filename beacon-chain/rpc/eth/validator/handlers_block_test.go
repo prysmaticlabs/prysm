@@ -992,6 +992,15 @@ func TestProduceBlindedBlock(t *testing.T) {
 
 func TestProduceBlockV3(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	randao := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+	graffiti := "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+	bRandao, err := hexutil.Decode(randao)
+	require.NoError(t, err)
+	bGraffiti, err := hexutil.Decode(graffiti)
+	require.NoError(t, err)
+	chainService := &blockchainTesting.ChainService{}
+	syncChecker := &mockSync.Sync{IsSyncing: false}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
 
 	t.Run("Phase 0", func(t *testing.T) {
 		var block *shared.SignedBeaconBlock
@@ -1000,17 +1009,20 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			SyncChecker:    syncChecker,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1031,20 +1043,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 
 				return block.Message.ToGeneric()
 			}())
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:     v1alpha1Server,
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			BlockRewardFetcher: &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:        syncChecker,
+			BlockRewardFetcher: rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1064,21 +1078,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1098,21 +1113,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1132,21 +1148,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1166,24 +1183,25 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
 				g.PayloadValue = 2000 //some fake value
 				return g, err
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1203,21 +1221,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.ToUnsigned())
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.ToUnsigned().ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1237,21 +1256,22 @@ func TestProduceBlockV3(t *testing.T) {
 		jsonBytes, err := json.Marshal(block.Message)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
-		mockRewards := &rewards.BlockRewards{Total: "10"}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1281,7 +1301,7 @@ func TestProduceBlockV3(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			SyncChecker:    syncChecker,
 		}
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v3/validator/blocks/asdfsad", nil)
 		writer := httptest.NewRecorder()
@@ -1294,7 +1314,7 @@ func TestProduceBlockV3(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			SyncChecker:    syncChecker,
 		}
 		request := httptest.NewRequest(http.MethodGet, "http://foo.example/eth/v3/validator/blocks/1?randao_reveal=0x213123", nil)
 		writer := httptest.NewRecorder()
@@ -1303,7 +1323,6 @@ func TestProduceBlockV3(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
 	})
 	t.Run("syncing", func(t *testing.T) {
-		chainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			SyncChecker:           &mockSync.Sync{IsSyncing: true},
 			HeadFetcher:           chainService,
@@ -1322,24 +1341,36 @@ func TestProduceBlockV3(t *testing.T) {
 
 func TestProduceBlockV3SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockRewards := &rewards.BlockRewards{Total: "10"}
+	randao := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+	graffiti := "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
+	bRandao, err := hexutil.Decode(randao)
+	require.NoError(t, err)
+	bGraffiti, err := hexutil.Decode(graffiti)
+	require.NoError(t, err)
+	chainService := &blockchainTesting.ChainService{}
+	syncChecker := &mockSync.Sync{IsSyncing: false}
+	rewardFetcher := &rewardtesting.MockBlockRewardFetcher{Rewards: &rewards.BlockRewards{Total: "10"}}
+
 	t.Run("Phase 0", func(t *testing.T) {
 		var block *shared.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
 		server := &Server{
 			V1Alpha1Server: v1alpha1Server,
-			SyncChecker:    &mockSync.Sync{IsSyncing: false},
+			SyncChecker:    syncChecker,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1361,20 +1392,23 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
 
 		server := &Server{
 			V1Alpha1Server:     v1alpha1Server,
-			SyncChecker:        &mockSync.Sync{IsSyncing: false},
-			BlockRewardFetcher: &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:        syncChecker,
+			BlockRewardFetcher: rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1396,21 +1430,24 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
+			SyncChecker:           syncChecker,
 			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1432,21 +1469,23 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1468,21 +1507,23 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1504,24 +1545,26 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
 				g.PayloadValue = 2000 //some fake value
 				return g, err
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1543,21 +1586,23 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.ToUnsigned().ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
@@ -1579,21 +1624,23 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &block)
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
-		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), gomock.Any()).Return(
+		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
+		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
 			}())
-		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
-			SyncChecker:           &mockSync.Sync{IsSyncing: false},
-			OptimisticModeFetcher: mockChainService,
-			BlockRewardFetcher:    &rewardtesting.MockBlockRewardFetcher{Rewards: mockRewards},
+			SyncChecker:           syncChecker,
+			OptimisticModeFetcher: chainService,
+			BlockRewardFetcher:    rewardFetcher,
 		}
-		rr := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505" +
-			"&graffiti=0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
-		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s", rr), nil)
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodGet, fmt.Sprintf("http://foo.example/eth/v3/validator/blocks/1?randao_reveal=%s&graffiti=%s", randao, graffiti), nil)
+		request.Header.Set("Accept", api.OctetStreamMediaType)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
