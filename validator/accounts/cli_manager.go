@@ -87,10 +87,7 @@ func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.Validat
 		acm.beaconApiTimeout,
 	)
 
-	validatorClient, err := validatorClientFactory.NewValidatorClient(ctx, conn)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not create the API validator client")
-	}
+	validatorClient := validatorClientFactory.NewValidatorClient(conn)
 	nodeClient := nodeClientFactory.NewNodeClient(conn)
 	return &validatorClient, &nodeClient, nil
 }

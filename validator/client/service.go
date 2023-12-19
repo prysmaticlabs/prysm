@@ -194,10 +194,7 @@ func (v *ValidatorService) Start() {
 	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
 	evErrCh := make(chan error)
 	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
-	validatorClient, err := validatorClientFactory.NewValidatorClient(v.ctx, v.conn, opts...)
-	if err != nil {
-		log.WithError(err).Fatal("Could not create the API validator client")
-	}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, opts...)
 	go func() {
 		select {
 		case e := <-evErrCh:

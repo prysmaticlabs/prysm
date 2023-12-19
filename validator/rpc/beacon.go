@@ -53,10 +53,7 @@ func (s *Server) registerBeaconClient() error {
 
 	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
 	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
-	s.beaconNodeValidatorClient, err = validatorClientFactory.NewValidatorClient(s.ctx, conn)
-	if err != nil {
-		return errors.Wrap(err, "could not create the API validator client")
-	}
+	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 
 	return nil
 }

@@ -47,7 +47,6 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 		return errors.Wrap(err, "failed to create HTTP request")
 	}
 
-	req.Header.Set("Cache-Control", "no-cache")
 	req.Header.Set("Accept", api.EventStreamMediaType)
 	req.Header.Set("Connection", "keep-alive")
 
@@ -70,7 +69,6 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			e := strings.Split(string(rawData), "\n")
 			// we expect: event type, newline, event data, newline, newline
 			if len(e) != 4 {
-				log.Error("Event does not have the correct format")
 				continue
 			}
 

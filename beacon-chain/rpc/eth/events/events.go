@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	time2 "time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/api"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -104,13 +106,27 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Connection", "keep-alive")
 
+	_, err := fmt.Fprint(w, "\n")
+	if err != nil {
+		log.WithError(err).Error("Could not write to response writer")
+	}
+	flusher.Flush()
+
 	// Handle each event received and context cancellation.
+	// We send a keepalive dummy message immediately to prevent clients
+	// stalling while waiting for the first response chunk.
+	// After that we send a keepalive dummy message every SECONDS_PER_SLOT
+	// to prevent anyone (e.g. proxy servers) from closing connections.
+	sendKeepalive(w, flusher)
+	keepaliveTicker := time2.NewTicker(time2.Duration(params.BeaconConfig().SecondsPerSlot) * time2.Second)
 	for {
 		select {
 		case event := <-opsChan:
 			handleBlockOperationEvents(w, flusher, topicsMap, event)
 		case event := <-stateChan:
 			s.handleStateEvents(ctx, w, flusher, topicsMap, event)
+		case <-keepaliveTicker.C:
+			sendKeepalive(w, flusher)
 		case <-ctx.Done():
 			return
 		}
@@ -404,6 +420,10 @@ func send(w http.ResponseWriter, flusher http.Flusher, name string, data interfa
 		return
 	}
 	write(w, flusher, "event: %s\ndata: %s\n\n", name, string(j))
+}
+
+func sendKeepalive(w http.ResponseWriter, flusher http.Flusher) {
+	write(w, flusher, ":\n\n")
 }
 
 func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) {
