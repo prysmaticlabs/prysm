@@ -121,7 +121,7 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	s.cfg.ForkChoiceStore.Lock()
 	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
-	disparity := params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	if !features.Get().DisableReorgLateBlocks {
 		disparity += reorgLateBlockCountAttestations
 	}

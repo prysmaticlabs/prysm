@@ -254,24 +254,24 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	if err != nil {
 		return err
 	}
+	var totalPruned int
 	for _, folder := range folders {
 		if folder.IsDir() {
-			num, err := bs.countFiles(folder.Name())
+			num, err := bs.processFolder(folder, currentSlot, retentionSlots)
 			if err != nil {
-				return err
-			}
-			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
 				return err
 			}
 			blobsPrunedCounter.Add(float64(num))
 			blobsTotalGauge.Add(-float64(num))
+			totalPruned += num
 		}
 	}
 	pruneTime := time.Since(t)
 
 	log.WithFields(log.Fields{
-		"lastPrunedEpoch": slots.ToEpoch(currentSlot - retentionSlots),
-		"pruneTime":       pruneTime,
+		"lastPrunedEpoch":   slots.ToEpoch(currentSlot - retentionSlots),
+		"pruneTime":         pruneTime,
+		"numberBlobsPruned": totalPruned,
 	}).Debug("Pruned old blobs")
 
 	return nil
@@ -279,10 +279,10 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) (int, error) {
 	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -292,14 +292,19 @@ func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionS
 
 	slot, err := slotFromBlob(f)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	var num int
 	if slot < (currentSlot - retentionSlots) {
+		num, err = bs.countFiles(folder.Name())
+		if err != nil {
+			return 0, err
+		}
 		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
-			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
+			return 0, errors.Wrapf(err, "failed to delete blob %s", f.Name())
 		}
 	}
-	return nil
+	return num, nil
 }
 
 // slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
