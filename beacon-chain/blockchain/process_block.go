@@ -366,8 +366,6 @@ func (s *Service) databaseDACheck(ctx context.Context, b consensusblocks.ROBlock
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {
 	e := coreTime.CurrentEpoch(st)
-	// The proposer indices cache takes the target root for the previous
-	// epoch as key
 	if err := helpers.UpdateCommitteeCache(ctx, st, e); err != nil {
 		return errors.Wrap(err, "could not update committee cache")
 	}
@@ -393,6 +391,8 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		log.WithError(err).Error("could not update proposer index state-root map")
 		return nil
 	}
+	// The proposer indices cache takes the target root for the previous
+	// epoch as key
 	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
 	if err != nil {
 		log.WithError(err).Error("could not update proposer index state-root map")
@@ -401,7 +401,6 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	err = helpers.UpdateCachedCheckpointToStateRoot(st, &forkchoicetypes.Checkpoint{Epoch: e, Root: target})
 	if err != nil {
 		log.WithError(err).Error("could not update proposer index state-root map")
-		return nil
 	}
 	return nil
 }
