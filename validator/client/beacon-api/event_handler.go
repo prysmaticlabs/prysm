@@ -9,6 +9,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api"
 )
 
+// Currently set to the first power of 2 bigger than the size of the `head` event
+// which is 446 bytes
 const eventByteLimit = 512
 
 // EventHandler is responsible for subscribing to the Beacon API events endpoint
