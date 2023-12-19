@@ -346,7 +346,7 @@ func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaco
 	if err != nil {
 		return err
 	}
-	root, err := state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
+	root, err := StateRootAtSlot(state, slot)
 	if err != nil {
 		return err
 	}

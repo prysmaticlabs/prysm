@@ -17,11 +17,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-func (s *Service) isNewProposer(slot primitives.Slot) bool {
-	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	return ok || features.Get().PrepareAllPayloads
-}
-
 func (s *Service) isNewHead(r [32]byte) bool {
 	s.headLock.RLock()
 	defer s.headLock.RUnlock()
@@ -61,16 +56,18 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot
 	if !isNewHead {
 		return false, nil
 	}
-	isNewProposer := s.isNewProposer(proposingSlot)
-	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
-			return false, nil
-		}
-	}
+
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
 		return false, nil
+	}
+
+	_, tracked := s.trackedProposer(headState, proposingSlot)
+	if (tracked || features.Get().PrepareAllPayloads) && !features.Get().DisableReorgLateBlocks {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+			return false, nil
+		}
 	}
 
 	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
