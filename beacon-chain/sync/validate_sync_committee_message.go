@@ -73,7 +73,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
 		s.cfg.clock.GenesisTime(),
-		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
+		params.BeaconConfig().MaximumGossipClockDisparityDuration(),
 	); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err

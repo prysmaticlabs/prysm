@@ -167,18 +167,18 @@ func TestSendRequest_SendBeaconBlocksByRangeRequest(t *testing.T) {
 		assert.Equal(t, 128, len(blocks))
 
 		// Cap max returned roots.
-		cfg := params.BeaconNetworkConfig().Copy()
+		cfg := params.BeaconConfig().Copy()
 		maxRequestBlocks := cfg.MaxRequestBlocks
 		defer func() {
 			cfg.MaxRequestBlocks = maxRequestBlocks
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 		}()
 		blocks, err = SendBeaconBlocksByRangeRequest(ctx, startup.NewClock(time.Now(), [32]byte{}), p1, p2.PeerID(), req, func(block interfaces.ReadOnlySignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
 			cfg.MaxRequestBlocks = 3
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 			return nil
 		})
 		assert.ErrorContains(t, ErrInvalidFetchedData.Error(), err)
@@ -419,18 +419,18 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 		assert.Equal(t, 4, len(blocks))
 
 		// Cap max returned roots.
-		cfg := params.BeaconNetworkConfig().Copy()
+		cfg := params.BeaconConfig().Copy()
 		maxRequestBlocks := cfg.MaxRequestBlocks
 		defer func() {
 			cfg.MaxRequestBlocks = maxRequestBlocks
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 		}()
 		blocks, err = SendBeaconBlocksByRootRequest(ctx, clock, p1, p2.PeerID(), req, func(block interfaces.ReadOnlySignedBeaconBlock) error {
 			// Since ssz checks the boundaries, and doesn't normally allow to send requests bigger than
 			// the max request size, we are updating max request size dynamically. Even when updated dynamically,
 			// no more than max request size of blocks is expected on return.
 			cfg.MaxRequestBlocks = 3
-			params.OverrideBeaconNetworkConfig(cfg)
+			params.OverrideBeaconConfig(cfg)
 			return nil
 		})
 		assert.NoError(t, err)

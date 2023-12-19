@@ -219,28 +219,17 @@ func ConfigToYaml(cfg *BeaconChainConfig) []byte {
 		fmt.Sprintf("ATTESTATION_SUBNET_PREFIX_BITS: %d", cfg.AttestationSubnetPrefixBits),
 		fmt.Sprintf("SUBNETS_PER_NODE: %d", cfg.SubnetsPerNode),
 		fmt.Sprintf("NODE_ID_BITS: %d", cfg.NodeIdBits),
-	}
-
-	yamlFile := []byte(strings.Join(lines, "\n"))
-	return yamlFile
-}
-
-// NetworkConfigToYaml takes a provided network config and outputs its contents
-// in yaml. This allows prysm's network configs to be read by other clients.
-func NetworkConfigToYaml(cfg *NetworkConfig) []byte {
-	lines := []string{
 		fmt.Sprintf("GOSSIP_MAX_SIZE: %d", cfg.GossipMaxSize),
-		fmt.Sprintf("GOSSIP_MAX_SIZE_BELLATRIX: %d", cfg.GossipMaxSizeBellatrix),
 		fmt.Sprintf("MAX_CHUNK_SIZE: %d", cfg.MaxChunkSize),
-		fmt.Sprintf("MAX_CHUNK_SIZE_BELLATRIX: %d", cfg.MaxChunkSizeBellatrix),
 		fmt.Sprintf("ATTESTATION_SUBNET_COUNT: %d", cfg.AttestationSubnetCount),
 		fmt.Sprintf("ATTESTATION_PROPAGATION_SLOT_RANGE: %d", cfg.AttestationPropagationSlotRange),
 		fmt.Sprintf("MAX_REQUEST_BLOCKS: %d", cfg.MaxRequestBlocks),
-		fmt.Sprintf("TTFB_TIMEOUT: %d", int(cfg.TtfbTimeout.Seconds())),
-		fmt.Sprintf("RESP_TIMEOUT: %d", int(cfg.RespTimeout.Seconds())),
-		fmt.Sprintf("MAXIMUM_GOSSIP_CLOCK_DISPARITY: %d", int(cfg.MaximumGossipClockDisparity.Seconds())),
+		fmt.Sprintf("TTFB_TIMEOUT: %d", int(cfg.TtfbTimeout)),
+		fmt.Sprintf("RESP_TIMEOUT: %d", int(cfg.RespTimeout)),
+		fmt.Sprintf("MAXIMUM_GOSSIP_CLOCK_DISPARITY: %d", int(cfg.MaximumGossipClockDisparity)),
 		fmt.Sprintf("MESSAGE_DOMAIN_INVALID_SNAPPY:  %#x", cfg.MessageDomainInvalidSnappy),
 		fmt.Sprintf("MESSAGE_DOMAIN_VALID_SNAPPY: %#x", cfg.MessageDomainValidSnappy),
+		fmt.Sprintf("MIN_EPOCHS_FOR_BLOCK_REQUESTS: %d", int(cfg.MinEpochsForBlockRequests)),
 	}
 
 	yamlFile := []byte(strings.Join(lines, "\n"))
