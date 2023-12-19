@@ -532,7 +532,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
-		&httputil.DefaultErrorJson{Code: http.StatusNotFound},
+		&httputil.DefaultJsonError{Code: http.StatusNotFound},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
@@ -585,7 +585,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
-		&httputil.DefaultErrorJson{Code: http.StatusNotFound},
+		&httputil.DefaultJsonError{Code: http.StatusNotFound},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
@@ -593,7 +593,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&abstractProduceBlockResponseJson{},
 	).Return(
-		&httputil.DefaultErrorJson{Code: http.StatusInternalServerError},
+		&httputil.DefaultJsonError{Code: http.StatusInternalServerError},
 		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(

@@ -102,7 +102,7 @@ var (
 // we have stored in the database for the given validator public key.
 func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*AttestationRecord, error) {
 	records := make([]*AttestationRecord, 0)
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKey")
+	_, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKey")
 	defer span.End()
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(pubKeysBucket)
@@ -423,7 +423,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
 func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationRecord) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
+	_, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {
 		// Initialize buckets for the lowest target and source epochs.
@@ -519,7 +519,7 @@ func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationR
 
 // AttestedPublicKeys retrieves all public keys that have attested.
 func (s *Store) AttestedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
+	_, span := trace.StartSpan(ctx, "Validator.AttestedPublicKeys")
 	defer span.End()
 	var err error
 	attestedPublicKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
@@ -538,7 +538,7 @@ func (s *Store) AttestedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubke
 // SigningRootAtTargetEpoch checks for an existing signing root at a specified
 // target epoch for a given validator public key.
 func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, target primitives.Epoch) ([]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
+	_, span := trace.StartSpan(ctx, "Validator.SigningRootAtTargetEpoch")
 	defer span.End()
 
 	var (
@@ -585,7 +585,7 @@ func (s *Store) SigningRootAtTargetEpoch(ctx context.Context, pubKey [fieldparam
 // LowestSignedSourceEpoch returns the lowest signed source epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
 func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
+	_, span := trace.StartSpan(ctx, "Validator.LowestSignedSourceEpoch")
 	defer span.End()
 
 	var err error
@@ -608,7 +608,7 @@ func (s *Store) LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldpar
 // LowestSignedTargetEpoch returns the lowest signed target epoch for a validator public key.
 // If no data exists, returning 0 is a sensible default.
 func (s *Store) LowestSignedTargetEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error) {
-	ctx, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
+	_, span := trace.StartSpan(ctx, "Validator.LowestSignedTargetEpoch")
 	defer span.End()
 
 	var err error

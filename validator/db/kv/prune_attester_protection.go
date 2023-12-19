@@ -15,7 +15,7 @@ import (
 // target epoch minus some constant of how many epochs we keep track of for slashing
 // protection. This routine is meant to run on startup.
 func (s *Store) PruneAttestations(ctx context.Context) error {
-	ctx, span := trace.StartSpan(ctx, "Validator.PruneAttestations")
+	_, span := trace.StartSpan(ctx, "Validator.PruneAttestations")
 	defer span.End()
 	var pubkeys [][]byte
 	err := s.view(func(tx *bolt.Tx) error {

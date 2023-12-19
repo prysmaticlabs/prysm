@@ -423,26 +423,26 @@ func non200Err(response *http.Response) error {
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
-	case 204:
+	case http.StatusNoContent:
 		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
-	case 400:
-		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			return errors.Wrap(jsonErr, "unable to read response body")
-		}
+	case http.StatusBadRequest:
 		log.WithError(ErrBadRequest).Debug(msg)
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
-	case 404:
-		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			return errors.Wrap(jsonErr, "unable to read response body")
-		}
+	case http.StatusNotFound:
 		log.WithError(ErrNotFound).Debug(msg)
-		return errors.Wrap(ErrNotFound, errMessage.Message)
-	case 500:
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
+		return errors.Wrap(ErrNotFound, errMessage.Message)
+	case http.StatusInternalServerError:
 		log.WithError(ErrNotOK).Debug(msg)
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		return errors.Wrap(ErrNotOK, errMessage.Message)
 	default:
 		log.WithError(ErrNotOK).Debug(msg)

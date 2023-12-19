@@ -53,7 +53,7 @@ func (s *Store) Block(ctx context.Context, blockRoot [32]byte) (interfaces.ReadO
 // at the time the chain was started, used to initialize the database and chain
 // without syncing from genesis.
 func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.OriginCheckpointBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.OriginCheckpointBlockRoot")
 	defer span.End()
 
 	var root [32]byte
@@ -72,7 +72,7 @@ func (s *Store) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 
 // BackfillBlockRoot keeps track of the highest block available before the OriginCheckpointBlockRoot
 func (s *Store) BackfillBlockRoot(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.BackfillBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.BackfillBlockRoot")
 	defer span.End()
 
 	var root [32]byte
@@ -168,7 +168,7 @@ func (s *Store) BlockRoots(ctx context.Context, f *filters.QueryFilter) ([][32]b
 
 // HasBlock checks if a block by root exists in the db.
 func (s *Store) HasBlock(ctx context.Context, blockRoot [32]byte) bool {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.HasBlock")
 	defer span.End()
 	if v, ok := s.blockCache.Get(string(blockRoot[:])); v != nil && ok {
 		return true
@@ -379,7 +379,7 @@ func (s *Store) GenesisBlock(ctx context.Context) (interfaces.ReadOnlySignedBeac
 }
 
 func (s *Store) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.GenesisBlockRoot")
 	defer span.End()
 	var root [32]byte
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -396,7 +396,7 @@ func (s *Store) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
 
 // SaveGenesisBlockRoot to the db.
 func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveGenesisBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
@@ -409,7 +409,7 @@ func (s *Store) SaveGenesisBlockRoot(ctx context.Context, blockRoot [32]byte) er
 // This value is used by a running beacon chain node to locate the state at the beginning
 // of the chain history, in places where genesis would typically be used.
 func (s *Store) SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginCheckpointBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveOriginCheckpointBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
@@ -420,7 +420,7 @@ func (s *Store) SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32
 // SaveBackfillBlockRoot is used to keep track of the most recently backfilled block root when
 // the node was initialized via checkpoint sync.
 func (s *Store) SaveBackfillBlockRoot(ctx context.Context, blockRoot [32]byte) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillBlockRoot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBackfillBlockRoot")
 	defer span.End()
 	return s.db.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(blocksBucket)
@@ -519,7 +519,7 @@ func (s *Store) FeeRecipientByValidatorID(ctx context.Context, id primitives.Val
 // SaveFeeRecipientsByValidatorIDs saves the fee recipients for validator ids.
 // Error is returned if `ids` and `recipients` are not the same length.
 func (s *Store) SaveFeeRecipientsByValidatorIDs(ctx context.Context, ids []primitives.ValidatorIndex, feeRecipients []common.Address) error {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveFeeRecipientByValidatorID")
+	_, span := trace.StartSpan(ctx, "BeaconDB.SaveFeeRecipientByValidatorID")
 	defer span.End()
 
 	if len(ids) != len(feeRecipients) {
@@ -644,7 +644,7 @@ func blockRootsBySlotRange(
 	bkt *bolt.Bucket,
 	startSlotEncoded, endSlotEncoded, startEpochEncoded, endEpochEncoded, slotStepEncoded interface{},
 ) ([][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlotRange")
+	_, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlotRange")
 	defer span.End()
 
 	// Return nothing when all slot parameters are missing
@@ -709,7 +709,7 @@ func blockRootsBySlotRange(
 
 // blockRootsBySlot retrieves the block roots by slot
 func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([][32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
+	_, span := trace.StartSpan(ctx, "BeaconDB.blockRootsBySlot")
 	defer span.End()
 
 	bkt := tx.Bucket(blockSlotIndicesBucket)
@@ -730,7 +730,7 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([
 // a map of bolt DB index buckets corresponding to each particular key for indices for
 // data, such as (shard indices bucket -> shard 5).
 func createBlockIndicesFromBlock(ctx context.Context, block interfaces.ReadOnlyBeaconBlock) map[string][]byte {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	// Every index has a unique bucket for fast, binary-search
@@ -758,7 +758,7 @@ func createBlockIndicesFromBlock(ctx context.Context, block interfaces.ReadOnlyB
 // objects. If a certain filter criterion does not apply to
 // blocks, an appropriate error is returned.
 func createBlockIndicesFromFilters(ctx context.Context, f *filters.QueryFilter) (map[string][]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromFilters")
+	_, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromFilters")
 	defer span.End()
 	indicesByBucket := make(map[string][]byte)
 	for k, v := range f.Filters() {

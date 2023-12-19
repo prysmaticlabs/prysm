@@ -172,7 +172,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 118, len(data))
+	assert.Equal(t, 121, len(data))
 	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":
@@ -428,6 +428,12 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "2", v)
 		case "EPOCHS_PER_SUBNET_SUBSCRIPTION":
 			assert.Equal(t, "256", v)
+		case "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS":
+			assert.Equal(t, "4096", v)
+		case "MAX_REQUEST_BLOCKS_DENEB":
+			assert.Equal(t, "128", v)
+		case "MAX_REQUEST_BLOB_SIDECARS":
+			assert.Equal(t, "768", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

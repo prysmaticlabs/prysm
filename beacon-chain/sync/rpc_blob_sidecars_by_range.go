@@ -24,7 +24,7 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	if wQuota == 0 {
 		return 0, nil
 	}
-	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
+	_, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	for _, b := range batch.canonical() {
 		root := b.Root()
@@ -99,7 +99,7 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	}
 
 	var batch blockBatch
-	wQuota := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	wQuota := params.BeaconConfig().MaxRequestBlobSidecars
 	for batch, ok = batcher.next(ctx, stream); ok; batch, ok = batcher.next(ctx, stream) {
 		batchStart := time.Now()
 		wQuota, err = s.streamBlobBatch(ctx, batch, wQuota, stream)
@@ -131,7 +131,7 @@ func BlobsByRangeMinStartSlot(current primitives.Slot) (primitives.Slot, error) 
 	if params.BeaconConfig().DenebForkEpoch == math.MaxUint64 {
 		return primitives.Slot(math.MaxUint64), nil
 	}
-	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	minReqEpochs := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	currEpoch := slots.ToEpoch(current)
 	minStart := params.BeaconConfig().DenebForkEpoch
 	if currEpoch > minReqEpochs && currEpoch-minReqEpochs > minStart {

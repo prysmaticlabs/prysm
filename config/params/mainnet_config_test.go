@@ -18,7 +18,7 @@ func TestMaxRequestBlock(t *testing.T) {
 		},
 		{
 			epoch:            primitives.Epoch(mainnetDenebForkEpoch),
-			expectedMaxBlock: mainnetNetworkConfig.MaxRequestBlocksDeneb,
+			expectedMaxBlock: mainnetBeaconConfig.MaxRequestBlocksDeneb,
 		},
 	}
 
