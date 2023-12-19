@@ -27,7 +27,7 @@ var Handler = func(res http.ResponseWriter, req *http.Request) {
 	if d, ok := _bindata[p]; ok {
 		m := mime.TypeByExtension(path.Ext(p))
 		res.Header().Add("Content-Type", m)
-		res.WriteHeader(200)
+		res.WriteHeader(http.StatusOK)
 		asset, err := d()
 		if err != nil {
 			log.WithError(err).Error("Failed to unwrap asset data for http response")
@@ -40,7 +40,7 @@ var Handler = func(res http.ResponseWriter, req *http.Request) {
 		// requesting /login, this should serve the single page app index.html.
 		m := mime.TypeByExtension(".html")
 		res.Header().Add("Content-Type", m)
-		res.WriteHeader(200)
+		res.WriteHeader(http.StatusOK)
 		asset, err := d()
 		if err != nil {
 			log.WithError(err).Error("Failed to unwrap asset data for http response")
@@ -50,7 +50,7 @@ var Handler = func(res http.ResponseWriter, req *http.Request) {
 		}
 	} else { // If index.html is not present, serve 404. This should never happen.
 		log.WithField("URI", req.RequestURI).Error("Path not found")
-		res.WriteHeader(404)
+		res.WriteHeader(http.StatusNotFound)
 		if _, err := res.Write([]byte("Not found")); err != nil {
 			log.WithError(err).Error("Failed to write http response")
 		}

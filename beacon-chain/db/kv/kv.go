@@ -223,7 +223,7 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 
 	// set a default so that tests don't break
 	if kv.blobRetentionEpochs == 0 {
-		kv.blobRetentionEpochs = params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+		kv.blobRetentionEpochs = params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	}
 	return kv, nil
 }

@@ -19,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2eparams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
@@ -53,8 +52,11 @@ var ValidatorsParticipatingAtEpoch = func(epoch primitives.Epoch) types.Evaluato
 // ValidatorSyncParticipation ensures the expected amount of sync committee participants
 // are active.
 var ValidatorSyncParticipation = types.Evaluator{
-	Name:       "validator_sync_participation_%d",
-	Policy:     policies.OnwardsNthEpoch(helpers.AltairE2EForkEpoch),
+	Name: "validator_sync_participation_%d",
+	Policy: func(e primitives.Epoch) bool {
+		fEpoch := params.BeaconConfig().AltairForkEpoch
+		return policies.OnwardsNthEpoch(fEpoch)(e)
+	},
 	Evaluation: validatorsSyncParticipation,
 }
 
@@ -125,7 +127,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 	if e2eparams.TestParams.LighthouseBeaconNodeCount != 0 {
 		expected = float32(expectedMulticlientParticipation)
 	}
-	if participation.Epoch > 0 && participation.Epoch.Sub(1) == helpers.BellatrixE2EForkEpoch {
+	if participation.Epoch > 0 && participation.Epoch.Sub(1) == params.BeaconConfig().BellatrixForkEpoch {
 		// Reduce Participation requirement to 95% to account for longer EE calls for
 		// the merge block. Target and head will likely be missed for a few validators at
 		// slot 0.
@@ -219,8 +221,8 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		lowestBound = currEpoch - 1
 	}
 
-	if lowestBound < helpers.AltairE2EForkEpoch {
-		lowestBound = helpers.AltairE2EForkEpoch
+	if lowestBound < params.BeaconConfig().AltairForkEpoch {
+		lowestBound = params.BeaconConfig().AltairForkEpoch
 	}
 	blockCtrs, err := altairClient.ListBeaconBlocks(context.Background(), &ethpb.ListBlocksRequest{QueryFilter: &ethpb.ListBlocksRequest_Epoch{Epoch: lowestBound}})
 	if err != nil {
@@ -235,7 +237,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkStartSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		forkStartSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		if err != nil {
 			return err
 		}
@@ -245,7 +247,7 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		}
 		expectedParticipation := expectedSyncParticipation
 		switch slots.ToEpoch(b.Block().Slot()) {
-		case helpers.AltairE2EForkEpoch:
+		case params.BeaconConfig().AltairForkEpoch:
 			// Drop expected sync participation figure.
 			expectedParticipation = 0.90
 		default:
@@ -276,11 +278,11 @@ func validatorsSyncParticipation(_ *types.EvaluationContext, conns ...*grpc.Clie
 		if b.IsNil() {
 			return errors.New("nil block provided")
 		}
-		forkSlot, err := slots.EpochStart(helpers.AltairE2EForkEpoch)
+		forkSlot, err := slots.EpochStart(params.BeaconConfig().AltairForkEpoch)
 		if err != nil {
 			return err
 		}
-		nexForkSlot, err := slots.EpochStart(helpers.BellatrixE2EForkEpoch)
+		nexForkSlot, err := slots.EpochStart(params.BeaconConfig().BellatrixForkEpoch)
 		if err != nil {
 			return err
 		}

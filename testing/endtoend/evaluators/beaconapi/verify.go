@@ -12,9 +12,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	e2etypes "github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -86,7 +86,7 @@ func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error 
 	// verify that block SSZ responses have the correct structure
 	blockData := requests["/beacon/blocks/{param1}"]
 	blindedBlockData := requests["/beacon/blinded_blocks/{param1}"]
-	if epoch < helpers.AltairE2EForkEpoch {
+	if epoch < params.BeaconConfig().AltairForkEpoch {
 		b := &ethpb.SignedBeaconBlock{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -95,7 +95,7 @@ func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error 
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if epoch < helpers.BellatrixE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().BellatrixForkEpoch {
 		b := &ethpb.SignedBeaconBlockAltair{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -104,7 +104,7 @@ func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error 
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if epoch < helpers.CapellaE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().CapellaForkEpoch {
 		b := &ethpb.SignedBeaconBlockBellatrix{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
@@ -113,7 +113,7 @@ func postEvaluation(requests map[string]endpoint, epoch primitives.Epoch) error 
 		if err := bb.UnmarshalSSZ(blindedBlockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)
 		}
-	} else if epoch < helpers.DenebE2EForkEpoch {
+	} else if epoch < params.BeaconConfig().DenebForkEpoch {
 		b := &ethpb.SignedBeaconBlockCapella{}
 		if err := b.UnmarshalSSZ(blockData.getSszResp()); err != nil {
 			return errors.Wrap(err, msgSSZUnmarshalFailed)

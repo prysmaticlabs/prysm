@@ -1,14 +1,7 @@
 package cache
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"k8s.io/client-go/tools/cache"
-)
-
-var (
-	// maxCacheSize is 4x of the epoch length for additional cache padding.
-	// Requests should be only accessing committees within defined epoch length.
-	maxCacheSize = uint64(4 * params.BeaconConfig().SlotsPerEpoch)
 )
 
 // trim the FIFO queue to the maxSize.
