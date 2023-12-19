@@ -128,7 +128,7 @@ func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) ([]blocks.ROBlob, e
 			continue
 		}
 		log.WithField("block_root", root).
-		  WithField("block_commitments", len(blkCmts)).
+			WithField("block_commitments", len(blkCmts)).
 			WithField("sidecar_index", i).
 			WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
 			Warn("Evicting BlobSidecar without commitment in block")
