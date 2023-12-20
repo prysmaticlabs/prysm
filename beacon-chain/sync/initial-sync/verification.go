@@ -111,15 +111,7 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 			return vb, err
 		}
 	}
-
-	if err := bv.ValidProposerSignature(ctx); err != nil {
-		return vb, err
-	}
 	if err := bv.SidecarInclusionProven(); err != nil {
-		return vb, err
-	}
-
-	if err := bv.SidecarProposerExpected(ctx); err != nil {
 		return vb, err
 	}
 

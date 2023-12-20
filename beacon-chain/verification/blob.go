@@ -44,18 +44,22 @@ var GossipSidecarRequirements = []Requirement{
 	RequireSidecarProposerExpected,
 }
 
+// InitsyncSidecarRequirements is the list of verification.Requirements to be used by the init-sync service
+// for batch-mode syncing. Because we only perform batch verification as part of the IsDataAvailable method
+// for blobs after the block has been verified, and the blobs to be verified are keyed in the cache by the
+// block root, it is safe to skip the following verifications.
+// RequireValidProposerSignature
+// RequireSidecarProposerExpected
 var InitsyncSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
 	RequireNotFromFutureSlot,
 	RequireSlotAboveFinalized,
-	RequireValidProposerSignature,
 	RequireSidecarParentSeen,
 	RequireSidecarParentValid,
 	RequireSidecarParentSlotLower,
 	RequireSidecarDescendsFromFinalized,
 	RequireSidecarInclusionProven,
 	RequireSidecarKzgProofVerified,
-	RequireSidecarProposerExpected,
 }
 
 var (
