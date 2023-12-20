@@ -1089,12 +1089,10 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 	for _, k := range pubkeys {
 		// Default case: Define fee recipient to burn address
 		var feeRecipient common.Address
-		isFeeRecipientDefined := false
 
 		// If fee recipient is defined in default configuration, use it
 		if v.ProposerSettings() != nil && v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
 			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipientConfig.FeeRecipient // Use cli config for fee recipient.
-			isFeeRecipientDefined = true
 		}
 
 		// If fee recipient is defined for this specific pubkey in proposer configuration, use it
@@ -1103,7 +1101,6 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 
 			if ok && config != nil && config.FeeRecipientConfig != nil {
 				feeRecipient = config.FeeRecipientConfig.FeeRecipient // Use file config for fee recipient.
-				isFeeRecipientDefined = true
 			}
 		}
 
@@ -1112,19 +1109,10 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			continue
 		}
 
-		if isFeeRecipientDefined {
-			prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-				ValidatorIndex: validatorIndex,
-				FeeRecipient:   feeRecipient[:],
-			})
-
-			if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
-				log.WithFields(logrus.Fields{
-					"validatorIndex": validatorIndex,
-					"feeRecipient":   feeRecipient,
-				}).Warn("Fee recipient is burn address")
-			}
-		}
+		prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			ValidatorIndex: validatorIndex,
+			FeeRecipient:   feeRecipient[:],
+		})
 	}
 	return prepareProposerReqs, nil
 }

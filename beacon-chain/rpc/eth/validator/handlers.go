@@ -556,16 +556,26 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	for _, r := range jsonFeeRecipients {
 		validatorIndex, valid := shared.ValidateUint(w, "validator_index", r.ValidatorIndex)
 		if !valid {
-			return
+			log.WithField("validatorIndex", validatorIndex).Warn("fee recipient is invalid")
+			continue
 		}
 		feeRecipientBytes, valid := shared.ValidateHex(w, "fee_recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
 		if !valid {
-			return
+			log.WithField("validatorIndex", validatorIndex).Warn("fee recipient is invalid")
+			continue
+		}
+		// Use default address if the burn address is return
+		feeRecipient := primitives.ExecutionAddress(feeRecipientBytes)
+		if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+			feeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+			if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+				log.WithField("validatorIndex", validatorIndex).Warn("fee recipient is the burn address")
+			}
 		}
 		val := cache.TrackedValidator{
 			Active:       true, // TODO: either check or add the field in the request
 			Index:        primitives.ValidatorIndex(validatorIndex),
-			FeeRecipient: primitives.ExecutionAddress(feeRecipientBytes),
+			FeeRecipient: feeRecipient,
 		}
 		s.TrackedValidatorsCache.Set(val)
 		validatorIndices = append(validatorIndices, primitives.ValidatorIndex(validatorIndex))

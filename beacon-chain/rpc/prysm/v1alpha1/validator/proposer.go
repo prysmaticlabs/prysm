@@ -285,10 +285,18 @@ func (vs *Server) PrepareBeaconProposer(
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
+		// Use default address if the burn address is return
+		feeRecipient := primitives.ExecutionAddress(r.FeeRecipient)
+		if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+			feeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+			if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+				log.WithField("validatorIndex", r.ValidatorIndex).Warn("fee recipient is the burn address")
+			}
+		}
 		val := cache.TrackedValidator{
 			Active:       true, // TODO: either check or add the field in the request
 			Index:        r.ValidatorIndex,
-			FeeRecipient: primitives.ExecutionAddress(r.FeeRecipient),
+			FeeRecipient: feeRecipient,
 		}
 		vs.TrackedValidatorsCache.Set(val)
 		validatorIndices = append(validatorIndices, r.ValidatorIndex)
