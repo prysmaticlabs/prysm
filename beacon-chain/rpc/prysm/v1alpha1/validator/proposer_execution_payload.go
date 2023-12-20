@@ -102,7 +102,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	finalizedBlockHash := [32]byte{}
 	justifiedBlockHash := [32]byte{}
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
-	if st.Version() >= version.Altair {
+	if st.Version() >= version.Bellatrix {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
 		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
@@ -289,7 +289,7 @@ func getParentBlockHashPostMerge(st state.BeaconState) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get post merge payload header")
 	}
-	return header.ParentHash(), nil
+	return header.BlockHash(), nil
 }
 
 // getParentBlockHashPreMerge retrieves the parent block hash before the merge has completed.
