@@ -172,7 +172,7 @@ func TestGetSpec(t *testing.T) {
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
 
-	assert.Equal(t, 121, len(data))
+	assert.Equal(t, 132, len(data))
 	for k, v := range data {
 		switch k {
 		case "CONFIG_NAME":
@@ -430,10 +430,32 @@ func TestGetSpec(t *testing.T) {
 			assert.Equal(t, "256", v)
 		case "MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS":
 			assert.Equal(t, "4096", v)
-		case "MAX_REQUEST_BLOCKS_DENEB":
-			assert.Equal(t, "128", v)
 		case "MAX_REQUEST_BLOB_SIDECARS":
 			assert.Equal(t, "768", v)
+		case "MESSAGE_DOMAIN_INVALID_SNAPPY":
+			assert.Equal(t, "0x00000000", v)
+		case "MESSAGE_DOMAIN_VALID_SNAPPY":
+			assert.Equal(t, "0x01000000", v)
+		case "ATTESTATION_PROPAGATION_SLOT_RANGE":
+			assert.Equal(t, "32", v)
+		case "RESP_TIMEOUT":
+			assert.Equal(t, "10", v)
+		case "TTFB_TIMEOUT":
+			assert.Equal(t, "5", v)
+		case "MIN_EPOCHS_FOR_BLOCK_REQUESTS":
+			assert.Equal(t, "33024", v)
+		case "GOSSIP_MAX_SIZE":
+			assert.Equal(t, "10485760", v)
+		case "MAX_CHUNK_SIZE":
+			assert.Equal(t, "10485760", v)
+		case "ATTESTATION_SUBNET_COUNT":
+			assert.Equal(t, "64", v)
+		case "MAXIMUM_GOSSIP_CLOCK_DISPARITY":
+			assert.Equal(t, "500", v)
+		case "MAX_REQUEST_BLOCKS":
+			assert.Equal(t, "1024", v)
+		case "MAX_REQUEST_BLOCKS_DENEB":
+			assert.Equal(t, "128", v)
 		default:
 			t.Errorf("Incorrect key: %s", k)
 		}

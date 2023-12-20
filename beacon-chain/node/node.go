@@ -227,8 +227,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	if beacon.finalizedStateAtStartUp != nil {
-		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
-			return nil, err
+		if err := beacon.BlobStorage.Initialize(beacon.finalizedStateAtStartUp.Slot()); err != nil {
+			return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
 		}
 	} else {
 		log.Warn("No finalized beacon state at startup, cannot prune blobs")

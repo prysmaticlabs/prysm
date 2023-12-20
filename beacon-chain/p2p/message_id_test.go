@@ -24,14 +24,14 @@ func TestMsgID_HashesCorrectly(t *testing.T) {
 	tpc := fmt.Sprintf(p2p.BlockSubnetTopicFormat, d)
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
-	hashedData := hash.Hash(append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], pMsg.Data...))
+	hashedData := hash.Hash(append(params.BeaconConfig().MessageDomainInvalidSnappy[:], pMsg.Data...))
 	msgID := string(hashedData[:20])
 	assert.Equal(t, msgID, p2p.MsgID(genesisValidatorsRoot, pMsg), "Got incorrect msg id")
 
 	validObj := [32]byte{'v', 'a', 'l', 'i', 'd'}
 	enc := snappy.Encode(nil, validObj[:])
 	nMsg := &pubsubpb.Message{Data: enc, Topic: &tpc}
-	hashedData = hash.Hash(append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], validObj[:]...))
+	hashedData = hash.Hash(append(params.BeaconConfig().MessageDomainValidSnappy[:], validObj[:]...))
 	msgID = string(hashedData[:20])
 	assert.Equal(t, msgID, p2p.MsgID(genesisValidatorsRoot, nMsg), "Got incorrect msg id")
 }
@@ -47,7 +47,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
 	// Create object to hash
-	combinedObj := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], topicLenBytes...)
+	combinedObj := append(params.BeaconConfig().MessageDomainInvalidSnappy[:], topicLenBytes...)
 	combinedObj = append(combinedObj, tpc...)
 	combinedObj = append(combinedObj, pMsg.Data...)
 	hashedData := hash.Hash(combinedObj)
@@ -58,7 +58,7 @@ func TestMessageIDFunction_HashesCorrectlyAltair(t *testing.T) {
 	enc := snappy.Encode(nil, validObj[:])
 	nMsg := &pubsubpb.Message{Data: enc, Topic: &tpc}
 	// Create object to hash
-	combinedObj = append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], topicLenBytes...)
+	combinedObj = append(params.BeaconConfig().MessageDomainValidSnappy[:], topicLenBytes...)
 	combinedObj = append(combinedObj, tpc...)
 	combinedObj = append(combinedObj, validObj[:]...)
 	hashedData = hash.Hash(combinedObj)
@@ -77,7 +77,7 @@ func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
 	invalidSnappy := [32]byte{'J', 'U', 'N', 'K'}
 	pMsg := &pubsubpb.Message{Data: invalidSnappy[:], Topic: &tpc}
 	// Create object to hash
-	combinedObj := append(params.BeaconNetworkConfig().MessageDomainInvalidSnappy[:], topicLenBytes...)
+	combinedObj := append(params.BeaconConfig().MessageDomainInvalidSnappy[:], topicLenBytes...)
 	combinedObj = append(combinedObj, tpc...)
 	combinedObj = append(combinedObj, pMsg.Data...)
 	hashedData := hash.Hash(combinedObj)
@@ -88,7 +88,7 @@ func TestMessageIDFunction_HashesCorrectlyBellatrix(t *testing.T) {
 	enc := snappy.Encode(nil, validObj[:])
 	nMsg := &pubsubpb.Message{Data: enc, Topic: &tpc}
 	// Create object to hash
-	combinedObj = append(params.BeaconNetworkConfig().MessageDomainValidSnappy[:], topicLenBytes...)
+	combinedObj = append(params.BeaconConfig().MessageDomainValidSnappy[:], topicLenBytes...)
 	combinedObj = append(combinedObj, tpc...)
 	combinedObj = append(combinedObj, validObj[:]...)
 	hashedData = hash.Hash(combinedObj)

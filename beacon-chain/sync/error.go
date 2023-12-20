@@ -28,7 +28,7 @@ func (s *Service) generateErrorResponse(code byte, reason string) ([]byte, error
 // ReadStatusCode response from a RPC stream.
 func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (uint8, string, error) {
 	// Set ttfb deadline.
-	SetStreamReadDeadline(stream, params.BeaconNetworkConfig().TtfbTimeout)
+	SetStreamReadDeadline(stream, params.BeaconConfig().TtfbTimeoutDuration())
 	b := make([]byte, 1)
 	_, err := stream.Read(b)
 	if err != nil {
@@ -37,13 +37,13 @@ func ReadStatusCode(stream network.Stream, encoding encoder.NetworkEncoding) (ui
 
 	if b[0] == responseCodeSuccess {
 		// Set response deadline on a successful response code.
-		SetStreamReadDeadline(stream, params.BeaconNetworkConfig().RespTimeout)
+		SetStreamReadDeadline(stream, params.BeaconConfig().RespTimeoutDuration())
 
 		return 0, "", nil
 	}
 
 	// Set response deadline, when reading error message.
-	SetStreamReadDeadline(stream, params.BeaconNetworkConfig().RespTimeout)
+	SetStreamReadDeadline(stream, params.BeaconConfig().RespTimeoutDuration())
 	msg := &types.ErrorMessage{}
 	if err := encoding.DecodeWithMaxLength(stream, msg); err != nil {
 		return 0, "", err

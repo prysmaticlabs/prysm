@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -14,7 +15,6 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -22,10 +22,10 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
-var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
+var ttfbTimeout = params.BeaconConfig().TtfbTimeoutDuration()
 
 // respTimeout is the maximum time for complete response transfer.
-var respTimeout = params.BeaconNetworkConfig().RespTimeout
+var respTimeout = params.BeaconConfig().RespTimeoutDuration()
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
