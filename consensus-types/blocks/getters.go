@@ -347,12 +347,16 @@ func (b *SignedBeaconBlock) IsBlinded() bool {
 func (b *SignedBeaconBlock) ValueInGwei() uint64 {
 	exec, err := b.block.body.Execution()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve execution payload")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	val, err := exec.ValueInGwei()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve value in gwei")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	return val

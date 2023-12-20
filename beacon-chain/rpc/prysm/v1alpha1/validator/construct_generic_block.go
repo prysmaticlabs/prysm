@@ -22,14 +22,15 @@ func (vs *Server) constructGenericBeaconBlock(sBlk interfaces.SignedBeaconBlock,
 	}
 
 	isBlinded := sBlk.IsBlinded()
+	payloadValue := sBlk.ValueInGwei()
 
 	switch sBlk.Version() {
 	case version.Deneb:
-		return vs.constructDenebBlock(blockProto, isBlinded, sBlk.ValueInGwei(), blobsBundle), nil
+		return vs.constructDenebBlock(blockProto, isBlinded, payloadValue, blobsBundle), nil
 	case version.Capella:
-		return vs.constructCapellaBlock(blockProto, isBlinded, sBlk.ValueInGwei()), nil
+		return vs.constructCapellaBlock(blockProto, isBlinded, payloadValue), nil
 	case version.Bellatrix:
-		return vs.constructBellatrixBlock(blockProto, isBlinded, sBlk.ValueInGwei()), nil
+		return vs.constructBellatrixBlock(blockProto, isBlinded, payloadValue), nil
 	case version.Altair:
 		return vs.constructAltairBlock(blockProto), nil
 	case version.Phase0:
