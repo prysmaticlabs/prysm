@@ -132,13 +132,16 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 	}
 
 	headers := map[string]string{"Eth-Consensus-Version": consensusVersion}
-	if httpError, err := c.jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
-		if httpError != nil && httpError.Code == http.StatusAccepted {
-			// Error 202 means that the block was successfully broadcasted, but validation failed
-			return nil, errors.Wrap(err, "block was successfully broadcasted but failed validation")
+	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil)
+	if err != nil {
+		return nil, errors.Wrap(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		// Error 202 means that the block was successfully broadcasted, but validation failed
+		if errJson.Code == http.StatusAccepted {
+			return nil, errors.New("block was successfully broadcasted but failed validation")
 		}
-
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+		return nil, errJson
 	}
 
 	return &ethpb.ProposeResponse{BlockRoot: beaconBlockRoot[:]}, nil

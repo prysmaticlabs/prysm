@@ -64,7 +64,7 @@ func (c beaconApiJsonRestHandler) Post(
 	url := c.host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request with context")
+		return nil, errors.Wrapf(err, "failed to create request for endpoint %s", url)
 	}
 
 	for headerKey, headerValue := range headers {
@@ -74,7 +74,7 @@ func (c beaconApiJsonRestHandler) Post(
 
 	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform request with HTTP client")
+		return nil, errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
 	defer func() {
 		if err = httpResp.Body.Close(); err != nil {

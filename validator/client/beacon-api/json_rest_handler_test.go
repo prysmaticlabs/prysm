@@ -45,7 +45,7 @@ func TestGet(t *testing.T) {
 	}
 	resp := &beacon.GetGenesisResponse{}
 	errJson, err := jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp)
-	assert.Equal(t, true, errJson == nil)
+	assert.NoError(t, errJson)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, genesisJson, resp)
 }
@@ -99,7 +99,7 @@ func TestPost(t *testing.T) {
 		bytes.NewBuffer(dataBytes),
 		resp,
 	)
-	assert.Equal(t, true, errJson == nil)
+	assert.NoError(t, errJson)
 	assert.NoError(t, err)
 	assert.DeepEqual(t, genesisJson, resp)
 }
