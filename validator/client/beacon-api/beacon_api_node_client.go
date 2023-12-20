@@ -42,12 +42,9 @@ func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty)
 }
 
 func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*ethpb.Genesis, error) {
-	genesisJson, errJson, err := c.genesisProvider.GetGenesis(ctx)
+	genesisJson, err := c.genesisProvider.GetGenesis(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get genesis")
-	}
-	if errJson != nil {
-		return nil, errJson
 	}
 
 	genesisValidatorRoot, err := hexutil.Decode(genesisJson.GenesisValidatorsRoot)
@@ -61,7 +58,7 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 	}
 
 	depositContractJson := config.GetDepositContractResponse{}
-	errJson, err = c.jsonRestHandler.Get(ctx, "/eth/v1/config/deposit_contract", &depositContractJson)
+	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/config/deposit_contract", &depositContractJson)
 	if err != nil {
 		return nil, errors.Wrapf(err, msgUnexpectedError)
 	}

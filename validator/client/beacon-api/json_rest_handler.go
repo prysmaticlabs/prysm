@@ -32,12 +32,12 @@ func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 	url := c.host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request with context")
+		return nil, errors.Wrapf(err, "failed to create request for endpoint %s", url)
 	}
 
 	httpResp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to perform request with HTTP client")
+		return nil, errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
 	defer func() {
 		if err := httpResp.Body.Close(); err != nil {

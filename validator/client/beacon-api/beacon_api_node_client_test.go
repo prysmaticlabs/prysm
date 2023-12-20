@@ -118,7 +118,6 @@ func TestGetGenesis(t *testing.T) {
 				ctx,
 			).Return(
 				testCase.genesisResponse,
-				nil,
 				testCase.genesisError,
 			)
 

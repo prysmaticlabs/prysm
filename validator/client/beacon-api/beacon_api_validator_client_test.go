@@ -121,7 +121,6 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
 		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
-		nil,
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{genesisProvider: genesisProvider}

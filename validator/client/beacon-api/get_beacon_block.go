@@ -38,39 +38,44 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), queryParams)
 	produceBlockV3ResponseJson := validator.ProduceBlockV3Response{}
 	errJson, err := c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockV3ResponseJson)
-	if err == nil {
+	if err != nil {
+		return nil, errors.Wrap(err, msgUnexpectedError)
+	}
+	if errJson != nil {
+		if errJson.Code == http.StatusNotFound {
+			log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
+			produceBlindedBlockResponseJson := abstractProduceBlockResponseJson{}
+			queryUrl = buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
+			errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlindedBlockResponseJson)
+			if err != nil {
+				return nil, errors.Wrap(err, msgUnexpectedError)
+			}
+			if errJson != nil {
+				log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
+				produceBlockResponseJson := abstractProduceBlockResponseJson{}
+				queryUrl = buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
+				errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockResponseJson)
+				if err != nil {
+					return nil, errors.Wrap(err, msgUnexpectedError)
+				}
+				if errJson != nil {
+					return nil, errJson
+				}
+				ver = produceBlockResponseJson.Version
+				blinded = false
+				decoder = json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
+			} else {
+				ver = produceBlindedBlockResponseJson.Version
+				blinded = true
+				decoder = json.NewDecoder(bytes.NewReader(produceBlindedBlockResponseJson.Data))
+			}
+		} else {
+			return nil, errJson
+		}
+	} else {
 		ver = produceBlockV3ResponseJson.Version
 		blinded = produceBlockV3ResponseJson.ExecutionPayloadBlinded
 		decoder = json.NewDecoder(bytes.NewReader(produceBlockV3ResponseJson.Data))
-	} else if errJson == nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
-	} else if errJson.Code == http.StatusNotFound {
-		log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
-		produceBlindedBlockResponseJson := abstractProduceBlockResponseJson{}
-		queryUrl = buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
-		errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlindedBlockResponseJson)
-		if err == nil {
-			ver = produceBlindedBlockResponseJson.Version
-			blinded = true
-			decoder = json.NewDecoder(bytes.NewReader(produceBlindedBlockResponseJson.Data))
-		} else if errJson == nil {
-			return nil, errors.Wrap(err, "failed to query GET REST endpoint: nil result")
-		} else {
-			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
-			produceBlockResponseJson := abstractProduceBlockResponseJson{}
-			queryUrl = buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
-			errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockResponseJson)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to query GET REST endpoint")
-			} else if errJson != nil {
-				return nil, errors.Wrap(errJson, "failed to query GET REST endpoint")
-			}
-			ver = produceBlockResponseJson.Version
-			blinded = false
-			decoder = json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
-		}
-	} else {
-		return nil, fmt.Errorf("failed to query GET REST endpoint: %s (status code %d)", errJson.Message, errJson.Code)
 	}
 
 	var response *ethpb.GenericBeaconBlock

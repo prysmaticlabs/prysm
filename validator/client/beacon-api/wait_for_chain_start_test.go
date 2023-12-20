@@ -155,7 +155,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 			Code:    http.StatusNotFound,
 			Message: "404 error",
 		},
-		errors.New("404 error"),
+		nil,
 	).Times(1)
 
 	// After receiving a 404 error, mock a request that actually has genesis data available

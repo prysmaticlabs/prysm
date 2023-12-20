@@ -38,7 +38,7 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
-	assert.ErrorContains(t, "failed to query GET REST endpoint", err)
+	assert.ErrorContains(t, "unexpected error when making request", err)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -533,7 +533,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
-		errors.New("foo"),
+		nil,
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -586,7 +586,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
-		errors.New("foo"),
+		nil,
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -594,7 +594,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		&abstractProduceBlockResponseJson{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusInternalServerError},
-		errors.New("foo"),
+		nil,
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
