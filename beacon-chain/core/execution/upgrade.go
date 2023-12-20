@@ -79,6 +79,7 @@ func UpgradeToBellatrix(state state.BeaconState) (state.BeaconState, error) {
 			GasLimit:         0,
 			GasUsed:          0,
 			Timestamp:        0,
+			ExtraData:        make([]byte, 0),
 			BaseFeePerGas:    make([]byte, 32),
 			BlockHash:        make([]byte, 32),
 			TransactionsRoot: make([]byte, 32),

@@ -2333,10 +2333,10 @@ func ExecutionPayloadHeaderDenebFromConsensus(payload *enginev1.ExecutionPayload
 		Timestamp:        fmt.Sprintf("%d", payload.Timestamp),
 		ExtraData:        hexutil.Encode(payload.ExtraData),
 		BaseFeePerGas:    baseFeePerGas,
-		BlobGasUsed:      fmt.Sprintf("%d", payload.BlobGasUsed),
-		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas),
 		BlockHash:        hexutil.Encode(payload.BlockHash),
 		TransactionsRoot: hexutil.Encode(payload.TransactionsRoot),
 		WithdrawalsRoot:  hexutil.Encode(payload.WithdrawalsRoot),
+		BlobGasUsed:      fmt.Sprintf("%d", payload.BlobGasUsed),
+		ExcessBlobGas:    fmt.Sprintf("%d", payload.ExcessBlobGas),
 	}, nil
 }

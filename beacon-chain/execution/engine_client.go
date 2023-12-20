@@ -796,8 +796,8 @@ func fullPayloadFromExecutionBlock(
 				BlockHash:     blockHash[:],
 				Transactions:  txs,
 				Withdrawals:   block.Withdrawals,
-				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
+				ExcessBlobGas: ebg,
 			}, 0) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
@@ -976,10 +976,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 		}, nil
 	case version.Capella:
 		return &pb.ExecutionPayloadCapella{
@@ -989,10 +989,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
 	case version.Deneb:
@@ -1003,10 +1003,10 @@ func buildEmptyExecutionPayload(v int) (proto.Message, error) {
 			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 			LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 			PrevRandao:    make([]byte, fieldparams.RootLength),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExtraData:     make([]byte, 0),
 			Withdrawals:   make([]*pb.Withdrawal, 0),
 		}, nil
 	default:
