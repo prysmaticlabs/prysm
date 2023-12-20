@@ -5,7 +5,6 @@ import (
 
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
-	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -136,12 +135,10 @@ func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) (safeCommitme
 	if err != nil {
 		return ar, err
 	}
-	if len(kc) > fieldparams.MaxBlobsPerBlock {
+	if len(kc) > len(ar) {
 		return ar, errIndexOutOfBounds
 	}
-	for i := range kc {
-		ar[i] = kc[i]
-	}
+	copy(ar[:], kc)
 	return ar, nil
 }
 
