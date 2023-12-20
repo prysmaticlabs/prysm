@@ -205,7 +205,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		newScs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range newScs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
@@ -229,7 +229,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
@@ -255,7 +255,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
@@ -281,7 +281,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}

@@ -108,7 +108,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
+	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconConfig().MaximumGossipClockDisparityDuration()))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.

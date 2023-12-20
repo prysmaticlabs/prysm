@@ -22,6 +22,7 @@ import (
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/sirupsen/logrus"
 )
 
 // ErrInvalidFetchedData is used to signal that an error occurred which should result in peer downscoring.
@@ -151,14 +152,18 @@ func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle,
 	if err != nil {
 		return nil, err
 	}
-	log.WithField("topic", topic).Debug("Sending blob by range request")
+	log.WithFields(logrus.Fields{
+		"topic":     topic,
+		"startSlot": req.StartSlot,
+		"count":     req.Count,
+	}).Debug("Sending blob by range request")
 	stream, err := p2pApi.Send(ctx, req, topic, pid)
 	if err != nil {
 		return nil, err
 	}
 	defer closeStream(stream, log)
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	max := params.BeaconConfig().MaxRequestBlobSidecars
 	if max > req.Count*fieldparams.MaxBlobsPerBlock {
 		max = req.Count * fieldparams.MaxBlobsPerBlock
 	}
@@ -169,7 +174,7 @@ func SendBlobSidecarByRoot(
 	ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.P2P, pid peer.ID,
 	ctxMap ContextByteVersions, req *p2ptypes.BlobSidecarsByRootReq,
 ) ([]blocks.ROBlob, error) {
-	if uint64(len(*req)) > params.BeaconNetworkConfig().MaxRequestBlobSidecars {
+	if uint64(len(*req)) > params.BeaconConfig().MaxRequestBlobSidecars {
 		return nil, errors.Wrapf(p2ptypes.ErrMaxBlobReqExceeded, "length=%d", len(*req))
 	}
 
@@ -184,7 +189,7 @@ func SendBlobSidecarByRoot(
 	}
 	defer closeStream(stream, log)
 
-	max := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	max := params.BeaconConfig().MaxRequestBlobSidecars
 	if max > uint64(len(*req))*fieldparams.MaxBlobsPerBlock {
 		max = uint64(len(*req)) * fieldparams.MaxBlobsPerBlock
 	}

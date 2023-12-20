@@ -381,10 +381,27 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
 		}
-		if err := helpers.UpdateProposerIndicesInCache(slotCtx, st, e+1); err != nil {
+		if err := helpers.UpdateUnsafeProposerIndicesInCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
 	}()
+	// The latest block header is from the previous epoch
+	r, err := st.LatestBlockHeader().HashTreeRoot()
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+		return nil
+	}
+	// The proposer indices cache takes the target root for the previous
+	// epoch as key
+	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+		return nil
+	}
+	err = helpers.UpdateCachedCheckpointToStateRoot(st, &forkchoicetypes.Checkpoint{Epoch: e, Root: target})
+	if err != nil {
+		log.WithError(err).Error("could not update proposer index state-root map")
+	}
 	return nil
 }
 
@@ -651,9 +668,12 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
+	// handleEpochBoundary requires a forkchoice lock to obtain the target root.
+	s.cfg.ForkChoiceStore.RLock()
 	if err := s.handleEpochBoundary(ctx, currentSlot, headState, headRoot[:]); err != nil {
 		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
+	s.cfg.ForkChoiceStore.RUnlock()
 	// Head root should be empty when retrieving proposer index for the next slot.
 	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
 	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.

@@ -95,7 +95,7 @@ func (s *Service) BroadcastSyncCommitteeMessage(ctx context.Context, subnet uint
 }
 
 func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *ethpb.Attestation, forkDigest [4]byte) {
-	ctx, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
+	_, span := trace.StartSpan(ctx, "p2p.broadcastAttestation")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
@@ -148,7 +148,7 @@ func (s *Service) broadcastAttestation(ctx context.Context, subnet uint64, att *
 }
 
 func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMsg *ethpb.SyncCommitteeMessage, forkDigest [4]byte) {
-	ctx, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
+	_, span := trace.StartSpan(ctx, "p2p.broadcastSyncCommittee")
 	defer span.End()
 	ctx = trace.NewContext(context.Background(), span) // clear parent context / deadline.
 
@@ -191,7 +191,7 @@ func (s *Service) broadcastSyncCommittee(ctx context.Context, subnet uint64, sMs
 	}
 	// In the event our sync message is outdated and beyond the
 	// acceptable threshold, we exit early and do not broadcast it.
-	if err := altair.ValidateSyncMessageTime(sMsg.Slot, s.genesisTime, params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := altair.ValidateSyncMessageTime(sMsg.Slot, s.genesisTime, params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		log.WithError(err).Warn("Sync Committee Message is too old to broadcast, discarding it")
 		return
 	}

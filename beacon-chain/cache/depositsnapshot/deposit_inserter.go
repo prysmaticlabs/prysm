@@ -28,6 +28,9 @@ var (
 func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum uint64, index int64, depositRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "Cache.InsertDeposit")
 	defer span.End()
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 	if d == nil {
 		log.WithFields(logrus.Fields{
 			"block":        blockNum,
@@ -60,7 +63,7 @@ func (c *Cache) InsertDeposit(ctx context.Context, d *ethpb.Deposit, blockNum ui
 
 // InsertDepositContainers inserts a set of deposit containers into our deposit cache.
 func (c *Cache) InsertDepositContainers(ctx context.Context, ctrs []*ethpb.DepositContainer) {
-	ctx, span := trace.StartSpan(ctx, "Cache.InsertDepositContainers")
+	_, span := trace.StartSpan(ctx, "Cache.InsertDepositContainers")
 	defer span.End()
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
@@ -88,6 +91,10 @@ func (c *Cache) InsertFinalizedDeposits(ctx context.Context, eth1DepositIndex in
 	defer span.End()
 	c.depositsLock.Lock()
 	defer c.depositsLock.Unlock()
+
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
 
 	depositTrie := c.finalizedDeposits.depositTree
 	insertIndex := int(c.finalizedDeposits.MerkleTrieIndex() + 1)

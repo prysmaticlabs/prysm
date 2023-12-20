@@ -11,10 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/components"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/policies"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
@@ -24,8 +24,11 @@ import (
 )
 
 var FeeRecipientIsPresent = types.Evaluator{
-	Name:       "fee_recipient_is_present_%d",
-	Policy:     policies.AfterNthEpoch(helpers.BellatrixE2EForkEpoch),
+	Name: "fee_recipient_is_present_%d",
+	Policy: func(e primitives.Epoch) bool {
+		fEpoch := params.BeaconConfig().BellatrixForkEpoch
+		return policies.AfterNthEpoch(fEpoch)(e)
+	},
 	Evaluation: feeRecipientIsPresent,
 }
 

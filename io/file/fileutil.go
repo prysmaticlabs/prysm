@@ -154,7 +154,7 @@ func Exists(filename string) bool {
 // RecursiveFileFind returns true, and the path,  if a file is not a directory and exists
 // at  dir or any of its subdirectories.  Finds the first instant based on the Walk order and returns.
 // Define non-fatal error to stop the recursive directory walk
-var stopWalk = errors.New("stop walking")
+var errStopWalk = errors.New("stop walking")
 
 // RecursiveFileFind searches for file in a directory and its subdirectories.
 func RecursiveFileFind(filename, dir string) (bool, string, error) {
@@ -171,13 +171,13 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 		if !info.IsDir() && filename == info.Name() {
 			found = true
 			fpath = path
-			return stopWalk
+			return errStopWalk
 		}
 
 		// no errors or file found
 		return nil
 	})
-	if err != nil && err != stopWalk {
+	if err != nil && err != errStopWalk {
 		return false, "", err
 	}
 	return found, fpath, nil

@@ -28,7 +28,7 @@ func (s *Server) ListTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	for _, id := range allIds {
 		p, err := httpPeerInfo(peerStatus, id)
 		if err != nil {
-			errJson := &httputil.DefaultErrorJson{
+			errJson := &httputil.DefaultJsonError{
 				Message: errors.Wrapf(err, "Could not get peer info").Error(),
 				Code:    http.StatusInternalServerError,
 			}
@@ -58,7 +58,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: errors.Wrapf(err, "Could not read request body").Error(),
 			Code:    http.StatusInternalServerError,
 		}
@@ -68,7 +68,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	var addrRequest *AddrRequest
 	err = json.Unmarshal(body, &addrRequest)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: errors.Wrapf(err, "Could not decode request body into peer address").Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -77,7 +77,7 @@ func (s *Server) AddTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	}
 	info, err := peer.AddrInfoFromString(addrRequest.Addr)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: errors.Wrapf(err, "Could not derive peer info from multiaddress").Error(),
 			Code:    http.StatusBadRequest,
 		}
@@ -108,7 +108,7 @@ func (s *Server) RemoveTrustedPeer(w http.ResponseWriter, r *http.Request) {
 	id := segments[len(segments)-1]
 	peerId, err := peer.Decode(id)
 	if err != nil {
-		errJson := &httputil.DefaultErrorJson{
+		errJson := &httputil.DefaultJsonError{
 			Message: errors.Wrapf(err, "Could not decode peer id").Error(),
 			Code:    http.StatusBadRequest,
 		}

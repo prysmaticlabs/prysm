@@ -5,7 +5,7 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ '*' ]
-  merge_group: 
+  merge_group:
     types: [checks_requested]
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.52.2
+          version: v1.55.2
           args: --config=.golangci.yml --out-${NO_FUTURE}format colored-line-number
 
   build:

@@ -24,7 +24,7 @@ func (s *Service) streamBlobBatch(ctx context.Context, batch blockBatch, wQuota 
 	if wQuota == 0 {
 		return 0, nil
 	}
-	ctx, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
+	_, span := trace.StartSpan(ctx, "sync.streamBlobBatch")
 	defer span.End()
 	for _, b := range batch.canonical() {
 		root := b.Root()
@@ -91,9 +91,15 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	batcher, err := newBlockRangeBatcher(rp, s.cfg.beaconDB, s.rateLimiter, s.cfg.chain.IsCanonical, ticker)
+	if err != nil {
+		log.WithError(err).Info("error in BlobSidecarsByRange batch")
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return err
+	}
 
 	var batch blockBatch
-	wQuota := params.BeaconNetworkConfig().MaxRequestBlobSidecars
+	wQuota := params.BeaconConfig().MaxRequestBlobSidecars
 	for batch, ok = batcher.next(ctx, stream); ok; batch, ok = batcher.next(ctx, stream) {
 		batchStart := time.Now()
 		wQuota, err = s.streamBlobBatch(ctx, batch, wQuota, stream)
@@ -107,7 +113,7 @@ func (s *Service) blobSidecarsByRangeRPCHandler(ctx context.Context, msg interfa
 		}
 	}
 	if err := batch.error(); err != nil {
-		log.WithError(err).Debug("error in BlocksByRange batch")
+		log.WithError(err).Debug("error in BlobSidecarsByRange batch")
 		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
 		tracing.AnnotateError(span, err)
 		return err
@@ -125,7 +131,7 @@ func BlobsByRangeMinStartSlot(current primitives.Slot) (primitives.Slot, error) 
 	if params.BeaconConfig().DenebForkEpoch == math.MaxUint64 {
 		return primitives.Slot(math.MaxUint64), nil
 	}
-	minReqEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	minReqEpochs := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	currEpoch := slots.ToEpoch(current)
 	minStart := params.BeaconConfig().DenebForkEpoch
 	if currEpoch > minReqEpochs && currEpoch-minReqEpochs > minStart {
@@ -153,7 +159,7 @@ func validateBlobsByRange(r *pb.BlobSidecarsByRangeRequest, current primitives.S
 	}
 
 	var err error
-	rp.end, err = rp.start.SafeAdd((rp.size - 1))
+	rp.end, err = rp.start.SafeAdd(rp.size - 1)
 	if err != nil {
 		return rangeParams{}, errors.Wrap(p2ptypes.ErrInvalidRequest, "overflow start + count -1")
 	}

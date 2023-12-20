@@ -14,11 +14,11 @@ func TestMaxRequestBlock(t *testing.T) {
 	}{
 		{
 			epoch:            primitives.Epoch(mainnetDenebForkEpoch - 1), // Assuming the fork epoch is not 0
-			expectedMaxBlock: mainnetNetworkConfig.MaxRequestBlocks,
+			expectedMaxBlock: mainnetBeaconConfig.MaxRequestBlocks,
 		},
 		{
 			epoch:            primitives.Epoch(mainnetDenebForkEpoch),
-			expectedMaxBlock: mainnetNetworkConfig.MaxRequestBlocksDeneb,
+			expectedMaxBlock: mainnetBeaconConfig.MaxRequestBlocksDeneb,
 		},
 	}
 

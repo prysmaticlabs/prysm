@@ -66,7 +66,7 @@ func (s *Server) GetValidatorPerformance(w http.ResponseWriter, r *http.Request)
 }
 
 func handleHTTPError(w http.ResponseWriter, message string, code int) {
-	errJson := &httputil.DefaultErrorJson{
+	errJson := &httputil.DefaultJsonError{
 		Message: message,
 		Code:    code,
 	}

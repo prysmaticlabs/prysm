@@ -27,7 +27,7 @@ import (
 )
 
 var (
-	errIndexOutOfBounds = errors.New("blob index in file name > MaxBlobsPerBlock")
+	errIndexOutOfBounds = errors.New("blob index in file name >= MaxBlobsPerBlock")
 )
 
 const (
@@ -60,7 +60,7 @@ func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	b := &BlobStorage{
 		fs:              fs,
-		retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
+		retentionEpochs: params.BeaconConfig().MinEpochsForBlobsSidecarsRequest,
 		lastPrunedEpoch: firstPruneEpoch,
 	}
 	for _, o := range opts {
@@ -78,6 +78,7 @@ type BlobStorage struct {
 
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
+	startTime := time.Now()
 	fname := namerForSidecar(sidecar)
 	sszPath := fname.path()
 	exists, err := afero.Exists(bs.fs, sszPath)
@@ -142,6 +143,8 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
+	blobsTotalGauge.Inc()
+	blobSaveLatency.Observe(time.Since(startTime).Seconds())
 	return nil
 }
 
@@ -149,6 +152,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // Since BlobStorage only writes blobs that have undergone full verification, the return
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
+	startTime := time.Now()
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.path())
 	var v blocks.VerifiedROBlob
@@ -163,6 +167,9 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	if err != nil {
 		return blocks.VerifiedROBlob{}, err
 	}
+	defer func() {
+		blobFetchLatency.Observe(time.Since(startTime).Seconds())
+	}()
 	return verification.BlobSidecarNoop(ro)
 }
 
@@ -232,8 +239,6 @@ func (p blobNamer) path() string {
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
 func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	log.Debug("Pruning old blobs")
-
 	t := time.Now()
 	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
 	if err != nil {
@@ -243,22 +248,30 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 		return nil // Overflow would occur
 	}
 
+	log.Debug("Pruning old blobs")
+
 	folders, err := afero.ReadDir(bs.fs, ".")
 	if err != nil {
 		return err
 	}
+	var totalPruned int
 	for _, folder := range folders {
 		if folder.IsDir() {
-			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
+			num, err := bs.processFolder(folder, currentSlot, retentionSlots)
+			if err != nil {
 				return err
 			}
+			blobsPrunedCounter.Add(float64(num))
+			blobsTotalGauge.Add(-float64(num))
+			totalPruned += num
 		}
 	}
 	pruneTime := time.Since(t)
 
 	log.WithFields(log.Fields{
-		"lastPrunedEpoch": slots.ToEpoch(currentSlot - retentionSlots),
-		"pruneTime":       pruneTime,
+		"lastPrunedEpoch":   slots.ToEpoch(currentSlot - retentionSlots),
+		"pruneTime":         pruneTime,
+		"numberBlobsPruned": totalPruned,
 	}).Debug("Pruned old blobs")
 
 	return nil
@@ -266,10 +279,10 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) (int, error) {
 	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -279,14 +292,19 @@ func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionS
 
 	slot, err := slotFromBlob(f)
 	if err != nil {
-		return err
+		return 0, err
 	}
+	var num int
 	if slot < (currentSlot - retentionSlots) {
+		num, err = bs.countFiles(folder.Name())
+		if err != nil {
+			return 0, err
+		}
 		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
-			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
+			return 0, errors.Wrapf(err, "failed to delete blob %s", f.Name())
 		}
 	}
-	return nil
+	return num, nil
 }
 
 // slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
