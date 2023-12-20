@@ -28,52 +28,54 @@ func TestCacheEnsureDelete(t *testing.T) {
 	require.Equal(t, nilEntry, c.entries[k])
 }
 
-func TestNewEntry(t *testing.T) {
-	entry := &cacheEntry{}
-	require.Equal(t, false, entry.dbidxInitialized())
-	entry.ensureDbidx(entry.dbx)
-	require.Equal(t, true, entry.dbidxInitialized())
-}
-
 func TestDbidxMissing(t *testing.T) {
 	cases := []struct {
-		name     string
-		nMissing int
+		name    string
+		missing []uint64
+		idx     dbidx
+		expect  int
 	}{
 		{
-			name:     "all missing",
-			nMissing: fieldparams.MaxBlobsPerBlock,
+			name:    "all missing",
+			missing: []uint64{0, 1, 2, 3, 4, 5},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{false, false, false, false, false, false}),
+			expect:  6,
 		},
 		{
-			name:     "none missing",
-			nMissing: 0,
+			name:    "none missing",
+			missing: []uint64{},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{true, true, true, true, true, true}),
+			expect:  6,
 		},
 		{
-			name:     "2 missing",
-			nMissing: 2,
+			name:    "ends missing",
+			missing: []uint64{0, 5},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{false, true, true, true, true, false}),
+			expect:  6,
 		},
 		{
-			name:     "3 missing",
-			nMissing: 3,
+			name:    "middle missing",
+			missing: []uint64{1, 2, 3, 4},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{true, false, false, false, false, true}),
+			expect:  6,
+		},
+		{
+			name:    "none expected",
+			missing: []uint64{},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{false, false, false, false, false, false}),
+			expect:  0,
+		},
+		{
+			name:    "middle missing, half expected",
+			missing: []uint64{1, 2},
+			idx:     dbidx([fieldparams.MaxBlobsPerBlock]bool{true, false, false, false, false, true}),
+			expect:  3,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			var idx [fieldparams.MaxBlobsPerBlock]bool
-			missing := make([]uint64, 0)
-			for i := range idx {
-				if i < c.nMissing {
-					idx[i] = false
-					missing = append(missing, uint64(i))
-				} else {
-					idx[i] = true
-				}
-			}
-			entry := &cacheEntry{}
-			d := entry.ensureDbidx(idx)
-			m := d.missing(6)
-			require.DeepEqual(t, m, missing)
-			require.Equal(t, c.nMissing, len(m))
+			m := c.idx.missing(c.expect)
+			require.DeepEqual(t, m, c.missing)
 		})
 	}
 }

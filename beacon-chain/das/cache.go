@@ -2,13 +2,11 @@ package das
 
 import (
 	"bytes"
-	"fmt"
 
 	errors "github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -57,6 +55,79 @@ func (c *cache) delete(key cacheKey) {
 	delete(c.entries, key)
 }
 
+// cacheEntry holds a fixed-length cache of BlobSidecars.
+type cacheEntry struct {
+	scs [fieldparams.MaxBlobsPerBlock]*blocks.ROBlob
+}
+
+// stash adds an item to the in-memory cache of BlobSidecars.
+// Only the first BlobSidecar of a given Index will be kept in the cache.
+// stash will return an error if the given blob is already in the cache, or if the Index is out of bounds.
+func (e *cacheEntry) stash(sc *blocks.ROBlob) error {
+	if sc.Index >= fieldparams.MaxBlobsPerBlock {
+		return errors.Wrapf(errIndexOutOfBounds, "index=%d", sc.Index)
+	}
+	if e.scs[sc.Index] != nil {
+		return errors.Wrapf(ErrDuplicateSidecar, "root=%#x, index=%d, commitment=%#x", sc.BlockRoot(), sc.Index, sc.KzgCommitment)
+	}
+	e.scs[sc.Index] = sc
+	return nil
+}
+
+/*
+// filter returns a slice of all sidecars with KzgCommitment values that are found
+// in the given list of block commitments, ignoring any that shouldn't be there.
+// This is a cheap pre-filtering step before full blob verification.
+func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) []blocks.ROBlob {
+	upper := fieldparams.MaxBlobsPerBlock
+	if upper > len(blkCmts) {
+		upper = len(blkCmts)
+	}
+	want := make([]blocks.ROBlob, 0, len(e.scs))
+	for i := 0; i < upper; i++ {
+		if e.scs[i] == nil {
+			continue
+		}
+		if bytes.Equal(blkCmts[i], e.scs[i].KzgCommitment) {
+			want = append(want, *e.scs[i])
+		}
+	}
+	return want
+}
+*/
+
+var (
+	errCommitmentMismatch = errors.New("KzgCommitment of sidecar in cache did not match block commitment")
+	errMissingSidecar     = errors.New("no sidecar in cache for block commitment")
+)
+
+// filter evicts sidecars that are not committed to by the block and returns custom
+// errors if the cache is missing any of the commitments, or if the commitments in
+// the cache do not match those found in the block. If err is nil, then all expected
+// commitments were found in the cache and the sidecar slice return value can be used
+// to perform a DA check against the cached sidecars.
+func (e *cacheEntry) filter(root [32]byte, kc safeCommitmentArray) ([]blocks.ROBlob, error) {
+	scs := make([]blocks.ROBlob, kc.count())
+	for i := uint64(0); i < fieldparams.MaxBlobsPerBlock; i++ {
+		if kc[i] == nil {
+			if e.scs[i] != nil {
+				return nil, errors.Wrapf(errCommitmentMismatch, "root=%#x, index=%#x, commitment=%#x, no block commitment", root, i, e.scs[i].KzgCommitment)
+			}
+			continue
+		}
+
+		if e.scs[i] == nil {
+			return nil, errors.Wrapf(errMissingSidecar, "root=%#x, index=%#x", root, i)
+		}
+		if !bytes.Equal(kc[i], e.scs[i].KzgCommitment) {
+			return nil, errors.Wrapf(errCommitmentMismatch, "root=%#x, index=%#x, commitment=%#x, block commitment=%#x", root, i, e.scs[i].KzgCommitment, kc[i])
+		}
+		scs[i] = *e.scs[i]
+	}
+
+	return scs, nil
+}
+
 // dbidx is a compact representation of the set of BlobSidecars in the database for a given root,
 // organized as a map from BlobSidecar.Index->BlobSidecar.KzgCommitment.
 // This representation is convenient for comparison to a block's commitments.
@@ -78,96 +149,15 @@ func (idx dbidx) missing(expected int) []uint64 {
 	return m
 }
 
-// cacheEntry represents 2 different types of caches for a given block.
-// scs is a fixed-length cache of BlobSidecars.
-// dbx is a compact representation of BlobSidecars observed in the backing store.
-// dbx assumes that all writes to the backing store go through the same cache.
-type cacheEntry struct {
-	scs    [fieldparams.MaxBlobsPerBlock]*blocks.ROBlob
-	dbx    dbidx
-	dbRead bool
-}
+// safeCommitemntArray is a fixed size array of commitment byte slices. This is helpful for avoiding
+// gratuitous bounds checks.
+type safeCommitmentArray [fieldparams.MaxBlobsPerBlock][]byte
 
-// stash adds an item to the in-memory cache of BlobSidecars.
-// Only the first BlobSidecar of a given Index will be kept in the cache.
-// The return value represents whether the given BlobSidecar was stashed.
-// A false value means there was already a BlobSidecar with the given Index.
-func (e *cacheEntry) stash(sc *blocks.ROBlob) error {
-	if sc.Index >= fieldparams.MaxBlobsPerBlock {
-		return errors.Wrapf(errIndexOutOfBounds, "index=%d", sc.Index)
-	}
-	if e.scs[sc.Index] != nil {
-		return errors.Wrapf(ErrDuplicateSidecar, "root=%#x, index=%d, commitment=%#x", sc.BlockRoot(), sc.Index, sc.KzgCommitment)
-	}
-	e.scs[sc.Index] = sc
-	return nil
-}
-
-func (e *cacheEntry) dbidx() dbidx {
-	return e.dbx
-}
-
-func (e *cacheEntry) dbidxInitialized() bool {
-	return e.dbRead
-}
-
-// filter evicts sidecars that are not committed to by the block and returns custom
-// errors if the cache is missing any of the commitments, or if the commitments in
-// the cache do not match those found in the block. If err is nil, then all expected
-// commitments were found in the cache and the sidecar slice return value can be used
-// to perform a DA check against the cached sidecars.
-func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) ([]blocks.ROBlob, error) {
-	scs := make([]blocks.ROBlob, len(blkCmts))
-	// Evict any blobs that are out of range.
-	for i := len(blkCmts); i < fieldparams.MaxBlobsPerBlock; i++ {
-		if e.scs[i] == nil {
-			continue
-		}
-		log.WithField("block_root", root).
-			WithField("block_commitments", len(blkCmts)).
-			WithField("sidecar_index", i).
-			WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
-			Warn("Evicting BlobSidecar without commitment in block")
-		e.scs[i] = nil
-	}
-	// Generate a MissingIndicesError for any missing indices.
-	// Generate a CommitmentMismatchError for any mismatched commitments.
-	missing := make([]uint64, 0, len(blkCmts))
-	mismatch := make([]uint64, 0, len(blkCmts))
-	for i := range blkCmts {
-		if e.scs[i] == nil {
-			missing = append(missing, uint64(i))
-			continue
-		}
-		if !bytes.Equal(blkCmts[i], e.scs[i].KzgCommitment) {
-			mismatch = append(mismatch, uint64(i))
-			log.WithField("block_root", root).
-				WithField("index", i).
-				WithField("expected_commitment", fmt.Sprintf("%#x", blkCmts[i])).
-				WithField("cached_commitment", fmt.Sprintf("%#x", e.scs[i].KzgCommitment)).
-				Error("Evicting BlobSidecar with incorrect commitment")
-			e.scs[i] = nil
-			continue
-		}
-		scs[i] = *e.scs[i]
-	}
-	if len(mismatch) > 0 {
-		return nil, NewCommitmentMismatchError(mismatch)
-	}
-	if len(missing) > 0 {
-		return nil, NewMissingIndicesError(missing)
-	}
-	return scs, nil
-}
-
-// ensureDbidx updates the db cache representation to include the given BlobSidecars.
-func (e *cacheEntry) ensureDbidx(fromDB [fieldparams.MaxBlobsPerBlock]bool) dbidx {
-	e.dbRead = true
-	for i := range fromDB {
-		// Positive result in cache overrides negative result in db.
-		if !e.dbx[i] && fromDB[i] {
-			e.dbx[i] = fromDB[i]
+func (s safeCommitmentArray) count() int {
+	for i := range s {
+		if s[i] == nil {
+			return i
 		}
 	}
-	return e.dbx
+	return fieldparams.MaxBlobsPerBlock
 }

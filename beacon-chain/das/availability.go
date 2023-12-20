@@ -4,7 +4,6 @@ import (
 	"context"
 
 	errors "github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -13,6 +12,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+)
+
+var (
+	errMixedRoots = errors.New("BlobSidecars must all be for the same block")
 )
 
 // LazilyPersistentStore is an implementation of AvailabilityStore to be used when batch syncing.
@@ -92,82 +95,54 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 
 	key := keyFromBlock(b)
 	entry := s.cache.ensure(key)
-	if err := s.daCheck(ctx, b.Root(), blockCommitments, entry); err != nil {
-		return err
+	defer s.cache.delete(key)
+	return s.daCheck(ctx, b.Root(), blockCommitments, entry)
+}
+
+func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, kc safeCommitmentArray, entry *cacheEntry) error {
+	// Verify we have all the expected sidecars, and fail fast if any are missing or inconsistent.
+	// We don't try to salvage problematic batches because this indicates a misbehaving peer and we'd rather
+	// ignore their response and decrease their peer score.
+	sidecars, err := entry.filter(root, kc)
+	if err != nil {
+		return errors.Wrap(err, "incomplete BlobSidecar batch")
 	}
-	// If there is no error, DA has been successful, so we can clean up the cache.
-	s.cache.delete(key)
+	// Do thorough verifications of each BlobSidecar for the block.
+	// Same as above, we don't save BlobSidecars if there are any problems with the batch.
+	vscs, err := s.verifier.VerifiedROBlobs(ctx, sidecars)
+	if err != nil {
+		return errors.Wrapf(err, "invalid BlobSidecars received for block %#x", root)
+	}
+	// Ensure that each BlobSidecar is written to disk.
+	for i := range vscs {
+		if err := s.store.Save(vscs[i]); err != nil {
+			return errors.Wrapf(err, "failed to save BlobSidecar index %d for block %#x", vscs[i].Index, root)
+		}
+	}
+	// All BlobSidecars are persisted - da check succeeds.
 	return nil
 }
 
-func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, blockCommitments [][]byte, entry *cacheEntry) error {
-	sidecars, cacheErr := entry.filter(root, blockCommitments)
-	// If cacheErr == nil, we know we have all the sidecars we need in the cache.
-	// If they are all successfully verified and written to disk, DA is successful.
-	if cacheErr == nil {
-		vscs, err := s.verifier.VerifiedROBlobs(ctx, sidecars)
-		if err != nil {
-			// Bail out asap if verification fails.
-			s.cache.delete(keyFromSidecar(sidecars[0]))
-			return errors.Wrapf(err, "invalid BlobSidecars received for block %#x", root)
-		}
-		for i := range vscs {
-			if err := s.store.Save(vscs[i]); err != nil {
-				return errors.Wrapf(err, "failed to save BlobSidecar index %d for block %#x", vscs[i].Index, root)
-			}
-		}
-		return nil
-	}
-
-	// Before returning the cache error, check if we have the data in the db.
-	dbidx, err := s.persisted(root, entry)
-	// persisted() accounts for db.ErrNotFound, so this is a real database error.
-	if err != nil {
-		return err
-	}
-	notInDb := dbidx.missing(len(blockCommitments))
-	// All commitments were found in the db, due to a previous successful DA check.
-	if len(notInDb) == 0 {
-		return nil
-	}
-
-	return cacheErr
-}
-
-// persisted populate the db cache, which contains a mapping from Index->KzgCommitment for BlobSidecars previously verified
-// (proof verification) and saved to the backend.
-func (s *LazilyPersistentStore) persisted(root [32]byte, entry *cacheEntry) (dbidx, error) {
-	if entry.dbidxInitialized() {
-		return entry.dbidx(), nil
-	}
-	idx, err := s.store.Indices(root)
-	if err != nil {
-		if errors.Is(err, db.ErrNotFound) {
-			// No BlobSidecars, initialize with empty idx.
-			return entry.ensureDbidx(entry.dbidx()), nil
-		}
-		return entry.dbidx(), err
-	}
-	// Ensure all sidecars found in the db are represented in the cache and return the cache value.
-	return entry.ensureDbidx(idx), nil
-}
-
-func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) ([][]byte, error) {
+func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) (safeCommitmentArray, error) {
+	var ar safeCommitmentArray
 	if b.Version() < version.Deneb {
-		return nil, nil
+		return ar, nil
 	}
 	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
 	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(current)) {
-		return nil, nil
+		return ar, nil
 	}
-	kzgCommitments, err := b.Block().Body().BlobKzgCommitments()
+	kc, err := b.Block().Body().BlobKzgCommitments()
 	if err != nil {
-		return nil, err
+		return ar, err
 	}
-	if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
-		return nil, errIndexOutOfBounds
+	if len(kc) > fieldparams.MaxBlobsPerBlock {
+		return ar, errIndexOutOfBounds
 	}
-	return kzgCommitments, nil
+	for i := range kc {
+		ar[i] = kc[i]
+	}
+	return ar, nil
 }
 
 func header(s blocks.ROBlob) *ethpb.BeaconBlockHeader {

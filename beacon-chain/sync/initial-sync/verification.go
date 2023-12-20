@@ -48,6 +48,9 @@ func (batch *BlobBatchVerifier) MarkVerified(root [32]byte, slot primitives.Slot
 var _ das.BlobBatchVerifier = &BlobBatchVerifier{}
 
 func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+	if len(scs) == 0 {
+		return nil, nil
+	}
 	if err := batch.verifyKzg(scs...); err != nil {
 		return nil, err
 	}
