@@ -83,7 +83,7 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	if err != nil {
 		return errors.Wrapf(err, "could check data availability for block %#x", b.Root())
 	}
-	if len(blockCommitments) == 0 {
+	if blockCommitments.count() == 0 {
 		// If blockchain processing calls IsDataAvailable for a block it is valid as far as the verifier is concerned.
 		// This func will early return for blocks that are pre-deneb or which do not have any commitments.
 		// But first, we'll mark the block as verified for the rest of the batch
