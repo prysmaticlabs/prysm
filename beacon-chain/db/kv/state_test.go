@@ -136,9 +136,9 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 	db := setupDB(t)
 
 	for _, enableFlag := range []bool{true, false} {
-		for _, tc := range cases {
-			reset := features.InitWithReset(&features.Flags{EnableHistoricalSpaceRepresentation: enableFlag})
+		reset := features.InitWithReset(&features.Flags{EnableHistoricalSpaceRepresentation: enableFlag})
 
+		for _, tc := range cases {
 			t.Run(tc.name+" - EnableHistoricalSpaceRepresentation is "+strconv.FormatBool(enableFlag), func(t *testing.T) {
 				rootNonce := byte('0')
 				if enableFlag {
@@ -156,9 +156,9 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 
 				assert.DeepSSZEqual(t, st.ToProtoUnsafe(), savedSt.ToProtoUnsafe())
 			})
-
-			reset()
 		}
+
+		reset()
 	}
 }
 
