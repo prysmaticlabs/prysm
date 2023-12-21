@@ -70,6 +70,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
+		log.WithFields(logrus.Fields{
+			"slot":       req.Slot,
+			"parentRoot": fmt.Sprintf("%#x", parentRoot),
+			"headRoot":   fmt.Sprintf("%#x", headRoot),
+		}).Warn("late block attempted reorg failed")
 	}
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
@@ -301,12 +306,11 @@ func (vs *Server) PrepareBeaconProposer(
 		vs.TrackedValidatorsCache.Set(val)
 		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
-	if len(validatorIndices) == 0 {
-		return &emptypb.Empty{}, nil
+	if len(validatorIndices) != 0 {
+		log.WithFields(logrus.Fields{
+			"validatorIndices": validatorIndices,
+		}).Info("Updated fee recipient addresses for validator indices")
 	}
-	log.WithFields(logrus.Fields{
-		"validatorIndices": validatorIndices,
-	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
 }
 

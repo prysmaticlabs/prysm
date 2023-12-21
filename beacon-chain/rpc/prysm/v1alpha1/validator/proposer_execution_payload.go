@@ -80,7 +80,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 			return nil, false, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
-
+	log.WithFields(logFields).Debug("payload ID cache miss")
 	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
 	switch {
 	case errors.Is(err, errActivationNotReached) || errors.Is(err, errNoTerminalBlockHash):

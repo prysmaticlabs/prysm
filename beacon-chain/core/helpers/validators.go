@@ -271,6 +271,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
 	proposerIndices, has := proposerIndicesCache.ProposerIndices(slots.ToEpoch(slot), root)
 	if !has {
+		cache.ProposerIndicesCacheMiss.Inc()
 		return 0, errProposerIndexMiss
 	}
 	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
