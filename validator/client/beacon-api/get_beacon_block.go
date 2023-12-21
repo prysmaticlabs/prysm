@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 )
@@ -42,36 +43,29 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		return nil, errors.Wrap(err, msgUnexpectedError)
 	}
 	if errJson != nil {
-		if errJson.Code == http.StatusNotFound {
-			log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
-			produceBlindedBlockResponseJson := abstractProduceBlockResponseJson{}
-			queryUrl = buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
-			errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlindedBlockResponseJson)
+		if errJson.Code != http.StatusNotFound {
+			return nil, errJson
+		}
+		log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
+		fallbackResp, errJson, err := c.fallBackToBlinded(ctx, slot, queryParams)
+		if err != nil {
+			return nil, errors.Wrap(err, msgUnexpectedError)
+		}
+		if errJson != nil {
+			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
+			fallbackResp, errJson, err = c.fallBackToFull(ctx, slot, queryParams)
 			if err != nil {
 				return nil, errors.Wrap(err, msgUnexpectedError)
 			}
 			if errJson != nil {
-				log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
-				produceBlockResponseJson := abstractProduceBlockResponseJson{}
-				queryUrl = buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
-				errJson, err = c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockResponseJson)
-				if err != nil {
-					return nil, errors.Wrap(err, msgUnexpectedError)
-				}
-				if errJson != nil {
-					return nil, errJson
-				}
-				ver = produceBlockResponseJson.Version
-				blinded = false
-				decoder = json.NewDecoder(bytes.NewReader(produceBlockResponseJson.Data))
-			} else {
-				ver = produceBlindedBlockResponseJson.Version
-				blinded = true
-				decoder = json.NewDecoder(bytes.NewReader(produceBlindedBlockResponseJson.Data))
+				return nil, errJson
 			}
+			blinded = false
 		} else {
-			return nil, errJson
+			blinded = true
 		}
+		ver = fallbackResp.Version
+		decoder = json.NewDecoder(bytes.NewReader(fallbackResp.Data))
 	} else {
 		ver = produceBlockV3ResponseJson.Version
 		blinded = produceBlockV3ResponseJson.ExecutionPayloadBlinded
@@ -170,4 +164,32 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 		return nil, errors.Errorf("unsupported consensus version `%s`", ver)
 	}
 	return response, nil
+}
+
+func (c beaconApiValidatorClient) fallBackToBlinded(
+	ctx context.Context,
+	slot primitives.Slot,
+	queryParams neturl.Values,
+) (*abstractProduceBlockResponseJson, *httputil.DefaultJsonError, error) {
+	resp := &abstractProduceBlockResponseJson{}
+	url := buildURL(fmt.Sprintf("/eth/v1/validator/blinded_blocks/%d", slot), queryParams)
+	errJson, err := c.jsonRestHandler.Get(ctx, url, resp)
+	if errJson != nil || err != nil {
+		return nil, errJson, err
+	}
+	return resp, nil, nil
+}
+
+func (c beaconApiValidatorClient) fallBackToFull(
+	ctx context.Context,
+	slot primitives.Slot,
+	queryParams neturl.Values,
+) (*abstractProduceBlockResponseJson, *httputil.DefaultJsonError, error) {
+	resp := &abstractProduceBlockResponseJson{}
+	url := buildURL(fmt.Sprintf("/eth/v2/validator/blocks/%d", slot), queryParams)
+	errJson, err := c.jsonRestHandler.Get(ctx, url, resp)
+	if errJson != nil || err != nil {
+		return nil, errJson, err
+	}
+	return resp, nil, nil
 }
