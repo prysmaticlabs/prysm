@@ -50,14 +50,14 @@ var GossipSidecarRequirements = []Requirement{
 // block root, it is safe to skip the following verifications.
 // RequireValidProposerSignature
 // RequireSidecarProposerExpected
+// RequireNotFromFutureSlot,
+// RequireSlotAboveFinalized,
+// RequireSidecarParentSeen,
+// RequireSidecarParentValid,
+// RequireSidecarParentSlotLower,
+// RequireSidecarDescendsFromFinalized,
 var InitsyncSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
-	RequireNotFromFutureSlot,
-	RequireSlotAboveFinalized,
-	RequireSidecarParentSeen,
-	RequireSidecarParentValid,
-	RequireSidecarParentSlotLower,
-	RequireSidecarDescendsFromFinalized,
 	RequireSidecarInclusionProven,
 	RequireSidecarKzgProofVerified,
 }

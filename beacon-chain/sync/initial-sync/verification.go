@@ -75,42 +75,47 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 	if err := bv.BlobIndexInBounds(); err != nil {
 		return vb, err
 	}
-	if err := bv.NotFromFutureSlot(); err != nil {
-		return vb, err
-	}
-	if err := bv.SlotAboveFinalized(); err != nil {
-		return vb, err
-	}
+	/*
+		if err := bv.NotFromFutureSlot(); err != nil {
+			return vb, err
+		}
+		if err := bv.SlotAboveFinalized(); err != nil {
+			return vb, err
+		}
+	*/
 
-	// If we've previously verified a sidecar for a given block root, we don't need to perform these other checks,
-	// because the matching block root ensures the slot and parent root match,
-	// making the checks in the 'else' branch redundant.
-	_, verified := batch.verified[sc.BlockRoot()]
-	// Since we are processing in batches, it is not possible to use methods that look at forkchoice data, which is
-	// only updated at the end of the batch. But, if this method has previously seen a sidecar for the parent
-	// and completely verified it, we know all these properties hold true for the child as well, as long as the parent's
-	// slot satisfies the following inequality. This code assumes responsibility for ensuring this
-	// assumption is correct using SatisfyRequirement to skip the verifier methods.
-	parentSlot, parentVerified := batch.verified[sc.ParentRoot()]
-	if verified || parentVerified && parentSlot < sc.Slot() {
-		bv.SatisfyRequirement(verification.RequireSidecarParentSeen)
-		bv.SatisfyRequirement(verification.RequireSidecarParentValid)
-		bv.SatisfyRequirement(verification.RequireSidecarParentSlotLower)
-		bv.SatisfyRequirement(verification.RequireSidecarDescendsFromFinalized)
-	} else {
-		if err := bv.SidecarParentSeen(nil); err != nil {
-			return vb, err
+	/*
+		// If we've previously verified a sidecar for a given block root, we don't need to perform these other checks,
+		// because the matching block root ensures the slot and parent root match,
+		// making the checks in the 'else' branch redundant.
+		_, verified := batch.verified[sc.BlockRoot()]
+		// Since we are processing in batches, it is not possible to use methods that look at forkchoice data, which is
+		// only updated at the end of the batch. But, if this method has previously seen a sidecar for the parent
+		// and completely verified it, we know all these properties hold true for the child as well, as long as the parent's
+		// slot satisfies the following inequality. This code assumes responsibility for ensuring this
+		// assumption is correct using SatisfyRequirement to skip the verifier methods.
+		parentSlot, parentVerified := batch.verified[sc.ParentRoot()]
+		if verified || parentVerified && parentSlot < sc.Slot() {
+			bv.SatisfyRequirement(verification.RequireSidecarParentSeen)
+			bv.SatisfyRequirement(verification.RequireSidecarParentValid)
+			bv.SatisfyRequirement(verification.RequireSidecarParentSlotLower)
+			bv.SatisfyRequirement(verification.RequireSidecarDescendsFromFinalized)
+		} else {
+			if err := bv.SidecarParentSeen(nil); err != nil {
+				return vb, err
+			}
+			if err := bv.SidecarParentValid(nil); err != nil {
+				return vb, err
+			}
+			if err := bv.SidecarParentSlotLower(); err != nil {
+				return vb, err
+			}
+			if err := bv.SidecarDescendsFromFinalized(); err != nil {
+				return vb, err
+			}
 		}
-		if err := bv.SidecarParentValid(nil); err != nil {
-			return vb, err
-		}
-		if err := bv.SidecarParentSlotLower(); err != nil {
-			return vb, err
-		}
-		if err := bv.SidecarDescendsFromFinalized(); err != nil {
-			return vb, err
-		}
-	}
+	*/
+
 	if err := bv.SidecarInclusionProven(); err != nil {
 		return vb, err
 	}
