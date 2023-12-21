@@ -13,7 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var failedBlockSignLocalErr = "attempted to sign a double proposal, block rejected by local protection"
+var failedBlockSignLocalErr = "block rejected by local protection"
 
 // slashableProposalCheck checks if a block proposal is slashable by comparing it with the
 // block proposals history for the given public key in our DB. If it is not, we then update the history
@@ -136,7 +136,7 @@ func (v *validator) slashableProposalCheckMinimal(
 	// Check if the proposal is potentially slashable regarding EIP-3076 minimal conditions.
 	// If not, save the new proposal into the database.
 	if err := v.db.SaveProposalHistoryForSlot(ctx, pubKey, signedBlock.Block().Slot(), signingRoot[:]); err != nil {
-		if strings.Contains(err.Error(), "could not sign block") {
+		if strings.Contains(err.Error(), "could not sign proposal") {
 			return errors.Wrapf(err, failedBlockSignLocalErr)
 		}
 
