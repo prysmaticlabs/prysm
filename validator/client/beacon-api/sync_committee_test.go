@@ -54,7 +54,6 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	protoSyncCommiteeMessage := ethpb.SyncCommitteeMessage{
@@ -83,7 +82,6 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
@@ -149,7 +147,6 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 				2,
 				test.expectedResponse,
 			).Return(
-				nil,
 				test.endpointError,
 			).Times(1)
 
@@ -224,7 +221,6 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 					},
 				},
 			).Return(
-				nil,
 				nil,
 			).Times(1)
 
@@ -341,7 +337,6 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 					},
 				},
 			).Return(
-				nil,
 				test.validatorsErr,
 			).Times(1)
 

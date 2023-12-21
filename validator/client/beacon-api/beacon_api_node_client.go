@@ -24,12 +24,8 @@ type beaconApiNodeClient struct {
 
 func (c *beaconApiNodeClient) GetSyncStatus(ctx context.Context, _ *empty.Empty) (*ethpb.SyncStatus, error) {
 	syncingResponse := node.SyncStatusResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/syncing", &syncingResponse)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/syncing", &syncingResponse); err != nil {
+		return nil, err
 	}
 
 	if syncingResponse.Data == nil {
@@ -58,12 +54,8 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 	}
 
 	depositContractJson := config.GetDepositContractResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/config/deposit_contract", &depositContractJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Get(ctx, "/eth/v1/config/deposit_contract", &depositContractJson); err != nil {
+		return nil, err
 	}
 
 	if depositContractJson.Data == nil {
@@ -86,12 +78,8 @@ func (c *beaconApiNodeClient) GetGenesis(ctx context.Context, _ *empty.Empty) (*
 
 func (c *beaconApiNodeClient) GetVersion(ctx context.Context, _ *empty.Empty) (*ethpb.Version, error) {
 	var versionResponse node.GetVersionResponse
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/version", &versionResponse)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/node/version", &versionResponse); err != nil {
+		return nil, err
 	}
 
 	if versionResponse.Data == nil || versionResponse.Data.Version == "" {

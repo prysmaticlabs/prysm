@@ -117,7 +117,6 @@ func TestGetFork_Nominal(t *testing.T) {
 		&stateForkResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		expected,
@@ -145,7 +144,6 @@ func TestGetFork_Invalid(t *testing.T) {
 		forkEndpoint,
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("custom error"),
 	).Times(1)
 
@@ -186,7 +184,6 @@ func TestGetHeaders_Nominal(t *testing.T) {
 		&blockHeadersResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		expected,
@@ -214,7 +211,6 @@ func TestGetHeaders_Invalid(t *testing.T) {
 		headersEndpoint,
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("custom error"),
 	).Times(1)
 
@@ -265,7 +261,6 @@ func TestGetLiveness_Nominal(t *testing.T) {
 		expected,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -289,7 +284,6 @@ func TestGetLiveness_Invalid(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("custom error"),
 	).Times(1)
 
@@ -338,7 +332,6 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 				&syncingResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				expected,
@@ -369,7 +362,6 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 		syncingEnpoint,
 		&syncingResponseJson,
 	).Return(
-		nil,
 		errors.New("custom error"),
 	).Times(1)
 

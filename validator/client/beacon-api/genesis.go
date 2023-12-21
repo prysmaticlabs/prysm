@@ -65,13 +65,10 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
 func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, error) {
 	genesisJson := &beacon.GetGenesisResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson); err != nil {
+		return nil, err
 	}
-	if errJson != nil {
-		return nil, errJson
-	}
+
 	if genesisJson.Data == nil {
 		return nil, errors.New("genesis data is nil")
 	}

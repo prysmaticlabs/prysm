@@ -38,7 +38,6 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		generateValidAttestation(uint64(slot), uint64(committeeIndex)),
@@ -78,7 +77,6 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
-		nil,
 		errors.New("some specific json error"),
 	).SetArg(
 		2,
@@ -155,7 +153,6 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockValid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(2)
 
 	validatorClient := beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -191,7 +188,6 @@ func TestBeaconApiValidatorClient_ProposeBeaconBlockError(t *testing.T) {
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(2)
 

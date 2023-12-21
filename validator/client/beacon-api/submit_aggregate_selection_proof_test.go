@@ -169,7 +169,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					},
 				},
 			).Return(
-				nil,
 				test.syncingErr,
 			).Times(1)
 

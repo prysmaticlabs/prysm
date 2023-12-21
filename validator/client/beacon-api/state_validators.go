@@ -91,12 +91,8 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 		return nil, errors.Wrapf(err, "failed to marshal request into JSON")
 	}
 	stateValidatorsJson := &beacon.GetValidatorsResponse{}
-	errJson, err := c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson); err != nil {
+		return nil, err
 	}
 
 	if stateValidatorsJson.Data == nil {

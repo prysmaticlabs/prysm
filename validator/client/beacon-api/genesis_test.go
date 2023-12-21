@@ -25,7 +25,6 @@ func TestGetGenesis_ValidGenesis(t *testing.T) {
 		&genesisResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		beacon.GetGenesisResponse{
@@ -57,7 +56,6 @@ func TestGetGenesis_NilData(t *testing.T) {
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,

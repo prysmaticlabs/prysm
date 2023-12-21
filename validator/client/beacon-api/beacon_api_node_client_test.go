@@ -130,7 +130,6 @@ func TestGetGenesis(t *testing.T) {
 					"/eth/v1/config/deposit_contract",
 					&depositContractJson,
 				).Return(
-					nil,
 					testCase.depositContractError,
 				).SetArg(
 					2,
@@ -210,7 +209,6 @@ func TestGetSyncStatus(t *testing.T) {
 				syncingEndpoint,
 				&syncingResponse,
 			).Return(
-				nil,
 				testCase.restEndpointError,
 			).SetArg(
 				2,
@@ -275,7 +273,6 @@ func TestGetVersion(t *testing.T) {
 				versionEndpoint,
 				&versionResponse,
 			).Return(
-				nil,
 				testCase.restEndpointError,
 			).SetArg(
 				2,

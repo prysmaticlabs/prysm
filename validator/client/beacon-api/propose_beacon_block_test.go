@@ -16,14 +16,13 @@ import (
 func TestProposeBeaconBlock_Error(t *testing.T) {
 	testSuites := []struct {
 		name                 string
-		returnedHttpError    *httputil.DefaultJsonError
 		returnedError        error
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "error 202",
 			expectedErrorMessage: "block was successfully broadcasted but failed validation",
-			returnedHttpError: &httputil.DefaultJsonError{
+			returnedError: &httputil.DefaultJsonError{
 				Code:    http.StatusAccepted,
 				Message: "202 error",
 			},
@@ -31,14 +30,14 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 		{
 			name:                 "error 500",
 			expectedErrorMessage: "HTTP request unsuccessful (500: foo error)",
-			returnedHttpError: &httputil.DefaultJsonError{
+			returnedError: &httputil.DefaultJsonError{
 				Code:    http.StatusInternalServerError,
 				Message: "foo error",
 			},
 		},
 		{
 			name:                 "other error",
-			expectedErrorMessage: "unexpected error when making request: foo error",
+			expectedErrorMessage: "foo error",
 			returnedError:        errors.New("foo error"),
 		},
 	}
@@ -108,7 +107,6 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 					gomock.Any(),
 					nil,
 				).Return(
-					testSuite.returnedHttpError,
 					testSuite.returnedError,
 				).Times(1)
 

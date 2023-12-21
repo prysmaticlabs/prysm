@@ -123,7 +123,6 @@ func TestGetValidatorCount(t *testing.T) {
 				"/eth/v1/node/version",
 				&nodeVersionResponse,
 			).Return(
-				nil,
 				test.versionEndpointError,
 			).SetArg(
 				2,

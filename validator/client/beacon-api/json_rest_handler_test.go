@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -44,9 +45,7 @@ func TestGet(t *testing.T) {
 		host:       server.URL,
 	}
 	resp := &beacon.GetGenesisResponse{}
-	errJson, err := jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp)
-	assert.NoError(t, errJson)
-	assert.NoError(t, err)
+	require.NoError(t, jsonRestHandler.Get(ctx, endpoint+"?arg1=abc&arg2=def", resp))
 	assert.DeepEqual(t, genesisJson, resp)
 }
 
@@ -92,15 +91,7 @@ func TestPost(t *testing.T) {
 		host:       server.URL,
 	}
 	resp := &beacon.GetGenesisResponse{}
-	errJson, err := jsonRestHandler.Post(
-		ctx,
-		endpoint,
-		headers,
-		bytes.NewBuffer(dataBytes),
-		resp,
-	)
-	assert.NoError(t, errJson)
-	assert.NoError(t, err)
+	require.NoError(t, jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(dataBytes), resp))
 	assert.DeepEqual(t, genesisJson, resp)
 }
 
@@ -116,9 +107,7 @@ func Test_decodeResp(t *testing.T) {
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.OctetStreamMediaType}},
 		}
-		errJson, err := decodeResp(r, nil)
-		require.NoError(t, errJson)
-		require.NoError(t, err)
+		require.NoError(t, decodeResp(r, nil))
 	})
 	t.Run("non-200 non-JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
@@ -129,11 +118,11 @@ func Test_decodeResp(t *testing.T) {
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.OctetStreamMediaType}},
 		}
-		errJson, err := decodeResp(r, nil)
-		require.NotNil(t, errJson)
+		err = decodeResp(r, nil)
+		errJson := &httputil.DefaultJsonError{}
+		require.Equal(t, true, errors.As(err, &errJson))
 		assert.Equal(t, http.StatusInternalServerError, errJson.Code)
 		assert.Equal(t, "foo", errJson.Message)
-		require.NoError(t, err)
 	})
 	t.Run("200 JSON with resp", func(t *testing.T) {
 		body := bytes.Buffer{}
@@ -146,9 +135,7 @@ func Test_decodeResp(t *testing.T) {
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
 		}
 		resp := &j{}
-		errJson, err := decodeResp(r, resp)
-		require.NoError(t, errJson)
-		require.NoError(t, err)
+		require.NoError(t, decodeResp(r, resp))
 		assert.Equal(t, "foo", resp.Foo)
 	})
 	t.Run("200 JSON without resp", func(t *testing.T) {
@@ -158,9 +145,7 @@ func Test_decodeResp(t *testing.T) {
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
 		}
-		errJson, err := decodeResp(r, nil)
-		require.NoError(t, errJson)
-		require.NoError(t, err)
+		require.NoError(t, decodeResp(r, nil))
 	})
 	t.Run("non-200 JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
@@ -172,11 +157,11 @@ func Test_decodeResp(t *testing.T) {
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
 		}
-		errJson, err := decodeResp(r, nil)
-		require.NotNil(t, errJson)
+		err = decodeResp(r, nil)
+		errJson := &httputil.DefaultJsonError{}
+		require.Equal(t, true, errors.As(err, &errJson))
 		assert.Equal(t, http.StatusInternalServerError, errJson.Code)
 		assert.Equal(t, "error", errJson.Message)
-		require.NoError(t, err)
 	})
 	t.Run("200 JSON cannot decode", func(t *testing.T) {
 		body := bytes.Buffer{}
@@ -189,8 +174,7 @@ func Test_decodeResp(t *testing.T) {
 			Request:    &http.Request{},
 		}
 		resp := &j{}
-		errJson, err := decodeResp(r, resp)
-		require.NoError(t, errJson)
+		err = decodeResp(r, resp)
 		assert.ErrorContains(t, "failed to decode response body into json", err)
 	})
 	t.Run("non-200 JSON cannot decode", func(t *testing.T) {
@@ -203,8 +187,7 @@ func Test_decodeResp(t *testing.T) {
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
 			Request:    &http.Request{},
 		}
-		errJson, err := decodeResp(r, nil)
-		require.NoError(t, errJson)
+		err = decodeResp(r, nil)
 		assert.ErrorContains(t, "failed to decode response body into error json", err)
 	})
 }
