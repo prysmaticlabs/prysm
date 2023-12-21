@@ -37,7 +37,7 @@ func (p *PayloadIDCache) PayloadID(slot primitives.Slot, root [32]byte) (primiti
 	return pid, true
 }
 
-// SetPayloadID updates the payload ID for the given slot and headroot
+// SetPayloadID updates the payload ID for the given slot and head root
 // it also prunes older entries in the cache
 func (p *PayloadIDCache) Set(slot primitives.Slot, root [32]byte, pid primitives.PayloadID) {
 	p.Lock()

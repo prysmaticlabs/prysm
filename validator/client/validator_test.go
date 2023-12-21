@@ -1935,6 +1935,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
 	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
 	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+	feeRecipient4 := common.Address{}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1984,6 +1985,11 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 						FeeRecipient: feeRecipient3,
 					},
 				},
+				pubkey4: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient4,
+					},
+				},
 			},
 		},
 		pubkeyToValidatorIndex: map[[48]byte]primitives.ValidatorIndex{
@@ -2002,6 +2008,10 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 		{
 			ValidatorIndex: 2,
 			FeeRecipient:   feeRecipient2[:],
+		},
+		{
+			ValidatorIndex: 4,
+			FeeRecipient:   feeRecipient4[:],
 		},
 	}
 	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
