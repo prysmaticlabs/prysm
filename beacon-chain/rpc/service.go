@@ -226,7 +226,7 @@ func (s *Service) initializeValidatorServerRoutes(validatorServer *validator.Ser
 	s.cfg.Router.HandleFunc("/eth/v1/validator/liveness/{epoch}", validatorServer.GetLiveness).Methods(http.MethodPost)
 	s.cfg.Router.HandleFunc("/eth/v2/validator/blocks/{slot}", validatorServer.ProduceBlockV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v1/validator/blinded_blocks/{slot}", validatorServer.ProduceBlindedBlock).Methods(http.MethodGet)
-	//s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServer.ProduceBlockV3).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v3/validator/blocks/{slot}", validatorServer.ProduceBlockV3).Methods(http.MethodGet)
 }
 
 func (s *Service) initializeNodeServerRoutes(nodeServer *node.Server) {
