@@ -29,6 +29,29 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// swagger:route GET /eth/v1/keystores keymanagerAPI
+//
+// # Lists keystores
+//
+// List all validating pubkeys known to and decrypted by this keymanager binary
+//
+//	Consumes:
+//	- application/json
+//
+//	Produces:
+//	- application/json
+//
+//	Schemes: http, https
+//
+//	Security:
+//	  api_key:
+//	  oauth: read, write
+//
+//	Responses:
+//	  default: genericError
+//	  200: someResponse
+//	  422: validationError
+//
 // ListKeystores implements the standard validator key management API.
 func (s *Server) ListKeystores(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.ListKeystores")

@@ -45,6 +45,25 @@ var (
 
 type handled bool
 
+// swagger:route GET /eth/v1/beacon/blocks/{block_id} beacon GetBlock
+//
+// # GetBlock
+//
+// retrieves block details for given block ID.
+//
+//	Consumes:
+//	- application/json
+//
+//	Produces:
+//	- application/json
+//
+//	Schemes: http, https
+//
+//	Responses:
+//	  default: genericError
+//	  200: someResponse
+//	  422: validationError
+//
 // GetBlock retrieves block details for given block ID.
 //
 // DEPRECATED: please use GetBlockV2 instead

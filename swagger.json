@@ -1,0 +1,83 @@
+{
+  "swagger": "2.0",
+  "paths": {
+    "/eth/v1/beacon/blocks/{block_id}": {
+      "get": {
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ],
+        "description": "List all validating pubkeys known to and decrypted by this keymanager binary",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "summary": "GetBlock",
+        "operationId": "beaconAPI",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        }
+      }
+    },
+    "/eth/v1/keystores": {
+      "get": {
+        "security": [
+          {
+            "api_key": []
+          },
+          {
+            "oauth": [
+              "read",
+              "write"
+            ]
+          }
+        ],
+        "description": "List all validating pubkeys known to and decrypted by this keymanager binary",
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "summary": "Lists keystores",
+        "operationId": "keymanagerAPI",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/someResponse"
+          },
+          "422": {
+            "$ref": "#/responses/validationError"
+          },
+          "default": {
+            "$ref": "#/responses/genericError"
+          }
+        }
+      }
+    }
+  }
+}
