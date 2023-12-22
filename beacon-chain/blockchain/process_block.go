@@ -674,13 +674,17 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
 	s.cfg.ForkChoiceStore.RUnlock()
-	// Head root should be empty when retrieving proposer index for the next slot.
-	_, id, has := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(s.CurrentSlot()+1, [32]byte{} /* head root */)
-	// There exists proposer for next slot, but we haven't called fcu w/ payload attribute yet.
-	if (!has && !features.Get().PrepareAllPayloads) || id != [8]byte{} {
+	_, tracked := s.trackedProposer(headState, s.CurrentSlot()+1)
+	// return early if we are not proposing next slot.
+	if !tracked && !features.Get().PrepareAllPayloads {
 		return
 	}
-
+	// return early if we already started building a block for the current
+	// head root
+	_, has := s.cfg.PayloadIDCache.PayloadID(s.CurrentSlot()+1, headRoot)
+	if has {
+		return
+	}
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {

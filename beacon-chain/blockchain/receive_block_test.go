@@ -7,6 +7,7 @@ import (
 	"time"
 
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -130,7 +131,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s, tr := minimalTestService(t,
 				WithFinalizedStateAtStartUp(genesis),
 				WithExitPool(voluntaryexits.NewPool()),
-				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+				WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
+			)
 
 			beaconDB := tr.db
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
