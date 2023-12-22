@@ -304,7 +304,6 @@ func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconSt
 			if err := UpdateProposerIndicesInCache(ctx, state, e); err != nil {
 				return 0, errors.Wrap(err, "could not update committee cache")
 			}
-			// This should not error except at genesis
 			pid, err = cachedProposerIndexAtSlot(slot, [32]byte(r))
 			if err == nil {
 				return pid, nil

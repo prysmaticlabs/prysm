@@ -556,11 +556,11 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 	for _, r := range jsonFeeRecipients {
 		validatorIndex, valid := shared.ValidateUint(w, "validator_index", r.ValidatorIndex)
 		if !valid {
-			continue
+			return
 		}
 		feeRecipientBytes, valid := shared.ValidateHex(w, "fee_recipient", r.FeeRecipient, fieldparams.FeeRecipientLength)
 		if !valid {
-			continue
+			return
 		}
 		// Use default address if the burn address is return
 		feeRecipient := primitives.ExecutionAddress(feeRecipientBytes)
