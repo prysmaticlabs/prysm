@@ -1028,6 +1028,10 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 
+	// Only register with the builder if the flag was used in the VC
+	if v.ProposerSettings() == nil {
+		return nil
+	}
 	signedRegReqs, err := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
 	if err != nil {
 		return err
@@ -1035,7 +1039,6 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
-
 	return nil
 }
 
