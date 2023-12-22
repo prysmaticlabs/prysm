@@ -2464,3 +2464,9 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 
 	assert.Equal(t, 0, len(actual))
 }
+
+func TestValidator_buildSignedRegReqs_NilSettings(t *testing.T) {
+	v := validator{}
+	_, err := v.buildSignedRegReqs(context.Background(), nil, nil)
+	require.ErrorContains(t, "proposer settings cannot be nil", err)
+}

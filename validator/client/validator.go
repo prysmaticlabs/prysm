@@ -1121,6 +1121,9 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 }
 
 func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
+	if v.ProposerSettings() == nil {
+		return nil, errors.New("proposer settings cannot be nil when registering with the builder")
+	}
 	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
 
 	// if the timestamp is pre-genesis, don't create registrations
