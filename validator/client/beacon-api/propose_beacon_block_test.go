@@ -21,7 +21,7 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 	}{
 		{
 			name:                 "error 202",
-			expectedErrorMessage: "block was successfully broadcasted but failed validation",
+			expectedErrorMessage: "block was successfully broadcast but failed validation",
 			returnedError: &httputil.DefaultJsonError{
 				Code:    http.StatusAccepted,
 				Message: "202 error",

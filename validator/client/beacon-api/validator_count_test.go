@@ -135,7 +135,6 @@ func TestGetValidatorCount(t *testing.T) {
 				"/eth/v1/beacon/states/head/validator_count?status=active",
 				&validatorCountResponse,
 			).Return(
-				nil,
 				test.validatorCountEndpointError,
 			).SetArg(
 				2,

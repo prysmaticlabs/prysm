@@ -352,7 +352,6 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		&validatorCountResponse,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		validator2.CountResponse{

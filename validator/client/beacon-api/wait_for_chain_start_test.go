@@ -161,7 +161,6 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 		&genesisResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		beacon.GetGenesisResponse{

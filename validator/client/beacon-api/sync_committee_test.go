@@ -233,7 +233,6 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 				2,
 				test.contribution,
 			).Return(
-				nil,
 				test.endpointErr,
 			).Times(1)
 
@@ -360,7 +359,6 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 					Data: test.duties,
 				},
 			).Return(
-				nil,
 				test.dutiesErr,
 			).Times(syncDutiesCalled)
 
