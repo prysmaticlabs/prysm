@@ -30,12 +30,9 @@ const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
 func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
 	blockHeader := beacon.GetBlockHeaderResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
+	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
 	if err != nil {
-		return nil, errors.Wrap(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+		return nil, err
 	}
 
 	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
@@ -53,12 +50,8 @@ func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.E
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
 	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints); err != nil {
+		return nil, err
 	}
 
 	if finalityCheckpoints.Data == nil {
@@ -338,12 +331,8 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
 	resp := &validator.PerformanceResponse{}
-	errJson, err := c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp); err != nil {
+		return nil, err
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{

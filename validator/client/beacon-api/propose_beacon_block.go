@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -132,13 +133,17 @@ func (c beaconApiValidatorClient) proposeBeaconBlock(ctx context.Context, in *et
 	}
 
 	headers := map[string]string{"Eth-Consensus-Version": consensusVersion}
-	if httpError, err := c.jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil); err != nil {
-		if httpError != nil && httpError.Code == http.StatusAccepted {
-			// Error 202 means that the block was successfully broadcasted, but validation failed
-			return nil, errors.Wrap(err, "block was successfully broadcasted but failed validation")
+	err = c.jsonRestHandler.Post(ctx, endpoint, headers, bytes.NewBuffer(marshalledSignedBeaconBlockJson), nil)
+	errJson := &httputil.DefaultJsonError{}
+	if err != nil {
+		if !errors.As(err, &errJson) {
+			return nil, err
 		}
-
-		return nil, errors.Wrap(err, "failed to send POST data to REST endpoint")
+		// Error 202 means that the block was successfully broadcast, but validation failed
+		if errJson.Code == http.StatusAccepted {
+			return nil, errors.New("block was successfully broadcast but failed validation")
+		}
+		return nil, errJson
 	}
 
 	return &ethpb.ProposeResponse{BlockRoot: beaconBlockRoot[:]}, nil
