@@ -1028,14 +1028,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 
-	// Only register with the builder if the flag was used in the VC
-	if v.ProposerSettings() == nil {
-		return nil
-	}
-	signedRegReqs, err := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err != nil {
-		return err
-	}
+	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
 	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
@@ -1120,15 +1113,14 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 	return prepareProposerReqs, nil
 }
 
-func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
-	if v.ProposerSettings() == nil {
-		return nil, errors.New("proposer settings cannot be nil when registering with the builder")
-	}
+func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) []*ethpb.SignedValidatorRegistrationV1 {
 	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
-
+	if v.ProposerSettings() == nil {
+		return signedValRegRegs
+	}
 	// if the timestamp is pre-genesis, don't create registrations
 	if v.genesisTime > uint64(time.Now().UTC().Unix()) {
-		return signedValRegRegs, nil
+		return signedValRegRegs
 	}
 	for i, k := range pubkeys {
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
@@ -1197,7 +1189,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			}).Warn("Fee recipient is burn address")
 		}
 	}
-	return signedValRegRegs, nil
+	return signedValRegRegs
 }
 
 func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {
