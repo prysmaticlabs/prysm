@@ -333,12 +333,12 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 	}
 }
 
-func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
+func (b *SignedBeaconBlock) UnBlind(e interfaces.ExecutionData) error {
 	if e.IsNil() {
-		return errors.New("cannot unblind with nil execution data")
+		return errors.New("cannot UnBlind with nil execution data")
 	}
-	if b.IsBlinded() {
-		return errors.New("cannot unblind with an blinded execution data")
+	if !b.IsBlinded() {
+		return errors.New("cannot UnBlind if the block is already unblinded")
 	}
 	payloadRoot, err := e.HashTreeRoot()
 	if err != nil {
@@ -353,7 +353,7 @@ func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
 		return err
 	}
 	if payloadRoot != headerRoot {
-		return errors.New("cannot unblind with different execution data")
+		return errors.New("cannot UnBlind with different execution data")
 	}
 	b.SetBlinded(false)
 	if err := b.SetExecution(e); err != nil {

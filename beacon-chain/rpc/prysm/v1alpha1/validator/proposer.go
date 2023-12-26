@@ -245,11 +245,6 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		return nil, err
 	}
 
-	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
-		Type: blockfeed.ReceivedBlock,
-		Data: &blockfeed.ReceivedBlockData{SignedBlock: block},
-	})
-
 	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
 }
 
@@ -272,7 +267,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 		return nil, nil, errors.Wrap(err, "submit blinded block failed")
 	}
 
-	if err := copiedBlock.Unblind(payload); err != nil {
+	if err := copiedBlock.UnBlind(payload); err != nil {
 		return nil, nil, errors.Wrap(err, "unblind failed")
 	}
 
@@ -315,6 +310,10 @@ func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.Si
 	if err := vs.P2P.Broadcast(ctx, protoBlock); err != nil {
 		return errors.Wrap(err, "broadcast failed")
 	}
+	vs.BlockNotifier.BlockFeed().Send(&feed.Event{
+		Type: blockfeed.ReceivedBlock,
+		Data: &blockfeed.ReceivedBlockData{SignedBlock: block},
+	})
 	return vs.BlockReceiver.ReceiveBlock(ctx, block, root)
 }
 
