@@ -144,6 +144,48 @@ var (
 			Help: "Time for gossiped blob sidecars to arrive",
 		},
 	)
+	hasBlockSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "has_block_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	checkFinalizedCheckpointSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "check_finalized_checkpoint_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	insertPendingQueueSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "insert_pending_queue_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	inForkChoiceSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "in_fork_choice_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	verifySignatureSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "verify_signature_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	verifyProposerIdxSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "verify_proposer_idx_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+	VerifyBellatrixSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "verify_bellatrix_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
 
 	// Sync committee verification performance.
 	syncMessagesForUnknownBlocks = promauto.NewCounter(

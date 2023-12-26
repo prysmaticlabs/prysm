@@ -108,9 +108,12 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block")
 		return pubsub.ValidationIgnore, nil
 	}
+	t := time.Now()
 	if s.cfg.beaconDB.HasBlock(ctx, blockRoot) {
 		return pubsub.ValidationIgnore, nil
 	}
+	hasBlockSummary.Observe(float64(time.Since(t).Milliseconds()))
+
 	// Check if parent is a bad block and then reject the block.
 	if s.hasBadBlock(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
@@ -141,6 +144,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		return pubsub.ValidationIgnore, nil
 	}
 
+	t = time.Now()
 	cp := s.cfg.chain.FinalizedCheckpt()
 	startSlot, err := slots.EpochStart(cp.Epoch)
 	if err != nil {
@@ -152,6 +156,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithFields(getBlockFields(blk)).Debug(err)
 		return pubsub.ValidationIgnore, err
 	}
+	checkFinalizedCheckpointSummary.Observe(float64(time.Since(t).Milliseconds()))
 
 	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
 	// Otherwise queue it for processing in the right slot.
@@ -173,6 +178,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	}
 
 	// Handle block when the parent is unknown.
+	t = time.Now()
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
 		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
 			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
@@ -189,6 +195,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not identify parent for block")
 		return pubsub.ValidationIgnore, err
 	}
+	insertPendingQueueSummary.Observe(float64(time.Since(t).Milliseconds()))
 
 	err = s.validateBeaconBlock(ctx, blk, blockRoot)
 	if err != nil {
@@ -241,11 +248,14 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		return err
 	}
 
+	t := time.Now()
 	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
 		return blockchain.ErrNotDescendantOfFinalized
 	}
+	inForkChoiceSummary.Observe(float64(time.Since(t).Milliseconds()))
 
+	t = time.Now()
 	parentState, err := s.cfg.stateGen.StateByRoot(ctx, blk.Block().ParentRoot())
 	if err != nil {
 		return err
@@ -255,8 +265,11 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
+	verifySignatureSummary.Observe(float64(time.Since(t).Milliseconds()))
+
 	// In the event the block is more than an epoch ahead from its
 	// parent state, we have to advance the state forward.
+	t = time.Now()
 	parentRoot := blk.Block().ParentRoot()
 	parentState, err = transition.ProcessSlotsUsingNextSlotCache(ctx, parentState, parentRoot[:], blk.Block().Slot())
 	if err != nil {
@@ -270,7 +283,9 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		s.setBadBlock(ctx, blockRoot)
 		return errors.New("incorrect proposer index")
 	}
+	verifyProposerIdxSummary.Observe(float64(time.Since(t).Milliseconds()))
 
+	t = time.Now()
 	if err = s.validateBellatrixBeaconBlock(ctx, parentState, blk.Block()); err != nil {
 		if errors.Is(err, ErrOptimisticParent) {
 			return err
@@ -279,6 +294,8 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		s.setBadBlock(ctx, blockRoot)
 		return err
 	}
+	VerifyBellatrixSummary.Observe(float64(time.Since(t).Milliseconds()))
+
 	return nil
 }
 
