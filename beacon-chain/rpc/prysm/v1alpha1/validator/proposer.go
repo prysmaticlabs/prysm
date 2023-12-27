@@ -257,7 +257,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 		return nil, nil, errors.New("unconfigured block builder")
 	}
 
-	copiedBlock, err := vs.copyAndCastBlock(block)
+	copiedBlock, err := vs.copyBlock(block)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -267,7 +267,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 		return nil, nil, errors.Wrap(err, "submit blinded block failed")
 	}
 
-	if err := copiedBlock.UnBlind(payload); err != nil {
+	if err := copiedBlock.Unblind(payload); err != nil {
 		return nil, nil, errors.Wrap(err, "unblind failed")
 	}
 
@@ -279,8 +279,8 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 	return copiedBlock, sidecars, nil
 }
 
-// copyAndCastBlock creates a copy of a SignedBeaconBlock.
-func (vs *Server) copyAndCastBlock(block interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
+// copyBlock creates a copy of a SignedBeaconBlock.
+func (vs *Server) copyBlock(block interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
 	copied, err := block.Copy()
 	if err != nil {
 		return nil, errors.Wrap(err, "copy failed")
@@ -321,8 +321,7 @@ func (vs *Server) broadcastReceiveBlock(ctx context.Context, block interfaces.Si
 func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethpb.BlobSidecar, root [32]byte) error {
 	for i, sc := range sidecars {
 		if err := vs.P2P.BroadcastBlob(ctx, uint64(i), sc); err != nil {
-			log.WithError(err).Error("broadcast blob failed")
-			continue
+			return errors.Wrap(err, "broadcast blob failed")
 		}
 
 		readOnlySc, err := blocks.NewROBlobWithRoot(sc, root)
@@ -330,7 +329,7 @@ func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethp
 			return errors.Wrap(err, "ROBlob creation failed")
 		}
 		if err := vs.BlobReceiver.ReceiveBlob(ctx, blocks.NewVerifiedROBlob(readOnlySc)); err != nil {
-			log.WithError(err).Error("receive blob failed")
+			return errors.Wrap(err, "receive blob failed")
 		}
 	}
 	return nil

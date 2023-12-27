@@ -97,7 +97,7 @@ type SignedBeaconBlock interface {
 	SetProposerIndex(idx primitives.ValidatorIndex)
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
-	UnBlind(e ExecutionData) error
+	Unblind(e ExecutionData) error
 }
 
 // ExecutionData represents execution layer information that is contained

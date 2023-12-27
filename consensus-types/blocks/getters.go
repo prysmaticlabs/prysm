@@ -333,7 +333,7 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 	}
 }
 
-func (b *SignedBeaconBlock) UnBlind(e interfaces.ExecutionData) error {
+func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
 	if e.IsNil() {
 		return errors.New("cannot unblind with nil execution data")
 	}

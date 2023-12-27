@@ -13,10 +13,7 @@ import (
 )
 
 func unblindBlobsSidecars(block interfaces.SignedBeaconBlock, bundle *enginev1.BlobsBundle) ([]*ethpb.BlobSidecar, error) {
-	if block.Version() < version.Deneb {
-		return nil, nil
-	}
-	if bundle == nil {
+	if block.Version() < version.Deneb || bundle == nil {
 		return nil, nil
 	}
 	header, err := block.Header()
