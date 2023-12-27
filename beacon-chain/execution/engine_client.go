@@ -773,11 +773,11 @@ func fullPayloadFromExecutionBlock(
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
 		}
 		bgu, err := header.BlobGasUsed()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
 		}
 		return blocks.WrappedExecutionPayloadDeneb(
 			&pb.ExecutionPayloadDeneb{
@@ -850,11 +850,11 @@ func fullPayloadFromPayloadBody(
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract ExcessBlobGas attribute from execution payload header")
 		}
 		bgu, err := header.BlobGasUsed()
 		if err != nil {
-			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from excution payload header")
+			return nil, errors.Wrap(err, "unable to extract BlobGasUsed attribute from execution payload header")
 		}
 		return blocks.WrappedExecutionPayloadDeneb(
 			&pb.ExecutionPayloadDeneb{

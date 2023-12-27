@@ -1862,8 +1862,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			if tt.feeRecipientMap != nil {
 				feeRecipients, err := v.buildPrepProposerReqs(ctx, pubkeys)
 				require.NoError(t, err)
-				signedRegisterValidatorRequests, err := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
-				require.NoError(t, err)
+				signedRegisterValidatorRequests := v.buildSignedRegReqs(ctx, pubkeys, km.Sign)
 				for _, recipient := range feeRecipients {
 					require.Equal(t, strings.ToLower(tt.feeRecipientMap[recipient.ValidatorIndex]), strings.ToLower(hexutil.Encode(recipient.FeeRecipient)))
 				}
@@ -1935,6 +1934,7 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 	feeRecipient1 := getFeeRecipientFromString(t, "0x1111111111111111111111111111111111111111")
 	feeRecipient2 := getFeeRecipientFromString(t, "0x0000000000000000000000000000000000000000")
 	feeRecipient3 := getFeeRecipientFromString(t, "0x3333333333333333333333333333333333333333")
+	feeRecipient4 := common.Address{}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -1984,6 +1984,11 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 						FeeRecipient: feeRecipient3,
 					},
 				},
+				pubkey4: {
+					FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+						FeeRecipient: feeRecipient4,
+					},
+				},
 			},
 		},
 		pubkeyToValidatorIndex: map[[48]byte]primitives.ValidatorIndex{
@@ -2002,6 +2007,10 @@ func TestValidator_buildPrepProposerReqs_WithoutDefaultConfig(t *testing.T) {
 		{
 			ValidatorIndex: 2,
 			FeeRecipient:   feeRecipient2[:],
+		},
+		{
+			ValidatorIndex: 4,
+			FeeRecipient:   feeRecipient4[:],
 		},
 	}
 	filteredKeys, err := v.filterAndCacheActiveKeys(ctx, pubkeys, 0)
@@ -2256,8 +2265,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
 	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
-	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
-	require.NoError(t, err)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 
 	assert.Equal(t, 1, len(actual))
 	assert.DeepEqual(t, feeRecipient1[:], actual[0].Message.FeeRecipient)
@@ -2342,8 +2350,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
 	v.pubkeyToValidatorIndex[pubkey2] = primitives.ValidatorIndex(2)
 	v.pubkeyToValidatorIndex[pubkey3] = primitives.ValidatorIndex(3)
-	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
-	require.NoError(t, err)
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 
 	assert.Equal(t, 2, len(actual))
 
@@ -2391,9 +2398,7 @@ func TestValidator_buildSignedRegReqs_SignerOnError(t *testing.T) {
 		return nil, errors.New("custom error")
 	}
 
-	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
-	require.NoError(t, err)
-
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	assert.Equal(t, 0, len(actual))
 }
 
@@ -2449,8 +2454,6 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 		return signature, nil
 	}
 	v.pubkeyToValidatorIndex[pubkey1] = primitives.ValidatorIndex(1)
-	actual, err := v.buildSignedRegReqs(ctx, pubkeys, signer)
-	require.NoError(t, err)
-
+	actual := v.buildSignedRegReqs(ctx, pubkeys, signer)
 	assert.Equal(t, 0, len(actual))
 }

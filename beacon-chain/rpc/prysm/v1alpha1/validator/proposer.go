@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -69,6 +70,11 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
 	if parentRoot != headRoot {
 		blockchain.LateBlockAttemptedReorgCount.Inc()
+		log.WithFields(logrus.Fields{
+			"slot":       req.Slot,
+			"parentRoot": fmt.Sprintf("%#x", parentRoot),
+			"headRoot":   fmt.Sprintf("%#x", headRoot),
+		}).Warn("late block attempted reorg failed")
 	}
 
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
@@ -275,45 +281,36 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 // PrepareBeaconProposer caches and updates the fee recipient for the given proposer.
 func (vs *Server) PrepareBeaconProposer(
-	ctx context.Context, request *ethpb.PrepareBeaconProposerRequest,
+	_ context.Context, request *ethpb.PrepareBeaconProposerRequest,
 ) (*emptypb.Empty, error) {
-	ctx, span := trace.StartSpan(ctx, "validator.PrepareBeaconProposer")
-	defer span.End()
-	var feeRecipients []common.Address
 	var validatorIndices []primitives.ValidatorIndex
 
-	newRecipients := make([]*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer, 0, len(request.Recipients))
 	for _, r := range request.Recipients {
-		f, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, r.ValidatorIndex)
-		switch {
-		case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-			newRecipients = append(newRecipients, r)
-		case err != nil:
-			return nil, status.Errorf(codes.Internal, "Could not get fee recipient by validator index: %v", err)
-		default:
-			if common.BytesToAddress(r.FeeRecipient) != f {
-				newRecipients = append(newRecipients, r)
-			}
-		}
-	}
-	if len(newRecipients) == 0 {
-		return &emptypb.Empty{}, nil
-	}
-
-	for _, recipientContainer := range newRecipients {
-		recipient := hexutil.Encode(recipientContainer.FeeRecipient)
+		recipient := hexutil.Encode(r.FeeRecipient)
 		if !common.IsHexAddress(recipient) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid fee recipient address: %v", recipient))
 		}
-		feeRecipients = append(feeRecipients, common.BytesToAddress(recipientContainer.FeeRecipient))
-		validatorIndices = append(validatorIndices, recipientContainer.ValidatorIndex)
+		// Use default address if the burn address is return
+		feeRecipient := primitives.ExecutionAddress(r.FeeRecipient)
+		if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+			feeRecipient = primitives.ExecutionAddress(params.BeaconConfig().DefaultFeeRecipient)
+			if feeRecipient == primitives.ExecutionAddress([20]byte{}) {
+				log.WithField("validatorIndex", r.ValidatorIndex).Warn("fee recipient is the burn address")
+			}
+		}
+		val := cache.TrackedValidator{
+			Active:       true, // TODO: either check or add the field in the request
+			Index:        r.ValidatorIndex,
+			FeeRecipient: feeRecipient,
+		}
+		vs.TrackedValidatorsCache.Set(val)
+		validatorIndices = append(validatorIndices, r.ValidatorIndex)
 	}
-	if err := vs.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, validatorIndices, feeRecipients); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not save fee recipients: %v", err)
+	if len(validatorIndices) != 0 {
+		log.WithFields(logrus.Fields{
+			"validatorIndices": validatorIndices,
+		}).Info("Updated fee recipient addresses for validator indices")
 	}
-	log.WithFields(logrus.Fields{
-		"validatorIndices": validatorIndices,
-	}).Info("Updated fee recipient addresses for validator indices")
 	return &emptypb.Empty{}, nil
 }
 

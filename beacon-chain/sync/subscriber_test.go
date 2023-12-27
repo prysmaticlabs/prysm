@@ -335,10 +335,10 @@ func TestStaticSubnets(t *testing.T) {
 	r.subscribeStaticWithSubnets(defaultTopic, r.noopValidator, func(_ context.Context, msg proto.Message) error {
 		// no-op
 		return nil
-	}, d, params.BeaconNetworkConfig().AttestationSubnetCount)
+	}, d, params.BeaconConfig().AttestationSubnetCount)
 	topics := r.cfg.p2p.PubSub().GetTopics()
-	if uint64(len(topics)) != params.BeaconNetworkConfig().AttestationSubnetCount {
-		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconNetworkConfig().AttestationSubnetCount, len(topics))
+	if uint64(len(topics)) != params.BeaconConfig().AttestationSubnetCount {
+		t.Errorf("Wanted the number of subnet topics registered to be %d but got %d", params.BeaconConfig().AttestationSubnetCount, len(topics))
 	}
 	cancel()
 }

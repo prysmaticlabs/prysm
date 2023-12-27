@@ -95,12 +95,8 @@ func (c *beaconApiValidatorClient) getAggregateAttestation(
 	endpoint := buildURL("/eth/v1/validator/aggregate_attestation", params)
 
 	var aggregateAttestationResponse validator.AggregateAttestationResponse
-	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, endpoint, &aggregateAttestationResponse); err != nil {
+		return nil, err
 	}
 
 	return &aggregateAttestationResponse, nil

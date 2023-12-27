@@ -985,7 +985,6 @@ func TestGetBlindedBlockSSZ(t *testing.T) {
 
 func TestPublishBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1002,6 +1001,7 @@ func TestPublishBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1023,6 +1023,7 @@ func TestPublishBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1046,6 +1047,7 @@ func TestPublishBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1069,6 +1071,7 @@ func TestPublishBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1103,27 +1106,25 @@ func TestPublishBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
 	})
-	t.Run("invalid block with version header", func(t *testing.T) {
+	t.Run("wrong version header", func(t *testing.T) {
 		server := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadCapellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		body := writer.Body.String()
-		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Capella))))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
@@ -1139,12 +1140,72 @@ func TestPublishBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
 		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Beacon node is currently syncing and not serving request on that endpoint"))
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
 func TestPublishBlockSSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Phase 0", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			var signedblock *shared.SignedBeaconBlock
+			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlock
+		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetPhase0().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlock(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockAltair
+		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetAltair().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlock(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1155,15 +1216,16 @@ func TestPublishBlockSSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var bellablock shared.SignedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &bellablock)
+		var blk shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := bellablock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBellatrix().MarshalSSZ()
+		ssz, err := genericBlock.GetBellatrix().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1180,15 +1242,16 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBeaconBlockCapella
-		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &cblock)
+		var blk shared.SignedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetCapella().MarshalSSZ()
+		ssz, err := genericBlock.GetCapella().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1205,15 +1268,16 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var dblock shared.SignedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		var blk shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blk)
 		require.NoError(t, err)
-		genericBlock, err := dblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetDeneb().MarshalSSZ()
+		ssz, err := genericBlock.GetDeneb().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
 		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
@@ -1224,12 +1288,59 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlock(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlock(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("syncing", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte("foo")))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlock(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
@@ -1251,6 +1362,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1272,6 +1384,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1295,6 +1408,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1318,6 +1432,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1341,6 +1456,7 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1352,27 +1468,25 @@ func TestPublishBlindedBlock(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlindedBlock(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
-	})
-	t.Run("invalid block with version header", func(t *testing.T) {
-		server := &Server{
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadBlindedBellatrixBlock)))
 		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		body := writer.Body.String()
-		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
@@ -1388,12 +1502,72 @@ func TestPublishBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Beacon node is currently syncing and not serving request on that endpoint"))
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
 func TestPublishBlindedBlockSSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Phase 0", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			var signedblock *shared.SignedBeaconBlock
+			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlock
+		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetPhase0().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockAltair
+		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetAltair().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1405,15 +1579,16 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var bellablock shared.SignedBlindedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &bellablock)
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := bellablock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1430,15 +1605,16 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBlindedBeaconBlockCapella
-		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &cblock)
+		var blk shared.SignedBlindedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedCapella().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedCapella().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1455,15 +1631,16 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBlindedBeaconBlockDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &cblock)
+		var blk shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedDeneb().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedDeneb().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
 		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
@@ -1475,17 +1652,55 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("syncing", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte("foo")))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlock(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
 func TestPublishBlockV2(t *testing.T) {
 	ctrl := gomock.NewController(t)
-
 	t.Run("Phase 0", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1502,6 +1717,7 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1523,6 +1739,7 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1546,6 +1763,7 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1569,6 +1787,7 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1592,6 +1811,7 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.DenebBlockContents)))
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1603,27 +1823,37 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block:", version.String(version.Bellatrix)), writer.Body.String())
 	})
-	t.Run("invalid block with version header", func(t *testing.T) {
+	t.Run("wrong version header", func(t *testing.T) {
 		server := &Server{
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadCapellaBlock)))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
 		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		body := writer.Body.String()
-		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Capella))))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block:", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("missing version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, api.VersionHeader+" header is required", writer.Body.String())
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
@@ -1635,16 +1865,77 @@ func TestPublishBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte("foo")))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Beacon node is currently syncing and not serving request on that endpoint"))
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
 func TestPublishBlockV2SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Phase 0", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			var signedblock *shared.SignedBeaconBlock
+			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlock
+		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetPhase0().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockAltair
+		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetAltair().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1655,15 +1946,16 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var bellablock shared.SignedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &bellablock)
+		var blk shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := bellablock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBellatrix().MarshalSSZ()
+		ssz, err := genericBlock.GetBellatrix().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1680,15 +1972,16 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBeaconBlockCapella
-		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &cblock)
+		var blk shared.SignedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetCapella().MarshalSSZ()
+		ssz, err := genericBlock.GetCapella().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1705,15 +1998,16 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var dblock shared.SignedBeaconBlockContentsDeneb
-		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &dblock)
+		var blk shared.SignedBeaconBlockContentsDeneb
+		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blk)
 		require.NoError(t, err)
-		genericBlock, err := dblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetDeneb().MarshalSSZ()
+		ssz, err := genericBlock.GetDeneb().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
 		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
@@ -1724,12 +2018,72 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("missing version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.CapellaBlock)))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, api.VersionHeader+" header is required", writer.Body.String())
+	})
+	t.Run("syncing", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte("foo")))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 
@@ -1751,6 +2105,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.Phase0Block)))
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1772,6 +2127,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.AltairBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1795,6 +2151,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1818,6 +2175,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1841,6 +2199,7 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedDenebBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1852,27 +2211,37 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		server.PublishBlindedBlockV2(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "please add the api header"))
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
-	})
-	t.Run("invalid block with version header", func(t *testing.T) {
-		server := &Server{
-			SyncChecker: &mockSync.Sync{IsSyncing: false},
-		}
-
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BadBlindedBellatrixBlock)))
 		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		body := writer.Body.String()
-		assert.Equal(t, true, strings.Contains(body, "Body does not represent a valid block type"))
-		assert.Equal(t, true, strings.Contains(body, fmt.Sprintf("could not decode %s request body into consensus block:", version.String(version.Bellatrix))))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block:", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedBellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("missing version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, api.VersionHeader+" header is required", writer.Body.String())
 	})
 	t.Run("syncing", func(t *testing.T) {
 		chainService := &chainMock.ChainService{}
@@ -1894,6 +2263,66 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 
 func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 	ctrl := gomock.NewController(t)
+	t.Run("Phase 0", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
+			var signedblock *shared.SignedBeaconBlock
+			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlock
+		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetPhase0().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Phase0))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
+	t.Run("Altair", func(t *testing.T) {
+		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
+		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
+			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
+			var signedblock *shared.SignedBeaconBlockAltair
+			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
+			require.NoError(t, err)
+			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			return ok
+		}))
+		server := &Server{
+			V1Alpha1ValidatorServer: v1alpha1Server,
+			SyncChecker:             &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBeaconBlockAltair
+		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetAltair().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Altair))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
@@ -1905,15 +2334,16 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var bellablock shared.SignedBlindedBeaconBlockBellatrix
-		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &bellablock)
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := bellablock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1930,15 +2360,16 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBlindedBeaconBlockCapella
-		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &cblock)
+		var blk shared.SignedBlindedBeaconBlockCapella
+		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedCapella().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedCapella().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
-		request.Header.Set("Accept", "application/octet-stream")
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
@@ -1955,18 +2386,19 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var cblock shared.SignedBlindedBeaconBlockDeneb
-		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &cblock)
+		var blk shared.SignedBlindedBeaconBlockDeneb
+		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &blk)
 		require.NoError(t, err)
-		genericBlock, err := cblock.ToGeneric()
+		genericBlock, err := blk.ToGeneric()
 		require.NoError(t, err)
-		sszvalue, err := genericBlock.GetBlindedDeneb().MarshalSSZ()
+		ssz, err := genericBlock.GetBlindedDeneb().MarshalSSZ()
 		require.NoError(t, err)
-		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(sszvalue))
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
 		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Deneb))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		server.PublishBlindedBlockV2(writer, request)
+		server.PublishBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 	})
 	t.Run("invalid block", func(t *testing.T) {
@@ -1975,11 +2407,63 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		}
 
 		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BellatrixBlock)))
+		request.Header.Set(api.VersionHeader, version.String(version.Bellatrix))
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		server.PublishBlindedBlockV2(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		assert.Equal(t, true, strings.Contains(writer.Body.String(), "Body does not represent a valid block type"))
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Bellatrix)), writer.Body.String())
+	})
+	t.Run("wrong version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		var blk shared.SignedBlindedBeaconBlockBellatrix
+		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
+		require.NoError(t, err)
+		genericBlock, err := blk.ToGeneric()
+		require.NoError(t, err)
+		ssz, err := genericBlock.GetBlindedBellatrix().MarshalSSZ()
+		require.NoError(t, err)
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader(ssz))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		request.Header.Set(api.VersionHeader, version.String(version.Capella))
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, fmt.Sprintf("Could not decode request body into %s consensus block", version.String(version.Capella)), writer.Body.String())
+	})
+	t.Run("missing version header", func(t *testing.T) {
+		server := &Server{
+			SyncChecker: &mockSync.Sync{IsSyncing: false},
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte(rpctesting.BlindedCapellaBlock)))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlockV2(writer, request)
+		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.StringContains(t, api.VersionHeader+" header is required", writer.Body.String())
+	})
+	t.Run("syncing", func(t *testing.T) {
+		chainService := &chainMock.ChainService{}
+		server := &Server{
+			SyncChecker:           &mockSync.Sync{IsSyncing: true},
+			HeadFetcher:           chainService,
+			TimeFetcher:           chainService,
+			OptimisticModeFetcher: chainService,
+		}
+
+		request := httptest.NewRequest(http.MethodPost, "http://foo.example", bytes.NewReader([]byte("foo")))
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		server.PublishBlindedBlockV2(writer, request)
+		assert.Equal(t, http.StatusServiceUnavailable, writer.Code)
+		assert.StringContains(t, "Beacon node is currently syncing and not serving request on that endpoint", writer.Body.String())
 	})
 }
 

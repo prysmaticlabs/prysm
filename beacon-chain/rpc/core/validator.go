@@ -255,7 +255,7 @@ func (s *Service) SubmitSignedAggregateSelectionProof(
 
 	// As a preventive measure, a beacon node shouldn't broadcast an attestation whose slot is out of range.
 	if err := helpers.ValidateAttestationTime(req.SignedAggregateAndProof.Message.Aggregate.Data.Slot,
-		s.GenesisTimeFetcher.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+		s.GenesisTimeFetcher.GenesisTime(), params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		return &RpcError{Err: errors.New("attestation slot is no longer valid from current time"), Reason: BadRequest}
 	}
 
@@ -321,7 +321,7 @@ func (s *Service) GetAttestationData(
 	if err := helpers.ValidateAttestationTime(
 		req.Slot,
 		s.GenesisTimeFetcher.GenesisTime(),
-		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
+		params.BeaconConfig().MaximumGossipClockDisparityDuration(),
 	); err != nil {
 		return nil, &RpcError{Reason: BadRequest, Err: errors.Errorf("invalid request: %v", err)}
 	}

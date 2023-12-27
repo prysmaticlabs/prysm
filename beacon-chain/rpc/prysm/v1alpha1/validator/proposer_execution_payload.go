@@ -5,14 +5,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -53,44 +51,36 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	slot := blk.Slot()
 	vIdx := blk.ProposerIndex()
 	headRoot := blk.ParentRoot()
-	proposerID, payloadId, ok := vs.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, headRoot)
-	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := vs.BeaconDB.FeeRecipientByValidatorID(ctx, vIdx)
-	switch err == nil {
-	case true:
-		feeRecipient = recipient
-	case errors.As(err, kv.ErrNotFoundFeeRecipient):
-		// If fee recipient is not found in DB and not set from beacon node CLI,
-		// use the burn address.
-		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
-			logrus.WithFields(logrus.Fields{
-				"validatorIndex": vIdx,
-				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
-			}).Warn("Fee recipient is currently using the burn address, " +
-				"you will not be rewarded transaction fees on this setting. " +
-				"Please set a different eth address as the fee recipient. " +
-				"Please refer to our documentation for instructions")
-		}
-	default:
-		return nil, false, errors.Wrap(err, "could not get fee recipient in db")
+	logFields := logrus.Fields{
+		"validatorIndex": vIdx,
+		"slot":           slot,
+		"headRoot":       fmt.Sprintf("%#x", headRoot),
+	}
+	payloadId, ok := vs.PayloadIDCache.PayloadID(slot, headRoot)
+
+	val, tracked := vs.TrackedValidatorsCache.Validator(vIdx)
+	if !tracked {
+		logrus.WithFields(logFields).Warn("could not find tracked proposer index")
 	}
 
-	if ok && proposerID == vIdx && payloadId != [8]byte{} { // Payload ID is cache hit. Return the cached payload ID.
-		var pid [8]byte
+	var err error
+	if ok && payloadId != [8]byte{} {
+		// Payload ID is cache hit. Return the cached payload ID.
+		var pid primitives.PayloadID
 		copy(pid[:], payloadId[:])
 		payloadIDCacheHit.Inc()
 		payload, bundle, overrideBuilder, err := vs.ExecutionEngineCaller.GetPayload(ctx, pid, slot)
 		switch {
 		case err == nil:
 			bundleCache.add(slot, bundle)
-			warnIfFeeRecipientDiffers(payload, feeRecipient)
+			warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
 			return payload, overrideBuilder, nil
 		case errors.Is(err, context.DeadlineExceeded):
 		default:
 			return nil, false, errors.Wrap(err, "could not get cached payload from execution client")
 		}
 	}
-
+	log.WithFields(logFields).Debug("payload ID cache miss")
 	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
 	switch {
 	case errors.Is(err, errActivationNotReached) || errors.Is(err, errNoTerminalBlockHash):
@@ -112,7 +102,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	finalizedBlockHash := [32]byte{}
 	justifiedBlockHash := [32]byte{}
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
-	if st.Version() >= version.Altair {
+	if st.Version() >= version.Bellatrix {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
 		justifiedBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
 	}
@@ -137,7 +127,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 			Withdrawals:           withdrawals,
 			ParentBeaconBlockRoot: headRoot[:],
 		})
@@ -152,7 +142,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 			Withdrawals:           withdrawals,
 		})
 		if err != nil {
@@ -162,7 +152,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            random,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 		})
 		if err != nil {
 			return nil, false, err
@@ -182,13 +172,13 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 		return nil, false, err
 	}
 	bundleCache.add(slot, bundle)
-	warnIfFeeRecipientDiffers(payload, feeRecipient)
+	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
 	return payload, overrideBuilder, nil
 }
 
 // warnIfFeeRecipientDiffers logs a warning if the fee recipient in the included payload does not
 // match the requested one.
-func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient common.Address) {
+func warnIfFeeRecipientDiffers(payload interfaces.ExecutionData, feeRecipient primitives.ExecutionAddress) {
 	// Warn if the fee recipient is not the value we expect.
 	if payload != nil && !bytes.Equal(payload.FeeRecipient(), feeRecipient[:]) {
 		logrus.WithFields(logrus.Fields{
@@ -299,7 +289,7 @@ func getParentBlockHashPostMerge(st state.BeaconState) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get post merge payload header")
 	}
-	return header.ParentHash(), nil
+	return header.BlockHash(), nil
 }
 
 // getParentBlockHashPreMerge retrieves the parent block hash before the merge has completed.

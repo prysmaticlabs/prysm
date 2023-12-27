@@ -52,7 +52,7 @@ type TestP2P struct {
 // NewTestP2P initializes a new p2p test service.
 func NewTestP2P(t *testing.T) *TestP2P {
 	ctx := context.Background()
-	h := bhost.NewBlankHost(swarmt.GenSwarm(t))
+	h := bhost.NewBlankHost(swarmt.GenSwarm(t, swarmt.OptDisableQUIC))
 	ps, err := pubsub.NewFloodSub(ctx, h,
 		pubsub.WithMessageSigning(false),
 		pubsub.WithStrictSignatureVerification(false),

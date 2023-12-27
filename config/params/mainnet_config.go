@@ -27,23 +27,11 @@ const (
 )
 
 var mainnetNetworkConfig = &NetworkConfig{
-	GossipMaxSize:                   1 << 20,      // 1 MiB
-	GossipMaxSizeBellatrix:          10 * 1 << 20, // 10 MiB
-	MaxChunkSize:                    1 << 20,      // 1 MiB
-	MaxChunkSizeBellatrix:           10 * 1 << 20, // 10 MiB
-	AttestationSubnetCount:          64,
-	AttestationPropagationSlotRange: 32,
-	MaxRequestBlocks:                1 << 10, // 1024
-	TtfbTimeout:                     5 * time.Second,
-	RespTimeout:                     10 * time.Second,
-	MaximumGossipClockDisparity:     500 * time.Millisecond,
-	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
-	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
-	ETH2Key:                         "eth2",
-	AttSubnetKey:                    "attnets",
-	SyncCommsSubnetKey:              "syncnets",
-	MinimumPeersInSubnetSearch:      20,
-	ContractDeploymentBlock:         11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
+	ETH2Key:                    "eth2",
+	AttSubnetKey:               "attnets",
+	SyncCommsSubnetKey:         "syncnets",
+	MinimumPeersInSubnetSearch: 20,
+	ContractDeploymentBlock:    11184524, // Note: contract was deployed in block 11052984 but no transactions were sent until 11184524.
 	BootstrapNodes: []string{
 		// Teku team's bootnode
 		"enr:-KG4QMOEswP62yzDjSwWS4YEjtTZ5PO6r65CPqYBkgTTkrpaedQ8uEUo1uMALtJIvb2w_WWEVmg5yt1UAuK1ftxUU7QDhGV0aDKQu6TalgMAAAD__________4JpZIJ2NIJpcIQEnfA2iXNlY3AyNTZrMaEDfol8oLr6XJ7FsdAYE7lpJhKMls4G_v6qQOGKJUWGb_uDdGNwgiMog3VkcIIjKA",
@@ -275,12 +263,23 @@ var mainnetBeaconConfig = &BeaconChainConfig{
 	MaxRequestBlobSidecars:           768,
 	MaxRequestBlocksDeneb:            128,
 
-	// Values related to the new subnet backbone
-	EpochsPerSubnetSubscription: 256,
-	AttestationSubnetExtraBits:  0,
-	AttestationSubnetPrefixBits: 6,
-	SubnetsPerNode:              2,
-	NodeIdBits:                  256,
+	// Values related to networking parameters.
+	GossipMaxSize:                   10 * 1 << 20, // 10 MiB
+	MaxChunkSize:                    10 * 1 << 20, // 10 MiB
+	AttestationSubnetCount:          64,
+	AttestationPropagationSlotRange: 32,
+	MaxRequestBlocks:                1 << 10, // 1024
+	TtfbTimeout:                     5,
+	RespTimeout:                     10,
+	MaximumGossipClockDisparity:     500,
+	MessageDomainInvalidSnappy:      [4]byte{00, 00, 00, 00},
+	MessageDomainValidSnappy:        [4]byte{01, 00, 00, 00},
+	MinEpochsForBlockRequests:       33024, // MIN_VALIDATOR_WITHDRAWABILITY_DELAY + CHURN_LIMIT_QUOTIENT / 2 (= 33024, ~5 months)
+	EpochsPerSubnetSubscription:     256,
+	AttestationSubnetExtraBits:      0,
+	AttestationSubnetPrefixBits:     6,
+	SubnetsPerNode:                  2,
+	NodeIdBits:                      256,
 }
 
 // MainnetTestConfig provides a version of the mainnet config that has a different name
