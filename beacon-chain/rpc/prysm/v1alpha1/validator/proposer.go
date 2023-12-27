@@ -309,6 +309,7 @@ func (vs *Server) PrepareBeaconProposer(
 	if len(validatorIndices) != 0 {
 		log.WithFields(logrus.Fields{
 			"validatorIndices": validatorIndices,
+			"validatorCount":   len(validatorIndices),
 		}).Info("Updated fee recipient addresses for validator indices")
 	}
 	return &emptypb.Empty{}, nil
