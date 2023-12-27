@@ -63,6 +63,7 @@ type ValidatorDB interface {
 	// Graffiti ordered index related methods
 	SaveGraffitiOrderedIndex(ctx context.Context, index uint64) error
 	GraffitiOrderedIndex(ctx context.Context, fileHash [32]byte) (uint64, error)
+	GraffitiFileHash() ([32]byte, bool, error)
 
 	// ProposerSettings related methods
 	ProposerSettings(context.Context) (*proposer.Settings, error)
