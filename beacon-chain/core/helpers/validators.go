@@ -281,6 +281,39 @@ func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.
 	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
 }
 
+// cachedUnsafeProposerIndexAtSlot returns the proposer index at the given slot
+// from the unsafe cache computed in the previous epoch
+func cachedUnsafeProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.UnsafeProposerIndices(slots.ToEpoch(slot), root)
+	if !has {
+		cache.ProposerIndicesCacheMiss.Inc()
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		cache.ProposerIndicesCacheMiss.Inc()
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// UnsafeBeaconProposerIndexAtSlot returns the proposer index at the given slot
+// if it has been cached one epoch in advance
+func UnsafeBeaconProposerIndexAtSlot(state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	e := slots.ToEpoch(slot)
+	if e < 2 {
+		return 0, errProposerIndexMiss
+	}
+	s, err := slots.EpochEnd(e - 2)
+	if err != nil {
+		return 0, err
+	}
+	r, err := StateRootAtSlot(state, s)
+	if err != nil {
+		return 0, err
+	}
+	return cachedUnsafeProposerIndexAtSlot(slot, [32]byte(r))
+}
+
 // BeaconProposerIndexAtSlot returns proposer index at the given slot from the
 // point of view of the given state as head state
 func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {

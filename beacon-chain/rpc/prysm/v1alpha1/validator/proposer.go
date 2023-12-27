@@ -220,7 +220,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "tree hash failed")
+		return nil, errors.Wrap(err, "calculating block root failed")
 	}
 
 	var wg sync.WaitGroup
@@ -230,7 +230,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	go func() {
 		defer wg.Done()
 		if err := vs.broadcastReceiveBlock(ctx, block, root); err != nil {
-			errChan <- errors.Wrap(err, "broadcast/receive failed")
+			errChan <- errors.Wrap(err, "broadcast/receive block failed")
 			return
 		}
 		errChan <- nil
