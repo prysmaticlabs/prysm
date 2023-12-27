@@ -107,13 +107,13 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 
 		_, sidecars = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 131187, fieldparams.MaxBlobsPerBlock)
-		testSidecars, err = verification.BlobSidecarSliceNoop(sidecars)
+		testSidecars2, err := verification.BlobSidecarSliceNoop(sidecars)
 		// Slot in second half of epoch therefore should prune
-		bs.tryPrune(testSidecars[0].Slot())
+		bs.tryPrune(testSidecars2[0].Slot())
 		require.NoError(t, err)
-		err = bs.Save(testSidecars[0])
+		err = bs.Save(testSidecars2[0])
 		require.NoError(t, err)
-		err = pollUntil(t, fs, 1)
+		err = pollUntil(t, fs, 3)
 		require.NoError(t, err)
 	})
 }
