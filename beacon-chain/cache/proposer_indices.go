@@ -42,17 +42,15 @@ var (
 // root would be for slot 32 if present.
 type ProposerIndicesCache struct {
 	sync.Mutex
-	indices       map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
-	unsafeIndices map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
-	rootMap       map[forkchoicetypes.Checkpoint][32]byte // A map from checkpoint root to state root
+	indices map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
+	rootMap map[forkchoicetypes.Checkpoint][32]byte // A map from checkpoint root to state root
 }
 
 // NewProposerIndicesCache returns a newly created cache
 func NewProposerIndicesCache() *ProposerIndicesCache {
 	return &ProposerIndicesCache{
-		indices:       make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
-		unsafeIndices: make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
-		rootMap:       make(map[forkchoicetypes.Checkpoint][32]byte),
+		indices: make(map[primitives.Epoch]map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex),
+		rootMap: make(map[forkchoicetypes.Checkpoint][32]byte),
 	}
 }
 
@@ -74,18 +72,6 @@ func (p *ProposerIndicesCache) ProposerIndices(epoch primitives.Epoch, root [32]
 	return indices, exists
 }
 
-// UnsafeProposerIndices returns the proposer indices (unsafe) for the given root
-func (p *ProposerIndicesCache) UnsafeProposerIndices(epoch primitives.Epoch, root [32]byte) ([fieldparams.SlotsPerEpoch]primitives.ValidatorIndex, bool) {
-	p.Lock()
-	defer p.Unlock()
-	inner, ok := p.unsafeIndices[epoch]
-	if !ok {
-		return [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}, false
-	}
-	indices, exists := inner[root]
-	return indices, exists
-}
-
 // Prune resets the ProposerIndicesCache to its initial state
 func (p *ProposerIndicesCache) Prune(epoch primitives.Epoch) {
 	p.Lock()
@@ -93,11 +79,6 @@ func (p *ProposerIndicesCache) Prune(epoch primitives.Epoch) {
 	for key := range p.indices {
 		if key < epoch {
 			delete(p.indices, key)
-		}
-	}
-	for key := range p.unsafeIndices {
-		if key < epoch {
-			delete(p.unsafeIndices, key)
 		}
 	}
 	for key := range p.rootMap {
@@ -116,18 +97,6 @@ func (p *ProposerIndicesCache) Set(epoch primitives.Epoch, root [32]byte, indice
 	if !ok {
 		inner = make(map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex)
 		p.indices[epoch] = inner
-	}
-	inner[root] = indices
-}
-
-// SetUnsafe sets the unsafe proposer indices for the given root as key
-func (p *ProposerIndicesCache) SetUnsafe(epoch primitives.Epoch, root [32]byte, indices [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex) {
-	p.Lock()
-	defer p.Unlock()
-	inner, ok := p.unsafeIndices[epoch]
-	if !ok {
-		inner = make(map[[32]byte][fieldparams.SlotsPerEpoch]primitives.ValidatorIndex)
-		p.unsafeIndices[epoch] = inner
 	}
 	inner[root] = indices
 }
