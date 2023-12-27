@@ -16,7 +16,7 @@ type ReadOnlySignedBeaconBlock interface {
 	Block() ReadOnlyBeaconBlock
 	Signature() [field_params.BLSSignatureLength]byte
 	IsNil() bool
-	Copy() (ReadOnlySignedBeaconBlock, error)
+	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
