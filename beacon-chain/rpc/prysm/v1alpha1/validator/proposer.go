@@ -205,7 +205,7 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 
 	block, err := blocks.NewSignedBeaconBlock(req.Block)
 	if err != nil {
-		return nil, errors.Wrap(err, "decode block failed")
+		return nil, status.Errorf(codes.InvalidArgument, "%s: %v", "decode block failed", err)
 	}
 
 	var sidecars []*ethpb.BlobSidecar
@@ -215,12 +215,12 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 		sidecars, err = vs.handleUnblindedBlock(block, req)
 	}
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "%s: %v", "handle block failed", err)
 	}
 
 	root, err := block.Block().HashTreeRoot()
 	if err != nil {
-		return nil, errors.Wrap(err, "calculating block root failed")
+		return nil, status.Errorf(codes.Internal, "Could not hash tree root: %v", err)
 	}
 
 	var wg sync.WaitGroup
@@ -237,12 +237,12 @@ func (vs *Server) ProposeBeaconBlock(ctx context.Context, req *ethpb.GenericSign
 	}()
 
 	if err := vs.broadcastAndReceiveBlobs(ctx, sidecars, root); err != nil {
-		return nil, errors.Wrap(err, "broadcast/receive blobs failed")
+		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive blobs: %v", err)
 	}
 
 	wg.Wait()
 	if err := <-errChan; err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "Could not broadcast/receive block: %v", err)
 	}
 
 	return &ethpb.ProposeResponse{BlockRoot: root[:]}, nil
