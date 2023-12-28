@@ -94,20 +94,20 @@ type BlobSidecarEvent struct {
 }
 
 type LightClientFinalityUpdateEvent struct {
-	Version string                     `json:"version" enum:"true"`
+	Version string                     `json:"version"`
 	Data    *LightClientFinalityUpdate `json:"data"`
 }
 
 type LightClientFinalityUpdate struct {
 	AttestedHeader  *shared.BeaconBlockHeader `json:"attested_header"`
 	FinalizedHeader *shared.BeaconBlockHeader `json:"finalized_header"`
-	FinalityBranch  []string                  `json:"finality_branch"  hex:"true"`
+	FinalityBranch  []string                  `json:"finality_branch"`
 	SyncAggregate   *shared.SyncAggregate     `json:"sync_aggregate"`
 	SignatureSlot   string                    `json:"signature_slot"`
 }
 
 type LightClientOptimisticUpdateEvent struct {
-	Version string                       `json:"version" enum:"true"`
+	Version string                       `json:"version"`
 	Data    *LightClientOptimisticUpdate `json:"data"`
 }
 
