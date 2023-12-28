@@ -186,7 +186,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 
 	if features.Get().EnableLightClientEvents {
 		if _, err := s.sendLightClientOptimisticUpdate(ctx, cfg.signed, cfg.postState); err != nil {
-			log.WithError(err)
+			log.WithError(err).Error("Failed to send light client optimistic update")
 		}
 
 		// Get the finalized checkpoint
@@ -221,7 +221,7 @@ func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signe
 
 	_, err = s.sendLightClientFinalityUpdate(ctx, signed, postState)
 	if err != nil {
-		log.WithError(err)
+		log.WithError(err).Error("Failed to send light client finality update")
 	} else {
 		s.lastPublishedLightClientEpoch = finalized.Epoch
 	}
