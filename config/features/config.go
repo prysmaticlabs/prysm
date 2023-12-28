@@ -23,10 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
+
+	"github.com/prysmaticlabs/prysm/v4/cmd"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 )
 
 var log = logrus.WithField("prefix", "flags")
@@ -74,6 +75,9 @@ type Flags struct {
 
 	// AggregateIntervals specifies the time durations at which we aggregate attestations preparing for forkchoice.
 	AggregateIntervals [3]time.Duration
+
+	// EnableLightClientEvents enables light client events to be emitted by the beacon node.
+	EnableLightClientEvents bool
 }
 
 var featureConfig *Flags
@@ -236,6 +240,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	if ctx.IsSet(EnableEIP4881.Name) {
 		logEnabled(EnableEIP4881)
 		cfg.EnableEIP4881 = true
+	}
+	if ctx.IsSet(EnableLightClientEvents.Name) {
+		logEnabled(EnableLightClientEvents)
+		cfg.EnableLightClientEvents = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
