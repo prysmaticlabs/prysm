@@ -200,7 +200,6 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 
 	b.version = version.Bellatrix
 	b.body.version = b.version
-	b.body.isBlinded = true
 	cp, err = b.Copy()
 	require.NoError(t, err)
 	assert.NotEqual(t, cp, b)
@@ -233,7 +232,6 @@ func Test_BeaconBlock_Copy(t *testing.T) {
 	require.NoError(t, err)
 	require.DeepEqual(t, gas, uint64(123))
 
-	b.body.isBlinded = true
 	cp, err = b.Copy()
 	require.NoError(t, err)
 	assert.NotEqual(t, cp, b)
@@ -263,7 +261,6 @@ func Test_BeaconBlock_IsNil(t *testing.T) {
 func Test_BeaconBlock_IsBlinded(t *testing.T) {
 	b := &SignedBeaconBlock{block: &BeaconBlock{body: &BeaconBlockBody{}}}
 	assert.Equal(t, false, b.IsBlinded())
-	b.SetBlinded(true)
 	assert.Equal(t, true, b.IsBlinded())
 }
 
@@ -433,7 +430,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	executionCapellaHeader := &pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}
 	eCapellaHeader, err := WrappedExecutionPayloadHeaderCapella(executionCapellaHeader, 0)
 	require.NoError(t, err)
-	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella, isBlinded: true}}}
+	bb = &SignedBeaconBlock{version: version.Capella, block: &BeaconBlock{version: version.Capella, body: &BeaconBlockBody{version: version.Capella}}}
 	require.NoError(t, bb.SetExecution(eCapellaHeader))
 	result, err = bb.Block().Body().Execution()
 	require.NoError(t, err)
@@ -454,7 +451,7 @@ func Test_BeaconBlockBody_Execution(t *testing.T) {
 	executionDenebHeader := &pb.ExecutionPayloadHeaderDeneb{BlockNumber: 1, ExcessBlobGas: 223}
 	eDenebHeader, err := WrappedExecutionPayloadHeaderDeneb(executionDenebHeader, 0)
 	require.NoError(t, err)
-	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{version: version.Deneb, body: &BeaconBlockBody{version: version.Deneb, isBlinded: true}}}
+	bb = &SignedBeaconBlock{version: version.Deneb, block: &BeaconBlock{version: version.Deneb, body: &BeaconBlockBody{version: version.Deneb}}}
 	require.NoError(t, bb.SetExecution(eDenebHeader))
 	result, err = bb.Block().Body().Execution()
 	require.NoError(t, err)
