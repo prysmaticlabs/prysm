@@ -184,15 +184,17 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return errors.Wrap(err, "could not send FCU to engine")
 	}
 
-	if _, err := s.sendLightClientOptimisticUpdate(ctx, cfg.signed, cfg.postState); err != nil {
-		log.WithError(err)
+	if features.Get().EnableLightClientEvents {
+		if _, err := s.sendLightClientOptimisticUpdate(ctx, cfg.signed, cfg.postState); err != nil {
+			log.WithError(err)
+		}
+
+		// Get the finalized checkpoint
+		finalized := s.ForkChoicer().FinalizedCheckpoint()
+
+		// LightClientFinalityUpdate needs super majority
+		s.tryPublishLightClientFinalityUpdate(ctx, cfg.signed, finalized, cfg.postState)
 	}
-
-	// Get the finalized checkpoint
-	finalized := s.ForkChoicer().FinalizedCheckpoint()
-
-	// LightClientFinalityUpdate needs super majority
-	s.tryPublishLightClientFinalityUpdate(ctx, cfg.signed, finalized, cfg.postState)
 
 	return nil
 }
