@@ -340,7 +340,7 @@ func (b *SignedBeaconBlock) Version() int {
 
 // IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
-	return b.block.body.isBlinded
+	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
 }
 
 // ValueInGwei metadata on the payload value returned by the builder. Value is 0 by default if local.
@@ -612,7 +612,7 @@ func (b *BeaconBlock) IsNil() bool {
 
 // IsBlinded checks if the beacon block is a blinded block.
 func (b *BeaconBlock) IsBlinded() bool {
-	return b.body.isBlinded
+	return b.version >= version.Bellatrix && b.body.executionPayload == nil
 }
 
 // Version of the underlying protobuf object.
@@ -1011,7 +1011,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	case version.Phase0, version.Altair:
 		return nil, consensus_types.ErrNotSupported("Execution", b.version)
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeader
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1032,7 +1032,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 		}
 		return WrappedExecutionPayload(p)
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderCapella
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1053,7 +1053,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 		}
 		return WrappedExecutionPayloadCapella(p, 0)
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1114,21 +1114,26 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 	case version.Altair:
 		return pb.(*eth.BeaconBlockBodyAltair).HashTreeRoot()
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyBellatrix).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyBellatrix).HashTreeRoot()
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyCapella).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyCapella).HashTreeRoot()
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyDeneb).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyDeneb).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}
+}
+
+// IsBlinded checks if the beacon block body is a blinded block body.
+func (b *BeaconBlockBody) IsBlinded() bool {
+	return b.version >= version.Bellatrix && b.executionPayload == nil
 }

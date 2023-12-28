@@ -313,7 +313,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			SyncAggregate:     b.syncAggregate,
 		}, nil
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeader
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -356,7 +356,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			ExecutionPayload:  p,
 		}, nil
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderCapella
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -401,7 +401,7 @@ func (b *BeaconBlockBody) Proto() (proto.Message, error) {
 			BlsToExecutionChanges: b.blsToExecutionChanges,
 		}, nil
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -755,7 +755,6 @@ func initBlockBodyFromProtoPhase0(pb *eth.BeaconBlockBody) (*BeaconBlockBody, er
 
 	b := &BeaconBlockBody{
 		version:           version.Phase0,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -775,7 +774,6 @@ func initBlockBodyFromProtoAltair(pb *eth.BeaconBlockBodyAltair) (*BeaconBlockBo
 
 	b := &BeaconBlockBody{
 		version:           version.Altair,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -801,7 +799,6 @@ func initBlockBodyFromProtoBellatrix(pb *eth.BeaconBlockBodyBellatrix) (*BeaconB
 	}
 	b := &BeaconBlockBody{
 		version:           version.Bellatrix,
-		isBlinded:         false,
 		randaoReveal:      bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:          pb.Eth1Data,
 		graffiti:          bytesutil.ToBytes32(pb.Graffiti),
@@ -828,7 +825,6 @@ func initBlindedBlockBodyFromProtoBellatrix(pb *eth.BlindedBeaconBlockBodyBellat
 	}
 	b := &BeaconBlockBody{
 		version:                version.Bellatrix,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
@@ -855,7 +851,6 @@ func initBlockBodyFromProtoCapella(pb *eth.BeaconBlockBodyCapella) (*BeaconBlock
 	}
 	b := &BeaconBlockBody{
 		version:               version.Capella,
-		isBlinded:             false,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:              pb.Eth1Data,
 		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
@@ -883,7 +878,6 @@ func initBlindedBlockBodyFromProtoCapella(pb *eth.BlindedBeaconBlockBodyCapella)
 	}
 	b := &BeaconBlockBody{
 		version:                version.Capella,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
@@ -911,7 +905,6 @@ func initBlockBodyFromProtoDeneb(pb *eth.BeaconBlockBodyDeneb) (*BeaconBlockBody
 	}
 	b := &BeaconBlockBody{
 		version:               version.Deneb,
-		isBlinded:             false,
 		randaoReveal:          bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:              pb.Eth1Data,
 		graffiti:              bytesutil.ToBytes32(pb.Graffiti),
@@ -940,7 +933,6 @@ func initBlindedBlockBodyFromProtoDeneb(pb *eth.BlindedBeaconBlockBodyDeneb) (*B
 	}
 	b := &BeaconBlockBody{
 		version:                version.Deneb,
-		isBlinded:              true,
 		randaoReveal:           bytesutil.ToBytes96(pb.RandaoReveal),
 		eth1Data:               pb.Eth1Data,
 		graffiti:               bytesutil.ToBytes32(pb.Graffiti),
