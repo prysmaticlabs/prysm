@@ -257,7 +257,7 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 		return nil, nil, errors.New("unconfigured block builder")
 	}
 
-	copiedBlock, err := vs.copyBlock(block)
+	copiedBlock, err := block.Copy()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -277,19 +277,6 @@ func (vs *Server) handleBlindedBlock(ctx context.Context, block interfaces.Signe
 	}
 
 	return copiedBlock, sidecars, nil
-}
-
-// copyBlock creates a copy of a SignedBeaconBlock.
-func (vs *Server) copyBlock(block interfaces.SignedBeaconBlock) (interfaces.SignedBeaconBlock, error) {
-	copied, err := block.Copy()
-	if err != nil {
-		return nil, errors.Wrap(err, "copy failed")
-	}
-	castedBlock, ok := copied.(interfaces.SignedBeaconBlock)
-	if !ok {
-		return nil, errors.New("cast to SignedBeaconBlock failed")
-	}
-	return castedBlock, nil
 }
 
 // handleUnblindedBlock processes unblinded beacon blocks.
