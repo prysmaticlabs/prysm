@@ -54,7 +54,7 @@ type postBlockProcessConfig struct {
 	isValidPayload bool
 }
 
-// sendLightClientFinalityUpdate sends a light client finality update notification of  to the state feed.
+// sendLightClientFinalityUpdate sends a light client finality update notification to the state feed.
 func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
 	postState state.BeaconState) (int, error) {
 	// Get attested state
