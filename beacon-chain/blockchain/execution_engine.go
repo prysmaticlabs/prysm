@@ -289,8 +289,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	stateEpoch := slots.ToEpoch(st.Slot())
 	if e == stateEpoch {
 		val, ok = s.trackedProposer(st, slot)
-		if !ok && !features.Get().PrepareAllPayloads {
-			log.Debug("returning from getPayloadAttribute because validator is not tracked")
+		if !ok {
 			return false, emptyAttri
 		}
 	}
@@ -305,8 +304,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	}
 	if e > stateEpoch {
 		val, ok = s.trackedProposer(st, slot)
-		if !ok && !features.Get().PrepareAllPayloads {
-			log.Debug("returning from getPayloadAttribute because validator is not tracked")
+		if !ok {
 			return false, emptyAttri
 		}
 	}
