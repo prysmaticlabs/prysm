@@ -100,7 +100,7 @@ func (s *Service) sendLightClientFinalityUpdate(ctx context.Context, signed inte
 	}), nil
 }
 
-// sendLightClientOptimisticUpdate sends a light client optimistic update notification of  to the state feed.
+// sendLightClientOptimisticUpdate sends a light client optimistic update notification to the state feed.
 func (s *Service) sendLightClientOptimisticUpdate(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock,
 	postState state.BeaconState) (int, error) {
 	// Get attested state
@@ -188,7 +188,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		log.WithError(err)
 	}
 
-	// Save finalized check point to db and more.
+	// Get the finalized checkpoint
 	finalized := s.ForkChoicer().FinalizedCheckpoint()
 
 	// LightClientFinalityUpdate needs super majority
@@ -212,6 +212,7 @@ func (s *Service) tryPublishLightClientFinalityUpdate(ctx context.Context, signe
 		return
 	}
 
+	// LightClientFinalityUpdate needs super majority
 	if syncAggregate.SyncCommitteeBits.Count()*3 < config.SyncCommitteeSize*2 {
 		return
 	}
