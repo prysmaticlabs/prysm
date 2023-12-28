@@ -340,7 +340,6 @@ func (b *SignedBeaconBlock) Version() int {
 
 // IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
-	fmt.Println(b.block.body.executionPayload)
 	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
 }
 
