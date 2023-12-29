@@ -16,21 +16,29 @@ import (
 func TestProposeBeaconBlock_Error(t *testing.T) {
 	testSuites := []struct {
 		name                 string
+		returnedError        error
 		expectedErrorMessage string
-		expectedHttpError    *httputil.DefaultJsonError
 	}{
 		{
 			name:                 "error 202",
-			expectedErrorMessage: "block was successfully broadcasted but failed validation",
-			expectedHttpError: &httputil.DefaultJsonError{
+			expectedErrorMessage: "block was successfully broadcast but failed validation",
+			returnedError: &httputil.DefaultJsonError{
 				Code:    http.StatusAccepted,
 				Message: "202 error",
 			},
 		},
 		{
-			name:                 "request failed",
-			expectedErrorMessage: "failed to send POST data to REST endpoint",
-			expectedHttpError:    nil,
+			name:                 "error 500",
+			expectedErrorMessage: "HTTP request unsuccessful (500: foo error)",
+			returnedError: &httputil.DefaultJsonError{
+				Code:    http.StatusInternalServerError,
+				Message: "foo error",
+			},
+		},
+		{
+			name:                 "other error",
+			expectedErrorMessage: "foo error",
+			returnedError:        errors.New("foo error"),
 		},
 	}
 
@@ -99,14 +107,12 @@ func TestProposeBeaconBlock_Error(t *testing.T) {
 					gomock.Any(),
 					nil,
 				).Return(
-					testSuite.expectedHttpError,
-					errors.New("foo error"),
+					testSuite.returnedError,
 				).Times(1)
 
 				validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 				_, err := validatorClient.proposeBeaconBlock(ctx, testCase.block)
 				assert.ErrorContains(t, testSuite.expectedErrorMessage, err)
-				assert.ErrorContains(t, "foo error", err)
 			})
 		}
 	}

@@ -772,11 +772,11 @@ func TestGetValidator(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 
 		s.GetValidator(writer, request)
-		assert.Equal(t, http.StatusBadRequest, writer.Code)
+		assert.Equal(t, http.StatusNotFound, writer.Code)
 		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
-		assert.Equal(t, http.StatusBadRequest, e.Code)
-		assert.StringContains(t, "Unknown pubkey", e.Message)
+		assert.Equal(t, http.StatusNotFound, e.Code)
+		assert.StringContains(t, "Unknown validator", e.Message)
 	})
 	t.Run("execution optimistic", func(t *testing.T) {
 		chainService := &chainMock.ChainService{Optimistic: true}

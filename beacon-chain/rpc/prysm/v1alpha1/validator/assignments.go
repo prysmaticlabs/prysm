@@ -135,7 +135,7 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		return nil, status.Errorf(codes.Internal, "Could not compute committee assignments: %v", err)
 	}
 	// Query the next epoch assignments for committee subnet subscriptions.
-	nextCommitteeAssignments, nextProposerIndexToSlots, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
+	nextCommitteeAssignments, _, err := helpers.CommitteeAssignments(ctx, s, req.Epoch+1)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not compute next committee assignments: %v", err)
 	}
@@ -178,15 +178,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 				nextAssignment.AttesterSlot = ca.AttesterSlot
 				nextAssignment.CommitteeIndex = ca.CommitteeIndex
 			}
-			// Cache proposer assignment for the current epoch.
-			for _, slot := range proposerIndexToSlots[idx] {
-				// Head root is empty because it can't be known until slot - 1. Same with payload id.
-				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
-			}
-			// Cache proposer assignment for the next epoch.
-			for _, slot := range nextProposerIndexToSlots[idx] {
-				vs.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, idx, [8]byte{} /* payloadID */, [32]byte{} /* head root */)
-			}
 		} else {
 			// If the validator isn't in the beacon state, try finding their deposit to determine their status.
 			// We don't need the lastActiveValidatorFn because we don't use the response in this.
@@ -228,9 +219,6 @@ func (vs *Server) duties(ctx context.Context, req *ethpb.DutiesRequest) (*ethpb.
 		validatorAssignments = append(validatorAssignments, assignment)
 		nextValidatorAssignments = append(nextValidatorAssignments, nextAssignment)
 	}
-	// Prune payload ID cache for any slots before request slot.
-	vs.ProposerSlotIndexCache.PrunePayloadIDs(epochStartSlot)
-
 	return &ethpb.DutiesResponse{
 		Duties:             validatorAssignments,
 		CurrentEpochDuties: validatorAssignments,

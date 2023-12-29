@@ -39,7 +39,6 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 		&produceAttestationDataResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		validator.GetAttestationDataResponse{
@@ -190,7 +189,6 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 				&produceAttestationDataResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				testCase.generateData(),
@@ -219,7 +217,6 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
 		&produceAttestationDataResponseJson,
 	).Return(
-		nil,
 		errors.New("some specific json response error"),
 	).Times(1)
 

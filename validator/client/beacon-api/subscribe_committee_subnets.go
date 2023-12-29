@@ -73,19 +73,11 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 		return errors.Wrap(err, "failed to marshal committees subscriptions")
 	}
 
-	errJson, err := c.jsonRestHandler.Post(
+	return c.jsonRestHandler.Post(
 		ctx,
 		"/eth/v1/validator/beacon_committee_subscriptions",
 		nil,
 		bytes.NewBuffer(committeeSubscriptionsBytes),
 		nil,
 	)
-	if err != nil {
-		return errors.Wrap(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return errJson
-	}
-
-	return nil
 }

@@ -42,7 +42,7 @@ func (b *SignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (b *SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	if b == nil {
 		return nil, nil
 	}
@@ -347,12 +347,16 @@ func (b *SignedBeaconBlock) IsBlinded() bool {
 func (b *SignedBeaconBlock) ValueInGwei() uint64 {
 	exec, err := b.block.body.Execution()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve execution payload")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	val, err := exec.ValueInGwei()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve value in gwei")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	return val

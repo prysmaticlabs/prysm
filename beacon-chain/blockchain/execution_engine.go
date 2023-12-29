@@ -11,7 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -74,7 +73,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 	}
 
 	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr, proposerId := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
+	hasAttr, attr := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
 
 	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
 	if err != nil {
@@ -153,7 +152,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		log.WithError(err).Error("Could not set head root to valid")
 		return nil, nil
 	}
-	// If the forkchoice update call has an attribute, update the proposer payload ID cache.
+	// If the forkchoice update call has an attribute, update the payload ID cache.
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
@@ -162,7 +161,7 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 			"headSlot":  headBlk.Slot(),
 			"payloadID": fmt.Sprintf("%#x", bytesutil.Trunc(payloadID[:])),
 		}).Info("Forkchoice updated with payload attributes for proposal")
-		s.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(nextSlot, proposerId, pId, arg.headRoot)
+		s.cfg.PayloadIDCache.Set(nextSlot, arg.headRoot, pId)
 	} else if hasAttr && payloadID == nil && !features.Get().PrepareAllPayloads {
 		log.WithFields(logrus.Fields{
 			"blockHash": fmt.Sprintf("%#x", headPayload.BlockHash()),
@@ -277,12 +276,12 @@ func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer, primitives.ValidatorIndex) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer) {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
-	// Root is `[32]byte{}` since we are retrieving proposer ID of a given slot. During insertion at assignment the root was not known.
-	proposerID, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	if !ok && !features.Get().PrepareAllPayloads { // There's no need to build attribute if there is no proposer for slot.
-		return false, emptyAttri, 0
+
+	val, ok := s.trackedProposer(st, slot)
+	if !ok && !features.Get().PrepareAllPayloads {
+		return false, emptyAttri
 	}
 
 	// Get previous randao.
@@ -292,41 +291,20 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot, slot)
 		if err != nil {
 			log.WithError(err).Error("Could not process slots to get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 	}
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		log.WithError(err).Error("Could not get randao mix to get payload attribute")
-		return false, emptyAttri, 0
-	}
-
-	// Get fee recipient.
-	feeRecipient := params.BeaconConfig().DefaultFeeRecipient
-	recipient, err := s.cfg.BeaconDB.FeeRecipientByValidatorID(ctx, proposerID)
-	switch {
-	case errors.Is(err, kv.ErrNotFoundFeeRecipient):
-		if feeRecipient.String() == params.BeaconConfig().EthBurnAddressHex {
-			logrus.WithFields(logrus.Fields{
-				"validatorIndex": proposerID,
-				"burnAddress":    params.BeaconConfig().EthBurnAddressHex,
-			}).Warn("Fee recipient is currently using the burn address, " +
-				"you will not be rewarded transaction fees on this setting. " +
-				"Please set a different eth address as the fee recipient. " +
-				"Please refer to our documentation for instructions")
-		}
-	case err != nil:
-		log.WithError(err).Error("Could not get fee recipient to get payload attribute")
-		return false, emptyAttri, 0
-	default:
-		feeRecipient = recipient
+		return false, emptyAttri
 	}
 
 	// Get timestamp.
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
 		log.WithError(err).Error("Could not get timestamp to get payload attribute")
-		return false, emptyAttri, 0
+		return false, emptyAttri
 	}
 
 	var attr payloadattribute.Attributer
@@ -335,51 +313,51 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            prevRando,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 			Withdrawals:           withdrawals,
 			ParentBeaconBlockRoot: headRoot,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            prevRando,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 			Withdrawals:           withdrawals,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
 			Timestamp:             uint64(t.Unix()),
 			PrevRandao:            prevRando,
-			SuggestedFeeRecipient: feeRecipient.Bytes(),
+			SuggestedFeeRecipient: val.FeeRecipient[:],
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri, 0
+			return false, emptyAttri
 		}
 	default:
 		log.WithField("version", st.Version()).Error("Could not get payload attribute due to unknown state version")
-		return false, emptyAttri, 0
+		return false, emptyAttri
 	}
 
-	return true, attr, proposerID
+	return true, attr
 }
 
 // removeInvalidBlockAndState removes the invalid block, blob and its corresponding state from the cache and DB.

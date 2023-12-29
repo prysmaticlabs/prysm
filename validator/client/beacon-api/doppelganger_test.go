@@ -305,7 +305,6 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					&syncingResponseJson,
 				).Return(
 					nil,
-					nil,
 				).SetArg(
 					2,
 					*testCase.getSyncingOutput,
@@ -321,7 +320,6 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					&stateForkResponseJson,
 				).Return(
 					nil,
-					nil,
 				).SetArg(
 					2,
 					*testCase.getForkOutput,
@@ -336,7 +334,6 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -361,7 +358,6 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						4,
 						*iface.output,
 					).Return(
-						nil,
 						nil,
 					).Times(1)
 				}
@@ -744,7 +740,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					syncingEnpoint,
 					&syncingResponseJson,
 				).Return(
-					nil,
 					testCase.getSyncingError,
 				).SetArg(
 					2,
@@ -760,7 +755,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
-					nil,
 					testCase.getForkError,
 				).SetArg(
 					2,
@@ -776,7 +770,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					testCase.getHeadersError,
 				).SetArg(
 					2,
@@ -815,7 +808,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 						4,
 						*iface.output,
 					).Return(
-						nil,
 						iface.err,
 					).Times(1)
 				}

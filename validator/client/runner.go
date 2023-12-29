@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -55,25 +54,20 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// check if proposer settings is still nil
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if v.ProposerSettings() != nil {
-		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
-			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		deadline := time.Now().Add(5 * time.Minute)
-		if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
-			if errors.Is(err, ErrBuilderValidatorRegistration) {
-				log.WithError(err).Warn("Push proposer settings error")
-			} else {
-				log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
-			}
-		}
-	} else {
+	if v.ProposerSettings() == nil {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-
+	deadline := time.Now().Add(5 * time.Minute)
+	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+		if errors.Is(err, ErrBuilderValidatorRegistration) {
+			log.WithError(err).Warn("Push proposer settings error")
+		} else {
+			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+		}
+	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
-
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
@@ -108,7 +102,7 @@ func run(ctx context.Context, v iface.Validator) {
 
 			// call push proposer setting at the start of each epoch to account for the following edge case:
 			// proposer is activated at the start of epoch and tries to propose immediately
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			if slots.IsEpochStart(slot) {
 				go func() {
 					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)

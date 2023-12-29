@@ -17,15 +17,6 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func TestService_isNewProposer(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-	require.Equal(t, false, service.isNewProposer(service.CurrentSlot()+1))
-
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
-	require.Equal(t, true, service.isNewProposer(service.CurrentSlot()+1))
-}
-
 func TestService_isNewHead(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
 	service := setupBeaconChain(t, beaconDB)
@@ -73,7 +64,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
+	service.cfg.PayloadIDCache = cache.NewPayloadIDCache()
 	_, err = service.forkchoiceUpdateWithExecution(ctx, service.headRoot(), service.CurrentSlot()+1)
 	require.NoError(t, err)
 	hookErr := "could not notify forkchoice update"
@@ -107,7 +98,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
+	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
 	_, err = service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot())
 	require.NoError(t, err)
 	require.LogsDoNotContain(t, hook, invalidStateErr)
@@ -125,15 +116,14 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
+	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
 	_, err = service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()+1)
 	require.NoError(t, err)
 	require.LogsDoNotContain(t, hook, invalidStateErr)
 	require.LogsDoNotContain(t, hook, hookErr)
-	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
+	payloadID, has := service.cfg.PayloadIDCache.PayloadID(2, [32]byte{2})
 	require.Equal(t, true, has)
-	require.Equal(t, primitives.ValidatorIndex(1), vId)
-	require.Equal(t, [8]byte{1}, payloadID)
+	require.Equal(t, primitives.PayloadID{1}, payloadID)
 
 	// Test zero headRoot returns immediately.
 	headRoot := service.headRoot()
@@ -143,7 +133,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 }
 
 func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testing.T) {
-	service, tr := minimalTestService(t)
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
@@ -182,7 +172,7 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 	service.head.root = r
 	service.head.block = sb
 	service.head.state = st
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
+	service.cfg.PayloadIDCache.Set(service.CurrentSlot()+1, [32]byte{} /* root */, [8]byte{})
 	_, err = service.forkchoiceUpdateWithExecution(ctx, r, service.CurrentSlot()+1)
 	require.NoError(t, err)
 
