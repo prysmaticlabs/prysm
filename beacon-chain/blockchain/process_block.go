@@ -89,6 +89,24 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
+		if s.isNewHead(headRoot) {
+			headState, headBlock, err := s.getStateAndBlock(ctx, headRoot)
+			if err != nil {
+				log.WithError(err).Error("Could not get forkchoice update argument")
+				return nil
+			}
+			// verify conditions for FCU, notifies FCU, and saves the new head.
+			// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
+			args := &fcuConfig{
+				headState:     headState,
+				headBlock:     headBlock,
+				headRoot:      headRoot,
+				proposingSlot: s.CurrentSlot() + 1,
+			}
+			if err := s.forkchoiceUpdateWithExecution(ctx, args); err != nil {
+				return err
+			}
+		}
 	} else {
 		// Updating next slot state cache can happen in the background
 		// except in the epoch boundary in which case we lock to handle
