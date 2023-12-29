@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
@@ -18,7 +19,13 @@ const eventByteLimit = 512
 type EventHandler struct {
 	httpClient *http.Client
 	host       string
-	subs       []chan<- event
+	subs       []eventSub
+	sync.Mutex
+}
+
+type eventSub struct {
+	name string
+	ch   chan<- event
 }
 
 type event struct {
@@ -31,12 +38,14 @@ func NewEventHandler(httpClient *http.Client, host string) *EventHandler {
 	return &EventHandler{
 		httpClient: httpClient,
 		host:       host,
-		subs:       make([]chan<- event, 0),
+		subs:       make([]eventSub, 0),
 	}
 }
 
-func (h *EventHandler) subscribe(ch chan<- event) {
-	h.subs = append(h.subs, ch)
+func (h *EventHandler) subscribe(sub eventSub) {
+	h.Lock()
+	h.subs = append(h.subs, sub)
+	h.Unlock()
 }
 
 func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan<- error) error {
@@ -97,8 +106,13 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 				continue
 			}
 
-			for _, ch := range h.subs {
-				ch <- event{eventType: e[0], data: e[1]}
+			for _, sub := range h.subs {
+				select {
+				case sub.ch <- event{eventType: e[0], data: e[1]}:
+					// Event sent successfully.
+				default:
+					log.Warn("Subscriber '" + sub.name + "' not ready to receive events")
+				}
 			}
 			// We reached EOF and sent the last event
 			if eof {

@@ -49,7 +49,7 @@ type headSignedBeaconBlockResult struct {
 
 func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
 	ch := make(chan event, 1)
-	c.eventHandler.subscribe(ch)
+	c.eventHandler.subscribe(eventSub{name: "stream slots", ch: ch})
 	return &streamSlotsClient{
 		ctx:                ctx,
 		beaconApiClient:    c,
