@@ -355,7 +355,6 @@ func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
 	if payloadRoot != headerRoot {
 		return errors.New("cannot unblind with different execution data")
 	}
-	b.SetBlinded(false)
 	if err := b.SetExecution(e); err != nil {
 		return err
 	}
