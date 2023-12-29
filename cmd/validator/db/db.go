@@ -2,6 +2,7 @@ package db
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/cmd"
+	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	validatordb "github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/sirupsen/logrus"
@@ -64,6 +65,30 @@ var Commands = &cli.Command{
 						return nil
 					},
 				},
+			},
+		},
+		{
+			Name:     "convert-complete-to-minimal",
+			Category: "db",
+			Usage:    "Convert a complete EIP-3076 slashing protection to a minimal one",
+			Flags: []cli.Flag{
+				flags.SourceDataDirFlag,
+				flags.TargetDataDirFlag,
+			},
+			Before: func(cliCtx *cli.Context) error {
+				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
+			},
+			Action: func(cliCtx *cli.Context) error {
+				sourcedDatabasePath := cliCtx.String(flags.SourceDataDirFlag.Name)
+				targetDatabasePath := cliCtx.String(flags.TargetDataDirFlag.Name)
+
+				// Convert the database
+				err := validatordb.ConvertDatabase(cliCtx.Context, sourcedDatabasePath, targetDatabasePath, false)
+				if err != nil {
+					log.WithError(err).Fatal("Could not convert database")
+				}
+
+				return nil
 			},
 		},
 	},
