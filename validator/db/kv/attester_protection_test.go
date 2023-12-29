@@ -9,6 +9,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
@@ -575,4 +576,56 @@ func TestStore_flushAttestationRecords_InProgress(t *testing.T) {
 	hook := logTest.NewGlobal()
 	s.flushAttestationRecords(context.Background(), nil)
 	assert.LogsContain(t, hook, "Attempted to flush attestation records when already in progress")
+}
+
+func BenchmarkStore_SaveAttestationForPubKey(b *testing.B) {
+	var wg sync.WaitGroup
+	ctx := context.Background()
+
+	// Create pubkeys
+	pubkeys := make([][fieldparams.BLSPubkeyLength]byte, 10)
+	for i := range pubkeys {
+		validatorKey, err := bls.RandKey()
+		require.NoError(b, err, "RandKey should not return an error")
+
+		copy(pubkeys[i][:], validatorKey.PublicKey().Marshal())
+	}
+
+	signingRoot := [32]byte{1}
+	attestation := &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: 42,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: 43,
+			},
+		},
+	}
+
+	validatorDB, err := NewKVStore(ctx, b.TempDir(), &Config{PubKeys: pubkeys})
+	require.NoError(b, err)
+
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		err := validatorDB.ClearDB()
+		require.NoError(b, err)
+
+		for _, pubkey := range pubkeys {
+			wg.Add(1)
+
+			go func(pk [fieldparams.BLSPubkeyLength]byte) {
+				defer wg.Done()
+
+				err := validatorDB.SaveAttestationForPubKey(ctx, pk, signingRoot, attestation)
+				require.NoError(b, err)
+			}(pubkey)
+		}
+
+		b.StartTimer()
+		wg.Wait()
+	}
+
+	err = validatorDB.Close()
+	require.NoError(b, err)
 }
