@@ -1,12 +1,14 @@
 package filesystem
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
@@ -19,6 +21,8 @@ import (
 )
 
 const (
+	backupsDirectoryName = "backups"
+
 	slashingProtectionDirName = "slashing-protection"
 	configurationFileName     = "configuration.yaml"
 
@@ -102,6 +106,44 @@ func (s *Store) DatabasePath() string {
 func (s *Store) ClearDB() error {
 	if err := os.RemoveAll(s.databasePath); err != nil {
 		return errors.Wrapf(err, "cannot remove database at path %s", s.databasePath)
+	}
+
+	return nil
+}
+
+// Backup creates a backup of the database.
+func (s *Store) Backup(_ context.Context, outputDir string, permissionOverride bool) error {
+	// Get backups directory path.
+	backupsDir := path.Join(outputDir, backupsDirectoryName)
+	if len(outputDir) != 0 {
+		backupsDir, err := file.ExpandPath(backupsDir)
+		if err != nil {
+			return errors.Wrapf(err, "could not expand path %s", backupsDir)
+		}
+	}
+
+	// Ensure the backups directory exists, else create it.
+	if err := file.HandleBackupDir(backupsDir, permissionOverride); err != nil {
+		return err
+	}
+
+	// Get the path of this specific backup directory.
+	backupPath := path.Join(backupsDir, fmt.Sprintf("prysm_validatordb_%d.backup", time.Now().Unix()), DatabaseDirName)
+	log.WithField("backup", backupPath).Info("Writing backup database")
+
+	// Create this specific backup directory.
+	if err := file.MkdirAll(backupPath); err != nil {
+		return errors.Wrapf(err, "could not create directory %s", backupPath)
+	}
+
+	// Copy the configuration file to the backup directory.
+	if err := file.CopyFile(s.configurationFilePath(), path.Join(backupPath, configurationFileName)); err != nil {
+		return errors.Wrap(err, "could not copy configuration file")
+	}
+
+	// Copy the slashing protection directory to the backup directory.
+	if err := file.CopyDir(s.slashingProtectionDirPath(), path.Join(backupPath, slashingProtectionDirName)); err != nil {
+		return errors.Wrap(err, "could not copy slashing protection directory")
 	}
 
 	return nil

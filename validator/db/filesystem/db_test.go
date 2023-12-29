@@ -1,14 +1,19 @@
 package filesystem
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/proposer"
+
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 )
 
@@ -44,32 +49,32 @@ func TestStore_Close(t *testing.T) {
 }
 
 func TestStore_DatabasePath(t *testing.T) {
-	// Get a database path.
-	databasePath := t.TempDir()
+	// Get a database parent path.
+	databaseParentPath := t.TempDir()
 
 	// Create a new store.
-	s, err := NewStore(databasePath, nil)
+	s, err := NewStore(databaseParentPath, nil)
 	require.NoError(t, err, "NewStore should not return an error")
 
-	expected := databasePath
+	expected := databaseParentPath
 	actual := s.DatabasePath()
 
 	require.Equal(t, expected, actual)
 }
 
 func TestStore_ClearDB(t *testing.T) {
-	// Get a database path.
-	databasePath := t.TempDir()
+	// Get a database parent path.
+	databaseParentPath := t.TempDir()
 
 	// Compute slashing protection directory and configuration file paths.
-	slashingProtectionDirPath := path.Join(databasePath, DatabaseDirName, slashingProtectionDirName)
-	configurationFilePath := path.Join(databasePath, DatabaseDirName, configurationFileName)
+	slashingProtectionDirPath := path.Join(databaseParentPath, DatabaseDirName, slashingProtectionDirName)
+	configurationFilePath := path.Join(databaseParentPath, DatabaseDirName, configurationFileName)
 
 	// Create some pubkeys.
 	pubkeys := getPubKeys(t, 5)
 
 	// Create a new store.
-	s, err := NewStore(databasePath, &Config{PubKeys: pubkeys})
+	s, err := NewStore(databaseParentPath, &Config{PubKeys: pubkeys})
 	require.NoError(t, err, "NewStore should not return an error")
 
 	// Check the presence of the slashing protection directory.
@@ -87,6 +92,49 @@ func TestStore_ClearDB(t *testing.T) {
 	// Check the absence of the configuration file path.
 	_, err = os.Stat(configurationFilePath)
 	require.ErrorIs(t, err, os.ErrNotExist, "os.Stat should return os.ErrNotExist")
+}
+
+func TestStore_Backup(t *testing.T) {
+	// Get a database parent path.
+	databaseParentPath := t.TempDir()
+	originalDatabaseDirPath := path.Join(databaseParentPath, DatabaseDirName)
+
+	// Get a backups directory path.
+	backupsPath := t.TempDir()
+
+	// Create some pubkeys.
+	pubkeys := getPubKeys(t, 5)
+
+	// Create a new store.
+	s, err := NewStore(databaseParentPath, &Config{PubKeys: pubkeys})
+	require.NoError(t, err, "NewStore should not return an error")
+
+	// Update the proposer settings.
+	err = s.SaveProposerSettings(context.Background(), &proposer.Settings{
+		DefaultConfig: &proposer.Option{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
+				FeeRecipient: common.Address{},
+			},
+		},
+	})
+	require.NoError(t, err, "SaveProposerSettings should not return an error")
+
+	// Backup the DB.
+	require.NoError(t, s.Backup(context.Background(), backupsPath, true), "Backup should not return an error")
+
+	// Get the directory path of the backup.
+	files, err := os.ReadDir(path.Join(backupsPath, backupsDirectoryName))
+	require.NoError(t, err, "os.ReadDir should not return an error")
+	require.Equal(t, 1, len(files), "os.ReadDir should return one file")
+	backupDirEntry := files[0]
+	require.Equal(t, true, backupDirEntry.IsDir(), "os.ReadDir should return a directory")
+	backupDirPath := path.Join(backupsPath, backupsDirectoryName, backupDirEntry.Name())
+
+	// Get the path database directory.
+	backupDatabaseDirPath := path.Join(backupDirPath, DatabaseDirName)
+
+	// Compare the content of the slashing protection directory.
+	require.Equal(t, true, file.DirsEqual(originalDatabaseDirPath, backupDatabaseDirPath))
 }
 
 func TestStore_UpdatePublickKeysBuckets(t *testing.T) {
