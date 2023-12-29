@@ -628,9 +628,10 @@ func injectSlashings(t *testing.T, st state.BeaconState, keys []bls.SecretKey, s
 
 func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
-		name  string
-		block func([32]byte) *ethpb.GenericSignedBeaconBlock
-		err   string
+		name       string
+		block      func([32]byte) *ethpb.GenericSignedBeaconBlock
+		err        string
+		useBuilder bool
 	}{
 		{
 			name: "phase0",
@@ -677,6 +678,24 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			useBuilder: true,
+		},
+		{
+			name: "blind capella no builder",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockCapella()
+				blockToPropose.Block.Slot = 5
+				blockToPropose.Block.ParentRoot = parent[:]
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				blockToPropose.Block.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+			err: "unconfigured block builder",
 		},
 		{
 			name: "bellatrix",
@@ -698,6 +717,69 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 		},
+		{
+			name: "deneb block some blobs",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockContentsDeneb()
+				blockToPropose.Block.Block.Slot = 5
+				blockToPropose.Block.Block.ParentRoot = parent[:]
+				blockToPropose.Blobs = [][]byte{{0x01}, {0x02}, {0x03}}
+				blockToPropose.KzgProofs = [][]byte{{0x01}, {0x02}, {0x03}}
+				blockToPropose.Block.Block.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte("kc"), 48), bytesutil.PadTo([]byte("kc1"), 48), bytesutil.PadTo([]byte("kc2"), 48)}
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+		},
+		{
+			name: "deneb block some blobs (kzg and blob count missmatch)",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBeaconBlockContentsDeneb()
+				blockToPropose.Block.Block.Slot = 5
+				blockToPropose.Block.Block.ParentRoot = parent[:]
+				blockToPropose.Blobs = [][]byte{{0x01}, {0x02}, {0x03}}
+				blockToPropose.KzgProofs = [][]byte{{0x01}, {0x02}, {0x03}}
+				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+			err: "blob KZG commitments don't match number of blobs or KZG proofs",
+		},
+		{
+			name: "blind deneb block some blobs",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockDeneb()
+				blockToPropose.Message.Slot = 5
+				blockToPropose.Message.ParentRoot = parent[:]
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blockToPropose.Message.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+			useBuilder: true,
+		},
+		{
+			name: "blind deneb block some blobs (commitment value does not match blob)",
+			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
+				blockToPropose := util.NewBlindedBeaconBlockDeneb()
+				blockToPropose.Message.Slot = 5
+				blockToPropose.Message.ParentRoot = parent[:]
+				txRoot, err := ssz.TransactionsRoot([][]byte{})
+				require.NoError(t, err)
+				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
+				require.NoError(t, err)
+				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
+				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
+				blockToPropose.Message.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte("kc"), 48)}
+				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: blockToPropose}
+				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+			},
+			useBuilder: true,
+			err:        "unblind sidecars failed: commitment value doesn't match block",
+		},
 	}
 
 	for _, tt := range tests {
@@ -715,8 +797,10 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder:  &builderTest.MockBuilderService{HasConfigured: true, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(), BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{{0x01}}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
-				BeaconDB:      db,
+				BlockBuilder: &builderTest.MockBuilderService{HasConfigured: tt.useBuilder, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(),
+					BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
+				BeaconDB:     db,
+				BlobReceiver: c,
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
