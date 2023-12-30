@@ -130,28 +130,31 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
+	// return early if we haven't changed head
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
-		// Fallback to our current head root in the event of a failure.
-		s.headLock.RLock()
-		newHeadRoot = s.headRoot()
-		s.headLock.RUnlock()
+		return
+	}
+	if !s.isNewHead(newHeadRoot) {
+		return
+	}
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("could not get head block")
+		return
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-
-	changed, err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot)
-	if err != nil {
+	args := &fcuConfig{
+		headState:     headState,
+		headRoot:      newHeadRoot,
+		headBlock:     headBlock,
+		proposingSlot: proposingSlot,
+	}
+	if err := s.forkchoiceUpdateWithExecution(s.ctx, args); err != nil {
 		log.WithError(err).Error("could not update forkchoice")
 	}
-	if changed {
-		s.headLock.RLock()
-		log.WithFields(logrus.Fields{
-			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
-		}).Debug("Head changed due to attestations")
-		s.headLock.RUnlock()
-	}
+	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
