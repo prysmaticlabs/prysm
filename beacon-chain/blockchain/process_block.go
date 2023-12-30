@@ -381,9 +381,6 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
 		}
-		if err := helpers.UpdateUnsafeProposerIndicesInCache(slotCtx, st, e+1); err != nil {
-			log.WithError(err).Warn("Failed to cache next epoch proposers")
-		}
 	}()
 	// The latest block header is from the previous epoch
 	r, err := st.LatestBlockHeader().HashTreeRoot()
