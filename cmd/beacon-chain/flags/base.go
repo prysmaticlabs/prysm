@@ -80,7 +80,7 @@ var (
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
-		Usage: "Port used to listening and respond metrics for prometheus.",
+		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8080,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.

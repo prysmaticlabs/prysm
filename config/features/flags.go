@@ -10,44 +10,44 @@ var (
 	// PraterTestnet flag for the multiclient Ethereum consensus testnet.
 	PraterTestnet = &cli.BoolFlag{
 		Name:    "prater",
-		Usage:   "Run Prysm configured for the Prater / Goerli test network",
+		Usage:   "Runs Prysm configured for the Prater / Goerli test network.",
 		Aliases: []string{"goerli"},
 	}
 	// SepoliaTestnet flag for the multiclient Ethereum consensus testnet.
 	SepoliaTestnet = &cli.BoolFlag{
 		Name:  "sepolia",
-		Usage: "Run Prysm configured for the Sepolia beacon chain test network",
+		Usage: "Runs Prysm configured for the Sepolia test network.",
 	}
 	// HoleskyTestnet flag for the multiclient Ethereum consensus testnet.
 	HoleskyTestnet = &cli.BoolFlag{
 		Name:  "holesky",
-		Usage: "Run Prysm configured for the Holesky beacon chain test network",
+		Usage: "Runs Prysm configured for the Holesky test network.",
 	}
 	// Mainnet flag for easier tooling, no-op
 	Mainnet = &cli.BoolFlag{
 		Value: true,
 		Name:  "mainnet",
-		Usage: "Run on Ethereum Beacon Chain Main Net. This is the default and can be omitted.",
+		Usage: "Runs on Ethereum main network. This is the default and can be omitted.",
 	}
 	devModeFlag = &cli.BoolFlag{
 		Name:  "dev",
-		Usage: "Enable experimental features still in development. These features may not be stable.",
+		Usage: "Enables experimental features still in development. These features may not be stable.",
 	}
 	enableExperimentalState = &cli.BoolFlag{
 		Name:  "enable-experimental-state",
-		Usage: "Turn on the latest and greatest (but potentially unstable) changes to the beacon state",
+		Usage: "Turns on the latest and greatest (but potentially unstable) changes to the beacon state.",
 	}
 	writeSSZStateTransitionsFlag = &cli.BoolFlag{
 		Name:  "interop-write-ssz-state-transitions",
-		Usage: "Write ssz states to disk after attempted state transition",
+		Usage: "Writes SSZ states to disk after attempted state transitio.",
 	}
 	disableGRPCConnectionLogging = &cli.BoolFlag{
 		Name:  "disable-grpc-connection-logging",
-		Usage: "Disables displaying logs for newly connected grpc clients",
+		Usage: "Disables displaying logs for newly connected grpc clients.",
 	}
 	disableReorgLateBlocks = &cli.BoolFlag{
 		Name:  "disable-reorg-late-blocks",
-		Usage: "Disables reorgs of late blocks",
+		Usage: "Disables reorgs of late blocks.",
 	}
 	disablePeerScorer = &cli.BoolFlag{
 		Name:  "disable-peer-scorer",
@@ -60,19 +60,19 @@ var (
 	}
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
-		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval)",
+		Usage:  "(Advanced): Specifies the first interval in which attestations are aggregated in the slot (typically unnaggregated attestations are aggregated in this interval).",
 		Value:  7000 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateSecondInterval = &cli.DurationFlag{
 		Name:   "aggregate-second-interval",
-		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot",
+		Usage:  "(Advanced): Specifies the second interval in which attestations are aggregated in the slot.",
 		Value:  9500 * time.Millisecond,
 		Hidden: true,
 	}
 	aggregateThirdInterval = &cli.DurationFlag{
 		Name:   "aggregate-third-interval",
-		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot",
+		Usage:  "(Advanced): Specifies the third interval in which attestations are aggregated in the slot.",
 		Value:  11800 * time.Millisecond,
 		Hidden: true,
 	}
@@ -88,15 +88,15 @@ var (
 	}
 	attestTimely = &cli.BoolFlag{
 		Name:  "attest-timely",
-		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details",
+		Usage: "Fixes validator can attest timely after current block processes. See #8185 for more details.",
 	}
 	enableSlasherFlag = &cli.BoolFlag{
 		Name:  "slasher",
-		Usage: "Enables a slasher in the beacon node for detecting slashable offenses",
+		Usage: "Enables a slasher in the beacon node for detecting slashable offenses.",
 	}
 	enableSlashingProtectionPruning = &cli.BoolFlag{
 		Name:  "enable-slashing-protection-history-pruning",
-		Usage: "Enables the pruning of the validator client's slashing protection database",
+		Usage: "Enables the pruning of the validator client's slashing protection database.",
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
@@ -106,7 +106,7 @@ var (
 	}
 	disableStakinContractCheck = &cli.BoolFlag{
 		Name:  "disable-staking-contract-check",
-		Usage: "Disables checking of staking contract deposits when proposing blocks, useful for devnets",
+		Usage: "Disables checking of staking contract deposits when proposing blocks, useful for devnets.",
 	}
 	enableHistoricalSpaceRepresentation = &cli.BoolFlag{
 		Name: "enable-historical-state-representation",
@@ -116,52 +116,52 @@ var (
 	}
 	enableStartupOptimistic = &cli.BoolFlag{
 		Name:   "startup-optimistic",
-		Usage:  "Treats every block as optimistically synced at launch. Use with caution",
+		Usage:  "Treats every block as optimistically synced at launch. Use with caution.",
 		Value:  false,
 		Hidden: true,
 	}
 	enableFullSSZDataLogging = &cli.BoolFlag{
 		Name:  "enable-full-ssz-data-logging",
-		Usage: "Enables displaying logs for full ssz data on rejected gossip messages",
+		Usage: "Enables displaying logs for full ssz data on rejected gossip messages.",
 	}
 	SaveFullExecutionPayloads = &cli.BoolFlag{
 		Name:  "save-full-execution-payloads",
-		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database",
+		Usage: "Saves beacon blocks with full execution payloads instead of execution payload headers in the database.",
 	}
 	EnableBeaconRESTApi = &cli.BoolFlag{
 		Name:  "enable-beacon-rest-api",
-		Usage: "Experimental enable of the beacon REST API when querying a beacon node",
+		Usage: "(Experimental): Enables of the beacon REST API when querying a beacon node.",
 	}
 	enableVerboseSigVerification = &cli.BoolFlag{
 		Name:  "enable-verbose-sig-verification",
-		Usage: "Enables identifying invalid signatures if batch verification fails when processing block",
+		Usage: "Enables identifying invalid signatures if batch verification fails when processing block.",
 	}
 	disableOptionalEngineMethods = &cli.BoolFlag{
 		Name:  "disable-optional-engine-methods",
-		Usage: "Disables the optional engine methods",
+		Usage: "Disables the optional engine methods.",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
-		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders",
+		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
 	}
 	EnableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
-		Usage: "Enables the deposit tree specified in EIP4881",
+		Usage: "Enables the deposit tree specified in EIP-4881.",
 	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
-		Usage: "Disables running the libp2p resource manager",
+		Usage: "Disables running the libp2p resource manager.",
 	}
 
 	// DisableRegistrationCache a flag for disabling the validator registration cache and use db instead.
 	DisableRegistrationCache = &cli.BoolFlag{
 		Name:  "disable-registration-cache",
-		Usage: "A temporary flag for disabling the validator registration cache instead of using the db. note: registrations do not clear on restart while using the db",
+		Usage: "Temporary flag for disabling the validator registration cache instead of using the DB. Note: registrations do not clear on restart while using the DB.",
 	}
 
 	disableAggregateParallel = &cli.BoolFlag{
 		Name:  "disable-aggregate-parallel",
-		Usage: "Disables parallel aggregation of attestations",
+		Usage: "Disables parallel aggregation of attestations.",
 	}
 )
 
