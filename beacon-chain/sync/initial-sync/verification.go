@@ -85,7 +85,6 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 	bv := batch.newVerifier(sc, verification.InitsyncSidecarRequirements)
 	// We can satisfy the following 2 requirements immediately because VerifiedROBlobs always verifies commitments
 	// and block signature for all blobs in the batch before calling verifyOneBlob.
-	//
 	bv.SatisfyRequirement(verification.RequireSidecarKzgProofVerified)
 	bv.SatisfyRequirement(verification.RequireValidProposerSignature)
 

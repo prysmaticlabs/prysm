@@ -19,3 +19,14 @@ func BlobFields(blob blocks.ROBlob) logrus.Fields {
 		"index":          blob.Index,
 	}
 }
+
+// BlockFieldsFromBlob extracts the set of fields from a given BlobSidecar which are shared by the block and
+// all other sidecars for the block.
+func BlockFieldsFromBlob(blob blocks.ROBlob) logrus.Fields {
+	return logrus.Fields{
+		"slot":           blob.Slot(),
+		"proposer_index": blob.ProposerIndex(),
+		"block_root":     fmt.Sprintf("%#x", blob.BlockRoot()),
+		"parent_root":    fmt.Sprintf("%#x", blob.ParentRoot()),
+	}
+}

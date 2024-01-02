@@ -57,9 +57,10 @@ var GossipSidecarRequirements = []Requirement{
 // RequireSidecarParentSlotLower,
 // RequireSidecarDescendsFromFinalized,
 var InitsyncSidecarRequirements = []Requirement{
+	RequireValidProposerSignature,
+	RequireSidecarKzgProofVerified,
 	RequireBlobIndexInBounds,
 	RequireSidecarInclusionProven,
-	RequireSidecarKzgProofVerified,
 }
 
 var (

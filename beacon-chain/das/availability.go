@@ -2,15 +2,19 @@ package das
 
 import (
 	"context"
+	"fmt"
 
 	errors "github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
@@ -102,6 +106,16 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	// Same as above, we don't save BlobSidecars if there are any problems with the batch.
 	vscs, err := s.verifier.VerifiedROBlobs(ctx, b, sidecars)
 	if err != nil {
+		me, ok := err.(verification.VerificationMultiError)
+		if ok {
+			fails := me.Failures()
+			lf := make(log.Fields, len(fails))
+			for i := range fails {
+				lf[fmt.Sprintf("fail_%d", i)] = fails[i].Error()
+			}
+			log.WithFields(lf).WithFields(logging.BlockFieldsFromBlob(sidecars[0])).
+				Debug("invalid BlobSidecars received")
+		}
 		return errors.Wrapf(err, "invalid BlobSidecars received for block %#x", root)
 	}
 	// Ensure that each BlobSidecar is written to disk.
