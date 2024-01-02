@@ -14,7 +14,7 @@ var log = logrus.WithField("prefix", "db")
 var Commands = &cli.Command{
 	Name:     "db",
 	Category: "db",
-	Usage:    "defines commands for interacting with the Prysm validator database",
+	Usage:    "Defines commands for interacting with the Prysm validator database.",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "restore",

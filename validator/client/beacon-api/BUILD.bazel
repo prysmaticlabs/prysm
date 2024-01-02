@@ -15,7 +15,6 @@ go_library(
         "domain_data.go",
         "doppelganger.go",
         "duties.go",
-        "errors.go",
         "genesis.go",
         "get_beacon_block.go",
         "index.go",

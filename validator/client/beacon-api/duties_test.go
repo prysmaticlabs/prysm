@@ -75,7 +75,6 @@ func TestGetAttesterDuties_Valid(t *testing.T) {
 		&validator.GetAttesterDutiesResponse{},
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		expectedAttesterDuties,
@@ -103,7 +102,6 @@ func TestGetAttesterDuties_HttpError(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
@@ -128,7 +126,6 @@ func TestGetAttesterDuties_NilAttesterDuty(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		4,
@@ -172,7 +169,6 @@ func TestGetProposerDuties_Valid(t *testing.T) {
 		&validator.GetProposerDutiesResponse{},
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		expectedProposerDuties,
@@ -198,7 +194,6 @@ func TestGetProposerDuties_HttpError(t *testing.T) {
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
@@ -221,7 +216,6 @@ func TestGetProposerDuties_NilData(t *testing.T) {
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,
@@ -249,7 +243,6 @@ func TestGetProposerDuties_NilProposerDuty(t *testing.T) {
 		fmt.Sprintf("%s/%d", getProposerDutiesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,
@@ -306,7 +299,6 @@ func TestGetSyncDuties_Valid(t *testing.T) {
 		&validator.GetSyncCommitteeDutiesResponse{},
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		expectedSyncDuties,
@@ -334,7 +326,6 @@ func TestGetSyncDuties_HttpError(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
@@ -359,7 +350,6 @@ func TestGetSyncDuties_NilData(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		4,
@@ -389,7 +379,6 @@ func TestGetSyncDuties_NilSyncDuty(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		4,
@@ -439,7 +428,6 @@ func TestGetCommittees_Valid(t *testing.T) {
 		&beacon.GetCommitteesResponse{},
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		expectedCommittees,
@@ -465,7 +453,6 @@ func TestGetCommittees_HttpError(t *testing.T) {
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
@@ -488,7 +475,6 @@ func TestGetCommittees_NilData(t *testing.T) {
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,
@@ -516,7 +502,6 @@ func TestGetCommittees_NilCommittee(t *testing.T) {
 		fmt.Sprintf("%s?epoch=%d", getCommitteesTestEndpoint, epoch),
 		gomock.Any(),
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,

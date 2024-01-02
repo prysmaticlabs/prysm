@@ -32,13 +32,11 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
-	assert.ErrorContains(t, "failed to query GET REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -138,7 +136,6 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 				},
 			).Return(
 				nil,
-				nil,
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -174,7 +171,6 @@ func TestGetBeaconBlock_Phase0Valid(t *testing.T) {
 			Data:    bytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -219,7 +215,6 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 		},
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -263,7 +258,6 @@ func TestGetBeaconBlock_BellatrixValid(t *testing.T) {
 			Data:                    bytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -310,7 +304,6 @@ func TestGetBeaconBlock_BlindedBellatrixValid(t *testing.T) {
 		},
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -355,7 +348,6 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 			Data:                    bytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -402,7 +394,6 @@ func TestGetBeaconBlock_BlindedCapellaValid(t *testing.T) {
 		},
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -447,7 +438,6 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 			Data:                    bytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -494,7 +484,6 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 		},
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -533,7 +522,6 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
-		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -546,7 +534,6 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 			Data:    blockBytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -586,7 +573,6 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
-		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -594,7 +580,6 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 		&abstractProduceBlockResponseJson{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusInternalServerError},
-		errors.New("foo"),
 	).Times(1)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -607,7 +592,6 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 			Data:    blockBytes,
 		},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 

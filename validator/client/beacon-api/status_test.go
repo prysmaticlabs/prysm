@@ -71,7 +71,6 @@ func TestValidatorStatus_Nominal(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		nil,
 		iface.ErrNotSupported,
 	).Times(1)
 
@@ -179,7 +178,6 @@ func TestMultipleValidatorStatus_Nominal(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		nil,
 		iface.ErrNotSupported,
 	).Times(1)
 
@@ -342,7 +340,6 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		&nodeVersionResponse,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		node.GetVersionResponse{Data: &node.Version{Version: "prysm/v0.0.1"}},
@@ -354,7 +351,6 @@ func TestGetValidatorsStatusResponse_Nominal_SomeActiveValidators(t *testing.T) 
 		"/eth/v1/beacon/states/head/validator_count?",
 		&validatorCountResponse,
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,
@@ -491,7 +487,6 @@ func TestGetValidatorsStatusResponse_Nominal_NoActiveValidators(t *testing.T) {
 		"/eth/v1/node/version",
 		&nodeVersionResponse,
 	).Return(
-		nil,
 		iface.ErrNotSupported,
 	).Times(1)
 
@@ -731,7 +726,6 @@ func TestValidatorStatusResponse_InvalidData(t *testing.T) {
 					"/eth/v1/node/version",
 					&nodeVersionResponse,
 				).Return(
-					nil,
 					iface.ErrNotSupported,
 				).Times(testCase.validatorCountCalled)
 

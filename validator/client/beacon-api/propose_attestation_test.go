@@ -132,7 +132,6 @@ func TestProposeAttestation(t *testing.T) {
 				bytes.NewBuffer(marshalledAttestations),
 				nil,
 			).Return(
-				nil,
 				test.endpointError,
 			).Times(test.endpointCall)
 

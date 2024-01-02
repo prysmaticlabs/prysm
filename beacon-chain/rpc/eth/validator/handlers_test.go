@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -1660,7 +1659,8 @@ func TestGetProposerDuties(t *testing.T) {
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			PayloadIDCache:         cache.NewPayloadIDCache(),
+			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -1681,9 +1681,6 @@ func TestGetProposerDuties(t *testing.T) {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(11, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(12289), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 11 not found")
 		assert.Equal(t, "12289", expectedDuty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[12289]), expectedDuty.Pubkey)
@@ -1702,7 +1699,8 @@ func TestGetProposerDuties(t *testing.T) {
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			PayloadIDCache:         cache.NewPayloadIDCache(),
+			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -1723,51 +1721,9 @@ func TestGetProposerDuties(t *testing.T) {
 				expectedDuty = duty
 			}
 		}
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(43, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(1360), vid)
 		require.NotNil(t, expectedDuty, "Expected duty for slot 43 not found")
 		assert.Equal(t, "1360", expectedDuty.ValidatorIndex)
 		assert.Equal(t, hexutil.Encode(pubKeys[1360]), expectedDuty.Pubkey)
-	})
-	t.Run("prune payload ID cache", func(t *testing.T) {
-		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
-		require.NoError(t, err, "Could not set up genesis state")
-		require.NoError(t, bs.SetSlot(params.BeaconConfig().SlotsPerEpoch))
-		require.NoError(t, bs.SetBlockRoots(roots))
-		chainSlot := params.BeaconConfig().SlotsPerEpoch
-		chain := &mockChain.ChainService{
-			State: bs, Root: genesisRoot[:], Slot: &chainSlot,
-		}
-		s := &Server{
-			Stater:                 &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{params.BeaconConfig().SlotsPerEpoch: bs}},
-			HeadFetcher:            chain,
-			TimeFetcher:            chain,
-			OptimisticModeFetcher:  chain,
-			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
-		}
-
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 1, [8]byte{1}, [32]byte{2})
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(31, 2, [8]byte{2}, [32]byte{3})
-		s.ProposerSlotIndexCache.SetProposerAndPayloadIDs(32, 4309, [8]byte{3}, [32]byte{4})
-
-		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
-		request = mux.SetURLVars(request, map[string]string{"epoch": "1"})
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-
-		s.GetProposerDuties(writer, request)
-		assert.Equal(t, http.StatusOK, writer.Code)
-		vid, _, has := s.ProposerSlotIndexCache.GetProposerPayloadIDs(1, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{})
-		require.Equal(t, false, has)
-		require.Equal(t, primitives.ValidatorIndex(0), vid)
-		vid, _, has = s.ProposerSlotIndexCache.GetProposerPayloadIDs(32, [32]byte{})
-		require.Equal(t, true, has)
-		require.Equal(t, primitives.ValidatorIndex(10565), vid)
 	})
 	t.Run("epoch out of bounds", func(t *testing.T) {
 		bs, err := transition.GenesisBeaconState(context.Background(), deposits, 0, eth1Data)
@@ -1785,7 +1741,8 @@ func TestGetProposerDuties(t *testing.T) {
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			PayloadIDCache:         cache.NewPayloadIDCache(),
+			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		}
 
 		currentEpoch := slots.ToEpoch(bs.Slot())
@@ -1828,7 +1785,8 @@ func TestGetProposerDuties(t *testing.T) {
 			TimeFetcher:            chain,
 			OptimisticModeFetcher:  chain,
 			SyncChecker:            &mockSync.Sync{IsSyncing: false},
-			ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+			PayloadIDCache:         cache.NewPayloadIDCache(),
+			TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		}
 
 		request := httptest.NewRequest(http.MethodGet, "http://www.example.com/eth/v1/validator/duties/proposer/{epoch}", nil)
@@ -2267,9 +2225,10 @@ func TestPrepareBeaconProposer(t *testing.T) {
 			request := httptest.NewRequest(http.MethodPost, url, &body)
 			writer := httptest.NewRecorder()
 			db := dbutil.SetupDB(t)
-			ctx := context.Background()
 			server := &Server{
-				BeaconDB: db,
+				BeaconDB:               db,
+				TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+				PayloadIDCache:         cache.NewPayloadIDCache(),
 			}
 			server.PrepareBeaconProposer(writer, request)
 			require.Equal(t, tt.code, writer.Code)
@@ -2277,11 +2236,13 @@ func TestPrepareBeaconProposer(t *testing.T) {
 				require.Equal(t, strings.Contains(writer.Body.String(), tt.wantErr), true)
 			} else {
 				require.NoError(t, err)
-				address, err := server.BeaconDB.FeeRecipientByValidatorID(ctx, 1)
-				require.NoError(t, err)
 				feebytes, err := hexutil.Decode(tt.request[0].FeeRecipient)
 				require.NoError(t, err)
-				require.Equal(t, common.BytesToAddress(feebytes), address)
+				index, err := strconv.ParseUint(tt.request[0].ValidatorIndex, 10, 64)
+				require.NoError(t, err)
+				val, tracked := server.TrackedValidatorsCache.Validator(primitives.ValidatorIndex(index))
+				require.Equal(t, true, tracked)
+				require.Equal(t, primitives.ExecutionAddress(feebytes), val.FeeRecipient)
 			}
 		})
 	}
@@ -2292,7 +2253,11 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	db := dbutil.SetupDB(t)
 
 	// New validator
-	proposerServer := &Server{BeaconDB: db}
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+		PayloadIDCache:         cache.NewPayloadIDCache(),
+	}
 	req := []*shared.FeeRecipient{{
 		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
 		ValidatorIndex: "1",
@@ -2318,7 +2283,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 
 	// Same validator with different fee recipient
 	hook.Reset()
@@ -2368,13 +2333,16 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 	writer = httptest.NewRecorder()
 	proposerServer.PrepareBeaconProposer(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	require.LogsDoNotContain(t, hook, "Updated fee recipient addresses")
+	require.LogsContain(t, hook, "Updated fee recipient addresses")
 }
 
 func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 	db := dbutil.SetupDB(b)
-	proposerServer := &Server{BeaconDB: db}
-
+	proposerServer := &Server{
+		BeaconDB:               db,
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
+		PayloadIDCache:         cache.NewPayloadIDCache(),
+	}
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
 	recipients := make([]*shared.FeeRecipient, 0)
 	for i := 0; i < 10000; i++ {

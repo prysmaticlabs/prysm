@@ -35,7 +35,6 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 		abstractSignedBlockResponseJson{Version: "foo"},
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
@@ -161,7 +160,6 @@ func TestStreamBlocks_Error(t *testing.T) {
 						},
 					).Return(
 						nil,
-						nil,
 					).Times(1)
 
 					beaconBlockConverter := testSuite.generateBeaconBlockConverter(ctrl, testCase.conversionError)
@@ -221,7 +219,6 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -259,7 +256,6 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -286,7 +282,6 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -385,7 +380,6 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -423,7 +417,6 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -450,7 +443,6 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -549,7 +541,6 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -587,7 +578,6 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -614,7 +604,6 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -713,7 +702,6 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -751,7 +739,6 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -778,7 +765,6 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -877,7 +863,6 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -907,7 +892,6 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 				&signedBlockResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				abstractSignedBlockResponseJson{
@@ -924,7 +908,6 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,

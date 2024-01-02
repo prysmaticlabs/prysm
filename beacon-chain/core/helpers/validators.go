@@ -20,10 +20,14 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "committee_cache_in_progress_hit",
-	Help: "The number of committee requests that are present in the cache.",
-})
+var (
+	CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "committee_cache_in_progress_hit",
+		Help: "The number of committee requests that are present in the cache.",
+	})
+
+	errProposerIndexMiss = errors.New("propoposer index not found in cache")
+)
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -259,10 +263,32 @@ func ValidatorActivationChurnLimitDeneb(activeValidatorCount uint64) uint64 {
 //	  indices = get_active_validator_indices(state, epoch)
 //	  return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
-	e := time.CurrentEpoch(state)
+	return BeaconProposerIndexAtSlot(ctx, state, state.Slot())
+}
+
+// cachedProposerIndexAtSlot returns the proposer index at the given slot from
+// the cache at the given root key.
+func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.ProposerIndices(slots.ToEpoch(slot), root)
+	if !has {
+		cache.ProposerIndicesCacheMiss.Inc()
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		cache.ProposerIndicesCacheMiss.Inc()
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// BeaconProposerIndexAtSlot returns proposer index at the given slot from the
+// point of view of the given state as head state
+func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	e := slots.ToEpoch(slot)
+	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
+	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch := time.PrevEpoch(state)
-		s, err := slots.EpochEnd(wantedEpoch)
+		s, err := slots.EpochEnd(e - 1)
 		if err != nil {
 			return 0, err
 		}
@@ -271,12 +297,16 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 			return 0, err
 		}
 		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			proposerIndices, ok := proposerIndicesCache.ProposerIndices(wantedEpoch+1, bytesutil.ToBytes32(r))
-			if ok {
-				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			pid, err := cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
-			if err := UpdateProposerIndicesInCache(ctx, state, time.CurrentEpoch(state)); err != nil {
+			if err := UpdateProposerIndicesInCache(ctx, state, e); err != nil {
 				return 0, errors.Wrap(err, "could not update committee cache")
+			}
+			pid, err = cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
 		}
 	}
@@ -286,7 +316,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot))...)
 	seedWithSlotHash := hash.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(ctx, state, e)

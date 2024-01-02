@@ -219,12 +219,8 @@ func (c beaconApiDutiesProvider) GetCommittees(ctx context.Context, epoch primit
 	committeesRequest := buildURL("/eth/v1/beacon/states/head/committees", committeeParams)
 
 	var stateCommittees beacon.GetCommitteesResponse
-	errJson, err := c.jsonRestHandler.Get(ctx, committeesRequest, &stateCommittees)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, committeesRequest, &stateCommittees); err != nil {
+		return nil, err
 	}
 
 	if stateCommittees.Data == nil {
@@ -253,18 +249,14 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 	}
 
 	attesterDuties := &validator.GetAttesterDutiesResponse{}
-	errJson, err := c.jsonRestHandler.Post(
+	if err = c.jsonRestHandler.Post(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/duties/attester/%d", epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
 		attesterDuties,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	); err != nil {
+		return nil, err
 	}
 
 	for index, attesterDuty := range attesterDuties.Data {
@@ -279,12 +271,8 @@ func (c beaconApiDutiesProvider) GetAttesterDuties(ctx context.Context, epoch pr
 // GetProposerDuties retrieves the proposer duties for the given epoch
 func (c beaconApiDutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
 	proposerDuties := validator.GetProposerDutiesResponse{}
-	errJson, err := c.jsonRestHandler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, fmt.Sprintf("/eth/v1/validator/duties/proposer/%d", epoch), &proposerDuties); err != nil {
+		return nil, err
 	}
 
 	if proposerDuties.Data == nil {
@@ -313,18 +301,14 @@ func (c beaconApiDutiesProvider) GetSyncDuties(ctx context.Context, epoch primit
 	}
 
 	syncDuties := validator.GetSyncCommitteeDutiesResponse{}
-	errJson, err := c.jsonRestHandler.Post(
+	if err = c.jsonRestHandler.Post(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/duties/sync/%d", epoch),
 		nil,
 		bytes.NewBuffer(validatorIndicesBytes),
 		&syncDuties,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	); err != nil {
+		return nil, err
 	}
 
 	if syncDuties.Data == nil {
