@@ -56,11 +56,14 @@ func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, fcs.InsertNode(ctx, state, blkRoot))
 
-	b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
-		Body: &ethpb.BeaconBlockBodyBellatrix{
-			ExecutionPayload: &v1.ExecutionPayload{},
+	sb := &ethpb.SignedBeaconBlockBellatrix{
+		Block: &ethpb.BeaconBlockBellatrix{
+			Body: &ethpb.BeaconBlockBodyBellatrix{
+				ExecutionPayload: &v1.ExecutionPayload{},
+			},
 		},
-	})
+	}
+	b, err := consensusblocks.NewSignedBeaconBlock(sb)
 	require.NoError(t, err)
 
 	pid := &v1.PayloadIDBytes{1}
@@ -72,7 +75,7 @@ func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
 	// Intentionally generate a bad state such that `hash_tree_root` fails during `process_slot`
 	s, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
 	require.NoError(t, err)
-	arg := &notifyForkchoiceUpdateArg{
+	arg := &fcuConfig{
 		headState: s,
 		headRoot:  [32]byte{},
 		headBlock: b,
@@ -113,7 +116,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		blk              interfaces.ReadOnlyBeaconBlock
+		blk              interfaces.ReadOnlySignedBeaconBlock
 		headRoot         [32]byte
 		finalizedRoot    [32]byte
 		justifiedRoot    [32]byte
@@ -122,24 +125,24 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 	}{
 		{
 			name: "phase0 block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}})
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlock{Block: &ethpb.BeaconBlock{Body: &ethpb.BeaconBlockBody{}}})
 				require.NoError(t, err)
 				return b
 			}(),
 		},
 		{
 			name: "altair block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}})
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockAltair{Block: &ethpb.BeaconBlockAltair{Body: &ethpb.BeaconBlockBodyAltair{}}})
 				require.NoError(t, err)
 				return b
 			}(),
 		},
 		{
 			name: "not execution block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{
 							ParentHash:    make([]byte, fieldparams.RootLength),
@@ -152,19 +155,19 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 							BlockHash:     make([]byte, fieldparams.RootLength),
 						},
 					},
-				})
+				}})
 				require.NoError(t, err)
 				return b
 			}(),
 		},
 		{
 			name: "happy case: finalized root is altair block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
-				})
+				}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -173,12 +176,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "happy case: finalized root is bellatrix block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
-				})
+				}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -187,12 +190,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with optimistic block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
-				})
+				}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -202,12 +205,12 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 		},
 		{
 			name: "forkchoice updated with invalid block",
-			blk: func() interfaces.ReadOnlyBeaconBlock {
-				b, err := consensusblocks.NewBeaconBlock(&ethpb.BeaconBlockBellatrix{
+			blk: func() interfaces.ReadOnlySignedBeaconBlock {
+				b, err := consensusblocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockBellatrix{Block: &ethpb.BeaconBlockBellatrix{
 					Body: &ethpb.BeaconBlockBodyBellatrix{
 						ExecutionPayload: &v1.ExecutionPayload{},
 					},
-				})
+				}})
 				require.NoError(t, err)
 				return b
 			}(),
@@ -225,7 +228,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 			st, _ := util.DeterministicGenesisState(t, 1)
 			require.NoError(t, beaconDB.SaveState(ctx, st, tt.finalizedRoot))
 			require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, tt.finalizedRoot))
-			arg := &notifyForkchoiceUpdateArg{
+			arg := &fcuConfig{
 				headState: st,
 				headRoot:  tt.headRoot,
 				headBlock: tt.blk,
@@ -305,9 +308,9 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
-	a := &notifyForkchoiceUpdateArg{
+	a := &fcuConfig{
 		headState: st,
-		headBlock: wbd.Block(),
+		headBlock: wbd,
 		headRoot:  brd,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)
@@ -442,9 +445,9 @@ func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
 
 	require.NoError(t, beaconDB.SaveState(ctx, st, bra))
 	require.NoError(t, beaconDB.SaveGenesisBlockRoot(ctx, bra))
-	a := &notifyForkchoiceUpdateArg{
+	a := &fcuConfig{
 		headState: st,
-		headBlock: wbg.Block(),
+		headBlock: wbg,
 		headRoot:  brg,
 	}
 	_, err = service.notifyForkchoiceUpdate(ctx, a)

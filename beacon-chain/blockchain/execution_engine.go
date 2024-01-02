@@ -32,22 +32,18 @@ const blobCommitmentVersionKZG uint8 = 0x01
 
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
-// notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
-type notifyForkchoiceUpdateArg struct {
-	headState  state.BeaconState
-	headRoot   [32]byte
-	headBlock  interfaces.ReadOnlyBeaconBlock
-	attributes payloadattribute.Attributer
-}
-
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
-	headBlk := arg.headBlock
+	if arg.headBlock.IsNil() {
+		log.Error("Head block is nil")
+		return nil, nil
+	}
+	headBlk := arg.headBlock.Block()
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		log.Error("Head block is nil")
 		return nil, nil
@@ -122,10 +118,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				log.WithError(err).Error("Could not get head state")
 				return nil, nil
 			}
-			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+			pid, err := s.notifyForkchoiceUpdate(ctx, &fcuConfig{
 				headState:  st,
 				headRoot:   r,
-				headBlock:  b.Block(),
+				headBlock:  b,
 				attributes: arg.attributes,
 			})
 			if err != nil {
