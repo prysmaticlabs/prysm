@@ -68,7 +68,14 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 	if err != nil {
 		return errors.Wrap(err, "failed to perform HTTP request")
 	}
+
 	go func() {
+		defer func() {
+			if closeErr := resp.Body.Close(); closeErr != nil {
+				log.WithError(closeErr).Error("Failed to close events response body")
+			}
+		}()
+
 		// We signal an EOF error in a special way. When we get this error while reading the response body,
 		// there might still be an event received in the body that we should handle.
 		eof := false
@@ -85,9 +92,6 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 					log.Error("Received EOF while reading events response body")
 					eof = true
 				} else {
-					if closeErr := resp.Body.Close(); closeErr != nil {
-						log.WithError(closeErr).Error("Failed to close events response body")
-					}
 					eventErrCh <- err
 					return
 				}
@@ -98,9 +102,6 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			if len(e) < 2 {
 				// We reached EOF and there is no event to send
 				if eof {
-					if closeErr := resp.Body.Close(); closeErr != nil {
-						log.WithError(closeErr).Error("Failed to close events response body")
-					}
 					return
 				}
 				continue
@@ -109,16 +110,13 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			for _, sub := range h.subs {
 				select {
 				case sub.ch <- event{eventType: e[0], data: e[1]}:
-					// Event sent successfully.
+				// Event sent successfully.
 				default:
 					log.Warn("Subscriber '" + sub.name + "' not ready to receive events")
 				}
 			}
 			// We reached EOF and sent the last event
 			if eof {
-				if closeErr := resp.Body.Close(); closeErr != nil {
-					log.WithError(closeErr).Error("Failed to close events response body")
-				}
 				return
 			}
 		}
