@@ -49,7 +49,6 @@ func TestIndex_Nominal(t *testing.T) {
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		beacon.GetValidatorsResponse{
@@ -100,7 +99,6 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		beacon.GetValidatorsResponse{
@@ -142,7 +140,6 @@ func TestIndex_BadIndexError(t *testing.T) {
 		reqBuffer,
 		&stateValidatorsResponseJson,
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		4,
@@ -192,7 +189,6 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		reqBuffer,
 		&stateValidatorsResponseJson,
 	).Return(
-		nil,
 		errors.New("some specific json error"),
 	).Times(1)
 

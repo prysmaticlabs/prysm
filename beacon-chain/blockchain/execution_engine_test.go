@@ -26,11 +26,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
-	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
@@ -79,14 +78,14 @@ func Test_NotifyForkchoiceUpdate_GetPayloadAttrErrorCanContinue(t *testing.T) {
 		headBlock: b,
 	}
 
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(1, 0, [8]byte{}, [32]byte{})
+	service.cfg.PayloadIDCache.Set(1, [32]byte{}, [8]byte{})
 	got, err := service.notifyForkchoiceUpdate(ctx, arg)
 	require.NoError(t, err)
 	require.DeepEqual(t, got, pid) // We still get a payload ID even though the state is bad. This means it returns until the end.
 }
 
 func Test_NotifyForkchoiceUpdate(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
@@ -246,7 +245,7 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 }
 
 func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	// Prepare blocks
@@ -334,7 +333,7 @@ func Test_NotifyForkchoiceUpdate_NIlLVH(t *testing.T) {
 // 3. the blockchain package calls fcu to obtain heads G -> F -> D.
 
 func Test_NotifyForkchoiceUpdateRecursive_DoublyLinkedTree(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	// Prepare blocks
@@ -467,7 +466,7 @@ func Test_NotifyNewPayload(t *testing.T) {
 	cfg := params.BeaconConfig()
 	cfg.TerminalTotalDifficulty = "2"
 	params.OverrideBeaconConfig(cfg)
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx, fcs := tr.ctx, tr.fcs
 
 	phase0State, _ := util.DeterministicGenesisState(t, 1)
@@ -709,7 +708,7 @@ func Test_NotifyNewPayload_SetOptimisticToValid(t *testing.T) {
 	cfg.TerminalTotalDifficulty = "2"
 	params.OverrideBeaconConfig(cfg)
 
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	bellatrixState, _ := util.DeterministicGenesisStateBellatrix(t, 2)
@@ -777,83 +776,70 @@ func Test_reportInvalidBlock(t *testing.T) {
 }
 
 func Test_GetPayloadAttribute(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	hasPayload, _ := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, false, hasPayload)
-	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, Index: 0})
 	// Cache hit, advance state, no fee recipient
-	suggestedVid := primitives.ValidatorIndex(1)
 	slot := primitives.Slot(1)
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
-	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, FeeRecipient: primitives.ExecutionAddress(suggestedAddr), Index: 0})
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
 }
 
 func Test_GetPayloadAttribute_PrepareAllPayloads(t *testing.T) {
-	hook := logTest.NewGlobal()
 	resetCfg := features.InitWithReset(&features.Flags{
 		PrepareAllPayloads: true,
 	})
 	defer resetCfg()
 
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	hasPayload, attr := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, primitives.ValidatorIndex(0), vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
-	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 }
 
 func Test_GetPayloadAttributeV2(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	st, _ := util.DeterministicGenesisStateCapella(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	hasPayload, _ := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, false, hasPayload)
-	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
 	// Cache hit, advance state, no fee recipient
-	suggestedVid := primitives.ValidatorIndex(1)
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, Index: 0})
 	slot := primitives.Slot(1)
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
-	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 	a, err := attr.Withdrawals()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(a))
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, FeeRecipient: primitives.ExecutionAddress(suggestedAddr), Index: 0})
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
 	a, err = attr.Withdrawals()
 	require.NoError(t, err)
@@ -861,35 +847,30 @@ func Test_GetPayloadAttributeV2(t *testing.T) {
 }
 
 func Test_GetPayloadAttributeDeneb(t *testing.T) {
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	st, _ := util.DeterministicGenesisStateDeneb(t, 1)
-	hasPayload, _, vId := service.getPayloadAttribute(ctx, st, 0, []byte{})
+	hasPayload, _ := service.getPayloadAttribute(ctx, st, 0, []byte{})
 	require.Equal(t, false, hasPayload)
-	require.Equal(t, primitives.ValidatorIndex(0), vId)
 
 	// Cache hit, advance state, no fee recipient
-	suggestedVid := primitives.ValidatorIndex(1)
 	slot := primitives.Slot(1)
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hook := logTest.NewGlobal()
-	hasPayload, attr, vId := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, Index: 0})
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr := service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(attr.SuggestedFeeRecipient()).String())
-	require.LogsContain(t, hook, "Fee recipient is currently using the burn address")
 	a, err := attr.Withdrawals()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(a))
 
 	// Cache hit, advance state, has fee recipient
 	suggestedAddr := common.HexToAddress("123")
-	require.NoError(t, service.cfg.BeaconDB.SaveFeeRecipientsByValidatorIDs(ctx, []primitives.ValidatorIndex{suggestedVid}, []common.Address{suggestedAddr}))
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(slot, suggestedVid, [8]byte{}, [32]byte{})
-	hasPayload, attr, vId = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, FeeRecipient: primitives.ExecutionAddress(suggestedAddr), Index: 0})
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	hasPayload, attr = service.getPayloadAttribute(ctx, st, slot, params.BeaconConfig().ZeroHash[:])
 	require.Equal(t, true, hasPayload)
-	require.Equal(t, suggestedVid, vId)
 	require.Equal(t, suggestedAddr, common.BytesToAddress(attr.SuggestedFeeRecipient()))
 	a, err = attr.Withdrawals()
 	require.NoError(t, err)

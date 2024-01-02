@@ -35,7 +35,6 @@ func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	attestationDataRoot, err := signedAggregateAndProof.Message.Aggregate.Data.HashTreeRoot()
@@ -66,7 +65,6 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 		bytes.NewBuffer(marshalledSignedAggregateSignedAndProof),
 		nil,
 	).Return(
-		nil,
 		errors.New("bad request"),
 	).Times(1)
 

@@ -52,12 +52,8 @@ func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID s
 	queryUrl := buildURL(fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count", stateID), queryParams)
 
 	var validatorCountResponse validator.CountResponse
-	errJson, err := c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse); err != nil {
+		return nil, err
 	}
 
 	if validatorCountResponse.Data == nil {

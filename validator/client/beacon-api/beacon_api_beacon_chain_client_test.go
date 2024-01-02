@@ -122,10 +122,7 @@ func TestListValidators(t *testing.T) {
 		)
 
 		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-		jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(
-			nil,
-			errors.New("bar error"),
-		)
+		jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(errors.New("bar error"))
 
 		beaconChainClient := beaconApiBeaconChainClient{
 			stateValidatorsProvider: stateValidatorsProvider,
@@ -199,7 +196,6 @@ func TestListValidators(t *testing.T) {
 
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Get(ctx, blockHeaderEndpoint, gomock.Any()).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -752,7 +748,6 @@ func TestGetChainHead(t *testing.T) {
 				finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
-					nil,
 					testCase.finalityCheckpointsError,
 				).SetArg(
 					2,
@@ -853,7 +848,6 @@ func TestGetChainHead(t *testing.T) {
 				finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
 				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					nil,
-					nil,
 				).SetArg(
 					2,
 					generateValidFinalityCheckpointsResponse(),
@@ -861,7 +855,6 @@ func TestGetChainHead(t *testing.T) {
 
 				headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
 				jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
-					nil,
 					testCase.headBlockHeadersError,
 				).SetArg(
 					2,
@@ -885,7 +878,6 @@ func TestGetChainHead(t *testing.T) {
 		finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
 		jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 			nil,
-			nil,
 		).SetArg(
 			2,
 			generateValidFinalityCheckpointsResponse(),
@@ -893,7 +885,6 @@ func TestGetChainHead(t *testing.T) {
 
 		headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
 		jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
-			nil,
 			nil,
 		).SetArg(
 			2,
@@ -957,7 +948,6 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 		bytes.NewBuffer(request),
 		wantResponse,
 	).Return(
-		nil,
 		nil,
 	)
 

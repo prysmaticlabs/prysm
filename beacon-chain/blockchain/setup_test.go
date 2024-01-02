@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -114,6 +115,7 @@ func minimalTestService(t *testing.T, opts ...Option) (*Service, *testServiceReq
 		WithAttestationService(req.attSrv),
 		WithBLSToExecPool(req.blsPool),
 		WithDepositCache(dc),
+		WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
 	}
 	// append the variadic opts so they override the defaults by being processed afterwards
 	opts = append(defOpts, opts...)

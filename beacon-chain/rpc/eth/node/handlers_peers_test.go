@@ -146,7 +146,7 @@ func TestGetPeers(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		returnedPeer := resp.Data[0]
-		assert.Equal(t, expectedId.Pretty(), returnedPeer.PeerId)
+		assert.Equal(t, expectedId.String(), returnedPeer.PeerId)
 		expectedEnr, err := peerStatus.ENR(expectedId)
 		require.NoError(t, err)
 		serializedEnr, err := p2p.SerializeENR(expectedEnr)
@@ -230,7 +230,7 @@ func TestGetPeers(t *testing.T) {
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, len(tt.wantIds), len(resp.Data), "Wrong number of peers returned")
 			for _, id := range tt.wantIds {
-				expectedId := id.Pretty()
+				expectedId := id.String()
 				found := false
 				for _, returnedPeer := range resp.Data {
 					if returnedPeer.PeerId == expectedId {
