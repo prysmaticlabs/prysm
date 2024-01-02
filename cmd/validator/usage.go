@@ -27,7 +27,7 @@ AUTHORS:
    {{end -}}
 {{end -}}
 {{if .App.Commands}}
-GLOBAL OPTIONS:
+global OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
    {{end -}}
 {{end -}}
