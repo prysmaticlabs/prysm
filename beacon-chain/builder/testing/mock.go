@@ -14,6 +14,7 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -30,13 +31,44 @@ type MockBuilderService struct {
 	PayloadDeneb          *v1.ExecutionPayloadDeneb
 	BlobBundle            *v1.BlobsBundle
 	ErrSubmitBlindedBlock error
-	Bid                   *ethpb.SignedBuilderBid
-	BidCapella            *ethpb.SignedBuilderBidCapella
-	BidDeneb              *ethpb.SignedBuilderBidDeneb
+	Bid                   *util.FakeBid
+	BidCapella            *util.FakeBidCapella
+	BidDeneb              *util.FakeBidDeneb
 	RegistrationCache     *cache.RegistrationCache
 	ErrGetHeader          error
 	ErrRegisterValidator  error
 	Cfg                   *Config
+}
+
+func DefaultBuilderService(useBuilder bool) (*MockBuilderService, error) {
+	bid, err := util.DefaultBid()
+	if err != nil {
+		return nil, err
+	}
+	bidCapella, err := util.DefaultBidCapella()
+	if err != nil {
+		return nil, err
+	}
+	bidDeneb, err := util.DefaultBidDeneb()
+	if err != nil {
+		return nil, err
+	}
+	return &MockBuilderService{
+		HasConfigured:  useBuilder,
+		Payload:        util.DefaultPayload(),
+		PayloadCapella: util.DefaultPayloadCapella(),
+		PayloadDeneb:   util.DefaultPayloadDeneb(),
+		Bid:            bid,
+		BidCapella:     bidCapella,
+		BidDeneb:       bidDeneb,
+	}, nil
+}
+
+func (s *MockBuilderService) Customize(f func(*MockBuilderService)) *MockBuilderService {
+	if f != nil {
+		f(s)
+	}
+	return s
 }
 
 // Configured for mocking.
@@ -73,12 +105,24 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch || s.BidDeneb != nil {
-		return builder.WrappedSignedBuilderBidDeneb(s.BidDeneb)
+		sBid, err := s.BidDeneb.Sign()
+		if err != nil {
+			return nil, err
+		}
+		return builder.WrappedSignedBuilderBidDeneb(sBid)
 	}
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch || s.BidCapella != nil {
-		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
+		sBid, err := s.BidCapella.Sign()
+		if err != nil {
+			return nil, err
+		}
+		return builder.WrappedSignedBuilderBidCapella(sBid)
 	}
-	w, err := builder.WrappedSignedBuilderBid(s.Bid)
+	sBid, err := s.Bid.Sign()
+	if err != nil {
+		return nil, err
+	}
+	w, err := builder.WrappedSignedBuilderBid(sBid)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}

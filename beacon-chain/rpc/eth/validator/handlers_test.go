@@ -1341,10 +1341,8 @@ func TestServer_RegisterValidator(t *testing.T) {
 						SyncCommitteeIndices: []primitives.CommitteeIndex{0},
 					},
 				},
-				BlockBuilder: &builderTest.MockBuilderService{
-					HasConfigured: true,
-				},
-				BeaconDB: db,
+				BlockBuilder: builderTest.DefaultBuilderService(true),
+				BeaconDB:     db,
 			}
 
 			server.RegisterValidator(writer, request)

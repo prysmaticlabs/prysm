@@ -628,10 +628,10 @@ func injectSlashings(t *testing.T, st state.BeaconState, keys []bls.SecretKey, s
 
 func TestProposer_ProposeBlock_OK(t *testing.T) {
 	tests := []struct {
-		name       string
-		block      func([32]byte) *ethpb.GenericSignedBeaconBlock
-		err        string
-		useBuilder bool
+		name           string
+		block          func([32]byte) *ethpb.GenericSignedBeaconBlock
+		err            string
+		builderService *builderTest.MockBuilderService
 	}{
 		{
 			name: "phase0",
@@ -642,6 +642,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Phase0{Phase0: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "altair",
@@ -652,6 +657,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "bellatrix",
@@ -662,6 +672,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "blind capella",
@@ -678,7 +693,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
-			useBuilder: true,
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(true)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "blind capella no builder",
@@ -695,6 +714,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 			err: "unconfigured block builder",
 		},
 		{
@@ -706,6 +730,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "deneb block no blob",
@@ -716,6 +745,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "deneb block some blobs",
@@ -729,6 +763,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "deneb block some blobs (kzg and blob count missmatch)",
@@ -741,6 +780,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Deneb{Deneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(false)
+				require.NoError(t, err)
+				return bs
+			}(),
 			err: "blob KZG commitments don't match number of blobs or KZG proofs",
 		},
 		{
@@ -759,7 +803,11 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
-			useBuilder: true,
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(true)
+				require.NoError(t, err)
+				return bs
+			}(),
 		},
 		{
 			name: "blind deneb block some blobs (commitment value does not match blob)",
@@ -777,8 +825,15 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
-			useBuilder: true,
-			err:        "unblind sidecars failed: commitment value doesn't match block",
+			builderService: func() *builderTest.MockBuilderService {
+				bs, err := builderTest.DefaultBuilderService(true)
+				require.NoError(t, err)
+				bs.Customize(func(s *builderTest.MockBuilderService) {
+					s.BlobBundle = &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}
+				})
+				return bs
+			}(),
+			err: "unblind sidecars failed: commitment value doesn't match block",
 		},
 	}
 
@@ -797,10 +852,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder: &builderTest.MockBuilderService{HasConfigured: tt.useBuilder, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(),
-					BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
-				BeaconDB:     db,
-				BlobReceiver: c,
+				BlockBuilder:  tt.builderService,
+				BeaconDB:      db,
+				BlobReceiver:  c,
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
