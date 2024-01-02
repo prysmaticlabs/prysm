@@ -342,10 +342,10 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 			return errors.Wrap(err, "could not set optimistic block to valid")
 		}
 	}
-	arg := &notifyForkchoiceUpdateArg{
+	arg := &fcuConfig{
 		headState: preState,
 		headRoot:  lastBR,
-		headBlock: lastB.Block(),
+		headBlock: lastB,
 	}
 	if _, err := s.notifyForkchoiceUpdate(ctx, arg); err != nil {
 		return err
@@ -711,12 +711,12 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	}
 	s.headLock.RUnlock()
 	s.cfg.ForkChoiceStore.RLock()
-	fcuArgs := &notifyForkchoiceUpdateArg{
+	fcuArgs := &fcuConfig{
 		headState: headState,
 		headRoot:  headRoot,
-		headBlock: headBlock.Block(),
+		headBlock: headBlock,
 	}
-	_, fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {

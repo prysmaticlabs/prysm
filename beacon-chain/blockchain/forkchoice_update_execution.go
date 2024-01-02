@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -49,6 +50,7 @@ type fcuConfig struct {
 	headBlock     interfaces.ReadOnlySignedBeaconBlock
 	headRoot      [32]byte
 	proposingSlot primitives.Slot
+	attributes    payloadattribute.Attributer
 }
 
 // fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
@@ -57,21 +59,17 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuCo
 	defer span.End()
 	// Note: Use the service context here to avoid the parent context being ended during a forkchoice update.
 	ctx = trace.NewContext(s.ctx, span)
-	fcuArgs := &notifyForkchoiceUpdateArg{
+	fcuArgs := &fcuConfig{
 		headState: args.headState,
 		headRoot:  args.headRoot,
-		headBlock: args.headBlock.Block(),
+		headBlock: args.headBlock,
 	}
 	_, tracked := s.trackedProposer(args.headState, args.proposingSlot)
 	if tracked && !features.Get().DisableReorgLateBlocks {
 		if s.shouldOverrideFCU(args.headRoot, args.proposingSlot) {
 			return nil
 		}
-		var has bool
-		has, fcuArgs.attributes = s.getPayloadAttribute(ctx, args.headState, args.proposingSlot, args.headRoot[:])
-		if !has {
-			log.Error("could not get payload attributes for tracked proposer")
-		}
+		fcuArgs.attributes = s.getPayloadAttribute(ctx, args.headState, args.proposingSlot, args.headRoot[:])
 	}
 	_, err := s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	if err != nil {
