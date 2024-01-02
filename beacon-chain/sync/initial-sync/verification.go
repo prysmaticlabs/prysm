@@ -96,9 +96,5 @@ func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROB
 		return vb, err
 	}
 
-	vb, err := bv.VerifiedROBlob()
-	if err == nil {
-		batch.MarkVerified(sc.BlockRoot(), sc.Slot())
-	}
-	return vb, err
+	return bv.VerifiedROBlob()
 }
