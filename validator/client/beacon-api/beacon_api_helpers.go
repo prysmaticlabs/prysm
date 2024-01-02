@@ -55,12 +55,8 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStat
 
 	stateForkResponseJson := &beacon.GetStateForkResponse{}
 
-	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, stateForkResponseJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, endpoint, stateForkResponseJson); err != nil {
+		return nil, err
 	}
 
 	return stateForkResponseJson, nil
@@ -71,12 +67,8 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetB
 
 	blockHeadersResponseJson := &beacon.GetBlockHeadersResponse{}
 
-	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, blockHeadersResponseJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, endpoint, blockHeadersResponseJson); err != nil {
+		return nil, err
 	}
 
 	return blockHeadersResponseJson, nil
@@ -93,12 +85,8 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 		return nil, errors.Wrapf(err, "failed to marshal validator indexes")
 	}
 
-	errJson, err := c.jsonRestHandler.Post(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Post(ctx, url, nil, bytes.NewBuffer(marshalledJsonValidatorIndexes), livenessResponseJson); err != nil {
+		return nil, err
 	}
 
 	return livenessResponseJson, nil
@@ -109,12 +97,8 @@ func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncSt
 
 	syncingResponseJson := &node.SyncStatusResponse{}
 
-	errJson, err := c.jsonRestHandler.Get(ctx, endpoint, syncingResponseJson)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err := c.jsonRestHandler.Get(ctx, endpoint, syncingResponseJson); err != nil {
+		return nil, err
 	}
 
 	return syncingResponseJson, nil

@@ -123,7 +123,6 @@ func TestActivation_Nominal(t *testing.T) {
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		beacon.GetValidatorsResponse{
@@ -248,7 +247,6 @@ func TestActivation_InvalidData(t *testing.T) {
 					gomock.Any(),
 				).Return(
 					nil,
-					nil,
 				).SetArg(
 					4,
 					beacon.GetValidatorsResponse{
@@ -289,7 +287,6 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("some specific json error"),
 	).Times(1)
 

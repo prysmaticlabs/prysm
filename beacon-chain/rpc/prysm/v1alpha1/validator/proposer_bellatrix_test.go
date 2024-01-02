@@ -81,9 +81,10 @@ func TestServer_setExecutionData(t *testing.T) {
 		HeadFetcher:            &blockchainTest.ChainService{State: capellaTransitionState},
 		FinalizationFetcher:    &blockchainTest.ChainService{},
 		BeaconDB:               beaconDB,
-		ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache(),
+		PayloadIDCache:         cache.NewPayloadIDCache(),
 		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true, Cfg: &builderTest.Config{BeaconDB: beaconDB}},
 		ForkchoiceFetcher:      &blockchainTest.ChainService{},
+		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 	}
 
 	t.Run("No builder configured. Use local block", func(t *testing.T) {

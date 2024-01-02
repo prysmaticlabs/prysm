@@ -4,9 +4,24 @@
 package cache
 
 import (
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+)
+
+var (
+	// ProposerIndicesCacheMiss tracks the number of proposerIndices requests that aren't present in the cache.
+	ProposerIndicesCacheMiss = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "proposer_indices_cache_miss",
+		Help: "The number of proposer indices requests that aren't present in the cache.",
+	})
+	// ProposerIndicesCacheHit tracks the number of proposerIndices requests that are in the cache.
+	ProposerIndicesCacheHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "proposer_indices_cache_hit",
+		Help: "The number of proposer indices requests that are present in the cache.",
+	})
 )
 
 // FakeProposerIndicesCache is a struct with 1 queue for looking up proposer indices by root.

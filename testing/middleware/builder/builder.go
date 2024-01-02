@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/beacon/engine"
@@ -115,6 +116,7 @@ type Builder struct {
 	blobBundle     *v1.BlobsBundle
 	mux            *gMux.Router
 	validatorMap   map[string]*eth.ValidatorRegistrationV1
+	valLock        sync.RWMutex
 	srv            *http.Server
 }
 
@@ -160,7 +162,9 @@ func New(opts ...Option) (*Builder, error) {
 	p.address = addr
 	p.srv = srv
 	p.execClient = execClient
+	p.valLock.Lock()
 	p.validatorMap = map[string]*eth.ValidatorRegistrationV1{}
+	p.valLock.Unlock()
 	p.mux = router
 	return p, nil
 }
@@ -247,7 +251,9 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 			p.cfg.logger.Errorf("Could not unmarshal fcu: %v", err)
 			return
 		}
-		p.currId = result.Result.PayloadId
+		if result.Result.PayloadId != nil && *result.Result.PayloadId != [8]byte{} {
+			p.currId = result.Result.PayloadId
+		}
 		if rpcObj.Method == ForkchoiceUpdatedMethodV3 {
 			attr := &v1.PayloadAttributesV3{}
 			obj, err := json.Marshal(rpcObj.Params[1])
@@ -261,7 +267,17 @@ func (p *Builder) handleEngineCalls(req, resp []byte) {
 			}
 			p.prevBeaconRoot = attr.ParentBeaconBlockRoot
 		}
-		p.cfg.logger.Infof("Received payload id of %#x", result.Result.PayloadId)
+		payloadID := [8]byte{}
+		status := ""
+		lastValHash := []byte{}
+		if result.Result.PayloadId != nil {
+			payloadID = *result.Result.PayloadId
+		}
+		if result.Result.Status != nil {
+			status = result.Result.Status.Status.String()
+			lastValHash = result.Result.Status.LatestValidHash
+		}
+		p.cfg.logger.Infof("Received payload id of %#x and status of %s along with a valid hash of %#x", payloadID, status, lastValHash)
 	}
 }
 
@@ -281,7 +297,9 @@ func (p *Builder) registerValidators(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		p.valLock.Lock()
 		p.validatorMap[r.Message.Pubkey] = msg
+		p.valLock.Unlock()
 	}
 	// TODO: Verify Signatures from validators
 	w.WriteHeader(http.StatusOK)
@@ -664,6 +682,7 @@ func (p *Builder) retrievePendingBlock() (*v1.ExecutionPayload, error) {
 	if err = json.Unmarshal(marshalledOutput, bellatrixPayload); err != nil {
 		return nil, err
 	}
+	p.currId = nil
 	return bellatrixPayload, nil
 }
 
@@ -688,6 +707,7 @@ func (p *Builder) retrievePendingBlockCapella() (*v1.ExecutionPayloadCapellaWith
 	if err = json.Unmarshal(marshalledOutput, capellaPayload); err != nil {
 		return nil, err
 	}
+	p.currId = nil
 	return capellaPayload, nil
 }
 
@@ -716,6 +736,7 @@ func (p *Builder) retrievePendingBlockDeneb() (*v1.ExecutionPayloadDenebWithValu
 	if err = json.Unmarshal(marshalledOutput, denebPayload); err != nil {
 		return nil, err
 	}
+	p.currId = nil
 	return denebPayload, nil
 }
 

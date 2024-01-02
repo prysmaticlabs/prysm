@@ -94,3 +94,23 @@ func (a *data) PbV3() (*enginev1.PayloadAttributesV3, error) {
 		ParentBeaconBlockRoot: a.parentBeaconBlockRoot,
 	}, nil
 }
+
+// IsEmpty returns whether the given payload attribute is empty
+func (a *data) IsEmpty() bool {
+	if len(a.PrevRandao()) != 0 {
+		return false
+	}
+	if a.Timestamps() != 0 {
+		return false
+	}
+	if len(a.SuggestedFeeRecipient()) != 0 {
+		return false
+	}
+	if a.Version() >= version.Capella && len(a.withdrawals) != 0 {
+		return false
+	}
+	if a.Version() >= version.Deneb && len(a.parentBeaconBlockRoot) != 0 {
+		return false
+	}
+	return true
+}

@@ -169,7 +169,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					},
 				},
 			).Return(
-				nil,
 				test.syncingErr,
 			).Times(1)
 
@@ -201,7 +200,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					},
 				},
 			).Return(
-				nil,
 				test.validatorsErr,
 			).Times(test.validatorsCalled)
 
@@ -220,7 +218,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					Data: test.duties,
 				},
 			).Return(
-				nil,
 				test.dutiesErr,
 			).Times(test.attesterDutiesCalled)
 
@@ -233,7 +230,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				2,
 				attestationDataResponse,
 			).Return(
-				nil,
 				test.attestationDataErr,
 			).Times(test.attestationDataCalled)
 
@@ -248,7 +244,6 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 					Data: jsonifyAttestation(aggregateAttestation),
 				},
 			).Return(
-				nil,
 				test.aggregateAttestationErr,
 			).Times(test.aggregateAttestationCalled)
 

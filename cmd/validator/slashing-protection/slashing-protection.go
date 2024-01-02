@@ -13,7 +13,7 @@ import (
 var Commands = &cli.Command{
 	Name:     "slashing-protection-history",
 	Category: "slashing-protection-history",
-	Usage:    "defines commands for interacting your validator's slashing protection history",
+	Usage:    "Defines commands for interacting your validator's slashing protection history.",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "export",

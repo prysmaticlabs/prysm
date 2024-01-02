@@ -14,7 +14,7 @@ import (
 )
 
 type GenesisProvider interface {
-	GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultJsonError, error)
+	GetGenesis(ctx context.Context) (*beacon.Genesis, error)
 }
 
 type beaconApiGenesisProvider struct {
@@ -22,17 +22,19 @@ type beaconApiGenesisProvider struct {
 }
 
 func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb.ChainStartResponse, error) {
-	genesis, httpError, err := c.genesisProvider.GetGenesis(ctx)
+	genesis, err := c.genesisProvider.GetGenesis(ctx)
 
 	for err != nil {
-		if httpError == nil || httpError.Code != http.StatusNotFound {
+		jsonErr := &httputil.DefaultJsonError{}
+		httpNotFound := errors.As(err, &jsonErr) && jsonErr.Code == http.StatusNotFound
+		if !httpNotFound {
 			return nil, errors.Wrap(err, "failed to get genesis data")
 		}
 
 		// Error 404 means that the chain genesis info is not yet known, so we query it every second until it's ready
 		select {
 		case <-time.After(time.Second):
-			genesis, httpError, err = c.genesisProvider.GetGenesis(ctx)
+			genesis, err = c.genesisProvider.GetGenesis(ctx)
 		case <-ctx.Done():
 			return nil, errors.New("context canceled")
 		}
@@ -61,16 +63,15 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 }
 
 // GetGenesis gets the genesis information from the beacon node via the /eth/v1/beacon/genesis endpoint
-func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, *httputil.DefaultJsonError, error) {
+func (c beaconApiGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, error) {
 	genesisJson := &beacon.GetGenesisResponse{}
-	errorJson, err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson)
-	if err != nil {
-		return nil, errorJson, errors.Wrap(err, "failed to get json response")
+	if err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/genesis", genesisJson); err != nil {
+		return nil, err
 	}
 
 	if genesisJson.Data == nil {
-		return nil, nil, errors.New("genesis data is nil")
+		return nil, errors.New("genesis data is nil")
 	}
 
-	return genesisJson.Data, nil, nil
+	return genesisJson.Data, nil
 }

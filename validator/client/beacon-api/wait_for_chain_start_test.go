@@ -29,7 +29,6 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 		&genesisResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		2,
 		beacon.GetGenesisResponse{
@@ -97,7 +96,6 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 				&genesisResponseJson,
 			).Return(
 				nil,
-				nil,
 			).SetArg(
 				2,
 				beacon.GetGenesisResponse{
@@ -125,7 +123,6 @@ func TestWaitForChainStart_JsonResponseError(t *testing.T) {
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
-		nil,
 		errors.New("some specific json error"),
 	).Times(1)
 
@@ -155,7 +152,6 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 			Code:    http.StatusNotFound,
 			Message: "404 error",
 		},
-		errors.New("404 error"),
 	).Times(1)
 
 	// After receiving a 404 error, mock a request that actually has genesis data available
@@ -164,7 +160,6 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 		"/eth/v1/beacon/genesis",
 		&genesisResponseJson,
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		2,

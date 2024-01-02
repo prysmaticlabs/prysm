@@ -56,7 +56,6 @@ func TestSubscribeCommitteeSubnets_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	duties := make([]*validator.AttesterDuty, len(subscribeSlots))
@@ -280,7 +279,6 @@ func TestSubscribeCommitteeSubnets_Error(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
-					nil,
 					errors.New("foo error"),
 				).Times(1)
 			}

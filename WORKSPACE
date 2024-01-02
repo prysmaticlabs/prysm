@@ -182,7 +182,7 @@ load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_depe
 go_rules_dependencies()
 
 go_register_toolchains(
-    go_version = "1.20.10",
+    go_version = "1.21.5",
     nogo = "@//:nogo",
 )
 
@@ -320,6 +320,22 @@ filegroup(
     sha256 = "2701e1e1a3ec10c673fe7dbdbbe6f02c8ae8c922aebbf6e720d8c72d5458aafe",
     strip_prefix = "eth2-networks-7b4897888cebef23801540236f73123e21774954",
     url = "https://github.com/eth-clients/eth2-networks/archive/7b4897888cebef23801540236f73123e21774954.tar.gz",
+)
+
+http_archive(
+    name = "goerli_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "prater/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "43fc0f55ddff7b511713e2de07aa22846a67432df997296fb4fc09cd8ed1dcdb",
+    strip_prefix = "goerli-6522ac6684693740cd4ddcc2a0662e03702aa4a1",
+    url = "https://github.com/eth-clients/goerli/archive/6522ac6684693740cd4ddcc2a0662e03702aa4a1.tar.gz",
 )
 
 http_archive(

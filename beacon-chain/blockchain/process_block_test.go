@@ -895,7 +895,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	cfg.TerminalBlockHash = params.BeaconConfig().ZeroHash
 	params.OverrideBeaconConfig(cfg)
 
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	aHash := common.BytesToHash([]byte("a"))

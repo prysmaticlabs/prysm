@@ -19,12 +19,14 @@ func (c beaconApiValidatorClient) proposeAttestation(ctx context.Context, attest
 		return nil, err
 	}
 
-	errJson, err := c.jsonRestHandler.Post(ctx, "/eth/v1/beacon/pool/attestations", nil, bytes.NewBuffer(marshalledAttestation), nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	if err = c.jsonRestHandler.Post(
+		ctx,
+		"/eth/v1/beacon/pool/attestations",
+		nil,
+		bytes.NewBuffer(marshalledAttestation),
+		nil,
+	); err != nil {
+		return nil, err
 	}
 
 	attestationDataRoot, err := attestation.Data.HashTreeRoot()

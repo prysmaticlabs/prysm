@@ -26,19 +26,5 @@ func (c *beaconApiValidatorClient) prepareBeaconProposer(ctx context.Context, re
 		return errors.Wrap(err, "failed to marshal recipients")
 	}
 
-	errJson, err := c.jsonRestHandler.Post(
-		ctx,
-		"/eth/v1/validator/prepare_beacon_proposer",
-		nil,
-		bytes.NewBuffer(marshalledJsonRecipients),
-		nil,
-	)
-	if err != nil {
-		return errors.Wrap(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return errJson
-	}
-
-	return nil
+	return c.jsonRestHandler.Post(ctx, "/eth/v1/validator/prepare_beacon_proposer", nil, bytes.NewBuffer(marshalledJsonRecipients), nil)
 }

@@ -19,12 +19,9 @@ func (c beaconApiValidatorClient) getDomainData(ctx context.Context, epoch primi
 	}
 
 	// Get the genesis validator root
-	genesis, errJson, err := c.genesisProvider.GetGenesis(ctx)
+	genesis, err := c.genesisProvider.GetGenesis(ctx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get genesis info")
-	}
-	if errJson != nil {
-		return nil, errJson
 	}
 
 	if !validRoot(genesis.GenesisValidatorsRoot) {

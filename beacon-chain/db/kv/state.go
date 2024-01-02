@@ -314,7 +314,7 @@ func (s *Store) saveStatesEfficientInternal(ctx context.Context, tx *bolt.Tx, bl
 			if err != nil {
 				return err
 			}
-			encodedState := snappy.Encode(nil, append(capellaKey, rawObj...))
+			encodedState := snappy.Encode(nil, append(denebKey, rawObj...))
 			if err := bucket.Put(rt[:], encodedState); err != nil {
 				return err
 			}
