@@ -693,7 +693,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	s.cfg.ForkChoiceStore.RUnlock()
 	_, tracked := s.trackedProposer(headState, s.CurrentSlot()+1)
 	// return early if we are not proposing next slot.
-	if !tracked && !features.Get().PrepareAllPayloads {
+	if !tracked {
 		return
 	}
 	// return early if we already started building a block for the current
@@ -711,11 +711,13 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	}
 	s.headLock.RUnlock()
 	s.cfg.ForkChoiceStore.RLock()
-	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+	fcuArgs := &notifyForkchoiceUpdateArg{
 		headState: headState,
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
-	})
+	}
+	_, fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
