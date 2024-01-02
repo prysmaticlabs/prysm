@@ -18,8 +18,13 @@ var appHelpTemplate = `NAME:
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
 {{if .App.Version}}
+VERSION:
+	{{.App.Version}}
+{{end -}}
+{{if len .App.Authors}}
 AUTHOR:
-   {{range .App.Authors}}{{ . }}{{end}}
+   {{range .App.Authors}}{{ . }}
+   {{end -}}
 {{end -}}
 {{if .App.Commands}}
 GLOBAL OPTIONS:
@@ -35,11 +40,6 @@ GLOBAL OPTIONS:
 {{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
-
-VERSION:
-	{{.App.Version}}
-{{end -}}
-{{if len .App.Authors}}
 {{end -}}
 `
 
