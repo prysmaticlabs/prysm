@@ -22,7 +22,7 @@ VERSION:
 	{{.App.Version}}
 {{end -}}
 {{if len .App.Authors}}
-AUTHOR:
+AUTHORS:
    {{range .App.Authors}}{{ . }}
    {{end -}}
 {{end -}}
