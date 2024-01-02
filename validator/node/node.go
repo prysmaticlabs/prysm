@@ -208,12 +208,49 @@ func (c *ValidatorClient) Close() {
 	close(c.stop)
 }
 
+// checkLegacyDatabaseLocation checks is a database exists in the specified location.
+// If it does not, it checks if a database exists in the legacy location.
+// If it does, it returns the legacy location.
+func (c *ValidatorClient) getLegacyDatabaseLocation(
+	isInteropNumValidatorsSet bool,
+	isWeb3SignerURLFlagSet bool,
+	dataDir string,
+	dataFile string,
+	walletDir string,
+) (string, string) {
+	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) {
+		return dataDir, dataFile
+	}
+
+	// We look in the previous, legacy directories.
+	// See https://github.com/prysmaticlabs/prysm/issues/13391
+	legacyDataDir := c.wallet.AccountsDir()
+	if isWeb3SignerURLFlagSet {
+		legacyDataDir = walletDir
+	}
+
+	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
+
+	if file.Exists(legacyDataFile) {
+		log.Warningf("Database not found in `--datadir` (%s) but found in `--wallet-dir` (%s).", dataFile, legacyDataFile)
+		log.Warningf("Please move the database from (%s) to (%s).", legacyDataFile, dataFile)
+		dataDir = legacyDataDir
+		dataFile = legacyDataFile
+	}
+
+	return dataDir, dataFile
+}
+
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
-	var err error
-	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
-	if !cliCtx.IsSet(flags.InteropNumValidators.Name) {
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
+	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
+
+	if !isInteropNumValidatorsSet {
 		// Custom Check For Web3Signer
-		if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		if isWeb3SignerURLFlagSet {
 			c.wallet = wallet.NewWalletForWeb3Signer()
 		} else {
 			fmt.Println("initializeFromCLI asking for wallet")
@@ -229,33 +266,28 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 				"wallet":          w.AccountsDir(),
 				"keymanager-kind": w.KeymanagerKind().String(),
 			}).Info("Opened validator wallet")
-			dataDir = c.wallet.AccountsDir()
 		}
 	}
-	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-	}
+
+	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
+	dataDir, dataFile = c.getLegacyDatabaseLocation(
+		isInteropNumValidatorsSet,
+		isWeb3SignerURLFlagSet,
+		dataDir,
+		dataFile,
+		walletDir,
+	)
+
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 	if clearFlag || forceClearFlag {
-		if dataDir == "" && c.wallet != nil {
-			dataDir = c.wallet.AccountsDir()
-			if dataDir == "" {
-				// skipcq: RVV-A0003
-				log.Fatal(
-					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
-						"to use for your validator data",
-				)
-			}
-		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
 	} else {
-		dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
 		if !file.Exists(dataFile) {
 			log.Warnf("Slashing protection file %s is missing.\n"+
-				"If you changed your --wallet-dir or --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
+				"If you changed your --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
 				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
 		}
 	}
@@ -292,13 +324,18 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 }
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
-	var err error
-	dataDir := cliCtx.String(flags.WalletDirFlag.Name)
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
+	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
+
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
+		// Custom Check For Web3Signer
 		c.wallet = wallet.NewWalletForWeb3Signer()
 	} else {
 		// Read the wallet password file from the cli context.
-		if err = setWalletPasswordFilePath(cliCtx); err != nil {
+		if err := setWalletPasswordFilePath(cliCtx); err != nil {
 			return errors.Wrap(err, "could not read wallet password file")
 		}
 
@@ -310,28 +347,21 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 			return errors.Wrap(err, "could not open wallet")
 		}
 		c.wallet = w
-		if c.wallet != nil {
-			dataDir = c.wallet.AccountsDir()
-		}
 	}
 
-	if cliCtx.String(cmd.DataDirFlag.Name) != cmd.DefaultDataDir() {
-		dataDir = cliCtx.String(cmd.DataDirFlag.Name)
-	}
+	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
+	dataDir, _ = c.getLegacyDatabaseLocation(
+		isInteropNumValidatorsSet,
+		isWeb3SignerURLFlagSet,
+		dataDir,
+		dataFile,
+		walletDir,
+	)
+
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
 	if clearFlag || forceClearFlag {
-		if dataDir == "" {
-			dataDir = cmd.DefaultDataDir()
-			if dataDir == "" {
-				// skipcq: RVV-A0003
-				log.Fatal(
-					"Could not determine your system'c HOME path, please specify a --datadir you wish " +
-						"to use for your validator data",
-				)
-			}
-		}
 		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
 			return err
 		}
