@@ -1312,7 +1312,6 @@ func bodyBlindedBellatrix(t *testing.T) *BeaconBlockBody {
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Bellatrix,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],
@@ -1360,7 +1359,6 @@ func bodyBlindedCapella(t *testing.T) *BeaconBlockBody {
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Capella,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],
@@ -1410,7 +1408,6 @@ func bodyBlindedDeneb(t *testing.T) *BeaconBlockBody {
 	require.NoError(t, err)
 	return &BeaconBlockBody{
 		version:      version.Deneb,
-		isBlinded:    true,
 		randaoReveal: f.sig,
 		eth1Data: &eth.Eth1Data{
 			DepositRoot:  f.root[:],

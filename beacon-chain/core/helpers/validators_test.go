@@ -16,7 +16,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
 func TestIsActiveValidator_OK(t *testing.T) {
@@ -802,27 +801,4 @@ func TestLastActivatedValidatorIndex_OK(t *testing.T) {
 	index, err := LastActivatedValidatorIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.Equal(t, index, primitives.ValidatorIndex(3))
-}
-
-func TestUnsafeProposerIndexAtSlot(t *testing.T) {
-	bRoot := [32]byte{'A'}
-	e := 4
-	slot := primitives.Slot(e) * params.BeaconConfig().SlotsPerEpoch
-	indices, ok := proposerIndicesCache.UnsafeProposerIndices(primitives.Epoch(e), bRoot)
-	require.Equal(t, false, ok)
-
-	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
-	require.NoError(t, err)
-	roots := make([][]byte, fieldparams.StateRootsLength)
-	roots[(e-1)*int(params.BeaconConfig().SlotsPerEpoch)-1] = bRoot[:]
-	id := primitives.ValidatorIndex(17)
-	indices[0] = id
-	require.NoError(t, beaconState.SetStateRoots(roots))
-	require.NoError(t, beaconState.SetSlot(slot))
-	epoch := slots.ToEpoch(slot)
-	require.Equal(t, primitives.Epoch(e), epoch)
-	proposerIndicesCache.SetUnsafe(epoch, bRoot, indices)
-	pid, err := UnsafeBeaconProposerIndexAtSlot(beaconState, slot)
-	require.NoError(t, err)
-	require.Equal(t, id, pid)
 }

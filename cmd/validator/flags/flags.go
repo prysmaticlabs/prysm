@@ -365,9 +365,9 @@ var (
 		Value: fmt.Sprint(params.BeaconConfig().DefaultBuilderGasLimit),
 	}
 
-	// ValidatorRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
-	ValidatorRegistrationBatchSizeFlag = &cli.IntFlag{
-		Name:  "validator-registration-batch-size",
+	// ValidatorsRegistrationBatchSizeFlag sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.
+	ValidatorsRegistrationBatchSizeFlag = &cli.IntFlag{
+		Name:  "validators-registration-batch-size",
 		Usage: "Sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.",
 		Value: 0,
 	}

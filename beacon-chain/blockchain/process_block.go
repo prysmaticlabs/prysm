@@ -73,6 +73,7 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 	if blockRoot != headRoot {
 		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
@@ -88,35 +89,25 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
-	}
-	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-
-	// verify conditions for FCU, notifies FCU, and saves the new head.
-	// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-	if _, err := s.forkchoiceUpdateWithExecution(ctx, headRoot, s.CurrentSlot()+1); err != nil {
-		return err
-	}
-
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)
-	if err != nil {
-		log.WithError(err).Debug("Could not check if block is optimistic")
-		optimistic = true
-	}
-
-	// Send notification of the processed block to the state feed.
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:        signed.Block().Slot(),
-			BlockRoot:   blockRoot,
-			SignedBlock: signed,
-			Verified:    true,
-			Optimistic:  optimistic,
-		},
-	})
-
-	defer reportAttestationInclusion(b)
-	if headRoot == blockRoot {
+		if s.isNewHead(headRoot) {
+			headState, headBlock, err := s.getStateAndBlock(ctx, headRoot)
+			if err != nil {
+				log.WithError(err).Error("Could not get forkchoice update argument")
+				return nil
+			}
+			// verify conditions for FCU, notifies FCU, and saves the new head.
+			// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
+			args := &fcuConfig{
+				headState:     headState,
+				headBlock:     headBlock,
+				headRoot:      headRoot,
+				proposingSlot: s.CurrentSlot() + 1,
+			}
+			if err := s.forkchoiceUpdateWithExecution(ctx, args); err != nil {
+				return err
+			}
+		}
+	} else {
 		// Updating next slot state cache can happen in the background
 		// except in the epoch boundary in which case we lock to handle
 		// the shuffling and proposer caches updates.
@@ -139,7 +130,36 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 				}
 			}()
 		}
+		// verify conditions for FCU, notifies FCU, and saves the new head.
+		// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
+		args := &fcuConfig{
+			headState:     postState,
+			headBlock:     signed,
+			headRoot:      headRoot,
+			proposingSlot: s.CurrentSlot() + 1,
+		}
+		if err := s.forkchoiceUpdateWithExecution(ctx, args); err != nil {
+			return err
+		}
 	}
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)
+	if err != nil {
+		log.WithError(err).Debug("Could not check if block is optimistic")
+		optimistic = true
+	}
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        signed.Block().Slot(),
+			BlockRoot:   blockRoot,
+			SignedBlock: signed,
+			Verified:    true,
+			Optimistic:  optimistic,
+		},
+	})
+
+	defer reportAttestationInclusion(b)
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
@@ -380,9 +400,6 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 		defer cancel()
 		if err := helpers.UpdateCommitteeCache(slotCtx, st, e+1); err != nil {
 			log.WithError(err).Warn("Could not update committee cache")
-		}
-		if err := helpers.UpdateUnsafeProposerIndicesInCache(slotCtx, st, e+1); err != nil {
-			log.WithError(err).Warn("Failed to cache next epoch proposers")
 		}
 	}()
 	// The latest block header is from the previous epoch

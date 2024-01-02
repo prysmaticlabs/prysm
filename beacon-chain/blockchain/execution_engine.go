@@ -7,6 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
@@ -279,12 +280,19 @@ func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [
 func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer) {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 
-	val, ok := s.trackedProposer(st, slot)
-	if !ok && !features.Get().PrepareAllPayloads {
-		return false, emptyAttri
+	// If it is an epoch boundary then process slots to get the right
+	// shuffling before checking if the proposer is tracked. Otherwise
+	// perform this check before. This is cheap as the NSC has already been updated.
+	var val cache.TrackedValidator
+	var ok bool
+	e := slots.ToEpoch(slot)
+	stateEpoch := slots.ToEpoch(st.Slot())
+	if e == stateEpoch {
+		val, ok = s.trackedProposer(st, slot)
+		if !ok {
+			return false, emptyAttri
+		}
 	}
-
-	// Get previous randao.
 	st = st.Copy()
 	if slot > st.Slot() {
 		var err error
@@ -294,6 +302,13 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 			return false, emptyAttri
 		}
 	}
+	if e > stateEpoch {
+		val, ok = s.trackedProposer(st, slot)
+		if !ok {
+			return false, emptyAttri
+		}
+	}
+	// Get previous randao.
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		log.WithError(err).Error("Could not get randao mix to get payload attribute")
