@@ -243,9 +243,6 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
 	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
 
@@ -269,39 +266,8 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 		}
 	}
 
-	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	dataDir, dataFile = c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
-		isWeb3SignerURLFlagSet,
-		dataDir,
-		dataFile,
-		walletDir,
-	)
-
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-	if clearFlag || forceClearFlag {
-		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
-			return err
-		}
-	} else {
-		if !file.Exists(dataFile) {
-			log.Warnf("Slashing protection file %s is missing.\n"+
-				"If you changed your --datadir, please copy your previous \"validator.db\" file into your current --datadir.\n"+
-				"Disregard this warning if this is the first time you are running this set of keys.", dataFile)
-		}
-	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
-	}
-	c.db = valDB
-	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migration")
+	if err := c.initializeDB(cliCtx); err != nil {
+		return errors.Wrapf(err, "could not initialize database")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -324,12 +290,6 @@ func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Rou
 }
 
 func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Router) error {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
-	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
-	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
-	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
-
 	if cliCtx.IsSet(flags.Web3SignerURLFlag.Name) {
 		// Custom Check For Web3Signer
 		c.wallet = wallet.NewWalletForWeb3Signer()
@@ -349,33 +309,8 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 		c.wallet = w
 	}
 
-	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	dataDir, _ = c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
-		isWeb3SignerURLFlagSet,
-		dataDir,
-		dataFile,
-		walletDir,
-	)
-
-	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
-	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
-
-	if clearFlag || forceClearFlag {
-		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
-			return err
-		}
-	}
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
-	}
-	c.db = valDB
-	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
-		return errors.Wrap(err, "could not run database migration")
+	if err := c.initializeDB(cliCtx); err != nil {
+		return errors.Wrapf(err, "could not initialize database")
 	}
 
 	if !cliCtx.Bool(cmd.DisableMonitoringFlag.Name) {
@@ -399,6 +334,49 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 	log.WithField("address", webAddress).Info(
 		"Starting Prysm web UI on address, open in browser to access",
 	)
+	return nil
+}
+
+func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
+	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
+	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
+	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
+
+	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
+	dataDir, _ = c.getLegacyDatabaseLocation(
+		isInteropNumValidatorsSet,
+		isWeb3SignerURLFlagSet,
+		dataDir,
+		dataFile,
+		walletDir,
+	)
+
+	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
+	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
+
+	if clearFlag || forceClearFlag {
+		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
+			return err
+		}
+	}
+
+	log.WithField("databasePath", dataDir).Info("Checking DB")
+	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
+		PubKeys: nil,
+	})
+
+	if err != nil {
+		return errors.Wrap(err, "could not initialize db")
+	}
+
+	c.db = valDB
+
+	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
+		return errors.Wrap(err, "could not run database migration")
+	}
+
 	return nil
 }
 
