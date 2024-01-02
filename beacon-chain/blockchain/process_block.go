@@ -716,7 +716,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		headRoot:  headRoot,
 		headBlock: headBlock.Block(),
 	}
-	_, fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {

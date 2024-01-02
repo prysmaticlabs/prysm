@@ -67,11 +67,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuCo
 		if s.shouldOverrideFCU(args.headRoot, args.proposingSlot) {
 			return nil
 		}
-		var has bool
-		has, fcuArgs.attributes = s.getPayloadAttribute(ctx, args.headState, args.proposingSlot, args.headRoot[:])
-		if !has {
-			log.Error("could not get payload attributes for tracked proposer")
-		}
+		fcuArgs.attributes = s.getPayloadAttribute(ctx, args.headState, args.proposingSlot, args.headRoot[:])
 	}
 	_, err := s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	if err != nil {
