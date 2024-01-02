@@ -57,18 +57,23 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuCo
 	defer span.End()
 	// Note: Use the service context here to avoid the parent context being ended during a forkchoice update.
 	ctx = trace.NewContext(s.ctx, span)
-	_, tracked := s.trackedProposer(args.headState, args.proposingSlot)
-	if (tracked || features.Get().PrepareAllPayloads) && !features.Get().DisableReorgLateBlocks {
-		if s.shouldOverrideFCU(args.headRoot, args.proposingSlot) {
-			return nil
-		}
-	}
-
-	_, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
+	fcuArgs := &notifyForkchoiceUpdateArg{
 		headState: args.headState,
 		headRoot:  args.headRoot,
 		headBlock: args.headBlock.Block(),
-	})
+	}
+	_, tracked := s.trackedProposer(args.headState, args.proposingSlot)
+	if tracked && !features.Get().DisableReorgLateBlocks {
+		if s.shouldOverrideFCU(args.headRoot, args.proposingSlot) {
+			return nil
+		}
+		var has bool
+		has, fcuArgs.attributes = s.getPayloadAttribute(ctx, args.headState, args.proposingSlot, args.headRoot[:])
+		if !has {
+			log.Error("could not get payload attributes for tracked proposer")
+		}
+	}
+	_, err := s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	if err != nil {
 		return errors.Wrap(err, "could not notify forkchoice update")
 	}

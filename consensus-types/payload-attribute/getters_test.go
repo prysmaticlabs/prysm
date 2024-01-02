@@ -204,3 +204,72 @@ func TestPayloadAttributeGetters(t *testing.T) {
 		t.Run(test.name, test.tc)
 	}
 }
+
+func TestIsEmpty(t *testing.T) {
+	tests := []struct {
+		name  string
+		a     Attributer
+		empty bool
+	}{
+		{
+			name:  "Empty V1",
+			a:     EmptyWithVersion(version.Bellatrix),
+			empty: true,
+		},
+		{
+			name:  "Empty V2",
+			a:     EmptyWithVersion(version.Capella),
+			empty: true,
+		},
+		{
+			name:  "Empty V3",
+			a:     EmptyWithVersion(version.Deneb),
+			empty: true,
+		},
+		{
+			name: "non empty prevrandao",
+			a: &data{
+				version:    version.Bellatrix,
+				prevRandao: []byte{0x01},
+			},
+			empty: false,
+		},
+		{
+			name: "non zero Timestamps",
+			a: &data{
+				version:   version.Bellatrix,
+				timeStamp: 1,
+			},
+			empty: false,
+		},
+		{
+			name: "non empty fee recipient",
+			a: &data{
+				version:               version.Bellatrix,
+				suggestedFeeRecipient: []byte{0x01},
+			},
+			empty: false,
+		},
+		{
+			name: "non empty withdrawals",
+			a: &data{
+				version:     version.Capella,
+				withdrawals: make([]*enginev1.Withdrawal, 1),
+			},
+			empty: false,
+		},
+		{
+			name: "non empty parent block root",
+			a: &data{
+				version:               version.Deneb,
+				parentBeaconBlockRoot: []byte{0x01},
+			},
+			empty: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.empty, tt.a.IsEmpty())
+		})
+	}
+}

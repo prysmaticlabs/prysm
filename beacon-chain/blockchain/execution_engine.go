@@ -34,9 +34,10 @@ var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
 // notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
 type notifyForkchoiceUpdateArg struct {
-	headState state.BeaconState
-	headRoot  [32]byte
-	headBlock interfaces.ReadOnlyBeaconBlock
+	headState  state.BeaconState
+	headRoot   [32]byte
+	headBlock  interfaces.ReadOnlyBeaconBlock
+	attributes payloadattribute.Attributer
 }
 
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
@@ -72,11 +73,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
-
-	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
-
-	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	if arg.attributes == nil {
+		arg.attributes = payloadattribute.EmptyWithVersion(headBlk.Version())
+	}
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, arg.attributes)
 	if err != nil {
 		switch err {
 		case execution.ErrAcceptedSyncingPayloadStatus:
@@ -123,9 +123,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				return nil, nil
 			}
 			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: st,
-				headRoot:  r,
-				headBlock: b.Block(),
+				headState:  st,
+				headRoot:   r,
+				headBlock:  b.Block(),
+				attributes: arg.attributes,
 			})
 			if err != nil {
 				return nil, err // Returning err because it's recursive here.
@@ -154,6 +155,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		return nil, nil
 	}
 	// If the forkchoice update call has an attribute, update the payload ID cache.
+	hasAttr := arg.attributes != nil && !arg.attributes.IsEmpty()
+	nextSlot := s.CurrentSlot() + 1
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
