@@ -197,7 +197,7 @@ type mockBlobBatchVerifier struct {
 
 var _ BlobBatchVerifier = &mockBlobBatchVerifier{}
 
-func (m *mockBlobBatchVerifier) VerifiedROBlobs(_ context.Context, blk blocks.ROBlock, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+func (m *mockBlobBatchVerifier) VerifiedROBlobs(_ context.Context, _ blocks.ROBlock, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
 	require.Equal(m.t, len(scs), len(m.scs))
 	for i := range m.scs {
 		require.Equal(m.t, m.scs[i], scs[i])

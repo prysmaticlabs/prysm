@@ -38,7 +38,7 @@ type kzgVerifier func(b ...blocks.ROBlob) error
 // BlobBatchVerifier solves problems that come from verifying batches of blobs from RPC.
 // First: we only update forkchoice after the entire batch has completed, so the n+1 elements in the batch
 // won't be in forkchoice yet.
-// Second: it is more efficient to batch some verifications, like kzg commitment verification. Batch adds an additional
+// Second: it is more efficient to batch some verifications, like kzg commitment verification. Batch adds a
 // method to BlobVerifier to verify the kzg commitments of all blob sidecars for a block together, then using the cached
 // result of the batch verification when verifying the individual blobs.
 type BlobBatchVerifier struct {
@@ -53,6 +53,7 @@ func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, blk blocks.
 		return nil, nil
 	}
 	// We assume the proposer was validated wrt the block in batch block processing before performing the DA check.
+
 	// So at this stage we just need to make sure the value being signed and signature bytes match the block.
 	for i := range scs {
 		if blk.Signature() != bytesutil.ToBytes96(scs[i].SignedBlockHeader.Signature) {
