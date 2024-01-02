@@ -71,7 +71,7 @@ func builderActive(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) err
 		if err != nil {
 			return err
 		}
-		if len(txs) == 0 {
+		if len(txs) == 0 && string(execPayload.ExtraData()) != "prysm-builder" {
 			// If a local payload is built with 0 transactions, builder cannot build a payload with more transactions
 			// since they both utilize the same EL.
 			continue
