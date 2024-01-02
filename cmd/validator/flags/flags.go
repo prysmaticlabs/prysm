@@ -24,9 +24,9 @@ var (
 	// DisableAccountMetricsFlag disables the prometheus metrics for validator accounts, default false.
 	DisableAccountMetricsFlag = &cli.BoolFlag{
 		Name: "disable-account-metrics",
-		Usage: "Disables prometheus metrics for validator accounts. Operators with high volumes " +
-			"of validating keys may wish to disable granular prometheus metrics as it increases " +
-			"the data cardinality.",
+		Usage: `Disables prometheus metrics for validator accounts. Operators with high volumes 
+		of validating keys may wish to disable granular prometheus metrics as it increases
+		the data cardinality.`,
 	}
 	// BeaconRPCProviderFlag defines a beacon node RPC endpoint.
 	BeaconRPCProviderFlag = &cli.StringFlag{
@@ -105,8 +105,8 @@ var (
 	// GrpcHeadersFlag defines a list of headers to send with all gRPC requests.
 	GrpcHeadersFlag = &cli.StringFlag{
 		Name: "grpc-headers",
-		Usage: "Comma separated list of key value pairs to pass as gRPC headers for all gRPC " +
-			"calls. Example: --grpc-headers=key=value",
+		Usage: `Comma separated list of key value pairs to pass as gRPC headers for all gRPC calls.
+		Example: --grpc-headers=key=value`,
 	}
 	// GRPCGatewayHost specifies a gRPC gateway host for the validator client.
 	GRPCGatewayHost = &cli.StringFlag{
@@ -123,8 +123,9 @@ var (
 	// GPRCGatewayCorsDomain serves preflight requests when serving gRPC JSON gateway.
 	GPRCGatewayCorsDomain = &cli.StringFlag{
 		Name: "grpc-gateway-corsdomain",
-		Usage: "Comma separated list of domains from which to accept cross origin requests " +
-			"(browser enforced). This flag has no effect if not used with --grpc-gateway-port.",
+		Usage: `Comma separated list of domains from which to accept cross origin requests (browser enforced).
+		This flag has no effect if not used with --grpc-gateway-port.
+`,
 		Value: "http://localhost:7500,http://127.0.0.1:7500,http://0.0.0.0:7500,http://localhost:4242,http://127.0.0.1:4242,http://localhost:4200,http://0.0.0.0:4242,http://127.0.0.1:4200,http://0.0.0.0:4200,http://localhost:3000,http://0.0.0.0:3000,http://127.0.0.1:3000"}
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
@@ -313,7 +314,7 @@ var (
 	// EnableWebFlag enables controlling the validator client via the Prysm web ui. This is a work in progress.
 	EnableWebFlag = &cli.BoolFlag{
 		Name:  "web",
-		Usage: "Enables the web portal for the validator client. (Work in progress.)",
+		Usage: "(Work in progress): Enables the web portal for the validator client.",
 		Value: false,
 	}
 	// SlashingProtectionExportDirFlag allows specifying the outpt directory
@@ -330,30 +331,35 @@ var (
 	}
 	// ProposerSettingsFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsFlag = &cli.StringFlag{
-		Name:  "proposer-settings-file",
-		Usage: "Sets path to a YAML or JSON file containing validator settings used when proposing blocks such as fee recipient and gas limit. File format found in docs.",
+		Name: "proposer-settings-file",
+		Usage: `Sets path to a YAML or JSON file containing validator settings used when proposing blocks such as
+		fee recipient and gas limit. File format found in docs.`,
 		Value: "",
 	}
 	// ProposerSettingsURLFlag defines the path or URL to a file with proposer config.
 	ProposerSettingsURLFlag = &cli.StringFlag{
-		Name:  "proposer-settings-url",
-		Usage: "Sets URL to a REST endpoint containing validator settings used when proposing blocks such as fee recipient and gas limit. File format found in docs",
+		Name: "proposer-settings-url",
+		Usage: `Sets URL to a REST endpoint containing validator settings used when proposing blocks such as
+		fee recipient and gas limit. File format found in docs`,
 		Value: "",
 	}
 
 	// SuggestedFeeRecipientFlag defines the address of the fee recipient.
 	SuggestedFeeRecipientFlag = &cli.StringFlag{
 		Name: "suggested-fee-recipient",
-		Usage: "Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block. " +
-			"Note that this is only a suggestion when integrating with a Builder API, which may choose to specify a different fee recipient as payment for the blocks it builds. " +
-			"For additional setting overrides use the --" + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " flags. ",
+		Usage: `Sets ALL validators' mapping to a suggested eth address to receive gas fees when proposing a block.
+		Note that this is only a suggestion when integrating with a Builder API, which may choose to specify
+		a different fee recipient as payment for the blocks it builds.For additional setting overrides use the 
+		--` + ProposerSettingsFlag.Name + " or --" + ProposerSettingsURLFlag.Name + " flags.",
 		Value: params.BeaconConfig().EthBurnAddressHex,
 	}
 
 	// EnableBuilderFlag enables the periodic validator registration API calls that will update the custom builder with validator settings.
 	EnableBuilderFlag = &cli.BoolFlag{
-		Name:    "enable-builder",
-		Usage:   "Enables builder validator registration APIs for the validator client to update settings such as fee recipient and gas limit. This flag is not required if using proposer settings config file.",
+		Name: "enable-builder",
+		Usage: `Enables builder validator registration APIs for the validator client to update settings
+		such as fee recipient and gas limit. This flag is not required if using proposer
+		settings config file.`,
 		Value:   false,
 		Aliases: []string{"enable-validator-registration"},
 	}

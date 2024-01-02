@@ -42,8 +42,9 @@ var (
 	}
 	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
 	EnableBackupWebhookFlag = &cli.BoolFlag{
-		Name:  "enable-db-backup-webhook",
-		Usage: "Serves HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+		Name: "enable-db-backup-webhook",
+		Usage: `Serves HTTP handler to initiate database backups.
+		The handler is served on the monitoring port at path /db/backup.`,
 	}
 	// BackupWebhookOutputDir to customize the output directory for db backups.
 	BackupWebhookOutputDir = &cli.StringFlag{
@@ -227,10 +228,11 @@ var (
 	// GrpcMaxCallRecvMsgSizeFlag defines the max call message size for GRPC
 	GrpcMaxCallRecvMsgSizeFlag = &cli.IntFlag{
 		Name: "grpc-max-msg-size",
-		Usage: "Integer to define max receive message call size. If serving a public gRPC server, " +
-			"set this to a more reasonable size to avoid resource exhaustion from large messages. " +
-			"Validators with as many as 10000 keys can be run with a max message size of less than " +
-			"50Mb. The default here is set to a very high value for local users.",
+		Usage: `Integer to define max receive message call size (in bytes).
+		If serving a public gRPC server, set this to a more reasonable size to avoid
+		resource exhaustion from large messages. 
+		Validators with as many as 10000 keys can be run with a max message size of less than 
+		50Mb. The default here is set to a very high value for local users.`,
 		Value: math.MaxInt32,
 	}
 	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments.

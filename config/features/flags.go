@@ -55,8 +55,8 @@ var (
 	}
 	writeWalletPasswordOnWebOnboarding = &cli.BoolFlag{
 		Name: "write-wallet-password-on-web-onboarding",
-		Usage: "(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding. " +
-			"We recommend against this flag unless you are an advanced user.",
+		Usage: `(Danger): Writes the wallet password to the wallet directory on completing Prysm web onboarding.
+	We recommend against this flag unless you are an advanced user.`,
 	}
 	aggregateFirstInterval = &cli.DurationFlag{
 		Name:   "aggregate-first-interval",
@@ -78,8 +78,8 @@ var (
 	}
 	dynamicKeyReloadDebounceInterval = &cli.DurationFlag{
 		Name: "dynamic-key-reload-debounce-interval",
-		Usage: "(Advanced): Specifies the time duration the validator waits to reload new keys if they have " +
-			"changed on disk. Default 1s, can be any type of duration such as 1.5s, 1000ms, 1m.",
+		Usage: `(Advanced): Specifies the time duration the validator waits to reload new keys if they have changed on disk.
+	Can be any type of duration such as 1.5s, 1000ms, 1m.`,
 		Value: time.Second,
 	}
 	disableBroadcastSlashingFlag = &cli.BoolFlag{
@@ -100,9 +100,9 @@ var (
 	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
-		Usage: "Enables the validator to perform a doppelganger check. (Warning): This is not " +
-			"a foolproof method to find duplicate instances in the network. Your validator will still be" +
-			" vulnerable if it is being run in unsafe configurations.",
+		Usage: `Enables the validator to perform a doppelganger check.
+		This is not "a foolproof method to find duplicate instances in the network.
+		Your validator will still be vulnerable if it is being run in unsafe configurations.`,
 	}
 	disableStakinContractCheck = &cli.BoolFlag{
 		Name:  "disable-staking-contract-check",
