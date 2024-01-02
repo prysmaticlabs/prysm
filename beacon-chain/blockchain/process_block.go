@@ -74,6 +74,8 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 		log.WithError(err).Warn("Could not update head")
 	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
+	proposingSlot := s.CurrentSlot() + 1
+	var fcuArgs *fcuConfig
 	if blockRoot != headRoot {
 		receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
 		if err != nil {
@@ -89,23 +91,16 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			"headRoot":       fmt.Sprintf("%#x", headRoot),
 			"headWeight":     headWeight,
 		}).Debug("Head block is not the received block")
-		if s.isNewHead(headRoot) {
-			headState, headBlock, err := s.getStateAndBlock(ctx, headRoot)
-			if err != nil {
-				log.WithError(err).Error("Could not get forkchoice update argument")
-				return nil
-			}
-			// verify conditions for FCU, notifies FCU, and saves the new head.
-			// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-			args := &fcuConfig{
-				headState:     headState,
-				headBlock:     headBlock,
-				headRoot:      headRoot,
-				proposingSlot: s.CurrentSlot() + 1,
-			}
-			if err := s.forkchoiceUpdateWithExecution(ctx, args); err != nil {
-				return err
-			}
+		headState, headBlock, err := s.getStateAndBlock(ctx, headRoot)
+		if err != nil {
+			log.WithError(err).Error("Could not get forkchoice update argument")
+			return nil
+		}
+		fcuArgs = &fcuConfig{
+			headState:     headState,
+			headBlock:     headBlock,
+			headRoot:      headRoot,
+			proposingSlot: proposingSlot,
 		}
 	} else {
 		// Updating next slot state cache can happen in the background
@@ -132,14 +127,24 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 		}
 		// verify conditions for FCU, notifies FCU, and saves the new head.
 		// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
-		args := &fcuConfig{
+		fcuArgs = &fcuConfig{
 			headState:     postState,
 			headBlock:     signed,
 			headRoot:      headRoot,
-			proposingSlot: s.CurrentSlot() + 1,
+			proposingSlot: proposingSlot,
 		}
-		if err := s.forkchoiceUpdateWithExecution(ctx, args); err != nil {
-			return err
+	}
+	if s.isNewHead(headRoot) {
+		shouldOverrideFCU := false
+		_, tracked := s.trackedProposer(fcuArgs.headState, proposingSlot)
+		if tracked && !features.Get().DisableReorgLateBlocks {
+			shouldOverrideFCU = s.shouldOverrideFCU(headRoot, proposingSlot)
+			fcuArgs.attributes = s.getPayloadAttribute(ctx, fcuArgs.headState, proposingSlot, headRoot[:])
+		}
+		if !shouldOverrideFCU {
+			if err := s.forkchoiceUpdateWithExecution(ctx, fcuArgs); err != nil {
+				return err
+			}
 		}
 	}
 	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(blockRoot)

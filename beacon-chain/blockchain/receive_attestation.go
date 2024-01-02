@@ -145,16 +145,23 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		return
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-	args := &fcuConfig{
+	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
+	fcuArgs := &fcuConfig{
 		headState:     headState,
 		headRoot:      newHeadRoot,
 		headBlock:     headBlock,
 		proposingSlot: proposingSlot,
 	}
-	if err := s.forkchoiceUpdateWithExecution(s.ctx, args); err != nil {
+	_, tracked := s.trackedProposer(headState, proposingSlot)
+	if tracked && !features.Get().DisableReorgLateBlocks {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+			return
+		}
+		fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	}
+	if err := s.forkchoiceUpdateWithExecution(s.ctx, fcuArgs); err != nil {
 		log.WithError(err).Error("could not update forkchoice")
 	}
-	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
 }
 
 // This processes fork choice attestations from the pool to account for validator votes and fork choice.
