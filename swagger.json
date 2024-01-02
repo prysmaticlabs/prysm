@@ -3,18 +3,7 @@
   "paths": {
     "/eth/v1/beacon/blocks/{block_id}": {
       "get": {
-        "security": [
-          {
-            "api_key": []
-          },
-          {
-            "oauth": [
-              "read",
-              "write"
-            ]
-          }
-        ],
-        "description": "List all validating pubkeys known to and decrypted by this keymanager binary",
+        "description": "retrieves block details for given block ID.",
         "consumes": [
           "application/json"
         ],
@@ -25,8 +14,11 @@
           "http",
           "https"
         ],
+        "tags": [
+          "beacon"
+        ],
         "summary": "GetBlock",
-        "operationId": "beaconAPI",
+        "operationId": "GetBlock",
         "responses": {
           "200": {
             "$ref": "#/responses/someResponse"
