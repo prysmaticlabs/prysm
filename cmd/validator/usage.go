@@ -14,25 +14,33 @@ import (
 
 var appHelpTemplate = `NAME:
    {{.App.Name}} - {{.App.Usage}}
+
 USAGE:
    {{.App.HelpName}} [options]{{if .App.Commands}} command [command options]{{end}} {{if .App.ArgsUsage}}{{.App.ArgsUsage}}{{else}}[arguments...]{{end}}
-   {{if .App.Version}}
+{{if .App.Version}}
 AUTHOR:
    {{range .App.Authors}}{{ . }}{{end}}
-   {{end}}{{if .App.Commands}}
+{{end -}}
+{{if .App.Commands}}
 GLOBAL OPTIONS:
    {{range .App.Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-   {{end}}{{end}}{{if .FlagGroups}}
+   {{end -}}
+{{end -}}
+{{if .FlagGroups}}
 {{range .FlagGroups}}{{.Name}} OPTIONS:
   {{range .Flags}}{{.}}
   {{end}}
-{{end}}{{end}}{{if .App.Copyright }}
+{{end -}}
+{{end -}}
+{{if .App.Copyright }}
 COPYRIGHT:
    {{.App.Copyright}}
+
 VERSION:
-   {{.App.Version}}
-   {{end}}{{if len .App.Authors}}
-   {{end}}
+	{{.App.Version}}
+{{end -}}
+{{if len .App.Authors}}
+{{end -}}
 `
 
 type flagGroup struct {
