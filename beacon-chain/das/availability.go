@@ -34,8 +34,7 @@ var _ AvailabilityStore = &LazilyPersistentStore{}
 // they are all available, the interface takes a slice of blobs, enabling the implementation to optimize
 // batch verification.
 type BlobBatchVerifier interface {
-	VerifiedROBlobs(ctx context.Context, sc []blocks.ROBlob) ([]blocks.VerifiedROBlob, error)
-	MarkVerified(root [32]byte, slot primitives.Slot)
+	VerifiedROBlobs(ctx context.Context, blk blocks.ROBlock, sc []blocks.ROBlob) ([]blocks.VerifiedROBlob, error)
 }
 
 // NewLazilyPersistentStore creates a new LazilyPersistentStore. This constructor should always be used
@@ -83,32 +82,25 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	if err != nil {
 		return errors.Wrapf(err, "could check data availability for block %#x", b.Root())
 	}
+	// Return early for blocks that are pre-deneb or which do not have any commitments.
 	if blockCommitments.count() == 0 {
-		// If blockchain processing calls IsDataAvailable for a block it is valid as far as the verifier is concerned.
-		// This func will early return for blocks that are pre-deneb or which do not have any commitments.
-		// But first, we'll mark the block as verified for the rest of the batch
-		// so that subsequent blocks can pass the parent-based validity checks.
-		s.verifier.MarkVerified(b.Root(), b.Block().Slot())
 		return nil
 	}
 
 	key := keyFromBlock(b)
 	entry := s.cache.ensure(key)
 	defer s.cache.delete(key)
-	return s.daCheck(ctx, b.Root(), blockCommitments, entry)
-}
-
-func (s *LazilyPersistentStore) daCheck(ctx context.Context, root [32]byte, kc safeCommitmentArray, entry *cacheEntry) error {
+	root := b.Root()
 	// Verify we have all the expected sidecars, and fail fast if any are missing or inconsistent.
 	// We don't try to salvage problematic batches because this indicates a misbehaving peer and we'd rather
 	// ignore their response and decrease their peer score.
-	sidecars, err := entry.filter(root, kc)
+	sidecars, err := entry.filter(root, blockCommitments)
 	if err != nil {
 		return errors.Wrap(err, "incomplete BlobSidecar batch")
 	}
 	// Do thorough verifications of each BlobSidecar for the block.
 	// Same as above, we don't save BlobSidecars if there are any problems with the batch.
-	vscs, err := s.verifier.VerifiedROBlobs(ctx, sidecars)
+	vscs, err := s.verifier.VerifiedROBlobs(ctx, b, sidecars)
 	if err != nil {
 		return errors.Wrapf(err, "invalid BlobSidecars received for block %#x", root)
 	}

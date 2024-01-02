@@ -3,11 +3,21 @@ package initialsync
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+)
+
+var (
+	// ErrBatchSignatureMismatch is returned by VerifiedROBlobs when any of the blobs in the batch have a signature
+	// which does not match the signature for the block with a corresponding root.
+	ErrBatchSignatureMismatch = errors.New("Sidecar block header signature does not match signed block")
+	// ErrBlockRootMismatch is returned by VerifiedROBlobs in the scenario where the root of the given signed block
+	// does not match the block header in one of the corresponding sidecars.
+	ErrBatchBlockRootMismatch = errors.New("Sidecar block header root does not match signed block")
 )
 
 func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
@@ -18,7 +28,6 @@ func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.
 
 func newBlobBatchVerifier(newVerifier verification.NewBlobVerifier) *BlobBatchVerifier {
 	return &BlobBatchVerifier{
-		verified:    make(map[[32]byte]primitives.Slot),
 		verifyKzg:   kzg.Verify,
 		newVerifier: newVerifier,
 	}
@@ -35,22 +44,27 @@ type kzgVerifier func(b ...blocks.ROBlob) error
 type BlobBatchVerifier struct {
 	verifyKzg   kzgVerifier
 	newVerifier verification.NewBlobVerifier
-	verified    map[[32]byte]primitives.Slot
-}
-
-// MarkVerified is exported so that blobs without commitments can be marked valid.
-// This allows a user of the BlobBatchVerifier to early return while still keeping
-// track of previous blocks in the batch.
-func (batch *BlobBatchVerifier) MarkVerified(root [32]byte, slot primitives.Slot) {
-	batch.verified[root] = slot
 }
 
 var _ das.BlobBatchVerifier = &BlobBatchVerifier{}
 
-func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
+func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, blk blocks.ROBlock, scs []blocks.ROBlob) ([]blocks.VerifiedROBlob, error) {
 	if len(scs) == 0 {
 		return nil, nil
 	}
+	// We assume the proposer was validated wrt the block in batch block processing before performing the DA check.
+	// So at this stage we just need to make sure the value being signed and signature bytes match the block.
+	for i := range scs {
+		if blk.Signature() != bytesutil.ToBytes96(scs[i].SignedBlockHeader.Signature) {
+			return nil, ErrBatchSignatureMismatch
+		}
+		// Extra defensive check to make sure the roots match. This should be unnecessary in practice since the root from
+		// the block should be used as the lookup key into the cache of sidecars.
+		if blk.Root() != scs[i].BlockRoot() {
+			return nil, ErrBatchBlockRootMismatch
+		}
+	}
+	// Verify commitments for all blobs at once. verifyOneBlob assumes it is only called once this check succeeds.
 	if err := batch.verifyKzg(scs...); err != nil {
 		return nil, err
 	}
@@ -68,54 +82,15 @@ func (batch *BlobBatchVerifier) VerifiedROBlobs(ctx context.Context, scs []block
 func (batch *BlobBatchVerifier) verifyOneBlob(ctx context.Context, sc blocks.ROBlob) (blocks.VerifiedROBlob, error) {
 	vb := blocks.VerifiedROBlob{}
 	bv := batch.newVerifier(sc, verification.InitsyncSidecarRequirements)
-	// We can satisfy this immediately because VerifiedROBlobs always verifies commitments for all blobs in the batch
-	// before calling verifyOneBlob.
+	// We can satisfy the following 2 requirements immediately because VerifiedROBlobs always verifies commitments
+	// and block signature for all blobs in the batch before calling verifyOneBlob.
+	//
 	bv.SatisfyRequirement(verification.RequireSidecarKzgProofVerified)
+	bv.SatisfyRequirement(verification.RequireValidProposerSignature)
 
 	if err := bv.BlobIndexInBounds(); err != nil {
 		return vb, err
 	}
-	/*
-		if err := bv.NotFromFutureSlot(); err != nil {
-			return vb, err
-		}
-		if err := bv.SlotAboveFinalized(); err != nil {
-			return vb, err
-		}
-	*/
-
-	/*
-		// If we've previously verified a sidecar for a given block root, we don't need to perform these other checks,
-		// because the matching block root ensures the slot and parent root match,
-		// making the checks in the 'else' branch redundant.
-		_, verified := batch.verified[sc.BlockRoot()]
-		// Since we are processing in batches, it is not possible to use methods that look at forkchoice data, which is
-		// only updated at the end of the batch. But, if this method has previously seen a sidecar for the parent
-		// and completely verified it, we know all these properties hold true for the child as well, as long as the parent's
-		// slot satisfies the following inequality. This code assumes responsibility for ensuring this
-		// assumption is correct using SatisfyRequirement to skip the verifier methods.
-		parentSlot, parentVerified := batch.verified[sc.ParentRoot()]
-		if verified || parentVerified && parentSlot < sc.Slot() {
-			bv.SatisfyRequirement(verification.RequireSidecarParentSeen)
-			bv.SatisfyRequirement(verification.RequireSidecarParentValid)
-			bv.SatisfyRequirement(verification.RequireSidecarParentSlotLower)
-			bv.SatisfyRequirement(verification.RequireSidecarDescendsFromFinalized)
-		} else {
-			if err := bv.SidecarParentSeen(nil); err != nil {
-				return vb, err
-			}
-			if err := bv.SidecarParentValid(nil); err != nil {
-				return vb, err
-			}
-			if err := bv.SidecarParentSlotLower(); err != nil {
-				return vb, err
-			}
-			if err := bv.SidecarDescendsFromFinalized(); err != nil {
-				return vb, err
-			}
-		}
-	*/
-
 	if err := bv.SidecarInclusionProven(); err != nil {
 		return vb, err
 	}
