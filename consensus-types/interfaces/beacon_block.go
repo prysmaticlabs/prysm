@@ -91,12 +91,12 @@ type SignedBeaconBlock interface {
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
 	SetRandaoReveal([]byte)
-	SetBlinded(bool)
 	SetStateRoot([]byte)
 	SetParentRoot([]byte)
 	SetProposerIndex(idx primitives.ValidatorIndex)
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
+	Unblind(e ExecutionData) error
 }
 
 // ExecutionData represents execution layer information that is contained

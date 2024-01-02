@@ -275,7 +275,24 @@ func TestClient_GetHeader(t *testing.T) {
 			require.Equal(t, len(kcgCommitments[i]) == 48, true)
 		}
 	})
-
+	t.Run("deneb, too many kzg commitments", func(t *testing.T) {
+		hc := &http.Client{
+			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
+				require.Equal(t, expectedPath, r.URL.Path)
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(bytes.NewBufferString(testExampleHeaderResponseDenebTooManyBlobs)),
+					Request:    r.Clone(ctx),
+				}, nil
+			}),
+		}
+		c := &Client{
+			hc:      hc,
+			baseURL: &url.URL{Host: "localhost:3500", Scheme: "http"},
+		}
+		_, err := c.GetHeader(ctx, slot, bytesutil.ToBytes32(parentHash), bytesutil.ToBytes48(pubkey))
+		require.ErrorContains(t, "could not extract proto message from header: too many blob commitments: 7", err)
+	})
 	t.Run("unsupported version", func(t *testing.T) {
 		hc := &http.Client{
 			Transport: roundtrip(func(r *http.Request) (*http.Response, error) {
@@ -412,7 +429,7 @@ func TestSubmitBlindedBlock(t *testing.T) {
 		require.ErrorContains(t, "not a bellatrix payload", err)
 	})
 	t.Run("not blinded", func(t *testing.T) {
-		sbb, err := blocks.NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: &eth.BeaconBlockBellatrix{Body: &eth.BeaconBlockBodyBellatrix{}}})
+		sbb, err := blocks.NewSignedBeaconBlock(&eth.SignedBeaconBlockBellatrix{Block: &eth.BeaconBlockBellatrix{Body: &eth.BeaconBlockBodyBellatrix{ExecutionPayload: &v1.ExecutionPayload{}}}})
 		require.NoError(t, err)
 		_, _, err = (&Client{}).SubmitBlindedBlock(ctx, sbb)
 		require.ErrorIs(t, err, errNotBlinded)

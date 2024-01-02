@@ -113,7 +113,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.SuggestedFeeRecipientFlag,
 			flags.EnableBuilderFlag,
 			flags.BuilderGasLimitFlag,
-			flags.ValidatorRegistrationBatchSizeFlag,
+			flags.ValidatorsRegistrationBatchSizeFlag,
 		},
 	},
 	{
