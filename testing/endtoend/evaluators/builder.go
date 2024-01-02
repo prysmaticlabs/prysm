@@ -67,6 +67,15 @@ func builderActive(_ *e2etypes.EvaluationContext, conns ...*grpc.ClientConn) err
 		if err != nil {
 			return err
 		}
+		txs, err := execPayload.Transactions()
+		if err != nil {
+			return err
+		}
+		if len(txs) == 0 {
+			// If a local payload is built with 0 transactions, builder cannot build a payload with more transactions
+			// since they both utilize the same EL.
+			continue
+		}
 		if string(execPayload.ExtraData()) != "prysm-builder" {
 			return errors.Errorf("block with slot %d was not built by the builder. It has an extra data of %s", b.Block().Slot(), string(execPayload.ExtraData()))
 		}
