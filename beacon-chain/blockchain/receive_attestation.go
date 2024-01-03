@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -122,9 +121,8 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
-	if !features.Get().DisableReorgLateBlocks {
-		disparity += reorgLateBlockCountAttestations
-	}
+	disparity += reorgLateBlockCountAttestations
+
 	s.processAttestations(ctx, disparity)
 
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
@@ -153,7 +151,7 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		proposingSlot: proposingSlot,
 	}
 	_, tracked := s.trackedProposer(headState, proposingSlot)
-	if tracked && !features.Get().DisableReorgLateBlocks {
+	if tracked {
 		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return
 		}

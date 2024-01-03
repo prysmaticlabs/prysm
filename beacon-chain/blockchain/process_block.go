@@ -137,7 +137,7 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 	if s.isNewHead(headRoot) {
 		shouldOverrideFCU := false
 		_, tracked := s.trackedProposer(fcuArgs.headState, proposingSlot)
-		if tracked && !features.Get().DisableReorgLateBlocks {
+		if tracked {
 			shouldOverrideFCU = s.shouldOverrideFCU(headRoot, proposingSlot)
 			fcuArgs.attributes = s.getPayloadAttribute(ctx, fcuArgs.headState, proposingSlot, headRoot[:])
 		}
