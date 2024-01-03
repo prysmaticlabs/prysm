@@ -173,9 +173,6 @@ func (s *Service) processFetchedDataRegSync(
 		"firstSlot":     data.bwb[0].Block.Block().Slot(),
 	}
 	for _, b := range data.bwb {
-		if len(b.Blobs) > 0 {
-			continue
-		}
 		if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
 			log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
 			return
@@ -199,7 +196,7 @@ func (s *Service) processFetchedDataRegSync(
 
 func syncFields(b blocks.ROBlock) logrus.Fields {
 	return logrus.Fields{
-		"root":     b.Root(),
+		"root":     fmt.Sprintf("%#x", b.Root()),
 		"lastSlot": b.Block().Slot(),
 	}
 }
