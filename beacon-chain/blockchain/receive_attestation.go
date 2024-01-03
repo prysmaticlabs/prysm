@@ -139,13 +139,13 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	if !s.isNewHead(newHeadRoot) {
 		return
 	}
+	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
 	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
 	if err != nil {
 		log.WithError(err).Error("could not get head block")
 		return
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
 	fcuArgs := &fcuConfig{
 		headState:     headState,
 		headRoot:      newHeadRoot,
