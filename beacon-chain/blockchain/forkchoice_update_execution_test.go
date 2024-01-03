@@ -58,33 +58,14 @@ func TestService_getHeadStateAndBlock(t *testing.T) {
 }
 
 func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	service.cfg.PayloadIDCache = cache.NewPayloadIDCache()
-	_, err = service.forkchoiceUpdateWithExecution(ctx, service.headRoot(), service.CurrentSlot()+1)
-	require.NoError(t, err)
-	hookErr := "could not notify forkchoice update"
-	invalidStateErr := "could not get state summary: could not find block in DB"
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, err)
-	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	_, err = service.forkchoiceUpdateWithExecution(ctx, [32]byte{'a'}, service.CurrentSlot()+1)
-	require.NoError(t, err)
-	require.LogsContain(t, hook, invalidStateErr)
+	service.cfg.TrackedValidatorsCache = cache.NewTrackedValidatorsCache()
 
-	hook.Reset()
-	service.head = &head{
-		root:  [32]byte{'a'},
-		block: nil, /* should not panic if notify head uses correct head */
-	}
-
-	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	wsb, err := blocks.NewSignedBeaconBlock(b)
@@ -99,12 +80,6 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		state: st,
 	}
 	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
-	_, err = service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot())
-	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-
-	// Block in DB
 	b = util.NewBeaconBlock()
 	b.Block.Slot = 3
 	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
@@ -117,19 +92,17 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		state: st,
 	}
 	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
-	_, err = service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()+1)
-	require.NoError(t, err)
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
+	args := &fcuConfig{
+		headState:     st,
+		headRoot:      r1,
+		headBlock:     wsb,
+		proposingSlot: service.CurrentSlot() + 1,
+	}
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, args))
+
 	payloadID, has := service.cfg.PayloadIDCache.PayloadID(2, [32]byte{2})
 	require.Equal(t, true, has)
 	require.Equal(t, primitives.PayloadID{1}, payloadID)
-
-	// Test zero headRoot returns immediately.
-	headRoot := service.headRoot()
-	_, err = service.forkchoiceUpdateWithExecution(ctx, [32]byte{}, service.CurrentSlot()+1)
-	require.NoError(t, err)
-	require.Equal(t, service.headRoot(), headRoot)
 }
 
 func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testing.T) {
@@ -173,9 +146,13 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 	service.head.block = sb
 	service.head.state = st
 	service.cfg.PayloadIDCache.Set(service.CurrentSlot()+1, [32]byte{} /* root */, [8]byte{})
-	_, err = service.forkchoiceUpdateWithExecution(ctx, r, service.CurrentSlot()+1)
-	require.NoError(t, err)
-
+	args := &fcuConfig{
+		headState:     st,
+		headBlock:     sb,
+		headRoot:      r,
+		proposingSlot: service.CurrentSlot() + 1,
+	}
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, args))
 }
 
 func TestShouldOverrideFCU(t *testing.T) {

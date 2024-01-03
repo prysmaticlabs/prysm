@@ -34,7 +34,7 @@ func (m SignedBeaconBlock) IsNil() bool {
 	return m.BeaconBlock == nil || m.Block().IsNil()
 }
 
-func (SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	panic("implement me")
 }
 
@@ -194,10 +194,6 @@ func (BeaconBlock) SetProposerIndex(_ primitives.ValidatorIndex) {
 }
 
 func (BeaconBlock) SetParentRoot(_ []byte) {
-	panic("implement me")
-}
-
-func (BeaconBlock) SetBlinded(_ bool) {
 	panic("implement me")
 }
 
