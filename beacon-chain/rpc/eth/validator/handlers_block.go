@@ -209,7 +209,6 @@ func processBuilderBoostFactor(raw string) (uint64, error) {
 	default:
 		number, err := strconv.ParseUint(trimmed, 10, 64)
 		if err != nil {
-
 			return 0, errors.Wrap(err, "Unable to decode builder boost factor")
 		}
 		return number, nil
