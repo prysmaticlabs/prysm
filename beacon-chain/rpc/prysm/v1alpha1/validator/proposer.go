@@ -317,13 +317,13 @@ func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethp
 			return errors.Wrap(err, "ROBlob creation failed")
 		}
 		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
+			return errors.Wrap(err, "receive blob failed")
+		}
 		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
 			Type: operation.BlobSidecarReceived,
 			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
 		})
-		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
-			return errors.Wrap(err, "receive blob failed")
-		}
 	}
 	return nil
 }
