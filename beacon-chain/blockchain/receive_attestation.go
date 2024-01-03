@@ -151,7 +151,7 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		proposingSlot: proposingSlot,
 	}
 	_, tracked := s.trackedProposer(headState, proposingSlot)
-	if tracked && !features.Get().DisableReorgLateBlocks {
+	if tracked {
 		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
 			return
 		}
