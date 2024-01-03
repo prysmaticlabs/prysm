@@ -188,7 +188,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			require.NoError(t, bs.Save(sidecar))
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
@@ -208,7 +208,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			slot += 10000
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
