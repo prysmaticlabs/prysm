@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -19,6 +21,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type blockType uint8
@@ -155,6 +158,12 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	rawGraffiti := r.URL.Query().Get("graffiti")
 	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
 
+	bbFactor, err := processBuilderBoostFactor(r.URL.Query().Get("builder_boost_factor"))
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
@@ -182,11 +191,29 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
-		Slot:         primitives.Slot(slot),
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		Slot:               primitives.Slot(slot),
+		RandaoReveal:       randaoReveal,
+		Graffiti:           graffiti,
+		SkipMevBoost:       false,
+		BuilderBoostFactor: &wrapperspb.UInt64Value{Value: bbFactor},
 	}, any)
+}
+
+func processBuilderBoostFactor(raw string) (uint64, error) {
+	trimmed := strings.ReplaceAll(raw, " ", "")
+	switch trimmed {
+	case "": // default to 100 if it's not provided
+		return 100, nil
+	case "2**64-1":
+		return math.MaxUint64, nil
+	default:
+		number, err := strconv.ParseUint(trimmed, 10, 64)
+		if err != nil {
+
+			return 0, errors.Wrap(err, "Unable to decode builder boost factor")
+		}
+		return number, nil
+	}
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest, requiredType blockType) {
