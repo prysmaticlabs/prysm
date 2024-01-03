@@ -250,22 +250,28 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 	log.Debug("Pruning old blobs")
 
-	folders, err := afero.ReadDir(bs.fs, ".")
-	if err != nil {
-		return err
-	}
 	var totalPruned int
-	for _, folder := range folders {
-		if folder.IsDir() {
-			num, err := bs.processFolder(folder, currentSlot, retentionSlots)
+	err = afero.Walk(bs.fs, ".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.WithError(err).Debugf("Failed to walk path %s", path)
+			return nil
+		}
+		if info.IsDir() && path != "." {
+			num, err := bs.processFolder(info, currentSlot, retentionSlots)
 			if err != nil {
-				return err
+				log.WithError(err).Debugf("Failed to process folder %s", info.Name())
+				return nil
 			}
 			blobsPrunedCounter.Add(float64(num))
 			blobsTotalGauge.Add(-float64(num))
 			totalPruned += num
 		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
+
 	pruneTime := time.Since(t)
 
 	log.WithFields(log.Fields{
