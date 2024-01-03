@@ -95,6 +95,10 @@ var (
 		Name:  "enable-slashing-protection-history-pruning",
 		Usage: "Enables the pruning of the validator client's slashing protection database.",
 	}
+	EnableMinimalSlashingProtection = &cli.BoolFlag{
+		Name:  "enable-minimal-slashing-protection",
+		Usage: "Enables the minimal slashing protection. See EIP-3076 for more details.",
+	}
 	enableDoppelGangerProtection = &cli.BoolFlag{
 		Name: "enable-doppelganger",
 		Usage: `Enables the validator to perform a doppelganger check.
@@ -177,6 +181,7 @@ var ValidatorFlags = append(deprecatedFlags, []cli.Flag{
 	dynamicKeyReloadDebounceInterval,
 	attestTimely,
 	enableSlashingProtectionPruning,
+	EnableMinimalSlashingProtection,
 	enableDoppelGangerProtection,
 	EnableBeaconRESTApi,
 }...)

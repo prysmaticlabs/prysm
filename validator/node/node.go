@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -45,6 +46,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	g "github.com/prysmaticlabs/prysm/v5/validator/graffiti"
@@ -338,41 +341,105 @@ func (c *ValidatorClient) initializeForWeb(cliCtx *cli.Context, router *mux.Rout
 }
 
 func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
-	dataDir := cliCtx.String(cmd.DataDirFlag.Name)
-	dataFile := filepath.Join(dataDir, kv.ProtectionDbFileName)
+	fileSystemDataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	kvDataDir := cliCtx.String(cmd.DataDirFlag.Name)
+	kvDataFile := filepath.Join(kvDataDir, kv.ProtectionDbFileName)
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	isInteropNumValidatorsSet := cliCtx.IsSet(flags.InteropNumValidators.Name)
 	isWeb3SignerURLFlagSet := cliCtx.IsSet(flags.Web3SignerURLFlag.Name)
-
-	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	dataDir, _ = c.getLegacyDatabaseLocation(
-		isInteropNumValidatorsSet,
-		isWeb3SignerURLFlagSet,
-		dataDir,
-		dataFile,
-		walletDir,
-	)
-
 	clearFlag := cliCtx.Bool(cmd.ClearDB.Name)
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
+	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
+	kvDataDir, _ = c.getLegacyDatabaseLocation(
+		isInteropNumValidatorsSet,
+		isWeb3SignerURLFlagSet,
+		kvDataDir,
+		kvDataFile,
+		walletDir,
+	)
+
+	// Check if minimal slashing protection is requested.
+	isMinimalSlashingProtectionRequested := cliCtx.Bool(features.EnableMinimalSlashingProtection.Name)
+
 	if clearFlag || forceClearFlag {
-		if err := clearDB(cliCtx.Context, dataDir, forceClearFlag); err != nil {
-			return err
+		var err error
+
+		if isMinimalSlashingProtectionRequested {
+			err = clearDB(cliCtx.Context, fileSystemDataDir, forceClearFlag, true)
+		} else {
+			err = clearDB(cliCtx.Context, kvDataDir, forceClearFlag, false)
+			// Reset the BoltDB datadir to the requested location, so the new one is not located any more in the legacy location.
+			kvDataDir = cliCtx.String(cmd.DataDirFlag.Name)
+		}
+
+		if err != nil {
+			return errors.Wrap(err, "could not clear database")
 		}
 	}
 
-	log.WithField("databasePath", dataDir).Info("Checking DB")
-	valDB, err := kv.NewKVStore(cliCtx.Context, dataDir, &kv.Config{
-		PubKeys: nil,
-	})
-
+	// Check if a minimal database exists.
+	minimalDatabaseExists, err := db.IsMinimalDatabaseExisting(fileSystemDataDir)
 	if err != nil {
-		return errors.Wrap(err, "could not initialize db")
+		return errors.Wrapf(err, "could not check if minimal slashing protection database exists")
 	}
 
+	// Check if a complete database exists.
+	completeDatabaseExists, err := db.IsCompleteDatabaseExisting(kvDataDir)
+	if err != nil {
+		return errors.Wrapf(err, "could not check if complete slashing protection database exists")
+	}
+
+	// If both a complete and minimal database exist, return on error.
+	if completeDatabaseExists && minimalDatabaseExists {
+		log.Fatalf(
+			"Both complete (%s) and minimal slashing (%s) protection databases exist. Please delete one of them.",
+			path.Join(kvDataDir, kv.ProtectionDbFileName),
+			path.Join(fileSystemDataDir, filesystem.DatabaseDirName),
+		)
+		return nil
+	}
+
+	// If a minimal database exists AND complete slashing protection is requested, convert the minimal
+	// database to a complete one and use the complete database.
+	if !isMinimalSlashingProtectionRequested && minimalDatabaseExists {
+		log.Warning("Complete slashing protection database requested, while minimal slashing protection database currently used. Converting.")
+
+		if err := db.ConvertDatabase(cliCtx.Context, fileSystemDataDir, kvDataDir, true); err != nil {
+			return errors.Wrapf(err, "could not convert minimal slashing protection database to complete slashing protection database")
+		}
+	}
+
+	// If a complete database exists AND minimal slashing protection is requested, use complete database.
+	useMinimalSlashingProtection := isMinimalSlashingProtectionRequested
+	if isMinimalSlashingProtectionRequested && completeDatabaseExists {
+		log.Warningf(`Minimal slashing protection database requested, while complete slashing protection database currently used.
+		Will continue to use complete slashing protection database.
+		Please convert your database by using 'validator db convert-complete-to-minimal --source %s --target %s'`,
+			kvDataDir, fileSystemDataDir,
+		)
+
+		useMinimalSlashingProtection = false
+	}
+
+	// Create / get the database.
+	var valDB iface.ValidatorDB
+	if useMinimalSlashingProtection {
+		log.WithField("databasePath", fileSystemDataDir).Info("Checking DB")
+		valDB, err = filesystem.NewStore(fileSystemDataDir, nil)
+	} else {
+		log.WithField("databasePath", kvDataDir).Info("Checking DB")
+		valDB, err = kv.NewKVStore(cliCtx.Context, kvDataDir, nil)
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "could not create validator database")
+	}
+
+	// Assign the database to the validator client.
 	c.db = valDB
 
+	// Migrate the database
 	if err := valDB.RunUpMigrations(cliCtx.Context); err != nil {
 		return errors.Wrap(err, "could not run database migration")
 	}
@@ -682,8 +749,12 @@ func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	return nil
 }
 
-func clearDB(ctx context.Context, dataDir string, force bool) error {
-	var err error
+func clearDB(ctx context.Context, dataDir string, force bool, isDatabaseMinimal bool) error {
+	var (
+		valDB iface.ValidatorDB
+		err   error
+	)
+
 	clearDBConfirmed := force
 
 	if !force {
@@ -697,10 +768,16 @@ func clearDB(ctx context.Context, dataDir string, force bool) error {
 	}
 
 	if clearDBConfirmed {
-		valDB, err := kv.NewKVStore(ctx, dataDir, &kv.Config{})
-		if err != nil {
-			return errors.Wrapf(err, "Could not create DB in dir %s", dataDir)
+		if isDatabaseMinimal {
+			valDB, err = filesystem.NewStore(dataDir, nil)
+		} else {
+			valDB, err = kv.NewKVStore(ctx, dataDir, nil)
 		}
+
+		if err != nil {
+			return errors.Wrap(err, "could not create validator database")
+		}
+
 		if err := valDB.Close(); err != nil {
 			return errors.Wrapf(err, "could not close DB in dir %s", dataDir)
 		}
