@@ -31,12 +31,13 @@ import (
 )
 
 const (
-	maxPollingWaitTime  = 60 * time.Second // A minute so timing out doesn't take very long.
-	filePollingInterval = 500 * time.Millisecond
-	memoryHeapFileName  = "node_heap_%d.pb.gz"
-	cpuProfileFileName  = "node_cpu_profile_%d.pb.gz"
-	fileBufferSize      = 64 * 1024
-	maxFileBufferSize   = 1024 * 1024
+	maxPollingWaitTime     = 60 * time.Second // A minute so timing out doesn't take very long.
+	filePollingInterval    = 500 * time.Millisecond
+	memoryHeapFileName     = "node_heap_%d.pb.gz"
+	cpuProfileFileName     = "node_cpu_profile_%d.pb.gz"
+	goroutineTraceFileName = "node_goroutine_trace_%d.log"
+	fileBufferSize         = 64 * 1024
+	maxFileBufferSize      = 1024 * 1024
 )
 
 // Graffiti is a list of sample graffiti strings.
@@ -251,6 +252,11 @@ func WritePprofFiles(testDir string, index int) error {
 	}
 	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/profile", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
 	filePath = filepath.Join(testDir, fmt.Sprintf(cpuProfileFileName, index))
+	if err := writeURLRespAtPath(url, filePath); err != nil {
+		return err
+	}
+	url = fmt.Sprintf("http://127.0.0.1:%d/debug/pprof/goroutine?debug=1", e2e.TestParams.Ports.PrysmBeaconNodePprofPort+index)
+	filePath = filepath.Join(testDir, fmt.Sprintf(goroutineTraceFileName, index))
 	return writeURLRespAtPath(url, filePath)
 }
 

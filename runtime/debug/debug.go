@@ -51,45 +51,45 @@ var (
 	// PProfFlag to enable pprof HTTP server.
 	PProfFlag = &cli.BoolFlag{
 		Name:  "pprof",
-		Usage: "Enable the pprof HTTP server",
+		Usage: "Enables the pprof HTTP server.",
 	}
 	// PProfPortFlag to specify HTTP server listening port.
 	PProfPortFlag = &cli.IntFlag{
 		Name:  "pprofport",
-		Usage: "pprof HTTP server listening port",
+		Usage: "pprof HTTP server listening port.",
 		Value: 6060,
 	}
 	// PProfAddrFlag to specify HTTP server address.
 	PProfAddrFlag = &cli.StringFlag{
 		Name:  "pprofaddr",
-		Usage: "pprof HTTP server listening interface",
+		Usage: "pprof HTTP server listening interface.",
 		Value: "127.0.0.1",
 	}
 	// MemProfileRateFlag to specify the mem profiling rate.
 	MemProfileRateFlag = &cli.IntFlag{
 		Name:  "memprofilerate",
-		Usage: "Turn on memory profiling with the given rate",
+		Usage: "Turns on memory profiling with the given rate.",
 		Value: runtime.MemProfileRate,
 	}
 	// MutexProfileFractionFlag to specify the mutex profiling rate.
 	MutexProfileFractionFlag = &cli.IntFlag{
 		Name:  "mutexprofilefraction",
-		Usage: "Turn on mutex profiling with the given rate",
+		Usage: "Turns on mutex profiling with the given rate.",
 	}
 	// BlockProfileRateFlag to specify the block profiling rate.
 	BlockProfileRateFlag = &cli.IntFlag{
 		Name:  "blockprofilerate",
-		Usage: "Turn on block profiling with the given rate",
+		Usage: "Turns on block profiling with the given rate.",
 	}
 	// CPUProfileFlag to specify where to write the CPU profile.
 	CPUProfileFlag = &cli.StringFlag{
 		Name:  "cpuprofile",
-		Usage: "Write CPU profile to the given file",
+		Usage: "Writes CPU profile to the given file.",
 	}
 	// TraceFlag to specify where to write the trace execution profile.
 	TraceFlag = &cli.StringFlag{
 		Name:  "trace",
-		Usage: "Write execution trace to the given file",
+		Usage: "Writes execution trace to the given file.",
 	}
 )
 
