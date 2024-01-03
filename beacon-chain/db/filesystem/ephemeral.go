@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/spf13/afero"
 )
 
@@ -18,8 +19,11 @@ func NewEphemeralBlobStorage(_ testing.TB) *BlobStorage {
 // in order to interact with it outside the parameters of the BlobStorage api.
 func NewEphemeralBlobStorageWithFs(_ testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	retentionEpoch := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
-	return fs, &BlobStorage{fs: fs, retentionEpochs: retentionEpoch}, nil
+	s, err := slots.EpochStart(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+	if err != nil {
+		return fs, &BlobStorage{}, err
+	}
+	return fs, &BlobStorage{fs: fs, retentionSlots: s}, nil
 }
 
 type BlobMocker struct {
