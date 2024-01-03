@@ -252,11 +252,8 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	var totalPruned int
 	for _, folder := range folders {
 		if folder.IsDir() {
-			num, err := bs.processFolder(folder, currentSlot, retentionSlots)
+			num, err := bs.processFolder(folder, currentSlot)
 			if err != nil {
-				return err
-			}
-			if err := bs.processFolder(folder, currentSlot, bs.retentionSlots); err != nil {
 				return err
 			}
 			blobsPrunedCounter.Add(float64(num))
@@ -267,7 +264,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	pruneTime := time.Since(t)
 
 	log.WithFields(log.Fields{
-		"lastPrunedEpoch":   slots.ToEpoch(currentSlot - retentionSlots),
+		"lastPrunedEpoch":   slots.ToEpoch(currentSlot - bs.retentionSlots),
 		"pruneTime":         pruneTime,
 		"numberBlobsPruned": totalPruned,
 	}).Debug("Pruned old blobs")
@@ -277,7 +274,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) (int, error) {
+func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot primitives.Slot) (int, error) {
 	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
 	if err != nil {
 		return 0, err
@@ -293,7 +290,7 @@ func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionS
 		return 0, err
 	}
 	var num int
-	if slot < (currentSlot - retentionSlots) {
+	if slot < (currentSlot - bs.retentionSlots) {
 		num, err = bs.countFiles(folder.Name())
 		if err != nil {
 			return 0, err
