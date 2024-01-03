@@ -15,12 +15,12 @@ var (
 	// MinimalConfigFlag declares to use the minimal config for running Ethereum consensus.
 	MinimalConfigFlag = &cli.BoolFlag{
 		Name:  "minimal-config",
-		Usage: "Use minimal config with parameters as defined in the spec.",
+		Usage: "Uses minimal config with parameters as defined in the spec.",
 	}
 	// E2EConfigFlag declares to use a testing specific config for running Ethereum consensus in end-to-end testing.
 	E2EConfigFlag = &cli.BoolFlag{
 		Name:  "e2e-config",
-		Usage: "Use the E2E testing config, only for use within end-to-end testing.",
+		Usage: "Enables the E2E testing config, only for use within end-to-end testing.",
 	}
 	// RPCMaxPageSizeFlag defines the maximum numbers per page returned in RPC responses from this
 	// beacon node (default: 500).
@@ -31,34 +31,35 @@ var (
 	// VerbosityFlag defines the logrus configuration.
 	VerbosityFlag = &cli.StringFlag{
 		Name:  "verbosity",
-		Usage: "Logging verbosity (trace, debug, info=default, warn, error, fatal, panic)",
+		Usage: "Logging verbosity. (trace, debug, info, warn, error, fatal, panic)",
 		Value: "info",
 	}
 	// DataDirFlag defines a path on disk where Prysm databases are stored.
 	DataDirFlag = &cli.StringFlag{
 		Name:  "datadir",
-		Usage: "Data directory for the databases",
+		Usage: "Data directory for the databases.",
 		Value: DefaultDataDir(),
 	}
 	// EnableBackupWebhookFlag for users to trigger db backups via an HTTP webhook.
 	EnableBackupWebhookFlag = &cli.BoolFlag{
-		Name:  "enable-db-backup-webhook",
-		Usage: "Serve HTTP handler to initiate database backups. The handler is served on the monitoring port at path /db/backup.",
+		Name: "enable-db-backup-webhook",
+		Usage: `Serves HTTP handler to initiate database backups.
+		The handler is served on the monitoring port at path /db/backup.`,
 	}
 	// BackupWebhookOutputDir to customize the output directory for db backups.
 	BackupWebhookOutputDir = &cli.StringFlag{
 		Name:  "db-backup-output-dir",
-		Usage: "Output directory for db backups",
+		Usage: "Output directory for db backups.",
 	}
 	// EnableTracingFlag defines a flag to enable p2p message tracing.
 	EnableTracingFlag = &cli.BoolFlag{
 		Name:  "enable-tracing",
-		Usage: "Enable request tracing.",
+		Usage: "Enables request tracing.",
 	}
 	// TracingProcessNameFlag defines a flag to specify a process name.
 	TracingProcessNameFlag = &cli.StringFlag{
 		Name:  "tracing-process-name",
-		Usage: "The name to apply to tracing tag \"process_name\"",
+		Usage: "Name to apply to tracing tag `process_name`.",
 	}
 	// TracingEndpointFlag flag defines the http endpoint for serving traces to Jaeger.
 	TracingEndpointFlag = &cli.StringFlag{
@@ -70,7 +71,7 @@ var (
 	// messages are sampled for tracing.
 	TraceSampleFractionFlag = &cli.Float64Flag{
 		Name:  "trace-sample-fraction",
-		Usage: "Indicate what fraction of p2p messages are sampled for tracing.",
+		Usage: "Indicates what fraction of p2p messages are sampled for tracing.",
 		Value: 0.20,
 	}
 	// MonitoringHostFlag defines the host used to serve prometheus metrics.
@@ -82,13 +83,13 @@ var (
 	// DisableMonitoringFlag defines a flag to disable the metrics collection.
 	DisableMonitoringFlag = &cli.BoolFlag{
 		Name:  "disable-monitoring",
-		Usage: "Disable monitoring service.",
+		Usage: "Disables monitoring service.",
 	}
 	// NoDiscovery specifies whether we are running a local network and have no need for connecting
 	// to the bootstrap nodes in the cloud
 	NoDiscovery = &cli.BoolFlag{
 		Name:  "no-discovery",
-		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes.",
+		Usage: "Enable only local network p2p and do not connect to cloud bootstrap nodes",
 	}
 	// StaticPeers specifies a set of peers to connect to explicitly.
 	StaticPeers = &cli.StringSliceFlag{
@@ -185,17 +186,17 @@ var (
 	// ForceClearDB removes any previously stored data at the data directory.
 	ForceClearDB = &cli.BoolFlag{
 		Name:  "force-clear-db",
-		Usage: "Clear any previously stored data at the data directory",
+		Usage: "Clears any previously stored data at the data directory.",
 	}
 	// ClearDB prompts user to see if they want to remove any previously stored data at the data directory.
 	ClearDB = &cli.BoolFlag{
 		Name:  "clear-db",
-		Usage: "Prompt for clearing any previously stored data at the data directory",
+		Usage: "Prompt for clearing any previously stored data at the data directory.",
 	}
 	// LogFormat specifies the log output format.
 	LogFormat = &cli.StringFlag{
 		Name:  "log-format",
-		Usage: "Specify log formatting. Supports: text, json, fluentd, journald.",
+		Usage: "Specifies log formatting. Supports: text, json, fluentd, journald.",
 		Value: "text",
 	}
 	// MaxGoroutines specifies the maximum amount of goroutines tolerated, before a status check fails.
@@ -207,7 +208,7 @@ var (
 	// LogFileName specifies the log output file name.
 	LogFileName = &cli.StringFlag{
 		Name:  "log-file",
-		Usage: "Specify log file name, relative or absolute",
+		Usage: "Specifies log file name, relative or absolute.",
 	}
 	// EnableUPnPFlag specifies if UPnP should be enabled or not. The default value is false.
 	EnableUPnPFlag = &cli.BoolFlag{
@@ -217,27 +218,27 @@ var (
 	// ConfigFileFlag specifies the filepath to load flag values.
 	ConfigFileFlag = &cli.StringFlag{
 		Name:  "config-file",
-		Usage: "The filepath to a yaml file with flag values",
+		Usage: "Filepath to a yaml file with flag values.",
 	}
 	// ChainConfigFileFlag specifies the filepath to load flag values.
 	ChainConfigFileFlag = &cli.StringFlag{
 		Name:  "chain-config-file",
-		Usage: "The path to a YAML file with chain config values",
+		Usage: "Path to a YAML file with chain config values.",
 	}
 	// GrpcMaxCallRecvMsgSizeFlag defines the max call message size for GRPC
 	GrpcMaxCallRecvMsgSizeFlag = &cli.IntFlag{
 		Name: "grpc-max-msg-size",
-		Usage: "Integer to define max receive message call size. If serving a public gRPC server, " +
-			"set this to a more reasonable size to avoid resource exhaustion from large messages. " +
-			"Validators with as many as 10000 keys can be run with a max message size of less than " +
-			"50Mb. The default here is set to a very high value for local users. " +
-			"(default: 2147483647 (2Gi)).",
+		Usage: `Integer to define max receive message call size (in bytes).
+		If serving a public gRPC server, set this to a more reasonable size to avoid
+		resource exhaustion from large messages. 
+		Validators with as many as 10000 keys can be run with a max message size of less than 
+		50Mb. The default here is set to a very high value for local users.`,
 		Value: math.MaxInt32,
 	}
 	// AcceptTosFlag specifies user acceptance of ToS for non-interactive environments.
 	AcceptTosFlag = &cli.BoolFlag{
 		Name:  "accept-terms-of-use",
-		Usage: "Accept Terms and Conditions (for non-interactive environments)",
+		Usage: "Accepts Terms and Conditions (for non-interactive environments).",
 	}
 	// ValidatorMonitorIndicesFlag specifies a list of validator indices to
 	// track for performance updates
@@ -261,7 +262,7 @@ var (
 	// ApiTimeoutFlag specifies the timeout value for API requests in seconds. A timeout of zero means no timeout.
 	ApiTimeoutFlag = &cli.IntFlag{
 		Name:  "api-timeout",
-		Usage: "Specifies the timeout value for API requests in seconds",
+		Usage: "Specifies the timeout value for API requests in seconds.",
 		Value: 120,
 	}
 	// JwtOutputFileFlag specifies the JWT file path that gets generated into when invoked by generate-jwt-secret.

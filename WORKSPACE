@@ -323,6 +323,22 @@ filegroup(
 )
 
 http_archive(
+    name = "goerli_testnet",
+    build_file_content = """
+filegroup(
+    name = "configs",
+    srcs = [
+        "prater/config.yaml",
+    ],
+    visibility = ["//visibility:public"],
+)
+    """,
+    sha256 = "43fc0f55ddff7b511713e2de07aa22846a67432df997296fb4fc09cd8ed1dcdb",
+    strip_prefix = "goerli-6522ac6684693740cd4ddcc2a0662e03702aa4a1",
+    url = "https://github.com/eth-clients/goerli/archive/6522ac6684693740cd4ddcc2a0662e03702aa4a1.tar.gz",
+)
+
+http_archive(
     name = "holesky_testnet",
     build_file_content = """
 filegroup(

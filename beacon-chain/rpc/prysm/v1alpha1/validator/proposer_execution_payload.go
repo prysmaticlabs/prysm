@@ -173,6 +173,10 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	}
 	bundleCache.add(slot, bundle)
 	warnIfFeeRecipientDiffers(payload, val.FeeRecipient)
+	localValueGwei, err := payload.ValueInGwei()
+	if err == nil {
+		log.WithField("value", localValueGwei).Debug("received execution payload from local engine")
+	}
 	return payload, overrideBuilder, nil
 }
 
