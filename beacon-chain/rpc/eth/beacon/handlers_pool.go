@@ -501,6 +501,13 @@ func (s *Server) SubmitAttesterSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not insert attester slashing into pool: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// notify events
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AttesterSlashingReceived,
+		Data: &operation.AttesterSlashingReceivedData{
+			AttesterSlashing: slashing,
+		},
+	})
 	if !features.Get().DisableBroadcastSlashings {
 		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
 			httputil.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)
@@ -569,6 +576,15 @@ func (s *Server) SubmitProposerSlashing(w http.ResponseWriter, r *http.Request) 
 		httputil.HandleError(w, "Could not insert proposer slashing into pool: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// notify events
+	s.OperationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.ProposerSlashingReceived,
+		Data: &operation.ProposerSlashingReceivedData{
+			ProposerSlashing: slashing,
+		},
+	})
+
 	if !features.Get().DisableBroadcastSlashings {
 		if err = s.Broadcaster.Broadcast(ctx, slashing); err != nil {
 			httputil.HandleError(w, "Could not broadcast slashing object: "+err.Error(), http.StatusInternalServerError)

@@ -44,6 +44,10 @@ const (
 	PayloadAttributesTopic = "payload_attributes"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
+	// ProposerSlashingTopic represents a new proposer slashing event topic
+	ProposerSlashingTopic = "proposer_slashing"
+	// AttesterSlashingTopic represents a new attester slashing event topic
+	AttesterSlashingTopic = "attester_slashing"
 )
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
@@ -61,6 +65,8 @@ var casesHandled = map[string]bool{
 	BLSToExecutionChangeTopic:      true,
 	PayloadAttributesTopic:         true,
 	BlobSidecarTopic:               true,
+	ProposerSlashingTopic:          true,
+	AttesterSlashingTopic:          true,
 }
 
 // StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.

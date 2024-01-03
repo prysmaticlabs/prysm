@@ -26,6 +26,12 @@ const (
 
 	// BlobSidecarReceived is sent after a blob sidecar is received from gossip or rpc.
 	BlobSidecarReceived = 6
+
+	// ProposerSlashingReceived is sent after a proposer slashing is received from gossip or rpc
+	ProposerSlashingReceived = 7
+
+	// AttesterSlashingReceived is sent after an attester slashing is received from gossip or rpc
+	AttesterSlashingReceived = 8
 )
 
 // UnAggregatedAttReceivedData is the data sent with UnaggregatedAttReceived events.
@@ -60,4 +66,14 @@ type BLSToExecutionChangeReceivedData struct {
 // BlobSidecarReceivedData is the data sent with BlobSidecarReceived events.
 type BlobSidecarReceivedData struct {
 	Blob *blocks.VerifiedROBlob
+}
+
+// ProposerSlashingReceivedData is the data sent with ProposerSlashingReceived events.
+type ProposerSlashingReceivedData struct {
+	ProposerSlashing *ethpb.ProposerSlashing
+}
+
+// AttesterSlashingReceivedData is the data sent with AttesterSlashingReceived events.
+type AttesterSlashingReceivedData struct {
+	AttesterSlashing *ethpb.AttesterSlashing
 }
