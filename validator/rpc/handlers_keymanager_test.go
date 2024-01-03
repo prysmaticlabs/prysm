@@ -29,6 +29,8 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v5/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
+	DBIface "github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/keymanager"
@@ -257,73 +259,83 @@ func TestServer_ImportKeystores(t *testing.T) {
 			require.Equal(t, keymanager.StatusError, st.Status)
 		}
 	})
-	t.Run("returns proper statuses for keystores in request", func(t *testing.T) {
-		numKeystores := 5
-		password := "12345678"
-		keystores := make([]*keymanager.Keystore, numKeystores)
-		passwords := make([]string, numKeystores)
-		publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeystores)
-		for i := 0; i < numKeystores; i++ {
-			keystores[i] = createRandomKeystore(t, password)
-			pubKey, err := hexutil.Decode("0x" + keystores[i].Pubkey)
-			require.NoError(t, err)
-			publicKeys[i] = bytesutil.ToBytes48(pubKey)
-			passwords[i] = password
-		}
 
-		// Create a validator database.
-		validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
-			PubKeys: publicKeys,
+	for _, isSlashingProtectionMinimal := range []bool{false, true} {
+		t.Run(fmt.Sprintf("returns proper statuses for keystores in request/isSlashingProtectionMininal:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			numKeystores := 5
+			password := "12345678"
+			keystores := make([]*keymanager.Keystore, numKeystores)
+			passwords := make([]string, numKeystores)
+			publicKeys := make([][fieldparams.BLSPubkeyLength]byte, numKeystores)
+			for i := 0; i < numKeystores; i++ {
+				keystores[i] = createRandomKeystore(t, password)
+				pubKey, err := hexutil.Decode("0x" + keystores[i].Pubkey)
+				require.NoError(t, err)
+				publicKeys[i] = bytesutil.ToBytes48(pubKey)
+				passwords[i] = password
+			}
+
+			// Create a validator database.
+			var validatorDB DBIface.ValidatorDB
+			if isSlashingProtectionMinimal {
+				validatorDB, err = filesystem.NewStore(defaultWalletPath, &filesystem.Config{
+					PubKeys: publicKeys,
+				})
+			} else {
+				validatorDB, err = kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
+					PubKeys: publicKeys,
+				})
+			}
+			require.NoError(t, err)
+			s.valDB = validatorDB
+
+			// Have to close it after import is done otherwise it complains db is not open.
+			defer func() {
+				require.NoError(t, validatorDB.Close())
+			}()
+			encodedKeystores := make([]string, numKeystores)
+			for i := 0; i < numKeystores; i++ {
+				enc, err := json.Marshal(keystores[i])
+				require.NoError(t, err)
+				encodedKeystores[i] = string(enc)
+			}
+
+			// Generate mock slashing history.
+			attestingHistory := make([][]*kv.AttestationRecord, 0)
+			proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
+			for i := 0; i < len(publicKeys); i++ {
+				proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+			}
+			mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+			require.NoError(t, err)
+
+			// JSON encode the protection JSON and save it.
+			encodedSlashingProtection, err := json.Marshal(mockJSON)
+			require.NoError(t, err)
+
+			request := &ImportKeystoresRequest{
+				Keystores:          encodedKeystores,
+				Passwords:          passwords,
+				SlashingProtection: string(encodedSlashingProtection),
+			}
+
+			var buf bytes.Buffer
+			err = json.NewEncoder(&buf).Encode(request)
+			require.NoError(t, err)
+
+			req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/keystores"), &buf)
+			wr := httptest.NewRecorder()
+			wr.Body = &bytes.Buffer{}
+			s.ImportKeystores(wr, req)
+			require.Equal(t, http.StatusOK, wr.Code)
+			resp := &ImportKeystoresResponse{}
+			require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+			require.Equal(t, numKeystores, len(resp.Data))
+			for _, st := range resp.Data {
+				require.Equal(t, keymanager.StatusImported, st.Status)
+			}
 		})
-		require.NoError(t, err)
-		s.valDB = validatorDB
-
-		// Have to close it after import is done otherwise it complains db is not open.
-		defer func() {
-			require.NoError(t, validatorDB.Close())
-		}()
-		encodedKeystores := make([]string, numKeystores)
-		for i := 0; i < numKeystores; i++ {
-			enc, err := json.Marshal(keystores[i])
-			require.NoError(t, err)
-			encodedKeystores[i] = string(enc)
-		}
-
-		// Generate mock slashing history.
-		attestingHistory := make([][]*kv.AttestationRecord, 0)
-		proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
-		for i := 0; i < len(publicKeys); i++ {
-			proposalHistory[i].Proposals = make([]kv.Proposal, 0)
-		}
-		mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
-		require.NoError(t, err)
-
-		// JSON encode the protection JSON and save it.
-		encodedSlashingProtection, err := json.Marshal(mockJSON)
-		require.NoError(t, err)
-
-		request := &ImportKeystoresRequest{
-			Keystores:          encodedKeystores,
-			Passwords:          passwords,
-			SlashingProtection: string(encodedSlashingProtection),
-		}
-
-		var buf bytes.Buffer
-		err = json.NewEncoder(&buf).Encode(request)
-		require.NoError(t, err)
-
-		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/keystores"), &buf)
-		wr := httptest.NewRecorder()
-		wr.Body = &bytes.Buffer{}
-		s.ImportKeystores(wr, req)
-		require.Equal(t, http.StatusOK, wr.Code)
-		resp := &ImportKeystoresResponse{}
-		require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
-		require.Equal(t, numKeystores, len(resp.Data))
-		for _, st := range resp.Data {
-			require.Equal(t, keymanager.StatusImported, st.Status)
-		}
-	})
+	}
 }
 
 func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
@@ -372,215 +384,236 @@ func TestServer_ImportKeystores_WrongKeymanagerKind(t *testing.T) {
 }
 
 func TestServer_DeleteKeystores(t *testing.T) {
-	ctx := context.Background()
-	srv := setupServerWithWallet(t)
+	for _, isSlashingProtectionMinimal := range []bool{false, true} {
+		ctx := context.Background()
+		srv := setupServerWithWallet(t)
 
-	// We recover 3 accounts from a test mnemonic.
-	numAccounts := 3
-	km, er := srv.validatorService.Keymanager()
-	require.NoError(t, er)
-	dr, ok := km.(*derived.Keymanager)
-	require.Equal(t, true, ok)
-	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
-	require.NoError(t, err)
-	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
+		// We recover 3 accounts from a test mnemonic.
+		numAccounts := 3
+		km, er := srv.validatorService.Keymanager()
+		require.NoError(t, er)
+		dr, ok := km.(*derived.Keymanager)
+		require.Equal(t, true, ok)
+		err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
+		require.NoError(t, err)
+		publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+		require.NoError(t, err)
 
-	// Create a validator database.
-	validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
-		PubKeys: publicKeys,
-	})
-	require.NoError(t, err)
-	srv.valDB = validatorDB
-
-	// Have to close it after import is done otherwise it complains db is not open.
-	defer func() {
-		require.NoError(t, validatorDB.Close())
-	}()
-
-	// Generate mock slashing history.
-	attestingHistory := make([][]*kv.AttestationRecord, 0)
-	proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
-	for i := 0; i < len(publicKeys); i++ {
-		proposalHistory[i].Proposals = make([]kv.Proposal, 0)
-	}
-	mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
-	require.NoError(t, err)
-
-	// JSON encode the protection JSON and save it.
-	encoded, err := json.Marshal(mockJSON)
-	require.NoError(t, err)
-	request := &ImportSlashingProtectionRequest{
-		SlashingProtectionJson: string(encoded),
-	}
-	var buf bytes.Buffer
-	err = json.NewEncoder(&buf).Encode(request)
-	require.NoError(t, err)
-
-	req := httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
-	wr := httptest.NewRecorder()
-	srv.ImportSlashingProtection(wr, req)
-	require.Equal(t, http.StatusOK, wr.Code)
-	t.Run("no slashing protection response if no keys in request even if we have a history in DB", func(t *testing.T) {
-		request := &DeleteKeystoresRequest{
-			Pubkeys: nil,
+		// Create a validator database.
+		var validatorDB DBIface.ValidatorDB
+		if isSlashingProtectionMinimal {
+			validatorDB, err = filesystem.NewStore(defaultWalletPath, &filesystem.Config{
+				PubKeys: publicKeys,
+			})
+		} else {
+			validatorDB, err = kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
+				PubKeys: publicKeys,
+			})
 		}
+		require.NoError(t, err)
+		srv.valDB = validatorDB
 
+		// Have to close it after import is done otherwise it complains db is not open.
+		defer func() {
+			require.NoError(t, validatorDB.Close())
+		}()
+
+		// Generate mock slashing history.
+		attestingHistory := make([][]*kv.AttestationRecord, 0)
+		proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
+		for i := 0; i < len(publicKeys); i++ {
+			proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+		}
+		mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+		require.NoError(t, err)
+
+		// JSON encode the protection JSON and save it.
+		encoded, err := json.Marshal(mockJSON)
+		require.NoError(t, err)
+		request := &ImportSlashingProtectionRequest{
+			SlashingProtectionJson: string(encoded),
+		}
 		var buf bytes.Buffer
 		err = json.NewEncoder(&buf).Encode(request)
 		require.NoError(t, err)
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
+
+		req := httptest.NewRequest(http.MethodPost, "/v2/validator/slashing-protection/import", &buf)
 		wr := httptest.NewRecorder()
-		wr.Body = &bytes.Buffer{}
-		srv.DeleteKeystores(wr, req)
+		srv.ImportSlashingProtection(wr, req)
 		require.Equal(t, http.StatusOK, wr.Code)
-		resp := &DeleteKeystoresResponse{}
-		require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
-		require.Equal(t, "", resp.SlashingProtection)
-	})
+		t.Run(fmt.Sprintf("no slashing protection response if no keys in request even if we have a history in DB/mininalSlaghinProtection:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			request := &DeleteKeystoresRequest{
+				Pubkeys: nil,
+			}
 
-	// For ease of test setup, we'll give each public key a string identifier.
-	publicKeysWithId := map[string][fieldparams.BLSPubkeyLength]byte{
-		"a": publicKeys[0],
-		"b": publicKeys[1],
-		"c": publicKeys[2],
-	}
+			var buf bytes.Buffer
+			err = json.NewEncoder(&buf).Encode(request)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
+			wr := httptest.NewRecorder()
+			wr.Body = &bytes.Buffer{}
+			srv.DeleteKeystores(wr, req)
+			require.Equal(t, http.StatusOK, wr.Code)
+			resp := &DeleteKeystoresResponse{}
+			require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+			require.Equal(t, "", resp.SlashingProtection)
+		})
 
-	type keyCase struct {
-		id                 string
-		wantProtectionData bool
-	}
-	tests := []struct {
-		keys         []*keyCase
-		wantStatuses []keymanager.KeyStatusType
-	}{
-		{
-			keys: []*keyCase{
-				{id: "a", wantProtectionData: true},
-				{id: "a", wantProtectionData: true},
-				{id: "d"},
-				{id: "c", wantProtectionData: true},
-			},
-			wantStatuses: []keymanager.KeyStatusType{
-				keymanager.StatusDeleted,
-				keymanager.StatusNotActive,
-				keymanager.StatusNotFound,
-				keymanager.StatusDeleted,
-			},
-		},
-		{
-			keys: []*keyCase{
-				{id: "a", wantProtectionData: true},
-				{id: "c", wantProtectionData: true},
-			},
-			wantStatuses: []keymanager.KeyStatusType{
-				keymanager.StatusNotActive,
-				keymanager.StatusNotActive,
-			},
-		},
-		{
-			keys: []*keyCase{
-				{id: "x"},
-			},
-			wantStatuses: []keymanager.KeyStatusType{
-				keymanager.StatusNotFound,
-			},
-		},
-	}
-	for _, tc := range tests {
-		keys := make([]string, len(tc.keys))
-		for i := 0; i < len(tc.keys); i++ {
-			pk := publicKeysWithId[tc.keys[i].id]
-			keys[i] = hexutil.Encode(pk[:])
-		}
-		request := &DeleteKeystoresRequest{
-			Pubkeys: keys,
+		// For ease of test setup, we'll give each public key a string identifier.
+		publicKeysWithId := map[string][fieldparams.BLSPubkeyLength]byte{
+			"a": publicKeys[0],
+			"b": publicKeys[1],
+			"c": publicKeys[2],
 		}
 
-		var buf bytes.Buffer
-		err = json.NewEncoder(&buf).Encode(request)
-		require.NoError(t, err)
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
-		wr := httptest.NewRecorder()
-		wr.Body = &bytes.Buffer{}
-		srv.DeleteKeystores(wr, req)
-		require.Equal(t, http.StatusOK, wr.Code)
-		resp := &DeleteKeystoresResponse{}
-		require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
-		require.Equal(t, len(keys), len(resp.Data))
-		slashingProtectionData := &format.EIPSlashingProtectionFormat{}
-		require.NoError(t, json.Unmarshal([]byte(resp.SlashingProtection), slashingProtectionData))
-		require.Equal(t, true, len(slashingProtectionData.Data) > 0)
+		type keyCase struct {
+			id                 string
+			wantProtectionData bool
+		}
+		tests := []struct {
+			keys         []*keyCase
+			wantStatuses []keymanager.KeyStatusType
+		}{
+			{
+				keys: []*keyCase{
+					{id: "a", wantProtectionData: true},
+					{id: "a", wantProtectionData: true},
+					{id: "d"},
+					{id: "c", wantProtectionData: true},
+				},
+				wantStatuses: []keymanager.KeyStatusType{
+					keymanager.StatusDeleted,
+					keymanager.StatusNotActive,
+					keymanager.StatusNotFound,
+					keymanager.StatusDeleted,
+				},
+			},
+			{
+				keys: []*keyCase{
+					{id: "a", wantProtectionData: true},
+					{id: "c", wantProtectionData: true},
+				},
+				wantStatuses: []keymanager.KeyStatusType{
+					keymanager.StatusNotActive,
+					keymanager.StatusNotActive,
+				},
+			},
+			{
+				keys: []*keyCase{
+					{id: "x"},
+				},
+				wantStatuses: []keymanager.KeyStatusType{
+					keymanager.StatusNotFound,
+				},
+			},
+		}
+		for _, tc := range tests {
+			keys := make([]string, len(tc.keys))
+			for i := 0; i < len(tc.keys); i++ {
+				pk := publicKeysWithId[tc.keys[i].id]
+				keys[i] = hexutil.Encode(pk[:])
+			}
+			request := &DeleteKeystoresRequest{
+				Pubkeys: keys,
+			}
 
-		for i := 0; i < len(tc.keys); i++ {
-			require.Equal(
-				t,
-				tc.wantStatuses[i],
-				resp.Data[i].Status,
-				fmt.Sprintf("Checking status for key %s", tc.keys[i].id),
-			)
-			if tc.keys[i].wantProtectionData {
-				// We check that we can find the key in the slashing protection data.
-				var found bool
-				for _, dt := range slashingProtectionData.Data {
-					if dt.Pubkey == keys[i] {
-						found = true
-						break
+			var buf bytes.Buffer
+			err = json.NewEncoder(&buf).Encode(request)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
+			wr := httptest.NewRecorder()
+			wr.Body = &bytes.Buffer{}
+			srv.DeleteKeystores(wr, req)
+			require.Equal(t, http.StatusOK, wr.Code)
+			resp := &DeleteKeystoresResponse{}
+			require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+			require.Equal(t, len(keys), len(resp.Data))
+			slashingProtectionData := &format.EIPSlashingProtectionFormat{}
+			require.NoError(t, json.Unmarshal([]byte(resp.SlashingProtection), slashingProtectionData))
+			require.Equal(t, true, len(slashingProtectionData.Data) > 0)
+
+			for i := 0; i < len(tc.keys); i++ {
+				require.Equal(
+					t,
+					tc.wantStatuses[i],
+					resp.Data[i].Status,
+					fmt.Sprintf("Checking status for key %s", tc.keys[i].id),
+				)
+				if tc.keys[i].wantProtectionData {
+					// We check that we can find the key in the slashing protection data.
+					var found bool
+					for _, dt := range slashingProtectionData.Data {
+						if dt.Pubkey == keys[i] {
+							found = true
+							break
+						}
 					}
+					require.Equal(t, true, found)
 				}
-				require.Equal(t, true, found)
 			}
 		}
 	}
 }
 
 func TestServer_DeleteKeystores_FailedSlashingProtectionExport(t *testing.T) {
-	ctx := context.Background()
-	srv := setupServerWithWallet(t)
+	for _, isSlashingProtectionMinimal := range []bool{false, true} {
+		t.Run(fmt.Sprintf("minimalSlashingProtection:%v", isSlashingProtectionMinimal), func(t *testing.T) {
+			ctx := context.Background()
+			srv := setupServerWithWallet(t)
 
-	// We recover 3 accounts from a test mnemonic.
-	numAccounts := 3
-	km, er := srv.validatorService.Keymanager()
-	require.NoError(t, er)
-	dr, ok := km.(*derived.Keymanager)
-	require.Equal(t, true, ok)
-	err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
-	require.NoError(t, err)
-	publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
-	require.NoError(t, err)
+			// We recover 3 accounts from a test mnemonic.
+			numAccounts := 3
+			km, er := srv.validatorService.Keymanager()
+			require.NoError(t, er)
+			dr, ok := km.(*derived.Keymanager)
+			require.Equal(t, true, ok)
+			err := dr.RecoverAccountsFromMnemonic(ctx, mocks.TestMnemonic, derived.DefaultMnemonicLanguage, "", numAccounts)
+			require.NoError(t, err)
+			publicKeys, err := dr.FetchValidatingPublicKeys(ctx)
+			require.NoError(t, err)
 
-	// Create a validator database.
-	validatorDB, err := kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
-		PubKeys: publicKeys,
-	})
-	require.NoError(t, err)
-	err = validatorDB.SaveGenesisValidatorsRoot(ctx, make([]byte, fieldparams.RootLength))
-	require.NoError(t, err)
-	srv.valDB = validatorDB
+			// Create a validator database.
+			var validatorDB DBIface.ValidatorDB
+			if isSlashingProtectionMinimal {
+				validatorDB, err = filesystem.NewStore(defaultWalletPath, &filesystem.Config{
+					PubKeys: publicKeys,
+				})
+			} else {
+				validatorDB, err = kv.NewKVStore(ctx, defaultWalletPath, &kv.Config{
+					PubKeys: publicKeys,
+				})
+			}
 
-	// Have to close it after import is done otherwise it complains db is not open.
-	defer func() {
-		require.NoError(t, validatorDB.Close())
-	}()
+			require.NoError(t, err)
+			err = validatorDB.SaveGenesisValidatorsRoot(ctx, make([]byte, fieldparams.RootLength))
+			require.NoError(t, err)
+			srv.valDB = validatorDB
 
-	request := &DeleteKeystoresRequest{
-		Pubkeys: []string{"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494"},
+			// Have to close it after import is done otherwise it complains db is not open.
+			defer func() {
+				require.NoError(t, validatorDB.Close())
+			}()
+
+			request := &DeleteKeystoresRequest{
+				Pubkeys: []string{"0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591494"},
+			}
+			var buf bytes.Buffer
+			err = json.NewEncoder(&buf).Encode(request)
+			require.NoError(t, err)
+			req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
+			wr := httptest.NewRecorder()
+			wr.Body = &bytes.Buffer{}
+			srv.DeleteKeystores(wr, req)
+			require.Equal(t, http.StatusOK, wr.Code)
+			resp := &DeleteKeystoresResponse{}
+			require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
+			require.Equal(t, 1, len(resp.Data))
+			require.Equal(t, keymanager.StatusError, resp.Data[0].Status)
+			require.Equal(t, "Could not export slashing protection history as existing non duplicate keys were deleted",
+				resp.Data[0].Message,
+			)
+		})
 	}
-	var buf bytes.Buffer
-	err = json.NewEncoder(&buf).Encode(request)
-	require.NoError(t, err)
-	req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/keystores"), &buf)
-	wr := httptest.NewRecorder()
-	wr.Body = &bytes.Buffer{}
-	srv.DeleteKeystores(wr, req)
-	require.Equal(t, http.StatusOK, wr.Code)
-	resp := &DeleteKeystoresResponse{}
-	require.NoError(t, json.Unmarshal(wr.Body.Bytes(), resp))
-	require.Equal(t, 1, len(resp.Data))
-	require.Equal(t, keymanager.StatusError, resp.Data[0].Status)
-	require.Equal(t, "Could not export slashing protection history as existing non duplicate keys were deleted",
-		resp.Data[0].Message,
-	)
 }
 
 func TestServer_DeleteKeystores_WrongKeymanagerKind(t *testing.T) {
