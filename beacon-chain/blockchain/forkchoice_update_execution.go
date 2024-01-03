@@ -8,7 +8,6 @@ import (
 	"github.com/pkg/errors"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
@@ -65,7 +64,7 @@ func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuCo
 		headBlock: args.headBlock,
 	}
 	_, tracked := s.trackedProposer(args.headState, args.proposingSlot)
-	if tracked && !features.Get().DisableReorgLateBlocks {
+	if tracked {
 		if s.shouldOverrideFCU(args.headRoot, args.proposingSlot) {
 			return nil
 		}
