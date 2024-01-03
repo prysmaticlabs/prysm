@@ -1012,11 +1012,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1047,11 +1046,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 
@@ -1083,11 +1081,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1119,11 +1116,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1155,11 +1151,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1191,11 +1186,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
@@ -1230,11 +1224,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.ToUnsigned().ToGeneric()
@@ -1266,11 +1259,10 @@ func TestProduceBlockV3(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1367,11 +1359,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1404,11 +1395,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1443,11 +1433,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1483,11 +1472,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1522,11 +1510,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
@@ -1561,11 +1548,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
@@ -1603,11 +1589,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.ToUnsigned().ToGeneric()
@@ -1642,11 +1627,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().GetBeaconBlock(gomock.Any(), &eth.BlockRequest{
-			Slot:               1,
-			RandaoReveal:       bRandao,
-			Graffiti:           bGraffiti,
-			SkipMevBoost:       false,
-			BuilderBoostFactor: &wrapperspb.UInt64Value{Value: 100},
+			Slot:         1,
+			RandaoReveal: bRandao,
+			Graffiti:     bGraffiti,
+			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
 				return block.Message.ToGeneric()
