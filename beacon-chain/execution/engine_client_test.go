@@ -20,7 +20,6 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -2007,10 +2006,6 @@ func newPayloadV3Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 }
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2258,10 +2253,6 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 }
 
 func TestCapella_PayloadBodiesByRange(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2509,10 +2500,6 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 }
 
 func Test_ExchangeCapabilities(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
