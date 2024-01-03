@@ -236,12 +236,8 @@ func (p blobNamer) path() string {
 // Prune prunes blobs in the base directory based on the retention epoch.
 // It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
 // This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
+func (bs *BlobStorage) Prune(pruneBeforeSlot primitives.Slot) error {
 	t := time.Now()
-
-	if currentSlot < bs.retentionSlots {
-		return nil // Overflow would occur
-	}
 
 	log.Debug("Pruning old blobs")
 
@@ -252,7 +248,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	var totalPruned int
 	for _, folder := range folders {
 		if folder.IsDir() {
-			num, err := bs.processFolder(folder, currentSlot)
+			num, err := bs.processFolder(folder, pruneBeforeSlot)
 			if err != nil {
 				return err
 			}
@@ -264,7 +260,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 	pruneTime := time.Since(t)
 
 	log.WithFields(log.Fields{
-		"lastPrunedEpoch":   slots.ToEpoch(currentSlot - bs.retentionSlots),
+		"lastPrunedEpoch":   slots.ToEpoch(pruneBeforeSlot),
 		"pruneTime":         pruneTime,
 		"numberBlobsPruned": totalPruned,
 	}).Debug("Pruned old blobs")
@@ -274,7 +270,7 @@ func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot primitives.Slot) (int, error) {
+func (bs *BlobStorage) processFolder(folder os.FileInfo, pruneBeforeSlot primitives.Slot) (int, error) {
 	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
 	if err != nil {
 		return 0, err
@@ -290,7 +286,7 @@ func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot primitives.
 		return 0, err
 	}
 	var num int
-	if slot < (currentSlot - bs.retentionSlots) {
+	if slot < pruneBeforeSlot {
 		num, err = bs.countFiles(folder.Name())
 		if err != nil {
 			return 0, err
