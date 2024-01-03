@@ -1684,38 +1684,28 @@ func Test_processBuilderBoostFactor(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    uint64
+		want    *wrapperspb.UInt64Value
 		wantErr bool
 	}{
 		{
 			name: "builder boost factor of 0 returns 0",
 			args: args{raw: "0"},
-			want: 0,
+			want: &wrapperspb.UInt64Value{Value: 0},
 		},
 		{
 			name: "builder boost factor that is empty with spaces returns default",
 			args: args{raw: "   "},
-			want: 100,
+			want: nil,
 		},
 		{
 			name: "builder boost factor of the default, 100 with spaces returns 100",
 			args: args{raw: "100    "},
-			want: 100,
+			want: &wrapperspb.UInt64Value{Value: 100},
 		},
 		{
 			name: "builder boost factor max uint64 returns max uint64",
 			args: args{raw: "18446744073709551615"},
-			want: math.MaxUint64,
-		},
-		{
-			name: "builder boost factor max uint in string format 2**64-1 returns max uint 64",
-			args: args{raw: "2**64-1"},
-			want: math.MaxUint64,
-		},
-		{
-			name: "builder boost factor max uint in string format with spaces 2**64 - 1 returns max uint 64",
-			args: args{raw: "2**64 - 1"},
-			want: math.MaxUint64,
+			want: &wrapperspb.UInt64Value{Value: math.MaxUint64},
 		},
 		{
 			name:    "builder boost factor as a percentage returns error",
@@ -1750,9 +1740,7 @@ func Test_processBuilderBoostFactor(t *testing.T) {
 				t.Errorf("processBuilderBoostFactor() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("processBuilderBoostFactor() got = %v, want %v", got, tt.want)
-			}
+			require.DeepEqual(t, got, tt.want)
 		})
 	}
 }

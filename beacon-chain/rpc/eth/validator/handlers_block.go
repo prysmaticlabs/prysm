@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -195,23 +194,21 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 		RandaoReveal:       randaoReveal,
 		Graffiti:           graffiti,
 		SkipMevBoost:       false,
-		BuilderBoostFactor: &wrapperspb.UInt64Value{Value: bbFactor},
+		BuilderBoostFactor: bbFactor,
 	}, any)
 }
 
-func processBuilderBoostFactor(raw string) (uint64, error) {
+func processBuilderBoostFactor(raw string) (*wrapperspb.UInt64Value, error) {
 	trimmed := strings.ReplaceAll(raw, " ", "")
 	switch trimmed {
-	case "": // default to 100 if it's not provided
-		return 100, nil
-	case "2**64-1":
-		return math.MaxUint64, nil
+	case "": // default to logic in setExecutionPayload
+		return nil, nil
 	default:
 		number, err := strconv.ParseUint(trimmed, 10, 64)
 		if err != nil {
-			return 0, errors.Wrap(err, "Unable to decode builder boost factor")
+			return nil, errors.Wrap(err, "Unable to decode builder boost factor")
 		}
-		return number, nil
+		return &wrapperspb.UInt64Value{Value: number}, nil
 	}
 }
 
