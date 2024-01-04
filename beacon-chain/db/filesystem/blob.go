@@ -241,24 +241,32 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 
 	log.Debug("Pruning old blobs")
 
-	folders, err := afero.ReadDir(bs.fs, ".")
-	if err != nil {
-		return err
-	}
-	var totalPruned int
-	for _, folder := range folders {
-		if folder.IsDir() {
-			num, err := bs.processFolder(folder, pruneBefore)
-			if err != nil {
-				return err
-			}
-			blobsPrunedCounter.Add(float64(num))
-			blobsTotalGauge.Add(-float64(num))
-			totalPruned += num
+	var dirs []string
+	err := afero.Walk(bs.fs, ".", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return errors.Wrap(err, "failed to walk blob storage directory")
 		}
+		if info.IsDir() && path != "." {
+			dirs = append(dirs, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to build directories list")
 	}
-	pruneTime := time.Since(t)
 
+	var totalPruned int
+	for _, dir := range dirs {
+		num, err := bs.processFolder(dir, pruneBefore)
+		if err != nil {
+			return errors.Wrapf(err, "failed to process folder %s", dir)
+		}
+		blobsPrunedCounter.Add(float64(num))
+		blobsTotalGauge.Add(-float64(num))
+		totalPruned += num
+	}
+
+	pruneTime := time.Since(t)
 	log.WithFields(log.Fields{
 		"lastPrunedEpoch":   slots.ToEpoch(pruneBefore),
 		"pruneTime":         pruneTime,
@@ -270,8 +278,8 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, pruneBefore primitives.Slot) (int, error) {
-	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
+func (bs *BlobStorage) processFolder(folder string, pruneBefore primitives.Slot) (int, error) {
+	f, err := bs.fs.Open(filepath.Join(folder, "0."+sszExt))
 	if err != nil {
 		return 0, err
 	}
@@ -287,11 +295,11 @@ func (bs *BlobStorage) processFolder(folder os.FileInfo, pruneBefore primitives.
 	}
 	var num int
 	if slot < pruneBefore {
-		num, err = bs.countFiles(folder.Name())
+		num, err = bs.countFiles(folder)
 		if err != nil {
 			return 0, err
 		}
-		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
+		if err = bs.fs.RemoveAll(folder); err != nil {
 			return 0, errors.Wrapf(err, "failed to delete blob %s", f.Name())
 		}
 	}
