@@ -97,7 +97,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -157,7 +157,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -220,7 +220,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
@@ -361,7 +361,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -382,7 +382,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.NoError(t, err)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -404,7 +404,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorIs(t, consensus_types.ErrNilObjectWrapped, err) // Builder returns fault. Use local block
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
@@ -512,7 +512,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
 		require.NoError(t, err)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 100))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 
 		got, err := blk.Block().Body().BlobKzgCommitments()
 		require.NoError(t, err)

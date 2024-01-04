@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,7 +23,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	mock2 "github.com/prysmaticlabs/prysm/v4/testing/mock"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestProduceBlockV2(t *testing.T) {
@@ -1659,72 +1657,4 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
-}
-
-func Test_processBuilderBoostFactor(t *testing.T) {
-	type args struct {
-		raw string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *wrapperspb.UInt64Value
-		wantErr bool
-	}{
-		{
-			name: "builder boost factor of 0 returns 0",
-			args: args{raw: "0"},
-			want: &wrapperspb.UInt64Value{Value: 0},
-		},
-		{
-			name: "builder boost factor that is empty with spaces returns default",
-			args: args{raw: "   "},
-			want: nil,
-		},
-		{
-			name: "builder boost factor of the default, 100 with spaces returns 100",
-			args: args{raw: "100    "},
-			want: &wrapperspb.UInt64Value{Value: 100},
-		},
-		{
-			name: "builder boost factor max uint64 returns max uint64",
-			args: args{raw: "18446744073709551615"},
-			want: &wrapperspb.UInt64Value{Value: math.MaxUint64},
-		},
-		{
-			name:    "builder boost factor as a percentage returns error",
-			args:    args{raw: "0.30"},
-			wantErr: true,
-		},
-		{
-			name:    "builder boost factor negative int returns error",
-			args:    args{raw: "-100"},
-			wantErr: true,
-		},
-		{
-			name:    "builder boost factor max uint64 +1 returns error",
-			args:    args{raw: "18446744073709551616"},
-			wantErr: true,
-		},
-		{
-			name:    "builder boost factor of invalid string returns error",
-			args:    args{raw: "asdf"},
-			wantErr: true,
-		},
-		{
-			name:    "builder boost factor of number bigger than uint64 string returns error",
-			args:    args{raw: "9871398721983721908372190837219837129803721983719283798217390821739081273918273918273918273981273982139812739821"},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := processBuilderBoostFactor(tt.args.raw)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("processBuilderBoostFactor() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			require.DeepEqual(t, got, tt.want)
-		})
-	}
 }

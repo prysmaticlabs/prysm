@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -157,10 +156,13 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	rawGraffiti := r.URL.Query().Get("graffiti")
 	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
 
-	bbFactor, err := processBuilderBoostFactor(r.URL.Query().Get("builder_boost_factor"))
-	if err != nil {
-		httputil.HandleError(w, err.Error(), http.StatusBadRequest)
+	var bbFactor *wrapperspb.UInt64Value // default the factor via fall back
+	rawBbFactor, bbValue, ok := shared.UintFromQuery(w, r, "builder_boost_factor", false)
+	if !ok {
 		return
+	}
+	if rawBbFactor != "" {
+		bbFactor = &wrapperspb.UInt64Value{Value: bbValue}
 	}
 
 	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
@@ -196,20 +198,6 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 		SkipMevBoost:       false,
 		BuilderBoostFactor: bbFactor,
 	}, any)
-}
-
-func processBuilderBoostFactor(raw string) (*wrapperspb.UInt64Value, error) {
-	trimmed := strings.ReplaceAll(raw, " ", "")
-	switch trimmed {
-	case "": // default to logic in setExecutionPayload
-		return nil, nil
-	default:
-		number, err := strconv.ParseUint(trimmed, 10, 64)
-		if err != nil {
-			return nil, errors.Wrap(err, "Unable to decode builder boost factor")
-		}
-		return &wrapperspb.UInt64Value{Value: number}, nil
-	}
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest, requiredType blockType) {
