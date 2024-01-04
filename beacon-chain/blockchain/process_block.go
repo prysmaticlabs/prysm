@@ -103,30 +103,6 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			proposingSlot: proposingSlot,
 		}
 	} else {
-		// Updating next slot state cache can happen in the background
-		// except in the epoch boundary in which case we lock to handle
-		// the shuffling and proposer caches updates.
-		// We handle these caches only on canonical
-		// blocks, otherwise this will be handled by lateBlockTasks
-		slot := postState.Slot()
-		if slots.IsEpochEnd(slot) {
-			if err := transition.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
-				return errors.Wrap(err, "could not update next slot state cache")
-			}
-			if err := s.handleEpochBoundary(ctx, slot, postState, blockRoot[:]); err != nil {
-				return errors.Wrap(err, "could not handle epoch boundary")
-			}
-		} else {
-			go func() {
-				slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
-				defer cancel()
-				if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
-					log.WithError(err).Error("could not update next slot state cache")
-				}
-			}()
-		}
-		// verify conditions for FCU, notifies FCU, and saves the new head.
-		// This function also prunes attestations, other similar operations happen in prunePostBlockOperationPools.
 		fcuArgs = &fcuConfig{
 			headState:     postState,
 			headBlock:     signed,
@@ -134,16 +110,36 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			proposingSlot: proposingSlot,
 		}
 	}
+	isEarly := slots.WithinVotingWindow(uint64(s.genesisTime.Unix()))
+	shouldOverrideFCU := false
+	slot := postState.Slot()
 	if s.isNewHead(headRoot) {
-		shouldOverrideFCU := false
-		_, tracked := s.trackedProposer(fcuArgs.headState, proposingSlot)
-		if tracked {
-			shouldOverrideFCU = s.shouldOverrideFCU(headRoot, proposingSlot)
-			fcuArgs.attributes = s.getPayloadAttribute(ctx, fcuArgs.headState, proposingSlot, headRoot[:])
-		}
-		if !shouldOverrideFCU {
+		// if the block is early send FCU without any payload attributes
+		if isEarly {
 			if err := s.forkchoiceUpdateWithExecution(ctx, fcuArgs); err != nil {
 				return err
+			}
+		} else {
+			// if the block is late lock and update the caches
+			if blockRoot == headRoot {
+				if err := transition.UpdateNextSlotCache(ctx, blockRoot[:], postState); err != nil {
+					return errors.Wrap(err, "could not update next slot state cache")
+				}
+				if slots.IsEpochEnd(slot) {
+					if err := s.handleEpochBoundary(ctx, slot, postState, blockRoot[:]); err != nil {
+						return errors.Wrap(err, "could not handle epoch boundary")
+					}
+				}
+			}
+			_, tracked := s.trackedProposer(fcuArgs.headState, proposingSlot)
+			if tracked {
+				shouldOverrideFCU = s.shouldOverrideFCU(headRoot, proposingSlot)
+				fcuArgs.attributes = s.getPayloadAttribute(ctx, fcuArgs.headState, proposingSlot, headRoot[:])
+			}
+			if !shouldOverrideFCU {
+				if err := s.forkchoiceUpdateWithExecution(ctx, fcuArgs); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -163,7 +159,29 @@ func (s *Service) postBlockProcess(ctx context.Context, signed interfaces.ReadOn
 			Optimistic:  optimistic,
 		},
 	})
-
+	if blockRoot == headRoot && isEarly {
+		go func() {
+			slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+			defer cancel()
+			if err := transition.UpdateNextSlotCache(slotCtx, blockRoot[:], postState); err != nil {
+				log.WithError(err).Error("could not update next slot state cache")
+			}
+			if slots.IsEpochEnd(slot) {
+				if err := s.handleEpochBoundary(ctx, slot, postState, blockRoot[:]); err != nil {
+					log.WithError(err).Error("could not handle epoch boundary")
+				}
+			}
+			if _, tracked := s.trackedProposer(fcuArgs.headState, proposingSlot); !tracked {
+				return
+			}
+			fcuArgs.attributes = s.getPayloadAttribute(ctx, fcuArgs.headState, proposingSlot, headRoot[:])
+			s.cfg.ForkChoiceStore.RLock()
+			defer s.cfg.ForkChoiceStore.RUnlock()
+			if _, err := s.notifyForkchoiceUpdate(ctx, fcuArgs); err != nil {
+				log.WithError(err).Error("could not update forkchoice with payload attributes for proposal")
+			}
+		}()
+	}
 	defer reportAttestationInclusion(b)
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
