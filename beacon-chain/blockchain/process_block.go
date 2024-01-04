@@ -184,7 +184,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return errors.Wrap(err, "could not send FCU to engine")
 	}
 
-	if features.Get().EnableLightClientEvents {
+	if features.Get().EnableLightClient {
 		if _, err := s.sendLightClientOptimisticUpdate(ctx, cfg.signed, cfg.postState); err != nil {
 			log.WithError(err).Error("Failed to send light client optimistic update")
 		}

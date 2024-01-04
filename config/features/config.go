@@ -41,7 +41,7 @@ type Flags struct {
 	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	EnableLightClientEvents             bool // EnableLightClientEvents enables light client events to be emitted by the beacon node.
+	EnableLightClient                   bool // EnableLightClient enables light client APIs.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -241,7 +241,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	}
 	if ctx.IsSet(EnableLightClientEvents.Name) {
 		logEnabled(EnableLightClientEvents)
-		cfg.EnableLightClientEvents = true
+		cfg.EnableLightClient = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
 	Init(cfg)
