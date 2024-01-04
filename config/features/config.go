@@ -239,8 +239,8 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(EnableEIP4881)
 		cfg.EnableEIP4881 = true
 	}
-	if ctx.IsSet(EnableLightClientEvents.Name) {
-		logEnabled(EnableLightClientEvents)
+	if ctx.IsSet(EnableLightClient.Name) {
+		logEnabled(EnableLightClient)
 		cfg.EnableLightClient = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}
