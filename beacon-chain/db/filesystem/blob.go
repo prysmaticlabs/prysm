@@ -239,8 +239,6 @@ func (p blobNamer) path() string {
 func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 	t := time.Now()
 
-	log.Debug("Pruning old blobs")
-
 	var dirs []string
 	err := afero.Walk(bs.fs, ".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -266,12 +264,14 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 		totalPruned += num
 	}
 
-	pruneTime := time.Since(t)
-	log.WithFields(log.Fields{
-		"lastPrunedEpoch":   slots.ToEpoch(pruneBefore),
-		"pruneTime":         pruneTime,
-		"numberBlobsPruned": totalPruned,
-	}).Debug("Pruned old blobs")
+	if totalPruned > 0 {
+		pruneTime := time.Since(t)
+		log.WithFields(log.Fields{
+			"lastPrunedEpoch":   slots.ToEpoch(pruneBefore),
+			"pruneTime":         pruneTime,
+			"numberBlobsPruned": totalPruned,
+		}).Debug("Pruned old blobs")
+	}
 
 	return nil
 }
