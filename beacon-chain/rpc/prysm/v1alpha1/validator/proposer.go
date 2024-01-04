@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
@@ -315,9 +316,14 @@ func (vs *Server) broadcastAndReceiveBlobs(ctx context.Context, sidecars []*ethp
 		if err != nil {
 			return errors.Wrap(err, "ROBlob creation failed")
 		}
-		if err := vs.BlobReceiver.ReceiveBlob(ctx, blocks.NewVerifiedROBlob(readOnlySc)); err != nil {
+		verifiedBlob := blocks.NewVerifiedROBlob(readOnlySc)
+		if err := vs.BlobReceiver.ReceiveBlob(ctx, verifiedBlob); err != nil {
 			return errors.Wrap(err, "receive blob failed")
 		}
+		vs.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.BlobSidecarReceived,
+			Data: &operation.BlobSidecarReceivedData{Blob: &verifiedBlob},
+		})
 	}
 	return nil
 }
