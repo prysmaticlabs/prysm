@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -126,109 +125,46 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 	beaconClient := eth.NewBeaconChainClient(conn)
 
 	ctx := context.Background()
-	chainHead, err := beaconClient.GetChainHead(ctx, &emptypb.Empty{})
-	if err != nil {
-		return errors.Wrap(err, "could not get chain head")
-	}
 
-	_, privKeys, err := util.DeterministicDepositsAndKeys(params.BeaconConfig().MinGenesisActiveValidatorCount)
+	h := doubleAttestationHelper{
+		valClient:    valClient,
+		beaconClient: beaconClient,
+	}
+	err := h.setup(ctx)
 	if err != nil {
-		return err
-	}
-	pubKeys := make([][]byte, len(privKeys))
-	for i, priv := range privKeys {
-		pubKeys[i] = priv.PublicKey().Marshal()
-	}
-	duties, err := valClient.GetDuties(ctx, &eth.DutiesRequest{
-		Epoch:      chainHead.HeadEpoch,
-		PublicKeys: pubKeys,
-	})
-	if err != nil {
-		return errors.Wrap(err, "could not get duties")
-	}
-
-	var committeeIndex primitives.CommitteeIndex
-	var committee []primitives.ValidatorIndex
-	for _, duty := range duties.Duties {
-		if duty.AttesterSlot == chainHead.HeadSlot {
-			committeeIndex = duty.CommitteeIndex
-			committee = duty.Committee
-			break
-		}
-	}
-
-	attDataReq := &eth.AttestationDataRequest{
-		CommitteeIndex: committeeIndex,
-		Slot:           chainHead.HeadSlot,
-	}
-
-	attData, err := valClient.GetAttestationData(ctx, attDataReq)
-	if err != nil {
-		return err
-	}
-
-	req := &eth.DomainRequest{
-		Epoch:  chainHead.HeadEpoch,
-		Domain: params.BeaconConfig().DomainBeaconAttester[:],
-	}
-	resp, err := valClient.DomainData(ctx, req)
-	if err != nil {
-		return errors.Wrap(err, "could not get domain data")
+		return errors.Wrap(err, "could not setup doubleAttestationHelper")
 	}
 
 	valsToSlash := uint64(2)
-	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
-		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
+	for i := uint64(0); i < valsToSlash; i++ {
+		valIdx := h.validatorIndexAtCommitteeIndex(i)
+
+		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(valIdx)})) > 0 {
 			valsToSlash++
 			continue
 		}
 
-		// msg must be unique so they are not filtered by P2P
-		blockRoot := bytesutil.ToBytes32([]byte("0 muahahahaha")) 
-		attData.BeaconBlockRoot = blockRoot[:]
-		signingRoot, err := signing.ComputeSigningRoot(attData, resp.SignatureDomain)
+		// Need to send proposal to both beacon nodes to avoid flakiness.
+		// See: https://github.com/prysmaticlabs/prysm/issues/12415#issuecomment-1874643269
+		c := eth.NewBeaconNodeValidatorClient(conns[0])
+		att, err := h.getSlashableAttestation(i)
 		if err != nil {
-			return errors.Wrap(err, "could not compute signing root")
+			return err
 		}
-		// Set the bits of half the committee to be slashed.
-		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
-		attBitfield.SetBitAt(i, true)
-
-		att := &eth.Attestation{
-			AggregationBits: attBitfield,
-			Data:            attData,
-			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
-		}
-		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
-		// Only broadcasting the attestation to one node also helps test slashing propagation.
-		client := eth.NewBeaconNodeValidatorClient(conns[0])
-		if _, err = client.ProposeAttestation(ctx, att); err != nil {
+		if _, err := c.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
 
-
-		blockRoot = bytesutil.ToBytes32([]byte("1 muahahahaha")) 
-		attData.BeaconBlockRoot = blockRoot[:]
-		signingRoot, err = signing.ComputeSigningRoot(attData, resp.SignatureDomain)
+		c1 := eth.NewBeaconNodeValidatorClient(conns[1])
+		att1, err := h.getSlashableAttestation(i)
 		if err != nil {
-			return errors.Wrap(err, "could not compute signing root")
+			return err
 		}
-		// Set the bits of half the committee to be slashed.
-		attBitfield = bitfield.NewBitlist(uint64(len(committee)))
-		attBitfield.SetBitAt(i, true)
-
-		att = &eth.Attestation{
-			AggregationBits: attBitfield,
-			Data:            attData,
-			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
-		}
-		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
-		// Only broadcasting the attestation to one node also helps test slashing propagation.
-		client = eth.NewBeaconNodeValidatorClient(conns[1])
-		if _, err = client.ProposeAttestation(ctx, att); err != nil {
+		if _, err := c1.ProposeAttestation(ctx, att1); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
-		slashedIndices = append(slashedIndices, uint64(committee[i]))
+
+		slashedIndices = append(slashedIndices, uint64(valIdx))
 	}
 	return nil
 }
