@@ -6,6 +6,8 @@ import (
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -54,6 +56,14 @@ func (s *Service) validateProposerSlashing(ctx context.Context, pid peer.ID, msg
 	if err := blocks.VerifyProposerSlashing(headState, slashing); err != nil {
 		return pubsub.ValidationReject, err
 	}
+
+	// notify events
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.ProposerSlashingReceived,
+		Data: &operation.ProposerSlashingReceivedData{
+			ProposerSlashing: slashing,
+		},
+	})
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

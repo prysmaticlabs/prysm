@@ -196,6 +196,26 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			KzgCommitment: hexutil.Encode(blobData.Blob.KzgCommitment),
 		}
 		send(w, flusher, BlobSidecarTopic, blobEvent)
+	case operation.AttesterSlashingReceived:
+		if _, ok := requestedTopics[AttesterSlashingTopic]; !ok {
+			return
+		}
+		attesterSlashingData, ok := event.Data.(*operation.AttesterSlashingReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
+			return
+		}
+		send(w, flusher, AttesterSlashingTopic, shared.AttesterSlashingFromConsensus(attesterSlashingData.AttesterSlashing))
+	case operation.ProposerSlashingReceived:
+		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
+			return
+		}
+		proposerSlashingData, ok := event.Data.(*operation.ProposerSlashingReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, ProposerSlashingTopic)
+			return
+		}
+		send(w, flusher, ProposerSlashingTopic, shared.ProposerSlashingFromConsensus(proposerSlashingData.ProposerSlashing))
 	}
 }
 
