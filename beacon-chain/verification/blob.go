@@ -118,7 +118,7 @@ func (bv *BlobVerifier) SlotNotTooEarly() (err error) {
 		return nil
 	}
 	// Subtract the max clock disparity from the start slot time.
-	validAfter := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	validAfter := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	// If the difference between now and gt is greater than maximum clock disparity, the block is too far in the future.
 	if bv.clock.Now().Before(validAfter) {
 		return ErrSlotTooEarly

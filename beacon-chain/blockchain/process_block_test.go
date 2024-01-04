@@ -895,7 +895,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 	cfg.TerminalBlockHash = params.BeaconConfig().ZeroHash
 	params.OverrideBeaconConfig(cfg)
 
-	service, tr := minimalTestService(t, WithProposerIdsCache(cache.NewProposerPayloadIDsCache()))
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
 	ctx := tr.ctx
 
 	aHash := common.BytesToHash([]byte("a"))
@@ -2050,7 +2050,7 @@ func driftGenesisTime(s *Service, slot, delay int64) {
 }
 
 func Test_commitmentsToCheck(t *testing.T) {
-	windowSlots, err := slots.EpochEnd(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest)
+	windowSlots, err := slots.EpochEnd(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
 	require.NoError(t, err)
 	commits := [][]byte{
 		bytesutil.PadTo([]byte("a"), 48),

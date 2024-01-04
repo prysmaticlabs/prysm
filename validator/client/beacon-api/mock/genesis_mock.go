@@ -10,7 +10,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	beacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	httputil "github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
 // MockGenesisProvider is a mock of GenesisProvider interface.
@@ -37,13 +36,12 @@ func (m *MockGenesisProvider) EXPECT() *MockGenesisProviderMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockGenesisProvider) GetGenesis(arg0 context.Context) (*beacon.Genesis, *httputil.DefaultErrorJson, error) {
+func (m *MockGenesisProvider) GetGenesis(arg0 context.Context) (*beacon.Genesis, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGenesis", arg0)
 	ret0, _ := ret[0].(*beacon.Genesis)
-	ret1, _ := ret[1].(*httputil.DefaultErrorJson)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // GetGenesis indicates an expected call of GetGenesis.

@@ -86,10 +86,8 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
-			blk.SetBlinded(true)
 			if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 				log.WithError(err).Warn("Proposer: failed to set builder payload")
-				blk.SetBlinded(false)
 				return setLocalExecution(blk, localPayload)
 			} else {
 				return nil
@@ -110,10 +108,8 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		)
 		return setLocalExecution(blk, localPayload)
 	default: // Bellatrix case.
-		blk.SetBlinded(true)
 		if err := setBuilderExecution(blk, builderPayload, builderKzgCommitments); err != nil {
 			log.WithError(err).Warn("Proposer: failed to set builder payload")
-			blk.SetBlinded(false)
 			return setLocalExecution(blk, localPayload)
 		} else {
 			return nil
@@ -214,16 +210,28 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "could not get blob kzg commitments")
 		}
+		if len(kzgCommitments) > fieldparams.MaxBlobsPerBlock {
+			return nil, nil, fmt.Errorf("builder returned too many kzg commitments: %d", len(kzgCommitments))
+		}
+		for _, c := range kzgCommitments {
+			if len(c) != fieldparams.BLSPubkeyLength {
+				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment lenth: %d", len(c))
+			}
+		}
 	}
 
-	log.WithFields(logrus.Fields{
+	l := log.WithFields(logrus.Fields{
 		"value":              v.String(),
 		"builderPubKey":      fmt.Sprintf("%#x", bid.Pubkey()),
 		"blockHash":          fmt.Sprintf("%#x", header.BlockHash()),
 		"slot":               slot,
 		"validator":          idx,
 		"sinceSlotStartTime": time.Since(t),
-	}).Info("Received header with bid")
+	})
+	if len(kzgCommitments) > 0 {
+		l = l.WithField("kzgCommitmentCount", len(kzgCommitments))
+	}
+	l.Info("Received header with bid")
 
 	span.AddAttributes(
 		trace.StringAttribute("value", v.String()),
@@ -302,9 +310,6 @@ func setExecution(blk interfaces.SignedBeaconBlock, execution interfaces.Executi
 	if execution == nil {
 		return errors.New("execution is nil")
 	}
-
-	// Set the blinded status of the block
-	blk.SetBlinded(isBlinded)
 
 	// Set the execution data for the block
 	errMessage := "failed to set local execution"

@@ -76,7 +76,6 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
 		4,
 		beacon.GetValidatorsResponse{
@@ -125,7 +124,6 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 		bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
-		nil,
 		errors.New("an error"),
 	).Times(1)
 
@@ -160,7 +158,6 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 		nil, bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
-		nil,
 		nil,
 	).SetArg(
 		4,

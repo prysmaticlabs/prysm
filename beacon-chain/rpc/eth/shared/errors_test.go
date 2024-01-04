@@ -45,7 +45,7 @@ func TestWriteStateFetchError(t *testing.T) {
 		assert.Equal(t, c.expectedCode, writer.Code, "incorrect status code")
 		assert.StringContains(t, c.expectedMessage, writer.Body.String(), "incorrect error message")
 
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		assert.NoError(t, json.Unmarshal(writer.Body.Bytes(), e), "failed to unmarshal response")
 	}
 }

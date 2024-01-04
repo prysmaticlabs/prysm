@@ -56,7 +56,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	// [REJECT] The sidecar is for the correct subnet -- i.e. compute_subnet_for_blob_sidecar(sidecar.index) == subnet_id.
 	want := fmt.Sprintf("blob_sidecar_%d", computeSubnetForBlobSidecar(blob.Index))
 	if !strings.Contains(*msg.Topic, want) {
-		log.WithFields(blobFields(blob)).Debug("Sidecar index  does not match topic")
+		log.WithFields(blobFields(blob)).Debug("Sidecar index does not match topic")
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
@@ -64,12 +64,18 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationIgnore, err
 	}
 
-	if err := vf.SlotAboveFinalized(); err != nil {
+	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), blob.Slot())
+	if err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 
-	if err := vf.ValidProposerSignature(ctx); err != nil {
-		return pubsub.ValidationReject, err
+	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature and sidecar inclusion proof
+	if s.hasSeenBlobIndex(blob.Slot(), blob.ProposerIndex(), blob.Index) {
+		return pubsub.ValidationIgnore, nil
+	}
+
+	if err := vf.SlotAboveFinalized(); err != nil {
+		return pubsub.ValidationIgnore, err
 	}
 
 	if err := vf.SidecarParentSeen(s.hasBadBlock); err != nil {
@@ -80,6 +86,10 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		}()
 		missingParentBlobSidecarCount.Inc()
 		return pubsub.ValidationIgnore, err
+	}
+
+	if err := vf.ValidProposerSignature(ctx); err != nil {
+		return pubsub.ValidationReject, err
 	}
 
 	if err := vf.SidecarParentValid(s.hasBadBlock); err != nil {
@@ -102,19 +112,10 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, err
 	}
 
-	// [IGNORE] The sidecar is the first sidecar for the tuple (block_header.slot, block_header.proposer_index, sidecar.index) with valid header signature and sidecar inclusion proof
-	if s.hasSeenBlobIndex(blob.Slot(), blob.ProposerIndex(), blob.Index) {
-		return pubsub.ValidationIgnore, nil
-	}
-
 	if err := vf.SidecarProposerExpected(ctx); err != nil {
 		return pubsub.ValidationReject, err
 	}
 
-	startTime, err := slots.ToTime(uint64(s.cfg.chain.GenesisTime().Unix()), blob.Slot())
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
 	fields := blobFields(blob)
 	sinceSlotStartTime := receivedTime.Sub(startTime)
 	fields["sinceSlotStartTime"] = sinceSlotStartTime

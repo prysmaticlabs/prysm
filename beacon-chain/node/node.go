@@ -98,7 +98,8 @@ type BeaconNode struct {
 	syncCommitteePool       synccommittee.Pool
 	blsToExecPool           blstoexec.PoolManager
 	depositCache            cache.DepositCache
-	proposerIdsCache        *cache.ProposerPayloadIDsCache
+	trackedValidatorsCache  *cache.TrackedValidatorsCache
+	payloadIDCache          *cache.PayloadIDCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
@@ -179,10 +180,11 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),
 		blsToExecPool:           blstoexec.NewPool(),
+		trackedValidatorsCache:  cache.NewTrackedValidatorsCache(),
+		payloadIDCache:          cache.NewPayloadIDCache(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
-		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
@@ -226,13 +228,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
-	if beacon.finalizedStateAtStartUp != nil {
-		log.Debugln("Pruning old blobs")
-		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
-			return nil, err
-		}
-	} else {
-		log.Warn("No finalized beacon state at startup, cannot prune blobs")
+	if err := beacon.BlobStorage.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
 	}
 
 	log.Debugln("Registering P2P Service")
@@ -660,10 +657,11 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
-		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
 		blockchain.WithBlobStorage(b.BlobStorage),
+		blockchain.WithTrackedValidatorsCache(b.trackedValidatorsCache),
+		blockchain.WithPayloadIDCache(b.payloadIDCache),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -894,11 +892,12 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		StateGen:                      b.stateGen,
 		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
-		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,
 		BlobStorage:                   b.BlobStorage,
+		TrackedValidatorsCache:        b.trackedValidatorsCache,
+		PayloadIDCache:                b.payloadIDCache,
 	})
 
 	return b.services.RegisterService(rpcService)

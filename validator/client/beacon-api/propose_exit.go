@@ -34,18 +34,14 @@ func (c beaconApiValidatorClient) proposeExit(ctx context.Context, signedVolunta
 		return nil, errors.Wrap(err, "failed to marshal signed voluntary exit")
 	}
 
-	errJson, err := c.jsonRestHandler.Post(
+	if err = c.jsonRestHandler.Post(
 		ctx,
 		"/eth/v1/beacon/pool/voluntary_exits",
 		nil,
 		bytes.NewBuffer(marshalledSignedVoluntaryExit),
 		nil,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, msgUnexpectedError)
-	}
-	if errJson != nil {
-		return nil, errJson
+	); err != nil {
+		return nil, err
 	}
 
 	exitRoot, err := signedVoluntaryExit.Exit.HashTreeRoot()

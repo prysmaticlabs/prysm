@@ -46,7 +46,6 @@ func TestProposeExit_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	decodedSignature, err := hexutil.Decode(signature)
@@ -95,7 +94,6 @@ func TestProposeExit_BadRequest(t *testing.T) {
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 

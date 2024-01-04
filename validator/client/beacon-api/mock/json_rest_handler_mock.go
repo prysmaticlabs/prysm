@@ -10,7 +10,6 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	http "github.com/prysmaticlabs/prysm/v4/network/httputil"
 )
 
 // MockJsonRestHandler is a mock of JsonRestHandler interface.
@@ -37,12 +36,11 @@ func (m *MockJsonRestHandler) EXPECT() *MockJsonRestHandlerMockRecorder {
 }
 
 // Get mocks base method.
-func (m *MockJsonRestHandler) Get(arg0 context.Context, arg1 string, arg2 interface{}) (*http.DefaultErrorJson, error) {
+func (m *MockJsonRestHandler) Get(arg0 context.Context, arg1 string, arg2 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
-	ret0, _ := ret[0].(*http.DefaultErrorJson)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Get indicates an expected call of Get.
@@ -52,12 +50,11 @@ func (mr *MockJsonRestHandlerMockRecorder) Get(arg0, arg1, arg2 interface{}) *go
 }
 
 // Post mocks base method.
-func (m *MockJsonRestHandler) Post(arg0 context.Context, arg1 string, arg2 map[string]string, arg3 *bytes.Buffer, arg4 interface{}) (*http.DefaultErrorJson, error) {
+func (m *MockJsonRestHandler) Post(arg0 context.Context, arg1 string, arg2 map[string]string, arg3 *bytes.Buffer, arg4 interface{}) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Post", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(*http.DefaultErrorJson)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Post indicates an expected call of Post.

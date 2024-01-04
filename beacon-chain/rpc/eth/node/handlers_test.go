@@ -158,7 +158,7 @@ func TestGetIdentity(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetIdentityResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		expectedID := peer.ID("foo").Pretty()
+		expectedID := peer.ID("foo").String()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
 		expectedEnr, err := p2p.SerializeENR(enrRecord)
 		require.NoError(t, err)
@@ -198,7 +198,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain enr", e.Message)
@@ -223,7 +223,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &httputil.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain discovery address", e.Message)

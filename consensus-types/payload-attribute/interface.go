@@ -13,4 +13,5 @@ type Attributer interface {
 	PbV1() (*enginev1.PayloadAttributes, error)
 	PbV2() (*enginev1.PayloadAttributesV2, error)
 	PbV3() (*enginev1.PayloadAttributesV3, error)
+	IsEmpty() bool
 }

@@ -428,7 +428,7 @@ func isBlockQueueable(genesisTime uint64, slot primitives.Slot, receivedTime tim
 		return false
 	}
 
-	currentTimeWithDisparity := receivedTime.Add(params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	currentTimeWithDisparity := receivedTime.Add(params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	return currentTimeWithDisparity.Unix() < slotTime.Unix()
 }
 

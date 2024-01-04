@@ -22,7 +22,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Retrieve beacon state
 	stateId := mux.Vars(r)["state_id"]
 	if stateId == "" {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: "state_id is required in URL params",
 			Code:    http.StatusBadRequest,
 		})
@@ -52,14 +52,14 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if proposalSlot < capellaStart {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: "expected withdrawals are not supported before Capella fork",
 			Code:    http.StatusBadRequest,
 		})
 		return
 	}
 	if proposalSlot <= st.Slot() {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("proposal slot must be bigger than state slot. proposal slot: %d, state slot: %d", proposalSlot, st.Slot()),
 			Code:    http.StatusBadRequest,
 		})
@@ -67,7 +67,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	lookAheadLimit := uint64(params.BeaconConfig().SlotsPerEpoch.Mul(uint64(params.BeaconConfig().MaxSeedLookahead)))
 	if st.Slot().Add(lookAheadLimit) <= proposalSlot {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: fmt.Sprintf("proposal slot cannot be >= %d slots ahead of state slot", lookAheadLimit),
 			Code:    http.StatusBadRequest,
 		})
@@ -89,7 +89,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	// Advance state forward to proposal slot
 	st, err = transition.ProcessSlots(r.Context(), st, proposalSlot)
 	if err != nil {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: "could not process slots",
 			Code:    http.StatusInternalServerError,
 		})
@@ -97,7 +97,7 @@ func (s *Server) ExpectedWithdrawals(w http.ResponseWriter, r *http.Request) {
 	}
 	withdrawals, err := st.ExpectedWithdrawals()
 	if err != nil {
-		httputil.WriteError(w, &httputil.DefaultErrorJson{
+		httputil.WriteError(w, &httputil.DefaultJsonError{
 			Message: "could not get expected withdrawals",
 			Code:    http.StatusInternalServerError,
 		})
@@ -123,8 +123,8 @@ func buildExpectedWithdrawalsData(withdrawals []*enginev1.Withdrawal) []*Expecte
 	return data
 }
 
-func handleWrapError(err error, message string, code int) *httputil.DefaultErrorJson {
-	return &httputil.DefaultErrorJson{
+func handleWrapError(err error, message string, code int) *httputil.DefaultJsonError {
+	return &httputil.DefaultJsonError{
 		Message: errors.Wrapf(err, message).Error(),
 		Code:    code,
 	}

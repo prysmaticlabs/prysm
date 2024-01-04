@@ -69,10 +69,18 @@ func WithDepositCache(c cache.DepositCache) Option {
 	}
 }
 
-// WithProposerIdsCache for proposer id cache.
-func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
+// WithPayloadIDCache for payload ID cache.
+func WithPayloadIDCache(c *cache.PayloadIDCache) Option {
 	return func(s *Service) error {
-		s.cfg.ProposerSlotIndexCache = c
+		s.cfg.PayloadIDCache = c
+		return nil
+	}
+}
+
+// WithTrackedValidatorsCache for tracked validators cache.
+func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.cfg.TrackedValidatorsCache = c
 		return nil
 	}
 }

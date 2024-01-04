@@ -59,13 +59,13 @@ func TestSlotNotTooEarly(t *testing.T) {
 
 	// Since we have an early return for slots that are directly equal, give a time that is less than max disparity
 	// but still in the previous slot.
-	closeClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now.Add(-1 * params.BeaconNetworkConfig().MaximumGossipClockDisparity / 2) }))
+	closeClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now.Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration() / 2) }))
 	ini = Initializer{shared: &sharedResources{clock: closeClock}}
 	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
 	require.NoError(t, v.SlotNotTooEarly())
 
 	// This clock will give a current slot of 0, with now coming more than max clock disparity before slot 1
-	disparate := now.Add(-2 * params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	disparate := now.Add(-2 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	dispClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return disparate }))
 	// Set up initializer to use the clock that will set now to a little to far before slot 1
 	ini = Initializer{shared: &sharedResources{clock: dispClock}}

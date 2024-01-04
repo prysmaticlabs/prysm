@@ -53,6 +53,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableReorgLateBlocks = &cli.BoolFlag{
+		Name:   "disable-reorg-late-blocks",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -66,6 +71,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedAggregateParallel,
 	deprecatedEnableOptionalEngineMethods,
 	deprecatedDisableBuildBlockParallel,
+	deprecatedDisableReorgLateBlocks,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components

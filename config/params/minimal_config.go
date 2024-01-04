@@ -94,6 +94,7 @@ func MinimalSpecConfig() *BeaconChainConfig {
 	minimalConfig.SyncCommitteeSize = 32
 	minimalConfig.InactivityScoreBias = 4
 	minimalConfig.EpochsPerSyncCommitteePeriod = 8
+	minimalConfig.MinEpochsForBlockRequests = 272
 
 	// Ethereum PoW parameters.
 	minimalConfig.DepositChainID = 5   // Chain ID of eth1 goerli.
