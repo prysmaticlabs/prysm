@@ -150,7 +150,7 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 	var committeeIndex primitives.CommitteeIndex
 	var committee []primitives.ValidatorIndex
 	for _, duty := range duties.Duties {
-		if duty.AttesterSlot == chainHead.HeadSlot-1 {
+		if duty.AttesterSlot == chainHead.HeadSlot {
 			committeeIndex = duty.CommitteeIndex
 			committee = duty.Committee
 			break
@@ -159,15 +159,13 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 
 	attDataReq := &eth.AttestationDataRequest{
 		CommitteeIndex: committeeIndex,
-		Slot:           chainHead.HeadSlot - 1,
+		Slot:           chainHead.HeadSlot,
 	}
 
 	attData, err := valClient.GetAttestationData(ctx, attDataReq)
 	if err != nil {
 		return err
 	}
-	blockRoot := bytesutil.ToBytes32([]byte("muahahahaha I'm an evil validator"))
-	attData.BeaconBlockRoot = blockRoot[:]
 
 	req := &eth.DomainRequest{
 		Epoch:  chainHead.HeadEpoch,
@@ -177,16 +175,20 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 	if err != nil {
 		return errors.Wrap(err, "could not get domain data")
 	}
-	signingRoot, err := signing.ComputeSigningRoot(attData, resp.SignatureDomain)
-	if err != nil {
-		return errors.Wrap(err, "could not compute signing root")
-	}
 
 	valsToSlash := uint64(2)
 	for i := uint64(0); i < valsToSlash && i < uint64(len(committee)); i++ {
 		if len(slice.IntersectionUint64(slashedIndices, []uint64{uint64(committee[i])})) > 0 {
 			valsToSlash++
 			continue
+		}
+
+		// msg must be unique so they are not filtered by P2P
+		blockRoot := bytesutil.ToBytes32([]byte("0 muahahahaha")) 
+		attData.BeaconBlockRoot = blockRoot[:]
+		signingRoot, err := signing.ComputeSigningRoot(attData, resp.SignatureDomain)
+		if err != nil {
+			return errors.Wrap(err, "could not compute signing root")
 		}
 		// Set the bits of half the committee to be slashed.
 		attBitfield := bitfield.NewBitlist(uint64(len(committee)))
@@ -200,6 +202,29 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
 		// Only broadcasting the attestation to one node also helps test slashing propagation.
 		client := eth.NewBeaconNodeValidatorClient(conns[0])
+		if _, err = client.ProposeAttestation(ctx, att); err != nil {
+			return errors.Wrap(err, "could not propose attestation")
+		}
+
+
+		blockRoot = bytesutil.ToBytes32([]byte("1 muahahahaha")) 
+		attData.BeaconBlockRoot = blockRoot[:]
+		signingRoot, err = signing.ComputeSigningRoot(attData, resp.SignatureDomain)
+		if err != nil {
+			return errors.Wrap(err, "could not compute signing root")
+		}
+		// Set the bits of half the committee to be slashed.
+		attBitfield = bitfield.NewBitlist(uint64(len(committee)))
+		attBitfield.SetBitAt(i, true)
+
+		att = &eth.Attestation{
+			AggregationBits: attBitfield,
+			Data:            attData,
+			Signature:       privKeys[committee[i]].Sign(signingRoot[:]).Marshal(),
+		}
+		// We only broadcast to conns[0] here since we can trust that at least 1 node will be online.
+		// Only broadcasting the attestation to one node also helps test slashing propagation.
+		client = eth.NewBeaconNodeValidatorClient(conns[1])
 		if _, err = client.ProposeAttestation(ctx, att); err != nil {
 			return errors.Wrap(err, "could not propose attestation")
 		}
