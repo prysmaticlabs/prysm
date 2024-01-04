@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
+	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -19,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -336,7 +337,7 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 }
 
 // ForkChoicer returns the forkchoice interface.
-func (s *Service) ForkChoicer() forkchoice.ForkChoicer {
+func (s *Service) ForkChoicer() f.ForkChoicer {
 	return s.cfg.ForkChoiceStore
 }
 
