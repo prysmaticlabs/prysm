@@ -38,7 +38,8 @@ import (
 var eth1DataNotification bool
 
 const (
-	eth1dataTimeout = 2 * time.Second
+	eth1dataTimeout           = 2 * time.Second
+	defaultBuilderBoostFactor = uint64(100)
 )
 
 // GetBeaconBlock is called by a proposer during its assigned slot to request a block to sign
@@ -108,7 +109,12 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	}
 	sBlk.SetProposerIndex(idx)
 
-	if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost); err != nil {
+	builderBoostFactor := defaultBuilderBoostFactor
+	if req.BuilderBoostFactor != nil {
+		builderBoostFactor = req.BuilderBoostFactor.Value
+	}
+
+	if err = vs.BuildBlockParallel(ctx, sBlk, head, req.SkipMevBoost, builderBoostFactor); err != nil {
 		return nil, errors.Wrap(err, "could not build block in parallel")
 	}
 
@@ -128,7 +134,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
 }
 
-func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool) error {
+func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {
 	// Build consensus fields in background
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -186,7 +192,7 @@ func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.Signed
 		}
 	}
 
-	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments); err != nil {
+	if err := setExecutionData(ctx, sBlk, localPayload, builderPayload, builderKzgCommitments, builderBoostFactor); err != nil {
 		return status.Errorf(codes.Internal, "Could not set execution data: %v", err)
 	}
 
