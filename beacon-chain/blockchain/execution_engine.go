@@ -32,21 +32,18 @@ const blobCommitmentVersionKZG uint8 = 0x01
 
 var defaultLatestValidHash = bytesutil.PadTo([]byte{0xff}, 32)
 
-// notifyForkchoiceUpdateArg is the argument for the forkchoice update notification `notifyForkchoiceUpdate`.
-type notifyForkchoiceUpdateArg struct {
-	headState state.BeaconState
-	headRoot  [32]byte
-	headBlock interfaces.ReadOnlyBeaconBlock
-}
-
 // notifyForkchoiceUpdate signals execution engine the fork choice updates. Execution engine should:
 // 1. Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
 // 2. Applies finality to the execution state: it irreversibly persists the chain of all execution payloads and corresponding state, up to and including finalized_block_hash.
-func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkchoiceUpdateArg) (*enginev1.PayloadIDBytes, error) {
+func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *fcuConfig) (*enginev1.PayloadIDBytes, error) {
 	ctx, span := trace.StartSpan(ctx, "blockChain.notifyForkchoiceUpdate")
 	defer span.End()
 
-	headBlk := arg.headBlock
+	if arg.headBlock.IsNil() {
+		log.Error("Head block is nil")
+		return nil, nil
+	}
+	headBlk := arg.headBlock.Block()
 	if headBlk == nil || headBlk.IsNil() || headBlk.Body().IsNil() {
 		log.Error("Head block is nil")
 		return nil, nil
@@ -72,11 +69,10 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		SafeBlockHash:      justifiedHash[:],
 		FinalizedBlockHash: finalizedHash[:],
 	}
-
-	nextSlot := s.CurrentSlot() + 1 // Cache payload ID for next slot proposer.
-	hasAttr, attr := s.getPayloadAttribute(ctx, arg.headState, nextSlot, arg.headRoot[:])
-
-	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, attr)
+	if arg.attributes == nil {
+		arg.attributes = payloadattribute.EmptyWithVersion(headBlk.Version())
+	}
+	payloadID, lastValidHash, err := s.cfg.ExecutionEngineCaller.ForkchoiceUpdated(ctx, fcs, arg.attributes)
 	if err != nil {
 		switch err {
 		case execution.ErrAcceptedSyncingPayloadStatus:
@@ -122,10 +118,11 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 				log.WithError(err).Error("Could not get head state")
 				return nil, nil
 			}
-			pid, err := s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-				headState: st,
-				headRoot:  r,
-				headBlock: b.Block(),
+			pid, err := s.notifyForkchoiceUpdate(ctx, &fcuConfig{
+				headState:  st,
+				headRoot:   r,
+				headBlock:  b,
+				attributes: arg.attributes,
 			})
 			if err != nil {
 				return nil, err // Returning err because it's recursive here.
@@ -154,6 +151,8 @@ func (s *Service) notifyForkchoiceUpdate(ctx context.Context, arg *notifyForkcho
 		return nil, nil
 	}
 	// If the forkchoice update call has an attribute, update the payload ID cache.
+	hasAttr := arg.attributes != nil && !arg.attributes.IsEmpty()
+	nextSlot := s.CurrentSlot() + 1
 	if hasAttr && payloadID != nil {
 		var pId [8]byte
 		copy(pId[:], payloadID[:])
@@ -277,7 +276,7 @@ func (s *Service) pruneInvalidBlock(ctx context.Context, root, parentRoot, lvh [
 
 // getPayloadAttributes returns the payload attributes for the given state and slot.
 // The attribute is required to initiate a payload build process in the context of an `engine_forkchoiceUpdated` call.
-func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) (bool, payloadattribute.Attributer) {
+func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState, slot primitives.Slot, headRoot []byte) payloadattribute.Attributer {
 	emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 
 	// If it is an epoch boundary then process slots to get the right
@@ -290,7 +289,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 	if e == stateEpoch {
 		val, ok = s.trackedProposer(st, slot)
 		if !ok {
-			return false, emptyAttri
+			return emptyAttri
 		}
 	}
 	st = st.Copy()
@@ -299,27 +298,28 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, headRoot, slot)
 		if err != nil {
 			log.WithError(err).Error("Could not process slots to get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 	}
 	if e > stateEpoch {
+		emptyAttri := payloadattribute.EmptyWithVersion(st.Version())
 		val, ok = s.trackedProposer(st, slot)
 		if !ok {
-			return false, emptyAttri
+			return emptyAttri
 		}
 	}
 	// Get previous randao.
 	prevRando, err := helpers.RandaoMix(st, time.CurrentEpoch(st))
 	if err != nil {
 		log.WithError(err).Error("Could not get randao mix to get payload attribute")
-		return false, emptyAttri
+		return emptyAttri
 	}
 
 	// Get timestamp.
 	t, err := slots.ToTime(uint64(s.genesisTime.Unix()), slot)
 	if err != nil {
 		log.WithError(err).Error("Could not get timestamp to get payload attribute")
-		return false, emptyAttri
+		return emptyAttri
 	}
 
 	var attr payloadattribute.Attributer
@@ -328,7 +328,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV3{
 			Timestamp:             uint64(t.Unix()),
@@ -339,13 +339,13 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 	case version.Capella:
 		withdrawals, err := st.ExpectedWithdrawals()
 		if err != nil {
 			log.WithError(err).Error("Could not get expected withdrawals to get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributesV2{
 			Timestamp:             uint64(t.Unix()),
@@ -355,7 +355,7 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 	case version.Bellatrix:
 		attr, err = payloadattribute.New(&enginev1.PayloadAttributes{
@@ -365,14 +365,14 @@ func (s *Service) getPayloadAttribute(ctx context.Context, st state.BeaconState,
 		})
 		if err != nil {
 			log.WithError(err).Error("Could not get payload attribute")
-			return false, emptyAttri
+			return emptyAttri
 		}
 	default:
 		log.WithField("version", st.Version()).Error("Could not get payload attribute due to unknown state version")
-		return false, emptyAttri
+		return emptyAttri
 	}
 
-	return true, attr
+	return attr
 }
 
 // removeInvalidBlockAndState removes the invalid block, blob and its corresponding state from the cache and DB.

@@ -5,7 +5,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/spf13/afero"
 )
 
@@ -31,10 +30,7 @@ var (
 	})
 )
 
-func (bs *BlobStorage) Initialize(lastFinalizedSlot primitives.Slot) error {
-	if err := bs.Prune(lastFinalizedSlot); err != nil {
-		return fmt.Errorf("failed to prune from finalized slot %d: %w", lastFinalizedSlot, err)
-	}
+func (bs *BlobStorage) Initialize() error {
 	if err := bs.collectTotalBlobMetric(); err != nil {
 		return fmt.Errorf("failed to initialize blob metrics: %w", err)
 	}

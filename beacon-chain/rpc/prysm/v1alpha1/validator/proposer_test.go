@@ -799,8 +799,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				P2P:           mockp2p.NewTestP2P(t),
 				BlockBuilder: &builderTest.MockBuilderService{HasConfigured: tt.useBuilder, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(),
 					BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
-				BeaconDB:     db,
-				BlobReceiver: c,
+				BeaconDB:          db,
+				BlobReceiver:      c,
+				OperationNotifier: c.OperationNotifier(),
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)
