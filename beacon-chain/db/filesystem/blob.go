@@ -257,19 +257,14 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
 	pruneTime := time.Since(t)
-
 	log.WithFields(log.Fields{
 		"lastPrunedEpoch":   slots.ToEpoch(pruneBefore),
 		"pruneTime":         pruneTime,
 		"numberBlobsPruned": totalPruned,
 	}).Debug("Pruned old blobs")
 
-	return nil
+	return err
 }
 
 // processFolder will delete the folder of blobs if the blob slot is outside the
