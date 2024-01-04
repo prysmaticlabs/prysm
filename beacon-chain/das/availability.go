@@ -10,7 +10,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -66,7 +65,7 @@ func (s *LazilyPersistentStore) Persist(current primitives.Slot, sc ...blocks.RO
 			}
 		}
 	}
-	if !params.WithinDAPeriod(slots.ToEpoch(header(sc[0]).Slot), slots.ToEpoch(current)) {
+	if !params.WithinDAPeriod(slots.ToEpoch(sc[0].Slot()), slots.ToEpoch(current)) {
 		return nil
 	}
 	key := keyFromSidecar(sc[0])
@@ -146,8 +145,4 @@ func commitmentsToCheck(b blocks.ROBlock, current primitives.Slot) (safeCommitme
 	}
 	copy(ar[:], kc)
 	return ar, nil
-}
-
-func header(s blocks.ROBlob) *ethpb.BeaconBlockHeader {
-	return s.SignedBlockHeader.Header
 }

@@ -161,6 +161,7 @@ func (s *Service) processFetchedDataRegSync(
 
 	bwb, err := validUnprocessed(ctx, data.bwb, s.cfg.Chain.HeadSlot(), s.isProcessedBlock)
 	if err != nil {
+		log.WithError(err).Debug("batch did not contain a valid sequence of unprocessed blocks")
 		return
 	}
 	if len(bwb) == 0 {
@@ -169,22 +170,22 @@ func (s *Service) processFetchedDataRegSync(
 	bv := newBlobBatchVerifier(s.newBlobVerifier)
 	avs := das.NewLazilyPersistentStore(s.cfg.BlobStorage, bv)
 	batchFields := logrus.Fields{
-		"missingParent": fmt.Sprintf("%#x", data.bwb[0].Block.Block().ParentRoot()),
-		"firstSlot":     data.bwb[0].Block.Block().Slot(),
+		"firstSlot":        data.bwb[0].Block.Block().Slot(),
+		"firstUnprocessed": bwb[0].Block.Block().Slot(),
 	}
 	for _, b := range data.bwb {
 		if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
 			log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
 			return
 		}
-
 		if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
 			switch {
 			case errors.Is(err, errBlockAlreadyProcessed):
 				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Skipping already processed block")
 				continue
 			case errors.Is(err, errParentDoesNotExist):
-				log.WithFields(batchFields).WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
+				log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
+					WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
 				return
 			default:
 				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Block processing failure")

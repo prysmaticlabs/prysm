@@ -10,8 +10,10 @@ import (
 )
 
 var (
-	ErrDuplicateSidecar = errors.New("duplicate sidecar stashed in AvailabilityStore")
-	errIndexOutOfBounds = errors.New("sidecar.index > MAX_BLOBS_PER_BLOCK")
+	ErrDuplicateSidecar   = errors.New("duplicate sidecar stashed in AvailabilityStore")
+	errIndexOutOfBounds   = errors.New("sidecar.index > MAX_BLOBS_PER_BLOCK")
+	errCommitmentMismatch = errors.New("KzgCommitment of sidecar in cache did not match block commitment")
+	errMissingSidecar     = errors.New("no sidecar in cache for block commitment")
 )
 
 // cacheKey includes the slot so that we can easily iterate through the cache and compare
@@ -32,7 +34,7 @@ func newCache() *cache {
 
 // keyFromSidecar is a convenience method for constructing a cacheKey from a BlobSidecar value.
 func keyFromSidecar(sc blocks.ROBlob) cacheKey {
-	return cacheKey{slot: header(sc).Slot, root: sc.BlockRoot()}
+	return cacheKey{slot: sc.Slot(), root: sc.BlockRoot()}
 }
 
 // keyFromBlock is a convenience method for constructing a cacheKey from a ROBlock value.
@@ -74,33 +76,6 @@ func (e *cacheEntry) stash(sc *blocks.ROBlob) error {
 	return nil
 }
 
-/*
-// filter returns a slice of all sidecars with KzgCommitment values that are found
-// in the given list of block commitments, ignoring any that shouldn't be there.
-// This is a cheap pre-filtering step before full blob verification.
-func (e *cacheEntry) filter(root [32]byte, blkCmts [][]byte) []blocks.ROBlob {
-	upper := fieldparams.MaxBlobsPerBlock
-	if upper > len(blkCmts) {
-		upper = len(blkCmts)
-	}
-	want := make([]blocks.ROBlob, 0, len(e.scs))
-	for i := 0; i < upper; i++ {
-		if e.scs[i] == nil {
-			continue
-		}
-		if bytes.Equal(blkCmts[i], e.scs[i].KzgCommitment) {
-			want = append(want, *e.scs[i])
-		}
-	}
-	return want
-}
-*/
-
-var (
-	errCommitmentMismatch = errors.New("KzgCommitment of sidecar in cache did not match block commitment")
-	errMissingSidecar     = errors.New("no sidecar in cache for block commitment")
-)
-
 // filter evicts sidecars that are not committed to by the block and returns custom
 // errors if the cache is missing any of the commitments, or if the commitments in
 // the cache do not match those found in the block. If err is nil, then all expected
@@ -126,27 +101,6 @@ func (e *cacheEntry) filter(root [32]byte, kc safeCommitmentArray) ([]blocks.ROB
 	}
 
 	return scs, nil
-}
-
-// dbidx is a compact representation of the set of BlobSidecars in the database for a given root,
-// organized as a map from BlobSidecar.Index->BlobSidecar.KzgCommitment.
-// This representation is convenient for comparison to a block's commitments.
-type dbidx [fieldparams.MaxBlobsPerBlock]bool
-
-// missing compares the set of BlobSidecars observed in the backing store to the set of commitments
-// observed in a block - cmts is the BlobKzgCommitments field from a block.
-func (idx dbidx) missing(expected int) []uint64 {
-	if expected > fieldparams.MaxBlobsPerBlock {
-		expected = fieldparams.MaxBlobsPerBlock
-	}
-	m := make([]uint64, 0, expected)
-	for i := 0; i < expected; i++ {
-		if !idx[i] {
-			m = append(m, uint64(i))
-			continue
-		}
-	}
-	return m
 }
 
 // safeCommitemntArray is a fixed size array of commitment byte slices. This is helpful for avoiding
