@@ -29,11 +29,15 @@ func DefaultBid() (*FakeBid, error) {
 	if err != nil {
 		return nil, err
 	}
+	h, err := DefaultPayloadHeader()
+	if err != nil {
+		return nil, err
+	}
 	return &FakeBid{
 		BuilderBid: &ethpb.BuilderBid{
-			Header: DefaultPayloadHeader(),
+			Header: h,
 			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo([]byte{defaultBidValue}, 32),
+			Value:  bytesutil.Uint64ToBytesLittleEndian32(defaultBidValue),
 		},
 		sk: sk,
 	}, nil
@@ -60,11 +64,15 @@ func DefaultBidCapella() (*FakeBidCapella, error) {
 	if err != nil {
 		return nil, err
 	}
+	h, err := DefaultPayloadHeaderCapella()
+	if err != nil {
+		return nil, err
+	}
 	return &FakeBidCapella{
 		BuilderBidCapella: &ethpb.BuilderBidCapella{
-			Header: DefaultPayloadHeaderCapella(),
+			Header: h,
 			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo([]byte{defaultBidValue}, 32),
+			Value:  bytesutil.Uint64ToBytesLittleEndian32(defaultBidValue),
 		},
 		sk: sk,
 	}, nil
@@ -91,11 +99,15 @@ func DefaultBidDeneb() (*FakeBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
+	h, err := DefaultPayloadHeaderDeneb()
+	if err != nil {
+		return nil, err
+	}
 	return &FakeBidDeneb{
 		BuilderBidDeneb: &ethpb.BuilderBidDeneb{
-			Header: DefaultPayloadHeaderDeneb(),
+			Header: h,
 			Pubkey: sk.PublicKey().Marshal(),
-			Value:  bytesutil.PadTo([]byte{defaultBidValue}, 32),
+			Value:  bytesutil.Uint64ToBytesLittleEndian32(defaultBidValue),
 		},
 		sk: sk,
 	}, nil

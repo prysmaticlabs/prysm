@@ -47,6 +47,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -90,7 +91,7 @@ func TestServer_GetBeaconBlock_Phase0(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, parentRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, parentRoot), "Could not save genesis state")
 
-	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer := getProposerServer(t, db, beaconState, parentRoot[:])
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
@@ -163,7 +164,7 @@ func TestServer_GetBeaconBlock_Altair(t *testing.T) {
 	require.NoError(t, db.SaveState(ctx, beaconState, blkRoot), "Could not save genesis state")
 	require.NoError(t, db.SaveHeadBlockRoot(ctx, blkRoot), "Could not save genesis state")
 
-	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer := getProposerServer(t, db, beaconState, parentRoot[:])
 
 	randaoReveal, err := util.RandaoReveal(beaconState, 0, privKeys)
 	require.NoError(t, err)
@@ -277,7 +278,7 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 		Timestamp:     uint64(timeStamp.Unix()),
 	}
 
-	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer := getProposerServer(t, db, beaconState, parentRoot[:])
 	proposerServer.Eth1BlockFetcher = c
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
 		PayloadIDBytes:   &enginev1.PayloadIDBytes{1},
@@ -398,7 +399,7 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 		Timestamp:     uint64(timeStamp.Unix()),
 	}
 
-	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer := getProposerServer(t, db, beaconState, parentRoot[:])
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
 		PayloadIDBytes:          &enginev1.PayloadIDBytes{1},
 		ExecutionPayloadCapella: payload,
@@ -518,7 +519,7 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 	proofs := [][]byte{[]byte("proof"), []byte("proof1"), []byte("proof2")}
 	blobs := [][]byte{[]byte("blob"), []byte("blob1"), []byte("blob2")}
 	bundle := &enginev1.BlobsBundle{KzgCommitments: kc, Proofs: proofs, Blobs: blobs}
-	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
+	proposerServer := getProposerServer(t, db, beaconState, parentRoot[:])
 	proposerServer.ExecutionEngineCaller = &mockExecution.EngineClient{
 		PayloadIDBytes:        &enginev1.PayloadIDBytes{1},
 		ExecutionPayloadDeneb: payload,
@@ -575,7 +576,7 @@ func TestServer_GetBeaconBlock_Optimistic(t *testing.T) {
 	require.ErrorContains(t, errOptimisticMode.Error(), err)
 }
 
-func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, headRoot []byte) *Server {
+func getProposerServer(t *testing.T, db db.HeadAccessDatabase, headState state.BeaconState, headRoot []byte) *Server {
 	mockChainService := &mock.ChainService{State: headState, Root: headRoot, ForkChoiceStore: doublylinkedtree.New()}
 	return &Server{
 		HeadFetcher:           mockChainService,
@@ -601,7 +602,7 @@ func getProposerServer(db db.HeadAccessDatabase, headState state.BeaconState, he
 		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		BeaconDB:               db,
 		BLSChangesPool:         blstoexec.NewPool(),
-		BlockBuilder:           &builderTest.MockBuilderService{HasConfigured: true},
+		BlockBuilder:           builderTest.DefaultBuilderService(t, version.Bellatrix, true),
 	}
 }
 
@@ -631,7 +632,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 		name           string
 		block          func([32]byte) *ethpb.GenericSignedBeaconBlock
 		err            string
-		builderService *builderTest.MockBuilderService
+		builderService func() *builderTest.MockBuilderService
 	}{
 		{
 			name: "phase0",
@@ -642,11 +643,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Phase0{Phase0: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
-			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
 		},
 		{
 			name: "altair",
@@ -657,11 +653,6 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				blk := &ethpb.GenericSignedBeaconBlock_Altair{Altair: blockToPropose}
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
-			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
 		},
 		{
 			name: "bellatrix",
@@ -673,10 +664,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Bellatrix, false)
+			},
 		},
 		{
 			name: "blind capella",
@@ -694,10 +683,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(true)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Capella, true)
+			},
 		},
 		{
 			name: "blind capella no builder",
@@ -715,26 +702,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
-			err: "unconfigured block builder",
-		},
-		{
-			name: "bellatrix",
-			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
-				blockToPropose := util.NewBeaconBlockBellatrix()
-				blockToPropose.Block.Slot = 5
-				blockToPropose.Block.ParentRoot = parent[:]
-				blk := &ethpb.GenericSignedBeaconBlock_Bellatrix{Bellatrix: blockToPropose}
-				return &ethpb.GenericSignedBeaconBlock{Block: blk}
+				return builderTest.DefaultBuilderService(t, version.Capella, false)
 			},
-			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
+			err: "unconfigured block builder",
 		},
 		{
 			name: "deneb block no blob",
@@ -746,10 +716,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Deneb, false)
+			},
 		},
 		{
 			name: "deneb block some blobs",
@@ -764,10 +732,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Deneb, false)
+			},
 		},
 		{
 			name: "deneb block some blobs (kzg and blob count missmatch)",
@@ -781,10 +747,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(false)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Deneb, false)
+			},
 			err: "blob KZG commitments don't match number of blobs or KZG proofs",
 		},
 		{
@@ -804,10 +768,8 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(true)
-				require.NoError(t, err)
-				return bs
-			}(),
+				return builderTest.DefaultBuilderService(t, version.Deneb, true)
+			},
 		},
 		{
 			name: "blind deneb block some blobs (commitment value does not match blob)",
@@ -826,13 +788,10 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				return &ethpb.GenericSignedBeaconBlock{Block: blk}
 			},
 			builderService: func() *builderTest.MockBuilderService {
-				bs, err := builderTest.DefaultBuilderService(true)
-				require.NoError(t, err)
-				bs.Customize(func(s *builderTest.MockBuilderService) {
-					s.BlobBundle = &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}
-				})
-				return bs
-			}(),
+				s := builderTest.DefaultBuilderService(t, version.Deneb, true)
+				s.BlobBundle = &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}
+				return s
+			},
 			err: "unblind sidecars failed: commitment value doesn't match block",
 		},
 	}
@@ -852,7 +811,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder:  tt.builderService,
+				BlockBuilder:  tt.builderService(),
 				BeaconDB:      db,
 				BlobReceiver:  c,
 			}
@@ -2853,13 +2812,15 @@ func TestProposer_SubmitValidatorRegistrations(t *testing.T) {
 	reg := &ethpb.SignedValidatorRegistrationsV1{}
 	_, err := proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.ErrorContains(t, builder.ErrNoBuilder.Error(), err)
-	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{}}
+	proposerServer = &Server{}
 	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.ErrorContains(t, builder.ErrNoBuilder.Error(), err)
-	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true}}
+	proposerServer = &Server{BlockBuilder: builderTest.DefaultBuilderService(t, version.Bellatrix, true)}
 	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.NoError(t, err)
-	proposerServer = &Server{BlockBuilder: &builderTest.MockBuilderService{HasConfigured: true, ErrRegisterValidator: errors.New("bad")}}
+	bb := builderTest.DefaultBuilderService(t, version.Bellatrix, true)
+	bb.ErrRegisterValidator = errors.New("bad")
+	proposerServer = &Server{BlockBuilder: bb}
 	_, err = proposerServer.SubmitValidatorRegistrations(ctx, reg)
 	require.ErrorContains(t, "bad", err)
 }

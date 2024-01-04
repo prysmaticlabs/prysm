@@ -3,7 +3,9 @@ package params
 import (
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
@@ -49,7 +51,7 @@ func TestConfigset_Replace(t *testing.T) {
 	require.ErrorIs(t, err, errConfigNotFound)
 	undo := o.Copy()
 	FillTestVersions(undo, 127)
-	undoFunc, err := r.replaceWithUndo(undo)
+	undoFunc, err := r.replaceWithUndo(o, undo)
 	require.NoError(t, err)
 	u, err := r.byName(undo.ConfigName)
 	require.NoError(t, err)
@@ -199,4 +201,22 @@ func compareConfigs(t *testing.T, expected, actual *BeaconChainConfig) {
 	require.DeepEqual(t, expected.TerminalBlockHashActivationEpoch, actual.TerminalBlockHashActivationEpoch)
 	require.DeepEqual(t, expected.TerminalTotalDifficulty, actual.TerminalTotalDifficulty)
 	require.DeepEqual(t, expected.DefaultFeeRecipient, actual.DefaultFeeRecipient)
+}
+
+func TestSetActiveWithUndo_Nested(t *testing.T) {
+	SetupTestConfigCleanup(t)
+	cfg := BeaconConfig().Copy()
+	cfg.AltairForkEpoch = 0
+	OverrideBeaconConfig(cfg)
+
+	t.Run("setup", func(t *testing.T) {
+		c := BeaconConfig().Copy()
+		c.AltairForkEpoch = 1
+		undo, err := SetActiveWithUndo(c)
+		require.NoError(t, err)
+		defer func() { require.NoError(t, undo()) }()
+	})
+	t.Run("assert", func(t *testing.T) {
+		assert.Equal(t, primitives.Epoch(0), BeaconConfig().AltairForkEpoch)
+	})
 }
