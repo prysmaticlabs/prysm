@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
@@ -15,15 +16,15 @@ import (
 )
 
 func UintFromQuery(w http.ResponseWriter, r *http.Request, name string, required bool) (string, uint64, bool) {
-	raw := r.URL.Query().Get(name)
-	if raw == "" && !required {
+	trimmed := strings.ReplaceAll(r.URL.Query().Get(name), " ", "")
+	if trimmed == "" && !required {
 		return "", 0, true
 	}
-	v, valid := ValidateUint(w, name, raw)
+	v, valid := ValidateUint(w, name, trimmed)
 	if !valid {
 		return "", 0, false
 	}
-	return raw, v, true
+	return trimmed, v, true
 }
 
 func UintFromRoute(w http.ResponseWriter, r *http.Request, name string) (string, uint64, bool) {

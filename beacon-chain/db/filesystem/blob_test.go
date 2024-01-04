@@ -79,7 +79,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 
 		// Slot in first half of epoch therefore should not prune
-		require.Equal(t, false, bs.shouldPrune(testSidecars[0].Slot()))
+		bs.tryPrune(testSidecars[0].Slot())
 		err = bs.Save(testSidecars[0])
 		require.NoError(t, err)
 		actual, err := bs.Get(testSidecars[0].BlockRoot(), testSidecars[0].Index)
@@ -92,7 +92,7 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		testSidecars1, err := verification.BlobSidecarSliceNoop(sidecars)
 		require.NoError(t, err)
 		// Slot in first half of epoch therefore should not prune
-		require.Equal(t, false, bs.shouldPrune(testSidecars1[0].Slot()))
+		bs.tryPrune(testSidecars1[0].Slot())
 		err = bs.Save(testSidecars1[0])
 		require.NoError(t, err)
 		// Check previous saved sidecar was not pruned
@@ -107,13 +107,13 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 
 		_, sidecars = util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 131187, fieldparams.MaxBlobsPerBlock)
-		testSidecars, err = verification.BlobSidecarSliceNoop(sidecars)
+		testSidecars2, err := verification.BlobSidecarSliceNoop(sidecars)
 		// Slot in second half of epoch therefore should prune
-		require.Equal(t, true, bs.shouldPrune(testSidecars[0].Slot()))
+		bs.tryPrune(testSidecars2[0].Slot())
 		require.NoError(t, err)
-		err = bs.Save(testSidecars[0])
+		err = bs.Save(testSidecars2[0])
 		require.NoError(t, err)
-		err = pollUntil(t, fs, 1)
+		err = pollUntil(t, fs, 3)
 		require.NoError(t, err)
 	})
 }
@@ -141,26 +141,6 @@ func pollUntil(t *testing.T, fs afero.Fs, expected int) error {
 	}
 	require.Equal(t, expected, len(remainingFolders))
 	return nil
-}
-
-func TestShouldPrune(t *testing.T) {
-	bs := NewEphemeralBlobStorage(t)
-	bs.lastPrunedEpoch = 5
-
-	// Slot is before the midpoint of the epoch
-	slot1 := primitives.Slot(100)
-	p1 := bs.shouldPrune(slot1)
-	require.Equal(t, false, p1)
-
-	// Slot is after the midpoint of the epoch, but same epoch as last pruning
-	slot2 := primitives.Slot(178)
-	p2 := bs.shouldPrune(slot2)
-	require.Equal(t, false, p2)
-
-	// Slot is after the midpoint of the epoch
-	slot3 := primitives.Slot(8018)
-	p3 := bs.shouldPrune(slot3)
-	require.Equal(t, true, p3)
 }
 
 func TestBlobIndicesBounds(t *testing.T) {
@@ -208,7 +188,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			require.NoError(t, bs.Save(sidecar))
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
@@ -228,7 +208,7 @@ func TestBlobStoragePrune(t *testing.T) {
 			slot += 10000
 		}
 
-		require.NoError(t, bs.Prune(currentSlot))
+		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
 
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
