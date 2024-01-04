@@ -16,9 +16,6 @@ import (
 // incoming objects. (24 mins with mainnet spec)
 const MaxSlotBuffer = uint64(1 << 7)
 
-// votingWindow specifies the deadline for attestations
-var votingWindow = params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
-
 // startFromTime returns the slot start in terms of genesis time.Time
 func startFromTime(genesis time.Time, slot primitives.Slot) time.Time {
 	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
@@ -271,5 +268,6 @@ func TimeIntoSlot(genesisTime uint64) time.Duration {
 // WithinVotingWindow returns whether the current time is within the voting window
 // (eg. 4 seconds on mainnet) of the current slot.
 func WithinVotingWindow(genesisTime uint64) bool {
+	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	return TimeIntoSlot(genesisTime) < time.Duration(votingWindow)*time.Second
 }
