@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -17,12 +18,106 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
 // CurrentSlot returns the current slot based on time.
 func (s *Service) CurrentSlot() primitives.Slot {
 	return slots.CurrentSlot(uint64(s.genesisTime.Unix()))
+}
+
+// getFCUArgs returns the arguments to call forkchoice update
+func (s *Service) getFCUArgs(cfg *postBlockProcessConfig) (*fcuConfig, error) {
+	ret, err := s.getFCUArgsEarlyBlock(cfg)
+	if err != nil {
+		return nil, err
+	}
+	if slots.WithinVotingWindow(uint64(s.genesisTime.Unix())) {
+		return ret, nil
+	}
+	if err := s.computePayloadAttributes(cfg, ret); err != nil {
+		return nil, err
+	}
+	return ret, nil
+}
+
+func (s *Service) getFCUArgsEarlyBlock(cfg *postBlockProcessConfig) (*fcuConfig, error) {
+	if cfg.blockRoot == cfg.headRoot {
+		return &fcuConfig{
+			headState:     cfg.postState,
+			headBlock:     cfg.signed,
+			headRoot:      cfg.headRoot,
+			proposingSlot: s.CurrentSlot() + 1,
+		}, nil
+	}
+	s.logNonCanonicalBlockReceived(cfg.blockRoot, cfg.headRoot)
+	return s.fcuArgsNonCanonicalBlock(cfg)
+}
+
+// logNonCanonicalBlockReceived prints a message informing that the received
+// block is not the head of the chain. It requires the caller holds a lock on
+// Foprkchoice.
+func (s *Service) logNonCanonicalBlockReceived(blockRoot [32]byte, headRoot [32]byte) {
+	receivedWeight, err := s.cfg.ForkChoiceStore.Weight(blockRoot)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", blockRoot)).Warn("could not determine node weight")
+	}
+	headWeight, err := s.cfg.ForkChoiceStore.Weight(headRoot)
+	if err != nil {
+		log.WithField("root", fmt.Sprintf("%#x", headRoot)).Warn("could not determine node weight")
+	}
+	log.WithFields(logrus.Fields{
+		"receivedRoot":   fmt.Sprintf("%#x", blockRoot),
+		"receivedWeight": receivedWeight,
+		"headRoot":       fmt.Sprintf("%#x", headRoot),
+		"headWeight":     headWeight,
+	}).Debug("Head block is not the received block")
+}
+
+// fcuArgsNonCanonicalBlock returns the arguments to the FCU call when the
+// incoming block is non-canonical, that is, based on the head root.
+func (s *Service) fcuArgsNonCanonicalBlock(cfg *postBlockProcessConfig) (*fcuConfig, error) {
+	headState, headBlock, err := s.getStateAndBlock(cfg.ctx, cfg.headRoot)
+	if err != nil {
+		return nil, err
+	}
+	return &fcuConfig{
+		headState:     headState,
+		headBlock:     headBlock,
+		headRoot:      cfg.headRoot,
+		proposingSlot: s.CurrentSlot() + 1,
+	}, nil
+}
+
+// updateCachesPostBlockProcessing updates the next slot cache and handles the epoch
+// boundary in order to compute the right proposer indices after processing
+// state transition. This function is called on late blocks while still locked,
+// before sending FCU to the engine.
+func (s *Service) updateCachesPostBlockProcessing(cfg *postBlockProcessConfig) error {
+	slot := cfg.postState.Slot()
+	if err := transition.UpdateNextSlotCache(cfg.ctx, cfg.blockRoot[:], cfg.postState); err != nil {
+		return errors.Wrap(err, "could not update next slot state cache")
+	}
+	if !slots.IsEpochEnd(slot) {
+		return nil
+	}
+	return s.handleEpochBoundary(cfg.ctx, slot, cfg.postState, cfg.blockRoot[:])
+}
+
+// computePayloadAttributes modifies the passed FCU arguments to
+// contain the right payload attributes with the tracked proposer. It gets
+// called on blocks that arrive after the attestation voting window, or in a
+// background routine after syncing early blocks.
+func (s *Service) computePayloadAttributes(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	proposingSlot := s.CurrentSlot() + 1
+	if cfg.blockRoot == cfg.headRoot {
+		if err := s.updateCachesPostBlockProcessing(cfg); err != nil {
+			return err
+		}
+	}
+	fcuArgs.attributes = s.getPayloadAttribute(cfg.ctx, fcuArgs.headState, proposingSlot, cfg.headRoot[:])
+	return nil
 }
 
 // getBlockPreState returns the pre state of an incoming block. It uses the parent root of the block
