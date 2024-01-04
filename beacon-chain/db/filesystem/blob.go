@@ -244,12 +244,12 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 	var totalPruned int
 	err := afero.Walk(bs.fs, ".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to walk blob storage directory")
 		}
 		if info.IsDir() && path != "." {
 			num, err := bs.processFolder(info, pruneBefore)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "failed to process folder %s", info.Name())
 			}
 			blobsPrunedCounter.Add(float64(num))
 			blobsTotalGauge.Add(-float64(num))
