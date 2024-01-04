@@ -11,10 +11,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// orphanLateBlockFirstThreshold is the number of seconds after which we
-// consider a block to be late, and thus a candidate to being reorged.
-const orphanLateBlockFirstThreshold = 4
-
 // ProcessAttestationsThreshold  is the number of seconds after which we
 // process attestations for the current slot
 const ProcessAttestationsThreshold = 10
@@ -137,7 +133,8 @@ func (n *Node) setNodeAndParentValidated(ctx context.Context) error {
 // slot will have secs = 3 below.
 func (n *Node) arrivedEarly(genesisTime uint64) (bool, error) {
 	secs, err := slots.SecondsSinceSlotStart(n.slot, genesisTime, n.timestamp)
-	return secs < orphanLateBlockFirstThreshold, err
+	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	return secs < votingWindow, err
 }
 
 // arrivedAfterOrphanCheck returns whether this block was inserted after the

@@ -908,6 +908,9 @@ func (bb *BuilderBidDeneb) ToProto() (*eth.BuilderBidDeneb, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(bb.BlobKzgCommitments) > fieldparams.MaxBlobsPerBlock {
+		return nil, fmt.Errorf("too many blob commitments: %d", len(bb.BlobKzgCommitments))
+	}
 	kzgCommitments := make([][]byte, len(bb.BlobKzgCommitments))
 	for i, commit := range bb.BlobKzgCommitments {
 		if len(commit) != fieldparams.BLSPubkeyLength {

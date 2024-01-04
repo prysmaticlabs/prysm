@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -122,35 +121,44 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 	defer s.cfg.ForkChoiceStore.Unlock()
 	// This function is only called at 10 seconds or 0 seconds into the slot
 	disparity := params.BeaconConfig().MaximumGossipClockDisparityDuration()
-	if !features.Get().DisableReorgLateBlocks {
-		disparity += reorgLateBlockCountAttestations
-	}
+	disparity += reorgLateBlockCountAttestations
+
 	s.processAttestations(ctx, disparity)
 
 	processAttsElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 
 	start = time.Now()
+	// return early if we haven't changed head
 	newHeadRoot, err := s.cfg.ForkChoiceStore.Head(ctx)
 	if err != nil {
 		log.WithError(err).Error("Could not compute head from new attestations")
-		// Fallback to our current head root in the event of a failure.
-		s.headLock.RLock()
-		newHeadRoot = s.headRoot()
-		s.headLock.RUnlock()
+		return
+	}
+	if !s.isNewHead(newHeadRoot) {
+		return
+	}
+	log.WithField("newHeadRoot", fmt.Sprintf("%#x", newHeadRoot)).Debug("Head changed due to attestations")
+	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
+	if err != nil {
+		log.WithError(err).Error("could not get head block")
+		return
 	}
 	newAttHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-
-	changed, err := s.forkchoiceUpdateWithExecution(s.ctx, newHeadRoot, proposingSlot)
-	if err != nil {
-		log.WithError(err).Error("could not update forkchoice")
+	fcuArgs := &fcuConfig{
+		headState:     headState,
+		headRoot:      newHeadRoot,
+		headBlock:     headBlock,
+		proposingSlot: proposingSlot,
 	}
-	if changed {
-		s.headLock.RLock()
-		log.WithFields(logrus.Fields{
-			"oldHeadRoot": fmt.Sprintf("%#x", s.headRoot()),
-			"newHeadRoot": fmt.Sprintf("%#x", newHeadRoot),
-		}).Debug("Head changed due to attestations")
-		s.headLock.RUnlock()
+	_, tracked := s.trackedProposer(headState, proposingSlot)
+	if tracked {
+		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+			return
+		}
+		fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	}
+	if err := s.forkchoiceUpdateWithExecution(s.ctx, fcuArgs); err != nil {
+		log.WithError(err).Error("could not update forkchoice")
 	}
 }
 

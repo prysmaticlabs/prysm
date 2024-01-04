@@ -34,29 +34,6 @@ func TestProposerCache_Set(t *testing.T) {
 	require.Equal(t, emptyIndices, received)
 }
 
-func TestProposerCache_SetUnsafe(t *testing.T) {
-	cache := NewProposerIndicesCache()
-	bRoot := [32]byte{'A'}
-	indices, ok := cache.UnsafeProposerIndices(0, bRoot)
-	require.Equal(t, false, ok)
-	emptyIndices := [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}
-	require.Equal(t, indices, emptyIndices, "Expected committee count not to exist in empty cache")
-	emptyIndices[0] = 1
-	cache.SetUnsafe(0, bRoot, emptyIndices)
-
-	received, ok := cache.UnsafeProposerIndices(0, bRoot)
-	require.Equal(t, true, ok)
-	require.Equal(t, received, emptyIndices)
-
-	newRoot := [32]byte{'B'}
-	copy(emptyIndices[3:], []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6})
-	cache.SetUnsafe(0, newRoot, emptyIndices)
-
-	received, ok = cache.UnsafeProposerIndices(0, newRoot)
-	require.Equal(t, true, ok)
-	require.Equal(t, emptyIndices, received)
-}
-
 func TestProposerCache_CheckpointAndPrune(t *testing.T) {
 	cache := NewProposerIndicesCache()
 	indices := [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}
@@ -65,7 +42,6 @@ func TestProposerCache_CheckpointAndPrune(t *testing.T) {
 	copy(indices[3:], []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6})
 	for i := 1; i < 10; i++ {
 		cache.Set(primitives.Epoch(i), root, indices)
-		cache.SetUnsafe(primitives.Epoch(i), root, indices)
 		cache.SetCheckpoint(forkchoicetypes.Checkpoint{Epoch: primitives.Epoch(i - 1), Root: cpRoot}, root)
 	}
 	received, ok := cache.ProposerIndices(1, root)
@@ -77,18 +53,6 @@ func TestProposerCache_CheckpointAndPrune(t *testing.T) {
 	require.Equal(t, indices, received)
 
 	received, ok = cache.ProposerIndices(9, root)
-	require.Equal(t, true, ok)
-	require.Equal(t, indices, received)
-
-	received, ok = cache.UnsafeProposerIndices(1, root)
-	require.Equal(t, true, ok)
-	require.Equal(t, indices, received)
-
-	received, ok = cache.UnsafeProposerIndices(4, root)
-	require.Equal(t, true, ok)
-	require.Equal(t, indices, received)
-
-	received, ok = cache.UnsafeProposerIndices(9, root)
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
@@ -120,18 +84,6 @@ func TestProposerCache_CheckpointAndPrune(t *testing.T) {
 	require.Equal(t, emptyIndices, received)
 
 	received, ok = cache.ProposerIndices(9, root)
-	require.Equal(t, true, ok)
-	require.Equal(t, indices, received)
-
-	received, ok = cache.UnsafeProposerIndices(1, root)
-	require.Equal(t, false, ok)
-	require.Equal(t, emptyIndices, received)
-
-	received, ok = cache.UnsafeProposerIndices(4, root)
-	require.Equal(t, false, ok)
-	require.Equal(t, emptyIndices, received)
-
-	received, ok = cache.UnsafeProposerIndices(9, root)
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 

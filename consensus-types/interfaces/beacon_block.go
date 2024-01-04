@@ -16,7 +16,7 @@ type ReadOnlySignedBeaconBlock interface {
 	Block() ReadOnlyBeaconBlock
 	Signature() [field_params.BLSSignatureLength]byte
 	IsNil() bool
-	Copy() (ReadOnlySignedBeaconBlock, error)
+	Copy() (SignedBeaconBlock, error)
 	Proto() (proto.Message, error)
 	PbGenericBlock() (*ethpb.GenericSignedBeaconBlock, error)
 	PbPhase0Block() (*ethpb.SignedBeaconBlock, error)
@@ -91,12 +91,12 @@ type SignedBeaconBlock interface {
 	SetGraffiti([]byte)
 	SetEth1Data(*ethpb.Eth1Data)
 	SetRandaoReveal([]byte)
-	SetBlinded(bool)
 	SetStateRoot([]byte)
 	SetParentRoot([]byte)
 	SetProposerIndex(idx primitives.ValidatorIndex)
 	SetSlot(slot primitives.Slot)
 	SetSignature(sig []byte)
+	Unblind(e ExecutionData) error
 }
 
 // ExecutionData represents execution layer information that is contained

@@ -600,3 +600,10 @@ func TestTimeIntoSlot(t *testing.T) {
 	require.Equal(t, true, TimeIntoSlot(genesisTime) > 900*time.Millisecond)
 	require.Equal(t, true, TimeIntoSlot(genesisTime) < 3000*time.Millisecond)
 }
+
+func TestWithinVotingWindow(t *testing.T) {
+	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
+	require.Equal(t, true, WithinVotingWindow(genesisTime))
+	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
+	require.Equal(t, false, WithinVotingWindow(genesisTime))
+}

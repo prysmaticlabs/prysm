@@ -104,7 +104,7 @@ type validator struct {
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
 	prysmBeaconClient                  iface.PrysmBeaconChainClient
-	validatorRegBatchSize              int
+	validatorsRegBatchSize             int
 }
 
 type validatorStatus struct {
@@ -333,7 +333,7 @@ func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel cha
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node, " + iface.ErrConnectionIssue.Error())
+			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
 			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 			return
 		}
@@ -1029,10 +1029,14 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	}
 
 	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorRegBatchSize); err != nil {
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 	return nil
+}
+
+func (v *validator) StartEventStream(ctx context.Context) error {
+	return v.validatorClient.StartEventStream(ctx)
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
