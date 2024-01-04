@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -20,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
-	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -84,7 +84,7 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	parentHash, err := vs.getParentBlockHash(ctx, st, slot)
 	switch {
 	case errors.Is(err, errActivationNotReached) || errors.Is(err, errNoTerminalBlockHash):
-		p, err := consensusblocks.WrappedExecutionPayload(util.DefaultPayload())
+		p, err := consensusblocks.WrappedExecutionPayload(emptyPayload())
 		if err != nil {
 			return nil, false, err
 		}
@@ -326,4 +326,18 @@ func activationEpochNotReached(slot primitives.Slot) bool {
 		return params.BeaconConfig().TerminalBlockHashActivationEpoch > slots.ToEpoch(slot)
 	}
 	return false
+}
+
+func emptyPayload() *enginev1.ExecutionPayload {
+	return &enginev1.ExecutionPayload{
+		ParentHash:    make([]byte, fieldparams.RootLength),
+		FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
+		StateRoot:     make([]byte, fieldparams.RootLength),
+		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
+		PrevRandao:    make([]byte, fieldparams.RootLength),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+	}
 }
