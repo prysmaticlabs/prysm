@@ -111,13 +111,12 @@ func (s *Service) updateCachesPostBlockProcessing(cfg *postBlockProcessConfig) e
 // called on blocks that arrive after the attestation voting window, or in a
 // background routine after syncing early blocks.
 func (s *Service) computePayloadAttributes(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
-	proposingSlot := s.CurrentSlot() + 1
 	if cfg.blockRoot == cfg.headRoot {
 		if err := s.updateCachesPostBlockProcessing(cfg); err != nil {
 			return err
 		}
 	}
-	fcuArgs.attributes = s.getPayloadAttribute(cfg.ctx, fcuArgs.headState, proposingSlot, cfg.headRoot[:])
+	fcuArgs.attributes = s.getPayloadAttribute(cfg.ctx, fcuArgs.headState, fcuArgs.proposingSlot, cfg.headRoot[:])
 	return nil
 }
 

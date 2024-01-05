@@ -2197,6 +2197,36 @@ func TestMissingIndices(t *testing.T) {
 	}
 }
 
+func Test_getFCUArgs(t *testing.T) {
+	s, tr := minimalTestService(t)
+	ctx := tr.ctx
+	st, keys := util.DeterministicGenesisState(t, 64)
+	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+
+	cfg := &postBlockProcessConfig{
+		ctx:            ctx,
+		signed:         wsb,
+		blockRoot:      [32]byte{'a'},
+		postState:      st,
+		isValidPayload: true,
+	}
+	hook := logTest.NewGlobal()
+	// error branch
+	_, err = s.getFCUArgs(cfg)
+	require.ErrorContains(t, "block does not exist", err)
+	require.LogsContain(t, hook, "could not determine node weight")
+	require.LogsContain(t, hook, "Head block is not the received block")
+
+	// canonical branch
+	cfg.headRoot = cfg.blockRoot
+	fcu, err := s.getFCUArgs(cfg)
+	require.NoError(t, err)
+	require.Equal(t, cfg.blockRoot, fcu.headRoot)
+}
+
 func fakeCommitments(n int) [][]byte {
 	f := make([][]byte, n)
 	for i := range f {
