@@ -645,11 +645,6 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
 	s.cfg.ForkChoiceStore.RUnlock()
-	_, tracked := s.trackedProposer(headState, s.CurrentSlot()+1)
-	// return early if we are not proposing next slot.
-	if !tracked {
-		return
-	}
 	// return early if we already started building a block for the current
 	// head root
 	_, has := s.cfg.PayloadIDCache.PayloadID(s.CurrentSlot()+1, headRoot)
@@ -671,6 +666,10 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		headBlock: headBlock,
 	}
 	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	// return early if we are not proposing next slot
+	if fcuArgs.attributes.IsEmpty() {
+		return
+	}
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {

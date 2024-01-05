@@ -33,7 +33,8 @@ func (s *Service) getFCUArgs(cfg *postBlockProcessConfig) (*fcuConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	if slots.WithinVotingWindow(uint64(s.genesisTime.Unix())) {
+	slot := cfg.signed.Block().Slot()
+	if slots.WithinVotingWindow(uint64(s.genesisTime.Unix()), slot) {
 		return ret, nil
 	}
 	if err := s.computePayloadAttributes(cfg, ret); err != nil {

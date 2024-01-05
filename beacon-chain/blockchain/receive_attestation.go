@@ -150,12 +150,9 @@ func (s *Service) UpdateHead(ctx context.Context, proposingSlot primitives.Slot)
 		headBlock:     headBlock,
 		proposingSlot: proposingSlot,
 	}
-	_, tracked := s.trackedProposer(headState, proposingSlot)
-	if tracked {
-		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
-			return
-		}
-		fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, proposingSlot, newHeadRoot[:])
+	if fcuArgs.attributes != nil && s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
+		return
 	}
 	if err := s.forkchoiceUpdateWithExecution(s.ctx, fcuArgs); err != nil {
 		log.WithError(err).Error("could not update forkchoice")
