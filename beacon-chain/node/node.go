@@ -742,7 +742,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
-		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
+		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, forkchoice.NewROForkChoice(b.forkChoicer), b.stateGen)),
 	)
 	return b.services.RegisterService(rs)
 }
