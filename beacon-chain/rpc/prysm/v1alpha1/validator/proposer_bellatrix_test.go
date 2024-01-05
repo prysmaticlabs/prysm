@@ -83,7 +83,6 @@ func TestServer_setExecutionData(t *testing.T) {
 	})
 	t.Run("Builder configured. Builder Block has higher value. Incorrect withdrawals", func(t *testing.T) {
 		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -118,7 +117,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bb.BidCapella.Header.WithdrawalsRoot = wr[:]
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -148,7 +146,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bb.BidCapella.Header.WithdrawalsRoot = wr[:]
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -178,7 +175,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bb.BidCapella.Header.WithdrawalsRoot = wr[:]
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -205,7 +201,6 @@ func TestServer_setExecutionData(t *testing.T) {
 	})
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -243,7 +238,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		}()
 
 		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
-		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidCapella.Header.BlockNumber = 2
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
 		vs.BlockBuilder = bb
@@ -339,7 +333,6 @@ func TestServer_setExecutionData(t *testing.T) {
 		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		bb.BidDeneb.Header.WithdrawalsRoot = wr[:]
-		bb.BidDeneb.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
 		bb.BidDeneb.Header.BlockNumber = 2
 		bb.BidDeneb.BlobKzgCommitments = kzgCommitments
 		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
