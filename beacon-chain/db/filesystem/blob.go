@@ -304,7 +304,8 @@ func (bs *BlobStorage) processFolder(folder string, pruneBefore primitives.Slot)
 	}
 
 	if slot == 0 {
-		return 0, fmt.Errorf("no blob files found in folder %s", folder)
+		log.WithField("folder", folder).Warn("Could not find slot for folder")
+		return 0, nil
 	}
 
 	var num int

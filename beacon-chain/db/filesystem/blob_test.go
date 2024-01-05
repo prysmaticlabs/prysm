@@ -211,7 +211,7 @@ func TestBlobStoragePrune(t *testing.T) {
 	})
 	t.Run("PruneMany", func(t *testing.T) {
 		blockQty := 10
-		slot := primitives.Slot(0)
+		slot := primitives.Slot(1)
 
 		for j := 0; j <= blockQty; j++ {
 			root := bytesutil.ToBytes32(bytesutil.ToBytes(uint64(slot), 32))
