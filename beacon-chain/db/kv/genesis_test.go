@@ -147,12 +147,7 @@ func TestEnsureEmbeddedGenesis(t *testing.T) {
 	// Embedded Genesis works with Mainnet config
 	cfg := params.MainnetConfig().Copy()
 	cfg.SecondsPerSlot = 1
-	undo, err := params.SetActiveWithUndo(cfg)
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
-
+	params.OverrideBeaconConfig(cfg)
 	ctx := context.Background()
 	db := setupDB(t)
 

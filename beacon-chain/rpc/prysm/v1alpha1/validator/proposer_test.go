@@ -807,11 +807,15 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 
 			c := &mock.ChainService{Root: bsRoot[:], State: beaconState}
 			db := dbutil.SetupDB(t)
+			var bb *builderTest.MockBuilderService
+			if tt.builderService != nil {
+				bb = tt.builderService()
+			}
 			proposerServer := &Server{
 				BlockReceiver: c,
 				BlockNotifier: c.BlockNotifier(),
 				P2P:           mockp2p.NewTestP2P(t),
-				BlockBuilder:  tt.builderService(),
+				BlockBuilder:  bb,
 				BeaconDB:      db,
 				BlobReceiver:  c,
 			}

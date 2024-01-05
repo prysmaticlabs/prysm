@@ -24,7 +24,6 @@ func BeaconConfig() *BeaconChainConfig {
 func OverrideBeaconConfig(c *BeaconChainConfig) {
 	cfgrw.Lock()
 	defer cfgrw.Unlock()
-	c.InitializeForkSchedule()
 	configs.active = c
 }
 

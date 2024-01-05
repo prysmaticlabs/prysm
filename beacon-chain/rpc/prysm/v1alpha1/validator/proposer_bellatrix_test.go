@@ -39,6 +39,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	cfg := params.BeaconConfig().Copy()
 	cfg.BellatrixForkEpoch = 0
 	cfg.CapellaForkEpoch = 0
+	cfg.InitializeForkSchedule()
 	params.OverrideBeaconConfig(cfg)
 
 	beaconDB := dbTest.SetupDB(t)
@@ -452,7 +453,11 @@ func TestServer_getPayloadHeader(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			vs := &Server{BlockBuilder: tc.builderService(), HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
+			var bb *builderTest.MockBuilderService
+			if tc.builderService != nil {
+				bb = tc.builderService()
+			}
+			vs := &Server{BlockBuilder: bb, HeadFetcher: tc.fetcher, TimeFetcher: &blockchainTest.ChainService{
 				Genesis: genesis,
 			}}
 			hb, err := vs.HeadFetcher.HeadBlock(context.Background())
@@ -468,7 +473,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					require.DeepEqual(t, want, h)
 				}
 				if tc.returnedHeaderCapella != nil {
-					want, err := blocks.WrappedExecutionPayloadHeaderCapella(tc.returnedHeaderCapella, 0) // value is a mock
+					want, err := blocks.WrappedExecutionPayloadHeaderCapella(tc.returnedHeaderCapella, blocks.PayloadValueToGwei(bb.BidCapella.Value))
 					require.NoError(t, err)
 					require.DeepEqual(t, want, h)
 				}
