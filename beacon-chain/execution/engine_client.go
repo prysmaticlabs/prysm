@@ -488,6 +488,10 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	defer span.End()
 
 	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	// Exit early if there are no execution hashes.
+	if len(executionBlockHashes) == 0 {
+		return result, nil
+	}
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
 
 	for i, item := range result {
