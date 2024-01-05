@@ -2214,14 +2214,16 @@ func Test_getFCUArgs(t *testing.T) {
 		isValidPayload: true,
 	}
 	// error branch
-	_, err = s.getFCUArgs(cfg)
+	fcuArgs := &fcuConfig{}
+	err = s.getFCUArgs(cfg, fcuArgs)
 	require.ErrorContains(t, "block does not exist", err)
 
 	// canonical branch
 	cfg.headRoot = cfg.blockRoot
-	fcu, err := s.getFCUArgs(cfg)
+	fcuArgs = &fcuConfig{}
+	err = s.getFCUArgs(cfg, fcuArgs)
 	require.NoError(t, err)
-	require.Equal(t, cfg.blockRoot, fcu.headRoot)
+	require.Equal(t, cfg.blockRoot, fcuArgs.headRoot)
 }
 
 func fakeCommitments(n int) [][]byte {

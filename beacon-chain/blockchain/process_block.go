@@ -63,7 +63,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return invalidBlock{error: err}
 	}
 	startTime := time.Now()
-	var fcuArgs *fcuConfig
+	fcuArgs := &fcuConfig{}
 
 	defer s.handleSecondFCUCall(cfg, fcuArgs)
 	defer s.sendStateFeedOnBlock(cfg)
@@ -94,8 +94,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		s.logNonCanonicalBlockReceived(cfg.blockRoot, cfg.headRoot)
 		return nil
 	}
-	fcuArgs, err = s.getFCUArgs(cfg)
-	if err != nil {
+	if err := s.getFCUArgs(cfg, fcuArgs); err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
 		return nil
 	}
