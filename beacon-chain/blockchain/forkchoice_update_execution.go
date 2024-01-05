@@ -70,9 +70,6 @@ func (s *Service) sendFCU(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error
 // sendFCUWithAttributes computes the payload attributes and sends an FCU message
 // to the engine if needed
 func (s *Service) sendFCUWithAttributes(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) {
-	if !s.isNewHead(cfg.headRoot) {
-		return
-	}
 	slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
 	defer cancel()
 	cfg.ctx = slotCtx

@@ -112,7 +112,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 	reportAttestationInclusion(b)
 	// We leave attributes as nil only on early blocks
-	if fcuArgs.attributes == nil {
+	if fcuArgs.attributes == nil && cfg.headRoot == cfg.blockRoot {
 		go s.sendFCUWithAttributes(cfg, fcuArgs)
 	}
 	return nil
