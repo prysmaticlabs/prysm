@@ -279,10 +279,22 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 // processFolder will delete the folder of blobs if the blob slot is outside the
 // retention period. We determine the slot by looking at the first blob in the folder.
 func (bs *BlobStorage) processFolder(folder string, pruneBefore primitives.Slot) (int, error) {
-	f, err := bs.fs.Open(filepath.Join(folder, "0."+sszExt))
-	if err != nil {
-		return 0, err
+	var f afero.File
+	var err error
+	var found bool
+
+	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
+		f, err = bs.fs.Open(filepath.Join(folder, fmt.Sprintf("%d.%s", i, sszExt)))
+		if err == nil {
+			found = true
+			break
+		}
 	}
+
+	if !found {
+		return 0, fmt.Errorf("no blob files found in folder %s", folder)
+	}
+
 	defer func() {
 		if err := f.Close(); err != nil {
 			log.WithError(err).Errorf("Could not close blob file")
