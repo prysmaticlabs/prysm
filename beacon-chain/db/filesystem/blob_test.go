@@ -194,6 +194,21 @@ func TestBlobStoragePrune(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, len(remainingFolders))
 	})
+	t.Run("Prune dangling blob", func(t *testing.T) {
+		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 299, fieldparams.MaxBlobsPerBlock)
+		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
+		require.NoError(t, err)
+
+		for _, sidecar := range testSidecars[4:] {
+			require.NoError(t, bs.Save(sidecar))
+		}
+
+		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
+
+		remainingFolders, err := afero.ReadDir(fs, ".")
+		require.NoError(t, err)
+		require.Equal(t, 0, len(remainingFolders))
+	})
 	t.Run("PruneMany", func(t *testing.T) {
 		blockQty := 10
 		slot := primitives.Slot(0)
@@ -213,21 +228,6 @@ func TestBlobStoragePrune(t *testing.T) {
 		remainingFolders, err := afero.ReadDir(fs, ".")
 		require.NoError(t, err)
 		require.Equal(t, 4, len(remainingFolders))
-	})
-	t.Run("Prune dangling blob", func(t *testing.T) {
-		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 300, fieldparams.MaxBlobsPerBlock)
-		testSidecars, err := verification.BlobSidecarSliceNoop(sidecars)
-		require.NoError(t, err)
-
-		for _, sidecar := range testSidecars[1:] {
-			require.NoError(t, bs.Save(sidecar))
-		}
-
-		require.NoError(t, bs.Prune(currentSlot-bs.retentionSlots))
-
-		remainingFolders, err := afero.ReadDir(fs, ".")
-		require.NoError(t, err)
-		require.Equal(t, 0, len(remainingFolders))
 	})
 }
 
