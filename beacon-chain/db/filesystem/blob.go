@@ -281,30 +281,28 @@ func (bs *BlobStorage) Prune(pruneBefore primitives.Slot) error {
 func (bs *BlobStorage) processFolder(folder string, pruneBefore primitives.Slot) (int, error) {
 	var f afero.File
 	var err error
-	var found bool
+	var slot primitives.Slot
 
 	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 		f, err = bs.fs.Open(filepath.Join(folder, fmt.Sprintf("%d.%s", i, sszExt)))
 		if err == nil {
-			found = true
+			slot, err = slotFromBlob(f)
+			if err != nil {
+				return 0, err
+			}
 			break
+		}
+		if f != nil {
+			if err := f.Close(); err != nil {
+				log.WithError(err).Errorf("Could not close blob file")
+			}
 		}
 	}
 
-	if !found {
+	if slot == 0 {
 		return 0, fmt.Errorf("no blob files found in folder %s", folder)
 	}
 
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close blob file")
-		}
-	}()
-
-	slot, err := slotFromBlob(f)
-	if err != nil {
-		return 0, err
-	}
 	var num int
 	if slot < pruneBefore {
 		num, err = bs.countFiles(folder)
