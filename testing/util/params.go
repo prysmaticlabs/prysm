@@ -7,5 +7,5 @@ const (
 )
 
 var (
-	DefaultGenesisTime = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	DefaultTime = time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 )

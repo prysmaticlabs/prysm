@@ -92,9 +92,9 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(
 			ctx,
 			[]primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}),
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}),
 		)
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -124,8 +124,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -153,8 +153,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -182,8 +182,8 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -208,9 +208,9 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -245,9 +245,9 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -274,9 +274,9 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
 		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 4}, BlockValue: 0}
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 
@@ -341,9 +341,9 @@ func TestServer_setExecutionData(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockDeneb())
 		require.NoError(t, err)
 		require.NoError(t, beaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
-			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
 		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadDeneb: &v1.ExecutionPayloadDeneb{BlockNumber: 4, Withdrawals: withdrawals}, BlockValue: 0}
-		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultTime, Block: blk}
 		vs.TimeFetcher = chain
 		vs.HeadFetcher = chain
 

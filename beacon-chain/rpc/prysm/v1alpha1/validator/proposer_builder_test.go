@@ -133,7 +133,7 @@ func TestServer_canUseBuilder(t *testing.T) {
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
 	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: p}}))
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)

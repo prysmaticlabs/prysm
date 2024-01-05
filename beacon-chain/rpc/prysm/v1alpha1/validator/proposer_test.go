@@ -677,7 +677,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
-				blockToPropose.Block.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultGenesisTime.Unix())
+				blockToPropose.Block.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultTime.Unix())
 				blockToPropose.Block.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
 				blockToPropose.Block.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 				blk := &ethpb.GenericSignedBeaconBlock_BlindedCapella{BlindedCapella: blockToPropose}
@@ -762,7 +762,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
-				blockToPropose.Message.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultGenesisTime.Unix())
+				blockToPropose.Message.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultTime.Unix())
 				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
 				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 				blockToPropose.Message.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}
@@ -783,7 +783,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				require.NoError(t, err)
 				withdrawalsRoot, err := ssz.WithdrawalSliceRoot([]*enginev1.Withdrawal{}, fieldparams.MaxWithdrawalsPerPayload)
 				require.NoError(t, err)
-				blockToPropose.Message.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultGenesisTime.Unix())
+				blockToPropose.Message.Body.ExecutionPayloadHeader.Timestamp = uint64(util.DefaultTime.Unix())
 				blockToPropose.Message.Body.ExecutionPayloadHeader.TransactionsRoot = txRoot[:]
 				blockToPropose.Message.Body.ExecutionPayloadHeader.WithdrawalsRoot = withdrawalsRoot[:]
 				blockToPropose.Message.Body.BlobKzgCommitments = [][]byte{bytesutil.PadTo([]byte("kc"), 48)}
