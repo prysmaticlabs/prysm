@@ -28,7 +28,7 @@ import (
 func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, r io.Reader) error {
 	switch validatorDB.(type) {
 	case *kv.Store:
-		return importStandardProtectionJSONComplete(ctx, validatorDB, r)
+		return importStandardProtectionJSONComplete(ctx, validatorDB.(*kv.Store), r)
 	case *filesystem.Store:
 		return importStandardProtectionJSONMinimal(ctx, validatorDB, r)
 	default:
@@ -39,7 +39,7 @@ func ImportStandardProtectionJSON(ctx context.Context, validatorDB db.Database, 
 // importStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
 // by Ethereum validators and imports its data into Prysm's internal complete representation of slashing
 // protection in the validator client's database.
-func importStandardProtectionJSONComplete(ctx context.Context, validatorDB db.Database, r io.Reader) error {
+func importStandardProtectionJSONComplete(ctx context.Context, validatorDB *kv.Store, r io.Reader) error {
 	encodedJSON, err := io.ReadAll(r)
 	if err != nil {
 		return errors.Wrap(err, "could not read slashing protection JSON file")
@@ -422,7 +422,7 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 
 func filterSlashablePubKeysFromAttestations(
 	ctx context.Context,
-	validatorDB db.Database,
+	validatorDB *kv.Store,
 	signedAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord,
 ) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)

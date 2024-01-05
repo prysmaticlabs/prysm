@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/prometheus/client_golang/prometheus"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -51,9 +52,12 @@ type ValidatorDB interface {
 	LowestSignedTargetEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error)
 	LowestSignedSourceEpoch(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Epoch, bool, error)
 	AttestedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
-	CheckSlashableAttestation(
-		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot []byte, att *ethpb.IndexedAttestation,
-	) (kv.SlashingKind, error)
+	SlashableAttestationCheck(
+		ctx context.Context, indexedAtt *ethpb.IndexedAttestation, pubKey [fieldparams.BLSPubkeyLength]byte,
+		signingRoot32 [32]byte,
+		emitAccountMetrics bool,
+		validatorAttestFailVec *prometheus.CounterVec,
+	) error
 	SaveAttestationForPubKey(
 		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
 	) error

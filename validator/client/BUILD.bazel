@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "aggregate.go",
         "attest.go",
-        "attest_protect.go",
         "key_reload.go",
         "log.go",
         "metrics.go",
@@ -49,7 +48,6 @@ go_library(
         "//monitoring/tracing:go_default_library",
         "//network/httputil:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
-        "//proto/prysm/v1alpha1/slashings:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//runtime/version:go_default_library",
         "//time:go_default_library",
@@ -102,7 +100,6 @@ go_test(
     size = "medium",
     srcs = [
         "aggregate_test.go",
-        "attest_protect_test.go",
         "attest_test.go",
         "key_reload_test.go",
         "metrics_test.go",

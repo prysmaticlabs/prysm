@@ -99,7 +99,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 					}
 
 					if !isSlashingProtectionMinimal {
-						slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
+						slashingKind, err := validatorDB.(*kv.Store).CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
 						// We expect we do not have an attesting history for each attestation
 						require.NoError(t, err)
 						require.Equal(t, kv.NotSlashable, slashingKind)
@@ -164,7 +164,7 @@ func TestStore_ImportInterchangeData_OK(t *testing.T) {
 						err := validatorDB.SaveAttestationForPubKey(ctx, publicKeys[i], [fieldparams.RootLength]byte{}, indexedAtt)
 						require.ErrorContains(t, "could not sign attestation", err)
 					} else {
-						slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
+						slashingKind, err := validatorDB.(*kv.Store).CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
 						require.NotNil(t, err)
 						require.Equal(t, kv.DoubleVote, slashingKind)
 					}
@@ -927,7 +927,6 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			historyByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey)
@@ -951,6 +950,7 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 }
 
 func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
+	// filterSlashablePubKeysFromAttestations is used only for complete slashing protection.
 	ctx := context.Background()
 	tests := []struct {
 		name                 string
@@ -1071,36 +1071,34 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-			t.Run(fmt.Sprintf("%s/isSlashingProtectionMinimal=%v", tt.name, isSlashingProtectionMinimal), func(t *testing.T) {
-				attestingHistoriesByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
-				pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
-				for pubKey := range tt.incomingAttsByPubKey {
-					pubKeys = append(pubKeys, pubKey)
-				}
-				validatorDB := dbtest.SetupDB(t, pubKeys, isSlashingProtectionMinimal)
-				for pubKey, signedAtts := range tt.incomingAttsByPubKey {
-					attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
-					require.NoError(t, err)
-					for _, att := range attestingHistory {
-						var signingRoot [32]byte
-						copy(signingRoot[:], att.SigningRoot)
+		t.Run(tt.name, func(t *testing.T) {
+			attestingHistoriesByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
+			pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
+			for pubKey := range tt.incomingAttsByPubKey {
+				pubKeys = append(pubKeys, pubKey)
+			}
+			validatorDB := dbtest.SetupDB(t, pubKeys, false)
+			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
+				attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
+				require.NoError(t, err)
+				for _, att := range attestingHistory {
+					var signingRoot [32]byte
+					copy(signingRoot[:], att.SigningRoot)
 
-						indexedAtt := createAttestation(att.Source, att.Target)
-						err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt)
-						require.NoError(t, err)
-					}
+					indexedAtt := createAttestation(att.Source, att.Target)
+					err := validatorDB.SaveAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt)
+					require.NoError(t, err)
 				}
-				got, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB, attestingHistoriesByPubKey)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				for _, pubKey := range got {
-					ok := tt.want[pubKey]
-					assert.Equal(t, true, ok)
-				}
-			})
-		}
+			}
+			got, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB.(*kv.Store), attestingHistoriesByPubKey)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for _, pubKey := range got {
+				ok := tt.want[pubKey]
+				assert.Equal(t, true, ok)
+			}
+		})
 	}
 }

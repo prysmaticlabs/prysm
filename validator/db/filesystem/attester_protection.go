@@ -2,13 +2,18 @@ package filesystem
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"go.opencensus.io/trace"
 )
+
+var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
 
 // EIPImportBlacklistedPublicKeys is implemented only to satisfy the interface.
 func (*Store) EIPImportBlacklistedPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
@@ -89,14 +94,31 @@ func (s *Store) AttestedPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyL
 	return attestedPublicKeys, nil
 }
 
-// CheckSlashableAttestation is implemented only to satisfy the interface.
-func (*Store) CheckSlashableAttestation(
-	_ context.Context,
-	_ [fieldparams.BLSPubkeyLength]byte,
-	_ []byte,
-	_ *ethpb.IndexedAttestation,
-) (kv.SlashingKind, error) {
-	panic("not implemented")
+// SlashableAttestationCheck checks if an attestation is slashable by comparing it with the attesting
+// history for the given public key in our minimal slashing protection database defined by EIP-3076.
+// If it is not, it updates the database.
+func (s *Store) SlashableAttestationCheck(
+	ctx context.Context,
+	indexedAtt *ethpb.IndexedAttestation,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signingRoot32 [32]byte,
+	_ bool,
+	_ *prometheus.CounterVec,
+) error {
+	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
+	defer span.End()
+
+	// Check if the attestation is potentially slashable regarding EIP-3076 minimal conditions.
+	// If not, save the new attestation into the database.
+	if err := s.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
+		if strings.Contains(err.Error(), "could not sign attestation") {
+			return errors.Wrap(err, failedAttLocalProtectionErr)
+		}
+
+		return errors.Wrap(err, "could not save attestation history for validator public key")
+	}
+
+	return nil
 }
 
 // SaveAttestationForPubKey checks if the incoming attestation is valid regarding EIP-3076 minimal slashing protection.
