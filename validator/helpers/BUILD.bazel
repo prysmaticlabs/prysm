@@ -4,6 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "converts.go",
+        "metadata.go",
         "node_connection.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/helpers",
@@ -11,7 +12,10 @@ go_library(
     deps = [
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//validator/db/iface:go_default_library",
+        "//validator/slashing-protection-history/format:go_default_library",
         "@com_github_k0kubun_go_ansi//:go_default_library",
+        "@com_github_pkg_errors//:go_default_library",
         "@com_github_schollz_progressbar_v3//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
     ],
@@ -19,10 +23,16 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["converts_test.go"],
+    srcs = [
+        "converts_test.go",
+        "metadata_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//config/fieldparams:go_default_library",
         "//consensus-types/primitives:go_default_library",
+        "//testing/require:go_default_library",
+        "//validator/db/testing:go_default_library",
+        "//validator/slashing-protection-history/format:go_default_library",
     ],
 )
