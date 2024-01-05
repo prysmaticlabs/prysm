@@ -415,7 +415,7 @@ func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
 	if isMinimalSlashingProtectionRequested && completeDatabaseExists {
 		log.Warningf(`Minimal slashing protection database requested, while complete slashing protection database currently used.
 		Will continue to use complete slashing protection database.
-		Please convert your database by using 'validator db convert-complete-to-minimal --source %s --target %s'`,
+		Please convert your database by using 'validator db convert-complete-to-minimal --source-data-dir %s --target-data-dir %s'`,
 			kvDataDir, fileSystemDataDir,
 		)
 
