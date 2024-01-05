@@ -285,17 +285,21 @@ func (bs *BlobStorage) processFolder(folder string, pruneBefore primitives.Slot)
 
 	for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 		f, err = bs.fs.Open(filepath.Join(folder, fmt.Sprintf("%d.%s", i, sszExt)))
-		if err == nil {
-			slot, err = slotFromBlob(f)
-			if err != nil {
-				return 0, err
-			}
-			break
+		if err != nil {
+			log.WithError(err).Debug("Could not open blob file")
+			continue
 		}
-		if f != nil {
-			if err := f.Close(); err != nil {
-				log.WithError(err).Errorf("Could not close blob file")
-			}
+
+		slot, err = slotFromBlob(f)
+		if closeErr := f.Close(); closeErr != nil {
+			log.WithError(closeErr).Error("Could not close blob file")
+		}
+		if err != nil {
+			log.WithError(err).Error("Could not read from blob file")
+			continue
+		}
+		if slot != 0 {
+			break
 		}
 	}
 
