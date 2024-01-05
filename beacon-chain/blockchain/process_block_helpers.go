@@ -3,9 +3,12 @@ package blockchain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -16,7 +19,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v4/math"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
@@ -90,6 +92,27 @@ func (s *Service) fcuArgsNonCanonicalBlock(cfg *postBlockProcessConfig) (*fcuCon
 	}, nil
 }
 
+// sendStateFeedOnBlock sends an event that a new block has been synced
+func (s *Service) sendStateFeedOnBlock(cfg *postBlockProcessConfig) {
+	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(cfg.blockRoot)
+	if err != nil {
+		log.WithError(err).Debug("Could not check if block is optimistic")
+		optimistic = true
+	}
+	// Send notification of the processed block to the state feed.
+	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
+		Type: statefeed.BlockProcessed,
+		Data: &statefeed.BlockProcessedData{
+			Slot:        cfg.signed.Block().Slot(),
+			BlockRoot:   cfg.blockRoot,
+			SignedBlock: cfg.signed,
+			Verified:    true,
+			Optimistic:  optimistic,
+		},
+	})
+
+}
+
 // updateCachesPostBlockProcessing updates the next slot cache and handles the epoch
 // boundary in order to compute the right proposer indices after processing
 // state transition. This function is called on late blocks while still locked,
@@ -103,6 +126,21 @@ func (s *Service) updateCachesPostBlockProcessing(cfg *postBlockProcessConfig) e
 		return nil
 	}
 	return s.handleEpochBoundary(cfg.ctx, slot, cfg.postState, cfg.blockRoot[:])
+}
+
+// handleSecondFCUCall handles a second call to FCU when syncing a new block.
+// This is useful when proposing in the next block and we want to defer the
+// computation of the next slot shuffling.
+func (s *Service) handleSecondFCUCall(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) {
+	if (fcuArgs.attributes == nil || fcuArgs.attributes.IsEmpty()) && cfg.headRoot == cfg.blockRoot {
+		go s.sendFCUWithAttributes(cfg, fcuArgs)
+	}
+}
+
+// reportProcessingTime reports the metric of how long it took to process the
+// current block
+func reportProcessingTime(startTime time.Time) {
+	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
 }
 
 // computePayloadAttributes modifies the passed FCU arguments to

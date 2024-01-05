@@ -63,7 +63,12 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		return invalidBlock{error: err}
 	}
 	startTime := time.Now()
-	b := cfg.signed.Block()
+	var fcuArgs *fcuConfig
+
+	defer s.handleSecondFCUCall(cfg, fcuArgs)
+	defer s.sendStateFeedOnBlock(cfg)
+	defer reportProcessingTime(startTime)
+	defer reportAttestationInclusion(cfg.signed.Block())
 
 	err := s.cfg.ForkChoiceStore.InsertNode(ctx, cfg.postState, cfg.blockRoot)
 	if err != nil {
@@ -84,39 +89,18 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 	if cfg.headRoot != cfg.blockRoot {
 		s.logNonCanonicalBlockReceived(cfg.blockRoot, cfg.headRoot)
+		return nil
 	}
-	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
-	fcuArgs, err := s.getFCUArgs(cfg)
+	fcuArgs, err = s.getFCUArgs(cfg)
 	if err != nil {
 		log.WithError(err).Error("Could not get forkchoice update argument")
 		return nil
 	}
 	if err := s.sendFCU(cfg, fcuArgs); err != nil {
 		return errors.Wrap(err, "could not send FCU to engine")
-	}
-	optimistic, err := s.cfg.ForkChoiceStore.IsOptimistic(cfg.blockRoot)
-	if err != nil {
-		log.WithError(err).Debug("Could not check if block is optimistic")
-		optimistic = true
-	}
-	// Send notification of the processed block to the state feed.
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.BlockProcessed,
-		Data: &statefeed.BlockProcessedData{
-			Slot:        cfg.signed.Block().Slot(),
-			BlockRoot:   cfg.blockRoot,
-			SignedBlock: cfg.signed,
-			Verified:    true,
-			Optimistic:  optimistic,
-		},
-	})
-	onBlockProcessingTime.Observe(float64(time.Since(startTime).Milliseconds()))
-	reportAttestationInclusion(b)
-	// We leave attributes as nil only on early blocks
-	if (fcuArgs.attributes == nil || fcuArgs.attributes.IsEmpty()) && cfg.headRoot == cfg.blockRoot {
-		go s.sendFCUWithAttributes(cfg, fcuArgs)
 	}
 	return nil
 }
