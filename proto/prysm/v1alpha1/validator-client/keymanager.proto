@@ -6,6 +6,7 @@ import "proto/prysm/v1alpha1/attestation.proto";
 import "proto/prysm/v1alpha1/beacon_block.proto";
 import "proto/prysm/v1alpha1/beacon_state.proto";
 import "proto/prysm/v1alpha1/sync_committee.proto";
+import "google/protobuf/wrappers.proto";
 
 option csharp_namespace = "Ethereum.Validator.Accounts.V2";
 option go_package = "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client;validatorpb";
@@ -94,6 +95,7 @@ message BuilderConfig {
   bool enabled = 1;
   uint64 gas_limit = 2 [(ethereum.eth.ext.cast_type) = "github.com/prysmaticlabs/prysm/v4/consensus-types/validator.Uint64"];
   repeated string relays = 3;
+  google.protobuf.UInt64Value builder_boost_factor = 4;
 }
 
 // ProposerSettingsPayload is used to unmarshal files sent from the validator flag as well as safe to bolt db bucket
