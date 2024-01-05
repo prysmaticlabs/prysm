@@ -1205,10 +1205,12 @@ func TestSubmitAttesterSlashing_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
 	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
@@ -1295,10 +1297,12 @@ func TestSubmitAttesterSlashing_AcrossFork(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
 	toSubmit := shared.AttesterSlashingsFromConsensus([]*ethpbv1alpha1.AttesterSlashing{slashing})
@@ -1404,10 +1408,12 @@ func TestSubmitProposerSlashing_Ok(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
 	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
@@ -1486,10 +1492,12 @@ func TestSubmitProposerSlashing_AcrossFork(t *testing.T) {
 	}
 
 	broadcaster := &p2pMock.MockBroadcaster{}
+	chainmock := &blockchainmock.ChainService{State: bs}
 	s := &Server{
-		ChainInfoFetcher: &blockchainmock.ChainService{State: bs},
-		SlashingsPool:    &slashingsmock.PoolMock{},
-		Broadcaster:      broadcaster,
+		ChainInfoFetcher:  chainmock,
+		SlashingsPool:     &slashingsmock.PoolMock{},
+		Broadcaster:       broadcaster,
+		OperationNotifier: chainmock.OperationNotifier(),
 	}
 
 	toSubmit := shared.ProposerSlashingsFromConsensus([]*ethpbv1alpha1.ProposerSlashing{slashing})
