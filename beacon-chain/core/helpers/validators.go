@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -271,11 +272,22 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
 	proposerIndices, has := proposerIndicesCache.ProposerIndices(slots.ToEpoch(slot), root)
 	if !has {
-		cache.ProposerIndicesCacheMiss.Inc()
 		return 0, errProposerIndexMiss
 	}
 	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
-		cache.ProposerIndicesCacheMiss.Inc()
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// ProposerIndexAtSlotFromCheckpoint returns the proposer index at the given
+// slot from the cache at the given checkpoint
+func ProposerIndexAtSlotFromCheckpoint(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.IndicesFromCheckpoint(*c)
+	if !has {
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
 		return 0, errProposerIndexMiss
 	}
 	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil

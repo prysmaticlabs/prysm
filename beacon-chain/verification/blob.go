@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -282,7 +283,16 @@ func (bv *ROBlobVerifier) SidecarKzgProofVerified() (err error) {
 // for later processing while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE this message.
 func (bv *ROBlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireSidecarProposerExpected, &err)
-	idx, cached := bv.pc.Proposer(bv.blob.ParentRoot(), bv.blob.Slot())
+	e := slots.ToEpoch(bv.blob.Slot())
+	if e > 0 {
+		e = e - 1
+	}
+	r, err := bv.fc.TargetRootForEpoch(bv.blob.ParentRoot(), e)
+	if err != nil {
+		return ErrSidecarUnexpectedProposer
+	}
+	c := &forkchoicetypes.Checkpoint{Root: r, Epoch: e}
+	idx, cached := bv.pc.Proposer(c, bv.blob.Slot())
 	if !cached {
 		pst, err := bv.parentState(ctx)
 		if err != nil {

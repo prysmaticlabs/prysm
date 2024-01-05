@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -102,7 +103,7 @@ func TestProposerCache(t *testing.T) {
 	st, _ := util.DeterministicGenesisStateDeneb(t, 3)
 
 	pc := newPropCache()
-	_, cached := pc.Proposer([32]byte{}, 1)
+	_, cached := pc.Proposer(&forkchoicetypes.Checkpoint{}, 1)
 	// should not be cached yet
 	require.Equal(t, false, cached)
 
@@ -112,7 +113,7 @@ func TestProposerCache(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, primitives.ValidatorIndex(expectedIdx), idx)
 
-	idx, cached = pc.Proposer([32]byte{}, 1)
+	idx, cached = pc.Proposer(&forkchoicetypes.Checkpoint{}, 1)
 	// TODO: update this test when we integrate a proposer id cache
 	require.Equal(t, false, cached)
 	require.Equal(t, primitives.ValidatorIndex(0), idx)
