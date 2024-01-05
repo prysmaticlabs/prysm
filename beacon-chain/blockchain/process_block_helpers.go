@@ -104,7 +104,6 @@ func (s *Service) sendStateFeedOnBlock(cfg *postBlockProcessConfig) {
 			Optimistic:  optimistic,
 		},
 	})
-
 }
 
 // updateCachesPostBlockProcessing updates the next slot cache and handles the epoch
