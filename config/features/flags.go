@@ -132,10 +132,6 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block.",
 	}
-	disableOptionalEngineMethods = &cli.BoolFlag{
-		Name:  "disable-optional-engine-methods",
-		Usage: "Disables the optional engine methods.",
-	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
@@ -206,7 +202,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	disableOptionalEngineMethods,
 	prepareAllPayloads,
 	aggregateFirstInterval,
 	aggregateSecondInterval,

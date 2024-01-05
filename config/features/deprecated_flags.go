@@ -58,6 +58,11 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
+	deprecatedDisableOptionalEngineMethods = &cli.BoolFlag{
+		Name:   "disable-optional-engine-methods",
+		Usage:  deprecatedUsage,
+		Hidden: true,
+	}
 )
 
 // Deprecated flags for both the beacon node and validator client.
@@ -72,6 +77,7 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedEnableOptionalEngineMethods,
 	deprecatedDisableBuildBlockParallel,
 	deprecatedDisableReorgLateBlocks,
+	deprecatedDisableOptionalEngineMethods,
 }
 
 // deprecatedBeaconFlags contains flags that are still used by other components
