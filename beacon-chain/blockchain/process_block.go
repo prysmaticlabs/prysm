@@ -84,6 +84,9 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	if err != nil {
 		log.WithError(err).Warn("Could not update head")
 	}
+	if cfg.headRoot != cfg.blockRoot {
+		s.logNonCanonicalBlockReceived(cfg.blockRoot, cfg.headRoot)
+	}
 	newBlockHeadElapsedTime.Observe(float64(time.Since(start).Milliseconds()))
 	fcuArgs, err := s.getFCUArgs(cfg)
 	if err != nil {

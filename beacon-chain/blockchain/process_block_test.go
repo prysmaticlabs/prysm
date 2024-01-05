@@ -2213,12 +2213,9 @@ func Test_getFCUArgs(t *testing.T) {
 		postState:      st,
 		isValidPayload: true,
 	}
-	hook := logTest.NewGlobal()
 	// error branch
 	_, err = s.getFCUArgs(cfg)
 	require.ErrorContains(t, "block does not exist", err)
-	require.LogsContain(t, hook, "could not determine node weight")
-	require.LogsContain(t, hook, "Head block is not the received block")
 
 	// canonical branch
 	cfg.headRoot = cfg.blockRoot

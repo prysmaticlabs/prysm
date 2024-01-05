@@ -52,7 +52,6 @@ func (s *Service) getFCUArgsEarlyBlock(cfg *postBlockProcessConfig) (*fcuConfig,
 			proposingSlot: s.CurrentSlot() + 1,
 		}, nil
 	}
-	s.logNonCanonicalBlockReceived(cfg.blockRoot, cfg.headRoot)
 	return s.fcuArgsNonCanonicalBlock(cfg)
 }
 
