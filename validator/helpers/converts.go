@@ -1,4 +1,4 @@
-package history
+package helpers
 
 import (
 	"encoding/hex"
@@ -81,7 +81,7 @@ func RootFromHex(str string) ([32]byte, error) {
 	return root, nil
 }
 
-func rootToHexString(root []byte) (string, error) {
+func RootToHexString(root []byte) (string, error) {
 	// Nil signing roots are allowed in EIP-3076.
 	if len(root) == 0 {
 		return "", nil
@@ -92,7 +92,7 @@ func rootToHexString(root []byte) (string, error) {
 	return fmt.Sprintf("%#x", root), nil
 }
 
-func pubKeyToHexString(pubKey []byte) (string, error) {
+func PubKeyToHexString(pubKey []byte) (string, error) {
 	if len(pubKey) != 48 {
 		return "", fmt.Errorf("wanted length 48, received %d", len(pubKey))
 	}

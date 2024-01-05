@@ -16,6 +16,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
+	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	history "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
 )
 
@@ -97,7 +98,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 
 				for _, step := range tt.Steps {
 					if tt.GenesisValidatorsRoot != "" {
-						r, err := history.RootFromHex(tt.GenesisValidatorsRoot)
+						r, err := helpers.RootFromHex(tt.GenesisValidatorsRoot)
 						require.NoError(t, validator.db.SaveGenesisValidatorsRoot(context.Background(), r[:]))
 						require.NoError(t, err)
 					}
@@ -124,9 +125,9 @@ func TestEIP3076SpecTests(t *testing.T) {
 							shouldSucceed = sb.ShouldSucceedMinimal
 						}
 
-						bSlot, err := history.SlotFromString(sb.Slot)
+						bSlot, err := helpers.SlotFromString(sb.Slot)
 						require.NoError(t, err)
-						pk, err := history.PubKeyFromHex(sb.Pubkey)
+						pk, err := helpers.PubKeyFromHex(sb.Pubkey)
 						require.NoError(t, err)
 						b := util.NewBeaconBlock()
 						b.Block.Slot = bSlot
@@ -155,11 +156,11 @@ func TestEIP3076SpecTests(t *testing.T) {
 							shouldSucceed = sa.ShouldSucceedMinimal
 						}
 
-						target, err := history.EpochFromString(sa.TargetEpoch)
+						target, err := helpers.EpochFromString(sa.TargetEpoch)
 						require.NoError(t, err)
-						source, err := history.EpochFromString(sa.SourceEpoch)
+						source, err := helpers.EpochFromString(sa.SourceEpoch)
 						require.NoError(t, err)
-						pk, err := history.PubKeyFromHex(sa.Pubkey)
+						pk, err := helpers.PubKeyFromHex(sa.Pubkey)
 						require.NoError(t, err)
 						ia := &ethpb.IndexedAttestation{
 							Data: &ethpb.AttestationData{

@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/progress"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 )
 
@@ -31,7 +32,7 @@ func ExportStandardProtectionJSON(
 			"genesis validators root is empty, perhaps you are not connected to your beacon node",
 		)
 	}
-	genesisRootHex, err := rootToHexString(genesisValidatorsRoot)
+	genesisRootHex, err := helpers.RootToHexString(genesisValidatorsRoot)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not convert genesis validators root to hex string")
 	}
@@ -63,7 +64,7 @@ func ExportStandardProtectionJSON(
 		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
-		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		pubKeyHex, err := helpers.PubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
@@ -89,7 +90,7 @@ func ExportStandardProtectionJSON(
 		if _, ok := filteredKeysMap[string(pubKey[:])]; len(filteredKeys) > 0 && !ok {
 			continue
 		}
-		pubKeyHex, err := pubKeyToHexString(pubKey[:])
+		pubKeyHex, err := helpers.PubKeyToHexString(pubKey[:])
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert public key to hex string")
 		}
@@ -154,7 +155,7 @@ func signedAttestationsByPubKey(ctx context.Context, validatorDB db.Database, pu
 		}
 		var root string
 		if len(att.SigningRoot) != 0 {
-			root, err = rootToHexString(att.SigningRoot)
+			root, err = helpers.RootToHexString(att.SigningRoot)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not convert signing root to hex string")
 			}
@@ -182,7 +183,7 @@ func signedBlocksByPubKey(ctx context.Context, validatorDB db.Database, pubKey [
 		if ctx.Err() != nil {
 			return nil, errors.Wrap(err, "context canceled")
 		}
-		signingRootHex, err := rootToHexString(proposal.SigningRoot)
+		signingRootHex, err := helpers.RootToHexString(proposal.SigningRoot)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not convert signing root to hex string")
 		}

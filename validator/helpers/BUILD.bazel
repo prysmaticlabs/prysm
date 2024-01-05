@@ -1,11 +1,28 @@
-load("@prysm//tools/go:def.bzl", "go_library")
+load("@prysm//tools/go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["node_connection.go"],
+    srcs = [
+        "converts.go",
+        "node_connection.go",
+    ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/helpers",
     visibility = ["//visibility:public"],
     deps = [
+        "//config/fieldparams:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+        "@com_github_k0kubun_go_ansi//:go_default_library",
+        "@com_github_schollz_progressbar_v3//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["converts_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//config/fieldparams:go_default_library",
+        "//consensus-types/primitives:go_default_library",
     ],
 )

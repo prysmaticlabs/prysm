@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -18,7 +19,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
+	"github.com/schollz/progressbar/v3"
 )
 
 // ImportStandardProtectionJSON takes in EIP-3076 compliant JSON file used for slashing protection
@@ -193,7 +196,7 @@ func importBlockProposals(ctx context.Context, pubkey [fieldparams.BLSPubkeyLeng
 		}
 
 		// Convert slot to primitives.Slot
-		slot, err := SlotFromString(sb.Slot)
+		slot, err := helpers.SlotFromString(sb.Slot)
 		if err != nil {
 			return errors.Wrap(err, "could not convert slot to primitives.Slot")
 		}
@@ -214,13 +217,13 @@ func importAttestations(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength
 		sa := item.SignedAttestations[i]
 
 		// Convert source epoch to primitives.Epoch
-		source, err := EpochFromString(sa.SourceEpoch)
+		source, err := helpers.EpochFromString(sa.SourceEpoch)
 		if err != nil {
 			return errors.Wrap(err, "could not convert source epoch to primitives.Epoch")
 		}
 
 		// Convert target epoch to primitives.Epoch
-		target, err := EpochFromString(sa.TargetEpoch)
+		target, err := helpers.EpochFromString(sa.TargetEpoch)
 		if err != nil {
 			return errors.Wrap(err, "could not convert target epoch to primitives.Epoch")
 		}
@@ -297,6 +300,24 @@ func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldpa
 	return nil
 }
 
+func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
+	return progressbar.NewOptions(
+		numItems,
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
+		progressbar.OptionEnableColorCodes(true),
+		progressbar.OptionSetTheme(progressbar.Theme{
+			Saucer:        "[green]=[reset]",
+			SaucerHead:    "[green]>[reset]",
+			SaucerPadding: " ",
+			BarStart:      "[",
+			BarEnd:        "]",
+		}),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		progressbar.OptionSetDescription(msg),
+	)
+}
+
 func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJSON *format.EIPSlashingProtectionFormat) error {
 	// We need to ensure the version in the metadata field matches the one we support.
 	version := interchangeJSON.Metadata.InterchangeFormatVersion
@@ -310,7 +331,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 
 	// We need to verify the genesis validators root matches that of our chain data, otherwise
 	// the imported slashing protection JSON was created on a different chain.
-	gvr, err := RootFromHex(interchangeJSON.Metadata.GenesisValidatorsRoot)
+	gvr, err := helpers.RootFromHex(interchangeJSON.Metadata.GenesisValidatorsRoot)
 	if err != nil {
 		return fmt.Errorf("%#x is not a valid root: %w", interchangeJSON.Metadata.GenesisValidatorsRoot, err)
 	}
@@ -350,7 +371,7 @@ func validateMetadata(ctx context.Context, validatorDB db.Database, interchangeJ
 func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
 	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
 	for _, validatorData := range data {
-		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
+		pubKey, err := helpers.PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid public key: %w", validatorData.Pubkey, err)
 		}
@@ -383,7 +404,7 @@ func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldpa
 func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation, error) {
 	signedAttestationsByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
-		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
+		pubKey, err := helpers.PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid public key: %w", validatorData.Pubkey, err)
 		}
@@ -479,7 +500,7 @@ func filterSlashablePubKeysFromAttestations(
 func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
 	proposals := make([]kv.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
-		slot, err := SlotFromString(proposal.Slot)
+		slot, err := helpers.SlotFromString(proposal.Slot)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid slot: %w", proposal.Slot, err)
 		}
@@ -489,7 +510,7 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 		signingRoot := make([]byte, 0, fieldparams.RootLength)
 
 		if proposal.SigningRoot != "" {
-			signingRoot32, err := RootFromHex(proposal.SigningRoot)
+			signingRoot32, err := helpers.RootFromHex(proposal.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%s is not a valid root: %w", proposal.SigningRoot, err)
 			}
@@ -510,11 +531,11 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
 	historicalAtts := make([]*kv.AttestationRecord, 0)
 	for _, attestation := range atts {
-		target, err := EpochFromString(attestation.TargetEpoch)
+		target, err := helpers.EpochFromString(attestation.TargetEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.TargetEpoch, err)
 		}
-		source, err := EpochFromString(attestation.SourceEpoch)
+		source, err := helpers.EpochFromString(attestation.SourceEpoch)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid epoch: %w", attestation.SourceEpoch, err)
 		}
@@ -524,7 +545,7 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 		signingRoot := make([]byte, 0, fieldparams.RootLength)
 
 		if attestation.SigningRoot != "" {
-			signingRoot32, err := RootFromHex(attestation.SigningRoot)
+			signingRoot32, err := helpers.RootFromHex(attestation.SigningRoot)
 			if err != nil {
 				return nil, fmt.Errorf("%s is not a valid root: %w", attestation.SigningRoot, err)
 			}
