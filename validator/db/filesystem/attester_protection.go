@@ -9,7 +9,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"go.opencensus.io/trace"
 )
 
@@ -271,7 +271,7 @@ func (s *Store) SaveAttestationsForPubKey(
 func (s *Store) AttestationHistoryForPubKey(
 	_ context.Context,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
-) ([]*kv.AttestationRecord, error) {
+) ([]*common.AttestationRecord, error) {
 	// Get validator slashing protection
 	validatorSlashingProtection, err := s.validatorSlashingProtection(pubKey)
 	if err != nil {
@@ -280,11 +280,11 @@ func (s *Store) AttestationHistoryForPubKey(
 
 	// If there is no validator slashing protection or no target epoch, return an empty slice.
 	if validatorSlashingProtection == nil || validatorSlashingProtection.LastSignedAttestationTargetEpoch == nil {
-		return []*kv.AttestationRecord{}, nil
+		return []*common.AttestationRecord{}, nil
 	}
 
 	// Return the (unique) attestation record.
-	return []*kv.AttestationRecord{
+	return []*common.AttestationRecord{
 		{
 			PubKey: pubKey,
 			Source: primitives.Epoch(validatorSlashingProtection.LastSignedAttestationSourceEpoch),

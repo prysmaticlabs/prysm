@@ -14,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
@@ -110,7 +111,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 				require.NoError(t, err)
 				require.DeepEqual(
 					t,
-					make([]*kv.Proposal, 0),
+					make([]*common.Proposal, 0),
 					receivedHistory,
 					"Imported proposal signing root is different than the empty default",
 				)
@@ -929,7 +930,7 @@ func Test_filterSlashablePubKeysFromBlocks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			historyByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey)
+			historyByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey)
 			for pubKey, signedBlocks := range tt.given {
 				proposalHistory, err := transformSignedBlocks(ctx, signedBlocks)
 				require.NoError(t, err)
@@ -1072,7 +1073,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			attestingHistoriesByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
+			attestingHistoriesByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord)
 			pubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 			for pubKey := range tt.incomingAttsByPubKey {
 				pubKeys = append(pubKeys, pubKey)

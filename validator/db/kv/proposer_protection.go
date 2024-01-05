@@ -10,20 +10,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
-
-// ProposalHistoryForPubkey for a validator public key.
-type ProposalHistoryForPubkey struct {
-	Proposals []Proposal
-}
-
-// Proposal representation for a validator public key.
-type Proposal struct {
-	Slot        primitives.Slot `json:"slot"`
-	SigningRoot []byte          `json:"signing_root"`
-}
 
 // ProposedPublicKeys retrieves all public keys in our proposals history bucket.
 // Warning: A public key in this bucket does not necessarily mean it has signed a block.
@@ -84,11 +74,11 @@ func (s *Store) ProposalHistoryForSlot(ctx context.Context, publicKey [fieldpara
 }
 
 // ProposalHistoryForPubKey returns the entire proposal history for a given public key.
-func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*Proposal, error) {
+func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*common.Proposal, error) {
 	_, span := trace.StartSpan(ctx, "Validator.ProposalHistoryForPubKey")
 	defer span.End()
 
-	proposals := make([]*Proposal, 0)
+	proposals := make([]*common.Proposal, 0)
 	err := s.view(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(historicProposalsBucket)
 		valBucket := bucket.Bucket(publicKey[:])
@@ -99,7 +89,7 @@ func (s *Store) ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldpa
 			slot := bytesutil.BytesToSlotBigEndian(slotKey)
 			sr := make([]byte, fieldparams.RootLength)
 			copy(sr, signingRootBytes)
-			proposals = append(proposals, &Proposal{
+			proposals = append(proposals, &common.Proposal{
 				Slot:        slot,
 				SigningRoot: sr,
 			})

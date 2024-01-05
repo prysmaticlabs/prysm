@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 )
@@ -26,35 +27,26 @@ type SlashingKind int
 // with the appropriate call context.
 type AttestationRecordSaveRequest struct {
 	ctx    context.Context
-	record *AttestationRecord
-}
-
-// AttestationRecord which can be represented by these simple values
-// for manipulation by database methods.
-type AttestationRecord struct {
-	PubKey      [fieldparams.BLSPubkeyLength]byte
-	Source      primitives.Epoch
-	Target      primitives.Epoch
-	SigningRoot []byte
+	record *common.AttestationRecord
 }
 
 // NewQueuedAttestationRecords constructor allocates the underlying slice and
 // required attributes for managing pending attestation records.
 func NewQueuedAttestationRecords() *QueuedAttestationRecords {
 	return &QueuedAttestationRecords{
-		records: make([]*AttestationRecord, 0, attestationBatchCapacity),
+		records: make([]*common.AttestationRecord, 0, attestationBatchCapacity),
 	}
 }
 
 // QueuedAttestationRecords is a thread-safe struct for managing a queue of
 // attestation records to save to validator database.
 type QueuedAttestationRecords struct {
-	records []*AttestationRecord
+	records []*common.AttestationRecord
 	lock    sync.RWMutex
 }
 
 // Append a new attestation record to the queue.
-func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
+func (p *QueuedAttestationRecords) Append(ar *common.AttestationRecord) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.records = append(p.records, ar)
@@ -62,11 +54,11 @@ func (p *QueuedAttestationRecords) Append(ar *AttestationRecord) {
 
 // Flush all records. This method returns the current pending records and resets
 // the pending records slice.
-func (p *QueuedAttestationRecords) Flush() []*AttestationRecord {
+func (p *QueuedAttestationRecords) Flush() []*common.AttestationRecord {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	recs := p.records
-	p.records = make([]*AttestationRecord, 0, attestationBatchCapacity)
+	p.records = make([]*common.AttestationRecord, 0, attestationBatchCapacity)
 	return recs
 }
 
@@ -103,8 +95,8 @@ var (
 
 // AttestationHistoryForPubKey retrieves a list of attestation records for data
 // we have stored in the database for the given validator public key.
-func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*AttestationRecord, error) {
-	records := make([]*AttestationRecord, 0)
+func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]*common.AttestationRecord, error) {
+	records := make([]*common.AttestationRecord, 0)
 	_, span := trace.StartSpan(ctx, "Validator.AttestationHistoryForPubKey")
 	defer span.End()
 	err := s.view(func(tx *bolt.Tx) error {
@@ -124,7 +116,7 @@ func (s *Store) AttestationHistoryForPubKey(ctx context.Context, pubKey [fieldpa
 			}
 			sourceEpoch := bytesutil.BytesToEpochBigEndian(sourceBytes)
 			for _, targetEpoch := range targetEpochs {
-				record := &AttestationRecord{
+				record := &common.AttestationRecord{
 					PubKey: pubKey,
 					Source: sourceEpoch,
 					Target: targetEpoch,
@@ -368,9 +360,9 @@ func (s *Store) SaveAttestationsForPubKey(
 			len(atts),
 		)
 	}
-	records := make([]*AttestationRecord, len(atts))
+	records := make([]*common.AttestationRecord, len(atts))
 	for i, a := range atts {
-		records[i] = &AttestationRecord{
+		records[i] = &common.AttestationRecord{
 			PubKey:      pubKey,
 			Source:      a.Data.Source.Epoch,
 			Target:      a.Data.Target.Epoch,
@@ -389,7 +381,7 @@ func (s *Store) SaveAttestationForPubKey(
 	defer span.End()
 	s.batchedAttestationsChan <- &AttestationRecordSaveRequest{
 		ctx: ctx,
-		record: &AttestationRecord{
+		record: &common.AttestationRecord{
 			PubKey:      pubKey,
 			Source:      att.Data.Source.Epoch,
 			Target:      att.Data.Target.Epoch,
@@ -461,7 +453,7 @@ func (s *Store) batchAttestationWrites(ctx context.Context) {
 // and resets the list of batched attestations for future writes.
 // This function notifies all subscribers for flushed attestations
 // of the result of the save operation.
-func (s *Store) flushAttestationRecords(ctx context.Context, records []*AttestationRecord) {
+func (s *Store) flushAttestationRecords(ctx context.Context, records []*common.AttestationRecord) {
 	ctx, span := trace.StartSpan(ctx, "validatorDB.flushAttestationRecords")
 	defer span.End()
 
@@ -498,7 +490,7 @@ func (s *Store) flushAttestationRecords(ctx context.Context, records []*Attestat
 // Saves a list of attestation records to the database in a single boltDB
 // transaction to minimize write lock contention compared to doing them
 // all in individual, isolated boltDB transactions.
-func (s *Store) saveAttestationRecords(ctx context.Context, atts []*AttestationRecord) error {
+func (s *Store) saveAttestationRecords(ctx context.Context, atts []*common.AttestationRecord) error {
 	_, span := trace.StartSpan(ctx, "Validator.saveAttestationRecords")
 	defer span.End()
 	return s.update(func(tx *bolt.Tx) error {

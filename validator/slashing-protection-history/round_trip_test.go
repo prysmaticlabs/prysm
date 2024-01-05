@@ -10,7 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	dbtest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	history "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
@@ -233,7 +233,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 		receivedAttestingHistory, err := validatorDB.AttestationHistoryForPubKey(ctx, publicKeys[i])
 		require.NoError(t, err)
 
-		wantedAttsByRoot := make(map[[32]byte]*kv.AttestationRecord)
+		wantedAttsByRoot := make(map[[32]byte]*common.AttestationRecord)
 		for _, att := range attestingHistory[i] {
 			var signingRoot [32]byte
 			copy(signingRoot[:], att.SigningRoot)
@@ -413,7 +413,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepEqual(
 			t,
-			make([]*kv.Proposal, 0),
+			make([]*common.Proposal, 0),
 			receivedHistory,
 			"Imported proposal signing root is different than the empty default",
 		)

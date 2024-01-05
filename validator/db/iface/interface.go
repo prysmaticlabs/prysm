@@ -11,15 +11,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/monitoring/backup"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
-
-// Ensure the kv store implements the interface.
-var _ = ValidatorDB(&kv.Store{})
-
-// Ensure the filesystem store implements the interface.
-var _ = ValidatorDB(&filesystem.Store{})
 
 // ValidatorDB defines the necessary methods for a Prysm validator DB.
 type ValidatorDB interface {
@@ -38,7 +31,7 @@ type ValidatorDB interface {
 	// Proposer protection related methods.
 	HighestSignedProposal(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Slot, bool, error)
 	LowestSignedProposal(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) (primitives.Slot, bool, error)
-	ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*kv.Proposal, error)
+	ProposalHistoryForPubKey(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*common.Proposal, error)
 	ProposalHistoryForSlot(ctx context.Context, publicKey [fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([32]byte, bool, bool, error)
 	SaveProposalHistoryForSlot(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, slot primitives.Slot, signingRoot []byte) error
 	ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error)
@@ -66,7 +59,7 @@ type ValidatorDB interface {
 	) error
 	AttestationHistoryForPubKey(
 		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte,
-	) ([]*kv.AttestationRecord, error)
+	) ([]*common.AttestationRecord, error)
 
 	// Graffiti ordered index related methods
 	SaveGraffitiOrderedIndex(ctx context.Context, index uint64) error

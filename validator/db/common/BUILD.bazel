@@ -1,0 +1,12 @@
+load("@prysm//tools/go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["structs.go"],
+    importpath = "github.com/prysmaticlabs/prysm/v5/validator/db/common",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//config/fieldparams:go_default_library",
+        "//consensus-types/primitives:go_default_library",
+    ],
+)

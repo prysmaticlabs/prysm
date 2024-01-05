@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
 
 func TestNewProposalHistoryForSlot_ReturnsNilIfNoHistory(t *testing.T) {
@@ -72,7 +73,7 @@ func TestNewProposalHistoryForPubKey_ReturnsEmptyIfNoHistory(t *testing.T) {
 
 	proposalHistory, err := db.ProposalHistoryForPubKey(context.Background(), valPubkey)
 	require.NoError(t, err)
-	assert.DeepEqual(t, make([]*Proposal, 0), proposalHistory)
+	assert.DeepEqual(t, make([]*common.Proposal, 0), proposalHistory)
 }
 
 func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
@@ -88,7 +89,7 @@ func TestSaveProposalHistoryForPubKey_OK(t *testing.T) {
 	require.NoError(t, err, "Failed to get proposal history")
 
 	require.NotNil(t, proposalHistory)
-	want := []*Proposal{
+	want := []*common.Proposal{
 		{
 			Slot:        slot,
 			SigningRoot: root[:],

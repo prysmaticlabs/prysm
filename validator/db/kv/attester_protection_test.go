@@ -14,6 +14,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 	bolt "go.etcd.io/bbolt"
 )
@@ -24,7 +25,7 @@ func TestPendingAttestationRecords_Flush(t *testing.T) {
 	// Add 5 atts
 	num := 5
 	for i := 0; i < num; i++ {
-		queue.Append(&AttestationRecord{
+		queue.Append(&common.AttestationRecord{
 			Target: primitives.Epoch(i),
 		})
 	}
@@ -37,7 +38,7 @@ func TestPendingAttestationRecords_Flush(t *testing.T) {
 func TestPendingAttestationRecords_Len(t *testing.T) {
 	queue := NewQueuedAttestationRecords()
 	assert.Equal(t, queue.Len(), 0)
-	queue.Append(&AttestationRecord{})
+	queue.Append(&common.AttestationRecord{})
 	assert.Equal(t, queue.Len(), 1)
 	queue.Flush()
 	assert.Equal(t, queue.Len(), 0)

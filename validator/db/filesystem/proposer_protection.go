@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
 
 // HighestSignedProposal is implemented only to satisfy the interface.
@@ -20,7 +20,7 @@ func (*Store) LowestSignedProposal(_ context.Context, _ [fieldparams.BLSPubkeyLe
 }
 
 // ProposalHistoryForPubKey returns the proposal history for a given public key.
-func (s *Store) ProposalHistoryForPubKey(_ context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*kv.Proposal, error) {
+func (s *Store) ProposalHistoryForPubKey(_ context.Context, publicKey [fieldparams.BLSPubkeyLength]byte) ([]*common.Proposal, error) {
 	// Get validator slashing protection.
 	validatorSlashingProtection, err := s.validatorSlashingProtection(publicKey)
 	if err != nil {
@@ -29,11 +29,11 @@ func (s *Store) ProposalHistoryForPubKey(_ context.Context, publicKey [fieldpara
 
 	// If there is no validator slashing protection or proposed block, return an empty slice.
 	if validatorSlashingProtection == nil || validatorSlashingProtection.LatestSignedBlockSlot == nil {
-		return []*kv.Proposal{}, nil
+		return []*common.Proposal{}, nil
 	}
 
 	// Return the (unique) proposal history.
-	return []*kv.Proposal{
+	return []*common.Proposal{
 		{
 			Slot: primitives.Slot(*validatorSlashingProtection.LatestSignedBlockSlot),
 		},

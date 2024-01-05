@@ -11,6 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 
@@ -203,7 +204,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 				},
 			}
 
-			expectedAttestationRecords1 := []*kv.AttestationRecord{
+			expectedAttestationRecords1 := []*common.AttestationRecord{
 				{
 					PubKey:      pubkey1,
 					Source:      primitives.Epoch(2),
@@ -212,7 +213,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 				},
 			}
 
-			expectedAttestationRecords2 := []*kv.AttestationRecord{
+			expectedAttestationRecords2 := []*common.AttestationRecord{
 				{
 					PubKey:      pubkey2,
 					Source:      primitives.Epoch(2),
@@ -234,7 +235,7 @@ func TestDB_ConvertDatabase(t *testing.T) {
 			err = sourceDatabase.SaveProposalHistoryForSlot(ctx, pubkey1, 43, []byte{})
 			require.NoError(t, err, "could not save block proposal")
 
-			expectedProposals := []*kv.Proposal{
+			expectedProposals := []*common.Proposal{
 				{
 					Slot:        43,
 					SigningRoot: signingRootBytes,

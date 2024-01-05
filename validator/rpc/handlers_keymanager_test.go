@@ -29,6 +29,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v5/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v5/validator/client"
+	dbCommon "github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	DBIface "github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
@@ -301,10 +302,10 @@ func TestServer_ImportKeystores(t *testing.T) {
 			}
 
 			// Generate mock slashing history.
-			attestingHistory := make([][]*kv.AttestationRecord, 0)
-			proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
+			attestingHistory := make([][]*dbCommon.AttestationRecord, 0)
+			proposalHistory := make([]dbCommon.ProposalHistoryForPubkey, len(publicKeys))
 			for i := 0; i < len(publicKeys); i++ {
-				proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+				proposalHistory[i].Proposals = make([]dbCommon.Proposal, 0)
 			}
 			mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 			require.NoError(t, err)
@@ -419,10 +420,10 @@ func TestServer_DeleteKeystores(t *testing.T) {
 		}()
 
 		// Generate mock slashing history.
-		attestingHistory := make([][]*kv.AttestationRecord, 0)
-		proposalHistory := make([]kv.ProposalHistoryForPubkey, len(publicKeys))
+		attestingHistory := make([][]*dbCommon.AttestationRecord, 0)
+		proposalHistory := make([]dbCommon.ProposalHistoryForPubkey, len(publicKeys))
 		for i := 0; i < len(publicKeys); i++ {
-			proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+			proposalHistory[i].Proposals = make([]dbCommon.Proposal, 0)
 		}
 		mockJSON, err := mocks.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
 		require.NoError(t, err)

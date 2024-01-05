@@ -11,7 +11,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	dbTest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	mocks "github.com/prysmaticlabs/prysm/v5/validator/testing"
@@ -129,10 +129,10 @@ func TestImportExportSlashingProtectionCli_EmptyData(t *testing.T) {
 	// Create some mock slashing protection history. and JSON file
 	pubKeys, err := mocks.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	attestingHistory := make([][]*kv.AttestationRecord, 0)
-	proposalHistory := make([]kv.ProposalHistoryForPubkey, len(pubKeys))
+	attestingHistory := make([][]*common.AttestationRecord, 0)
+	proposalHistory := make([]common.ProposalHistoryForPubkey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
-		proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+		proposalHistory[i].Proposals = make([]common.Proposal, 0)
 	}
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)

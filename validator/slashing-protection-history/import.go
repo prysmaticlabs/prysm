@@ -17,6 +17,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/slashings"
 	"github.com/prysmaticlabs/prysm/v5/validator/db"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
@@ -75,8 +76,8 @@ func importStandardProtectionJSONComplete(ctx context.Context, validatorDB *kv.S
 		return errors.Wrap(err, "could not parse unique entries for attestations by public key")
 	}
 
-	attestingHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord)
-	proposalHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey)
+	attestingHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord)
+	proposalHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey)
 
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
 		// Transform the processed signed blocks data from the JSON
@@ -251,7 +252,7 @@ func importAttestations(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength
 	return nil
 }
 
-func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey, validatorDB db.Database) error {
+func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey, validatorDB db.Database) error {
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
 		bar := initializeProgressBar(
 			len(proposalHistory.Proposals),
@@ -272,7 +273,7 @@ func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams
 	return nil
 }
 
-func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord, validatorDB db.Database) error {
+func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord, validatorDB db.Database) error {
 	bar := initializeProgressBar(
 		len(attestingHistoryByPubKey),
 		"Importing attesting history for validator public keys",
@@ -418,7 +419,7 @@ func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[f
 	return signedAttestationsByPubKey, nil
 }
 
-func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fieldparams.BLSPubkeyLength]byte]kv.ProposalHistoryForPubkey) [][fieldparams.BLSPubkeyLength]byte {
+func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey) [][fieldparams.BLSPubkeyLength]byte {
 	// Given signing roots are optional in the EIP standard, we behave as follows:
 	// For a given block:
 	//   If we have a previous block with the same slot in our history:
@@ -444,7 +445,7 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 func filterSlashablePubKeysFromAttestations(
 	ctx context.Context,
 	validatorDB *kv.Store,
-	signedAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*kv.AttestationRecord,
+	signedAttsByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord,
 ) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	// First we need to find attestations that are slashable with respect to other
@@ -497,8 +498,8 @@ func filterSlashablePubKeysFromAttestations(
 	return slashablePubKeys, nil
 }
 
-func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock) (*kv.ProposalHistoryForPubkey, error) {
-	proposals := make([]kv.Proposal, len(signedBlocks))
+func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock) (*common.ProposalHistoryForPubkey, error) {
+	proposals := make([]common.Proposal, len(signedBlocks))
 	for i, proposal := range signedBlocks {
 		slot, err := helpers.SlotFromString(proposal.Slot)
 		if err != nil {
@@ -517,19 +518,19 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 			signingRoot = signingRoot32[:]
 		}
 
-		proposals[i] = kv.Proposal{
+		proposals[i] = common.Proposal{
 			Slot:        slot,
 			SigningRoot: signingRoot,
 		}
 	}
 
-	return &kv.ProposalHistoryForPubkey{
+	return &common.ProposalHistoryForPubkey{
 		Proposals: proposals,
 	}, nil
 }
 
-func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts []*format.SignedAttestation) ([]*kv.AttestationRecord, error) {
-	historicalAtts := make([]*kv.AttestationRecord, 0)
+func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts []*format.SignedAttestation) ([]*common.AttestationRecord, error) {
+	historicalAtts := make([]*common.AttestationRecord, 0)
 	for _, attestation := range atts {
 		target, err := helpers.EpochFromString(attestation.TargetEpoch)
 		if err != nil {
@@ -551,7 +552,7 @@ func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts 
 			}
 			signingRoot = signingRoot32[:]
 		}
-		historicalAtts = append(historicalAtts, &kv.AttestationRecord{
+		historicalAtts = append(historicalAtts, &common.AttestationRecord{
 			PubKey:      pubKey,
 			Source:      source,
 			Target:      target,

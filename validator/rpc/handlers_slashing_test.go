@@ -11,6 +11,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
@@ -91,10 +92,10 @@ func TestImportSlashingProtection_Preconditions(t *testing.T) {
 			require.StringContains(t, "empty slashing_protection_json specified", wr.Body.String())
 
 			// Generate mock slashing history.
-			attestingHistory := make([][]*kv.AttestationRecord, 0)
-			proposalHistory := make([]kv.ProposalHistoryForPubkey, len(pubKeys))
+			attestingHistory := make([][]*common.AttestationRecord, 0)
+			proposalHistory := make([]common.ProposalHistoryForPubkey, len(pubKeys))
 			for i := 0; i < len(pubKeys); i++ {
-				proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+				proposalHistory[i].Proposals = make([]common.Proposal, 0)
 			}
 			mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 			require.NoError(t, err)
@@ -196,10 +197,10 @@ func TestImportExportSlashingProtection_RoundTrip(t *testing.T) {
 	}()
 
 	// Generate mock slashing history.
-	attestingHistory := make([][]*kv.AttestationRecord, 0)
-	proposalHistory := make([]kv.ProposalHistoryForPubkey, len(pubKeys))
+	attestingHistory := make([][]*common.AttestationRecord, 0)
+	proposalHistory := make([]common.ProposalHistoryForPubkey, len(pubKeys))
 	for i := 0; i < len(pubKeys); i++ {
-		proposalHistory[i].Proposals = make([]kv.Proposal, 0)
+		proposalHistory[i].Proposals = make([]common.Proposal, 0)
 	}
 	mockJSON, err := mocks.MockSlashingProtectionJSON(pubKeys, attestingHistory, proposalHistory)
 	require.NoError(t, err)
