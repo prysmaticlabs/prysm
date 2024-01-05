@@ -61,7 +61,7 @@ func (s *Service) sendFCU(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error
 	if !s.isNewHead(cfg.headRoot) {
 		return nil
 	}
-	if fcuArgs.attributes != nil && s.shouldOverrideFCU(cfg.headRoot, s.CurrentSlot()+1) {
+	if fcuArgs.attributes != nil && !fcuArgs.attributes.IsEmpty() && s.shouldOverrideFCU(cfg.headRoot, s.CurrentSlot()+1) {
 		return nil
 	}
 	return s.forkchoiceUpdateWithExecution(cfg.ctx, fcuArgs)
