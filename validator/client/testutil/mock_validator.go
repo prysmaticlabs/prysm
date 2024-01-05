@@ -174,18 +174,18 @@ func (fv *FakeValidator) ProposeBlock(_ context.Context, slot primitives.Slot, _
 }
 
 // SubmitAggregateAndProof for mocking.
-func (_ *FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // SubmitSyncCommitteeMessage for mocking.
-func (_ *FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // LogAttestationsSubmitted for mocking.
-func (_ *FakeValidator) LogAttestationsSubmitted() {}
+func (*FakeValidator) LogAttestationsSubmitted() {}
 
 // UpdateDomainDataCaches for mocking.
-func (_ *FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
+func (*FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}
 
 // BalancesByPubkeys for mocking.
 func (fv *FakeValidator) BalancesByPubkeys(_ context.Context) map[[fieldparams.BLSPubkeyLength]byte]uint64 {
@@ -213,7 +213,7 @@ func (fv *FakeValidator) Keymanager() (keymanager.IKeymanager, error) {
 }
 
 // CheckDoppelGanger for mocking
-func (_ *FakeValidator) CheckDoppelGanger(_ context.Context) error {
+func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
@@ -237,7 +237,7 @@ func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldpara
 }
 
 // SubmitSignedContributionAndProof for mocking
-func (_ *FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
+func (*FakeValidator) SubmitSignedContributionAndProof(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
 // HasProposerSettings for mocking
@@ -266,22 +266,26 @@ func (fv *FakeValidator) PushProposerSettings(ctx context.Context, km keymanager
 }
 
 // SetPubKeyToValidatorIndexMap for mocking
-func (_ *FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
+func (*FakeValidator) SetPubKeyToValidatorIndexMap(_ context.Context, _ keymanager.IKeymanager) error {
 	return nil
 }
 
 // SignValidatorRegistrationRequest for mocking
-func (_ *FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
+func (*FakeValidator) SignValidatorRegistrationRequest(_ context.Context, _ iface.SigningFunc, _ *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error) {
 	return nil, nil
 }
 
 // ProposerSettings for mocking
-func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
-	return f.proposerSettings
+func (fv *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+	return fv.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
-	f.proposerSettings = settings
+func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+	fv.proposerSettings = settings
+	return nil
+}
+
+func (fv *FakeValidator) StartEventStream(_ context.Context) error {
 	return nil
 }
