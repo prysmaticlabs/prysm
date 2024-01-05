@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -75,7 +76,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, true, builderPayload == nil)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block
@@ -105,7 +106,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, builderPayload)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(1), e.BlockNumber()) // Local block because incorrect withdrawals
@@ -137,10 +138,70 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, builderPayload)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(2), e.BlockNumber()) // Builder block
+	})
+	t.Run("Max builder boost factor should return builder", func(t *testing.T) {
+		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
+		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		bb.BidCapella.Header.WithdrawalsRoot = wr[:]
+		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
+		bb.BidCapella.Header.BlockNumber = 2
+		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
+		vs.BlockBuilder = bb
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
+		require.NoError(t, err)
+		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		vs.TimeFetcher = chain
+		vs.HeadFetcher = chain
+
+		b := blk.Block()
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NotNil(t, builderPayload)
+		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, math.MaxUint64))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(2), e.BlockNumber()) // builder block
+	})
+	t.Run("Builder builder has higher value but forced to local payload with builder boost factor", func(t *testing.T) {
+		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
+		wr, err := ssz.WithdrawalSliceRoot(withdrawals, fieldparams.MaxWithdrawalsPerPayload)
+		require.NoError(t, err)
+		bb.BidCapella.Header.WithdrawalsRoot = wr[:]
+		bb.BidCapella.Header.Timestamp = uint64(util.DefaultGenesisTime.Unix())
+		bb.BidCapella.Header.BlockNumber = 2
+		bb.Cfg = &builderTest.Config{BeaconDB: beaconDB}
+		vs.BlockBuilder = bb
+
+		blk, err := blocks.NewSignedBeaconBlock(util.NewBlindedBeaconBlockCapella())
+		require.NoError(t, err)
+		require.NoError(t, vs.BeaconDB.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{blk.Block().ProposerIndex()},
+			[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: make([]byte, fieldparams.FeeRecipientLength), Timestamp: uint64(util.DefaultGenesisTime.Unix()), Pubkey: make([]byte, fieldparams.BLSPubkeyLength)}}))
+		chain := &blockchainTest.ChainService{Genesis: util.DefaultGenesisTime, Block: blk}
+		vs.TimeFetcher = chain
+		vs.HeadFetcher = chain
+
+		b := blk.Block()
+		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
+		require.NoError(t, err)
+		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
+		require.NoError(t, err)
+		require.NotNil(t, builderPayload)
+		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, 0))
+		e, err := blk.Block().Body().Execution()
+		require.NoError(t, err)
+		require.Equal(t, uint64(1), e.BlockNumber()) // local block
 	})
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		bb := builderTest.DefaultBuilderService(t, version.Capella, true)
@@ -165,14 +226,14 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, builderPayload)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
 
 		require.LogsContain(t, hook, "builderGweiValue=1 localBoostPercentage=0 localGweiValue=2")
 	})
-	t.Run("Builder configured. Local block and boost has higher value", func(t *testing.T) {
+	t.Run("Builder configured. Local block and local boost has higher value", func(t *testing.T) {
 		cfg := params.BeaconConfig().Copy()
 		cfg.LocalBlockValueBoost = 1 // Boost 1%.
 		undo, err := params.SetActiveWithUndo(cfg)
@@ -203,7 +264,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, builderPayload)
 		require.DeepEqual(t, [][]uint8(nil), builderKzgCommitments)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(3), e.BlockNumber()) // Local block
@@ -230,7 +291,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		builderPayload, builderKzgCommitments, err := vs.getBuilderPayloadAndBlobs(ctx, b.Slot(), b.ProposerIndex())
 		require.ErrorContains(t, "fault", err) // Builder returns fault. Use local block
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		e, err := blk.Block().Body().Execution()
 		require.NoError(t, err)
 		require.Equal(t, uint64(4), e.BlockNumber()) // Local block
@@ -299,7 +360,7 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.Equal(t, uint64(2), builderPayload.BlockNumber()) // header should be the same from block
 		localPayload, _, err := vs.getLocalPayload(ctx, blk.Block(), denebTransitionState)
 		require.NoError(t, err)
-		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments))
+		require.NoError(t, setExecutionData(context.Background(), blk, localPayload, builderPayload, builderKzgCommitments, defaultBuilderBoostFactor))
 		got, err := blk.Block().Body().BlobKzgCommitments()
 		require.NoError(t, err)
 		require.DeepEqual(t, kzgCommitments, got)

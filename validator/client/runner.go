@@ -189,6 +189,9 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		if err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
+		if err = v.StartEventStream(ctx); err != nil {
+			log.WithError(err).Fatal("Could not start API event stream")
+		}
 
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {

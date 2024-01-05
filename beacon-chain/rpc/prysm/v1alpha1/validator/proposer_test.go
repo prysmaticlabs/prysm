@@ -818,6 +818,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				BlockBuilder:  bb,
 				BeaconDB:      db,
 				BlobReceiver:  c,
+				OperationNotifier: c.OperationNotifier(),
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)

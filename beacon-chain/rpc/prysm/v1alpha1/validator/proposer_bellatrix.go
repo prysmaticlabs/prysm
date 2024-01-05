@@ -41,7 +41,7 @@ var emptyTransactionsRoot = [32]byte{127, 254, 36, 30, 166, 1, 135, 253, 176, 24
 const blockBuilderTimeout = 1 * time.Second
 
 // Sets the execution data for the block. Execution data can come from local EL client or remote builder depends on validator registration and circuit breaker conditions.
-func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte) error {
+func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, localPayload, builderPayload interfaces.ExecutionData, builderKzgCommitments [][]byte, builderBoostFactor uint64) error {
 	_, span := trace.StartSpan(ctx, "ProposerServer.setExecutionData")
 	defer span.End()
 
@@ -80,9 +80,17 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 		}
 
 		// Use builder payload if the following in true:
-		// builder_bid_value * 100 > local_block_value * (local-block-value-boost + 100)
+		// builder_bid_value * builderBoostFactor(default 100) > local_block_value * (local-block-value-boost + 100)
 		boost := params.BeaconConfig().LocalBlockValueBoost
-		higherValueBuilder := builderValueGwei*100 > localValueGwei*(100+boost)
+		higherValueBuilder := builderValueGwei*builderBoostFactor > localValueGwei*(100+boost)
+		if boost > 0 && builderBoostFactor != defaultBuilderBoostFactor {
+			log.WithFields(logrus.Fields{
+				"localGweiValue":       localValueGwei,
+				"localBoostPercentage": boost,
+				"builderGweiValue":     builderValueGwei,
+				"builderBoostFactor":   builderBoostFactor,
+			}).Warn("Proposer: both local boost and builder boost are using non default values")
+		}
 
 		// If we can't get the builder value, just use local block.
 		if higherValueBuilder && withdrawalsMatched { // Builder value is higher and withdrawals match.
@@ -98,13 +106,15 @@ func setExecutionData(ctx context.Context, blk interfaces.SignedBeaconBlock, loc
 				"localGweiValue":       localValueGwei,
 				"localBoostPercentage": boost,
 				"builderGweiValue":     builderValueGwei,
+				"builderBoostFactor":   builderBoostFactor,
 			}).Warn("Proposer: using local execution payload because higher value")
 		}
 		span.AddAttributes(
 			trace.BoolAttribute("higherValueBuilder", higherValueBuilder),
-			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
-			trace.Int64Attribute("localBoostPercentage", int64(boost)),        // lint:ignore uintcast -- This is OK for tracing.
-			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)), // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localGweiValue", int64(localValueGwei)),         // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("localBoostPercentage", int64(boost)),            // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderGweiValue", int64(builderValueGwei)),     // lint:ignore uintcast -- This is OK for tracing.
+			trace.Int64Attribute("builderBoostFactor", int64(builderBoostFactor)), // lint:ignore uintcast -- This is OK for tracing.
 		)
 		return setLocalExecution(blk, localPayload)
 	default: // Bellatrix case.
