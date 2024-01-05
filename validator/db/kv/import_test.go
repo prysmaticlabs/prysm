@@ -1,4 +1,4 @@
-package history
+package kv
 
 import (
 	"bytes"
@@ -14,428 +14,157 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
-	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
-	dbtest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	valtest "github.com/prysmaticlabs/prysm/v5/validator/testing"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
 func TestStore_ImportInterchangeData_BadJSON(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("isSlashingProtectionMinimal=%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			ctx := context.Background()
-			validatorDB := dbtest.SetupDB(t, nil, isSlashingProtectionMinimal)
+	ctx := context.Background()
+	validatorDB := setupDB(t, nil)
 
-			buf := bytes.NewBuffer([]byte("helloworld"))
-			err := ImportStandardProtectionJSON(ctx, validatorDB, buf)
-			require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
-		})
-	}
+	buf := bytes.NewBuffer([]byte("helloworld"))
+	err := validatorDB.ImportStandardProtectionJSON(ctx, buf)
+	require.ErrorContains(t, "could not unmarshal slashing protection JSON file", err)
 }
 
 func TestStore_ImportInterchangeData_NilData_FailsSilently(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("isSlashingProtectionMinimal=%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			hook := logTest.NewGlobal()
-			ctx := context.Background()
-			validatorDB := dbtest.SetupDB(t, nil, isSlashingProtectionMinimal)
+	hook := logTest.NewGlobal()
+	ctx := context.Background()
+	validatorDB := setupDB(t, nil)
 
-			interchangeJSON := &format.EIPSlashingProtectionFormat{}
-			encoded, err := json.Marshal(interchangeJSON)
-			require.NoError(t, err)
+	interchangeJSON := &format.EIPSlashingProtectionFormat{}
+	encoded, err := json.Marshal(interchangeJSON)
+	require.NoError(t, err)
 
-			buf := bytes.NewBuffer(encoded)
-			err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
-			require.NoError(t, err)
-			require.LogsContain(t, hook, "No slashing protection data to import")
-		})
-	}
+	buf := bytes.NewBuffer(encoded)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
+	require.NoError(t, err)
+	require.LogsContain(t, hook, "No slashing protection data to import")
 }
 
 func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("isSlashingProtectionMinimal=%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			ctx := context.Background()
-			numValidators := 10
-			publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, publicKeys, isSlashingProtectionMinimal)
+	ctx := context.Background()
+	numValidators := 10
+	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
+	require.NoError(t, err)
+	validatorDB := setupDB(t, publicKeys)
 
-			// First we setup some mock attesting and proposal histories and create a mock
-			// standard slashing protection format JSON struct.
-			attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
-			standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
-			require.NoError(t, err)
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
+	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
 
-			// We replace a slot of one of the blocks with junk data.
-			standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
+	// We replace a slot of one of the blocks with junk data.
+	standardProtectionFormat.Data[0].SignedBlocks[0].Slot = "BadSlot"
 
-			// We encode the standard slashing protection struct into a JSON format.
-			blob, err := json.Marshal(standardProtectionFormat)
-			require.NoError(t, err)
-			buf := bytes.NewBuffer(blob)
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
 
-			// Next, we attempt to import it into our validator database and check that
-			// we obtain an error during the import process.
-			err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
-			assert.NotNil(t, err)
+	// Next, we attempt to import it into our validator database and check that
+	// we obtain an error during the import process.
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
+	assert.NotNil(t, err)
 
-			// Next, we attempt to retrieve the attesting and proposals histories from our database and
-			// verify nothing was saved to the DB. If there is an error in the import process, we need to make
-			// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
-			// data to our DB, or it does not.
-			for i := 0; i < len(publicKeys); i++ {
-				for _, att := range attestingHistory[i] {
-					indexedAtt := &ethpb.IndexedAttestation{
-						Data: &ethpb.AttestationData{
-							Source: &ethpb.Checkpoint{
-								Epoch: att.Source,
-							},
-							Target: &ethpb.Checkpoint{
-								Epoch: att.Target,
-							},
-						},
-					}
-
-					if !isSlashingProtectionMinimal {
-						slashingKind, err := validatorDB.(*kv.Store).CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
-						// We expect we do not have an attesting history for each attestation
-						require.NoError(t, err)
-						require.Equal(t, kv.NotSlashable, slashingKind)
-					}
-				}
-
-				receivedHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
-				require.NoError(t, err)
-				require.DeepEqual(
-					t,
-					make([]*common.Proposal, 0),
-					receivedHistory,
-					"Imported proposal signing root is different than the empty default",
-				)
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify nothing was saved to the DB. If there is an error in the import process, we need to make
+	// sure writing is an atomic operation: either the import succeeds and saves the slashing protection
+	// data to our DB, or it does not.
+	for i := 0; i < len(publicKeys); i++ {
+		for _, att := range attestingHistory[i] {
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: att.Source,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: att.Target,
+					},
+				},
 			}
-		})
+
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
+			// We expect we do not have an attesting history for each attestation
+			require.NoError(t, err)
+			require.Equal(t, NotSlashable, slashingKind)
+		}
+
+		receivedHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
+		require.NoError(t, err)
+		require.DeepEqual(
+			t,
+			make([]*common.Proposal, 0),
+			receivedHistory,
+			"Imported proposal signing root is different than the empty default",
+		)
 	}
 }
 
 func TestStore_ImportInterchangeData_OK(t *testing.T) {
-	for _, isSlashingProtectionMinimal := range [...]bool{false, true} {
-		t.Run(fmt.Sprintf("isSlashingProtectionMinimal=%v", isSlashingProtectionMinimal), func(t *testing.T) {
-			ctx := context.Background()
-			numValidators := 10
-			publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
-			require.NoError(t, err)
-			validatorDB := dbtest.SetupDB(t, publicKeys, isSlashingProtectionMinimal)
-
-			// First we setup some mock attesting and proposal histories and create a mock
-			// standard slashing protection format JSON struct.
-			attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
-			standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
-			require.NoError(t, err)
-
-			// We encode the standard slashing protection struct into a JSON format.
-			blob, err := json.Marshal(standardProtectionFormat)
-			require.NoError(t, err)
-			buf := bytes.NewBuffer(blob)
-
-			// Next, we attempt to import it into our validator database.
-			err = ImportStandardProtectionJSON(ctx, validatorDB, buf)
-			require.NoError(t, err)
-
-			// Next, we attempt to retrieve the attesting and proposals histories from our database and
-			// verify those indeed match the originally generated mock histories.
-			for i := 0; i < len(publicKeys); i++ {
-				for _, att := range attestingHistory[i] {
-					indexedAtt := &ethpb.IndexedAttestation{
-						Data: &ethpb.AttestationData{
-							Source: &ethpb.Checkpoint{
-								Epoch: att.Source,
-							},
-							Target: &ethpb.Checkpoint{
-								Epoch: att.Target,
-							},
-						},
-					}
-					// We expect we have an attesting history for the attestation and when
-					// attempting to verify the same att is slashable with a different signing root,
-					// we expect to receive a double vote slashing kind.
-					if isSlashingProtectionMinimal {
-						err := validatorDB.SaveAttestationForPubKey(ctx, publicKeys[i], [fieldparams.RootLength]byte{}, indexedAtt)
-						require.ErrorContains(t, "could not sign attestation", err)
-					} else {
-						slashingKind, err := validatorDB.(*kv.Store).CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
-						require.NotNil(t, err)
-						require.Equal(t, kv.DoubleVote, slashingKind)
-					}
-				}
-
-				if !isSlashingProtectionMinimal {
-					proposals := proposalHistory[i].Proposals
-
-					receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
-					require.NoError(t, err)
-					rootsBySlot := make(map[primitives.Slot][]byte)
-					for _, proposal := range receivedProposalHistory {
-						rootsBySlot[proposal.Slot] = proposal.SigningRoot
-					}
-					for _, proposal := range proposals {
-						receivedRoot, ok := rootsBySlot[proposal.Slot]
-						require.DeepEqual(t, true, ok)
-						require.DeepEqual(
-							t,
-							receivedRoot,
-							proposal.SigningRoot,
-							"Imported proposals are different then the generated ones",
-						)
-					}
-				}
-			}
-		})
-	}
-}
-
-func Test_parseUniqueSignedBlocksByPubKey(t *testing.T) {
-	numValidators := 4
+	ctx := context.Background()
+	numValidators := 10
 	publicKeys, err := valtest.CreateRandomPubKeys(numValidators)
 	require.NoError(t, err)
-	roots := valtest.CreateMockRoots(numValidators)
-	tests := []struct {
-		name    string
-		data    []*format.ProtectionData
-		want    map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock
-		wantErr bool
-	}{
-		{
-			name: "nil values are skipped",
-			data: []*format.ProtectionData{
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-						nil,
+	validatorDB := setupDB(t, publicKeys)
+
+	// First we setup some mock attesting and proposal histories and create a mock
+	// standard slashing protection format JSON struct.
+	attestingHistory, proposalHistory := valtest.MockAttestingAndProposalHistories(publicKeys)
+	standardProtectionFormat, err := valtest.MockSlashingProtectionJSON(publicKeys, attestingHistory, proposalHistory)
+	require.NoError(t, err)
+
+	// We encode the standard slashing protection struct into a JSON format.
+	blob, err := json.Marshal(standardProtectionFormat)
+	require.NoError(t, err)
+	buf := bytes.NewBuffer(blob)
+
+	// Next, we attempt to import it into our validator database.
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
+	require.NoError(t, err)
+
+	// Next, we attempt to retrieve the attesting and proposals histories from our database and
+	// verify those indeed match the originally generated mock histories.
+	for i := 0; i < len(publicKeys); i++ {
+		for _, att := range attestingHistory[i] {
+			indexedAtt := &ethpb.IndexedAttestation{
+				Data: &ethpb.AttestationData{
+					Source: &ethpb.Checkpoint{
+						Epoch: att.Source,
+					},
+					Target: &ethpb.Checkpoint{
+						Epoch: att.Target,
 					},
 				},
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "3",
-							SigningRoot: fmt.Sprintf("%x", roots[2]),
-						},
-					},
-				},
-			},
-			want: map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock{
-				publicKeys[0]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "3",
-						SigningRoot: fmt.Sprintf("%x", roots[2]),
-					},
-				},
-			},
-		},
-		{
-			name: "same blocks but different public keys are parsed correctly",
-			data: []*format.ProtectionData{
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-						{
-							Slot:        "2",
-							SigningRoot: fmt.Sprintf("%x", roots[1]),
-						},
-					},
-				},
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[1]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-						{
-							Slot:        "2",
-							SigningRoot: fmt.Sprintf("%x", roots[1]),
-						},
-					},
-				},
-			},
-			want: map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock{
-				publicKeys[0]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "2",
-						SigningRoot: fmt.Sprintf("%x", roots[1]),
-					},
-				},
-				publicKeys[1]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "2",
-						SigningRoot: fmt.Sprintf("%x", roots[1]),
-					},
-				},
-			},
-		},
-		{
-			name: "disjoint sets of signed blocks by the same public key are parsed correctly",
-			data: []*format.ProtectionData{
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-						{
-							Slot:        "2",
-							SigningRoot: fmt.Sprintf("%x", roots[1]),
-						},
-					},
-				},
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "3",
-							SigningRoot: fmt.Sprintf("%x", roots[2]),
-						},
-					},
-				},
-			},
-			want: map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock{
-				publicKeys[0]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "2",
-						SigningRoot: fmt.Sprintf("%x", roots[1]),
-					},
-					{
-						Slot:        "3",
-						SigningRoot: fmt.Sprintf("%x", roots[2]),
-					},
-				},
-			},
-		},
-		{
-			name: "full duplicate entries are uniquely parsed",
-			data: []*format.ProtectionData{
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-					},
-				},
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-					},
-				},
-			},
-			want: map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock{
-				publicKeys[0]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-				},
-			},
-		},
-		{
-			name: "intersecting duplicate public key entries are handled properly",
-			data: []*format.ProtectionData{
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "1",
-							SigningRoot: fmt.Sprintf("%x", roots[0]),
-						},
-						{
-							Slot:        "2",
-							SigningRoot: fmt.Sprintf("%x", roots[1]),
-						},
-					},
-				},
-				{
-					Pubkey: fmt.Sprintf("%x", publicKeys[0]),
-					SignedBlocks: []*format.SignedBlock{
-						{
-							Slot:        "2",
-							SigningRoot: fmt.Sprintf("%x", roots[1]),
-						},
-						{
-							Slot:        "3",
-							SigningRoot: fmt.Sprintf("%x", roots[2]),
-						},
-					},
-				},
-			},
-			want: map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock{
-				publicKeys[0]: {
-					{
-						Slot:        "1",
-						SigningRoot: fmt.Sprintf("%x", roots[0]),
-					},
-					{
-						Slot:        "2",
-						SigningRoot: fmt.Sprintf("%x", roots[1]),
-					},
-					{
-						Slot:        "2",
-						SigningRoot: fmt.Sprintf("%x", roots[1]),
-					},
-					{
-						Slot:        "3",
-						SigningRoot: fmt.Sprintf("%x", roots[2]),
-					},
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseBlocksForUniquePublicKeys(tt.data)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("parseBlocksForUniquePublicKeys() error = %v, wantErr %v", err, tt.wantErr)
-				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("parseBlocksForUniquePublicKeys() got = %v, want %v", got, tt.want)
-			}
-		})
+			// We expect we have an attesting history for the attestation and when
+			// attempting to verify the same att is slashable with a different signing root,
+			// we expect to receive a double vote slashing kind.
+			slashingKind, err := validatorDB.CheckSlashableAttestation(ctx, publicKeys[i], []byte{}, indexedAtt)
+			require.NotNil(t, err)
+			require.Equal(t, DoubleVote, slashingKind)
+		}
+
+		proposals := proposalHistory[i].Proposals
+
+		receivedProposalHistory, err := validatorDB.ProposalHistoryForPubKey(ctx, publicKeys[i])
+		require.NoError(t, err)
+		rootsBySlot := make(map[primitives.Slot][]byte)
+		for _, proposal := range receivedProposalHistory {
+			rootsBySlot[proposal.Slot] = proposal.SigningRoot
+		}
+		for _, proposal := range proposals {
+			receivedRoot, ok := rootsBySlot[proposal.Slot]
+			require.DeepEqual(t, true, ok)
+			require.DeepEqual(
+				t,
+				receivedRoot,
+				proposal.SigningRoot,
+				"Imported proposals are different then the generated ones",
+			)
+		}
 	}
 }
 
@@ -951,7 +680,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 			for pubKey := range tt.incomingAttsByPubKey {
 				pubKeys = append(pubKeys, pubKey)
 			}
-			validatorDB := dbtest.SetupDB(t, pubKeys, false)
+			validatorDB := setupDB(t, pubKeys)
 			for pubKey, signedAtts := range tt.incomingAttsByPubKey {
 				attestingHistory, err := transformSignedAttestations(pubKey, signedAtts)
 				require.NoError(t, err)
@@ -964,7 +693,7 @@ func Test_filterSlashablePubKeysFromAttestations(t *testing.T) {
 					require.NoError(t, err)
 				}
 			}
-			got, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB.(*kv.Store), attestingHistoriesByPubKey)
+			got, err := filterSlashablePubKeysFromAttestations(ctx, validatorDB, attestingHistoriesByPubKey)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("filterSlashablePubKeysFromAttestations() error = %v, wantErr %v", err, tt.wantErr)
 				return

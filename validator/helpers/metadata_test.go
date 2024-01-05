@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"encoding/hex"
+	"io"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -142,6 +143,11 @@ func (db *ValidatorDBMock) UpdateProposerSettingsForPubkey(context.Context, [fie
 	panic("not implemented")
 }
 func (db *ValidatorDBMock) SaveProposerSettings(ctx context.Context, settings *proposer.Settings) error {
+	panic("not implemented")
+}
+
+// EIP-3076 slashing protection related methods
+func (db *ValidatorDBMock) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) error {
 	panic("not implemented")
 }
 

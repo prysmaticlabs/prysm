@@ -70,4 +70,7 @@ type ValidatorDB interface {
 	ProposerSettings(context.Context) (*proposer.Settings, error)
 	ProposerSettingsExists(ctx context.Context) (bool, error)
 	SaveProposerSettings(ctx context.Context, settings *proposer.Settings) error
+
+	// EIP-3076 slashing protection related methods
+	ImportStandardProtectionJSON(ctx context.Context, r io.Reader) error
 }

@@ -7,6 +7,7 @@ import (
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/assert"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	dbtest "github.com/prysmaticlabs/prysm/v5/validator/db/testing"
@@ -247,5 +248,18 @@ func Test_getSignedBlocksByPubKey(t *testing.T) {
 				assert.DeepEqual(t, blk, signedBlocks[i])
 			}
 		})
+	}
+}
+
+func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
+	return &ethpb.IndexedAttestation{
+		Data: &ethpb.AttestationData{
+			Source: &ethpb.Checkpoint{
+				Epoch: source,
+			},
+			Target: &ethpb.Checkpoint{
+				Epoch: target,
+			},
+		},
 	}
 }

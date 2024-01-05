@@ -557,19 +557,6 @@ func benchCheckSurroundVote(
 	}
 }
 
-func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {
-	return &ethpb.IndexedAttestation{
-		Data: &ethpb.AttestationData{
-			Source: &ethpb.Checkpoint{
-				Epoch: source,
-			},
-			Target: &ethpb.Checkpoint{
-				Epoch: target,
-			},
-		},
-	}
-}
-
 func TestStore_flushAttestationRecords_InProgress(t *testing.T) {
 	s := &Store{}
 	s.batchedAttestationsFlushInProgress.Set()
