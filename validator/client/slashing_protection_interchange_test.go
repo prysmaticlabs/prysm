@@ -17,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
-	history "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history"
 )
 
 type eip3076TestCase struct {
@@ -110,7 +109,7 @@ func TestEIP3076SpecTests(t *testing.T) {
 						t.Fatal(err)
 					}
 					b := bytes.NewBuffer(interchangeBytes)
-					if err := history.ImportStandardProtectionJSON(context.Background(), validator.db, b); err != nil {
+					if err := validator.db.ImportStandardProtectionJSON(context.Background(), b); err != nil {
 						if step.ShouldSucceed {
 							t.Fatal(err)
 						}

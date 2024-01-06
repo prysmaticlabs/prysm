@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "doc.go",
         "export.go",
-        "import.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history",
     visibility = [

@@ -44,7 +44,7 @@ func TestImportExport_RoundTrip(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	require.NoError(t, err)
 
 	rawPublicKeys := make([][]byte, numValidators)
@@ -130,7 +130,7 @@ func TestImportExport_RoundTrip_SkippedAttestationEpochs(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	require.NoError(t, err)
 
 	rawPublicKeys := make([][]byte, numValidators)
@@ -179,7 +179,7 @@ func TestImportExport_FilterKeys(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	require.NoError(t, err)
 
 	// Next up, we export our slashing protection database into the EIP standard file.
@@ -224,7 +224,7 @@ func TestImportInterchangeData_OK(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	require.NoError(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
@@ -343,7 +343,7 @@ func TestImportInterchangeData_OK_SavesBlacklistedPublicKeys(t *testing.T) {
 	buf := bytes.NewBuffer(blob)
 
 	// Next, we attempt to import it into our validator database.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	require.NoError(t, err)
 
 	// Assert the three slashable keys in the imported JSON were saved to the database.
@@ -393,7 +393,7 @@ func TestStore_ImportInterchangeData_BadFormat_PreventsDBWrites(t *testing.T) {
 
 	// Next, we attempt to import it into our validator database and check that
 	// we obtain an error during the import process.
-	err = history.ImportStandardProtectionJSON(ctx, validatorDB, buf)
+	err = validatorDB.ImportStandardProtectionJSON(ctx, buf)
 	assert.NotNil(t, err)
 
 	// Next, we attempt to retrieve the attesting and proposals histories from our database and
