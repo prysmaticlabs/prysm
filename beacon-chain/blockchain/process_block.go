@@ -645,7 +645,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 		return
 	}
 	s.headLock.RUnlock()
-	s.cfg.ForkChoiceStore.RLock()
+
 	fcuArgs := &fcuConfig{
 		headState: headState,
 		headRoot:  headRoot,
@@ -656,6 +656,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if fcuArgs.attributes.IsEmpty() {
 		return
 	}
+	s.cfg.ForkChoiceStore.RLock()
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {
