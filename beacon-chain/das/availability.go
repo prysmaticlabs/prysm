@@ -105,7 +105,8 @@ func (s *LazilyPersistentStore) IsDataAvailable(ctx context.Context, current pri
 	// Same as above, we don't save BlobSidecars if there are any problems with the batch.
 	vscs, err := s.verifier.VerifiedROBlobs(ctx, b, sidecars)
 	if err != nil {
-		me, ok := err.(verification.VerificationMultiError)
+		var me verification.VerificationMultiError
+		ok := errors.As(err, &me)
 		if ok {
 			fails := me.Failures()
 			lf := make(log.Fields, len(fails))

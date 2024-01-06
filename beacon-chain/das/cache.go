@@ -3,7 +3,7 @@ package das
 import (
 	"bytes"
 
-	errors "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
