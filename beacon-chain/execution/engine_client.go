@@ -15,7 +15,6 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/types"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -489,6 +488,10 @@ func (s *Service) GetPayloadBodiesByHash(ctx context.Context, executionBlockHash
 	defer span.End()
 
 	result := make([]*pb.ExecutionPayloadBodyV1, 0)
+	// Exit early if there are no execution hashes.
+	if len(executionBlockHashes) == 0 {
+		return result, nil
+	}
 	err := s.rpcClient.CallContext(ctx, &result, GetPayloadBodiesByHashV1, executionBlockHashes)
 
 	for i, item := range result {
@@ -621,31 +624,15 @@ func (s *Service) ReconstructFullBellatrixBlockBatch(
 }
 
 func (s *Service) retrievePayloadFromExecutionHash(ctx context.Context, executionBlockHash common.Hash, header interfaces.ExecutionData, version int) (interfaces.ExecutionData, error) {
-	if features.Get().EnableOptionalEngineMethods {
-		pBodies, err := s.GetPayloadBodiesByHash(ctx, []common.Hash{executionBlockHash})
-		if err != nil {
-			return nil, fmt.Errorf("could not get payload body by hash %#x: %v", executionBlockHash, err)
-		}
-		if len(pBodies) != 1 {
-			return nil, errors.Errorf("could not retrieve the correct number of payload bodies: wanted 1 but got %d", len(pBodies))
-		}
-		bdy := pBodies[0]
-		return fullPayloadFromPayloadBody(header, bdy, version)
-	}
-
-	executionBlock, err := s.ExecutionBlockByHash(ctx, executionBlockHash, true /* with txs */)
+	pBodies, err := s.GetPayloadBodiesByHash(ctx, []common.Hash{executionBlockHash})
 	if err != nil {
-		return nil, fmt.Errorf("could not fetch execution block with txs by hash %#x: %v", executionBlockHash, err)
+		return nil, fmt.Errorf("could not get payload body by hash %#x: %v", executionBlockHash, err)
 	}
-	if executionBlock == nil {
-		return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionBlockHash)
+	if len(pBodies) != 1 {
+		return nil, errors.Errorf("could not retrieve the correct number of payload bodies: wanted 1 but got %d", len(pBodies))
 	}
-	if bytes.Equal(executionBlock.Hash.Bytes(), []byte{}) {
-		return nil, ErrEmptyBlockHash
-	}
-
-	executionBlock.Version = version
-	return fullPayloadFromExecutionBlock(version, header, executionBlock)
+	bdy := pBodies[0]
+	return fullPayloadFromPayloadBody(header, bdy, version)
 }
 
 func (s *Service) retrievePayloadsFromExecutionHashes(
@@ -654,19 +641,12 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	validExecPayloads []int,
 	blindedBlocks []interfaces.ReadOnlySignedBeaconBlock) ([]interfaces.SignedBeaconBlock, error) {
 	fullBlocks := make([]interfaces.SignedBeaconBlock, len(blindedBlocks))
-	var execBlocks []*pb.ExecutionBlock
 	var payloadBodies []*pb.ExecutionPayloadBodyV1
 	var err error
-	if features.Get().EnableOptionalEngineMethods {
-		payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
-		}
-	} else {
-		execBlocks, err = s.ExecutionBlocksByHashes(ctx, executionHashes, true /* with txs*/)
-		if err != nil {
-			return nil, fmt.Errorf("could not fetch execution blocks with txs by hash %#x: %v", executionHashes, err)
-		}
+
+	payloadBodies, err = s.GetPayloadBodiesByHash(ctx, executionHashes)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch payload bodies by hash %#x: %v", executionHashes, err)
 	}
 
 	// For each valid payload, we reconstruct the full block from it with the
@@ -674,32 +654,17 @@ func (s *Service) retrievePayloadsFromExecutionHashes(
 	for sliceIdx, realIdx := range validExecPayloads {
 		var payload interfaces.ExecutionData
 		bblock := blindedBlocks[realIdx]
-		if features.Get().EnableOptionalEngineMethods {
-			b := payloadBodies[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := bblock.Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromPayloadBody(header, b, bblock.Version())
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			b := execBlocks[sliceIdx]
-			if b == nil {
-				return nil, fmt.Errorf("received nil execution block for request by hash %#x", executionHashes[sliceIdx])
-			}
-			header, err := bblock.Block().Body().Execution()
-			if err != nil {
-				return nil, err
-			}
-			payload, err = fullPayloadFromExecutionBlock(bblock.Version(), header, b)
-			if err != nil {
-				return nil, err
-			}
+		b := payloadBodies[sliceIdx]
+		if b == nil {
+			return nil, fmt.Errorf("received nil payload body for request by hash %#x", executionHashes[sliceIdx])
+		}
+		header, err := bblock.Block().Body().Execution()
+		if err != nil {
+			return nil, err
+		}
+		payload, err = fullPayloadFromPayloadBody(header, b, bblock.Version())
+		if err != nil {
+			return nil, err
 		}
 		fullBlock, err := blocks.BuildSignedBeaconBlockFromExecutionPayload(bblock, payload.Proto())
 		if err != nil {

@@ -7,6 +7,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
@@ -73,6 +75,14 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, errors.Errorf("none of the validators are slashable: %v", slashedVals)
 	}
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)
+
+	// notify events
+	s.cfg.operationNotifier.OperationFeed().Send(&feed.Event{
+		Type: operation.AttesterSlashingReceived,
+		Data: &operation.AttesterSlashingReceivedData{
+			AttesterSlashing: slashing,
+		},
+	})
 
 	msg.ValidatorData = slashing // Used in downstream subscriber
 	return pubsub.ValidationAccept, nil

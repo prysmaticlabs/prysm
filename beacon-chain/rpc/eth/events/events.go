@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	time2 "time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
@@ -15,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -44,6 +47,10 @@ const (
 	PayloadAttributesTopic = "payload_attributes"
 	// BlobSidecarTopic represents a new blob sidecar event topic
 	BlobSidecarTopic = "blob_sidecar"
+	// ProposerSlashingTopic represents a new proposer slashing event topic
+	ProposerSlashingTopic = "proposer_slashing"
+	// AttesterSlashingTopic represents a new attester slashing event topic
+	AttesterSlashingTopic = "attester_slashing"
 )
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
@@ -61,6 +68,8 @@ var casesHandled = map[string]bool{
 	BLSToExecutionChangeTopic:      true,
 	PayloadAttributesTopic:         true,
 	BlobSidecarTopic:               true,
+	ProposerSlashingTopic:          true,
+	AttesterSlashingTopic:          true,
 }
 
 // StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.
@@ -100,16 +109,24 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	defer stateSub.Unsubscribe()
 
 	// Set up SSE response headers
-	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Connection", "keep-alive")
 
 	// Handle each event received and context cancellation.
+	// We send a keepalive dummy message immediately to prevent clients
+	// stalling while waiting for the first response chunk.
+	// After that we send a keepalive dummy message every SECONDS_PER_SLOT
+	// to prevent anyone (e.g. proxy servers) from closing connections.
+	sendKeepalive(w, flusher)
+	keepaliveTicker := time2.NewTicker(time2.Duration(params.BeaconConfig().SecondsPerSlot) * time2.Second)
 	for {
 		select {
 		case event := <-opsChan:
 			handleBlockOperationEvents(w, flusher, topicsMap, event)
 		case event := <-stateChan:
 			s.handleStateEvents(ctx, w, flusher, topicsMap, event)
+		case <-keepaliveTicker.C:
+			sendKeepalive(w, flusher)
 		case <-ctx.Done():
 			return
 		}
@@ -190,6 +207,26 @@ func handleBlockOperationEvents(w http.ResponseWriter, flusher http.Flusher, req
 			KzgCommitment: hexutil.Encode(blobData.Blob.KzgCommitment),
 		}
 		send(w, flusher, BlobSidecarTopic, blobEvent)
+	case operation.AttesterSlashingReceived:
+		if _, ok := requestedTopics[AttesterSlashingTopic]; !ok {
+			return
+		}
+		attesterSlashingData, ok := event.Data.(*operation.AttesterSlashingReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, AttesterSlashingTopic)
+			return
+		}
+		send(w, flusher, AttesterSlashingTopic, shared.AttesterSlashingFromConsensus(attesterSlashingData.AttesterSlashing))
+	case operation.ProposerSlashingReceived:
+		if _, ok := requestedTopics[ProposerSlashingTopic]; !ok {
+			return
+		}
+		proposerSlashingData, ok := event.Data.(*operation.ProposerSlashingReceivedData)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, ProposerSlashingTopic)
+			return
+		}
+		send(w, flusher, ProposerSlashingTopic, shared.ProposerSlashingFromConsensus(proposerSlashingData.ProposerSlashing))
 	}
 }
 
@@ -403,6 +440,10 @@ func send(w http.ResponseWriter, flusher http.Flusher, name string, data interfa
 		return
 	}
 	write(w, flusher, "event: %s\ndata: %s\n\n", name, string(j))
+}
+
+func sendKeepalive(w http.ResponseWriter, flusher http.Flusher) {
+	write(w, flusher, ":\n\n")
 }
 
 func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) {

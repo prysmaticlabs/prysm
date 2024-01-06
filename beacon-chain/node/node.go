@@ -230,12 +230,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	}
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(beacon.clockWaiter, beacon.forkChoicer, beacon.stateGen)
-	if beacon.finalizedStateAtStartUp != nil {
-		if err := beacon.BlobStorage.Initialize(beacon.finalizedStateAtStartUp.Slot()); err != nil {
-			return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
-		}
-	} else {
-		log.Warn("No finalized beacon state at startup, cannot prune blobs")
+	if err := beacon.BlobStorage.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
 	}
 
 	log.Debugln("Registering P2P Service")
