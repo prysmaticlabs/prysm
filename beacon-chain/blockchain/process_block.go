@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -122,7 +123,7 @@ func getStateVersionAndPayload(st state.BeaconState) (int, interfaces.ExecutionD
 	return preStateVersion, preStateHeader, nil
 }
 
-func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlock) error {
+func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlock, avs das.AvailabilityStore) error {
 	ctx, span := trace.StartSpan(ctx, "blockChain.onBlockBatch")
 	defer span.End()
 
@@ -225,8 +226,8 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 				return err
 			}
 		}
-		if err := s.databaseDACheck(ctx, b); err != nil {
-			return errors.Wrap(err, "could not validate blob data availability")
+		if err := avs.IsDataAvailable(ctx, s.CurrentSlot(), b); err != nil {
+			return errors.Wrapf(err, "could not validate blob data availability at slot %d", b.Block().Slot())
 		}
 		args := &forkchoicetypes.BlockAndCheckpoints{Block: b.Block(),
 			JustifiedCheckpoint: jCheckpoints[i],
@@ -291,37 +292,6 @@ func (s *Service) onBlockBatch(ctx context.Context, blks []consensusblocks.ROBlo
 		return err
 	}
 	return s.saveHeadNoDB(ctx, lastB, lastBR, preState, !isValidPayload)
-}
-
-func commitmentsToCheck(b consensusblocks.ROBlock, current primitives.Slot) [][]byte {
-	if b.Version() < version.Deneb {
-		return nil
-	}
-	// We are only required to check within MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUESTS
-	if !params.WithinDAPeriod(slots.ToEpoch(b.Block().Slot()), slots.ToEpoch(current)) {
-		return nil
-	}
-	kzgCommitments, err := b.Block().Body().BlobKzgCommitments()
-	if err != nil {
-		return nil
-	}
-	return kzgCommitments
-}
-
-func (s *Service) databaseDACheck(ctx context.Context, b consensusblocks.ROBlock) error {
-	commitments := commitmentsToCheck(b, s.CurrentSlot())
-	if len(commitments) == 0 {
-		return nil
-	}
-	missing, err := missingIndices(s.blobStorage, b.Root(), commitments)
-	if err != nil {
-		return err
-	}
-	if len(missing) == 0 {
-		return nil
-	}
-	// TODO: don't worry that this error isn't informative, it will be superceded by a detailed sidecar cache error.
-	return errors.New("not all kzg commitments are available")
 }
 
 func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.BeaconState) error {

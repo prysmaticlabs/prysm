@@ -74,14 +74,18 @@ func (s ROBlockSlice) Len() int {
 	return len(s)
 }
 
-type BlockWithVerifiedBlobs struct {
+// BlockWithROBlobs is a wrapper that collects the block and blob values together.
+// This is helpful because these values are collated from separate RPC requests.
+type BlockWithROBlobs struct {
 	Block ROBlock
 	Blobs []ROBlob
 }
 
-type BlockWithVerifiedBlobsSlice []BlockWithVerifiedBlobs
+// BlockWithROBlobsSlice gives convnenient access to getting a slice of just the ROBlocks,
+// and defines sorting helpers.
+type BlockWithROBlobsSlice []BlockWithROBlobs
 
-func (s BlockWithVerifiedBlobsSlice) ROBlocks() []ROBlock {
+func (s BlockWithROBlobsSlice) ROBlocks() []ROBlock {
 	r := make([]ROBlock, len(s))
 	for i := range s {
 		r[i] = s[i].Block
@@ -92,7 +96,7 @@ func (s BlockWithVerifiedBlobsSlice) ROBlocks() []ROBlock {
 // Less reports whether the element with index i must sort before the element with index j.
 // ROBlocks are ordered first by their slot,
 // with a lexicographic sort of roots breaking ties for slots with duplicate blocks.
-func (s BlockWithVerifiedBlobsSlice) Less(i, j int) bool {
+func (s BlockWithROBlobsSlice) Less(i, j int) bool {
 	si, sj := s[i].Block.Block().Slot(), s[j].Block.Block().Slot()
 
 	// lower slot wins
@@ -106,11 +110,11 @@ func (s BlockWithVerifiedBlobsSlice) Less(i, j int) bool {
 }
 
 // Swap swaps the elements with indexes i and j.
-func (s BlockWithVerifiedBlobsSlice) Swap(i, j int) {
+func (s BlockWithROBlobsSlice) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
 // Len is the number of elements in the collection.
-func (s BlockWithVerifiedBlobsSlice) Len() int {
+func (s BlockWithROBlobsSlice) Len() int {
 	return len(s)
 }

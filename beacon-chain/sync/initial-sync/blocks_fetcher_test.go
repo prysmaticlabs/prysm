@@ -306,9 +306,9 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 				fetcher.stop()
 			}()
 
-			processFetchedBlocks := func() ([]blocks.BlockWithVerifiedBlobs, error) {
+			processFetchedBlocks := func() ([]blocks.BlockWithROBlobs, error) {
 				defer cancel()
-				var unionRespBlocks []blocks.BlockWithVerifiedBlobs
+				var unionRespBlocks []blocks.BlockWithROBlobs
 
 				for {
 					select {
@@ -347,7 +347,7 @@ func TestBlocksFetcher_RoundRobin(t *testing.T) {
 			bwb, err := processFetchedBlocks()
 			assert.NoError(t, err)
 
-			sort.Sort(blocks.BlockWithVerifiedBlobsSlice(bwb))
+			sort.Sort(blocks.BlockWithROBlobsSlice(bwb))
 			ss := make([]primitives.Slot, len(bwb))
 			for i, b := range bwb {
 				ss[i] = b.Block.Block().Slot()
@@ -454,7 +454,7 @@ func TestBlocksFetcher_handleRequest(t *testing.T) {
 			}
 		}()
 
-		var bwb []blocks.BlockWithVerifiedBlobs
+		var bwb []blocks.BlockWithROBlobs
 		select {
 		case <-ctx.Done():
 			t.Error(ctx.Err())
@@ -1015,7 +1015,7 @@ func TestLowestSlotNeedsBlob(t *testing.T) {
 func TestBlobRequest(t *testing.T) {
 	var nilReq *ethpb.BlobSidecarsByRangeRequest
 	// no blocks
-	req := blobRequest([]blocks.BlockWithVerifiedBlobs{}, 0)
+	req := blobRequest([]blocks.BlockWithROBlobs{}, 0)
 	require.Equal(t, nilReq, req)
 	blks, _ := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, 10)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
@@ -1047,7 +1047,7 @@ func TestBlobRequest(t *testing.T) {
 	require.Equal(t, len(allAfter), int(req.Count))
 }
 
-func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithVerifiedBlobs, []blocks.ROBlob) {
+func testSequenceBlockWithBlob(t *testing.T, nblocks int) ([]blocks.BlockWithROBlobs, []blocks.ROBlob) {
 	blks, blobs := util.ExtendBlocksPlusBlobs(t, []blocks.ROBlock{}, nblocks)
 	sbbs := make([]interfaces.ReadOnlySignedBeaconBlock, len(blks))
 	for i := range blks {

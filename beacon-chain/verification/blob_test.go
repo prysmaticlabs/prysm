@@ -27,13 +27,13 @@ func TestBlobIndexInBounds(t *testing.T) {
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
 	b := blobs[0]
 	// set Index to a value that is out of bounds
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.NoError(t, v.BlobIndexInBounds())
 	require.Equal(t, true, v.results.executed(RequireBlobIndexInBounds))
 	require.NoError(t, v.results.result(RequireBlobIndexInBounds))
 
 	b.Index = fieldparams.MaxBlobsPerBlock
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.ErrorIs(t, v.BlobIndexInBounds(), ErrBlobIndexInvalid)
 	require.Equal(t, true, v.results.executed(RequireBlobIndexInBounds))
 	require.NotNil(t, v.results.result(RequireBlobIndexInBounds))
@@ -52,27 +52,27 @@ func TestSlotNotTooEarly(t *testing.T) {
 	// This clock will give a current slot of 1 on the nose
 	happyClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now }))
 	ini := Initializer{shared: &sharedResources{clock: happyClock}}
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.NoError(t, v.SlotNotTooEarly())
-	require.Equal(t, true, v.results.executed(RequireSlotNotTooEarly))
-	require.NoError(t, v.results.result(RequireSlotNotTooEarly))
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
+	require.NoError(t, v.NotFromFutureSlot())
+	require.Equal(t, true, v.results.executed(RequireNotFromFutureSlot))
+	require.NoError(t, v.results.result(RequireNotFromFutureSlot))
 
 	// Since we have an early return for slots that are directly equal, give a time that is less than max disparity
 	// but still in the previous slot.
 	closeClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return now.Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration() / 2) }))
 	ini = Initializer{shared: &sharedResources{clock: closeClock}}
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.NoError(t, v.SlotNotTooEarly())
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
+	require.NoError(t, v.NotFromFutureSlot())
 
 	// This clock will give a current slot of 0, with now coming more than max clock disparity before slot 1
 	disparate := now.Add(-2 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	dispClock := startup.NewClock(genesis, [32]byte{}, startup.WithNower(func() time.Time { return disparate }))
 	// Set up initializer to use the clock that will set now to a little to far before slot 1
 	ini = Initializer{shared: &sharedResources{clock: dispClock}}
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
-	require.ErrorIs(t, v.SlotNotTooEarly(), ErrSlotTooEarly)
-	require.Equal(t, true, v.results.executed(RequireSlotNotTooEarly))
-	require.NotNil(t, v.results.result(RequireSlotNotTooEarly))
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
+	require.ErrorIs(t, v.NotFromFutureSlot(), ErrFromFutureSlot)
+	require.Equal(t, true, v.results.executed(RequireNotFromFutureSlot))
+	require.NotNil(t, v.results.result(RequireNotFromFutureSlot))
 }
 
 func TestSlotAboveFinalized(t *testing.T) {
@@ -114,7 +114,7 @@ func TestSlotAboveFinalized(t *testing.T) {
 			_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 0, 1)
 			b := blobs[0]
 			b.SignedBlockHeader.Header.Slot = c.slot
-			v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+			v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 			err := v.SlotAboveFinalized()
 			require.Equal(t, true, v.results.executed(RequireSlotAboveFinalized))
 			if c.err == nil {
@@ -146,7 +146,7 @@ func TestValidProposerSignature_Cached(t *testing.T) {
 		},
 	}
 	ini := Initializer{shared: &sharedResources{sc: sc, sr: &mockStateByRooter{sbr: sbrErrorIfCalled(t)}}}
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.NoError(t, v.ValidProposerSignature(ctx))
 	require.Equal(t, true, v.results.executed(RequireValidProposerSignature))
 	require.NoError(t, v.results.result(RequireValidProposerSignature))
@@ -159,7 +159,7 @@ func TestValidProposerSignature_Cached(t *testing.T) {
 		return true, errors.New("derp")
 	}
 	ini = Initializer{shared: &sharedResources{sc: sc, sr: &mockStateByRooter{sbr: sbrErrorIfCalled(t)}}}
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.ErrorIs(t, v.ValidProposerSignature(ctx), ErrInvalidProposerSignature)
 	require.Equal(t, true, v.results.executed(RequireValidProposerSignature))
 	require.NotNil(t, v.results.result(RequireValidProposerSignature))
@@ -182,14 +182,14 @@ func TestValidProposerSignature_CacheMiss(t *testing.T) {
 		},
 	}
 	ini := Initializer{shared: &sharedResources{sc: sc, sr: sbrForValOverride(b.ProposerIndex(), &ethpb.Validator{})}}
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.NoError(t, v.ValidProposerSignature(ctx))
 	require.Equal(t, true, v.results.executed(RequireValidProposerSignature))
 	require.NoError(t, v.results.result(RequireValidProposerSignature))
 
 	// simulate state not found
 	ini = Initializer{shared: &sharedResources{sc: sc, sr: sbrNotFound(t, expectedSd.Parent)}}
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.ErrorIs(t, v.ValidProposerSignature(ctx), ErrInvalidProposerSignature)
 	require.Equal(t, true, v.results.executed(RequireValidProposerSignature))
 	require.NotNil(t, v.results.result(RequireValidProposerSignature))
@@ -206,7 +206,7 @@ func TestValidProposerSignature_CacheMiss(t *testing.T) {
 		},
 	}
 	ini = Initializer{shared: &sharedResources{sc: sc, sr: sbr}}
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
 
 	// make sure all the histories are clean before calling the method
 	// so we don't get polluted by previous usages
@@ -255,14 +255,14 @@ func TestSidecarParentSeen(t *testing.T) {
 
 	t.Run("happy path", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{fc: fcHas}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarParentSeen(nil))
 		require.Equal(t, true, v.results.executed(RequireSidecarParentSeen))
 		require.NoError(t, v.results.result(RequireSidecarParentSeen))
 	})
 	t.Run("HasNode false, no badParent cb, expected error", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{fc: fcLacks}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarParentSeen(nil), ErrSidecarParentNotSeen)
 		require.Equal(t, true, v.results.executed(RequireSidecarParentSeen))
 		require.NotNil(t, v.results.result(RequireSidecarParentSeen))
@@ -270,14 +270,14 @@ func TestSidecarParentSeen(t *testing.T) {
 
 	t.Run("HasNode false, badParent true", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{fc: fcLacks}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarParentSeen(badParentCb(t, b.ParentRoot(), true)))
 		require.Equal(t, true, v.results.executed(RequireSidecarParentSeen))
 		require.NoError(t, v.results.result(RequireSidecarParentSeen))
 	})
 	t.Run("HasNode false, badParent false", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{fc: fcLacks}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarParentSeen(badParentCb(t, b.ParentRoot(), false)), ErrSidecarParentNotSeen)
 		require.Equal(t, true, v.results.executed(RequireSidecarParentSeen))
 		require.NotNil(t, v.results.result(RequireSidecarParentSeen))
@@ -289,14 +289,14 @@ func TestSidecarParentValid(t *testing.T) {
 	b := blobs[0]
 	t.Run("parent valid", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarParentValid(badParentCb(t, b.ParentRoot(), false)))
 		require.Equal(t, true, v.results.executed(RequireSidecarParentValid))
 		require.NoError(t, v.results.result(RequireSidecarParentValid))
 	})
 	t.Run("parent not valid", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarParentValid(badParentCb(t, b.ParentRoot(), true)), ErrSidecarParentInvalid)
 		require.Equal(t, true, v.results.executed(RequireSidecarParentValid))
 		require.NotNil(t, v.results.result(RequireSidecarParentValid))
@@ -340,7 +340,7 @@ func TestSidecarParentSlotLower(t *testing.T) {
 				}
 				return c.fcSlot, c.fcErr
 			}}}}
-			v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+			v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 			err := v.SidecarParentSlotLower()
 			require.Equal(t, true, v.results.executed(RequireSidecarParentSlotLower))
 			if c.err == nil {
@@ -364,7 +364,7 @@ func TestSidecarDescendsFromFinalized(t *testing.T) {
 			}
 			return false
 		}}}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarDescendsFromFinalized(), ErrSidecarNotFinalizedDescendent)
 		require.Equal(t, true, v.results.executed(RequireSidecarDescendsFromFinalized))
 		require.NotNil(t, v.results.result(RequireSidecarDescendsFromFinalized))
@@ -376,7 +376,7 @@ func TestSidecarDescendsFromFinalized(t *testing.T) {
 			}
 			return true
 		}}}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarDescendsFromFinalized())
 		require.Equal(t, true, v.results.executed(RequireSidecarDescendsFromFinalized))
 		require.NoError(t, v.results.result(RequireSidecarDescendsFromFinalized))
@@ -389,7 +389,7 @@ func TestSidecarInclusionProven(t *testing.T) {
 	b := blobs[0]
 
 	ini := Initializer{}
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.NoError(t, v.SidecarInclusionProven())
 	require.Equal(t, true, v.results.executed(RequireSidecarInclusionProven))
 	require.NoError(t, v.results.result(RequireSidecarInclusionProven))
@@ -397,7 +397,7 @@ func TestSidecarInclusionProven(t *testing.T) {
 	// Invert bits of the first byte of the body root to mess up the proof
 	byte0 := b.SignedBlockHeader.Header.BodyRoot[0]
 	b.SignedBlockHeader.Header.BodyRoot[0] = byte0 ^ 255
-	v = ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v = ini.NewBlobVerifier(b, GossipSidecarRequirements)
 	require.ErrorIs(t, v.SidecarInclusionProven(), ErrSidecarInclusionProofInvalid)
 	require.Equal(t, true, v.results.executed(RequireSidecarInclusionProven))
 	require.NotNil(t, v.results.result(RequireSidecarInclusionProven))
@@ -407,20 +407,20 @@ func TestSidecarKzgProofVerified(t *testing.T) {
 	// GenerateTestDenebBlockWithSidecar is supposed to generate valid commitments
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
-	passes := func(vb blocks.ROBlob) error {
-		require.Equal(t, true, bytes.Equal(b.KzgCommitment, vb.KzgCommitment))
+	passes := func(vb ...blocks.ROBlob) error {
+		require.Equal(t, true, bytes.Equal(b.KzgCommitment, vb[0].KzgCommitment))
 		return nil
 	}
-	v := &BlobVerifier{verifyBlobCommitment: passes, results: newResults(), blob: b}
+	v := &ROBlobVerifier{verifyBlobCommitment: passes, results: newResults(), blob: b}
 	require.NoError(t, v.SidecarKzgProofVerified())
 	require.Equal(t, true, v.results.executed(RequireSidecarKzgProofVerified))
 	require.NoError(t, v.results.result(RequireSidecarKzgProofVerified))
 
-	fails := func(vb blocks.ROBlob) error {
-		require.Equal(t, true, bytes.Equal(b.KzgCommitment, vb.KzgCommitment))
+	fails := func(vb ...blocks.ROBlob) error {
+		require.Equal(t, true, bytes.Equal(b.KzgCommitment, vb[0].KzgCommitment))
 		return errors.New("bad blob")
 	}
-	v = &BlobVerifier{verifyBlobCommitment: fails, results: newResults(), blob: b}
+	v = &ROBlobVerifier{results: newResults(), blob: b, verifyBlobCommitment: fails}
 	require.ErrorIs(t, v.SidecarKzgProofVerified(), ErrSidecarKzgProofInvalid)
 	require.Equal(t, true, v.results.executed(RequireSidecarKzgProofVerified))
 	require.NotNil(t, v.results.result(RequireSidecarKzgProofVerified))
@@ -432,21 +432,21 @@ func TestSidecarProposerExpected(t *testing.T) {
 	b := blobs[0]
 	t.Run("cached, matches", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex())}}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarProposerExpected(ctx))
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
 	})
 	t.Run("cached, does not match", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex() + 1)}}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarProposerExpected(ctx), ErrSidecarUnexpectedProposer)
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
 	})
 	t.Run("not cached, state lookup failure", func(t *testing.T) {
 		ini := Initializer{shared: &sharedResources{sr: sbrNotFound(t, b.ParentRoot()), pc: &mockProposerCache{ProposerCB: pcReturnsNotFound()}}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarProposerExpected(ctx), ErrSidecarUnexpectedProposer)
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
@@ -462,7 +462,7 @@ func TestSidecarProposerExpected(t *testing.T) {
 			},
 		}
 		ini := Initializer{shared: &sharedResources{sr: sbrForValOverride(b.ProposerIndex(), &ethpb.Validator{}), pc: pc}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarProposerExpected(ctx))
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NoError(t, v.results.result(RequireSidecarProposerExpected))
@@ -477,7 +477,7 @@ func TestSidecarProposerExpected(t *testing.T) {
 			},
 		}
 		ini := Initializer{shared: &sharedResources{sr: sbrForValOverride(b.ProposerIndex(), &ethpb.Validator{}), pc: pc}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarProposerExpected(ctx), ErrSidecarUnexpectedProposer)
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
@@ -492,7 +492,7 @@ func TestSidecarProposerExpected(t *testing.T) {
 			},
 		}
 		ini := Initializer{shared: &sharedResources{sr: sbrForValOverride(b.ProposerIndex(), &ethpb.Validator{}), pc: pc}}
-		v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.ErrorIs(t, v.SidecarProposerExpected(ctx), ErrSidecarUnexpectedProposer)
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
 		require.NotNil(t, v.results.result(RequireSidecarProposerExpected))
@@ -503,7 +503,7 @@ func TestRequirementSatisfaction(t *testing.T) {
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
 	ini := Initializer{}
-	v := ini.NewBlobVerifier(b, GossipSidecarRequirements...)
+	v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 
 	_, err := v.VerifiedROBlob()
 	require.ErrorIs(t, err, ErrBlobInvalid)

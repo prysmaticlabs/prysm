@@ -16,7 +16,7 @@ import (
 
 const (
 	RequireBlobIndexInBounds Requirement = iota
-	RequireSlotNotTooEarly
+	RequireNotFromFutureSlot
 	RequireSlotAboveFinalized
 	RequireValidProposerSignature
 	RequireSidecarParentSeen
@@ -32,7 +32,7 @@ const (
 // must satisfy in order to upgrade an ROBlob to a VerifiedROBlob.
 var GossipSidecarRequirements = []Requirement{
 	RequireBlobIndexInBounds,
-	RequireSlotNotTooEarly,
+	RequireNotFromFutureSlot,
 	RequireSlotAboveFinalized,
 	RequireValidProposerSignature,
 	RequireSidecarParentSeen,
@@ -44,12 +44,30 @@ var GossipSidecarRequirements = []Requirement{
 	RequireSidecarProposerExpected,
 }
 
+// InitsyncSidecarRequirements is the list of verification requirements to be used by the init-sync service
+// for batch-mode syncing. Because we only perform batch verification as part of the IsDataAvailable method
+// for blobs after the block has been verified, and the blobs to be verified are keyed in the cache by the
+// block root, it is safe to skip the following verifications.
+// RequireSidecarProposerExpected
+// RequireNotFromFutureSlot,
+// RequireSlotAboveFinalized,
+// RequireSidecarParentSeen,
+// RequireSidecarParentValid,
+// RequireSidecarParentSlotLower,
+// RequireSidecarDescendsFromFinalized,
+var InitsyncSidecarRequirements = []Requirement{
+	RequireValidProposerSignature,
+	RequireSidecarKzgProofVerified,
+	RequireBlobIndexInBounds,
+	RequireSidecarInclusionProven,
+}
+
 var (
 	ErrBlobInvalid = errors.New("blob failed verification")
 	// ErrBlobIndexInvalid means RequireBlobIndexInBounds failed.
 	ErrBlobIndexInvalid = errors.Wrap(ErrBlobInvalid, "incorrect blob sidecar index")
-	// ErrSlotTooEarly means RequireSlotNotTooEarly failed.
-	ErrSlotTooEarly = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
+	// ErrFromFutureSlot means RequireSlotNotTooEarly failed.
+	ErrFromFutureSlot = errors.Wrap(ErrBlobInvalid, "slot is too far in the future")
 	// ErrSlotNotAfterFinalized means RequireSlotAboveFinalized failed.
 	ErrSlotNotAfterFinalized = errors.Wrap(ErrBlobInvalid, "slot <= finalized checkpoint")
 	// ErrInvalidProposerSignature means RequireValidProposerSignature failed.
@@ -70,7 +88,7 @@ var (
 	ErrSidecarUnexpectedProposer = errors.Wrap(ErrBlobInvalid, "sidecar was not proposed by the expected proposer_index")
 )
 
-type BlobVerifier struct {
+type ROBlobVerifier struct {
 	*sharedResources
 	results              *results
 	blob                 blocks.ROBlob
@@ -78,19 +96,31 @@ type BlobVerifier struct {
 	verifyBlobCommitment roblobCommitmentVerifier
 }
 
-type roblobCommitmentVerifier func(blocks.ROBlob) error
+type roblobCommitmentVerifier func(...blocks.ROBlob) error
+
+var _ BlobVerifier = &ROBlobVerifier{}
 
 // VerifiedROBlob "upgrades" the wrapped ROBlob to a VerifiedROBlob.
 // If any of the verifications ran against the blob failed, or some required verifications
 // were not run, an error will be returned.
-func (bv *BlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
+func (bv *ROBlobVerifier) VerifiedROBlob() (blocks.VerifiedROBlob, error) {
 	if bv.results.allSatisfied() {
 		return blocks.NewVerifiedROBlob(bv.blob), nil
 	}
 	return blocks.VerifiedROBlob{}, bv.results.errors(ErrBlobInvalid)
 }
 
-func (bv *BlobVerifier) recordResult(req Requirement, err *error) {
+// SatisfyRequirement allows the caller to assert that a requirement has been satisfied.
+// This gives us a way to tick the box for a requirement where the usual method would be impractical.
+// For example, when batch syncing, forkchoice is only updated at the end of the batch. So the checks that use
+// forkchoice, like descends from finalized or parent seen, would necessarily fail. Allowing the caller to
+// assert the requirement has been satisfied ensures we have an easy way to audit which piece of code is satisfying
+// a requireent outside of this package.
+func (bv *ROBlobVerifier) SatisfyRequirement(req Requirement) {
+	bv.recordResult(req, nil)
+}
+
+func (bv *ROBlobVerifier) recordResult(req Requirement, err *error) {
 	if err == nil || *err == nil {
 		bv.results.record(req, nil)
 		return
@@ -100,7 +130,7 @@ func (bv *BlobVerifier) recordResult(req Requirement, err *error) {
 
 // BlobIndexInBounds represents the follow spec verification:
 // [REJECT] The sidecar's index is consistent with MAX_BLOBS_PER_BLOCK -- i.e. blob_sidecar.index < MAX_BLOBS_PER_BLOCK.
-func (bv *BlobVerifier) BlobIndexInBounds() (err error) {
+func (bv *ROBlobVerifier) BlobIndexInBounds() (err error) {
 	defer bv.recordResult(RequireBlobIndexInBounds, &err)
 	if bv.blob.Index >= fieldparams.MaxBlobsPerBlock {
 		log.WithFields(logging.BlobFields(bv.blob)).Debug("Sidecar index >= MAX_BLOBS_PER_BLOCK")
@@ -109,19 +139,20 @@ func (bv *BlobVerifier) BlobIndexInBounds() (err error) {
 	return nil
 }
 
-// SlotNotTooEarly represents the spec verification:
+// NotFromFutureSlot represents the spec verification:
 // [IGNORE] The sidecar is not from a future slot (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
 // -- i.e. validate that block_header.slot <= current_slot
-func (bv *BlobVerifier) SlotNotTooEarly() (err error) {
-	defer bv.recordResult(RequireSlotNotTooEarly, &err)
+func (bv *ROBlobVerifier) NotFromFutureSlot() (err error) {
+	defer bv.recordResult(RequireNotFromFutureSlot, &err)
 	if bv.clock.CurrentSlot() == bv.blob.Slot() {
 		return nil
 	}
-	// Subtract the max clock disparity from the start slot time.
-	validAfter := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
-	// If the difference between now and gt is greater than maximum clock disparity, the block is too far in the future.
-	if bv.clock.Now().Before(validAfter) {
-		return ErrSlotTooEarly
+	// earliestStart represents the time the slot starts, lowered by MAXIMUM_GOSSIP_CLOCK_DISPARITY.
+	// We lower the time by MAXIMUM_GOSSIP_CLOCK_DISPARITY in case system time is running slightly behind real time.
+	earliestStart := bv.clock.SlotStart(bv.blob.Slot()).Add(-1 * params.BeaconConfig().MaximumGossipClockDisparityDuration())
+	// If the system time is still before earliestStart, we consider the blob from a future slot and return an error.
+	if bv.clock.Now().Before(earliestStart) {
+		return ErrFromFutureSlot
 	}
 	return nil
 }
@@ -129,7 +160,7 @@ func (bv *BlobVerifier) SlotNotTooEarly() (err error) {
 // SlotAboveFinalized represents the spec verification:
 // [IGNORE] The sidecar is from a slot greater than the latest finalized slot
 // -- i.e. validate that block_header.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-func (bv *BlobVerifier) SlotAboveFinalized() (err error) {
+func (bv *ROBlobVerifier) SlotAboveFinalized() (err error) {
 	defer bv.recordResult(RequireSlotAboveFinalized, &err)
 	fcp := bv.fc.FinalizedCheckpoint()
 	fSlot, err := slots.EpochStart(fcp.Epoch)
@@ -145,7 +176,7 @@ func (bv *BlobVerifier) SlotAboveFinalized() (err error) {
 // ValidProposerSignature represents the spec verification:
 // [REJECT] The proposer signature of blob_sidecar.signed_block_header,
 // is valid with respect to the block_header.proposer_index pubkey.
-func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) {
+func (bv *ROBlobVerifier) ValidProposerSignature(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireValidProposerSignature, &err)
 	sd := blobToSignatureData(bv.blob)
 	// First check if there is a cached verification that can be reused.
@@ -175,12 +206,12 @@ func (bv *BlobVerifier) ValidProposerSignature(ctx context.Context) (err error) 
 // SidecarParentSeen represents the spec verification:
 // [IGNORE] The sidecar's block's parent (defined by block_header.parent_root) has been seen
 // (via both gossip and non-gossip sources) (a client MAY queue sidecars for processing once the parent block is retrieved).
-func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err error) {
+func (bv *ROBlobVerifier) SidecarParentSeen(parentSeen func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentSeen, &err)
-	if bv.fc.HasNode(bv.blob.ParentRoot()) {
+	if parentSeen != nil && parentSeen(bv.blob.ParentRoot()) {
 		return nil
 	}
-	if badParent != nil && badParent(bv.blob.ParentRoot()) {
+	if bv.fc.HasNode(bv.blob.ParentRoot()) {
 		return nil
 	}
 	return ErrSidecarParentNotSeen
@@ -188,7 +219,7 @@ func (bv *BlobVerifier) SidecarParentSeen(badParent func([32]byte) bool) (err er
 
 // SidecarParentValid represents the spec verification:
 // [REJECT] The sidecar's block's parent (defined by block_header.parent_root) passes validation.
-func (bv *BlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err error) {
+func (bv *ROBlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err error) {
 	defer bv.recordResult(RequireSidecarParentValid, &err)
 	if badParent != nil && badParent(bv.blob.ParentRoot()) {
 		return ErrSidecarParentInvalid
@@ -198,7 +229,7 @@ func (bv *BlobVerifier) SidecarParentValid(badParent func([32]byte) bool) (err e
 
 // SidecarParentSlotLower represents the spec verification:
 // [REJECT] The sidecar is from a higher slot than the sidecar's block's parent (defined by block_header.parent_root).
-func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
+func (bv *ROBlobVerifier) SidecarParentSlotLower() (err error) {
 	defer bv.recordResult(RequireSidecarParentSlotLower, &err)
 	parentSlot, err := bv.fc.Slot(bv.blob.ParentRoot())
 	if err != nil {
@@ -213,7 +244,7 @@ func (bv *BlobVerifier) SidecarParentSlotLower() (err error) {
 // SidecarDescendsFromFinalized represents the spec verification:
 // [REJECT] The current finalized_checkpoint is an ancestor of the sidecar's block
 // -- i.e. get_checkpoint_block(store, block_header.parent_root, store.finalized_checkpoint.epoch) == store.finalized_checkpoint.root.
-func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
+func (bv *ROBlobVerifier) SidecarDescendsFromFinalized() (err error) {
 	defer bv.recordResult(RequireSidecarDescendsFromFinalized, &err)
 	if !bv.fc.IsCanonical(bv.blob.ParentRoot()) {
 		return ErrSidecarNotFinalizedDescendent
@@ -223,7 +254,7 @@ func (bv *BlobVerifier) SidecarDescendsFromFinalized() (err error) {
 
 // SidecarInclusionProven represents the spec verification:
 // [REJECT] The sidecar's inclusion proof is valid as verified by verify_blob_sidecar_inclusion_proof(blob_sidecar).
-func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
+func (bv *ROBlobVerifier) SidecarInclusionProven() (err error) {
 	defer bv.recordResult(RequireSidecarInclusionProven, &err)
 	if err = blocks.VerifyKZGInclusionProof(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("sidecar inclusion proof verification failed")
@@ -235,7 +266,7 @@ func (bv *BlobVerifier) SidecarInclusionProven() (err error) {
 // SidecarKzgProofVerified represents the spec verification:
 // [REJECT] The sidecar's blob is valid as verified by
 // verify_blob_kzg_proof(blob_sidecar.blob, blob_sidecar.kzg_commitment, blob_sidecar.kzg_proof).
-func (bv *BlobVerifier) SidecarKzgProofVerified() (err error) {
+func (bv *ROBlobVerifier) SidecarKzgProofVerified() (err error) {
 	defer bv.recordResult(RequireSidecarKzgProofVerified, &err)
 	if err = bv.verifyBlobCommitment(bv.blob); err != nil {
 		log.WithError(err).WithFields(logging.BlobFields(bv.blob)).Debug("kzg commitment proof verification failed")
@@ -249,7 +280,7 @@ func (bv *BlobVerifier) SidecarKzgProofVerified() (err error) {
 // in the context of the current shuffling (defined by block_header.parent_root/block_header.slot).
 // If the proposer_index cannot immediately be verified against the expected shuffling, the sidecar MAY be queued
 // for later processing while proposers for the block's branch are calculated -- in such a case do not REJECT, instead IGNORE this message.
-func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
+func (bv *ROBlobVerifier) SidecarProposerExpected(ctx context.Context) (err error) {
 	defer bv.recordResult(RequireSidecarProposerExpected, &err)
 	idx, cached := bv.pc.Proposer(bv.blob.ParentRoot(), bv.blob.Slot())
 	if !cached {
@@ -273,7 +304,7 @@ func (bv *BlobVerifier) SidecarProposerExpected(ctx context.Context) (err error)
 	return nil
 }
 
-func (bv *BlobVerifier) parentState(ctx context.Context) (state.BeaconState, error) {
+func (bv *ROBlobVerifier) parentState(ctx context.Context) (state.BeaconState, error) {
 	if bv.parent != nil {
 		return bv.parent, nil
 	}

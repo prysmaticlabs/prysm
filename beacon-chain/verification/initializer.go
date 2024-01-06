@@ -45,12 +45,12 @@ type Initializer struct {
 }
 
 // NewBlobVerifier creates a BlobVerifier for a single blob, with the given set of requirements.
-func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs ...Requirement) *BlobVerifier {
-	return &BlobVerifier{
+func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs []Requirement) *ROBlobVerifier {
+	return &ROBlobVerifier{
 		sharedResources:      ini.shared,
 		blob:                 b,
 		results:              newResults(reqs...),
-		verifyBlobCommitment: kzg.VerifyROBlobCommitment,
+		verifyBlobCommitment: kzg.Verify,
 	}
 }
 
