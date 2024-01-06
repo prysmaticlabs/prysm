@@ -229,7 +229,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
-	beacon.verifyInitWaiter = verification.NewInitializerWaiter(beacon.clockWaiter, beacon.forkChoicer, beacon.stateGen)
+	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
+		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
 	if err := beacon.BlobStorage.Initialize(); err != nil {
 		return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
 	}
