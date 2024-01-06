@@ -10,7 +10,6 @@ go_library(
         "metrics.go",
         "multiple_endpoints_grpc_resolver.go",
         "propose.go",
-        "propose_protect.go",
         "registration.go",
         "runner.go",
         "service.go",
