@@ -10,6 +10,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
@@ -68,6 +69,17 @@ func (db *ValidatorDBMock) SaveProposalHistoryForSlot(ctx context.Context, pubKe
 	panic("not implemented")
 }
 func (db *ValidatorDBMock) ProposedPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
+	panic("not implemented")
+}
+
+func (db *ValidatorDBMock) SlashableProposalCheck(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [fieldparams.RootLength]byte,
+	emitAccountMetrics bool,
+	validatorProposeFailVec *prometheus.CounterVec,
+) error {
 	panic("not implemented")
 }
 

@@ -429,3 +429,15 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 
 	return []byte{}, nil
 }
+
+func blockLogFields(pubKey [fieldparams.BLSPubkeyLength]byte, blk interfaces.ReadOnlyBeaconBlock, sig []byte) logrus.Fields {
+	fields := logrus.Fields{
+		"proposerPublicKey": fmt.Sprintf("%#x", pubKey),
+		"proposerIndex":     blk.ProposerIndex(),
+		"blockSlot":         blk.Slot(),
+	}
+	if sig != nil {
+		fields["signature"] = fmt.Sprintf("%#x", sig)
+	}
+	return fields
+}

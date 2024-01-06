@@ -5,6 +5,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 )
 
+const FailedBlockSignLocalErr = "block rejected by local protection"
+
 // Proposal representation for a validator public key.
 type Proposal struct {
 	Slot        primitives.Slot `json:"slot"`

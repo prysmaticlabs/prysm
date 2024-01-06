@@ -17,6 +17,7 @@ go_library(
     deps = [
         "//config/fieldparams:go_default_library",
         "//config/proposer:go_default_library",
+        "//consensus-types/interfaces:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//io/file:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
@@ -49,7 +50,9 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//config/fieldparams:go_default_library",
+        "//config/params:go_default_library",
         "//config/proposer:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//crypto/bls:go_default_library",
         "//io/file:go_default_library",
@@ -57,6 +60,7 @@ go_test(
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
         "//testing/assert:go_default_library",
         "//testing/require:go_default_library",
+        "//testing/util:go_default_library",
         "//validator/db/common:go_default_library",
         "//validator/slashing-protection-history/format:go_default_library",
         "//validator/testing:go_default_library",

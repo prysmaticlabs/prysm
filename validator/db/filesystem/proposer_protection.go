@@ -2,9 +2,12 @@ package filesystem
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
@@ -115,4 +118,28 @@ func (s *Store) SaveProposalHistoryForSlot(
 // this function do not necessarily have proposed a block.
 func (s *Store) ProposedPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
 	return s.publicKeys()
+}
+
+// SlashableProposalCheck checks if a block proposal is slashable by comparing it with the
+// block proposals history for the given public key in our minimal slashing protection database defined by EIP-3076.
+// If it is not, it update the database.
+func (s *Store) SlashableProposalCheck(
+	ctx context.Context,
+	pubKey [fieldparams.BLSPubkeyLength]byte,
+	signedBlock interfaces.ReadOnlySignedBeaconBlock,
+	signingRoot [32]byte,
+	emitAccountMetrics bool,
+	validatorProposeFailVec *prometheus.CounterVec,
+) error {
+	// Check if the proposal is potentially slashable regarding EIP-3076 minimal conditions.
+	// If not, save the new proposal into the database.
+	if err := s.SaveProposalHistoryForSlot(ctx, pubKey, signedBlock.Block().Slot(), signingRoot[:]); err != nil {
+		if strings.Contains(err.Error(), "could not sign proposal") {
+			return errors.Wrapf(err, common.FailedBlockSignLocalErr)
+		}
+
+		return errors.Wrap(err, "failed to save updated proposal history")
+	}
+
+	return nil
 }

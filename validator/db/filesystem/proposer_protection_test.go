@@ -5,8 +5,12 @@ import (
 	"testing"
 
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
+	"github.com/prysmaticlabs/prysm/v5/testing/util"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 )
 
@@ -176,4 +180,162 @@ func TestStore_ProposedPublicKeys(t *testing.T) {
 	}
 
 	require.DeepEqual(t, expectedSet, actualSet)
+}
+
+func Test_slashableProposalCheck_PreventsLowerThanMinProposal(t *testing.T) {
+	ctx := context.Background()
+
+	// We get a database path
+	databasePath := t.TempDir()
+
+	// We create some pubkeys
+	pubkeys := getPubKeys(t, 1)
+	pubkey := pubkeys[0]
+
+	// We create a new store
+	s, err := NewStore(databasePath, &Config{PubKeys: pubkeys})
+	require.NoError(t, err, "NewStore should not return an error")
+
+	lowestSignedSlot := primitives.Slot(10)
+
+	// We save a proposal at the lowest signed slot in the DB.
+	err = s.SaveProposalHistoryForSlot(ctx, pubkey, lowestSignedSlot, []byte{1})
+	require.NoError(t, err)
+
+	// We expect the same block with a slot lower than the lowest
+	// signed slot to fail validation.
+	blk := &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:          lowestSignedSlot - 1,
+			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
+		},
+		Signature: params.BeaconConfig().EmptySignature[:],
+	}
+	wsb, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SlashableProposalCheck(context.Background(), pubkey, wsb, [32]byte{4}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// We expect the same block with a slot equal to the lowest
+	// signed slot to pass validation if signing roots are equal.
+	blk = &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:          lowestSignedSlot,
+			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
+		},
+		Signature: params.BeaconConfig().EmptySignature[:],
+	}
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SlashableProposalCheck(context.Background(), pubkey, wsb, [32]byte{1}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// We expect the same block with a slot equal to the lowest
+	// signed slot to fail validation if signing roots are different.
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SlashableProposalCheck(context.Background(), pubkey, wsb, [32]byte{4}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// We expect the same block with a slot > than the lowest
+	// signed slot to pass validation.
+	blk = &ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:          lowestSignedSlot + 1,
+			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
+		},
+		Signature: params.BeaconConfig().EmptySignature[:],
+	}
+
+	wsb, err = blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SlashableProposalCheck(context.Background(), pubkey, wsb, [32]byte{3}, false, nil)
+	require.NoError(t, err)
+}
+
+func Test_slashableProposalCheck(t *testing.T) {
+	ctx := context.Background()
+
+	// We get a database path
+	databasePath := t.TempDir()
+
+	// We create some pubkeys
+	pubkeys := getPubKeys(t, 1)
+	pubkey := pubkeys[0]
+
+	// We create a new store
+	s, err := NewStore(databasePath, &Config{PubKeys: pubkeys})
+	require.NoError(t, err, "NewStore should not return an error")
+
+	blk := util.HydrateSignedBeaconBlock(&ethpb.SignedBeaconBlock{
+		Block: &ethpb.BeaconBlock{
+			Slot:          10,
+			ProposerIndex: 0,
+			Body:          &ethpb.BeaconBlockBody{},
+		},
+		Signature: params.BeaconConfig().EmptySignature[:],
+	})
+
+	// We save a proposal at slot 1 as our lowest proposal.
+	err = s.SaveProposalHistoryForSlot(ctx, pubkey, 1, []byte{1})
+	require.NoError(t, err)
+
+	// We save a proposal at slot 10 with a dummy signing root.
+	dummySigningRoot := [32]byte{1}
+	err = s.SaveProposalHistoryForSlot(ctx, pubkey, 10, dummySigningRoot[:])
+	require.NoError(t, err)
+	sBlock, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	// We expect the same block sent out should be slasahble.
+	err = s.SlashableProposalCheck(context.Background(), pubkey, sBlock, dummySigningRoot, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// We expect the same block sent out with a different signing root should be slashable.
+	err = s.SlashableProposalCheck(context.Background(), pubkey, sBlock, [32]byte{2}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// We save a proposal at slot 11 with a nil signing root.
+	blk.Block.Slot = 11
+	sBlock, err = blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SaveProposalHistoryForSlot(ctx, pubkey, blk.Block.Slot, nil)
+	require.NoError(t, err)
+
+	// We expect the same block sent out should return slashable error even
+	// if we had a nil signing root stored in the database.
+	err = s.SlashableProposalCheck(context.Background(), pubkey, sBlock, [32]byte{2}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+
+	// A block with a different slot for which we do not have a proposing history
+	// should not be failing validation.
+	blk.Block.Slot = 9
+	sBlock, err = blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+	err = s.SlashableProposalCheck(context.Background(), pubkey, sBlock, [32]byte{3}, false, nil)
+	require.ErrorContains(t, common.FailedBlockSignLocalErr, err)
+}
+
+func Test_slashableProposalCheck_RemoteProtection(t *testing.T) {
+	// We get a database path
+	databasePath := t.TempDir()
+
+	// We create some pubkeys
+	pubkeys := getPubKeys(t, 1)
+	pubkey := pubkeys[0]
+
+	// We create a new store
+	s, err := NewStore(databasePath, &Config{PubKeys: pubkeys})
+	require.NoError(t, err, "NewStore should not return an error")
+
+	blk := util.NewBeaconBlock()
+	blk.Block.Slot = 10
+	sBlock, err := blocks.NewSignedBeaconBlock(blk)
+	require.NoError(t, err)
+
+	err = s.SlashableProposalCheck(context.Background(), pubkey, sBlock, [32]byte{2}, false, nil)
+	require.NoError(t, err, "Expected allowed block not to throw error")
 }
