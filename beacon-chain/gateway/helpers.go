@@ -2,7 +2,6 @@ package gateway
 
 import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	ethpbalpha "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -41,7 +40,7 @@ func DefaultConfig(enableDebugRPCEndpoints bool, httpModules string) MuxConfig {
 				},
 			}),
 			gwruntime.WithMarshalerOption(
-				api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{},
+				"text/event-stream", &gwruntime.EventSourceJSONPb{},
 			),
 		)
 		v1AlphaPbHandler = &gateway.PbMux{

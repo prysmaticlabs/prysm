@@ -11,7 +11,6 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/io/logs/mock"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -93,7 +92,7 @@ func TestStreamBeaconLogs(t *testing.T) {
 	}
 	ct, ok := resp.Header["Content-Type"]
 	require.Equal(t, ok, true)
-	require.Equal(t, ct[0], api.EventStreamMediaType)
+	require.Equal(t, ct[0], "text/event-stream")
 	cn, ok := resp.Header["Connection"]
 	require.Equal(t, ok, true)
 	require.Equal(t, cn[0], "keep-alive")
@@ -144,7 +143,7 @@ func TestStreamValidatorLogs(t *testing.T) {
 	}
 	ct, ok := resp.Header["Content-Type"]
 	require.Equal(t, ok, true)
-	require.Equal(t, ct[0], api.EventStreamMediaType)
+	require.Equal(t, ct[0], "text/event-stream")
 	cn, ok := resp.Header["Connection"]
 	require.Equal(t, ok, true)
 	require.Equal(t, cn[0], "keep-alive")
