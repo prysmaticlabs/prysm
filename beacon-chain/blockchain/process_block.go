@@ -654,6 +654,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
 	// return early if we are not proposing next slot
 	if fcuArgs.attributes.IsEmpty() {
+		s.cfg.ForkChoiceStore.RUnlock()
 		return
 	}
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
