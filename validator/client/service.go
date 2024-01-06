@@ -2,7 +2,6 @@ package client
 
 import (
 	"context"
-	"net/http"
 	"strings"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
-	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
@@ -191,16 +189,7 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
-	evErrCh := make(chan error)
-	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, opts...)
-	go func() {
-		e := <-evErrCh
-		log.WithError(e).Error("Event streaming failed")
-		v.cancel()
-	}()
-
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
 	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
 	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
 

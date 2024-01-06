@@ -64,7 +64,6 @@ type Validator interface {
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
-	StartEventStream(ctx context.Context) error
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

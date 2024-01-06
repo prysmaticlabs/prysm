@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -28,8 +26,8 @@ type streamSlotsClient struct {
 	ctx                context.Context
 	beaconApiClient    beaconApiValidatorClient
 	streamSlotsRequest *ethpb.StreamSlotsRequest
+	prevBlockSlot      primitives.Slot
 	pingDelay          time.Duration
-	ch                 chan event
 }
 
 type streamBlocksAltairClient struct {
@@ -48,14 +46,11 @@ type headSignedBeaconBlockResult struct {
 }
 
 func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
-	ch := make(chan event, 1)
-	c.eventHandler.subscribe(eventSub{name: "stream slots", ch: ch})
 	return &streamSlotsClient{
 		ctx:                ctx,
 		beaconApiClient:    c,
 		streamSlotsRequest: in,
 		pingDelay:          pingDelay,
-		ch:                 ch,
 	}
 }
 
@@ -69,27 +64,28 @@ func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.St
 }
 
 func (c *streamSlotsClient) Recv() (*ethpb.StreamSlotsResponse, error) {
-	for {
+	result, err := c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get latest signed block")
+	}
+
+	// We keep querying the beacon chain for the latest block until we receive a new slot
+	for (c.streamSlotsRequest.VerifiedOnly && result.executionOptimistic) || c.prevBlockSlot == result.slot {
 		select {
-		case rawEvent := <-c.ch:
-			if rawEvent.eventType != events.HeadTopic {
-				continue
-			}
-			e := &events.HeadEvent{}
-			if err := json.Unmarshal([]byte(rawEvent.data), e); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal head event into JSON")
-			}
-			uintSlot, err := strconv.ParseUint(e.Slot, 10, 64)
+		case <-time.After(c.pingDelay):
+			result, err = c.beaconApiClient.getHeadSignedBeaconBlock(c.ctx)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse slot")
+				return nil, errors.Wrap(err, "failed to get latest signed block")
 			}
-			return &ethpb.StreamSlotsResponse{
-				Slot: primitives.Slot(uintSlot),
-			}, nil
 		case <-c.ctx.Done():
 			return nil, errors.New("context canceled")
 		}
 	}
+
+	c.prevBlockSlot = result.slot
+	return &ethpb.StreamSlotsResponse{
+		Slot: result.slot,
+	}, nil
 }
 
 func (c *streamBlocksAltairClient) Recv() (*ethpb.StreamBlocksResponse, error) {

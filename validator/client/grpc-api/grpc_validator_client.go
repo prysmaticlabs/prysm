@@ -141,8 +141,3 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
 }
-
-// StartEventStream doesn't do anything in gRPC client
-func (c *grpcValidatorClient) StartEventStream(context.Context) error {
-	return nil
-}

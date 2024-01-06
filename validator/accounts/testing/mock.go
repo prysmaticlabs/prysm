@@ -212,7 +212,3 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 	m.proposerSettings = settings
 	return nil
 }
-
-func (_ *Validator) StartEventStream(_ context.Context) error {
-	panic("implement me")
-}
