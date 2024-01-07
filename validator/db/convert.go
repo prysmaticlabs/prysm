@@ -14,32 +14,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 )
 
-// IsCompleteDatabaseExisting checks if a complete database exists in the given data directory.
-func IsCompleteDatabaseExisting(dataDir string) (bool, error) {
-	// Construct the path to the complete database.
-	completeDatabasePath := filepath.Join(dataDir, kv.ProtectionDbFileName)
-
-	exists, err := file.Exists(completeDatabasePath, file.Regular)
-	if err != nil {
-		return false, errors.Wrapf(err, "could not check if file %s exists", completeDatabasePath)
-	}
-
-	return exists, nil
-}
-
-// IsMinimalDatabaseExisting checks if a minimal database exists in the given data directory.
-func IsMinimalDatabaseExisting(dataDir string) (bool, error) {
-	// Construct the path to the minimal database configuration file.
-	minimalDatabaseDirPath := filepath.Join(dataDir, filesystem.DatabaseDirName)
-
-	exists, err := file.Exists(minimalDatabaseDirPath, file.Directory)
-	if err != nil {
-		return false, errors.Wrapf(err, "could not check if directory %s exists", minimalDatabaseDirPath)
-	}
-
-	return exists, nil
-}
-
 // ConvertDatabase converts a minimal database to a complete database or a complete database to a minimal database.
 // Delete the source database after conversion.
 func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir string, minimalToComplete bool) error {
@@ -50,10 +24,13 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 	)
 
 	if minimalToComplete {
-		sourceDatabaseExists, err = IsMinimalDatabaseExisting(sourceDataDir)
+		sourceDataBasePath := filepath.Join(sourceDataDir, filesystem.DatabaseDirName)
+		sourceDatabaseExists, err = file.Exists(sourceDataBasePath, file.Directory)
 	} else {
-		sourceDatabaseExists, err = IsCompleteDatabaseExisting(sourceDataDir)
+		sourceDataBasePath := filepath.Join(sourceDataDir, kv.ProtectionDbFileName)
+		sourceDatabaseExists, err = file.Exists(sourceDataBasePath, file.Regular)
 	}
+
 	if err != nil {
 		return errors.Wrap(err, "could not check if source database exists")
 	}

@@ -3,12 +3,14 @@ package db
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/proposer"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
@@ -32,60 +34,6 @@ func getFeeRecipientFromString(t *testing.T, feeRecipientString string) [fieldpa
 	require.NoError(t, err, "hexutil.Decode should not return an error")
 	copy(feeRecipient[:], feeRecipientBytes)
 	return feeRecipient
-}
-
-func TestDB_IsCompleteDatabaseExisting(t *testing.T) {
-	ctx := context.Background()
-
-	// Create a directory path.
-	datadir := t.TempDir()
-
-	// Check if the complete database exists.
-	completeDatabaseExists, err := IsCompleteDatabaseExisting(datadir)
-	require.NoError(t, err, "could not check if complete database exists")
-	require.Equal(t, false, completeDatabaseExists, "complete database should not exist")
-
-	// Create the complete database.
-	completeStore, err := kv.NewKVStore(ctx, datadir, nil)
-	require.NoError(t, err, "could not create complete database")
-
-	// Check if the complete database exists.
-	completeDatabaseExists, err = IsCompleteDatabaseExisting(datadir)
-	require.NoError(t, err, "could not check if complete database exists")
-	require.Equal(t, true, completeDatabaseExists, "complete database should not exist")
-
-	// Close the complete database.
-	err = completeStore.Close()
-	require.NoError(t, err, "could not close complete database")
-}
-
-func TestDB_IsMinimalDatabaseExisting(t *testing.T) {
-	ctx := context.Background()
-
-	// Create a directory path.
-	datadir := t.TempDir()
-
-	// Check if the minimal database exists.
-	minimalDatabaseExists, err := IsMinimalDatabaseExisting(datadir)
-	require.NoError(t, err, "could not check if minimal database exists")
-	require.Equal(t, false, minimalDatabaseExists, "minimal database should not exist")
-
-	// Create the minimal database.
-	minimalStore, err := filesystem.NewStore(datadir, nil)
-	require.NoError(t, err, "could not create minimal database")
-
-	// Save the genesis validator root.
-	err = minimalStore.SaveGenesisValidatorsRoot(ctx, []byte("genesis-validator-root"))
-	require.NoError(t, err, "could not save genesis validator root")
-
-	// Check if the minimal database exists.
-	minimalDatabaseExists, err = IsMinimalDatabaseExisting(datadir)
-	require.NoError(t, err, "could not check if minimal database exists")
-	require.Equal(t, true, minimalDatabaseExists, "minimal database should not exist")
-
-	// Close the complete database.
-	err = minimalStore.Close()
-	require.NoError(t, err, "could not close minimal database")
 }
 
 func TestDB_ConvertDatabase(t *testing.T) {
@@ -303,9 +251,11 @@ func TestDB_ConvertDatabase(t *testing.T) {
 			var existing bool
 
 			if minimalToComplete {
-				existing, err = IsMinimalDatabaseExisting(datadir)
+				databasePath := filepath.Join(datadir, filesystem.DatabaseDirName)
+				existing, err = file.Exists(databasePath, file.Directory)
 			} else {
-				existing, err = IsCompleteDatabaseExisting(datadir)
+				databasePath := filepath.Join(datadir, kv.ProtectionDbFileName)
+				existing, err = file.Exists(databasePath, file.Regular)
 			}
 
 			require.NoError(t, err, "could not check if source database exists")

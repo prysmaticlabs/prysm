@@ -393,13 +393,15 @@ func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
 	}
 
 	// Check if a minimal database exists.
-	minimalDatabaseExists, err := db.IsMinimalDatabaseExisting(fileSystemDataDir)
+	minimalDatabasePath := path.Join(fileSystemDataDir, filesystem.DatabaseDirName)
+	minimalDatabaseExists, err := file.Exists(minimalDatabasePath, file.Directory)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if minimal slashing protection database exists")
 	}
 
 	// Check if a complete database exists.
-	completeDatabaseExists, err := db.IsCompleteDatabaseExisting(kvDataDir)
+	completeDatabasePath := path.Join(kvDataDir, kv.ProtectionDbFileName)
+	completeDatabaseExists, err := file.Exists(completeDatabasePath, file.Regular)
 	if err != nil {
 		return errors.Wrapf(err, "could not check if complete slashing protection database exists")
 	}
