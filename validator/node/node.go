@@ -214,9 +214,14 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	dataDir string,
 	dataFile string,
 	walletDir string,
-) (string, string) {
-	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) || c.wallet == nil {
-		return dataDir, dataFile
+) (string, string, error) {
+	exists, err := file.Exists(dataFile, file.Regular)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "could not check if file exists: %s", dataFile)
+	}
+
+	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || exists || c.wallet == nil {
+		return dataDir, dataFile, nil
 	}
 
 	// We look in the previous, legacy directories.
@@ -228,7 +233,12 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 
 	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
 
-	if file.Exists(legacyDataFile) {
+	legacyDataFileExists, err := file.Exists(legacyDataFile, file.Regular)
+	if err != nil {
+		return "", "", errors.Wrapf(err, "could not check if file exists: %s", legacyDataFile)
+	}
+
+	if legacyDataFileExists {
 		log.Infof(`Database not found in the --datadir directory (%s)
 		but found in the --wallet-dir directory (%s),
 		which was the legacy default.
@@ -242,7 +252,7 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 		dataFile = legacyDataFile
 	}
 
-	return dataDir, dataFile
+	return dataDir, dataFile, nil
 }
 
 func (c *ValidatorClient) initializeFromCLI(cliCtx *cli.Context, router *mux.Router) error {
@@ -351,13 +361,17 @@ func (c *ValidatorClient) initializeDB(cliCtx *cli.Context) error {
 	forceClearFlag := cliCtx.Bool(cmd.ForceClearDB.Name)
 
 	// Workaround for https://github.com/prysmaticlabs/prysm/issues/13391
-	kvDataDir, _ = c.getLegacyDatabaseLocation(
+	kvDataDir, _, err := c.getLegacyDatabaseLocation(
 		isInteropNumValidatorsSet,
 		isWeb3SignerURLFlagSet,
 		kvDataDir,
 		kvDataFile,
 		walletDir,
 	)
+
+	if err != nil {
+		return errors.Wrap(err, "could not get legacy database location")
+	}
 
 	// Check if minimal slashing protection is requested.
 	isMinimalSlashingProtectionRequested := cliCtx.Bool(features.EnableMinimalSlashingProtection.Name)
@@ -728,7 +742,12 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 func setWalletPasswordFilePath(cliCtx *cli.Context) error {
 	walletDir := cliCtx.String(flags.WalletDirFlag.Name)
 	defaultWalletPasswordFilePath := filepath.Join(walletDir, wallet.DefaultWalletPasswordFile)
-	if file.Exists(defaultWalletPasswordFilePath) {
+	exists, err := file.Exists(defaultWalletPasswordFilePath, file.Regular)
+	if err != nil {
+		return errors.Wrap(err, "could not check if default wallet password file exists")
+	}
+
+	if exists {
 		// Ensure file has proper permissions.
 		hasPerms, err := file.HasReadWritePermissions(defaultWalletPasswordFilePath)
 		if err != nil {

@@ -179,13 +179,15 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			validatorClient := &ValidatorClient{wallet: tt.wallet}
-			actualDataDir, actualDataFile := validatorClient.getLegacyDatabaseLocation(
+			actualDataDir, actualDataFile, err := validatorClient.getLegacyDatabaseLocation(
 				tt.isInteropNumValidatorsSet,
 				tt.isWeb3SignerURLFlagSet,
 				tt.dataDir,
 				tt.dataFile,
 				tt.walletDir,
 			)
+
+			require.NoError(t, err, "Failed to get legacy database location")
 
 			assert.Equal(t, tt.expectedDataDir, actualDataDir, "data dir should be equal")
 			assert.Equal(t, tt.expectedDataFile, actualDataFile, "data file should be equal")
