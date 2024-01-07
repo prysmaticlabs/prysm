@@ -22,12 +22,11 @@ import (
 )
 
 const (
-	backupsDirectoryName = "backups"
-
-	slashingProtectionDirName = "slashing-protection"
+	backupsDirectoryName      = "backups"
 	configurationFileName     = "configuration.yaml"
+	slashingProtectionDirName = "slashing-protection"
 
-	DatabaseDirName = "validatorClientData"
+	DatabaseDirName = "validator-client-data"
 )
 
 type (
