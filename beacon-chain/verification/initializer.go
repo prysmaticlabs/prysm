@@ -20,6 +20,7 @@ type Forkchoicer interface {
 	HasNode([32]byte) bool
 	IsCanonical(root [32]byte) bool
 	Slot([32]byte) (primitives.Slot, error)
+	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 }
 
 // StateByRooter describes a stategen-ish type that can produce arbitrary states by their root
