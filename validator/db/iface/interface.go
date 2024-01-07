@@ -61,7 +61,7 @@ type ValidatorDB interface {
 		validatorAttestFailVec *prometheus.CounterVec,
 	) error
 	SaveAttestationForPubKey(
-		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot [32]byte, att *ethpb.IndexedAttestation,
+		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoot [fieldparams.RootLength]byte, att *ethpb.IndexedAttestation,
 	) error
 	SaveAttestationsForPubKey(
 		ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, signingRoots [][]byte, atts []*ethpb.IndexedAttestation,

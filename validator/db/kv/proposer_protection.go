@@ -202,7 +202,7 @@ func (s *Store) SlashableProposalCheck(
 	ctx context.Context,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
 	signedBlock interfaces.ReadOnlySignedBeaconBlock,
-	signingRoot [32]byte,
+	signingRoot [fieldparams.RootLength]byte,
 	emitAccountMetrics bool,
 	validatorProposeFailVec *prometheus.CounterVec,
 ) error {
