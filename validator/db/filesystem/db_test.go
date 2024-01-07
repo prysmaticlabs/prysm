@@ -67,8 +67,7 @@ func TestStore_ClearDB(t *testing.T) {
 	databaseParentPath := t.TempDir()
 
 	// Compute slashing protection directory and configuration file paths.
-	slashingProtectionDirPath := path.Join(databaseParentPath, DatabaseDirName, slashingProtectionDirName)
-	configurationFilePath := path.Join(databaseParentPath, DatabaseDirName, configurationFileName)
+	databasePath := path.Join(databaseParentPath, DatabaseDirName)
 
 	// Create some pubkeys.
 	pubkeys := getPubKeys(t, 5)
@@ -77,21 +76,19 @@ func TestStore_ClearDB(t *testing.T) {
 	s, err := NewStore(databaseParentPath, &Config{PubKeys: pubkeys})
 	require.NoError(t, err, "NewStore should not return an error")
 
-	// Check the presence of the slashing protection directory.
-	_, err = os.Stat(slashingProtectionDirPath)
-	require.NoError(t, err, "os.Stat should not return an error")
+	// Check the presence of the database directory.
+	exists, err := file.Exists(databasePath, file.Directory)
+	require.NoError(t, err, "file.Exists should not return an error")
+	require.Equal(t, true, exists, "file.Exists should return true")
 
 	// Clear the DB.
 	err = s.ClearDB()
 	require.NoError(t, err, "ClearDB should not return an error")
 
-	// Check the absence of the slashing protection directory.
-	_, err = os.Stat(slashingProtectionDirPath)
-	require.ErrorIs(t, err, os.ErrNotExist, "os.Stat should return os.ErrNotExist")
-
-	// Check the absence of the configuration file path.
-	_, err = os.Stat(configurationFilePath)
-	require.ErrorIs(t, err, os.ErrNotExist, "os.Stat should return os.ErrNotExist")
+	// Check the absence of the database directory.
+	exists, err = file.Exists(databasePath, file.Directory)
+	require.NoError(t, err, "file.Exists should not return an error")
+	require.Equal(t, false, exists, "file.Exists should return false")
 }
 
 func TestStore_Backup(t *testing.T) {
@@ -157,8 +154,9 @@ func TestStore_UpdatePublickKeysBuckets(t *testing.T) {
 		pubkeyHex := hexutil.Encode(pubkeys[i][:])
 		pubkeyFile := path.Join(databasePath, DatabaseDirName, slashingProtectionDirName, fmt.Sprintf("%s.yaml", pubkeyHex))
 
-		_, err := os.Stat(pubkeyFile)
-		require.NoError(t, err, "os.Stat should not return an error")
+		exists, err := file.Exists(pubkeyFile, file.Regular)
+		require.NoError(t, err, "file.Exists should not return an error")
+		require.Equal(t, true, exists, "file.Exists should return true")
 	}
 }
 

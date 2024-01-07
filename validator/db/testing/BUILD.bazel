@@ -22,6 +22,7 @@ go_test(
     srcs = ["setup_db_test.go"],
     embed = [":go_default_library"],
     deps = [
+        "//io/file:go_default_library",
         "//testing/require:go_default_library",
         "//validator/db/filesystem:go_default_library",
         "//validator/db/iface:go_default_library",

@@ -174,7 +174,12 @@ func (s *Store) UpdatePublicKeysBuckets(pubKeys [][fieldparams.BLSPubkeyLength]b
 		path := s.pubkeySlashingProtectionFilePath(pubKey)
 
 		// Check if the public key has a file in the database.
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
+		exists, err := file.Exists(path, file.Regular)
+		if err != nil {
+			return errors.Wrapf(err, "could not check if %s exists", path)
+		}
+
+		if exists {
 			continue
 		}
 
@@ -218,7 +223,12 @@ func (s *Store) configuration() (*Configuration, error) {
 	defer s.configurationMu.RUnlock()
 
 	// Check if config file exists.
-	if _, err := os.Stat(configFilePath); os.IsNotExist(err) {
+	exists, err := file.Exists(configFilePath, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if %s exists", cleanedConfigFilePath)
+	}
+
+	if !exists {
 		return nil, nil
 	}
 
@@ -296,7 +306,12 @@ func (s *Store) validatorSlashingProtection(publicKey [fieldparams.BLSPubkeyLeng
 	cleanedPath := filepath.Clean(path)
 
 	// Check if the public key has a file in the database.
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	exists, err := file.Exists(path, file.Regular)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if %s exists", cleanedPath)
+	}
+
+	if !exists {
 		return nil, nil
 	}
 
@@ -386,7 +401,12 @@ func (s *Store) publicKeys() ([][fieldparams.BLSPubkeyLength]byte, error) {
 	slashingProtectionDirPath := s.slashingProtectionDirPath()
 
 	// If the slashing protection directory does not exist, return an empty slice.
-	if _, err := os.Stat(slashingProtectionDirPath); os.IsNotExist(err) {
+	exists, err := file.Exists(slashingProtectionDirPath, file.Directory)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not check if %s exists", slashingProtectionDirPath)
+	}
+
+	if !exists {
 		return nil, nil
 	}
 

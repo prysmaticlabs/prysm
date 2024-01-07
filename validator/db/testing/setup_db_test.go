@@ -3,10 +3,10 @@ package testing
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	"github.com/prysmaticlabs/prysm/v5/testing/require"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
@@ -40,9 +40,10 @@ func TestClearDB(t *testing.T) {
 				databaseName = filesystem.DatabaseDirName
 			}
 
-			if _, err := os.Stat(filepath.Join(testDB.DatabasePath(), databaseName)); !os.IsNotExist(err) {
-				t.Fatalf("DB was not cleared: %v", err)
-			}
+			databasePath := filepath.Join(testDB.DatabasePath(), databaseName)
+			exists, err := file.Exists(databasePath, file.Regular)
+			require.NoError(t, err, "Failed to check if DB exists")
+			require.Equal(t, false, exists, "DB was not cleared")
 		})
 	}
 }

@@ -2,50 +2,42 @@ package db
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
 )
 
-// IsCompleteDatabaseExisting checks if a complete database exists in the given data directory
+// IsCompleteDatabaseExisting checks if a complete database exists in the given data directory.
 func IsCompleteDatabaseExisting(dataDir string) (bool, error) {
 	// Construct the path to the complete database.
 	completeDatabasePath := filepath.Join(dataDir, kv.ProtectionDbFileName)
 
-	if _, err := os.Stat(completeDatabasePath); err == nil {
-		// If no error, the complete database exists.
-		return true, nil
-	} else if !os.IsNotExist(err) {
-		// If the error is not a "does not exist" error, return the error.
-		return false, errors.Wrapf(err, "could not stat file %s", completeDatabasePath)
+	exists, err := file.Exists(completeDatabasePath, file.Regular)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if file %s exists", completeDatabasePath)
 	}
 
-	// The only error that remains is a "does not exist" error.
-	return false, nil
+	return exists, nil
 }
 
-// IsMinimalDatabaseExisting checks if a minimal database exists in the given data directory
+// IsMinimalDatabaseExisting checks if a minimal database exists in the given data directory.
 func IsMinimalDatabaseExisting(dataDir string) (bool, error) {
 	// Construct the path to the minimal database configuration file.
-	minimalDatabaseConfigurationFilePath := filepath.Join(dataDir, filesystem.DatabaseDirName)
+	minimalDatabaseDirPath := filepath.Join(dataDir, filesystem.DatabaseDirName)
 
-	if _, err := os.Stat(minimalDatabaseConfigurationFilePath); err == nil {
-		// If no error, the complete database exists.
-		return true, nil
-	} else if !os.IsNotExist(err) {
-		// If the error is not a "does not exist" error, return the error.
-		return false, errors.Wrapf(err, "could not stat file %s", minimalDatabaseConfigurationFilePath)
+	exists, err := file.Exists(minimalDatabaseDirPath, file.Directory)
+	if err != nil {
+		return false, errors.Wrapf(err, "could not check if directory %s exists", minimalDatabaseDirPath)
 	}
 
-	// The only error that remains is a "does not exist" error.
-	return false, nil
+	return exists, nil
 }
 
 // ConvertDatabase converts a minimal database to a complete database or a complete database to a minimal database.
