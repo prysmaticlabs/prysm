@@ -431,7 +431,7 @@ func TestSidecarProposerExpected(t *testing.T) {
 	_, blobs := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 1, 1)
 	b := blobs[0]
 	t.Run("cached, matches", func(t *testing.T) {
-		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex())}}}
+		ini := Initializer{shared: &sharedResources{pc: &mockProposerCache{ProposerCB: pcReturnsIdx(b.ProposerIndex())}, fc: &mockForkchoicer{TargetRootForEpochCB: fcReturnsTargetRoot([32]byte{})}}}
 		v := ini.NewBlobVerifier(b, GossipSidecarRequirements)
 		require.NoError(t, v.SidecarProposerExpected(ctx))
 		require.Equal(t, true, v.results.executed(RequireSidecarProposerExpected))
