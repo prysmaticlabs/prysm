@@ -2,7 +2,6 @@ package db
 
 import (
 	"github.com/prysmaticlabs/prysm/v5/cmd"
-	"github.com/prysmaticlabs/prysm/v5/cmd/validator/flags"
 	"github.com/prysmaticlabs/prysm/v5/runtime/tos"
 	validatordb "github.com/prysmaticlabs/prysm/v5/validator/db"
 	"github.com/sirupsen/logrus"
@@ -10,6 +9,22 @@ import (
 )
 
 var log = logrus.WithField("prefix", "db")
+
+var (
+	// SourceDataDirFlag defines a path on disk where source Prysm databases are stored. Used for conversion.
+	SourceDataDirFlag = &cli.StringFlag{
+		Name:     "source-data-dir",
+		Usage:    "Source data directory",
+		Required: true,
+	}
+
+	// SourceDataDirFlag defines a path on disk where source Prysm databases are stored. Used for conversion.
+	TargetDataDirFlag = &cli.StringFlag{
+		Name:     "target-data-dir",
+		Usage:    "Target data directory",
+		Required: true,
+	}
+)
 
 // Commands for interacting with the Prysm validator database.
 var Commands = &cli.Command{
@@ -72,15 +87,15 @@ var Commands = &cli.Command{
 			Category: "db",
 			Usage:    "Convert a complete EIP-3076 slashing protection to a minimal one",
 			Flags: []cli.Flag{
-				flags.SourceDataDirFlag,
-				flags.TargetDataDirFlag,
+				SourceDataDirFlag,
+				TargetDataDirFlag,
 			},
 			Before: func(cliCtx *cli.Context) error {
 				return cmd.LoadFlagsFromConfig(cliCtx, cliCtx.Command.Flags)
 			},
 			Action: func(cliCtx *cli.Context) error {
-				sourcedDatabasePath := cliCtx.String(flags.SourceDataDirFlag.Name)
-				targetDatabasePath := cliCtx.String(flags.TargetDataDirFlag.Name)
+				sourcedDatabasePath := cliCtx.String(SourceDataDirFlag.Name)
+				targetDatabasePath := cliCtx.String(TargetDataDirFlag.Name)
 
 				// Convert the database
 				err := validatordb.ConvertDatabase(cliCtx.Context, sourcedDatabasePath, targetDatabasePath, false)

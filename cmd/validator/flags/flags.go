@@ -379,20 +379,6 @@ var (
 		Usage: "To enable the use of prysm validator client in Distributed Validator Cluster",
 		Value: false,
 	}
-
-	// SourceDataDirFlag defines a path on disk where source Prysm databases are stored. Used for conversion.
-	SourceDataDirFlag = &cli.StringFlag{
-		Name:     "source-data-dir",
-		Usage:    "Source data directory",
-		Required: true,
-	}
-
-	// SourceDataDirFlag defines a path on disk where source Prysm databases are stored. Used for conversion.
-	TargetDataDirFlag = &cli.StringFlag{
-		Name:     "target-data-dir",
-		Usage:    "Target data directory",
-		Required: true,
-	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.
