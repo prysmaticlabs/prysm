@@ -72,10 +72,11 @@ type (
 	}
 )
 
-var log = logrus.WithField("prefix", "db")
-
 // Ensure the filesystem store implements the interface.
 var _ = iface.ValidatorDB(&Store{})
+
+// Logging.
+var log = logrus.WithField("prefix", "db")
 
 // NewStore creates a new filesystem store.
 func NewStore(databaseParentPath string, config *Config) (*Store, error) {
@@ -420,6 +421,9 @@ func (s *Store) publicKeys() ([][fieldparams.BLSPubkeyLength]byte, error) {
 	publicKeys := make([][fieldparams.BLSPubkeyLength]byte, 0, len(entries))
 	for _, entry := range entries {
 		if !(entry.Type().IsRegular() && strings.HasPrefix(entry.Name(), "0x")) {
+			log.WithFields(logrus.Fields{
+				"file": entry.Name(),
+			}).Warn("Unexpected file in slashing protection directory")
 			continue
 		}
 
