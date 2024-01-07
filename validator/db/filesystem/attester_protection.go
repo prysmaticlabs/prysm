@@ -13,7 +13,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
+const failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
 
 // EIPImportBlacklistedPublicKeys is implemented only to satisfy the interface.
 func (*Store) EIPImportBlacklistedPublicKeys(_ context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
