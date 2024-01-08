@@ -932,6 +932,58 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
+// RecordStateMetrics proceeds to record any state related metrics data.
+func (b *BeaconState) RecordStateMetrics() {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	// Only run this for nodes running with the experimental state.
+	if !features.Get().EnableExperimentalState {
+		return
+	}
+	// Validators
+	stats := b.validatorsMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+	// Balances
+	stats = b.balancesMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+	// InactivityScores
+	stats = b.inactivityScoresMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+	// BlockRoots
+	stats = b.blockRootsMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+	// StateRoots
+	stats = b.stateRootsMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+	// RandaoMixes
+	stats = b.randaoMixesMultiValue.MultiValueStatistics()
+	multiValueIndividualElementsCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalIndividualElements))
+	multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalIndividualElemReferences))
+	multiValueAppendedElementsCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalAppendedElements))
+	multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalAppendedElemReferences))
+
+}
+
 // IsNil checks if the state and the underlying proto
 // object are nil.
 func (b *BeaconState) IsNil() bool {
