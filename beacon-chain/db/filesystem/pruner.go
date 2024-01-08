@@ -210,6 +210,7 @@ func listDir(fs afero.Fs, dir string) ([]string, error) {
 			log.WithError(err).Errorf("Could not close file %s", dir)
 		}
 	}()
+	// re the -1 param: "If n <= 0, Readdirnames returns all the names from the directory in a single slice"
 	dirs, err := top.Readdirnames(-1)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read directory listing")
