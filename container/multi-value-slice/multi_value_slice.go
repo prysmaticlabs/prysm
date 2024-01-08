@@ -394,6 +394,49 @@ func (s *Slice[V]) Detach(obj Identifiable) {
 	delete(s.cachedLengths, obj.Id())
 }
 
+// TODO
+func (s *Slice[V]) Reset(obj Identifiable) *Slice[V] {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	l, ok := s.cachedLengths[obj.Id()]
+	if !ok {
+		l = len(s.sharedItems)
+	}
+
+	items := make([]V, l)
+	copy(items, s.sharedItems)
+	for i, ind := range s.individualItems {
+		for _, v := range ind.Values {
+			_, found := containsId(v.ids, obj.Id())
+			if found {
+				items[i] = v.val
+				break
+			}
+		}
+	}
+
+	index := len(s.sharedItems)
+	for _, app := range s.appendedItems {
+		found := true
+		for _, v := range app.Values {
+			_, found = containsId(v.ids, obj.Id())
+			if found {
+				items[index] = v.val
+				index++
+				break
+			}
+		}
+		if found == false {
+			break
+		}
+	}
+
+	reset := &Slice[V]{}
+	reset.Init(items)
+	return reset
+}
+
 func (s *Slice[V]) fillOriginalItems(obj Identifiable, items *[]V) {
 	for i, item := range s.sharedItems {
 		ind, ok := s.individualItems[uint64(i)]

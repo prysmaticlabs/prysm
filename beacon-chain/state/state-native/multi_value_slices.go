@@ -120,6 +120,40 @@ func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
 	return mv
 }
 
+// TODO
+func (b *BeaconState) Defragment() {
+	if b.blockRootsMultiValue != nil {
+		b.blockRootsMultiValue = b.blockRootsMultiValue.Reset(b)
+		multiValueBlockRootsCountGauge.Inc()
+		runtime.SetFinalizer(b.blockRootsMultiValue, blockRootsFinalizer)
+	}
+	if b.stateRootsMultiValue != nil {
+		b.stateRootsMultiValue = b.stateRootsMultiValue.Reset(b)
+		multiValueStateRootsCountGauge.Inc()
+		runtime.SetFinalizer(b.stateRootsMultiValue, stateRootsFinalizer)
+	}
+	if b.randaoMixesMultiValue != nil {
+		b.randaoMixesMultiValue = b.randaoMixesMultiValue.Reset(b)
+		multiValueRandaoMixesCountGauge.Inc()
+		runtime.SetFinalizer(b.randaoMixesMultiValue, randaoMixesFinalizer)
+	}
+	if b.balancesMultiValue != nil {
+		b.balancesMultiValue = b.balancesMultiValue.Reset(b)
+		multiValueBalancesCountGauge.Inc()
+		runtime.SetFinalizer(b.balancesMultiValue, balancesFinalizer)
+	}
+	if b.validatorsMultiValue != nil {
+		b.validatorsMultiValue = b.validatorsMultiValue.Reset(b)
+		multiValueValidatorsCountGauge.Inc()
+		runtime.SetFinalizer(b.validatorsMultiValue, validatorsFinalizer)
+	}
+	if b.inactivityScoresMultiValue != nil {
+		b.inactivityScoresMultiValue = b.inactivityScoresMultiValue.Reset(b)
+		multiValueInactivityScoresCountGauge.Inc()
+		runtime.SetFinalizer(b.inactivityScoresMultiValue, inactivityScoresFinalizer)
+	}
+}
+
 func randaoMixesFinalizer(m *MultiValueRandaoMixes) {
 	multiValueRandaoMixesCountGauge.Dec()
 }

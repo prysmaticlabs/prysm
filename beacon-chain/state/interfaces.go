@@ -22,6 +22,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	CopyAllTries()
+	Defragment()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	Prover
 	json.Marshaler

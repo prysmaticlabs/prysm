@@ -200,6 +200,9 @@ func (s *Service) Start() {
 		}
 	}
 	s.spawnProcessAttestationsRoutine()
+	if features.Get().EnableExperimentalState {
+		go s.runHeadStateDefragmentation()
+	}
 	go s.runLateBlockTasks()
 }
 

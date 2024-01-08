@@ -326,6 +326,25 @@ func TestDetach(t *testing.T) {
 	assert.Equal(t, false, ok)
 }
 
+func TestReset(t *testing.T) {
+	s := setup()
+	obj := &testObject{id: 2}
+
+	reset := s.Reset(obj)
+
+	assert.Equal(t, 8, len(reset.sharedItems))
+	assert.Equal(t, 123, reset.sharedItems[0])
+	assert.Equal(t, 2, reset.sharedItems[1])
+	assert.Equal(t, 3, reset.sharedItems[2])
+	assert.Equal(t, 123, reset.sharedItems[3])
+	assert.Equal(t, 2, reset.sharedItems[4])
+	assert.Equal(t, 2, reset.sharedItems[5])
+	assert.Equal(t, 3, reset.sharedItems[6])
+	assert.Equal(t, 2, reset.sharedItems[7])
+	assert.Equal(t, 0, len(reset.individualItems))
+	assert.Equal(t, 0, len(reset.appendedItems))
+}
+
 // Share the slice between 2 objects.
 // Index 0: Shared value
 // Index 1: Different individual value
