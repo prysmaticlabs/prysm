@@ -20,7 +20,6 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/pkg/errors"
 	mocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -758,26 +757,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
 		require.NoError(t, err)
 		payload.Transactions = encodedBinaryTxs
-		jsonPayload["transactions"] = txs
-		num := big.NewInt(1)
-		encodedNum := hexutil.EncodeBig(num)
-		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
-		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
-		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
-		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
-		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
-		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
-		jsonPayload["number"] = encodedNum
-		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
-		jsonPayload["totalDifficulty"] = "0x123456"
-		jsonPayload["difficulty"] = encodedNum
-		jsonPayload["size"] = encodedNum
-		jsonPayload["baseFeePerGas"] = encodedNum
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
 
 		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
@@ -792,7 +772,7 @@ func TestReconstructFullBellatrixBlock(t *testing.T) {
 			respJSON := map[string]interface{}{
 				"jsonrpc": "2.0",
 				"id":      1,
-				"result":  jsonPayload,
+				"result":  []map[string]interface{}{jsonPayload},
 			}
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 		}))
@@ -869,26 +849,7 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 		encodedBinaryTxs[0], err = txs[0].MarshalBinary()
 		require.NoError(t, err)
 		payload.Transactions = encodedBinaryTxs
-		jsonPayload["transactions"] = txs
-		num := big.NewInt(1)
-		encodedNum := hexutil.EncodeBig(num)
-		jsonPayload["hash"] = hexutil.Encode(payload.BlockHash)
-		jsonPayload["parentHash"] = common.BytesToHash([]byte("parent"))
-		jsonPayload["sha3Uncles"] = common.BytesToHash([]byte("uncles"))
-		jsonPayload["miner"] = common.BytesToAddress([]byte("miner"))
-		jsonPayload["stateRoot"] = common.BytesToHash([]byte("state"))
-		jsonPayload["transactionsRoot"] = common.BytesToHash([]byte("txs"))
-		jsonPayload["receiptsRoot"] = common.BytesToHash([]byte("receipts"))
-		jsonPayload["logsBloom"] = gethtypes.BytesToBloom([]byte("bloom"))
-		jsonPayload["gasLimit"] = hexutil.EncodeUint64(1)
-		jsonPayload["gasUsed"] = hexutil.EncodeUint64(2)
-		jsonPayload["timestamp"] = hexutil.EncodeUint64(3)
-		jsonPayload["number"] = encodedNum
-		jsonPayload["extraData"] = common.BytesToHash([]byte("extra"))
-		jsonPayload["totalDifficulty"] = "0x123456"
-		jsonPayload["difficulty"] = encodedNum
-		jsonPayload["size"] = encodedNum
-		jsonPayload["baseFeePerGas"] = encodedNum
+		jsonPayload["transactions"] = []hexutil.Bytes{encodedBinaryTxs[0]}
 
 		wrappedPayload, err := blocks.WrappedExecutionPayload(payload)
 		require.NoError(t, err)
@@ -912,19 +873,11 @@ func TestReconstructFullBellatrixBlockBatch(t *testing.T) {
 				require.NoError(t, r.Body.Close())
 			}()
 
-			respJSON := []map[string]interface{}{
-				{
-					"jsonrpc": "2.0",
-					"id":      1,
-					"result":  jsonPayload,
-				},
-				{
-					"jsonrpc": "2.0",
-					"id":      2,
-					"result":  jsonPayload,
-				},
+			respJSON := map[string]interface{}{
+				"jsonrpc": "2.0",
+				"id":      1,
+				"result":  []map[string]interface{}{jsonPayload, jsonPayload},
 			}
-			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 			require.NoError(t, json.NewEncoder(w).Encode(respJSON))
 
 		}))
@@ -1288,6 +1241,10 @@ func fixtures() map[string]interface{} {
 		BlockHash:     foo[:],
 		Transactions:  [][]byte{foo[:]},
 	}
+	executionPayloadBodyFixture := &pb.ExecutionPayloadBodyV1{
+		Transactions: [][]byte{foo[:]},
+		Withdrawals:  []*pb.Withdrawal{},
+	}
 	executionPayloadFixtureCapella := &pb.ExecutionPayloadCapella{
 		ParentHash:    foo[:],
 		FeeRecipient:  bar,
@@ -1459,6 +1416,7 @@ func fixtures() map[string]interface{} {
 	}
 	return map[string]interface{}{
 		"ExecutionBlock":                    executionBlock,
+		"ExecutionPayloadBody":              executionPayloadBodyFixture,
 		"ExecutionPayload":                  executionPayloadFixture,
 		"ExecutionPayloadCapella":           executionPayloadFixtureCapella,
 		"ExecutionPayloadDeneb":             executionPayloadFixtureDeneb,
@@ -2007,10 +1965,6 @@ func newPayloadV3Setup(t *testing.T, status *pb.PayloadStatus, payload *pb.Execu
 }
 
 func TestCapella_PayloadBodiesByHash(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2067,7 +2021,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results))
 
@@ -2113,7 +2069,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 
@@ -2154,7 +2112,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 1, len(results))
 
@@ -2204,7 +2164,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 2, len(results))
 
@@ -2247,7 +2209,9 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 		service := &Service{}
 		service.rpcClient = rpcClient
 
-		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{})
+		bRoot := [32]byte{}
+		copy(bRoot[:], "hash")
+		results, err := service.GetPayloadBodiesByHash(ctx, []common.Hash{bRoot, bRoot, bRoot})
 		require.NoError(t, err)
 		require.Equal(t, 3, len(results))
 
@@ -2258,10 +2222,6 @@ func TestCapella_PayloadBodiesByHash(t *testing.T) {
 }
 
 func TestCapella_PayloadBodiesByRange(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -2509,10 +2469,6 @@ func TestCapella_PayloadBodiesByRange(t *testing.T) {
 }
 
 func Test_ExchangeCapabilities(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		EnableOptionalEngineMethods: true,
-	})
-	defer resetFn()
 	t.Run("empty response works", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

@@ -15,6 +15,11 @@ import (
 )
 
 var (
+	// Delay parameters
+	minDelay    = float64(10)        // 10 nanoseconds
+	maxDelay    = float64(100000000) // 0.1 second
+	delayFactor = 1.1
+
 	// Metrics
 	skipSlotCacheHit = promauto.NewCounter(prometheus.CounterOpts{
 		Name: "skip_slot_cache_hit",

@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -18,11 +17,6 @@ import (
 )
 
 func TestKV_Aggregated_AggregateUnaggregatedAttestations(t *testing.T) {
-	resetFn := features.InitWithReset(&features.Flags{
-		AggregateParallel: true,
-	})
-	defer resetFn()
-
 	cache := NewAttCaches()
 	priv, err := bls.RandKey()
 	require.NoError(t, err)

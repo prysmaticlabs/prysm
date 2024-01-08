@@ -15,6 +15,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -73,7 +74,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		resp := &GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Phase0), resp.Version)
-		st := &BeaconState{}
+		st := &shared.BeaconState{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -101,7 +102,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		resp := &GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Altair), resp.Version)
-		st := &BeaconStateAltair{}
+		st := &shared.BeaconStateAltair{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -129,7 +130,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		resp := &GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Bellatrix), resp.Version)
-		st := &BeaconStateBellatrix{}
+		st := &shared.BeaconStateBellatrix{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -157,7 +158,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		resp := &GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Capella), resp.Version)
-		st := &BeaconStateCapella{}
+		st := &shared.BeaconStateCapella{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -185,7 +186,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 		resp := &GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
-		st := &BeaconStateDeneb{}
+		st := &shared.BeaconStateDeneb{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})

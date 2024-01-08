@@ -73,7 +73,7 @@ func (s *Service) validateSyncCommitteeMessage(
 	if err := altair.ValidateSyncMessageTime(
 		m.Slot,
 		s.cfg.clock.GenesisTime(),
-		params.BeaconNetworkConfig().MaximumGossipClockDisparity,
+		params.BeaconConfig().MaximumGossipClockDisparityDuration(),
 	); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
@@ -176,7 +176,7 @@ func (s *Service) rejectIncorrectSyncCommittee(
 	committeeIndices []primitives.CommitteeIndex, topic string,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
+		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSyncCommittee")
 		defer span.End()
 		isValid := false
 		digest, err := s.currentForkDigest()

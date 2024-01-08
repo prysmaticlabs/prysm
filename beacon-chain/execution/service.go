@@ -128,6 +128,7 @@ type config struct {
 	currHttpEndpoint        network.Endpoint
 	headers                 []string
 	finalizedStateAtStartup state.BeaconState
+	jwtId                   string
 }
 
 // Service fetches important information about the canonical

@@ -42,7 +42,7 @@ func (b *SignedBeaconBlock) IsNil() bool {
 }
 
 // Copy performs a deep copy of the signed beacon block object.
-func (b *SignedBeaconBlock) Copy() (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (b *SignedBeaconBlock) Copy() (interfaces.SignedBeaconBlock, error) {
 	if b == nil {
 		return nil, nil
 	}
@@ -120,15 +120,11 @@ func (b *SignedBeaconBlock) PbGenericBlock() (*eth.GenericSignedBeaconBlock, err
 	case version.Deneb:
 		if b.IsBlinded() {
 			return &eth.GenericSignedBeaconBlock{
-				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: &eth.SignedBlindedBeaconBlockAndBlobsDeneb{
-					SignedBlindedBlock: pb.(*eth.SignedBlindedBeaconBlockDeneb),
-				}},
+				Block: &eth.GenericSignedBeaconBlock_BlindedDeneb{BlindedDeneb: pb.(*eth.SignedBlindedBeaconBlockDeneb)},
 			}, nil
 		}
 		return &eth.GenericSignedBeaconBlock{
-			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: &eth.SignedBeaconBlockAndBlobsDeneb{
-				Block: pb.(*eth.SignedBeaconBlockDeneb),
-			}},
+			Block: &eth.GenericSignedBeaconBlock_Deneb{Deneb: pb.(*eth.SignedBeaconBlockContentsDeneb)},
 		}, nil
 	default:
 		return nil, errIncorrectBlockVersion
@@ -337,6 +333,34 @@ func (b *SignedBeaconBlock) ToBlinded() (interfaces.ReadOnlySignedBeaconBlock, e
 	}
 }
 
+func (b *SignedBeaconBlock) Unblind(e interfaces.ExecutionData) error {
+	if e.IsNil() {
+		return errors.New("cannot unblind with nil execution data")
+	}
+	if !b.IsBlinded() {
+		return errors.New("cannot unblind if the block is already unblinded")
+	}
+	payloadRoot, err := e.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	header, err := b.Block().Body().Execution()
+	if err != nil {
+		return err
+	}
+	headerRoot, err := header.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+	if payloadRoot != headerRoot {
+		return errors.New("cannot unblind with different execution data")
+	}
+	if err := b.SetExecution(e); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Version of the underlying protobuf object.
 func (b *SignedBeaconBlock) Version() int {
 	return b.version
@@ -344,19 +368,23 @@ func (b *SignedBeaconBlock) Version() int {
 
 // IsBlinded metadata on whether a block is blinded
 func (b *SignedBeaconBlock) IsBlinded() bool {
-	return b.block.body.isBlinded
+	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
 }
 
 // ValueInGwei metadata on the payload value returned by the builder. Value is 0 by default if local.
 func (b *SignedBeaconBlock) ValueInGwei() uint64 {
 	exec, err := b.block.body.Execution()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve execution payload")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	val, err := exec.ValueInGwei()
 	if err != nil {
-		log.WithError(err).Warn("failed to retrieve value in gwei")
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
 		return 0
 	}
 	return val
@@ -612,7 +640,7 @@ func (b *BeaconBlock) IsNil() bool {
 
 // IsBlinded checks if the beacon block is a blinded block.
 func (b *BeaconBlock) IsBlinded() bool {
-	return b.body.isBlinded
+	return b.version >= version.Bellatrix && b.body.executionPayload == nil
 }
 
 // Version of the underlying protobuf object.
@@ -1011,7 +1039,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	case version.Phase0, version.Altair:
 		return nil, consensus_types.ErrNotSupported("Execution", b.version)
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeader
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1032,7 +1060,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 		}
 		return WrappedExecutionPayload(p)
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderCapella
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1053,7 +1081,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 		}
 		return WrappedExecutionPayloadCapella(p, 0)
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			var ph *enginev1.ExecutionPayloadHeaderDeneb
 			var ok bool
 			if b.executionPayloadHeader != nil {
@@ -1114,21 +1142,26 @@ func (b *BeaconBlockBody) HashTreeRoot() ([field_params.RootLength]byte, error) 
 	case version.Altair:
 		return pb.(*eth.BeaconBlockBodyAltair).HashTreeRoot()
 	case version.Bellatrix:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyBellatrix).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyBellatrix).HashTreeRoot()
 	case version.Capella:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyCapella).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyCapella).HashTreeRoot()
 	case version.Deneb:
-		if b.isBlinded {
+		if b.IsBlinded() {
 			return pb.(*eth.BlindedBeaconBlockBodyDeneb).HashTreeRoot()
 		}
 		return pb.(*eth.BeaconBlockBodyDeneb).HashTreeRoot()
 	default:
 		return [field_params.RootLength]byte{}, errIncorrectBodyVersion
 	}
+}
+
+// IsBlinded checks if the beacon block body is a blinded block body.
+func (b *BeaconBlockBody) IsBlinded() bool {
+	return b.version >= version.Bellatrix && b.executionPayload == nil
 }

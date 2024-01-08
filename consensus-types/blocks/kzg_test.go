@@ -128,3 +128,67 @@ func Benchmark_MerkleProofKZGCommitment(b *testing.B) {
 		require.NoError(b, err)
 	}
 }
+
+func Test_VerifyKZGInclusionProof(t *testing.T) {
+	kzgs := make([][]byte, 3)
+	kzgs[0] = make([]byte, 48)
+	_, err := rand.Read(kzgs[0])
+	require.NoError(t, err)
+	kzgs[1] = make([]byte, 48)
+	_, err = rand.Read(kzgs[1])
+	require.NoError(t, err)
+	kzgs[2] = make([]byte, 48)
+	_, err = rand.Read(kzgs[2])
+	require.NoError(t, err)
+	pbBody := &ethpb.BeaconBlockBodyDeneb{
+		SyncAggregate: &ethpb.SyncAggregate{
+			SyncCommitteeBits:      make([]byte, fieldparams.SyncAggregateSyncCommitteeBytesLength),
+			SyncCommitteeSignature: make([]byte, fieldparams.BLSSignatureLength),
+		},
+		ExecutionPayload: &enginev1.ExecutionPayloadDeneb{
+			ParentHash:    make([]byte, fieldparams.RootLength),
+			FeeRecipient:  make([]byte, 20),
+			StateRoot:     make([]byte, fieldparams.RootLength),
+			ReceiptsRoot:  make([]byte, fieldparams.RootLength),
+			LogsBloom:     make([]byte, 256),
+			PrevRandao:    make([]byte, fieldparams.RootLength),
+			BaseFeePerGas: make([]byte, fieldparams.RootLength),
+			BlockHash:     make([]byte, fieldparams.RootLength),
+			Transactions:  make([][]byte, 0),
+			ExtraData:     make([]byte, 0),
+		},
+		Eth1Data: &ethpb.Eth1Data{
+			DepositRoot: make([]byte, fieldparams.RootLength),
+			BlockHash:   make([]byte, fieldparams.RootLength),
+		},
+		BlobKzgCommitments: kzgs,
+	}
+
+	body, err := NewBeaconBlockBody(pbBody)
+	require.NoError(t, err)
+	root, err := body.HashTreeRoot()
+	require.NoError(t, err)
+	index := 1
+	proof, err := MerkleProofKZGCommitment(body, index)
+	require.NoError(t, err)
+
+	header := &ethpb.BeaconBlockHeader{
+		BodyRoot:   root[:],
+		ParentRoot: make([]byte, 32),
+		StateRoot:  make([]byte, 32),
+	}
+	signedHeader := &ethpb.SignedBeaconBlockHeader{
+		Header: header,
+	}
+	sidecar := &ethpb.BlobSidecar{
+		Index:                    uint64(index),
+		KzgCommitment:            kzgs[index],
+		CommitmentInclusionProof: proof,
+		SignedBlockHeader:        signedHeader,
+	}
+	blob, err := NewROBlob(sidecar)
+	require.NoError(t, err)
+	require.NoError(t, VerifyKZGInclusionProof(blob))
+	proof[2] = make([]byte, 32)
+	require.ErrorIs(t, errInvalidInclusionProof, VerifyKZGInclusionProof(blob))
+}

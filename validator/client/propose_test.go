@@ -587,12 +587,10 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_Deneb{
-					Deneb: func() *ethpb.BeaconBlockAndBlobsDeneb {
-						blk := util.NewBeaconBlockDeneb()
-						blk.Block.Body.Graffiti = graffiti
-						return &ethpb.BeaconBlockAndBlobsDeneb{
-							Block: blk.Block,
-						}
+					Deneb: func() *ethpb.BeaconBlockContentsDeneb {
+						blk := util.NewBeaconBlockContentsDeneb()
+						blk.Block.Block.Body.Graffiti = graffiti
+						return &ethpb.BeaconBlockContentsDeneb{Block: blk.Block.Block, KzgProofs: blk.KzgProofs, Blobs: blk.Blobs}
 					}(),
 				},
 			},
@@ -602,12 +600,10 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 			version: version.Deneb,
 			block: &ethpb.GenericBeaconBlock{
 				Block: &ethpb.GenericBeaconBlock_BlindedDeneb{
-					BlindedDeneb: func() *ethpb.BlindedBeaconBlockAndBlobsDeneb {
+					BlindedDeneb: func() *ethpb.BlindedBeaconBlockDeneb {
 						blk := util.NewBlindedBeaconBlockDeneb()
 						blk.Message.Body.Graffiti = graffiti
-						return &ethpb.BlindedBeaconBlockAndBlobsDeneb{
-							Block: blk.Message,
-						}
+						return blk.Message
 					}(),
 				},
 			},
@@ -651,7 +647,7 @@ func testProposeBlock(t *testing.T, graffiti []byte) {
 				gomock.AssignableToTypeOf(&ethpb.GenericSignedBeaconBlock{}),
 			).DoAndReturn(func(ctx context.Context, block *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
 				sentBlock, err = blocktest.NewSignedBeaconBlockFromGeneric(block)
-				assert.NoError(t, err, "Unexpected error unwrapping block")
+				require.NoError(t, err)
 				return &ethpb.ProposeResponse{BlockRoot: make([]byte, 32)}, nil
 			})
 

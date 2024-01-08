@@ -21,7 +21,7 @@ import (
 	syncmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -158,7 +158,7 @@ func TestGetIdentity(t *testing.T) {
 		require.Equal(t, http.StatusOK, writer.Code)
 		resp := &GetIdentityResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		expectedID := peer.ID("foo").Pretty()
+		expectedID := peer.ID("foo").String()
 		assert.Equal(t, expectedID, resp.Data.PeerId)
 		expectedEnr, err := p2p.SerializeENR(enrRecord)
 		require.NoError(t, err)
@@ -198,7 +198,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain enr", e.Message)
@@ -223,7 +223,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusInternalServerError, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusInternalServerError, e.Code)
 		assert.StringContains(t, "Could not obtain discovery address", e.Message)

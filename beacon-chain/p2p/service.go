@@ -48,12 +48,8 @@ var refreshRate = slots.DivideSlotBy(2)
 // maxBadResponses is the maximum number of bad responses from a peer before we stop talking to it.
 const maxBadResponses = 5
 
-// pubsubQueueSize is the size that we assign to our validation queue and outbound message queue for
-// gossipsub.
-const pubsubQueueSize = 600
-
 // maxDialTimeout is the timeout for a single peer dial.
-var maxDialTimeout = params.BeaconNetworkConfig().RespTimeout
+var maxDialTimeout = params.BeaconConfig().RespTimeoutDuration()
 
 // Service for managing peer to peer (p2p) networking.
 type Service struct {
@@ -69,7 +65,7 @@ type Service struct {
 	metaData              metadata.Metadata
 	pubsub                *pubsub.PubSub
 	joinedTopics          map[string]*pubsub.Topic
-	joinedTopicsLock      sync.Mutex
+	joinedTopicsLock      sync.RWMutex
 	subnetsLock           map[uint64]*sync.RWMutex
 	subnetsLockLock       sync.Mutex // Lock access to subnetsLock
 	initializationLock    sync.Mutex
@@ -97,6 +93,8 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 		joinedTopics: make(map[string]*pubsub.Topic, len(gossipTopicMappings)),
 		subnetsLock:  make(map[uint64]*sync.RWMutex),
 	}
+
+	s.cfg = validateConfig(s.cfg)
 
 	dv5Nodes := parseBootStrapAddrs(s.cfg.BootstrapNodeAddr)
 
@@ -136,7 +134,7 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 	// Set the pubsub global parameters that we require.
 	setPubSubParameters()
 	// Reinitialize them in the event we are running a custom config.
-	attestationSubnetCount = params.BeaconNetworkConfig().AttestationSubnetCount
+	attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount
 	syncCommsSubnetCount = params.BeaconConfig().SyncCommitteeSubnetCount
 
 	gs, err := pubsub.NewGossipSub(s.ctx, s.host, psOpts...)
@@ -219,16 +217,12 @@ func (s *Service) Start() {
 	// current epoch.
 	s.RefreshENR()
 
-	// if the current epoch is beyond bellatrix, increase the
-	// MaxGossipSize and MaxChunkSize to 10Mb.
-	s.increaseMaxMessageSizesForBellatrix()
-
 	// Periodic functions.
-	async.RunEvery(s.ctx, params.BeaconNetworkConfig().TtfbTimeout, func() {
+	async.RunEvery(s.ctx, params.BeaconConfig().TtfbTimeoutDuration(), func() {
 		ensurePeerConnections(s.ctx, s.host, s.peers, relayNodes...)
 	})
 	async.RunEvery(s.ctx, 30*time.Minute, s.Peers().Prune)
-	async.RunEvery(s.ctx, params.BeaconNetworkConfig().RespTimeout, s.updateMetrics)
+	async.RunEvery(s.ctx, time.Duration(params.BeaconConfig().RespTimeout)*time.Second, s.updateMetrics)
 	async.RunEvery(s.ctx, refreshRate, s.RefreshENR)
 	async.RunEvery(s.ctx, 1*time.Minute, func() {
 		log.WithFields(logrus.Fields{
@@ -476,15 +470,4 @@ func (s *Service) connectToBootnodes() error {
 // required for discovery and pubsub validation.
 func (s *Service) isInitialized() bool {
 	return !s.genesisTime.IsZero() && len(s.genesisValidatorsRoot) == 32
-}
-
-// increaseMaxMessageSizesForBellatrix increases the max sizes of gossip and chunk from 1 Mb to 10Mb,
-// if the current epoch is or above the configured BellatrixForkEpoch.
-func (s *Service) increaseMaxMessageSizesForBellatrix() {
-	currentSlot := slots.Since(s.genesisTime)
-	currentEpoch := slots.ToEpoch(currentSlot)
-	if currentEpoch >= params.BeaconConfig().BellatrixForkEpoch {
-		encoder.SetMaxGossipSizeForBellatrix()
-		encoder.SetMaxChunkSizeForBellatrix()
-	}
 }

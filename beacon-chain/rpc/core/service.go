@@ -12,6 +12,7 @@ import (
 
 type Service struct {
 	HeadFetcher        blockchain.HeadFetcher
+	FinalizedFetcher   blockchain.FinalizationFetcher
 	GenesisTimeFetcher blockchain.TimeFetcher
 	SyncChecker        sync.Checker
 	Broadcaster        p2p.Broadcaster

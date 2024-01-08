@@ -156,7 +156,7 @@ func TestStop_OK(t *testing.T) {
 	require.NoError(t, err, "Unable to stop web3 ETH1.0 chain service")
 
 	// The context should have been canceled.
-	assert.NotNil(t, web3Service.ctx.Err(), "Context wasnt canceled")
+	assert.NotNil(t, web3Service.ctx.Err(), "Context wasn't canceled")
 
 	hook.Reset()
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/kv"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/slasherkv"
 	interopcoldstart "github.com/prysmaticlabs/prysm/v4/beacon-chain/deterministic-genesis"
@@ -42,7 +43,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -52,6 +52,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -97,7 +98,8 @@ type BeaconNode struct {
 	syncCommitteePool       synccommittee.Pool
 	blsToExecPool           blstoexec.PoolManager
 	depositCache            cache.DepositCache
-	proposerIdsCache        *cache.ProposerPayloadIDsCache
+	trackedValidatorsCache  *cache.TrackedValidatorsCache
+	payloadIDCache          *cache.PayloadIDCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
@@ -112,11 +114,14 @@ type BeaconNode struct {
 	forkChoicer             forkchoice.ForkChoicer
 	clockWaiter             startup.ClockWaiter
 	initialSyncComplete     chan struct{}
+	BlobStorage             *filesystem.BlobStorage
+	blobRetentionEpochs     primitives.Epoch
+	verifyInitWaiter        *verification.InitializerWaiter
 }
 
 // New creates a new node instance, sets up configuration options, and registers
 // every required service to the node.
-func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
+func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*BeaconNode, error) {
 	if err := configureTracing(cliCtx); err != nil {
 		return nil, err
 	}
@@ -154,9 +159,6 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err := configureExecutionSetting(cliCtx); err != nil {
 		return nil, err
 	}
-	if err := kv.ConfigureBlobRetentionEpoch(cliCtx); err != nil {
-		return nil, err
-	}
 	configureFastSSZHashingAlgorithm()
 
 	// Initializes any forks here.
@@ -164,7 +166,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 
 	registry := runtime.NewServiceRegistry()
 
-	ctx, cancel := context.WithCancel(cliCtx.Context)
+	ctx := cliCtx.Context
 	beacon := &BeaconNode{
 		cliCtx:                  cliCtx,
 		ctx:                     ctx,
@@ -179,10 +181,11 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),
 		blsToExecPool:           blstoexec.NewPool(),
+		trackedValidatorsCache:  cache.NewTrackedValidatorsCache(),
+		payloadIDCache:          cache.NewPayloadIDCache(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
-		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
@@ -200,6 +203,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	log.Debugln("Starting DB")
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
@@ -223,6 +227,12 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 				"a genesis block/state for this network.", "genesis-state", "genesis-beacon-api-url")
 		}
 		return nil, err
+	}
+
+	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
+		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
+	if err := beacon.BlobStorage.Initialize(); err != nil {
+		return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
 	}
 
 	log.Debugln("Registering P2P Service")
@@ -271,8 +281,7 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	}
 
 	log.Debugln("Registering RPC Service")
-	router := mux.NewRouter()
-	router.Use(server.NormalizeQueryValuesHandler)
+	router := newRouter(cliCtx)
 	if err := beacon.registerRPCService(router); err != nil {
 		return nil, err
 	}
@@ -304,6 +313,19 @@ func New(cliCtx *cli.Context, opts ...Option) (*BeaconNode, error) {
 	beacon.collector = c
 
 	return beacon, nil
+}
+
+func newRouter(cliCtx *cli.Context) *mux.Router {
+	var allowedOrigins []string
+	if cliCtx.IsSet(flags.GPRCGatewayCorsDomain.Name) {
+		allowedOrigins = strings.Split(cliCtx.String(flags.GPRCGatewayCorsDomain.Name), ",")
+	} else {
+		allowedOrigins = strings.Split(flags.GPRCGatewayCorsDomain.Value, ",")
+	}
+	r := mux.NewRouter()
+	r.Use(server.NormalizeQueryValuesHandler)
+	r.Use(server.CorsHandler(allowedOrigins))
+	return r
 }
 
 // StateFeed implements statefeed.Notifier.
@@ -378,7 +400,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := db.NewDB(b.ctx, dbPath)
+	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 	if err != nil {
 		return err
 	}
@@ -400,7 +422,8 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 		if err := d.ClearDB(); err != nil {
 			return errors.Wrap(err, "could not clear database")
 		}
-		d, err = db.NewDB(b.ctx, dbPath)
+
+		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -567,6 +590,7 @@ func (b *BeaconNode) registerP2P(cliCtx *cli.Context) error {
 		TCPPort:           cliCtx.Uint(cmd.P2PTCPPort.Name),
 		UDPPort:           cliCtx.Uint(cmd.P2PUDPPort.Name),
 		MaxPeers:          cliCtx.Uint(cmd.P2PMaxPeers.Name),
+		QueueSize:         cliCtx.Uint(cmd.PubsubQueueSize.Name),
 		AllowListCIDR:     cliCtx.String(cmd.P2PAllowList.Name),
 		DenyListCIDR:      slice.SplitCommaSeparated(cliCtx.StringSlice(cmd.P2PDenyList.Name)),
 		EnableUPnP:        cliCtx.Bool(cmd.EnableUPnPFlag.Name),
@@ -636,9 +660,11 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
-		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
+		blockchain.WithBlobStorage(b.BlobStorage),
+		blockchain.WithTrackedValidatorsCache(b.trackedValidatorsCache),
+		blockchain.WithPayloadIDCache(b.payloadIDCache),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -671,6 +697,7 @@ func (b *BeaconNode) registerPOWChainService() error {
 		execution.WithStateGen(b.stateGen),
 		execution.WithBeaconNodeStatsUpdater(bs),
 		execution.WithFinalizedStateAtStartup(b.finalizedStateAtStartUp),
+		execution.WithJwtId(b.cliCtx.String(flags.JwtId.Name)),
 	)
 	web3Service, err := execution.NewService(b.ctx, opts...)
 	if err != nil {
@@ -717,6 +744,8 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithClockWaiter(b.clockWaiter),
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
+		regularsync.WithBlobStorage(b.BlobStorage),
+		regularsync.WithVerifierWaiter(b.verifyInitWaiter),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -727,6 +756,9 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		return err
 	}
 
+	opts := []initialsync.Option{
+		initialsync.WithVerifierWaiter(b.verifyInitWaiter),
+	}
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:                  b.db,
 		Chain:               chainService,
@@ -735,7 +767,8 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		BlockNotifier:       b,
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
-	})
+		BlobStorage:         b.BlobStorage,
+	}, opts...)
 	return b.services.RegisterService(is)
 }
 
@@ -841,6 +874,7 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		ForkchoiceFetcher:             chainService,
 		FinalizationFetcher:           chainService,
 		BlockReceiver:                 chainService,
+		BlobReceiver:                  chainService,
 		AttestationReceiver:           chainService,
 		GenesisTimeFetcher:            chainService,
 		GenesisFetcher:                chainService,
@@ -864,10 +898,12 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		StateGen:                      b.stateGen,
 		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
-		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,
+		BlobStorage:                   b.BlobStorage,
+		TrackedValidatorsCache:        b.trackedValidatorsCache,
+		PayloadIDCache:                b.payloadIDCache,
 	})
 
 	return b.services.RegisterService(rpcService)
@@ -931,9 +967,6 @@ func (b *BeaconNode) registerGRPCGateway(router *mux.Router) error {
 		apigateway.WithMaxCallRecvMsgSize(maxCallSize),
 		apigateway.WithAllowedOrigins(allowedOrigins),
 		apigateway.WithTimeout(uint64(timeout)),
-	}
-	if flags.EnableHTTPEthAPI(httpModules) {
-		opts = append(opts, apigateway.WithApiMiddleware(&apimiddleware.BeaconEndpointFactory{}))
 	}
 	g, err := apigateway.New(b.ctx, opts...)
 	if err != nil {

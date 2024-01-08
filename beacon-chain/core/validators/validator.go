@@ -17,9 +17,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// ValidatorAlreadyExitedErr is an error raised when trying to process an exit of
+// ErrValidatorAlreadyExited is an error raised when trying to process an exit of
 // an already exited validator
-var ValidatorAlreadyExitedErr = errors.New("validator already exited")
+var ErrValidatorAlreadyExited = errors.New("validator already exited")
 
 // MaxExitEpochAndChurn returns the maximum non-FAR_FUTURE_EPOCH exit
 // epoch and the number of them
@@ -76,7 +76,7 @@ func InitiateValidatorExit(ctx context.Context, s state.BeaconState, idx primiti
 		return nil, 0, err
 	}
 	if validator.ExitEpoch != params.BeaconConfig().FarFutureEpoch {
-		return s, validator.ExitEpoch, ValidatorAlreadyExitedErr
+		return s, validator.ExitEpoch, ErrValidatorAlreadyExited
 	}
 	activeValidatorCount, err := helpers.ActiveValidatorCount(ctx, s, time.CurrentEpoch(s))
 	if err != nil {
@@ -136,7 +136,7 @@ func SlashValidator(
 	proposerRewardQuotient uint64) (state.BeaconState, error) {
 	maxExitEpoch, churn := MaxExitEpochAndChurn(s)
 	s, _, err := InitiateValidatorExit(ctx, s, slashedIdx, maxExitEpoch, churn)
-	if err != nil && !errors.Is(err, ValidatorAlreadyExitedErr) {
+	if err != nil && !errors.Is(err, ErrValidatorAlreadyExited) {
 		return nil, errors.Wrapf(err, "could not initiate validator %d exit", slashedIdx)
 	}
 	currentEpoch := slots.ToEpoch(s.Slot())

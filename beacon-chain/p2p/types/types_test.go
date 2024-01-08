@@ -82,7 +82,7 @@ func TestBlobSidecarsByRootReq_MarshalSSZ(t *testing.T) {
 
 func TestBeaconBlockByRootsReq_Limit(t *testing.T) {
 	fixedRoots := make([][32]byte, 0)
-	for i := uint64(0); i < params.BeaconNetworkConfig().MaxRequestBlocks+100; i++ {
+	for i := uint64(0); i < params.BeaconConfig().MaxRequestBlocks+100; i++ {
 		fixedRoots = append(fixedRoots, [32]byte{byte(i)})
 	}
 	req := BeaconBlockByRootsReq(fixedRoots)

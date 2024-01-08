@@ -59,10 +59,9 @@ func HandleBackupDir(dirPath string, permissionOverride bool) error {
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
 
-// MkdirAll takes in a path, expands it if necessary, and looks through the
-// permissions of every directory along the path, ensuring we are not attempting
-// to overwrite any existing permissions. Finally, creates the directory accordingly
-// with standardized, Prysm project permissions. This is the static-analysis enforced
+// MkdirAll takes in a path, expands it if necessary, and creates the directory accordingly
+// with standardized, Prysm project permissions. If a directory already exists as this path,
+// then the method returns without making any changes. This is the static-analysis enforced
 // method for creating a directory programmatically in Prysm.
 func MkdirAll(dirPath string) error {
 	expanded, err := ExpandPath(dirPath)
@@ -74,13 +73,7 @@ func MkdirAll(dirPath string) error {
 		return err
 	}
 	if exists {
-		info, err := os.Stat(expanded)
-		if err != nil {
-			return err
-		}
-		if info.Mode().Perm() != params.BeaconIoConfig().ReadWriteExecutePermissions {
-			return errors.New("dir already exists without proper 0700 permissions")
-		}
+		return nil
 	}
 	return os.MkdirAll(expanded, params.BeaconIoConfig().ReadWriteExecutePermissions)
 }
@@ -161,7 +154,7 @@ func Exists(filename string) bool {
 // RecursiveFileFind returns true, and the path,  if a file is not a directory and exists
 // at  dir or any of its subdirectories.  Finds the first instant based on the Walk order and returns.
 // Define non-fatal error to stop the recursive directory walk
-var stopWalk = errors.New("stop walking")
+var errStopWalk = errors.New("stop walking")
 
 // RecursiveFileFind searches for file in a directory and its subdirectories.
 func RecursiveFileFind(filename, dir string) (bool, string, error) {
@@ -178,13 +171,13 @@ func RecursiveFileFind(filename, dir string) (bool, string, error) {
 		if !info.IsDir() && filename == info.Name() {
 			found = true
 			fpath = path
-			return stopWalk
+			return errStopWalk
 		}
 
 		// no errors or file found
 		return nil
 	})
-	if err != nil && err != stopWalk {
+	if err != nil && err != errStopWalk {
 		return false, "", err
 	}
 	return found, fpath, nil
