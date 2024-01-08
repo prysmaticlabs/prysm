@@ -9,7 +9,6 @@ import (
 	"github.com/k0kubun/go-ansi"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
 	"github.com/schollz/progressbar/v3"
 )
 
@@ -98,37 +97,4 @@ func PubKeyToHexString(pubKey []byte) (string, error) {
 		return "", fmt.Errorf("wanted length 48, received %d", len(pubKey))
 	}
 	return fmt.Sprintf("%#x", pubKey), nil
-}
-
-// We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
-// we append to this map. This allows us to handle valid input JSON data such as:
-//
-//	"0x2932232930: {
-//	  SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
-//	 },
-//
-//	"0x2932232930: {
-//	  SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
-//	 }
-//
-// Which should be properly parsed as:
-//
-//	"0x2932232930: {
-//	  SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
-//	 }
-func ParseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
-	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
-	for _, validatorData := range data {
-		pubKey, err := PubKeyFromHex(validatorData.Pubkey)
-		if err != nil {
-			return nil, fmt.Errorf("%s is not a valid public key: %w", validatorData.Pubkey, err)
-		}
-		for _, sBlock := range validatorData.SignedBlocks {
-			if sBlock == nil {
-				continue
-			}
-			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
-		}
-	}
-	return signedBlocksByPubKey, nil
 }

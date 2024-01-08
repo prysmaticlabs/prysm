@@ -45,7 +45,7 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 
 	// We need to handle duplicate public keys in the JSON file, with potentially
 	// different signing histories for both attestations and blocks.
-	signedBlocksByPubKey, err := helpers.ParseBlocksForUniquePublicKeys(interchangeJSON.Data)
+	signedBlocksByPubKey, err := parseBlocksForUniquePublicKeys(interchangeJSON.Data)
 	if err != nil {
 		return errors.Wrap(err, "could not parse unique entries for blocks by public key")
 	}
@@ -120,6 +120,48 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 	}
 
 	return nil
+}
+
+// We create a map of pubKey -> []*SignedBlock. Then, for each public key we observe,
+// we append to this map. This allows us to handle valid input JSON data such as:
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 6, Slot: 7],
+//	 },
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 10, Slot: 11],
+//	 }
+//
+// Which should be properly parsed as:
+//
+//	"0x2932232930: {
+//	  SignedBlocks: [Slot: 5, Slot: 5, Slot: 6, Slot: 7, Slot: 10, Slot: 11],
+//	 }
+func parseBlocksForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock, error) {
+	bar := common.InitializeProgressBar(
+		len(data),
+		"Parsing blocks for unique public keys:",
+	)
+
+	signedBlocksByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedBlock)
+	for _, validatorData := range data {
+		if err := bar.Add(1); err != nil {
+			return nil, errors.Wrap(err, "could not increase progress bar")
+		}
+
+		pubKey, err := helpers.PubKeyFromHex(validatorData.Pubkey)
+		if err != nil {
+			return nil, fmt.Errorf("%s is not a valid public key: %w", validatorData.Pubkey, err)
+		}
+		for _, sBlock := range validatorData.SignedBlocks {
+			if sBlock == nil {
+				continue
+			}
+			signedBlocksByPubKey[pubKey] = append(signedBlocksByPubKey[pubKey], sBlock)
+		}
+	}
+	return signedBlocksByPubKey, nil
 }
 
 // We create a map of pubKey -> []*SignedAttestation. Then, for each public key we observe,
