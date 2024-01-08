@@ -33,7 +33,7 @@ type blobPruner struct {
 	fs           afero.Fs
 }
 
-func newblobPruner(fs afero.Fs, retain primitives.Epoch) (*blobPruner, error) {
+func newBlobPruner(fs afero.Fs, retain primitives.Epoch) (*blobPruner, error) {
 	r, err := slots.EpochStart(retain + retentionBuffer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not set retentionSlots")
@@ -110,7 +110,7 @@ func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
 	return nil
 }
 
-func shouldPrune(slot, pruneBefore primitives.Slot) bool {
+func shouldRetain(slot, pruneBefore primitives.Slot) bool {
 	return slot >= pruneBefore
 }
 
@@ -118,7 +118,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 	root := rootFromDir(dir)
 	slot, slotCached := p.slotMap.slot(root)
 	// Return early if the slot is cached and doesn't need pruning.
-	if slotCached && shouldPrune(slot, pruneBefore) {
+	if slotCached && shouldRetain(slot, pruneBefore) {
 		return 0, nil
 	}
 
@@ -141,7 +141,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 			return 0, errors.Wrapf(err, "slot could not be read from blob file %s", scFiles[0])
 		}
 		p.slotMap.ensure(root, slot)
-		if slot >= pruneBefore {
+		if shouldRetain(slot, pruneBefore) {
 			return 0, nil
 		}
 	}

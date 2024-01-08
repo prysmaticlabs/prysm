@@ -19,7 +19,7 @@ import (
 
 func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	pr, err := newblobPruner(fs, 0)
+	pr, err := newBlobPruner(fs, 0)
 	require.NoError(t, err)
 	slot := pr.windowSize
 	_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, fieldparams.MaxBlobsPerBlock)
@@ -37,7 +37,7 @@ func TestTryPruneDir_CachedNotExpired(t *testing.T) {
 func TestTryPruneDir_CachedExpired(t *testing.T) {
 	t.Run("empty directory", func(t *testing.T) {
 		fs := afero.NewMemMapFs()
-		pr, err := newblobPruner(fs, 0)
+		pr, err := newBlobPruner(fs, 0)
 		require.NoError(t, err)
 		var slot primitives.Slot = 0
 		_, sidecars := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, slot, 1)

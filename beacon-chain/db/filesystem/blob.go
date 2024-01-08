@@ -37,7 +37,7 @@ type BlobStorageOption func(*BlobStorage) error
 // WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
 func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
 	return func(b *BlobStorage) error {
-		pruner, err := newblobPruner(b.fs, e)
+		pruner, err := newBlobPruner(b.fs, e)
 		if err != nil {
 			return err
 		}

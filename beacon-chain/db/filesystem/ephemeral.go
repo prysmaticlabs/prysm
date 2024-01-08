@@ -12,7 +12,7 @@ import (
 // improving test performance and simplifying cleanup.
 func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
 	fs := afero.NewMemMapFs()
-	pruner, err := newblobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
 	if err != nil {
 		t.Fatal("test setup issue", err)
 	}
@@ -23,7 +23,7 @@ func NewEphemeralBlobStorage(t testing.TB) *BlobStorage {
 // in order to interact with it outside the parameters of the BlobStorage api.
 func NewEphemeralBlobStorageWithFs(t testing.TB) (afero.Fs, *BlobStorage, error) {
 	fs := afero.NewMemMapFs()
-	pruner, err := newblobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
+	pruner, err := newBlobPruner(fs, params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
 	if err != nil {
 		t.Fatal("test setup issue", err)
 	}
