@@ -150,7 +150,7 @@ func (p *blobPruner) tryPruneDir(dir string, pruneBefore primitives.Slot) (int, 
 	for _, fname := range entries {
 		fullName := path.Join(dir, fname)
 		if err := p.fs.Remove(fullName); err != nil {
-			return removed, errors.Wrapf(err, "unable to remove directory %s", fullName)
+			return removed, errors.Wrapf(err, "unable to remove %s", fullName)
 		}
 		// Don't count other files that happen to be in the dir, like dangling .part files.
 		if filterSsz(fname) {
