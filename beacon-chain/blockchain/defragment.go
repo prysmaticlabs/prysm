@@ -28,11 +28,11 @@ func (s *Service) runHeadStateDefragmentation() {
 				continue
 			}
 			s.headLock.Lock()
-			log.Info("Head state defragmentation initialized") // TODO: change to debug
+			log.Debug("Head state defragmentation initialized")
 			startTime := time.Now()
 			s.head.state.Defragment()
 			elapsedTime := time.Since(startTime)
-			log.Infof("Head state defragmentation completed in %s", elapsedTime.String()) // TODO: change to debug
+			log.Debugf("Head state defragmentation completed in %s", elapsedTime.String())
 			stateDefragmentationTime.Observe(float64(elapsedTime.Milliseconds()))
 			s.headLock.Unlock()
 		case <-s.ctx.Done():
