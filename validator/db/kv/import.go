@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/k0kubun/go-ansi"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -18,7 +17,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
-	"github.com/schollz/progressbar/v3"
 )
 
 // ImportStandardProtection takes in EIP-3076 compliant JSON file used for slashing protection
@@ -60,9 +58,15 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 	attestingHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord)
 	proposalHistoryByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey)
 
+	bar := common.InitializeProgressBar(len(signedBlocksByPubKey), "Transform signed blocks:")
+
 	for pubKey, signedBlocks := range signedBlocksByPubKey {
-		// Transform the processed signed blocks data from the JSON
+		// Transform the processed signed blocks data from the JSON.
 		// file into the internal Prysm representation of proposal history.
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
 		proposalHistory, err := transformSignedBlocks(ctx, signedBlocks)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed blocks in JSON file for key %#x", pubKey)
@@ -71,9 +75,14 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 		proposalHistoryByPubKey[pubKey] = *proposalHistory
 	}
 
+	bar = common.InitializeProgressBar(len(signedAttsByPubKey), "Transform signed attestations:")
 	for pubKey, signedAtts := range signedAttsByPubKey {
-		// Transform the processed signed attestation data from the JSON
+		// Transform the processed signed attestation data from the JSON.
 		// file into the internal Prysm representation of attesting history.
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
 		historicalAtt, err := transformSignedAttestations(pubKey, signedAtts)
 		if err != nil {
 			return errors.Wrapf(err, "could not parse signed attestations in JSON file for key %#x", pubKey)
@@ -85,7 +94,6 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 	// We validate and filter out public keys parsed from JSON to ensure we are
 	// not importing those which are slashable with respect to other data within the same JSON.
 	slashableProposerKeys := filterSlashablePubKeysFromBlocks(ctx, proposalHistoryByPubKey)
-
 	slashableAttesterKeys, err := filterSlashablePubKeysFromAttestations(ctx, s, attestingHistoryByPubKey)
 	if err != nil {
 		return errors.Wrap(err, "could not filter slashable attester public keys from JSON data")
@@ -131,8 +139,17 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 //	  SignedAttestations: [{Source: 5, Target: 6}, {Source: 5, Target: 6}, {Source: 6, Target: 7}],
 //	 }
 func parseAttestationsForUniquePublicKeys(data []*format.ProtectionData) (map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation, error) {
+	bar := common.InitializeProgressBar(
+		len(data),
+		"Parsing attestations for unique public keys:",
+	)
+
 	signedAttestationsByPubKey := make(map[[fieldparams.BLSPubkeyLength]byte][]*format.SignedAttestation)
 	for _, validatorData := range data {
+		if err := bar.Add(1); err != nil {
+			return nil, errors.Wrap(err, "could not increase progress bar")
+		}
+
 		pubKey, err := helpers.PubKeyFromHex(validatorData.Pubkey)
 		if err != nil {
 			return nil, fmt.Errorf("%s is not a valid public key: %w", validatorData.Pubkey, err)
@@ -180,6 +197,7 @@ func transformSignedBlocks(_ context.Context, signedBlocks []*format.SignedBlock
 
 func transformSignedAttestations(pubKey [fieldparams.BLSPubkeyLength]byte, atts []*format.SignedAttestation) ([]*common.AttestationRecord, error) {
 	historicalAtts := make([]*common.AttestationRecord, 0)
+
 	for _, attestation := range atts {
 		target, err := helpers.EpochFromString(attestation.TargetEpoch)
 		if err != nil {
@@ -218,8 +236,12 @@ func filterSlashablePubKeysFromBlocks(_ context.Context, historyByPubKey map[[fi
 	//     If signing root is nil, we consider that proposer public key as slashable
 	//     If signing root is not nil , then we compare signing roots. If they are different,
 	//     then we consider that proposer public key as slashable.
+	bar := common.InitializeProgressBar(len(historyByPubKey), "Filter slashable pubkeys from blocks:")
 	slashablePubKeys := make([][fieldparams.BLSPubkeyLength]byte, 0)
 	for pubKey, proposals := range historyByPubKey {
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
 		seenSigningRootsBySlot := make(map[primitives.Slot][]byte)
 		for _, blk := range proposals.Proposals {
 			if signingRoot, ok := seenSigningRootsBySlot[blk.Slot]; ok {
@@ -245,8 +267,17 @@ func filterSlashablePubKeysFromAttestations(
 	for pubKey, signedAtts := range signedAttsByPubKey {
 		signingRootsByTarget := make(map[primitives.Epoch][]byte)
 		targetEpochsBySource := make(map[primitives.Epoch][]primitives.Epoch)
+
+		bar := common.InitializeProgressBar(
+			len(signedAtts),
+			fmt.Sprintf("Pubkey %#x - Filter attestations wrt. JSON file:", pubKey),
+		)
+
 	Loop:
 		for _, att := range signedAtts {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
 			// Check for double votes.
 			if sr, ok := signingRootsByTarget[att.Target]; ok {
 				if slashings.SigningRootsDiffer(sr, att.SigningRoot) {
@@ -254,6 +285,7 @@ func filterSlashablePubKeysFromAttestations(
 					break Loop
 				}
 			}
+
 			// Check for surround voting.
 			for source, targets := range targetEpochsBySource {
 				for _, target := range targets {
@@ -269,9 +301,18 @@ func filterSlashablePubKeysFromAttestations(
 			targetEpochsBySource[att.Source] = append(targetEpochsBySource[att.Source], att.Target)
 		}
 	}
+
 	// Then, we need to find attestations that are slashable with respect to our database.
 	for pubKey, signedAtts := range signedAttsByPubKey {
+		bar := common.InitializeProgressBar(
+			len(signedAtts),
+			fmt.Sprintf("Pubkey %#x - Filter attestations wrt. database file:", pubKey),
+		)
 		for _, att := range signedAtts {
+			if err := bar.Add(1); err != nil {
+				log.WithError(err).Debug("Could not increase progress bar")
+			}
+
 			indexedAtt := createAttestation(att.Source, att.Target)
 
 			// If slashable == NotSlashable and err != nil, then CheckSlashableAttestation failed.
@@ -292,7 +333,7 @@ func filterSlashablePubKeysFromAttestations(
 
 func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte]common.ProposalHistoryForPubkey, validatorDB iface.ValidatorDB) error {
 	for pubKey, proposalHistory := range proposalHistoryByPubKey {
-		bar := initializeProgressBar(
+		bar := common.InitializeProgressBar(
 			len(proposalHistory.Proposals),
 			fmt.Sprintf("Importing proposals for validator public key %#x", bytesutil.Trunc(pubKey[:])),
 		)
@@ -312,7 +353,7 @@ func saveProposals(ctx context.Context, proposalHistoryByPubKey map[[fieldparams
 }
 
 func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldparams.BLSPubkeyLength]byte][]*common.AttestationRecord, validatorDB iface.ValidatorDB) error {
-	bar := initializeProgressBar(
+	bar := common.InitializeProgressBar(
 		len(attestingHistoryByPubKey),
 		"Importing attesting history for validator public keys",
 	)
@@ -337,24 +378,6 @@ func saveAttestations(ctx context.Context, attestingHistoryByPubKey map[[fieldpa
 	}
 
 	return nil
-}
-
-func initializeProgressBar(numItems int, msg string) *progressbar.ProgressBar {
-	return progressbar.NewOptions(
-		numItems,
-		progressbar.OptionFullWidth(),
-		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-		progressbar.OptionOnCompletion(func() { fmt.Println() }),
-		progressbar.OptionSetDescription(msg),
-	)
 }
 
 func createAttestation(source, target primitives.Epoch) *ethpb.IndexedAttestation {

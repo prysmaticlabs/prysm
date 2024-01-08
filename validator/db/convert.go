@@ -9,6 +9,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v5/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/kv"
@@ -140,8 +141,19 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 		return errors.Wrap(err, "could not get attested public keys from source database")
 	}
 
+	// Initialize the progress bar.
+	bar := common.InitializeProgressBar(
+		len(attestedPublicKeys),
+		"Processing attestations:",
+	)
+
 	for _, pubkey := range attestedPublicKeys {
-		// Get the attestation records
+		// Update the progress bar.
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
+		// Get the attestation records.
 		attestationRecords, err := sourceDatabase.AttestationHistoryForPubKey(ctx, pubkey)
 		if err != nil {
 			return errors.Wrap(err, "could not get attestation history for public key")
@@ -194,7 +206,18 @@ func ConvertDatabase(ctx context.Context, sourceDataDir string, targetDataDir st
 		return errors.Wrap(err, "could not get proposed public keys from source database")
 	}
 
+	// Initialize the progress bar.
+	bar = common.InitializeProgressBar(
+		len(attestedPublicKeys),
+		"Processing proposals:",
+	)
+
 	for _, pubkey := range proposedPublicKeys {
+		// Update the progress bar.
+		if err := bar.Add(1); err != nil {
+			log.WithError(err).Debug("Could not increase progress bar")
+		}
+
 		// Get the proposal history.
 		proposals, err := sourceDatabase.ProposalHistoryForPubKey(ctx, pubkey)
 		if err != nil {

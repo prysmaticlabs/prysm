@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/validator/db/common"
 	"github.com/prysmaticlabs/prysm/v5/validator/db/iface"
 	"github.com/prysmaticlabs/prysm/v5/validator/helpers"
 	"github.com/prysmaticlabs/prysm/v5/validator/slashing-protection-history/format"
@@ -41,8 +42,14 @@ func (s *Store) ImportStandardProtectionJSON(ctx context.Context, r io.Reader) e
 		return errors.Wrap(err, "slashing protection JSON metadata was incorrect")
 	}
 
-	// Save block proposals and attestations into the database
+	// Save blocks proposals and attestations into the database
+	bar := common.InitializeProgressBar(len(interchangeJSON.Data), "Save blocks proposals and attestations:")
 	for _, item := range interchangeJSON.Data {
+		// Update progress bar
+		if err := bar.Add(1); err != nil {
+			return errors.Wrap(err, "could not update progress bar")
+		}
+
 		// If item is nil, skip
 		if item == nil {
 			continue
