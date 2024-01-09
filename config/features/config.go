@@ -40,7 +40,6 @@ type Flags struct {
 	EnableExperimentalState             bool // EnableExperimentalState turns on the latest and greatest (but potentially unstable) changes to the beacon state.
 	WriteSSZStateTransitions            bool // WriteSSZStateTransitions to tmp directory.
 	EnablePeerScorer                    bool // EnablePeerScorer enables experimental peer scoring in p2p.
-	DisableReorgLateBlocks              bool // DisableReorgLateBlocks disables reorgs of late blocks.
 	WriteWalletPasswordOnWebOnboarding  bool // WriteWalletPasswordOnWebOnboarding writes the password to disk after Prysm web signup.
 	EnableDoppelGanger                  bool // EnableDoppelGanger enables doppelganger protection on startup for the validator.
 	EnableHistoricalSpaceRepresentation bool // EnableHistoricalSpaceRepresentation enables the saving of registry validators in separate buckets to save space
@@ -65,12 +64,9 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
-
-	AggregateParallel bool // AggregateParallel aggregates attestations in parallel.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -192,10 +188,6 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		cfg.DisableGRPCConnectionLogs = true
 	}
 
-	if ctx.Bool(disableReorgLateBlocks.Name) {
-		logEnabled(disableReorgLateBlocks)
-		cfg.DisableReorgLateBlocks = true
-	}
 	cfg.EnablePeerScorer = true
 	if ctx.Bool(disablePeerScorer.Name) {
 		logDisabled(disablePeerScorer)
@@ -233,26 +225,16 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	cfg.EnableOptionalEngineMethods = true
-	if ctx.IsSet(disableOptionalEngineMethods.Name) {
-		logEnabled(disableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = false
-	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
-	}
-	cfg.AggregateParallel = true
-	if ctx.IsSet(disableAggregateParallel.Name) {
-		logEnabled(disableAggregateParallel)
-		cfg.AggregateParallel = false
 	}
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	if ctx.IsSet(enableEIP4881.Name) {
-		logEnabled(enableEIP4881)
+	if ctx.IsSet(EnableEIP4881.Name) {
+		logEnabled(EnableEIP4881)
 		cfg.EnableEIP4881 = true
 	}
 	cfg.AggregateIntervals = [3]time.Duration{aggregateFirstInterval.Value, aggregateSecondInterval.Value, aggregateThirdInterval.Value}

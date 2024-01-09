@@ -122,45 +122,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
-	if blk.Version() >= version.Deneb {
-		if !blk.IsBlinded() {
-			signedBlobs, err := v.signDenebBlobs(ctx, b.GetDeneb().Blobs, pubKey)
-			if err != nil {
-				log.WithError(err).Error("Failed to sign blobs")
-				return
-			}
-			denebBlock, err := blk.PbDenebBlock()
-			if err != nil {
-				log.WithError(err).Error("Failed to get deneb block")
-				return
-			}
-			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-				Block: &ethpb.GenericSignedBeaconBlock_Deneb{
-					Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-						Block: denebBlock,
-						Blobs: signedBlobs,
-					},
+	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
+		denebBlock, err := blk.PbDenebBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to get deneb block")
+			return
+		}
+		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+				Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
+					Block:     denebBlock,
+					KzgProofs: b.GetDeneb().KzgProofs,
+					Blobs:     b.GetDeneb().Blobs,
 				},
-			}
-		} else {
-			signedBlindBlobs, err := v.signBlindedDenebBlobs(ctx, b.GetBlindedDeneb().Blobs, pubKey)
-			if err != nil {
-				log.WithError(err).Error("Failed to sign blinded blob sidecar")
-				return
-			}
-			blindedDenebBlock, err := blk.PbBlindedDenebBlock()
-			if err != nil {
-				log.WithError(err).Error("Failed to get blinded deneb block")
-				return
-			}
-			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-				Block: &ethpb.GenericSignedBeaconBlock_BlindedDeneb{
-					BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
-						SignedBlindedBlock:        blindedDenebBlock,
-						SignedBlindedBlobSidecars: signedBlindBlobs,
-					},
-				},
-			}
+			},
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()
@@ -411,7 +386,7 @@ func signVoluntaryExit(
 func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	// When specified, default graffiti from the command line takes the first priority.
 	if len(v.graffiti) != 0 {
-		return v.graffiti, nil
+		return bytesutil.PadTo(v.graffiti, 32), nil
 	}
 
 	if v.graffitiStruct == nil {
@@ -421,11 +396,11 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	// When specified, individual validator specified graffiti takes the second priority.
 	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	g, ok := v.graffitiStruct.Specific[idx.Index]
 	if ok {
-		return []byte(g), nil
+		return bytesutil.PadTo([]byte(g), 32), nil
 	}
 
 	// When specified, a graffiti from the ordered list in the file take third priority.
@@ -436,7 +411,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to update graffiti ordered index")
 		}
-		return []byte(graffiti), nil
+		return bytesutil.PadTo([]byte(graffiti), 32), nil
 	}
 
 	// When specified, a graffiti from the random list in the file take fourth priority.
@@ -444,12 +419,12 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())
 		i := r.Uint64() % uint64(len(v.graffitiStruct.Random))
-		return []byte(v.graffitiStruct.Random[i]), nil
+		return bytesutil.PadTo([]byte(v.graffitiStruct.Random[i]), 32), nil
 	}
 
 	// Finally, default graffiti if specified in the file will be used.
 	if v.graffitiStruct.Default != "" {
-		return []byte(v.graffitiStruct.Default), nil
+		return bytesutil.PadTo([]byte(v.graffitiStruct.Default), 32), nil
 	}
 
 	return []byte{}, nil

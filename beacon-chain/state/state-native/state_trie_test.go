@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -732,4 +733,42 @@ func TestBeaconState_ValidatorMutation_Bellatrix(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, rt, rt2)
+}
+
+func TestBeaconState_InitializeInactivityScoresCorrectly_Deneb(t *testing.T) {
+	resetCfg := features.InitWithReset(&features.Flags{
+		EnableExperimentalState: true,
+	})
+	defer resetCfg()
+	st, _ := util.DeterministicGenesisStateDeneb(t, 200)
+	_, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+	ic, err := st.InactivityScores()
+	require.NoError(t, err)
+	ic[10] = 10000
+	ic[100] = 1000
+
+	err = st.SetInactivityScores(ic)
+	require.NoError(t, err)
+
+	_, err = st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	ic[150] = 2390239
+	err = st.SetInactivityScores(ic)
+	require.NoError(t, err)
+	rt, err := st.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	copiedSt, ok := st.ToProtoUnsafe().(*ethpb.BeaconStateDeneb)
+	if !ok {
+		t.Error("not ok")
+	}
+	newSt, err := statenative.InitializeFromProtoUnsafeDeneb(copiedSt)
+	require.NoError(t, err)
+
+	newRt, err := newSt.HashTreeRoot(context.Background())
+	require.NoError(t, err)
+
+	require.DeepSSZEqual(t, rt, newRt)
 }

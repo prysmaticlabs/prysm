@@ -23,8 +23,8 @@ import (
 func getProposerSettings(c *cli.Context, r io.Reader) error {
 	ctx, span := trace.StartSpan(c.Context, "prysmctl.getProposerSettings")
 	defer span.End()
-	if !c.IsSet(ValidatorHostFlag.Name) {
-		return errNoFlag(ValidatorHostFlag.Name)
+	if !c.IsSet(HostFlag.Name) {
+		return errNoFlag(HostFlag.Name)
 	}
 	if !c.IsSet(TokenFlag.Name) {
 		return errNoFlag(TokenFlag.Name)
@@ -47,7 +47,7 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 		}
 	}
 
-	cl, err := validator.NewClient(c.String(ValidatorHostFlag.Name), client.WithAuthenticationToken(c.String(TokenFlag.Name)))
+	cl, err := validator.NewClient(c.String(HostFlag.Name), client.WithAuthenticationToken(c.String(TokenFlag.Name)))
 	if err != nil {
 		return err
 	}

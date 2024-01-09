@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ '*' ]
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   formatting:
@@ -26,15 +28,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up Go 1.20
+      - name: Set up Go 1.21
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21.5'
       - name: Run Gosec Security Scanner
         run: | # https://github.com/securego/gosec/issues/469
           export PATH=$PATH:$(go env GOPATH)/bin
           go install github.com/securego/gosec/v2/cmd/gosec@v2.15.0
-          gosec -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
+          gosec -exclude-generated -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
 
   lint:
     name: Lint
@@ -43,16 +45,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Go 1.20
+      - name: Set up Go 1.21
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20'
+          go-version: '1.21.5'
           id: go
 
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.52.2
+          version: v1.55.2
           args: --config=.golangci.yml --out-${NO_FUTURE}format colored-line-number
 
   build:
@@ -62,7 +64,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: '1.20'
+          go-version: '1.21.5'
         id: go
 
       - name: Check out code into the Go module directory

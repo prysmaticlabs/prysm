@@ -154,12 +154,6 @@ message ExecutionPayloadHeaderDeneb {
 	uint64 excess_blob_gas  = 17;
 }
 
-message TransitionConfiguration {
-	string terminal_total_difficulty = 1;
-	bytes terminal_block_hash        = 2;
-	bytes terminal_block_number      = 3;
-}
-
 message PayloadAttributes {
 	uint64 timestamp              = 1;
 	bytes prev_randao             = 2 [(ethereum.eth.ext.ssz_size) = "32"];
@@ -225,16 +219,6 @@ message BlobsBundle {
 	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
 	// The blobs itself.
 	repeated bytes blobs = 3 [(ethereum.eth.ext.ssz_size) = "?,131072", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
-}
-
-// BlindedBlobsBundle is retrieved through the builder-api from /eth/v1/builder/header/{slot}/{parent_hash}/{pubkey} after the Deneb hardfork.
-message BlindedBlobsBundle {
-	// The KZG commitments of the blobs.
-	repeated bytes kzg_commitments = 1 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
-	// The proofs of the blobs.
-	repeated bytes proofs = 2 [(ethereum.eth.ext.ssz_size) = "?,48", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
-	// The blob roots.
-	repeated bytes blob_roots = 3 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max) = "max_blob_commitments.size"];
 }
 
 // Blob contains the data that is to be committed on chain.

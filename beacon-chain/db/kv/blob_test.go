@@ -3,13 +3,10 @@ package kv
 import (
 	"context"
 	"crypto/rand"
-	"flag"
 	"fmt"
-	"strconv"
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -18,11 +15,10 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assertions"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
-	"github.com/urfave/cli/v2"
 	bolt "go.etcd.io/bbolt"
 )
 
-func equalBlobSlices(expect []*ethpb.BlobSidecar, got []*ethpb.BlobSidecar) error {
+func equalBlobSlices(expect []*ethpb.DeprecatedBlobSidecar, got []*ethpb.DeprecatedBlobSidecar) error {
 	if len(expect) != len(got) {
 		return fmt.Errorf("mismatched lengths, expect=%d, got=%d", len(expect), len(got))
 	}
@@ -80,7 +76,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
@@ -91,10 +87,10 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
-		expect := make([]*ethpb.BlobSidecar, 2)
+		expect := make([]*ethpb.DeprecatedBlobSidecar, 2)
 		expect[0] = scs[0]
 		expect[1] = scs[3]
 
@@ -108,7 +104,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot), uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -127,7 +123,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -136,7 +132,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot)
@@ -147,10 +143,10 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		// we'll request indices 0 and 3, so make a slice with those indices for comparison
-		expect := make([]*ethpb.BlobSidecar, 2)
+		expect := make([]*ethpb.DeprecatedBlobSidecar, 2)
 		expect[0] = scs[0]
 		expect[1] = scs[3]
 
@@ -165,7 +161,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 
 		got, err := db.BlobSidecarsBySlot(ctx, scs[0].Slot, uint64(len(scs)))
 		require.ErrorIs(t, err, ErrNotFound)
@@ -175,7 +171,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		require.NoError(t, db.SaveBlobSidecar(ctx, scs))
-		require.Equal(t, int(fieldparams.MaxBlobsPerBlock), len(scs))
+		require.Equal(t, fieldparams.MaxBlobsPerBlock, len(scs))
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
@@ -191,11 +187,11 @@ func TestStore_BlobSidecars(t *testing.T) {
 		for i := 0; i < fieldparams.MaxBlobsPerBlock; i++ {
 			scs[i].Slot = primitives.Slot(i)
 			scs[i].BlockRoot = bytesutil.PadTo([]byte{byte(i)}, 32)
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{scs[i]}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{scs[i]}))
 			br := bytesutil.ToBytes32(scs[i].BlockRoot)
 			saved, err := db.BlobSidecarsByRoot(ctx, br)
 			require.NoError(t, err)
-			require.NoError(t, equalBlobSlices([]*ethpb.BlobSidecar{scs[i]}, saved))
+			require.NoError(t, equalBlobSlices([]*ethpb.DeprecatedBlobSidecar{scs[i]}, saved))
 		}
 	})
 	t.Run("saving a new blob for rotation (batch)", func(t *testing.T) {
@@ -209,7 +205,7 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		newScs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range newScs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
@@ -226,19 +222,19 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 
 		_, err = db.BlobSidecarsBySlot(ctx, 100)
@@ -259,12 +255,12 @@ func TestStore_BlobSidecars(t *testing.T) {
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 
 		_, err = db.BlobSidecarsBySlot(ctx, 100)
@@ -278,14 +274,14 @@ func TestStore_BlobSidecars(t *testing.T) {
 		db := setupDB(t)
 		scs := generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
 		for _, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
 		}
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
 		require.NoError(t, err)
 		require.NoError(t, equalBlobSlices(scs, got))
 
 		scs = generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock)
-		newRetentionSlot := primitives.Slot(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
+		newRetentionSlot := primitives.Slot(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest.Mul(uint64(params.BeaconConfig().SlotsPerEpoch)))
 		for _, sc := range scs {
 			sc.Slot = sc.Slot + newRetentionSlot
 		}
@@ -304,8 +300,8 @@ func TestStore_BlobSidecars(t *testing.T) {
 		eScs := generateEquivocatingBlobSidecars(t, fieldparams.MaxBlobsPerBlock/2)
 
 		for i, sc := range scs {
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{sc}))
-			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{eScs[i]}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{sc}))
+			require.NoError(t, db.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{eScs[i]}))
 		}
 
 		got, err := db.BlobSidecarsByRoot(ctx, bytesutil.ToBytes32(scs[0].BlockRoot))
@@ -318,15 +314,15 @@ func TestStore_BlobSidecars(t *testing.T) {
 	})
 }
 
-func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
-	blobSidecars := make([]*ethpb.BlobSidecar, n)
+func generateBlobSidecars(t *testing.T, n uint64) []*ethpb.DeprecatedBlobSidecar {
+	blobSidecars := make([]*ethpb.DeprecatedBlobSidecar, n)
 	for i := uint64(0); i < n; i++ {
 		blobSidecars[i] = generateBlobSidecar(t, i)
 	}
 	return blobSidecars
 }
 
-func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
+func generateBlobSidecar(t *testing.T, index uint64) *ethpb.DeprecatedBlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)
@@ -336,7 +332,7 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	kzgProof := make([]byte, 48)
 	_, err = rand.Read(kzgProof)
 	require.NoError(t, err)
-	return &ethpb.BlobSidecar{
+	return &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte{'a'}, 32),
 		Index:           index,
 		Slot:            100,
@@ -348,15 +344,15 @@ func generateBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
 	}
 }
 
-func generateEquivocatingBlobSidecars(t *testing.T, n uint64) []*ethpb.BlobSidecar {
-	blobSidecars := make([]*ethpb.BlobSidecar, n)
+func generateEquivocatingBlobSidecars(t *testing.T, n uint64) []*ethpb.DeprecatedBlobSidecar {
+	blobSidecars := make([]*ethpb.DeprecatedBlobSidecar, n)
 	for i := uint64(0); i < n; i++ {
 		blobSidecars[i] = generateEquivocatingBlobSidecar(t, i)
 	}
 	return blobSidecars
 }
 
-func generateEquivocatingBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSidecar {
+func generateEquivocatingBlobSidecar(t *testing.T, index uint64) *ethpb.DeprecatedBlobSidecar {
 	blob := make([]byte, 131072)
 	_, err := rand.Read(blob)
 	require.NoError(t, err)
@@ -367,7 +363,7 @@ func generateEquivocatingBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSide
 	_, err = rand.Read(kzgProof)
 	require.NoError(t, err)
 
-	return &ethpb.BlobSidecar{
+	return &ethpb.DeprecatedBlobSidecar{
 		BlockRoot:       bytesutil.PadTo([]byte{'c'}, 32),
 		Index:           index,
 		Slot:            100,
@@ -382,16 +378,16 @@ func generateEquivocatingBlobSidecar(t *testing.T, index uint64) *ethpb.BlobSide
 func Test_validUniqueSidecars_validation(t *testing.T) {
 	tests := []struct {
 		name string
-		scs  []*ethpb.BlobSidecar
+		scs  []*ethpb.DeprecatedBlobSidecar
 		err  error
 	}{
-		{name: "empty", scs: []*ethpb.BlobSidecar{}, err: errEmptySidecar},
+		{name: "empty", scs: []*ethpb.DeprecatedBlobSidecar{}, err: errEmptySidecar},
 		{name: "too many sidecars", scs: generateBlobSidecars(t, fieldparams.MaxBlobsPerBlock+1), err: errBlobSidecarLimit},
-		{name: "invalid slot", scs: []*ethpb.BlobSidecar{{Slot: 1}, {Slot: 2}}, err: errBlobSlotMismatch},
-		{name: "invalid proposer index", scs: []*ethpb.BlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, err: errBlobProposerMismatch},
-		{name: "invalid root", scs: []*ethpb.BlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, err: errBlobRootMismatch},
-		{name: "invalid parent root", scs: []*ethpb.BlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, err: errBlobParentMismatch},
-		{name: "happy path", scs: []*ethpb.BlobSidecar{{Index: 0}, {Index: 1}}},
+		{name: "invalid slot", scs: []*ethpb.DeprecatedBlobSidecar{{Slot: 1}, {Slot: 2}}, err: errBlobSlotMismatch},
+		{name: "invalid proposer index", scs: []*ethpb.DeprecatedBlobSidecar{{ProposerIndex: 1}, {ProposerIndex: 2}}, err: errBlobProposerMismatch},
+		{name: "invalid root", scs: []*ethpb.DeprecatedBlobSidecar{{BlockRoot: []byte{1}}, {BlockRoot: []byte{2}}}, err: errBlobRootMismatch},
+		{name: "invalid parent root", scs: []*ethpb.DeprecatedBlobSidecar{{BlockParentRoot: []byte{1}}, {BlockParentRoot: []byte{2}}}, err: errBlobParentMismatch},
+		{name: "happy path", scs: []*ethpb.DeprecatedBlobSidecar{{Index: 0}, {Index: 1}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -408,43 +404,43 @@ func Test_validUniqueSidecars_validation(t *testing.T) {
 func Test_validUniqueSidecars_dedup(t *testing.T) {
 	cases := []struct {
 		name     string
-		scs      []*ethpb.BlobSidecar
-		expected []*ethpb.BlobSidecar
+		scs      []*ethpb.DeprecatedBlobSidecar
+		expected []*ethpb.DeprecatedBlobSidecar
 		err      error
 	}{
 		{
 			name:     "duplicate sidecar",
-			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 1}},
-			expected: []*ethpb.BlobSidecar{{Index: 1}},
+			scs:      []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 1}},
+			expected: []*ethpb.DeprecatedBlobSidecar{{Index: 1}},
 		},
 		{
 			name:     "single sidecar",
-			scs:      []*ethpb.BlobSidecar{{Index: 1}},
-			expected: []*ethpb.BlobSidecar{{Index: 1}},
+			scs:      []*ethpb.DeprecatedBlobSidecar{{Index: 1}},
+			expected: []*ethpb.DeprecatedBlobSidecar{{Index: 1}},
 		},
 		{
 			name:     "multiple duplicates",
-			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
-			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
+			scs:      []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
+			expected: []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
 		},
 		{
 			name:     "ok number after de-dupe, > 6 before",
-			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
-			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
+			scs:      []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 2}, {Index: 3}, {Index: 3}},
+			expected: []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}},
 		},
 		{
 			name:     "max unique, no dupes",
-			scs:      []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
-			expected: []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
+			scs:      []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
+			expected: []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}},
 		},
 		{
 			name: "too many unique",
-			scs:  []*ethpb.BlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
+			scs:  []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
 			err:  errBlobSidecarLimit,
 		},
 		{
 			name: "too many unique with dupes",
-			scs:  []*ethpb.BlobSidecar{{Index: 1}, {Index: 1}, {Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
+			scs:  []*ethpb.DeprecatedBlobSidecar{{Index: 1}, {Index: 1}, {Index: 1}, {Index: 2}, {Index: 3}, {Index: 4}, {Index: 5}, {Index: 6}, {Index: 7}},
 			err:  errBlobSidecarLimit,
 		},
 	}
@@ -462,7 +458,7 @@ func Test_validUniqueSidecars_dedup(t *testing.T) {
 }
 
 func TestStore_sortSidecars(t *testing.T) {
-	scs := []*ethpb.BlobSidecar{
+	scs := []*ethpb.DeprecatedBlobSidecar{
 		{Index: 6},
 		{Index: 4},
 		{Index: 2},
@@ -480,7 +476,7 @@ func TestStore_sortSidecars(t *testing.T) {
 func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 	s := setupDB(b)
 	ctx := context.Background()
-	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{
+	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{
 		{BlockRoot: bytesutil.PadTo([]byte{'a'}, 32), Slot: 0},
 	}))
 
@@ -490,11 +486,11 @@ func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 			r := make([]byte, 32)
 			_, err := rand.Read(r)
 			require.NoError(b, err)
-			scs := []*ethpb.BlobSidecar{
+			scs := []*ethpb.DeprecatedBlobSidecar{
 				{BlockRoot: r, Slot: primitives.Slot(i)},
 			}
-			k := blobSidecarKey(scs[0])
-			encodedBlobSidecar, err := encode(ctx, &ethpb.BlobSidecars{Sidecars: scs})
+			k := s.blobSidecarKey(scs[0])
+			encodedBlobSidecar, err := encode(ctx, &ethpb.DeprecatedBlobSidecars{Sidecars: scs})
 			require.NoError(b, err)
 			require.NoError(b, bkt.Put(k, encodedBlobSidecar))
 		}
@@ -502,7 +498,7 @@ func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 	})
 	require.NoError(b, err)
 
-	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.BlobSidecar{
+	require.NoError(b, s.SaveBlobSidecar(ctx, []*ethpb.DeprecatedBlobSidecar{
 		{BlockRoot: bytesutil.PadTo([]byte{'b'}, 32), Slot: 131071},
 	}))
 
@@ -514,27 +510,23 @@ func BenchmarkStore_BlobSidecarsByRoot(b *testing.B) {
 }
 
 func Test_checkEpochsForBlobSidecarsRequestBucket(t *testing.T) {
-	dbStore := setupDB(t)
+	s := setupDB(t)
 
-	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First write
-	require.NoError(t, checkEpochsForBlobSidecarsRequestBucket(dbStore.db)) // First check
+	require.NoError(t, s.checkEpochsForBlobSidecarsRequestBucket(s.db)) // First write
+	require.NoError(t, s.checkEpochsForBlobSidecarsRequestBucket(s.db)) // First check
 
-	params.SetupTestConfigCleanup(t)
-	set := flag.NewFlagSet("test", 0)
-	set.Uint64(flags.BlobRetentionEpoch.Name, 0, "")
-	require.NoError(t, set.Set(flags.BlobRetentionEpoch.Name, strconv.FormatUint(42069, 10)))
-	cliCtx := cli.NewContext(&cli.App{}, set, nil)
-	require.NoError(t, ConfigureBlobRetentionEpoch(cliCtx))
-	require.ErrorContains(t, "epochs for blobs request value in DB 4096 does not match config value 42069", checkEpochsForBlobSidecarsRequestBucket(dbStore.db))
+	s.blobRetentionEpochs += 1
+	require.ErrorIs(t, s.checkEpochsForBlobSidecarsRequestBucket(s.db), errBlobRetentionEpochMismatch)
 }
 
 func TestBlobRotatingKey(t *testing.T) {
-	k := blobSidecarKey(&ethpb.BlobSidecar{
+	s := setupDB(t)
+	k := s.blobSidecarKey(&ethpb.DeprecatedBlobSidecar{
 		Slot:      1,
 		BlockRoot: []byte{2},
 	})
 
 	require.Equal(t, types.Slot(1), k.Slot())
 	require.DeepEqual(t, []byte{2}, k.BlockRoot())
-	require.DeepEqual(t, slotKey(types.Slot(1)), k.BufferPrefix())
+	require.DeepEqual(t, s.slotKey(types.Slot(1)), k.BufferPrefix())
 }

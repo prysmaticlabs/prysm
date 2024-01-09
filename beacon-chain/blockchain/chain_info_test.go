@@ -429,6 +429,11 @@ func TestService_IsOptimistic(t *testing.T) {
 	opt, err = c.IsOptimistic(ctx)
 	require.NoError(t, err)
 	require.Equal(t, true, opt)
+
+	// If head is nil, for some reason, an error should be returned rather than panic.
+	c = &Service{}
+	_, err = c.IsOptimistic(ctx)
+	require.ErrorIs(t, err, ErrNilHead)
 }
 
 func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {

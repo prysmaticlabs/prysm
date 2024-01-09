@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/blstoexec"
@@ -15,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 )
 
 type Option func(s *Service) error
@@ -124,7 +126,7 @@ func WithSlasherBlockHeadersFeed(slasherBlockHeadersFeed *event.Feed) Option {
 	}
 }
 
-func WithExecutionPayloadReconstructor(r execution.ExecutionPayloadReconstructor) Option {
+func WithPayloadReconstructor(r execution.PayloadReconstructor) Option {
 	return func(s *Service) error {
 		s.cfg.executionPayloadReconstructor = r
 		return nil
@@ -149,6 +151,22 @@ func WithInitialSyncComplete(c chan struct{}) Option {
 func WithStateNotifier(n statefeed.Notifier) Option {
 	return func(s *Service) error {
 		s.cfg.stateNotifier = n
+		return nil
+	}
+}
+
+// WithBlobStorage gives the sync package direct access to BlobStorage.
+func WithBlobStorage(b *filesystem.BlobStorage) Option {
+	return func(s *Service) error {
+		s.cfg.blobStorage = b
+		return nil
+	}
+}
+
+// WithVerifierWaiter gives the sync package direct access to the verifier waiter.
+func WithVerifierWaiter(v *verification.InitializerWaiter) Option {
+	return func(s *Service) error {
+		s.verifierWaiter = v
 		return nil
 	}
 }

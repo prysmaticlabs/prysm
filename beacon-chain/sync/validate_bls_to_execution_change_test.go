@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -178,7 +179,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
@@ -396,7 +397,7 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				epoch := slots.ToEpoch(st.Slot())
 				domain, err := signing.Domain(st.Fork(), epoch, params.BeaconConfig().DomainBLSToExecutionChange, st.GenesisValidatorsRoot())
 				assert.NoError(t, err)
-				htr, err := signing.SigningData(msg.Message.HashTreeRoot, domain)
+				htr, err := signing.Data(msg.Message.HashTreeRoot, domain)
 				assert.NoError(t, err)
 				msg.Signature = keys[51].Sign(htr[:]).Marshal()
 				return s, topic
@@ -430,6 +431,8 @@ func TestService_ValidateBlsToExecutionChange(t *testing.T) {
 				tt.clock = startup.NewClock(time.Now(), [32]byte{})
 			}
 			require.NoError(t, cw.SetClock(tt.clock))
+			svc.verifierWaiter = verification.NewInitializerWaiter(cw, chainService.ForkChoiceStore, svc.cfg.stateGen)
+
 			marshalledObj, err := tt.args.msg.MarshalSSZ()
 			assert.NoError(t, err)
 			marshalledObj = snappy.Encode(nil, marshalledObj)

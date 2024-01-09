@@ -21,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -318,6 +319,9 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		clockWaiter:  cw,
 		chainStarted: abool.New(),
 	}
+	clock := startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 	p1.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
@@ -334,6 +338,10 @@ func TestHandshakeHandlers_Roundtrip(t *testing.T) {
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
+	clock = startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r2.verifierWaiter = verification.NewInitializerWaiter(clock, chain2.ForkChoiceStore, r2.cfg.stateGen)
+
 	p2.Digest, err = r.currentForkDigest()
 	require.NoError(t, err)
 
@@ -837,6 +845,9 @@ func TestStatusRPCRequest_BadPeerHandshake(t *testing.T) {
 		clockWaiter:  cw,
 		chainStarted: abool.New(),
 	}
+	clock := startup.NewClockSynchronizer()
+	require.NoError(t, clock.SetClock(startup.NewClock(time.Now(), [32]byte{})))
+	r.verifierWaiter = verification.NewInitializerWaiter(clock, chain.ForkChoiceStore, r.cfg.stateGen)
 
 	go r.Start()
 

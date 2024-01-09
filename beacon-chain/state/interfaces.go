@@ -23,7 +23,7 @@ type BeaconState interface {
 	Copy() BeaconState
 	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	StateProver
+	Prover
 	json.Marshaler
 }
 
@@ -35,7 +35,7 @@ type SpecParametersProvider interface {
 }
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
-type StateProver interface {
+type Prover interface {
 	FinalizedRootProof(ctx context.Context) ([][]byte, error)
 	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
@@ -66,6 +66,7 @@ type ReadOnlyBeaconState interface {
 	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
+	RecordStateMetrics()
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int

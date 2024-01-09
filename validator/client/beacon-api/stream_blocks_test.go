@@ -10,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -26,8 +25,8 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Get(
 		ctx,
 		gomock.Any(),
 		&abstractSignedBlockResponseJson{},
@@ -35,7 +34,6 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 		2,
 		abstractSignedBlockResponseJson{Version: "foo"},
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -48,12 +46,12 @@ func TestStreamBlocks_UnsupportedConsensusVersion(t *testing.T) {
 func TestStreamBlocks_Error(t *testing.T) {
 	testSuites := []struct {
 		consensusVersion             string
-		generateBeaconBlockConverter func(ctrl *gomock.Controller, conversionError error) *mock.MockbeaconBlockConverter
+		generateBeaconBlockConverter func(ctrl *gomock.Controller, conversionError error) *mock.MockBeaconBlockConverter
 	}{
 		{
 			consensusVersion: "phase0",
-			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockbeaconBlockConverter {
-				beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockBeaconBlockConverter {
+				beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 				beaconBlockConverter.EXPECT().ConvertRESTPhase0BlockToProto(
 					gomock.Any(),
 				).Return(
@@ -66,8 +64,8 @@ func TestStreamBlocks_Error(t *testing.T) {
 		},
 		{
 			consensusVersion: "altair",
-			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockbeaconBlockConverter {
-				beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockBeaconBlockConverter {
+				beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 				beaconBlockConverter.EXPECT().ConvertRESTAltairBlockToProto(
 					gomock.Any(),
 				).Return(
@@ -80,8 +78,8 @@ func TestStreamBlocks_Error(t *testing.T) {
 		},
 		{
 			consensusVersion: "bellatrix",
-			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockbeaconBlockConverter {
-				beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockBeaconBlockConverter {
+				beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 				beaconBlockConverter.EXPECT().ConvertRESTBellatrixBlockToProto(
 					gomock.Any(),
 				).Return(
@@ -94,8 +92,8 @@ func TestStreamBlocks_Error(t *testing.T) {
 		},
 		{
 			consensusVersion: "capella",
-			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockbeaconBlockConverter {
-				beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			generateBeaconBlockConverter: func(ctrl *gomock.Controller, conversionError error) *mock.MockBeaconBlockConverter {
+				beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 				beaconBlockConverter.EXPECT().ConvertRESTCapellaBlockToProto(
 					gomock.Any(),
 				).Return(
@@ -124,7 +122,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			expectedErrorMessage: "failed to get signed %s block",
 			conversionError:      errors.New("foo"),
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockJson{Signature: "0x01"})
+				blockBytes, err := json.Marshal(shared.SignedBeaconBlock{Signature: "0x01"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -133,7 +131,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			name:                 "signature decoding failed",
 			expectedErrorMessage: "failed to decode %s block signature `foo`",
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(apimiddleware.SignedBeaconBlockJson{Signature: "foo"})
+				blockBytes, err := json.Marshal(shared.SignedBeaconBlock{Signature: "foo"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -149,8 +147,8 @@ func TestStreamBlocks_Error(t *testing.T) {
 
 					ctx := context.Background()
 
-					jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-					jsonRestHandler.EXPECT().GetRestJsonResponse(
+					jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+					jsonRestHandler.EXPECT().Get(
 						ctx,
 						gomock.Any(),
 						&abstractSignedBlockResponseJson{},
@@ -161,7 +159,6 @@ func TestStreamBlocks_Error(t *testing.T) {
 							Data:    testCase.generateData(testSuite.consensusVersion),
 						},
 					).Return(
-						nil,
 						nil,
 					).Times(1)
 
@@ -201,14 +198,14 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			phase0BeaconBlock1 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockJson{
+			signedBeaconBlockContainer1 := shared.SignedBeaconBlock{
 				Message:   phase0BeaconBlock1,
 				Signature: "0x01",
 			}
@@ -216,12 +213,11 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -246,7 +242,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			phase0BeaconBlock2 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockJson{
+			signedBeaconBlockContainer2 := shared.SignedBeaconBlock{
 				Message:   phase0BeaconBlock2,
 				Signature: "0x02",
 			}
@@ -254,12 +250,11 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -282,12 +277,11 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -365,14 +359,14 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			altairBeaconBlock1 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockAltairJson{
+			signedBeaconBlockContainer1 := shared.SignedBeaconBlockAltair{
 				Message:   altairBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -380,12 +374,11 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -410,7 +403,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			altairBeaconBlock2 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockAltairJson{
+			signedBeaconBlockContainer2 := shared.SignedBeaconBlockAltair{
 				Message:   altairBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -418,12 +411,11 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -446,12 +438,11 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -529,14 +520,14 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			bellatrixBeaconBlock1 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockBellatrixJson{
+			signedBeaconBlockContainer1 := shared.SignedBeaconBlockBellatrix{
 				Message:   bellatrixBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -544,12 +535,11 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -574,7 +564,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			bellatrixBeaconBlock2 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockBellatrixJson{
+			signedBeaconBlockContainer2 := shared.SignedBeaconBlockBellatrix{
 				Message:   bellatrixBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -582,12 +572,11 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -610,12 +599,11 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -693,14 +681,14 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			capellaBeaconBlock1 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := apimiddleware.SignedBeaconBlockCapellaJson{
+			signedBeaconBlockContainer1 := shared.SignedBeaconBlockCapella{
 				Message:   capellaBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -708,12 +696,11 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(signedBeaconBlockContainer1)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -738,7 +725,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			capellaBeaconBlock2 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := apimiddleware.SignedBeaconBlockCapellaJson{
+			signedBeaconBlockContainer2 := shared.SignedBeaconBlockCapella{
 				Message:   capellaBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -746,12 +733,11 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(signedBeaconBlockContainer2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -774,12 +760,11 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -857,8 +842,8 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			ctx := context.Background()
 
 			signedBlockResponseJson := abstractSignedBlockResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			beaconBlockConverter := mock.NewMockbeaconBlockConverter(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			beaconBlockConverter := mock.NewMockBeaconBlockConverter(ctrl)
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
@@ -872,12 +857,11 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			marshalledSignedBeaconBlockContainer1, err := json.Marshal(denebBlock)
 			require.NoError(t, err)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -902,12 +886,11 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			marshalledSignedBeaconBlockContainer2, err := json.Marshal(denebBlock2)
 			require.NoError(t, err)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v2/beacon/blocks/head",
 				&signedBlockResponseJson,
 			).Return(
-				nil,
 				nil,
 			).SetArg(
 				2,
@@ -920,12 +903,11 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			// The fourth call is only necessary when verifiedOnly == true since the previous block was optimistic
 			if testCase.verifiedOnly {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v2/beacon/blocks/head",
 					&signedBlockResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,

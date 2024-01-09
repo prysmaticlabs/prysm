@@ -28,11 +28,11 @@ const executionToBLSPadding = 12
 // signature set.
 func ProcessBLSToExecutionChanges(
 	st state.BeaconState,
-	signed interfaces.ReadOnlySignedBeaconBlock) (state.BeaconState, error) {
-	if signed.Version() < version.Capella {
+	b interfaces.ReadOnlyBeaconBlock) (state.BeaconState, error) {
+	if b.Version() < version.Capella {
 		return st, nil
 	}
-	changes, err := signed.Block().Body().BLSToExecutionChanges()
+	changes, err := b.Body().BLSToExecutionChanges()
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get BLSToExecutionChanges")
 	}
@@ -235,7 +235,7 @@ func BLSChangesSignatureBatch(
 			return nil, errors.Wrap(err, "could not convert bytes to public key")
 		}
 		batch.PublicKeys[i] = publicKey
-		htr, err := signing.SigningData(change.Message.HashTreeRoot, domain)
+		htr, err := signing.Data(change.Message.HashTreeRoot, domain)
 		if err != nil {
 			return nil, errors.Wrap(err, "could not compute BLSToExecutionChange signing data")
 		}

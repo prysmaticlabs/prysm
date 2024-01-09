@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -46,30 +45,7 @@ func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedA
 	// Track the unaggregated attestations that aren't able to aggregate.
 	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
 
-	if features.Get().AggregateParallel {
-		leftOverUnaggregatedAtt = c.aggregateParallel(attsByDataRoot, leftOverUnaggregatedAtt)
-	} else {
-		for _, atts := range attsByDataRoot {
-			aggregated, err := attaggregation.AggregateDisjointOneBitAtts(atts)
-			if err != nil {
-				return errors.Wrap(err, "could not aggregate unaggregated attestations")
-			}
-			if aggregated == nil {
-				return errors.New("could not aggregate unaggregated attestations")
-			}
-			if helpers.IsAggregated(aggregated) {
-				if err := c.SaveAggregatedAttestations([]*ethpb.Attestation{aggregated}); err != nil {
-					return err
-				}
-			} else {
-				h, err := hashFn(aggregated)
-				if err != nil {
-					return err
-				}
-				leftOverUnaggregatedAtt[h] = true
-			}
-		}
-	}
+	leftOverUnaggregatedAtt = c.aggregateParallel(attsByDataRoot, leftOverUnaggregatedAtt)
 
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {

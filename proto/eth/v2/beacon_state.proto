@@ -227,32 +227,9 @@ message HistoricalSummary {
   bytes state_summary_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
 }
 
-message BeaconStateRequestV2 {
-  // The state id which can be any of: "head" (canonical head in node's view),
-  // "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
-  bytes state_id = 1;
-}
-
-message BeaconStateResponseV2 {
-  Version version = 1;
-  BeaconStateContainer data = 2;
-  bool execution_optimistic = 3;
-  bool finalized = 4;
-}
-
 message BeaconStateSSZResponseV2 {
   v2.Version version = 1;
   bytes data = 2;
-}
-
-message BeaconStateContainer {
-  oneof state {
-    v1.BeaconState phase0_state = 1;
-    BeaconState altair_state = 2;
-    BeaconStateBellatrix bellatrix_state = 3;
-    BeaconStateCapella capella_state = 4;
-    BeaconStateDeneb deneb_state = 5;
-  }
 }
 
 message ForkChoiceHeadsResponse {

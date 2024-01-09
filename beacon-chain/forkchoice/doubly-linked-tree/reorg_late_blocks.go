@@ -3,7 +3,6 @@ package doublylinkedtree
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
@@ -28,7 +27,7 @@ const orphanLateBlockProposingEarly = 2
 // 3- The beacon node is serving a validator that will propose during the next
 // slot.
 //
-// This function only applies an heuristic to decide if the beacon will update
+// This function only applies a heuristic to decide if the beacon will update
 // the engine's view of head with the parent block or the incoming block. It
 // does not guarantee an attempted reorg. This will only be decided later at
 // proposal time by calling GetProposerHead.
@@ -98,9 +97,6 @@ func (f *ForkChoice) ShouldOverrideFCU() (override bool) {
 // This function needs to be called only when proposing a block and all
 // attestation processing has already happened.
 func (f *ForkChoice) GetProposerHead() [32]byte {
-	if features.Get().DisableReorgLateBlocks {
-		return f.CachedHeadRoot()
-	}
 	head := f.store.headNode
 	if head == nil {
 		return [32]byte{}

@@ -22,7 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -129,6 +128,7 @@ type config struct {
 	currHttpEndpoint        network.Endpoint
 	headers                 []string
 	finalizedStateAtStartup state.BeaconState
+	jwtId                   string
 }
 
 // Service fetches important information about the canonical
@@ -241,9 +241,6 @@ func (s *Service) Start() {
 
 	// Poll the execution client connection and fallback if errors occur.
 	s.pollConnectionStatus(s.ctx)
-
-	// Check transition configuration for the engine API client in the background.
-	go s.checkTransitionConfiguration(s.ctx, make(chan *feed.Event, 1))
 
 	go s.run(s.ctx.Done())
 }
@@ -754,6 +751,10 @@ func (s *Service) initializeEth1Data(ctx context.Context, eth1DataInDB *ethpb.ET
 			}
 		}
 	} else {
+		if eth1DataInDB.Trie == nil && eth1DataInDB.DepositSnapshot != nil {
+			return errors.Errorf("trying to use old deposit trie after migration to the new trie. "+
+				"Run with the --%s flag to resume normal operations.", features.EnableEIP4881.Name)
+		}
 		s.depositTrie, err = trie.CreateTrieFromProto(eth1DataInDB.Trie)
 	}
 	if err != nil {

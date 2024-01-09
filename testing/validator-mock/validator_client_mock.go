@@ -247,19 +247,19 @@ func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
 }
 
-// StreamBlocksAltair mocks base method.
-func (m *MockValidatorClient) StreamBlocksAltair(arg0 context.Context, arg1 *eth.StreamBlocksRequest) (eth.BeaconNodeValidator_StreamBlocksAltairClient, error) {
+// StreamSlots mocks base method.
+func (m *MockValidatorClient) StreamSlots(arg0 context.Context, arg1 *eth.StreamSlotsRequest) (eth.BeaconNodeValidator_StreamSlotsClient, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StreamBlocksAltair", arg0, arg1)
-	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamBlocksAltairClient)
+	ret := m.ctrl.Call(m, "StreamSlots", arg0, arg1)
+	ret0, _ := ret[0].(eth.BeaconNodeValidator_StreamSlotsClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// StreamBlocksAltair indicates an expected call of StreamBlocksAltair.
-func (mr *MockValidatorClientMockRecorder) StreamBlocksAltair(arg0, arg1 interface{}) *gomock.Call {
+// StreamSlots indicates an expected call of StreamSlots.
+func (mr *MockValidatorClientMockRecorder) StreamSlots(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamBlocksAltair", reflect.TypeOf((*MockValidatorClient)(nil).StreamBlocksAltair), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StreamSlots", reflect.TypeOf((*MockValidatorClient)(nil).StreamSlots), arg0, arg1)
 }
 
 // SubmitAggregateSelectionProof mocks base method.

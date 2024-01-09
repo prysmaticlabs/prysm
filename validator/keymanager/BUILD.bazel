@@ -14,7 +14,6 @@ go_library(
         "//async/event:go_default_library",
         "//config/fieldparams:go_default_library",
         "//crypto/bls:go_default_library",
-        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1/validator-client:go_default_library",
     ],
 )

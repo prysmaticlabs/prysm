@@ -84,10 +84,11 @@ func TestValidateAttesterSlashing_ValidSlashing(t *testing.T) {
 	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
-			p2p:         p,
-			chain:       chain,
-			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			initialSync: &mockSync.Sync{IsSyncing: false},
+			p2p:               p,
+			chain:             chain,
+			clock:             startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			initialSync:       &mockSync.Sync{IsSyncing: false},
+			operationNotifier: chain.OperationNotifier(),
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),
@@ -129,10 +130,11 @@ func TestValidateAttesterSlashing_InvalidSlashing_WithdrawableEpoch(t *testing.T
 	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
-			p2p:         p,
-			chain:       chain,
-			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			initialSync: &mockSync.Sync{IsSyncing: false},
+			p2p:               p,
+			chain:             chain,
+			clock:             startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			initialSync:       &mockSync.Sync{IsSyncing: false},
+			operationNotifier: chain.OperationNotifier(),
 		},
 		seenAttesterSlashingCache: make(map[uint64]bool),
 		subHandler:                newSubTopicHandler(),

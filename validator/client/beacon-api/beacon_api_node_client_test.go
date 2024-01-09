@@ -7,8 +7,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -22,7 +22,7 @@ func TestGetGenesis(t *testing.T) {
 		name                    string
 		genesisResponse         *beacon.Genesis
 		genesisError            error
-		depositContractResponse apimiddleware.DepositContractResponseJson
+		depositContractResponse config.GetDepositContractResponse
 		depositContractError    error
 		queriesDepositContract  bool
 		expectedResponse        *ethpb.Genesis
@@ -57,7 +57,7 @@ func TestGetGenesis(t *testing.T) {
 			},
 			depositContractError:   errors.New("foo error"),
 			queriesDepositContract: true,
-			expectedError:          "failed to query deposit contract information: foo error",
+			expectedError:          "foo error",
 		},
 		{
 			name: "fails to read nil deposit contract data",
@@ -66,7 +66,7 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
+			depositContractResponse: config.GetDepositContractResponse{
 				Data: nil,
 			},
 			expectedError: "deposit contract data is nil",
@@ -78,8 +78,8 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
-				Data: &apimiddleware.DepositContractJson{
+			depositContractResponse: config.GetDepositContractResponse{
+				Data: &config.DepositContractData{
 					Address: "foo",
 				},
 			},
@@ -92,8 +92,8 @@ func TestGetGenesis(t *testing.T) {
 				GenesisValidatorsRoot: hexutil.Encode([]byte{2}),
 			},
 			queriesDepositContract: true,
-			depositContractResponse: apimiddleware.DepositContractResponseJson{
-				Data: &apimiddleware.DepositContractJson{
+			depositContractResponse: config.GetDepositContractResponse{
+				Data: &config.DepositContractData{
 					Address: hexutil.Encode([]byte{3}),
 				},
 			},
@@ -113,25 +113,23 @@ func TestGetGenesis(t *testing.T) {
 			defer ctrl.Finish()
 			ctx := context.Background()
 
-			genesisProvider := mock.NewMockgenesisProvider(ctrl)
+			genesisProvider := mock.NewMockGenesisProvider(ctrl)
 			genesisProvider.EXPECT().GetGenesis(
 				ctx,
 			).Return(
 				testCase.genesisResponse,
-				nil,
 				testCase.genesisError,
 			)
 
-			depositContractJson := apimiddleware.DepositContractResponseJson{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			depositContractJson := config.GetDepositContractResponse{}
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			if testCase.queriesDepositContract {
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					"/eth/v1/config/deposit_contract",
 					&depositContractJson,
 				).Return(
-					nil,
 					testCase.depositContractError,
 				).SetArg(
 					2,
@@ -167,7 +165,7 @@ func TestGetSyncStatus(t *testing.T) {
 		{
 			name:              "fails to query REST endpoint",
 			restEndpointError: errors.New("foo error"),
-			expectedError:     "failed to get sync status: foo error",
+			expectedError:     "foo error",
 		},
 		{
 			name:                 "returns nil syncing data",
@@ -205,13 +203,12 @@ func TestGetSyncStatus(t *testing.T) {
 			ctx := context.Background()
 
 			syncingResponse := node.SyncStatusResponse{}
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				syncingEndpoint,
 				&syncingResponse,
 			).Return(
-				nil,
 				testCase.restEndpointError,
 			).SetArg(
 				2,
@@ -243,7 +240,7 @@ func TestGetVersion(t *testing.T) {
 		{
 			name:              "fails to query REST endpoint",
 			restEndpointError: errors.New("foo error"),
-			expectedError:     "failed to query node version",
+			expectedError:     "foo error",
 		},
 		{
 			name:                 "returns nil version data",
@@ -270,13 +267,12 @@ func TestGetVersion(t *testing.T) {
 			ctx := context.Background()
 
 			var versionResponse node.GetVersionResponse
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				versionEndpoint,
 				&versionResponse,
 			).Return(
-				nil,
 				testCase.restEndpointError,
 			).SetArg(
 				2,

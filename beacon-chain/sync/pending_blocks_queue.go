@@ -55,6 +55,9 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "processPendingBlocks")
 	defer span.End()
 
+	// Remove old blocks from our expiration cache.
+	s.deleteExpiredBlocksFromCache()
+
 	// Validate pending slots before processing.
 	if err := s.validatePendingSlots(); err != nil {
 		return errors.Wrap(err, "could not validate pending slots")
@@ -131,11 +134,17 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 				continue
 			}
 
+			// Calculate the deadline time by adding three slots duration to the current time
+			secondsPerSlot := params.BeaconConfig().SecondsPerSlot
+			threeSlotDuration := 3 * time.Duration(secondsPerSlot) * time.Second
+			ctxWithTimeout, cancelFunction := context.WithTimeout(ctx, threeSlotDuration)
 			// Process and broadcast the block.
-			if err := s.processAndBroadcastBlock(ctx, b, blkRoot); err != nil {
-				s.handleBlockProcessingError(ctx, err, b, blkRoot)
+			if err := s.processAndBroadcastBlock(ctxWithTimeout, b, blkRoot); err != nil {
+				s.handleBlockProcessingError(ctxWithTimeout, err, b, blkRoot)
+				cancelFunction()
 				continue
 			}
+			cancelFunction()
 
 			// Remove the processed block from the queue.
 			if err := s.removeBlockFromQueue(b, blkRoot); err != nil {
@@ -202,7 +211,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot, nil); err != nil {
 		return err
 	}
 
@@ -290,8 +299,10 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
 		req := p2ptypes.BeaconBlockByRootsReq(roots)
-		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
+		currentEpoch := slots.ToEpoch(s.cfg.clock.CurrentSlot())
+		maxReqBlock := params.MaxRequestBlock(currentEpoch)
+		if uint64(len(roots)) > maxReqBlock {
+			req = roots[:maxReqBlock]
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)
@@ -430,6 +441,15 @@ func (s *Service) deleteBlockFromPendingQueue(slot primitives.Slot, b interfaces
 	}
 	delete(s.seenPendingBlocks, r)
 	return nil
+}
+
+// This method manually clears our cache so that all expired
+// entries are correctly removed.
+func (s *Service) deleteExpiredBlocksFromCache() {
+	s.pendingQueueLock.Lock()
+	defer s.pendingQueueLock.Unlock()
+
+	s.slotToPendingBlocks.DeleteExpired()
 }
 
 // Insert block to the list in the pending queue using the slot as key.

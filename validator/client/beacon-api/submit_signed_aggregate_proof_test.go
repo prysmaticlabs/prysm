@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,20 +21,19 @@ func TestSubmitSignedAggregateSelectionProof_Valid(t *testing.T) {
 	defer ctrl.Finish()
 
 	signedAggregateAndProof := generateSignedAggregateAndProofJson()
-	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
+	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*shared.SignedAggregateAttestationAndProof{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/validator/aggregate_and_proofs",
 		nil,
 		bytes.NewBuffer(marshalledSignedAggregateSignedAndProof),
 		nil,
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -54,19 +53,18 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 	defer ctrl.Finish()
 
 	signedAggregateAndProof := generateSignedAggregateAndProofJson()
-	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*apimiddleware.SignedAggregateAttestationAndProofJson{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
+	marshalledSignedAggregateSignedAndProof, err := json.Marshal([]*shared.SignedAggregateAttestationAndProof{jsonifySignedAggregateAndProof(signedAggregateAndProof)})
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/validator/aggregate_and_proofs",
 		nil,
 		bytes.NewBuffer(marshalledSignedAggregateSignedAndProof),
 		nil,
 	).Return(
-		nil,
 		errors.New("bad request"),
 	).Times(1)
 
@@ -74,7 +72,6 @@ func TestSubmitSignedAggregateSelectionProof_BadRequest(t *testing.T) {
 	_, err = validatorClient.submitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: signedAggregateAndProof,
 	})
-	assert.ErrorContains(t, "failed to send POST data to REST endpoint", err)
 	assert.ErrorContains(t, "bad request", err)
 }
 

@@ -623,8 +623,8 @@ func CopyExecutionPayloadHeader(payload *enginev1.ExecutionPayloadHeader) *engin
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
 		Timestamp:        payload.Timestamp,
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
 	}
@@ -646,8 +646,8 @@ func CopyExecutionPayloadHeaderCapella(payload *enginev1.ExecutionPayloadHeaderC
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
 		Timestamp:        payload.Timestamp,
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
 		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
@@ -812,13 +812,13 @@ func CopyExecutionPayloadHeaderDeneb(payload *enginev1.ExecutionPayloadHeaderDen
 		GasLimit:         payload.GasLimit,
 		GasUsed:          payload.GasUsed,
 		Timestamp:        payload.Timestamp,
-		BlobGasUsed:      payload.BlobGasUsed,
-		ExcessBlobGas:    payload.ExcessBlobGas,
-		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		ExtraData:        bytesutil.SafeCopyBytes(payload.ExtraData),
+		BaseFeePerGas:    bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:        bytesutil.SafeCopyBytes(payload.BlockHash),
 		TransactionsRoot: bytesutil.SafeCopyBytes(payload.TransactionsRoot),
 		WithdrawalsRoot:  bytesutil.SafeCopyBytes(payload.WithdrawalsRoot),
+		BlobGasUsed:      payload.BlobGasUsed,
+		ExcessBlobGas:    payload.ExcessBlobGas,
 	}
 }
 
@@ -838,13 +838,13 @@ func CopyExecutionPayloadDeneb(payload *enginev1.ExecutionPayloadDeneb) *enginev
 		GasLimit:      payload.GasLimit,
 		GasUsed:       payload.GasUsed,
 		Timestamp:     payload.Timestamp,
-		BlobGasUsed:   payload.BlobGasUsed,
-		ExcessBlobGas: payload.ExcessBlobGas,
 		ExtraData:     bytesutil.SafeCopyBytes(payload.ExtraData),
 		BaseFeePerGas: bytesutil.SafeCopyBytes(payload.BaseFeePerGas),
 		BlockHash:     bytesutil.SafeCopyBytes(payload.BlockHash),
 		Transactions:  bytesutil.SafeCopy2dBytes(payload.Transactions),
 		Withdrawals:   CopyWithdrawalSlice(payload.Withdrawals),
+		BlobGasUsed:   payload.BlobGasUsed,
+		ExcessBlobGas: payload.ExcessBlobGas,
 	}
 }
 

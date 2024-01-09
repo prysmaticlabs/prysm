@@ -33,19 +33,20 @@ var (
 // BeaconNodeOptions is responsible for determining if the checkpoint sync options have been used, and if so,
 // reading the block and state ssz-serialized values from the filesystem locations specified and preparing a
 // checkpoint.Initializer, which uses the provided io.ReadClosers to initialize the beacon node database.
-func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
+func BeaconNodeOptions(c *cli.Context) ([]node.Option, error) {
 	blockPath := c.Path(BlockPath.Name)
 	statePath := c.Path(StatePath.Name)
 	remoteURL := c.String(RemoteURL.Name)
 	if remoteURL != "" {
-		return func(node *node.BeaconNode) error {
+		opt := func(node *node.BeaconNode) error {
 			var err error
 			node.CheckpointInitializer, err = checkpoint.NewAPIInitializer(remoteURL)
 			if err != nil {
 				return errors.Wrap(err, "error while constructing beacon node api client for checkpoint sync")
 			}
 			return nil
-		}, nil
+		}
+		return []node.Option{opt}, nil
 	}
 
 	if blockPath == "" && statePath == "" {
@@ -58,11 +59,12 @@ func BeaconNodeOptions(c *cli.Context) (node.Option, error) {
 		return nil, fmt.Errorf("--checkpoint-state specified, but not --checkpoint-block. both are required")
 	}
 
-	return func(node *node.BeaconNode) (err error) {
+	opt := func(node *node.BeaconNode) (err error) {
 		node.CheckpointInitializer, err = checkpoint.NewFileInitializer(blockPath, statePath)
 		if err != nil {
 			return errors.Wrap(err, "error preparing to initialize checkpoint from local ssz files")
 		}
 		return nil
-	}, nil
+	}
+	return []node.Option{opt}, nil
 }

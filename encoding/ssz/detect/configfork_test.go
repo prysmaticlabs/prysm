@@ -3,7 +3,6 @@ package detect
 import (
 	"context"
 	"fmt"
-	"math"
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -48,11 +47,8 @@ func TestSlotFromBlock(t *testing.T) {
 }
 
 func TestByState(t *testing.T) {
-	undo, err := hackDenebMaxuint()
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
 	bc := params.BeaconConfig()
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	require.NoError(t, err)
@@ -137,11 +133,8 @@ func stateForVersion(v int) (state.BeaconState, error) {
 
 func TestUnmarshalState(t *testing.T) {
 	ctx := context.Background()
-	undo, err := hackDenebMaxuint()
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
 	bc := params.BeaconConfig()
 	altairSlot, err := slots.EpochStart(bc.AltairForkEpoch)
 	require.NoError(t, err)
@@ -211,23 +204,9 @@ func TestUnmarshalState(t *testing.T) {
 	}
 }
 
-func hackDenebMaxuint() (func() error, error) {
-	// We monkey patch the config to use a smaller value for the next fork epoch (which is always set to maxint).
-	// Upstream configs use MaxUint64, which leads to a multiplication overflow when converting epoch->slot.
-	// Unfortunately we have unit tests that assert our config matches the upstream config, so we have to choose between
-	// breaking conformance, adding a special case to the conformance unit test, or patch it here.
-	bc := params.MainnetConfig().Copy()
-	bc.DenebForkEpoch = math.MaxUint32
-	undo, err := params.SetActiveWithUndo(bc)
-	return undo, err
-}
-
 func TestUnmarshalBlock(t *testing.T) {
-	undo, err := hackDenebMaxuint()
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
 	genv := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	altairv := bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)
 	bellav := bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion)
@@ -339,11 +318,8 @@ func TestUnmarshalBlock(t *testing.T) {
 }
 
 func TestUnmarshalBlindedBlock(t *testing.T) {
-	undo, err := hackDenebMaxuint()
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, undo())
-	}()
+	undo := util.HackDenebMaxuint(t)
+	defer undo()
 	genv := bytesutil.ToBytes4(params.BeaconConfig().GenesisForkVersion)
 	altairv := bytesutil.ToBytes4(params.BeaconConfig().AltairForkVersion)
 	bellav := bytesutil.ToBytes4(params.BeaconConfig().BellatrixForkVersion)

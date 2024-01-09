@@ -62,7 +62,7 @@ func Test_BuilderMethodsWithouClient(t *testing.T) {
 	_, err = s.GetHeader(context.Background(), 0, [32]byte{}, [48]byte{})
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 
-	_, _, err = s.SubmitBlindedBlock(context.Background(), nil, nil)
+	_, _, err = s.SubmitBlindedBlock(context.Background(), nil)
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 
 	err = s.RegisterValidator(context.Background(), nil)

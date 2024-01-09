@@ -252,7 +252,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -273,7 +273,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						"66666", // not recent - not duplicate
 					},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -292,19 +292,18 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := node.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -315,12 +314,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := beacon.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -331,12 +329,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			if testCase.getHeadersOutput != nil {
 				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					nil,
 				).SetArg(
 					2,
@@ -351,7 +348,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,
@@ -362,12 +359,11 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						*iface.output,
 					).Return(
 						nil,
-						nil,
 					).Times(1)
 				}
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
@@ -627,7 +623,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{nil},
+						Data: []*validator.Liveness{nil},
 					},
 				},
 			},
@@ -650,7 +646,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
@@ -679,14 +675,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},
@@ -709,7 +705,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{
+						Data: []*validator.Liveness{
 							{
 								Index: "42",
 							},
@@ -720,7 +716,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
 					output: &validator.GetLivenessResponse{
-						Data: []*validator.ValidatorLiveness{},
+						Data: []*validator.Liveness{},
 					},
 				},
 			},
@@ -732,19 +728,18 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
 				syncingResponseJson := node.SyncStatusResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					syncingEnpoint,
 					&syncingResponseJson,
 				).Return(
-					nil,
 					testCase.getSyncingError,
 				).SetArg(
 					2,
@@ -755,12 +750,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			if testCase.getForkOutput != nil {
 				stateForkResponseJson := beacon.GetStateForkResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					forkEndpoint,
 					&stateForkResponseJson,
 				).Return(
-					nil,
 					testCase.getForkError,
 				).SetArg(
 					2,
@@ -771,12 +765,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			if testCase.getHeadersOutput != nil {
 				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
 
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
 					headersEndpoint,
 					&blockHeadersResponseJson,
 				).Return(
-					nil,
 					testCase.getHeadersError,
 				).SetArg(
 					2,
@@ -784,7 +777,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				).Times(1)
 			}
 
-			stateValidatorsProvider := mock.NewMockstateValidatorsProvider(ctrl)
+			stateValidatorsProvider := mock.NewMockStateValidatorsProvider(ctrl)
 
 			if testCase.getStateValidatorsInterface != nil {
 				stateValidatorsProvider.EXPECT().GetStateValidators(
@@ -805,7 +798,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
 
-					jsonRestHandler.EXPECT().PostRestJson(
+					jsonRestHandler.EXPECT().Post(
 						ctx,
 						iface.inputUrl,
 						nil,
@@ -815,7 +808,6 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 						4,
 						*iface.output,
 					).Return(
-						nil,
 						iface.err,
 					).Times(1)
 				}
