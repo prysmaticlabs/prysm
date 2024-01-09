@@ -2,6 +2,7 @@ package testing
 
 import (
 	"context"
+	"testing"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/builder"
@@ -14,6 +15,8 @@ import (
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
@@ -25,18 +28,50 @@ type Config struct {
 // MockBuilderService to mock builder.
 type MockBuilderService struct {
 	HasConfigured         bool
+	Cfg                   *Config
 	Payload               *v1.ExecutionPayload
 	PayloadCapella        *v1.ExecutionPayloadCapella
 	PayloadDeneb          *v1.ExecutionPayloadDeneb
 	BlobBundle            *v1.BlobsBundle
-	ErrSubmitBlindedBlock error
-	Bid                   *ethpb.SignedBuilderBid
-	BidCapella            *ethpb.SignedBuilderBidCapella
-	BidDeneb              *ethpb.SignedBuilderBidDeneb
+	Bid                   *util.FakeBid
+	BidCapella            *util.FakeBidCapella
+	BidDeneb              *util.FakeBidDeneb
 	RegistrationCache     *cache.RegistrationCache
+	ErrSubmitBlindedBlock error
 	ErrGetHeader          error
 	ErrRegisterValidator  error
-	Cfg                   *Config
+}
+
+func DefaultBuilderService(t testing.TB, ver int, useBuilder bool) *MockBuilderService {
+	switch ver {
+	case version.Bellatrix:
+		bid, err := util.DefaultBid()
+		require.NoError(t, err)
+		return &MockBuilderService{
+			HasConfigured: useBuilder,
+			Payload:       util.DefaultPayload(),
+			Bid:           bid,
+		}
+	case version.Capella:
+		bid, err := util.DefaultBidCapella()
+		require.NoError(t, err)
+		return &MockBuilderService{
+			HasConfigured:  useBuilder,
+			PayloadCapella: util.DefaultPayloadCapella(),
+			BidCapella:     bid,
+		}
+	case version.Deneb:
+		bid, err := util.DefaultBidDeneb()
+		require.NoError(t, err)
+		return &MockBuilderService{
+			HasConfigured: useBuilder,
+			PayloadDeneb:  util.DefaultPayloadDeneb(),
+			BidDeneb:      bid,
+		}
+	default:
+		t.Fatal("Mock builder service does not support version " + version.String(ver))
+		return nil
+	}
 }
 
 // Configured for mocking.
@@ -72,17 +107,33 @@ func (s *MockBuilderService) SubmitBlindedBlock(_ context.Context, b interfaces.
 
 // GetHeader for mocking.
 func (s *MockBuilderService) GetHeader(_ context.Context, slot primitives.Slot, _ [32]byte, _ [48]byte) (builder.SignedBid, error) {
+	if s.ErrGetHeader != nil {
+		return nil, s.ErrGetHeader
+	}
+
 	if slots.ToEpoch(slot) >= params.BeaconConfig().DenebForkEpoch || s.BidDeneb != nil {
-		return builder.WrappedSignedBuilderBidDeneb(s.BidDeneb)
+		sBid, err := s.BidDeneb.Sign()
+		if err != nil {
+			return nil, err
+		}
+		return builder.WrappedSignedBuilderBidDeneb(sBid)
 	}
 	if slots.ToEpoch(slot) >= params.BeaconConfig().CapellaForkEpoch || s.BidCapella != nil {
-		return builder.WrappedSignedBuilderBidCapella(s.BidCapella)
+		sBid, err := s.BidCapella.Sign()
+		if err != nil {
+			return nil, err
+		}
+		return builder.WrappedSignedBuilderBidCapella(sBid)
 	}
-	w, err := builder.WrappedSignedBuilderBid(s.Bid)
+	sBid, err := s.Bid.Sign()
+	if err != nil {
+		return nil, err
+	}
+	w, err := builder.WrappedSignedBuilderBid(sBid)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not wrap capella bid")
 	}
-	return w, s.ErrGetHeader
+	return w, nil
 }
 
 // RegistrationByValidatorID returns either the values from the cache or db.

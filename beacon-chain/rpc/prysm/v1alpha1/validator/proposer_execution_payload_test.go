@@ -238,7 +238,7 @@ func TestServer_getExecutionPayload_UnexpectedFeeRecipient(t *testing.T) {
 
 	feeRecipient := common.BytesToAddress([]byte("a"))
 	payloadID := &pb.PayloadIDBytes{0x1}
-	payload := emptyPayload()
+	payload := util.DefaultPayload()
 	payload.FeeRecipient = feeRecipient[:]
 	vs := &Server{
 		ExecutionEngineCaller: &powtesting.EngineClient{

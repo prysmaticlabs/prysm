@@ -18,7 +18,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
+	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -106,9 +108,7 @@ func TestServer_validatorRegistered(t *testing.T) {
 
 func TestServer_canUseBuilder(t *testing.T) {
 	proposerServer := &Server{
-		BlockBuilder: &testing2.MockBuilderService{
-			HasConfigured: false,
-		},
+		BlockBuilder: testing2.DefaultBuilderService(t, version.Bellatrix, false),
 	}
 	reg, err := proposerServer.canUseBuilder(context.Background(), 0, 0)
 	require.NoError(t, err)
@@ -117,16 +117,14 @@ func TestServer_canUseBuilder(t *testing.T) {
 	ctx := context.Background()
 
 	proposerServer.ForkchoiceFetcher = &blockchainTest.ChainService{ForkChoiceStore: doublylinkedtree.New()}
-	proposerServer.ForkchoiceFetcher.SetForkChoiceGenesisTime(uint64(time.Now().Unix()))
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots+1, 0)
 	require.NoError(t, err)
 	require.Equal(t, false, reg)
 	db := dbTest.SetupDB(t)
 
-	proposerServer.BlockBuilder = &testing2.MockBuilderService{
-		HasConfigured: true,
-		Cfg:           &testing2.Config{BeaconDB: db},
-	}
+	bb := testing2.DefaultBuilderService(t, version.Bellatrix, true)
+	bb.Cfg = &testing2.Config{BeaconDB: db}
+	proposerServer.BlockBuilder = bb
 
 	reg, err = proposerServer.canUseBuilder(ctx, 1, 0)
 	require.NoError(t, err)
@@ -135,7 +133,7 @@ func TestServer_canUseBuilder(t *testing.T) {
 	f := bytesutil.PadTo([]byte{}, fieldparams.FeeRecipientLength)
 	p := bytesutil.PadTo([]byte{}, fieldparams.BLSPubkeyLength)
 	require.NoError(t, db.SaveRegistrationsByValidatorIDs(ctx, []primitives.ValidatorIndex{0},
-		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(time.Now().Unix()), Pubkey: p}}))
+		[]*ethpb.ValidatorRegistrationV1{{FeeRecipient: f, Timestamp: uint64(util.DefaultTime.Unix()), Pubkey: p}}))
 
 	reg, err = proposerServer.canUseBuilder(ctx, params.BeaconConfig().MaxBuilderConsecutiveMissedSlots-1, 0)
 	require.NoError(t, err)
