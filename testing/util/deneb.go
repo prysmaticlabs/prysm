@@ -87,10 +87,11 @@ func GenerateTestDenebBlockWithSidecar(t *testing.T, parent [32]byte, slot primi
 		Timestamp:     0,
 		ExtraData:     make([]byte, 0),
 		BaseFeePerGas: bytesutil.PadTo([]byte("baseFeePerGas"), fieldparams.RootLength),
-		ExcessBlobGas: 0,
-		BlobGasUsed:   0,
 		BlockHash:     blockHash[:],
 		Transactions:  encodedBinaryTxs,
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
+		BlobGasUsed:   0,
+		ExcessBlobGas: 0,
 	}
 	block := NewBeaconBlockDeneb()
 	block.Block.Body.ExecutionPayload = payload
