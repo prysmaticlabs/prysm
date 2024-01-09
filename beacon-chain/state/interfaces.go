@@ -67,6 +67,7 @@ type ReadOnlyBeaconState interface {
 	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
+	RecordStateMetrics()
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
