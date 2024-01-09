@@ -92,10 +92,8 @@ package mvslice
 import (
 	"fmt"
 	"sync"
-	"time"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 )
 
 // Id is an object identifier.
@@ -401,7 +399,7 @@ func (s *Slice[V]) Detach(obj Identifiable) {
 func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	t := time.Now()
+
 	stats := MultiValueStatistics{}
 	stats.TotalIndividualElements = len(s.individualItems)
 	totalIndRefs := 0
@@ -422,7 +420,6 @@ func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 	}
 	stats.TotalIndividualElemReferences = totalIndRefs
 	stats.TotalAppendedElemReferences = totalAppRefs
-	log.Infof("pingo: Time taken for statistics: %s", time.Now().Sub(t).String())
 
 	return stats
 }
