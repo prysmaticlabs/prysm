@@ -96,6 +96,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const fragmentationLimit = 50000
+
 // Id is an object identifier.
 type Id = uint64
 
@@ -422,6 +424,13 @@ func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 	stats.TotalAppendedElemReferences = totalAppRefs
 
 	return stats
+}
+
+func (s *Slice[V]) IsFragmented() bool {
+	stats := s.MultiValueStatistics()
+	return stats.TotalIndividualElemReferences >= fragmentationLimit ||
+		stats.TotalAppendedElemReferences >= fragmentationLimit ||
+		stats.TotalIndividualElemReferences+stats.TotalAppendedElemReferences >= fragmentationLimit
 }
 
 // TODO

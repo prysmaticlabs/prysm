@@ -125,34 +125,46 @@ func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
 
 // TODO
 func (b *BeaconState) Defragment() {
-	if b.blockRootsMultiValue != nil {
+	if b.blockRootsMultiValue != nil && b.blockRootsMultiValue.IsFragmented() {
+		initialMVslice := b.blockRootsMultiValue
 		b.blockRootsMultiValue = b.blockRootsMultiValue.Reset(b)
-		multiValueBlockRootsCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.BlockRoots.String()).Inc()
 		runtime.SetFinalizer(b.blockRootsMultiValue, blockRootsFinalizer)
 	}
-	if b.stateRootsMultiValue != nil {
+	if b.stateRootsMultiValue != nil && b.stateRootsMultiValue.IsFragmented() {
+		initialMVslice := b.stateRootsMultiValue
 		b.stateRootsMultiValue = b.stateRootsMultiValue.Reset(b)
-		multiValueStateRootsCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.StateRoots.String()).Inc()
 		runtime.SetFinalizer(b.stateRootsMultiValue, stateRootsFinalizer)
 	}
-	if b.randaoMixesMultiValue != nil {
+	if b.randaoMixesMultiValue != nil && b.randaoMixesMultiValue.IsFragmented() {
+		initialMVslice := b.randaoMixesMultiValue
 		b.randaoMixesMultiValue = b.randaoMixesMultiValue.Reset(b)
-		multiValueRandaoMixesCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.RandaoMixes.String()).Inc()
 		runtime.SetFinalizer(b.randaoMixesMultiValue, randaoMixesFinalizer)
 	}
-	if b.balancesMultiValue != nil {
+	if b.balancesMultiValue != nil && b.balancesMultiValue.IsFragmented() {
+		initialMVslice := b.balancesMultiValue
 		b.balancesMultiValue = b.balancesMultiValue.Reset(b)
-		multiValueBalancesCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.Balances.String()).Inc()
 		runtime.SetFinalizer(b.balancesMultiValue, balancesFinalizer)
 	}
-	if b.validatorsMultiValue != nil {
+	if b.validatorsMultiValue != nil && b.validatorsMultiValue.IsFragmented() {
+		initialMVslice := b.validatorsMultiValue
 		b.validatorsMultiValue = b.validatorsMultiValue.Reset(b)
-		multiValueValidatorsCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.Validators.String()).Inc()
 		runtime.SetFinalizer(b.validatorsMultiValue, validatorsFinalizer)
 	}
-	if b.inactivityScoresMultiValue != nil {
+	if b.inactivityScoresMultiValue != nil && b.inactivityScoresMultiValue.IsFragmented() {
+		initialMVslice := b.inactivityScoresMultiValue
 		b.inactivityScoresMultiValue = b.inactivityScoresMultiValue.Reset(b)
-		multiValueInactivityScoresCountGauge.Inc()
+		initialMVslice.Detach(b)
+		multiValueCountGauge.WithLabelValues(types.InactivityScores.String()).Inc()
 		runtime.SetFinalizer(b.inactivityScoresMultiValue, inactivityScoresFinalizer)
 	}
 }
