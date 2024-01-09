@@ -657,6 +657,7 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithAttestationService(attService),
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
+		blockchain.WithSlasherDB(b.slasherDB),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
