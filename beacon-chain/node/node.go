@@ -208,6 +208,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
+	beacon.BlobStorage.WarmCache()
 
 	log.Debugln("Starting Slashing DB")
 	if err := beacon.startSlasherDB(cliCtx); err != nil {
@@ -231,9 +232,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
 		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
-	if err := beacon.BlobStorage.Initialize(); err != nil {
-		return nil, fmt.Errorf("failed to initialize blob storage: %w", err)
-	}
 
 	log.Debugln("Registering P2P Service")
 	if err := beacon.registerP2P(cliCtx); err != nil {
