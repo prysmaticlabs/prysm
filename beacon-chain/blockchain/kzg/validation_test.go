@@ -8,7 +8,6 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/sirupsen/logrus"
 )
@@ -56,12 +55,6 @@ func GenerateCommitmentAndProof(blob GoKZG.Blob) (GoKZG.KZGCommitment, GoKZG.KZG
 		return GoKZG.KZGCommitment{}, GoKZG.KZGProof{}, err
 	}
 	return commitment, proof, err
-}
-
-func TestIsDataAvailable(t *testing.T) {
-	sidecars := make([]*ethpb.DeprecatedBlobSidecar, 0)
-	commitments := make([][]byte, 0)
-	require.NoError(t, IsDataAvailable(commitments, sidecars))
 }
 
 func TestBytesToAny(t *testing.T) {
