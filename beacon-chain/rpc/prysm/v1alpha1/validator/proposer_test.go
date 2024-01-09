@@ -731,7 +731,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			},
 		},
 		{
-			name: "deneb block some blobs (kzg and blob count missmatch)",
+			name: "deneb block some blobs (kzg and blob count mismatch)",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockContentsDeneb()
 				blockToPropose.Block.Block.Slot = 5

@@ -225,7 +225,7 @@ func (vs *Server) getPayloadHeaderFromBuilder(ctx context.Context, slot primitiv
 		}
 		for _, c := range kzgCommitments {
 			if len(c) != fieldparams.BLSPubkeyLength {
-				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment lenth: %d", len(c))
+				return nil, nil, fmt.Errorf("builder returned invalid kzg commitment length: %d", len(c))
 			}
 		}
 	}
