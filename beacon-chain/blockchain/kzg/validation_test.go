@@ -8,6 +8,7 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	GoKZG "github.com/crate-crypto/go-kzg-4844"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/sirupsen/logrus"
 )
@@ -55,6 +56,11 @@ func GenerateCommitmentAndProof(blob GoKZG.Blob) (GoKZG.KZGCommitment, GoKZG.KZG
 		return GoKZG.KZGCommitment{}, GoKZG.KZGProof{}, err
 	}
 	return commitment, proof, err
+}
+
+func TestVerify(t *testing.T) {
+	sidecars := make([]blocks.ROBlob, 0)
+	require.NoError(t, Verify(sidecars[0]))
 }
 
 func TestBytesToAny(t *testing.T) {

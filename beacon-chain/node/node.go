@@ -398,7 +398,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
+	d, err := kv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			return errors.Wrap(err, "could not clear database")
 		}
 
-		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
+		d, err = kv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
