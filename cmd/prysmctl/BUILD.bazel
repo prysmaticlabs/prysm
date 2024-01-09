@@ -33,7 +33,7 @@ prysm_image_upload(
     entrypoint = ["/prysmctl"],
     repository = "gcr.io/prysmaticlabs/prysm/cmd/prysmctl",
     symlinks = {
-        # Backwards compatiability for images that depended on the old filepath.
+        # Backwards compatibility for images that depended on the old filepath.
         "/app/cmd/prysmctl/prysmctl": "/prysmctl",
     },
     tags = ["manual"],
