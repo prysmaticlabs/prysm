@@ -87,7 +87,6 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		}
 	}
 
-	// Broadcast equivocating blocks to the network if any.
 	if err := s.broadcastDoubleBlockProposals(ctx, signed, blockRoot); err != nil {
 		return errors.Wrap(err, "could not broadcast equivocating blocks to the network")
 	}
@@ -112,6 +111,8 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	return nil
 }
 
+// broadcastDoubleBlockProposals checks if the given block is a double block proposal (equivocating block) and broadcasts it to the network if it is
+// returns an error if the process fails to check whether the block is a double block proposal or if the broadcast fails
 func (s *Service) broadcastDoubleBlockProposals(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 	header, err := signed.Header()
 	if err != nil {
