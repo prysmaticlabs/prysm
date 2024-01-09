@@ -190,5 +190,23 @@
       "external/.*": "Third party code",
       "rules_go_work-.*": "Third party code"
     }
+  },
+  "reflectvaluecompare": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "unusedwrite": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
+  },
+  "stringintconv": {
+    "exclude_files": {
+      "external/.*": "Third party code",
+      "rules_go_work-.*": "Third party code"
+    }
   }
 }
