@@ -154,7 +154,6 @@ func TestServer_GetBeaconBlock_Altair(t *testing.T) {
 				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := genAltair.Block.HashTreeRoot()
@@ -244,7 +243,6 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -371,7 +369,6 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -483,7 +480,6 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
