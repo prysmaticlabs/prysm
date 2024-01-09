@@ -582,6 +582,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return err
 	}
 
+	v.dutiesLock.Lock()
+	v.duties = resp
+	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
+	v.dutiesLock.Unlock()
+
 	allExitedCounter := 0
 	for i := range resp.CurrentEpochDuties {
 		if resp.CurrentEpochDuties[i].Status == ethpb.ValidatorStatus_EXITED {
@@ -591,11 +596,6 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	if allExitedCounter != 0 && allExitedCounter == len(resp.CurrentEpochDuties) {
 		return ErrValidatorsAllExited
 	}
-
-	v.dutiesLock.Lock()
-	v.duties = resp
-	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
-	v.dutiesLock.Unlock()
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	// Make sure to copy metadata into a new context

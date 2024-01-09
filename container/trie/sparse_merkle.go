@@ -250,7 +250,7 @@ func (m *SparseMerkleTrie) Copy() *SparseMerkleTrie {
 
 // NumOfItems returns the num of items stored in
 // the sparse merkle trie. We handle a special case
-// where if there is only one item stored and it is a
+// where if there is only one item stored and it is an
 // empty 32-byte root.
 func (m *SparseMerkleTrie) NumOfItems() int {
 	var zeroBytes [32]byte

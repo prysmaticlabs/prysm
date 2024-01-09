@@ -207,8 +207,10 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 			ReceiptsRoot:  make([]byte, 32),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, 32),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, 32),
 			BlockHash:     make([]byte, 32),
+			Transactions:  make([][]byte, 0),
 		},
 	}).HashTreeRoot()
 	if err != nil {
@@ -241,6 +243,7 @@ func buildGenesisBeaconStateBellatrix(genesisTime uint64, preState state.BeaconS
 		ReceiptsRoot:     make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
 		PrevRandao:       make([]byte, 32),
+		ExtraData:        make([]byte, 0),
 		BaseFeePerGas:    make([]byte, 32),
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),

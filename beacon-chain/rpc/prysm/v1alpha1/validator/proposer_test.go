@@ -363,8 +363,11 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:    make([]byte, fieldparams.RootLength),
+					ExtraData:     make([]byte, 0),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
+					Transactions:  make([][]byte, 0),
+					Withdrawals:   make([]*enginev1.Withdrawal, 0),
 				},
 			},
 		},
@@ -388,14 +391,15 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:    random,
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
 		BlockNumber:   1,
 		GasLimit:      2,
 		GasUsed:       3,
 		Timestamp:     uint64(timeStamp.Unix()),
+		ExtraData:     make([]byte, 0),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
@@ -731,7 +735,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			},
 		},
 		{
-			name: "deneb block some blobs (kzg and blob count missmatch)",
+			name: "deneb block some blobs (kzg and blob count mismatch)",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockContentsDeneb()
 				blockToPropose.Block.Block.Slot = 5

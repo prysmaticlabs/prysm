@@ -110,7 +110,7 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	if rp.start > maxStart {
 		return rangeParams{}, p2ptypes.ErrInvalidRequest
 	}
-	rp.end, err = rp.start.SafeAdd((rp.size - 1))
+	rp.end, err = rp.start.SafeAdd(rp.size - 1)
 	if err != nil {
 		return rangeParams{}, p2ptypes.ErrInvalidRequest
 	}
