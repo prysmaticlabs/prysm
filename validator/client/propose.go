@@ -24,6 +24,7 @@ import (
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	g "github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -64,7 +65,7 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 		return
 	}
 
-	g, err := v.getGraffiti(ctx, pubKey)
+	g, err := v.GetGraffiti(ctx, pubKey)
 	if err != nil {
 		// Graffiti is not a critical enough to fail block production and cause
 		// validator to miss block reward. When failed, validator should continue
@@ -382,9 +383,11 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// Gets the graffiti from cli or file for the validator public key.
-func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-	// When specified, default graffiti from the command line takes the first priority.
+// GetGraffiti Gets the graffiti from cli or file for the validator public key.
+func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	// Check proposer settings first
+
+	// When specified, default graffiti from the command line takes the second priority.
 	if len(v.graffiti) != 0 {
 		return bytesutil.PadTo(v.graffiti, 32), nil
 	}
@@ -393,7 +396,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		return nil, errors.New("graffitiStruct can't be nil")
 	}
 
-	// When specified, individual validator specified graffiti takes the second priority.
+	// When specified, individual validator specified graffiti takes the third priority.
 	idx, err := v.validatorClient.ValidatorIndex(ctx, &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]})
 	if err != nil {
 		return nil, err
@@ -403,7 +406,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		return bytesutil.PadTo([]byte(g), 32), nil
 	}
 
-	// When specified, a graffiti from the ordered list in the file take third priority.
+	// When specified, a graffiti from the ordered list in the file take fourth priority.
 	if v.graffitiOrderedIndex < uint64(len(v.graffitiStruct.Ordered)) {
 		graffiti := v.graffitiStruct.Ordered[v.graffitiOrderedIndex]
 		v.graffitiOrderedIndex = v.graffitiOrderedIndex + 1
@@ -414,7 +417,7 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		return bytesutil.PadTo([]byte(graffiti), 32), nil
 	}
 
-	// When specified, a graffiti from the random list in the file take fourth priority.
+	// When specified, a graffiti from the random list in the file take Fifth priority.
 	if len(v.graffitiStruct.Random) != 0 {
 		r := rand.NewGenerator()
 		r.Seed(time.Now().Unix())
@@ -428,4 +431,22 @@ func (v *validator) getGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 	}
 
 	return []byte{}, nil
+}
+
+func (v *validator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	var graffitiStruct *g.Graffiti
+	if v.graffitiStruct == nil {
+		graffitiStruct = &g.Graffiti{}
+	} else if v.graffiti != nil {
+		graffitiStruct = &g.Graffiti{Default: string(v.graffiti)}
+	} else {
+		graffitiStruct = v.graffitiStruct
+	}
+
+	return nil
+}
+
+func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+
+	return nil
 }

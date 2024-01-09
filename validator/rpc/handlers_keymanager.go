@@ -846,3 +846,73 @@ func (s *Server) DeleteGasLimit(w http.ResponseWriter, r *http.Request) {
 	// we respond "not found".
 	httputil.HandleError(w, fmt.Sprintf("No gas limit found for pubkey %q", rawPubkey), http.StatusNotFound)
 }
+
+func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.GetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
+	if err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	httputil.WriteJson(w, &GetGraffiti{
+		Data: &GraffitiData{
+			Pubkey:   rawPubkey,
+			Graffiti: string(graffiti),
+		},
+	})
+}
+
+func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Graffiti string `json:"graffiti"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	switch {
+	case err == io.EOF:
+		httputil.HandleError(w, "No data submitted", http.StatusBadRequest)
+		return
+	case err != nil:
+		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+}
+
+func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGraffiti")
+	defer span.End()
+
+	if s.validatorService == nil {
+		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
+		return
+	}
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
+		return
+	}
+
+}

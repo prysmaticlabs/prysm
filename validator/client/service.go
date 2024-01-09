@@ -347,3 +347,10 @@ func (v *ValidatorService) GenesisInfo(ctx context.Context) (*ethpb.Genesis, err
 	nc := ethpb.NewNodeClient(v.conn.GetGrpcClientConn())
 	return nc.GetGenesis(ctx, &emptypb.Empty{})
 }
+
+func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	if v.validator == nil {
+		return nil, errors.New("validator is unavailable")
+	}
+	return v.validator.GetGraffiti(ctx, pubKey)
+}

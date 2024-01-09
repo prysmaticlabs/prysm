@@ -947,7 +947,7 @@ func TestGetGraffiti_Ok(t *testing.T) {
 					ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 					Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
 			}
-			got, err := tt.v.getGraffiti(context.Background(), pubKey)
+			got, err := tt.v.GetGraffiti(context.Background(), pubKey)
 			require.NoError(t, err)
 			require.DeepEqual(t, tt.want, got)
 		})
@@ -975,7 +975,7 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 		},
 	}
 	for _, want := range [][]byte{bytesutil.PadTo([]byte{'a'}, 32), bytesutil.PadTo([]byte{'b'}, 32), bytesutil.PadTo([]byte{'c'}, 32), bytesutil.PadTo([]byte{'d'}, 32), bytesutil.PadTo([]byte{'d'}, 32)} {
-		got, err := v.getGraffiti(context.Background(), pubKey)
+		got, err := v.GetGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
 	}
