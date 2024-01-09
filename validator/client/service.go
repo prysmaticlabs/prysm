@@ -195,10 +195,20 @@ func (v *ValidatorService) Start() {
 		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
 		Host:       v.conn.GetBeaconApiUrl(),
 	}
+	
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	evErrCh := make(chan error)
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+	go func() {
+		e := <-evErrCh
+		log.WithError(e).Error("Event streaming failed")
+		v.cancel()
+	}()
 
 	valStruct := &validator{
 		db:                             v.db,
-		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn, restHandler),
+		validatorClient:                validatorClient,
 		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
 		node:                           nodeClientFactory.NewNodeClient(v.conn, restHandler),
 		graffiti:                       v.graffiti,

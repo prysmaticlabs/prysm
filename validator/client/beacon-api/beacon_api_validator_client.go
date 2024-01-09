@@ -13,17 +13,33 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 )
 
+type ValidatorClientOpt func(*beaconApiValidatorClient)
+
+func WithEventHandler(h *EventHandler) ValidatorClientOpt {
+	return func(c *beaconApiValidatorClient) {
+		c.eventHandler = h
+	}
+}
+
+func WithEventErrorChannel(ch chan error) ValidatorClientOpt {
+	return func(c *beaconApiValidatorClient) {
+		c.eventErrCh = ch
+	}
+}
+
 type beaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
+	eventHandler            *EventHandler
+	eventErrCh              chan error
 	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
 
-func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler) iface.ValidatorClient {
-	return &beaconApiValidatorClient{
+func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
+	c := &beaconApiValidatorClient{
 		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
@@ -34,6 +50,10 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler) iface.Validato
 			jsonRestHandler: jsonRestHandler,
 		},
 	}
+	for _, o := range opts {
+		o(c)
+	}
+	return c
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -148,4 +168,16 @@ func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *et
 // Deprecated: Do not use.
 func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *empty.Empty) (*ethpb.ChainStartResponse, error) {
 	return c.waitForChainStart(ctx)
+}
+
+func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context) error {
+	if c.eventHandler != nil {
+		if c.eventErrCh == nil {
+			return errors.New("event handler cannot be initialized without an event error channel")
+		}
+		if err := c.eventHandler.get(ctx, []string{"head"}, c.eventErrCh); err != nil {
+			return errors.Wrapf(err, "event handler stopped working")
+		}
+	}
+	return nil
 }
