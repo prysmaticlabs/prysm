@@ -87,7 +87,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 		}
 	}
 
-	if err := s.broadcastDoubleBlockProposals(ctx, signed, blockRoot); err != nil {
+	if err := s.broadcastDoubleBlockProposals(ctx, cfg.signed, cfg.blockRoot); err != nil {
 		return errors.Wrap(err, "could not broadcast equivocating blocks to the network")
 	}
 
