@@ -217,10 +217,6 @@ func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*St
 		return nil, err
 	}
 
-	if err := kv.checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
-		return nil, errors.Wrap(err, "failed to check epochs for blob sidecars request bucket")
-	}
-
 	// set a default so that tests don't break
 	if kv.blobRetentionEpochs == 0 {
 		kv.blobRetentionEpochs = params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
