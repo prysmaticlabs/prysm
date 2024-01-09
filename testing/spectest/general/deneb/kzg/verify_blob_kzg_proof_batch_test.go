@@ -7,6 +7,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	kzgPrysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/spectest/utils"
@@ -36,7 +37,7 @@ func TestVerifyBlobKZGProofBatch(t *testing.T) {
 			require.NoError(t, err)
 			test := &KZGTestData{}
 			require.NoError(t, yaml.Unmarshal(file, test))
-			var sidecars []*ethpb.DeprecatedBlobSidecar
+			var sidecars []blocks.ROBlob
 			blobs := test.Input.Blobs
 			commitments := test.Input.Commitments
 			proofs := test.Input.Proofs
@@ -52,11 +53,13 @@ func TestVerifyBlobKZGProofBatch(t *testing.T) {
 				require.NoError(t, err)
 				proofBytes, err := hex.DecodeString(proofs[i][2:])
 				require.NoError(t, err)
-				sidecar := &ethpb.DeprecatedBlobSidecar{
+				sidecar := &ethpb.BlobSidecar{
 					Blob:     blobBytes,
 					KzgProof: proofBytes,
 				}
-				sidecars = append(sidecars, sidecar)
+				sc, err := blocks.NewROBlob(sidecar)
+				require.NoError(t, err)
+				sidecars = append(sidecars, sc)
 			}
 			for _, commitment := range commitments {
 				commitmentBytes, err := hex.DecodeString(commitment[2:])
@@ -64,9 +67,9 @@ func TestVerifyBlobKZGProofBatch(t *testing.T) {
 				kzgs = append(kzgs, commitmentBytes)
 			}
 			if test.Output {
-				require.NoError(t, kzgPrysm.IsDataAvailable(kzgs, sidecars))
+				require.NoError(t, kzgPrysm.Verify(sidecars...))
 			} else {
-				require.NotNil(t, kzgPrysm.IsDataAvailable(kzgs, sidecars))
+				require.NotNil(t, kzgPrysm.Verify(sidecars...))
 			}
 		})
 	}
