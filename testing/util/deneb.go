@@ -189,7 +189,7 @@ func ExtendBlocksPlusBlobs(t *testing.T, blks []blocks.ROBlock, size int) ([]blo
 	return blks, blobs
 }
 
-// HackDenebForkEpoch is helpful for tests that need to set up cases where the deneb fork has passed.
+// HackDenebMaxuint is helpful for tests that need to set up cases where the deneb fork has passed.
 // We have unit tests that assert our config matches the upstream config, where the next fork is always
 // set to MaxUint64 until the fork epoch is formally set. This creates an issue for tests that want to
 // work with slots that are defined to be after deneb because converting the max epoch to a slot leads
