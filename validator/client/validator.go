@@ -53,7 +53,6 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod                = 30 * time.Second
 	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
 	ErrValidatorsAllExited          = errors.New("All validators are exited, no more work to perform...")
 )
