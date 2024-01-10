@@ -2990,8 +2990,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_multiformats_go_multiaddr",
         importpath = "github.com/multiformats/go-multiaddr",
-        sum = "h1:1QlibTFkoXJuDjjYsMHhE73TnzJQl8FSWatk/0gxGzE=",
-        version = "v0.12.0",
+        sum = "h1:vm+BA/WZA8QZDp1pF1FWhi5CT3g1tbi5GJmqpb6wnlk=",
+        version = "v0.12.1",
     )
     go_repository(
         name = "com_github_multiformats_go_multiaddr_dns",
