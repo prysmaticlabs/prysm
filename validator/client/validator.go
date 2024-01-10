@@ -387,6 +387,12 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
+			if status.status.Status == ethpb.ValidatorStatus_ACTIVE {
+				log.WithFields(logrus.Fields{
+					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+					"index":     status.index,
+				}).Info("Validator activated")
+			}
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		case ethpb.ValidatorStatus_INVALID:
@@ -398,18 +404,6 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 		}
 	}
 	return validatorActivated
-}
-
-func logActiveValidatorStatus(statuses []*validatorStatus) {
-	for _, s := range statuses {
-		if s.status.Status != ethpb.ValidatorStatus_ACTIVE {
-			continue
-		}
-		log.WithFields(logrus.Fields{
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
-			"index":     s.index,
-		}).Info("Validator activated")
-	}
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the
