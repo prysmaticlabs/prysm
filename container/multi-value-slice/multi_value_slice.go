@@ -472,7 +472,7 @@ func (s *Slice[V]) Reset(obj Identifiable) *Slice[V] {
 				break
 			}
 		}
-		if found == false {
+		if !found {
 			break
 		}
 	}
