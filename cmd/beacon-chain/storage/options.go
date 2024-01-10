@@ -53,7 +53,7 @@ func blobStoragePath(c *cli.Context) string {
 
 var errInvalidBlobRetentionEpochs = errors.New("value is smaller than spec minimum")
 
-// blobRetentionEpoch returns the spec deffault MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
+// blobRetentionEpoch returns the spec default MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
 // or a user-specified flag overriding this value. If a user-specified override is
 // smaller than the spec default, an error will be returned.
 func blobRetentionEpoch(cliCtx *cli.Context) (primitives.Epoch, error) {

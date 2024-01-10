@@ -200,8 +200,11 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 			ReceiptsRoot:  make([]byte, 32),
 			LogsBloom:     make([]byte, 256),
 			PrevRandao:    make([]byte, 32),
+			ExtraData:     make([]byte, 0),
 			BaseFeePerGas: make([]byte, 32),
 			BlockHash:     make([]byte, 32),
+			Transactions:  make([][]byte, 0),
+			Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		},
 	}).HashTreeRoot()
 	if err != nil {
@@ -240,6 +243,7 @@ func buildGenesisBeaconStateCapella(genesisTime uint64, preState state.BeaconSta
 		ReceiptsRoot:     make([]byte, 32),
 		LogsBloom:        make([]byte, 256),
 		PrevRandao:       make([]byte, 32),
+		ExtraData:        make([]byte, 0),
 		BaseFeePerGas:    make([]byte, 32),
 		BlockHash:        make([]byte, 32),
 		TransactionsRoot: make([]byte, 32),

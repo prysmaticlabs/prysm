@@ -338,7 +338,7 @@ func TestRoundTripDenebSave(t *testing.T) {
 		require.NoError(t, undo())
 	}()
 	parentRoot := [32]byte{}
-	c := blobsTestCase{nblocks: 10}
+	c := blobsTestCase{}
 	chain, clock := defaultMockChain(t)
 	c.chain = chain
 	c.clock = clock

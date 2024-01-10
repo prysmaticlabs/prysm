@@ -340,6 +340,10 @@ func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 		return false, nil
 	}
 	s.headLock.RLock()
+	if s.head == nil {
+		s.headLock.RUnlock()
+		return false, ErrNilHead
+	}
 	headRoot := s.head.root
 	headSlot := s.head.slot
 	headOptimistic := s.head.optimistic
