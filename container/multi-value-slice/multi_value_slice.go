@@ -432,9 +432,7 @@ func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 // If the number of references is higher than our threshold we return true.
 func (s *Slice[V]) IsFragmented() bool {
 	stats := s.MultiValueStatistics()
-	return stats.TotalIndividualElemReferences >= fragmentationLimit ||
-		stats.TotalAppendedElemReferences >= fragmentationLimit ||
-		stats.TotalIndividualElemReferences+stats.TotalAppendedElemReferences >= fragmentationLimit
+	return stats.TotalIndividualElemReferences+stats.TotalAppendedElemReferences >= fragmentationLimit
 }
 
 // Reset builds a new multivalue object with respect to the
