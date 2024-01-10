@@ -126,6 +126,8 @@ func NewMultiValueValidators(vals []*ethpb.Validator) *MultiValueValidators {
 // Defragment checks whether each individual multi-value field in our state is fragmented
 // and if it is, it will 'reset' the field to create a new multivalue object.
 func (b *BeaconState) Defragment() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
 	if b.blockRootsMultiValue != nil && b.blockRootsMultiValue.IsFragmented() {
 		initialMVslice := b.blockRootsMultiValue
 		b.blockRootsMultiValue = b.blockRootsMultiValue.Reset(b)
