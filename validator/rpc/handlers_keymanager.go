@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -705,14 +704,8 @@ func (s *Server) GetGasLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rawPubkey := mux.Vars(r)["pubkey"]
-	if rawPubkey == "" {
-		httputil.HandleError(w, "pubkey is required in URL params", http.StatusBadRequest)
-		return
-	}
-
-	pubkey, valid := shared.ValidateHex(w, "pubkey", rawPubkey, fieldparams.BLSPubkeyLength)
-	if !valid {
+	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+	if !ok {
 		return
 	}
 

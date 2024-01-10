@@ -606,8 +606,6 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	p1.Connect(p2)
 	require.Equal(t, 1, len(p1.BHost.Network().Peers()), "Expected peers to be connected")
 	req := &ethpb.BeaconBlocksByRangeRequest{
-		StartSlot: 100,
-		Step:      1,
 		Count:     64,
 	}
 

@@ -387,10 +387,7 @@ func (s *Service) removeInvalidBlockAndState(ctx context.Context, blkRoots [][32
 			// This is an irreparable condition, it would me a justified or finalized block has become invalid.
 			return err
 		}
-		// No op if the sidecar does not exist.
-		if err := s.cfg.BeaconDB.DeleteBlobSidecars(ctx, root); err != nil {
-			return err
-		}
+		// TODO: Remove blob here
 	}
 	return nil
 }

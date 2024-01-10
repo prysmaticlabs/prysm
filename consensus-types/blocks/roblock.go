@@ -81,7 +81,7 @@ type BlockWithROBlobs struct {
 	Blobs []ROBlob
 }
 
-// BlockWithROBlobsSlice gives convnenient access to getting a slice of just the ROBlocks,
+// BlockWithROBlobsSlice gives convenient access to getting a slice of just the ROBlocks,
 // and defines sorting helpers.
 type BlockWithROBlobsSlice []BlockWithROBlobs
 
