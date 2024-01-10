@@ -13,15 +13,15 @@ var stateDefragmentationTime = promauto.NewSummary(prometheus.SummaryOpts{
 	Help: "Milliseconds it takes to defragment the head state",
 })
 
-// TODO
-func (s *Service) runStateDefragmentation(st state.BeaconState) {
+// This method defragments our state, so that any specific fields which have
+// a higher number of fragmented indexes are reallocated to a new separate slice for
+// that field.
+func (s *Service) defragmentState(st state.BeaconState) {
 	if !features.Get().EnableExperimentalState {
 		return
 	}
-	log.Debug("Head state defragmentation initialized")
 	startTime := time.Now()
 	st.Defragment()
 	elapsedTime := time.Since(startTime)
-	log.Debugf("Head state defragmentation completed in %s", elapsedTime.String())
 	stateDefragmentationTime.Observe(float64(elapsedTime.Milliseconds()))
 }
