@@ -923,8 +923,10 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:    make([]byte, fieldparams.RootLength),
+				ExtraData:     make([]byte, 0),
 				BaseFeePerGas: make([]byte, fieldparams.RootLength),
 				BlockHash:     make([]byte, fieldparams.RootLength),
+				Transactions:  make([][]byte, 0),
 			},
 		},
 		{
@@ -968,6 +970,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:       make([]byte, fieldparams.RootLength),
+					ExtraData:        make([]byte, 0),
 					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 					BlockHash:        make([]byte, fieldparams.RootLength),
 					TransactionsRoot: make([]byte, fieldparams.RootLength),

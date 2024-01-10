@@ -62,7 +62,7 @@ prysm_image_upload(
     entrypoint = ["/validator"],
     repository = "gcr.io/prysmaticlabs/prysm/validator",
     symlinks = {
-        # Backwards compatiability for images that depended on the old filepath.
+        # Backwards compatibility for images that depended on the old filepath.
         "/app/cmd/validator/validator": "/validator",
     },
     tags = ["manual"],

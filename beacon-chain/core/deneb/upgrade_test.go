@@ -85,6 +85,7 @@ func TestUpgradeToDeneb(t *testing.T) {
 		GasLimit:         prevHeader.GasLimit(),
 		GasUsed:          prevHeader.GasUsed(),
 		Timestamp:        prevHeader.Timestamp(),
+		ExtraData:        prevHeader.ExtraData(),
 		BaseFeePerGas:    prevHeader.BaseFeePerGas(),
 		BlockHash:        prevHeader.BlockHash(),
 		TransactionsRoot: txRoot,

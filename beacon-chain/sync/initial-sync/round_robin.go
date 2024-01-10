@@ -154,7 +154,7 @@ func (s *Service) processFetchedData(
 	}
 }
 
-// processFetchedData processes data received from queue.
+// processFetchedDataRegSync processes data received from queue.
 func (s *Service) processFetchedDataRegSync(
 	ctx context.Context, genesis time.Time, startSlot primitives.Slot, data *blocksQueueFetchedData) {
 	defer s.updatePeerScorerStats(data.pid, startSlot)
@@ -173,16 +173,13 @@ func (s *Service) processFetchedDataRegSync(
 		"firstSlot":        data.bwb[0].Block.Block().Slot(),
 		"firstUnprocessed": bwb[0].Block.Block().Slot(),
 	}
-	for _, b := range data.bwb {
+	for _, b := range bwb {
 		if err := avs.Persist(s.clock.CurrentSlot(), b.Blobs...); err != nil {
 			log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Batch failure due to BlobSidecar issues")
 			return
 		}
 		if err := s.processBlock(ctx, genesis, b, s.cfg.Chain.ReceiveBlock, avs); err != nil {
 			switch {
-			case errors.Is(err, errBlockAlreadyProcessed):
-				log.WithError(err).WithFields(batchFields).WithFields(syncFields(b.Block)).Warn("Skipping already processed block")
-				continue
 			case errors.Is(err, errParentDoesNotExist):
 				log.WithFields(batchFields).WithField("missingParent", fmt.Sprintf("%#x", b.Block.Block().ParentRoot())).
 					WithFields(syncFields(b.Block)).Debug("Could not process batch blocks due to missing parent")
@@ -292,7 +289,7 @@ func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithROBlobs, headSl
 			parent := bwb[i-1].Block
 			if parent.Root() != b.Block().ParentRoot() {
 				return nil, fmt.Errorf("expected linear block list with parent root of %#x (slot %d) but received %#x (slot %d)",
-					parent, parent.Block().Slot(), b.Block().ParentRoot(), b.Block().Slot())
+					parent.Root(), parent.Block().Slot(), b.Block().ParentRoot(), b.Block().Slot())
 			}
 		}
 	}
@@ -302,7 +299,7 @@ func validUnprocessed(ctx context.Context, bwb []blocks.BlockWithROBlobs, headSl
 	if *processed+1 == len(bwb) {
 		maxIncoming := bwb[len(bwb)-1].Block
 		maxRoot := maxIncoming.Root()
-		return nil, fmt.Errorf("headSlot:%d, blockSlot:%d , root %#x:%w", headSlot, maxIncoming.Block().Slot(), maxRoot, errBlockAlreadyProcessed)
+		return nil, fmt.Errorf("%w: headSlot=%d, blockSlot=%d, root=%#x", errBlockAlreadyProcessed, headSlot, maxIncoming.Block().Slot(), maxRoot)
 	}
 	nonProcessedIdx := *processed + 1
 	return bwb[nonProcessedIdx:], nil
