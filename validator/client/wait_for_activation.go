@@ -54,7 +54,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 	defer span.End()
 	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
 	if err != nil {
-		return errors.Wrap(err, "could not fetch validating keys")
+		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}
 	if len(validatingKeys) == 0 {
 		log.Warn(msgNoKeysFetched)
