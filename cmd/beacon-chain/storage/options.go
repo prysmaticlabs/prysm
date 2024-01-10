@@ -21,7 +21,7 @@ var (
 	BlobRetentionEpochFlag = &cli.Uint64Flag{
 		Name:    "blob-retention-epochs",
 		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
-		Value:   uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
+		Value:   uint64(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest),
 		Aliases: []string{"extend-blob-retention-epoch"},
 	}
 )
@@ -53,18 +53,18 @@ func blobStoragePath(c *cli.Context) string {
 
 var errInvalidBlobRetentionEpochs = errors.New("value is smaller than spec minimum")
 
-// blobRetentionEpoch returns the spec deffault MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
+// blobRetentionEpoch returns the spec default MIN_EPOCHS_FOR_BLOB_SIDECARS_REQUEST
 // or a user-specified flag overriding this value. If a user-specified override is
 // smaller than the spec default, an error will be returned.
 func blobRetentionEpoch(cliCtx *cli.Context) (primitives.Epoch, error) {
-	spec := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	spec := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	if !cliCtx.IsSet(BlobRetentionEpochFlag.Name) {
 		return spec, nil
 	}
 
 	re := primitives.Epoch(cliCtx.Uint64(BlobRetentionEpochFlag.Name))
 	// Validate the epoch value against the spec default.
-	if re < params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest {
+	if re < params.BeaconConfig().MinEpochsForBlobsSidecarsRequest {
 		return spec, errors.Wrapf(errInvalidBlobRetentionEpochs, "%s=%d, spec=%d", BlobRetentionEpochFlag.Name, re, spec)
 	}
 

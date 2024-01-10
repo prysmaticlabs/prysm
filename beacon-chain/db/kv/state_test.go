@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"math/rand"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -28,27 +30,136 @@ func TestStateNil(t *testing.T) {
 }
 
 func TestState_CanSaveRetrieve(t *testing.T) {
+	type testCase struct {
+		name     string
+		s        func() state.BeaconState
+		rootSeed byte
+	}
+
+	cases := []testCase{
+		{
+			name: "phase0",
+			s: func() state.BeaconState {
+				st, err := util.NewBeaconState()
+				require.NoError(t, err)
+				require.NoError(t, st.SetSlot(100))
+				return st
+			},
+			rootSeed: '0',
+		},
+		{
+			name: "altair",
+			s: func() state.BeaconState {
+				st, err := util.NewBeaconStateAltair()
+				require.NoError(t, err)
+				require.NoError(t, st.SetSlot(100))
+				return st
+			},
+			rootSeed: 'A',
+		},
+		{
+			name: "bellatrix",
+			s: func() state.BeaconState {
+				st, err := util.NewBeaconStateBellatrix()
+				require.NoError(t, err)
+				require.NoError(t, st.SetSlot(100))
+				p, err := blocks.WrappedExecutionPayloadHeader(&enginev1.ExecutionPayloadHeader{
+					ParentHash:       make([]byte, 32),
+					FeeRecipient:     make([]byte, 20),
+					StateRoot:        make([]byte, 32),
+					ReceiptsRoot:     make([]byte, 32),
+					LogsBloom:        make([]byte, 256),
+					PrevRandao:       make([]byte, 32),
+					ExtraData:        []byte("foo"),
+					BaseFeePerGas:    make([]byte, 32),
+					BlockHash:        make([]byte, 32),
+					TransactionsRoot: make([]byte, 32),
+				})
+				require.NoError(t, err)
+				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
+				return st
+			},
+			rootSeed: 'B',
+		},
+		{
+			name: "capella",
+			s: func() state.BeaconState {
+				st, err := util.NewBeaconStateCapella()
+				require.NoError(t, err)
+				require.NoError(t, st.SetSlot(100))
+				p, err := blocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{
+					ParentHash:       make([]byte, 32),
+					FeeRecipient:     make([]byte, 20),
+					StateRoot:        make([]byte, 32),
+					ReceiptsRoot:     make([]byte, 32),
+					LogsBloom:        make([]byte, 256),
+					PrevRandao:       make([]byte, 32),
+					ExtraData:        []byte("foo"),
+					BaseFeePerGas:    make([]byte, 32),
+					BlockHash:        make([]byte, 32),
+					TransactionsRoot: make([]byte, 32),
+					WithdrawalsRoot:  make([]byte, 32),
+				}, 0)
+				require.NoError(t, err)
+				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
+				return st
+			},
+			rootSeed: 'C',
+		},
+		{
+			name: "deneb",
+			s: func() state.BeaconState {
+				st, err := util.NewBeaconStateDeneb()
+				require.NoError(t, err)
+				require.NoError(t, st.SetSlot(100))
+				p, err := blocks.WrappedExecutionPayloadHeaderDeneb(&enginev1.ExecutionPayloadHeaderDeneb{
+					ParentHash:       make([]byte, 32),
+					FeeRecipient:     make([]byte, 20),
+					StateRoot:        make([]byte, 32),
+					ReceiptsRoot:     make([]byte, 32),
+					LogsBloom:        make([]byte, 256),
+					PrevRandao:       make([]byte, 32),
+					ExtraData:        []byte("foo"),
+					BaseFeePerGas:    make([]byte, 32),
+					BlockHash:        make([]byte, 32),
+					TransactionsRoot: make([]byte, 32),
+					WithdrawalsRoot:  make([]byte, 32),
+				}, 0)
+				require.NoError(t, err)
+				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
+				return st
+			},
+			rootSeed: 'D',
+		},
+	}
+
 	db := setupDB(t)
 
-	r := [32]byte{'A'}
+	for _, enableFlag := range []bool{true, false} {
+		reset := features.InitWithReset(&features.Flags{EnableHistoricalSpaceRepresentation: enableFlag})
 
-	require.Equal(t, false, db.HasState(context.Background(), r))
+		for _, tc := range cases {
+			t.Run(tc.name+" - EnableHistoricalSpaceRepresentation is "+strconv.FormatBool(enableFlag), func(t *testing.T) {
+				rootNonce := byte('0')
+				if enableFlag {
+					rootNonce = '1'
+				}
+				root := bytesutil.ToBytes32([]byte{tc.rootSeed, rootNonce})
+				require.Equal(t, false, db.HasState(context.Background(), root))
+				st := tc.s()
 
-	st, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, st.SetSlot(100))
+				require.NoError(t, db.SaveState(context.Background(), st, root))
+				assert.Equal(t, true, db.HasState(context.Background(), root))
 
-	require.NoError(t, db.SaveState(context.Background(), st, r))
-	assert.Equal(t, true, db.HasState(context.Background(), r))
+				savedSt, err := db.State(context.Background(), root)
+				require.NoError(t, err)
 
-	savedS, err := db.State(context.Background(), r)
-	require.NoError(t, err)
+				assert.DeepSSZEqual(t, st.ToProtoUnsafe(), savedSt.ToProtoUnsafe())
+			})
+		}
 
-	require.DeepSSZEqual(t, st.ToProtoUnsafe(), savedS.ToProtoUnsafe(), "saved state and retrieved state are not matching")
-
-	savedS, err = db.State(context.Background(), [32]byte{'B'})
-	require.NoError(t, err)
-	assert.Equal(t, state.ReadOnlyBeaconState(nil), savedS, "Unsaved state should've been nil")
+		reset()
+	}
 }
 
 func TestState_CanSaveRetrieveValidatorEntries(t *testing.T) {

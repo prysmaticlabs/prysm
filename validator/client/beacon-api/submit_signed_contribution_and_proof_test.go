@@ -53,7 +53,6 @@ func TestSubmitSignedContributionAndProof_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	contributionAndProof := &ethpb.SignedContributionAndProof{
@@ -128,7 +127,6 @@ func TestSubmitSignedContributionAndProof_Error(t *testing.T) {
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
-					nil,
 					errors.New("foo error"),
 				).Times(1)
 			}

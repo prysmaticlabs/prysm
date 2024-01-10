@@ -66,7 +66,7 @@ var (
 	// time to allow processing early blocks.
 	earlyBlockProcessingTolerance = slots.MultiplySlotBy(2)
 	// time to allow processing early attestations.
-	earlyAttestationProcessingTolerance = params.BeaconNetworkConfig().MaximumGossipClockDisparity
+	earlyAttestationProcessingTolerance = params.BeaconConfig().MaximumGossipClockDisparityDuration()
 	errWrongMessage                     = errors.New("wrong pubsub message")
 	errNilMessage                       = errors.New("nil pubsub message")
 )
@@ -154,7 +154,7 @@ type Service struct {
 	clockWaiter                      startup.ClockWaiter
 	initialSyncComplete              chan struct{}
 	verifierWaiter                   *verification.InitializerWaiter
-	newBlobVerifier                  NewBlobVerifier
+	newBlobVerifier                  verification.NewBlobVerifier
 }
 
 // NewService initializes new regular sync service.
@@ -205,11 +205,9 @@ func NewService(ctx context.Context, opts ...Option) *Service {
 	return r
 }
 
-type NewBlobVerifier func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier
-
-func newBlobVerifierFromInitializer(ini *verification.Initializer) NewBlobVerifier {
-	return func(b blocks.ROBlob, reqs ...verification.Requirement) BlobVerifier {
-		return ini.NewBlobVerifier(b, reqs...)
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
 	}
 }
 

@@ -47,7 +47,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 	if err != nil {
 		return pubsub.ValidationReject, errors.Wrap(err, "roblob conversion failure")
 	}
-	vf := s.newBlobVerifier(blob, verification.GossipSidecarRequirements...)
+	vf := s.newBlobVerifier(blob, verification.GossipSidecarRequirements)
 
 	if err := vf.BlobIndexInBounds(); err != nil {
 		return pubsub.ValidationReject, err
@@ -60,7 +60,7 @@ func (s *Service) validateBlob(ctx context.Context, pid peer.ID, msg *pubsub.Mes
 		return pubsub.ValidationReject, fmt.Errorf("wrong topic name: %s", *msg.Topic)
 	}
 
-	if err := vf.SlotNotTooEarly(); err != nil {
+	if err := vf.NotFromFutureSlot(); err != nil {
 		return pubsub.ValidationIgnore, err
 	}
 

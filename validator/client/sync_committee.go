@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	emptypb "github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
@@ -147,7 +148,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		if contribution.AggregationBits.Count() == 0 {
 			log.WithFields(logrus.Fields{
 				"slot":   slot,
-				"pubkey": pubKey,
+				"pubkey": hexutil.Encode(pubKey[:]),
 				"subnet": subnet,
 			}).Warn("Sync contribution for validator has no bits set.")
 			continue

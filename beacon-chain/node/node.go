@@ -98,7 +98,8 @@ type BeaconNode struct {
 	syncCommitteePool       synccommittee.Pool
 	blsToExecPool           blstoexec.PoolManager
 	depositCache            cache.DepositCache
-	proposerIdsCache        *cache.ProposerPayloadIDsCache
+	trackedValidatorsCache  *cache.TrackedValidatorsCache
+	payloadIDCache          *cache.PayloadIDCache
 	stateFeed               *event.Feed
 	blockFeed               *event.Feed
 	opFeed                  *event.Feed
@@ -115,6 +116,7 @@ type BeaconNode struct {
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
 	blobRetentionEpochs     primitives.Epoch
+	verifyInitWaiter        *verification.InitializerWaiter
 }
 
 // New creates a new node instance, sets up configuration options, and registers
@@ -179,10 +181,11 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		slashingsPool:           slashings.NewPool(),
 		syncCommitteePool:       synccommittee.NewPool(),
 		blsToExecPool:           blstoexec.NewPool(),
+		trackedValidatorsCache:  cache.NewTrackedValidatorsCache(),
+		payloadIDCache:          cache.NewPayloadIDCache(),
 		slasherBlockHeadersFeed: new(event.Feed),
 		slasherAttestationsFeed: new(event.Feed),
 		serviceFlagOpts:         &serviceFlagOpts{},
-		proposerIdsCache:        cache.NewProposerPayloadIDsCache(),
 	}
 
 	beacon.initialSyncComplete = make(chan struct{})
@@ -205,6 +208,7 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	if err := beacon.startDB(cliCtx, depositAddress); err != nil {
 		return nil, err
 	}
+	beacon.BlobStorage.WarmCache()
 
 	log.Debugln("Starting Slashing DB")
 	if err := beacon.startSlasherDB(cliCtx); err != nil {
@@ -226,13 +230,8 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
-	if beacon.finalizedStateAtStartUp != nil {
-		if err := beacon.BlobStorage.Prune(beacon.finalizedStateAtStartUp.Slot()); err != nil {
-			return nil, err
-		}
-	} else {
-		log.Warn("No finalized beacon state at startup, cannot prune blobs")
-	}
+	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
+		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
 
 	log.Debugln("Registering P2P Service")
 	if err := beacon.registerP2P(cliCtx); err != nil {
@@ -399,7 +398,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 
 	log.WithField("database-path", dbPath).Info("Checking DB")
 
-	d, err := kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
+	d, err := kv.NewKVStore(b.ctx, dbPath)
 	if err != nil {
 		return err
 	}
@@ -422,7 +421,7 @@ func (b *BeaconNode) startDB(cliCtx *cli.Context, depositAddress string) error {
 			return errors.Wrap(err, "could not clear database")
 		}
 
-		d, err = kv.NewKVStore(b.ctx, dbPath, kv.WithBlobRetentionEpochs(b.blobRetentionEpochs))
+		d, err = kv.NewKVStore(b.ctx, dbPath)
 		if err != nil {
 			return errors.Wrap(err, "could not create new database")
 		}
@@ -659,10 +658,11 @@ func (b *BeaconNode) registerBlockchainService(fc forkchoice.ForkChoicer, gs *st
 		blockchain.WithStateGen(b.stateGen),
 		blockchain.WithSlasherAttestationsFeed(b.slasherAttestationsFeed),
 		blockchain.WithFinalizedStateAtStartUp(b.finalizedStateAtStartUp),
-		blockchain.WithProposerIdsCache(b.proposerIdsCache),
 		blockchain.WithClockSynchronizer(gs),
 		blockchain.WithSyncComplete(syncComplete),
 		blockchain.WithBlobStorage(b.BlobStorage),
+		blockchain.WithTrackedValidatorsCache(b.trackedValidatorsCache),
+		blockchain.WithPayloadIDCache(b.payloadIDCache),
 	)
 
 	blockchainService, err := blockchain.NewService(b.ctx, opts...)
@@ -743,7 +743,7 @@ func (b *BeaconNode) registerSyncService(initialSyncComplete chan struct{}) erro
 		regularsync.WithInitialSyncComplete(initialSyncComplete),
 		regularsync.WithStateNotifier(b),
 		regularsync.WithBlobStorage(b.BlobStorage),
-		regularsync.WithVerifierWaiter(verification.NewInitializerWaiter(b.clockWaiter, b.forkChoicer, b.stateGen)),
+		regularsync.WithVerifierWaiter(b.verifyInitWaiter),
 	)
 	return b.services.RegisterService(rs)
 }
@@ -754,6 +754,9 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		return err
 	}
 
+	opts := []initialsync.Option{
+		initialsync.WithVerifierWaiter(b.verifyInitWaiter),
+	}
 	is := initialsync.NewService(b.ctx, &initialsync.Config{
 		DB:                  b.db,
 		Chain:               chainService,
@@ -763,7 +766,7 @@ func (b *BeaconNode) registerInitialSyncService(complete chan struct{}) error {
 		ClockWaiter:         b.clockWaiter,
 		InitialSyncComplete: complete,
 		BlobStorage:         b.BlobStorage,
-	})
+	}, opts...)
 	return b.services.RegisterService(is)
 }
 
@@ -893,11 +896,12 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		StateGen:                      b.stateGen,
 		EnableDebugRPCEndpoints:       enableDebugRPCEndpoints,
 		MaxMsgSize:                    maxMsgSize,
-		ProposerIdsCache:              b.proposerIdsCache,
 		BlockBuilder:                  b.fetchBuilderService(),
 		Router:                        router,
 		ClockWaiter:                   b.clockWaiter,
 		BlobStorage:                   b.BlobStorage,
+		TrackedValidatorsCache:        b.trackedValidatorsCache,
+		PayloadIDCache:                b.payloadIDCache,
 	})
 
 	return b.services.RegisterService(rpcService)

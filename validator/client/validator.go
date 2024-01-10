@@ -104,7 +104,7 @@ type validator struct {
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
 	prysmBeaconClient                  iface.PrysmBeaconChainClient
-	validatorRegBatchSize              int
+	validatorsRegBatchSize             int
 }
 
 type validatorStatus struct {
@@ -582,6 +582,11 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		return err
 	}
 
+	v.dutiesLock.Lock()
+	v.duties = resp
+	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
+	v.dutiesLock.Unlock()
+
 	allExitedCounter := 0
 	for i := range resp.CurrentEpochDuties {
 		if resp.CurrentEpochDuties[i].Status == ethpb.ValidatorStatus_EXITED {
@@ -591,11 +596,6 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 	if allExitedCounter != 0 && allExitedCounter == len(resp.CurrentEpochDuties) {
 		return ErrValidatorsAllExited
 	}
-
-	v.dutiesLock.Lock()
-	v.duties = resp
-	v.logDuties(slot, v.duties.CurrentEpochDuties, v.duties.NextEpochDuties)
-	v.dutiesLock.Unlock()
 
 	// Non-blocking call for beacon node to start subscriptions for aggregators.
 	// Make sure to copy metadata into a new context
@@ -1028,14 +1028,10 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return err
 	}
 
-	signedRegReqs, err := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
-	if err != nil {
-		return err
-	}
-	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorRegBatchSize); err != nil {
+	signedRegReqs := v.buildSignedRegReqs(ctx, filteredKeys, km.Sign)
+	if err := SubmitValidatorRegistrations(ctx, v.validatorClient, signedRegReqs, v.validatorsRegBatchSize); err != nil {
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
-
 	return nil
 }
 
@@ -1089,12 +1085,10 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 	for _, k := range pubkeys {
 		// Default case: Define fee recipient to burn address
 		var feeRecipient common.Address
-		isFeeRecipientDefined := false
 
 		// If fee recipient is defined in default configuration, use it
 		if v.ProposerSettings() != nil && v.ProposerSettings().DefaultConfig != nil && v.ProposerSettings().DefaultConfig.FeeRecipientConfig != nil {
 			feeRecipient = v.ProposerSettings().DefaultConfig.FeeRecipientConfig.FeeRecipient // Use cli config for fee recipient.
-			isFeeRecipientDefined = true
 		}
 
 		// If fee recipient is defined for this specific pubkey in proposer configuration, use it
@@ -1103,7 +1097,6 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 
 			if ok && config != nil && config.FeeRecipientConfig != nil {
 				feeRecipient = config.FeeRecipientConfig.FeeRecipient // Use file config for fee recipient.
-				isFeeRecipientDefined = true
 			}
 		}
 
@@ -1112,29 +1105,22 @@ func (v *validator) buildPrepProposerReqs(ctx context.Context, pubkeys [][fieldp
 			continue
 		}
 
-		if isFeeRecipientDefined {
-			prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
-				ValidatorIndex: validatorIndex,
-				FeeRecipient:   feeRecipient[:],
-			})
-
-			if hexutil.Encode(feeRecipient.Bytes()) == params.BeaconConfig().EthBurnAddressHex {
-				log.WithFields(logrus.Fields{
-					"validatorIndex": validatorIndex,
-					"feeRecipient":   feeRecipient,
-				}).Warn("Fee recipient is burn address")
-			}
-		}
+		prepareProposerReqs = append(prepareProposerReqs, &ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer{
+			ValidatorIndex: validatorIndex,
+			FeeRecipient:   feeRecipient[:],
+		})
 	}
 	return prepareProposerReqs, nil
 }
 
-func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) ([]*ethpb.SignedValidatorRegistrationV1, error) {
+func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte /* only active pubkeys */, signer iface.SigningFunc) []*ethpb.SignedValidatorRegistrationV1 {
 	var signedValRegRegs []*ethpb.SignedValidatorRegistrationV1
-
+	if v.ProposerSettings() == nil {
+		return signedValRegRegs
+	}
 	// if the timestamp is pre-genesis, don't create registrations
 	if v.genesisTime > uint64(time.Now().UTC().Unix()) {
-		return signedValRegRegs, nil
+		return signedValRegRegs
 	}
 	for i, k := range pubkeys {
 		feeRecipient := common.HexToAddress(params.BeaconConfig().EthBurnAddressHex)
@@ -1203,7 +1189,7 @@ func (v *validator) buildSignedRegReqs(ctx context.Context, pubkeys [][fieldpara
 			}).Warn("Fee recipient is burn address")
 		}
 	}
-	return signedValRegRegs, nil
+	return signedValRegRegs
 }
 
 func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool, error) {

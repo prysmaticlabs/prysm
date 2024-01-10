@@ -12,7 +12,7 @@ var (
 	// MevRelayEndpoint provides an HTTP access endpoint to a MEV builder network.
 	MevRelayEndpoint = &cli.StringFlag{
 		Name:  "http-mev-relay",
-		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
+		Usage: "A MEV builder relay string http endpoint, this will be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
 	MaxBuilderConsecutiveMissedSlots = &cli.IntFlag{
@@ -80,7 +80,7 @@ var (
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
-		Usage: "Port used to listening and respond metrics for prometheus.",
+		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8080,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.

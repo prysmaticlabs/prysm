@@ -3,13 +3,13 @@ package scorers
 import (
 	"errors"
 	"math"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/time"
 )
 
 var _ Scorer = (*PeerStatusScorer)(nil)

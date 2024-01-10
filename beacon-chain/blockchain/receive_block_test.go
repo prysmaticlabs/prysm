@@ -7,6 +7,8 @@ import (
 	"time"
 
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -130,7 +132,9 @@ func TestService_ReceiveBlock(t *testing.T) {
 			s, tr := minimalTestService(t,
 				WithFinalizedStateAtStartUp(genesis),
 				WithExitPool(voluntaryexits.NewPool()),
-				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}))
+				WithStateNotifier(&blockchainTesting.MockStateNotifier{RecordEvents: true}),
+				WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
+			)
 
 			beaconDB := tr.db
 			genesisBlockRoot := bytesutil.ToBytes32(nil)
@@ -143,7 +147,7 @@ func TestService_ReceiveBlock(t *testing.T) {
 			require.NoError(t, err)
 			wsb, err := blocks.NewSignedBeaconBlock(tt.args.block)
 			require.NoError(t, err)
-			err = s.ReceiveBlock(ctx, wsb, root)
+			err = s.ReceiveBlock(ctx, wsb, root, nil)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {
@@ -176,7 +180,7 @@ func TestService_ReceiveBlockUpdateHead(t *testing.T) {
 	go func() {
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		require.NoError(t, s.ReceiveBlock(ctx, wsb, root))
+		require.NoError(t, s.ReceiveBlock(ctx, wsb, root, nil))
 		wg.Done()
 	}()
 	wg.Wait()
@@ -240,7 +244,7 @@ func TestService_ReceiveBlockBatch(t *testing.T) {
 			require.NoError(t, err)
 			rwsb, err := blocks.NewROBlock(wsb)
 			require.NoError(t, err)
-			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb})
+			err = s.ReceiveBlockBatch(ctx, []blocks.ROBlock{rwsb}, &das.MockAvailabilityStore{})
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

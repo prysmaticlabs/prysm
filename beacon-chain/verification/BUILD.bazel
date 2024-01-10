@@ -8,6 +8,8 @@ go_library(
         "error.go",
         "fake.go",
         "initializer.go",
+        "interface.go",
+        "mock.go",
         "result.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/verification",

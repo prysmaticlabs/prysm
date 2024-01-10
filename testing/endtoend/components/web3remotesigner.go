@@ -260,9 +260,6 @@ func createTestnetDir() (string, error) {
 	// Add in deposit contract in yaml
 	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s\n", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
-	rawYaml = append(rawYaml, params.NetworkConfigToYaml(params.BeaconNetworkConfig())...)
-
-	rawYaml = append(rawYaml, []byte("\nMIN_EPOCHS_FOR_BLOCK_REQUESTS: 33024\n")...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {
 		return "", err

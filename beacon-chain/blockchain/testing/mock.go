@@ -16,6 +16,7 @@ import (
 	opfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -73,6 +74,7 @@ type ChainService struct {
 	BlockSlot                   primitives.Slot
 	SyncingRoot                 [32]byte
 	Blobs                       []blocks.VerifiedROBlob
+	TargetRoot                  [32]byte
 }
 
 func (s *ChainService) Ancestor(ctx context.Context, root []byte, slot primitives.Slot) ([]byte, error) {
@@ -207,7 +209,7 @@ func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interf
 }
 
 // ReceiveBlockBatch processes blocks in batches from initial-sync.
-func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBlock) error {
+func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBlock, _ das.AvailabilityStore) error {
 	if s.State == nil {
 		return ErrNilState
 	}
@@ -237,7 +239,7 @@ func (s *ChainService) ReceiveBlockBatch(ctx context.Context, blks []blocks.ROBl
 }
 
 // ReceiveBlock mocks ReceiveBlock method in chain service.
-func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, _ [32]byte) error {
+func (s *ChainService) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, _ [32]byte, _ das.AvailabilityStore) error {
 	if s.ReceiveBlockMockErr != nil {
 		return s.ReceiveBlockMockErr
 	}
@@ -319,7 +321,7 @@ func (s *ChainService) PreviousJustifiedCheckpt() *ethpb.Checkpoint {
 }
 
 // ReceiveAttestation mocks ReceiveAttestation method in chain service.
-func (_ *ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
+func (*ChainService) ReceiveAttestation(_ context.Context, _ *ethpb.Attestation) error {
 	return nil
 }
 
@@ -399,12 +401,12 @@ func (s *ChainService) RecentBlockSlot([32]byte) (primitives.Slot, error) {
 }
 
 // HeadGenesisValidatorsRoot mocks HeadGenesisValidatorsRoot method in chain service.
-func (_ *ChainService) HeadGenesisValidatorsRoot() [32]byte {
+func (*ChainService) HeadGenesisValidatorsRoot() [32]byte {
 	return [32]byte{}
 }
 
 // VerifyLmdFfgConsistency mocks VerifyLmdFfgConsistency and always returns nil.
-func (_ *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
+func (*ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attestation) error {
 	if !bytes.Equal(a.Data.BeaconBlockRoot, a.Data.Target.Root) {
 		return errors.New("LMD and FFG miss matched")
 	}
@@ -412,7 +414,7 @@ func (_ *ChainService) VerifyLmdFfgConsistency(_ context.Context, a *ethpb.Attes
 }
 
 // ChainHeads mocks ChainHeads and always return nil.
-func (_ *ChainService) ChainHeads() ([][32]byte, []primitives.Slot) {
+func (*ChainService) ChainHeads() ([][32]byte, []primitives.Slot) {
 	return [][32]byte{
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("foo"), 32)),
 			bytesutil.ToBytes32(bytesutil.PadTo([]byte("bar"), 32)),
@@ -421,7 +423,7 @@ func (_ *ChainService) ChainHeads() ([][32]byte, []primitives.Slot) {
 }
 
 // HeadPublicKeyToValidatorIndex mocks HeadPublicKeyToValidatorIndex and always return 0 and true.
-func (_ *ChainService) HeadPublicKeyToValidatorIndex(_ [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
+func (*ChainService) HeadPublicKeyToValidatorIndex(_ [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool) {
 	return 0, true
 }
 
@@ -485,7 +487,7 @@ func (s *ChainService) UpdateHead(ctx context.Context, slot primitives.Slot) {
 }
 
 // ReceiveAttesterSlashing mocks the same method in the chain service.
-func (s *ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
+func (*ChainService) ReceiveAttesterSlashing(context.Context, *ethpb.AttesterSlashing) {}
 
 // IsFinalized mocks the same method in the chain service.
 func (s *ChainService) IsFinalized(_ context.Context, blockRoot [32]byte) bool {
@@ -598,12 +600,12 @@ func (s *ChainService) ProposerBoost() [32]byte {
 }
 
 // FinalizedBlockHash mocks the same method in the chain service
-func (s *ChainService) FinalizedBlockHash() [32]byte {
+func (*ChainService) FinalizedBlockHash() [32]byte {
 	return [32]byte{}
 }
 
 // UnrealizedJustifiedPayloadBlockHash mocks the same method in the chain service
-func (s *ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
+func (*ChainService) UnrealizedJustifiedPayloadBlockHash() [32]byte {
 	return [32]byte{}
 }
 
@@ -616,4 +618,9 @@ func (c *ChainService) BlockBeingSynced(root [32]byte) bool {
 func (c *ChainService) ReceiveBlob(_ context.Context, b blocks.VerifiedROBlob) error {
 	c.Blobs = append(c.Blobs, b)
 	return nil
+}
+
+// TargetRootForEpoch mocks the same method in the chain service
+func (c *ChainService) TargetRootForEpoch(_ [32]byte, _ primitives.Epoch) ([32]byte, error) {
+	return c.TargetRoot, nil
 }

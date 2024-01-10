@@ -277,6 +277,7 @@ func TestNode_TimeStampsChecks(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, false, late)
 
+	orphanLateBlockFirstThreshold := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
 	// late block
 	driftGenesisTime(f, 2, orphanLateBlockFirstThreshold+1)
 	root = [32]byte{'b'}

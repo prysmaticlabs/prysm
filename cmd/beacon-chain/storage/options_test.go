@@ -35,7 +35,7 @@ func TestBlobStoragePath_FlagSpecified(t *testing.T) {
 
 func TestConfigureBlobRetentionEpoch(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
-	specMinEpochs := params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest
+	specMinEpochs := params.BeaconConfig().MinEpochsForBlobsSidecarsRequest
 	app := cli.App{}
 	set := flag.NewFlagSet("test", 0)
 	cliCtx := cli.NewContext(&app, set, nil)

@@ -75,7 +75,6 @@ func TestRegistration_Valid(t *testing.T) {
 		nil,
 	).Return(
 		nil,
-		nil,
 	).Times(1)
 
 	decodedFeeRecipient1, err := hexutil.Decode(feeRecipient1)
@@ -150,7 +149,6 @@ func TestRegistration_BadRequest(t *testing.T) {
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 

@@ -40,7 +40,10 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["errors_test.go"],
+    srcs = [
+        "errors_test.go",
+        "request_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
         "//beacon-chain/rpc/lookup:go_default_library",

@@ -264,3 +264,10 @@ func SecondsSinceSlotStart(s primitives.Slot, genesisTime, timeStamp uint64) (ui
 func TimeIntoSlot(genesisTime uint64) time.Duration {
 	return time.Since(StartTime(genesisTime, CurrentSlot(genesisTime)))
 }
+
+// WithinVotingWindow returns whether the current time is within the voting window
+// (eg. 4 seconds on mainnet) of the current slot.
+func WithinVotingWindow(genesisTime uint64, slot primitives.Slot) bool {
+	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	return time.Since(StartTime(genesisTime, slot)) < time.Duration(votingWindow)*time.Second
+}

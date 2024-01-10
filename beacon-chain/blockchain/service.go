@@ -73,7 +73,8 @@ type config struct {
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
 	DepositCache            cache.DepositCache
-	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
+	PayloadIDCache          *cache.PayloadIDCache
+	TrackedValidatorsCache  *cache.TrackedValidatorsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
@@ -167,7 +168,7 @@ func NewService(ctx context.Context, opts ...Option) (*Service, error) {
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
 		blobNotifiers:        bn,
-		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
+		cfg:                  &config{},
 		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
 	}
 	for _, opt := range opts {

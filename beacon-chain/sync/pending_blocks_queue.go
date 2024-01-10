@@ -211,7 +211,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot, nil); err != nil {
 		return err
 	}
 

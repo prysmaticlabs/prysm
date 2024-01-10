@@ -1,27 +1,21 @@
 package filesystem
 
 import (
-	"encoding/binary"
 	"fmt"
-	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/logging"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
@@ -34,18 +28,21 @@ const (
 	sszExt  = "ssz"
 	partExt = "part"
 
-	firstPruneEpoch      = 0
-	bufferEpochs         = 2
 	directoryPermissions = 0700
 )
 
 // BlobStorageOption is a functional option for configuring a BlobStorage.
-type BlobStorageOption func(*BlobStorage)
+type BlobStorageOption func(*BlobStorage) error
 
 // WithBlobRetentionEpochs is an option that changes the number of epochs blobs will be persisted.
 func WithBlobRetentionEpochs(e primitives.Epoch) BlobStorageOption {
-	return func(b *BlobStorage) {
-		b.retentionEpochs = e
+	return func(b *BlobStorage) error {
+		pruner, err := newBlobPruner(b.fs, e)
+		if err != nil {
+			return err
+		}
+		b.pruner = pruner
+		return nil
 	}
 }
 
@@ -59,25 +56,41 @@ func NewBlobStorage(base string, opts ...BlobStorageOption) (*BlobStorage, error
 	}
 	fs := afero.NewBasePathFs(afero.NewOsFs(), base)
 	b := &BlobStorage{
-		fs:              fs,
-		retentionEpochs: params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest,
-		lastPrunedEpoch: firstPruneEpoch,
+		fs: fs,
 	}
 	for _, o := range opts {
-		o(b)
+		if err := o(b); err != nil {
+			return nil, fmt.Errorf("failed to create blob storage at %s: %w", base, err)
+		}
+	}
+	if b.pruner == nil {
+		log.Warn("Initializing blob filesystem storage with pruning disabled")
 	}
 	return b, nil
 }
 
 // BlobStorage is the concrete implementation of the filesystem backend for saving and retrieving BlobSidecars.
 type BlobStorage struct {
-	fs              afero.Fs
-	retentionEpochs primitives.Epoch
-	lastPrunedEpoch primitives.Epoch
+	fs     afero.Fs
+	pruner *blobPruner
+}
+
+// WarmCache runs the prune routine with an expiration of slot of 0, so nothing will be pruned, but the pruner's cache
+// will be populated at node startup, avoiding a costly cold prune (~4s in syscalls) during syncing.
+func (bs *BlobStorage) WarmCache() {
+	if bs.pruner == nil {
+		return
+	}
+	go func() {
+		if err := bs.pruner.prune(0); err != nil {
+			log.WithError(err).Error("Error encountered while warming up blob pruner cache.")
+		}
+	}()
 }
 
 // Save saves blobs given a list of sidecars.
 func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
+	startTime := time.Now()
 	fname := namerForSidecar(sidecar)
 	sszPath := fname.path()
 	exists, err := afero.Exists(bs.fs, sszPath)
@@ -88,13 +101,8 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 		log.WithFields(logging.BlobFields(sidecar.ROBlob)).Debug("ignoring a duplicate blob sidecar Save attempt")
 		return nil
 	}
-	if bs.shouldPrune(sidecar.Slot()) {
-		go func() {
-			err := bs.pruneOlderThan(sidecar.Slot())
-			if err != nil {
-				log.WithError(err).Errorf("failed to prune blobs from slot %d", sidecar.Slot())
-			}
-		}()
+	if bs.pruner != nil {
+		bs.pruner.notify(sidecar.BlockRoot(), sidecar.Slot())
 	}
 
 	// Serialize the ethpb.BlobSidecar to binary data using SSZ.
@@ -107,8 +115,12 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	}
 	partPath := fname.partPath()
 
+	partialMoved := false
 	// Ensure the partial file is deleted.
 	defer func() {
+		if partialMoved {
+			return
+		}
 		// It's expected to error if the save is successful.
 		err = bs.fs.Remove(partPath)
 		if err == nil {
@@ -142,6 +154,9 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to rename partial file to final name")
 	}
+	partialMoved = true
+	blobsWrittenCounter.Inc()
+	blobSaveLatency.Observe(time.Since(startTime).Seconds())
 	return nil
 }
 
@@ -149,6 +164,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 // Since BlobStorage only writes blobs that have undergone full verification, the return
 // value is always a VerifiedROBlob.
 func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, error) {
+	startTime := time.Now()
 	expected := blobNamer{root: root, index: idx}
 	encoded, err := afero.ReadFile(bs.fs, expected.path())
 	var v blocks.VerifiedROBlob
@@ -163,6 +179,9 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	if err != nil {
 		return blocks.VerifiedROBlob{}, err
 	}
+	defer func() {
+		blobFetchLatency.Observe(time.Since(startTime).Seconds())
+	}()
 	return verification.BlobSidecarNoop(ro)
 }
 
@@ -213,7 +232,7 @@ func namerForSidecar(sc blocks.VerifiedROBlob) blobNamer {
 }
 
 func (p blobNamer) dir() string {
-	return fmt.Sprintf("%#x", p.root)
+	return rootString(p.root)
 }
 
 func (p blobNamer) fname(ext string) string {
@@ -228,106 +247,6 @@ func (p blobNamer) path() string {
 	return p.fname(sszExt)
 }
 
-// Prune prunes blobs in the base directory based on the retention epoch.
-// It deletes blobs older than currentEpoch - (retentionEpochs+bufferEpochs).
-// This is so that we keep a slight buffer and blobs are deleted after n+2 epochs.
-func (bs *BlobStorage) Prune(currentSlot primitives.Slot) error {
-	t := time.Now()
-	retentionSlots, err := slots.EpochStart(bs.retentionEpochs + bufferEpochs)
-	if err != nil {
-		return err
-	}
-	if currentSlot < retentionSlots {
-		return nil // Overflow would occur
-	}
-
-	log.Debug("Pruning old blobs")
-
-	folders, err := afero.ReadDir(bs.fs, ".")
-	if err != nil {
-		return err
-	}
-	for _, folder := range folders {
-		if folder.IsDir() {
-			if err := bs.processFolder(folder, currentSlot, retentionSlots); err != nil {
-				return err
-			}
-		}
-	}
-	pruneTime := time.Since(t)
-
-	log.WithFields(log.Fields{
-		"lastPrunedEpoch": slots.ToEpoch(currentSlot - retentionSlots),
-		"pruneTime":       pruneTime,
-	}).Debug("Pruned old blobs")
-
-	return nil
-}
-
-// processFolder will delete the folder of blobs if the blob slot is outside the
-// retention period. We determine the slot by looking at the first blob in the folder.
-func (bs *BlobStorage) processFolder(folder os.FileInfo, currentSlot, retentionSlots primitives.Slot) error {
-	f, err := bs.fs.Open(filepath.Join(folder.Name(), "0."+sszExt))
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			log.WithError(err).Errorf("Could not close blob file")
-		}
-	}()
-
-	slot, err := slotFromBlob(f)
-	if err != nil {
-		return err
-	}
-	if slot < (currentSlot - retentionSlots) {
-		if err = bs.fs.RemoveAll(folder.Name()); err != nil {
-			return errors.Wrapf(err, "failed to delete blob %s", f.Name())
-		}
-	}
-	return nil
-}
-
-// slotFromBlob reads the ssz data of a file at the specified offset (8 + 131072 + 48 + 48 = 131176 bytes),
-// which is calculated based on the size of the BlobSidecar struct and is based on the size of the fields
-// preceding the slot information within SignedBeaconBlockHeader.
-func slotFromBlob(at io.ReaderAt) (primitives.Slot, error) {
-	b := make([]byte, 8)
-	_, err := at.ReadAt(b, 131176)
-	if err != nil {
-		return 0, err
-	}
-	rawSlot := binary.LittleEndian.Uint64(b)
-	return primitives.Slot(rawSlot), nil
-}
-
-// Delete removes the directory matching the provided block root and all the blobs it contains.
-func (bs *BlobStorage) Delete(root [32]byte) error {
-	if err := bs.fs.RemoveAll(hexutil.Encode(root[:])); err != nil {
-		return fmt.Errorf("failed to delete blobs for root %#x: %w", root, err)
-	}
-	return nil
-}
-
-// shouldPrune checks whether pruning should be triggered based on the given slot.
-func (bs *BlobStorage) shouldPrune(slot primitives.Slot) bool {
-	if slots.SinceEpochStarts(slot) < params.BeaconConfig().SlotsPerEpoch/2 {
-		return false
-	}
-	if slots.ToEpoch(slot) == bs.lastPrunedEpoch {
-		return false
-	}
-	return true
-}
-
-// pruneOlderThan prunes blobs in the base directory based on the retention epoch and current slot.
-func (bs *BlobStorage) pruneOlderThan(slot primitives.Slot) error {
-	err := bs.Prune(slot)
-	if err != nil {
-		return err
-	}
-	// Update lastPrunedEpoch to the current epoch.
-	bs.lastPrunedEpoch = slots.ToEpoch(slot)
-	return nil
+func rootString(root [32]byte) string {
+	return fmt.Sprintf("%#x", root)
 }

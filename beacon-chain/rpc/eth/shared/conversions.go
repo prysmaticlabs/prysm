@@ -769,30 +769,34 @@ func ProposerSlashingsToConsensus(src []*ProposerSlashing) ([]*eth.ProposerSlash
 func ProposerSlashingsFromConsensus(src []*eth.ProposerSlashing) []*ProposerSlashing {
 	proposerSlashings := make([]*ProposerSlashing, len(src))
 	for i, s := range src {
-		proposerSlashings[i] = &ProposerSlashing{
-			SignedHeader1: &SignedBeaconBlockHeader{
-				Message: &BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", s.Header_1.Header.Slot),
-					ProposerIndex: fmt.Sprintf("%d", s.Header_1.Header.ProposerIndex),
-					ParentRoot:    hexutil.Encode(s.Header_1.Header.ParentRoot),
-					StateRoot:     hexutil.Encode(s.Header_1.Header.StateRoot),
-					BodyRoot:      hexutil.Encode(s.Header_1.Header.BodyRoot),
-				},
-				Signature: hexutil.Encode(s.Header_1.Signature),
-			},
-			SignedHeader2: &SignedBeaconBlockHeader{
-				Message: &BeaconBlockHeader{
-					Slot:          fmt.Sprintf("%d", s.Header_2.Header.Slot),
-					ProposerIndex: fmt.Sprintf("%d", s.Header_2.Header.ProposerIndex),
-					ParentRoot:    hexutil.Encode(s.Header_2.Header.ParentRoot),
-					StateRoot:     hexutil.Encode(s.Header_2.Header.StateRoot),
-					BodyRoot:      hexutil.Encode(s.Header_2.Header.BodyRoot),
-				},
-				Signature: hexutil.Encode(s.Header_2.Signature),
-			},
-		}
+		proposerSlashings[i] = ProposerSlashingFromConsensus(s)
 	}
 	return proposerSlashings
+}
+
+func ProposerSlashingFromConsensus(src *eth.ProposerSlashing) *ProposerSlashing {
+	return &ProposerSlashing{
+		SignedHeader1: &SignedBeaconBlockHeader{
+			Message: &BeaconBlockHeader{
+				Slot:          fmt.Sprintf("%d", src.Header_1.Header.Slot),
+				ProposerIndex: fmt.Sprintf("%d", src.Header_1.Header.ProposerIndex),
+				ParentRoot:    hexutil.Encode(src.Header_1.Header.ParentRoot),
+				StateRoot:     hexutil.Encode(src.Header_1.Header.StateRoot),
+				BodyRoot:      hexutil.Encode(src.Header_1.Header.BodyRoot),
+			},
+			Signature: hexutil.Encode(src.Header_1.Signature),
+		},
+		SignedHeader2: &SignedBeaconBlockHeader{
+			Message: &BeaconBlockHeader{
+				Slot:          fmt.Sprintf("%d", src.Header_2.Header.Slot),
+				ProposerIndex: fmt.Sprintf("%d", src.Header_2.Header.ProposerIndex),
+				ParentRoot:    hexutil.Encode(src.Header_2.Header.ParentRoot),
+				StateRoot:     hexutil.Encode(src.Header_2.Header.StateRoot),
+				BodyRoot:      hexutil.Encode(src.Header_2.Header.BodyRoot),
+			},
+			Signature: hexutil.Encode(src.Header_2.Signature),
+		},
+	}
 }
 
 func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlashing, error) {
@@ -875,52 +879,56 @@ func AttesterSlashingsToConsensus(src []*AttesterSlashing) ([]*eth.AttesterSlash
 func AttesterSlashingsFromConsensus(src []*eth.AttesterSlashing) []*AttesterSlashing {
 	attesterSlashings := make([]*AttesterSlashing, len(src))
 	for i, s := range src {
-		a1AttestingIndices := make([]string, len(s.Attestation_1.AttestingIndices))
-		for j, ix := range s.Attestation_1.AttestingIndices {
-			a1AttestingIndices[j] = fmt.Sprintf("%d", ix)
-		}
-		a2AttestingIndices := make([]string, len(s.Attestation_2.AttestingIndices))
-		for j, ix := range s.Attestation_2.AttestingIndices {
-			a2AttestingIndices[j] = fmt.Sprintf("%d", ix)
-		}
-		attesterSlashings[i] = &AttesterSlashing{
-			Attestation1: &IndexedAttestation{
-				AttestingIndices: a1AttestingIndices,
-				Data: &AttestationData{
-					Slot:            fmt.Sprintf("%d", s.Attestation_1.Data.Slot),
-					CommitteeIndex:  fmt.Sprintf("%d", s.Attestation_1.Data.CommitteeIndex),
-					BeaconBlockRoot: hexutil.Encode(s.Attestation_1.Data.BeaconBlockRoot),
-					Source: &Checkpoint{
-						Epoch: fmt.Sprintf("%d", s.Attestation_1.Data.Source.Epoch),
-						Root:  hexutil.Encode(s.Attestation_1.Data.Source.Root),
-					},
-					Target: &Checkpoint{
-						Epoch: fmt.Sprintf("%d", s.Attestation_1.Data.Target.Epoch),
-						Root:  hexutil.Encode(s.Attestation_1.Data.Target.Root),
-					},
-				},
-				Signature: hexutil.Encode(s.Attestation_1.Signature),
-			},
-			Attestation2: &IndexedAttestation{
-				AttestingIndices: a2AttestingIndices,
-				Data: &AttestationData{
-					Slot:            fmt.Sprintf("%d", s.Attestation_2.Data.Slot),
-					CommitteeIndex:  fmt.Sprintf("%d", s.Attestation_2.Data.CommitteeIndex),
-					BeaconBlockRoot: hexutil.Encode(s.Attestation_2.Data.BeaconBlockRoot),
-					Source: &Checkpoint{
-						Epoch: fmt.Sprintf("%d", s.Attestation_2.Data.Source.Epoch),
-						Root:  hexutil.Encode(s.Attestation_2.Data.Source.Root),
-					},
-					Target: &Checkpoint{
-						Epoch: fmt.Sprintf("%d", s.Attestation_2.Data.Target.Epoch),
-						Root:  hexutil.Encode(s.Attestation_2.Data.Target.Root),
-					},
-				},
-				Signature: hexutil.Encode(s.Attestation_2.Signature),
-			},
-		}
+		attesterSlashings[i] = AttesterSlashingFromConsensus(s)
 	}
 	return attesterSlashings
+}
+
+func AttesterSlashingFromConsensus(src *eth.AttesterSlashing) *AttesterSlashing {
+	a1AttestingIndices := make([]string, len(src.Attestation_1.AttestingIndices))
+	for j, ix := range src.Attestation_1.AttestingIndices {
+		a1AttestingIndices[j] = fmt.Sprintf("%d", ix)
+	}
+	a2AttestingIndices := make([]string, len(src.Attestation_2.AttestingIndices))
+	for j, ix := range src.Attestation_2.AttestingIndices {
+		a2AttestingIndices[j] = fmt.Sprintf("%d", ix)
+	}
+	return &AttesterSlashing{
+		Attestation1: &IndexedAttestation{
+			AttestingIndices: a1AttestingIndices,
+			Data: &AttestationData{
+				Slot:            fmt.Sprintf("%d", src.Attestation_1.Data.Slot),
+				CommitteeIndex:  fmt.Sprintf("%d", src.Attestation_1.Data.CommitteeIndex),
+				BeaconBlockRoot: hexutil.Encode(src.Attestation_1.Data.BeaconBlockRoot),
+				Source: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_1.Data.Source.Epoch),
+					Root:  hexutil.Encode(src.Attestation_1.Data.Source.Root),
+				},
+				Target: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_1.Data.Target.Epoch),
+					Root:  hexutil.Encode(src.Attestation_1.Data.Target.Root),
+				},
+			},
+			Signature: hexutil.Encode(src.Attestation_1.Signature),
+		},
+		Attestation2: &IndexedAttestation{
+			AttestingIndices: a2AttestingIndices,
+			Data: &AttestationData{
+				Slot:            fmt.Sprintf("%d", src.Attestation_2.Data.Slot),
+				CommitteeIndex:  fmt.Sprintf("%d", src.Attestation_2.Data.CommitteeIndex),
+				BeaconBlockRoot: hexutil.Encode(src.Attestation_2.Data.BeaconBlockRoot),
+				Source: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_2.Data.Source.Epoch),
+					Root:  hexutil.Encode(src.Attestation_2.Data.Source.Root),
+				},
+				Target: &Checkpoint{
+					Epoch: fmt.Sprintf("%d", src.Attestation_2.Data.Target.Epoch),
+					Root:  hexutil.Encode(src.Attestation_2.Data.Target.Root),
+				},
+			},
+			Signature: hexutil.Encode(src.Attestation_2.Signature),
+		},
+	}
 }
 
 func AttsToConsensus(src []*Attestation) ([]*eth.Attestation, error) {

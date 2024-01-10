@@ -36,7 +36,7 @@ func (c *client) registerRPCHandler(baseTopic string, handle rpcHandler) {
 			_ = _err
 		}()
 
-		log.WithField("peer", stream.Conn().RemotePeer().Pretty()).WithField("topic", string(stream.Protocol()))
+		log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
 
 		base, ok := p2p.RPCTopicMappings[baseTopic]
 		if !ok {
