@@ -31,7 +31,7 @@ var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
 var errMaxRequestBlobSidecarsExceeded = errors.Wrap(ErrInvalidFetchedData, "peer exceeded req blob chunk tx limit")
 var errBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
 var errBlobUnmarshal = errors.New("Could not unmarshal chunk-encoded blob")
-var errUnrequestedRoot = errors.New("Received BlobSidecar in response that was not requested")
+var errUnrequested = errors.New("Received BlobSidecar in response that was not requested")
 var errBlobResponseOutOfBounds = errors.New("received BlobSidecar with slot outside BlobSidecarsByRangeRequest bounds")
 
 // BeaconBlockProcessor defines a block processing function, which allows to start utilizing
@@ -199,13 +199,22 @@ func SendBlobSidecarByRoot(
 type blobResponseValidation func(blocks.ROBlob) error
 
 func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseValidation {
-	roots := make(map[[32]byte]bool)
+	blobIds := make(map[[32]byte]map[uint64]bool)
 	for _, sc := range *req {
-		roots[bytesutil.ToBytes32(sc.BlockRoot)] = true
+		blockRoot := bytesutil.ToBytes32(sc.BlockRoot)
+		if blobIds[blockRoot] == nil {
+			blobIds[blockRoot] = make(map[uint64]bool)
+		}
+		blobIds[blockRoot][sc.Index] = true
 	}
 	return func(sc blocks.ROBlob) error {
-		if requested := roots[sc.BlockRoot()]; !requested {
-			return errors.Wrapf(errUnrequestedRoot, "root=%#x", sc.BlockRoot())
+		blobIndices := blobIds[sc.BlockRoot()]
+		if blobIndices == nil {
+			return errors.Wrapf(errUnrequested, "root=%#x", sc.BlockRoot())
+		}
+		requested := blobIndices[sc.Index]
+		if !requested {
+			return errors.Wrapf(errUnrequested, "root=%#x index=%d", sc.BlockRoot(), sc.Index)
 		}
 		return nil
 	}
