@@ -9,30 +9,18 @@ import (
 	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 )
 
-func NewBeaconChainClient(validatorConn validatorHelpers.NodeConnection) iface.BeaconChainClient {
+func NewBeaconChainClient(validatorConn validatorHelpers.NodeConnection, jsonRestHandler beaconApi.JsonRestHandler) iface.BeaconChainClient {
 	grpcClient := grpcApi.NewGrpcBeaconChainClient(validatorConn.GetGrpcClientConn())
-	featureFlags := features.Get()
-
-	if featureFlags.EnableBeaconRESTApi {
-		return beaconApi.NewBeaconApiBeaconChainClientWithFallback(
-			validatorConn.GetBeaconApiUrl(),
-			validatorConn.GetBeaconApiTimeout(),
-			grpcClient,
-		)
+	if features.Get().EnableBeaconRESTApi {
+		return beaconApi.NewBeaconApiBeaconChainClientWithFallback(jsonRestHandler, grpcClient)
 	} else {
 		return grpcClient
 	}
 }
 
-func NewPrysmBeaconClient(validatorConn validatorHelpers.NodeConnection) iface.PrysmBeaconChainClient {
-	featureFlags := features.Get()
-
-	if featureFlags.EnableBeaconRESTApi {
-		return beaconApi.NewPrysmBeaconChainClient(
-			validatorConn.GetBeaconApiUrl(),
-			validatorConn.GetBeaconApiTimeout(),
-			nodeClientFactory.NewNodeClient(validatorConn),
-		)
+func NewPrysmBeaconClient(validatorConn validatorHelpers.NodeConnection, jsonRestHandler beaconApi.JsonRestHandler) iface.PrysmBeaconChainClient {
+	if features.Get().EnableBeaconRESTApi {
+		return beaconApi.NewPrysmBeaconChainClient(jsonRestHandler, nodeClientFactory.NewNodeClient(validatorConn, jsonRestHandler))
 	} else {
 		return grpcApi.NewGrpcPrysmBeaconChainClient(validatorConn.GetGrpcClientConn())
 	}

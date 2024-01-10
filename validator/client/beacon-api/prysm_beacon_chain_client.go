@@ -3,11 +3,9 @@ package beacon_api
 import (
 	"context"
 	"fmt"
-	"net/http"
 	neturl "net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
@@ -16,12 +14,7 @@ import (
 )
 
 // NewPrysmBeaconChainClient returns implementation of iface.PrysmBeaconChainClient.
-func NewPrysmBeaconChainClient(host string, timeout time.Duration, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
-	}
-
+func NewPrysmBeaconChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
 	return prysmBeaconChainClient{
 		jsonRestHandler: jsonRestHandler,
 		nodeClient:      nodeClient,
