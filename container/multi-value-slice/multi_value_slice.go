@@ -428,7 +428,7 @@ func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 	return stats
 }
 
-// IsFragmented checks if our mutlivalue object is fragmented(individual references held).
+// IsFragmented checks if our mutlivalue object is fragmented (individual references held).
 // If the number of references is higher than our threshold we return true.
 func (s *Slice[V]) IsFragmented() bool {
 	stats := s.MultiValueStatistics()
