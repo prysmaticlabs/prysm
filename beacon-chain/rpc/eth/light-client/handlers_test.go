@@ -171,12 +171,12 @@ func TestLightClientHandler_GetLightClientUpdatesByRange(t *testing.T) {
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdatesByRangeResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, 1, len(resp.Updates))
-	require.Equal(t, "capella", resp.Updates[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Updates)
+	var resp []LightClientUpdateWithVersion
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+	require.Equal(t, 1, len(resp))
+	require.Equal(t, "capella", resp[0].Version)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp)
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCount(t *testing.T) {
@@ -274,12 +274,12 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigInputCount(t *tes
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdatesByRangeResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, 1, len(resp.Updates)) // Even with big count input, the response is still the max available period, which is 1 in test case.
-	require.Equal(t, "capella", resp.Updates[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Updates)
+	var resp []LightClientUpdateWithVersion
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+	require.Equal(t, 1, len(resp)) // Even with big count input, the response is still the max available period, which is 1 in test case.
+	require.Equal(t, "capella", resp[0].Version)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp)
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriod(t *testing.T) {
@@ -377,12 +377,12 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooEarlyPeriod(t *testi
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdatesByRangeResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, 1, len(resp.Updates))
-	require.Equal(t, "capella", resp.Updates[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Updates)
+	var resp []LightClientUpdateWithVersion
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+	require.Equal(t, 1, len(resp))
+	require.Equal(t, "capella", resp[0].Version)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp)
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCount(t *testing.T) {
@@ -480,12 +480,12 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_TooBigCount(t *testing.
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &LightClientUpdatesByRangeResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, 1, len(resp.Updates))
-	require.Equal(t, "capella", resp.Updates[0].Version)
-	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp.Updates[0].Data.AttestedHeader.BodyRoot)
-	require.NotNil(t, resp.Updates)
+	var resp []LightClientUpdateWithVersion
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
+	require.Equal(t, 1, len(resp))
+	require.Equal(t, "capella", resp[0].Version)
+	require.Equal(t, hexutil.Encode(attestedHeader.BodyRoot), resp[0].Data.AttestedHeader.BodyRoot)
+	require.NotNil(t, resp)
 }
 
 func TestLightClientHandler_GetLightClientUpdatesByRange_BeforeAltair(t *testing.T) {
@@ -583,9 +583,6 @@ func TestLightClientHandler_GetLightClientUpdatesByRange_BeforeAltair(t *testing
 	s.GetLightClientUpdatesByRange(writer, request)
 
 	require.Equal(t, http.StatusNotFound, writer.Code)
-	resp := &LightClientUpdatesByRangeResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.Equal(t, 0, len(resp.Updates))
 }
 
 func TestLightClientHandler_GetLightClientFinalityUpdate(t *testing.T) {
