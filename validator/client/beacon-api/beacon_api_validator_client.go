@@ -2,7 +2,6 @@ package beacon_api
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,12 +22,7 @@ type beaconApiValidatorClient struct {
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
 
-func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
-	}
-
+func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler) iface.ValidatorClient {
 	return &beaconApiValidatorClient{
 		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
