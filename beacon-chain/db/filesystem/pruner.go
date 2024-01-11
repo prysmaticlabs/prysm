@@ -81,12 +81,14 @@ func (p *blobPruner) prune(pruneBefore primitives.Slot) error {
 		}()
 	} else {
 		defer func() {
-			log.WithFields(log.Fields{
-				"upToEpoch":    slots.ToEpoch(pruneBefore),
-				"duration":     time.Since(start).String(),
-				"filesRemoved": totalPruned,
-			}).Debug("Pruned old blobs")
-			blobsPrunedCounter.Add(float64(totalPruned))
+			if totalPruned > 0 {
+				log.WithFields(log.Fields{
+					"upToEpoch":    slots.ToEpoch(pruneBefore),
+					"duration":     time.Since(start).String(),
+					"filesRemoved": totalPruned,
+				}).Debug("Pruned old blobs")
+				blobsPrunedCounter.Add(float64(totalPruned))
+			}
 		}()
 	}
 
