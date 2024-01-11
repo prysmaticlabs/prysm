@@ -59,7 +59,7 @@ var (
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
-	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
 )
 
 type validator struct {
