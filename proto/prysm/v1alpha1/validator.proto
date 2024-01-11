@@ -17,6 +17,7 @@ package ethereum.eth.v1alpha1;
 
 import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/wrappers.proto";
 
 import "proto/eth/ext/options.proto";
 
@@ -566,6 +567,9 @@ message BlockRequest {
 
     // Signal server to skip outsourcing block request from mev-boost/relayer so that returned block will always be a local block.
     bool skip_mev_boost = 4;
+
+    // Percentage multiplier to apply to the builder's payload value when choosing between a builder payload header and payload from the paired execution node
+    google.protobuf.UInt64Value builder_boost_factor = 5;
 }
 
 message ProposeResponse {

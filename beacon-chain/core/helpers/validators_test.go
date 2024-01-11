@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -801,4 +802,19 @@ func TestLastActivatedValidatorIndex_OK(t *testing.T) {
 	index, err := LastActivatedValidatorIndex(context.Background(), beaconState)
 	require.NoError(t, err)
 	require.Equal(t, index, primitives.ValidatorIndex(3))
+}
+
+func TestProposerIndexFromCheckpoint(t *testing.T) {
+	e := primitives.Epoch(2)
+	r := [32]byte{'a'}
+	root := [32]byte{'b'}
+	ids := [32]primitives.ValidatorIndex{}
+	slot := primitives.Slot(69) // slot 5 in the Epoch
+	ids[5] = primitives.ValidatorIndex(19)
+	proposerIndicesCache.Set(e, r, ids)
+	c := &forkchoicetypes.Checkpoint{Root: root, Epoch: e - 1}
+	proposerIndicesCache.SetCheckpoint(*c, r)
+	id, err := ProposerIndexAtSlotFromCheckpoint(c, slot)
+	require.NoError(t, err)
+	require.Equal(t, ids[5], id)
 }

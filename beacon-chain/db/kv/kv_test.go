@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/prysmaticlabs/prysm/v4/config/features"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -16,8 +15,7 @@ import (
 
 // setupDB instantiates and returns a Store instance.
 func setupDB(t testing.TB) *Store {
-	opt := WithBlobRetentionEpochs(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
-	db, err := NewKVStore(context.Background(), t.TempDir(), opt)
+	db, err := NewKVStore(context.Background(), t.TempDir())
 	require.NoError(t, err, "Failed to instantiate DB")
 	t.Cleanup(func() {
 		require.NoError(t, db.Close(), "Failed to close database")

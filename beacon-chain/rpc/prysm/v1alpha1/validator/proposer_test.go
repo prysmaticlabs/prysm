@@ -154,7 +154,6 @@ func TestServer_GetBeaconBlock_Altair(t *testing.T) {
 				SyncAggregate: &ethpb.SyncAggregate{SyncCommitteeBits: scBits[:], SyncCommitteeSignature: make([]byte, 96)},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := genAltair.Block.HashTreeRoot()
@@ -244,7 +243,6 @@ func TestServer_GetBeaconBlock_Bellatrix(t *testing.T) {
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -363,12 +361,14 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:    make([]byte, fieldparams.RootLength),
+					ExtraData:     make([]byte, 0),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
+					Transactions:  make([][]byte, 0),
+					Withdrawals:   make([]*enginev1.Withdrawal, 0),
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -388,14 +388,15 @@ func TestServer_GetBeaconBlock_Capella(t *testing.T) {
 		ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 		LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 		PrevRandao:    random,
-		BaseFeePerGas: make([]byte, fieldparams.RootLength),
-		BlockHash:     make([]byte, fieldparams.RootLength),
-		Transactions:  make([][]byte, 0),
-		ExtraData:     make([]byte, 0),
 		BlockNumber:   1,
 		GasLimit:      2,
 		GasUsed:       3,
 		Timestamp:     uint64(timeStamp.Unix()),
+		ExtraData:     make([]byte, 0),
+		BaseFeePerGas: make([]byte, fieldparams.RootLength),
+		BlockHash:     make([]byte, fieldparams.RootLength),
+		Transactions:  make([][]byte, 0),
+		Withdrawals:   make([]*enginev1.Withdrawal, 0),
 	}
 
 	proposerServer := getProposerServer(db, beaconState, parentRoot[:])
@@ -479,7 +480,6 @@ func TestServer_GetBeaconBlock_Deneb(t *testing.T) {
 				},
 			},
 		},
-		Signature: genesis.Signature,
 	}
 
 	blkRoot, err := blk.Block.HashTreeRoot()
@@ -731,7 +731,7 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 			},
 		},
 		{
-			name: "deneb block some blobs (kzg and blob count missmatch)",
+			name: "deneb block some blobs (kzg and blob count mismatch)",
 			block: func(parent [32]byte) *ethpb.GenericSignedBeaconBlock {
 				blockToPropose := util.NewBeaconBlockContentsDeneb()
 				blockToPropose.Block.Block.Slot = 5
@@ -799,8 +799,9 @@ func TestProposer_ProposeBlock_OK(t *testing.T) {
 				P2P:           mockp2p.NewTestP2P(t),
 				BlockBuilder: &builderTest.MockBuilderService{HasConfigured: tt.useBuilder, PayloadCapella: emptyPayloadCapella(), PayloadDeneb: emptyPayloadDeneb(),
 					BlobBundle: &enginev1.BlobsBundle{KzgCommitments: [][]byte{bytesutil.PadTo([]byte{0x01}, 48)}, Proofs: [][]byte{{0x02}}, Blobs: [][]byte{{0x03}}}},
-				BeaconDB:     db,
-				BlobReceiver: c,
+				BeaconDB:          db,
+				BlobReceiver:      c,
+				OperationNotifier: c.OperationNotifier(),
 			}
 			blockToPropose := tt.block(bsRoot)
 			res, err := proposerServer.ProposeBeaconBlock(context.Background(), blockToPropose)

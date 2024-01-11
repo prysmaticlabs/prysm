@@ -19,6 +19,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type blockType uint8
@@ -155,6 +156,15 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	rawGraffiti := r.URL.Query().Get("graffiti")
 	rawSkipRandaoVerification := r.URL.Query().Get("skip_randao_verification")
 
+	var bbFactor *wrapperspb.UInt64Value // default the factor via fall back
+	rawBbFactor, bbValue, ok := shared.UintFromQuery(w, r, "builder_boost_factor", false)
+	if !ok {
+		return
+	}
+	if rawBbFactor != "" {
+		bbFactor = &wrapperspb.UInt64Value{Value: bbValue}
+	}
+
 	slot, valid := shared.ValidateUint(w, "slot", rawSlot)
 	if !valid {
 		return
@@ -182,10 +192,11 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.produceBlockV3(ctx, w, r, &eth.BlockRequest{
-		Slot:         primitives.Slot(slot),
-		RandaoReveal: randaoReveal,
-		Graffiti:     graffiti,
-		SkipMevBoost: false,
+		Slot:               primitives.Slot(slot),
+		RandaoReveal:       randaoReveal,
+		Graffiti:           graffiti,
+		SkipMevBoost:       false,
+		BuilderBoostFactor: bbFactor,
 	}, any)
 }
 

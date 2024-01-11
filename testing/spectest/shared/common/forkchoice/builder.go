@@ -90,7 +90,7 @@ func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconB
 	r := bb.block(t, b)
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
 	defer cancel()
-	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r) != nil)
+	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
@@ -98,7 +98,7 @@ func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlo
 	r := bb.block(t, b)
 	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
 	defer cancel()
-	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r))
+	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 }
 
 // PoWBlock receives the block and notifies a mocked execution engine.

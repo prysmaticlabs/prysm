@@ -394,6 +394,36 @@ func (s *Slice[V]) Detach(obj Identifiable) {
 	delete(s.cachedLengths, obj.Id())
 }
 
+// MultiValueStatistics generates the multi-value stats object for the respective
+// multivalue slice.
+func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	stats := MultiValueStatistics{}
+	stats.TotalIndividualElements = len(s.individualItems)
+	totalIndRefs := 0
+
+	for _, v := range s.individualItems {
+		for _, ival := range v.Values {
+			totalIndRefs += len(ival.ids)
+		}
+	}
+
+	stats.TotalAppendedElements = len(s.appendedItems)
+	totalAppRefs := 0
+
+	for _, v := range s.appendedItems {
+		for _, ival := range v.Values {
+			totalAppRefs += len(ival.ids)
+		}
+	}
+	stats.TotalIndividualElemReferences = totalIndRefs
+	stats.TotalAppendedElemReferences = totalAppRefs
+
+	return stats
+}
+
 func (s *Slice[V]) fillOriginalItems(obj Identifiable, items *[]V) {
 	for i, item := range s.sharedItems {
 		ind, ok := s.individualItems[uint64(i)]
@@ -537,4 +567,12 @@ func BuildEmptyCompositeSlice[V comparable](values []V) MultiValueSliceComposite
 		Identifiable:    nil,
 		MultiValueSlice: EmptyMVSlice[V]{fullSlice: values},
 	}
+}
+
+// MultiValueStatistics represents the internal properties of a multivalue slice.
+type MultiValueStatistics struct {
+	TotalIndividualElements       int
+	TotalAppendedElements         int
+	TotalIndividualElemReferences int
+	TotalAppendedElemReferences   int
 }

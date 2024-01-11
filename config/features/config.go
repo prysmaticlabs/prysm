@@ -64,12 +64,9 @@ type Flags struct {
 	DisableStakinContractCheck bool // Disables check for deposit contract when proposing blocks
 
 	EnableVerboseSigVerification bool // EnableVerboseSigVerification specifies whether to verify individual signature if batch verification fails
-	EnableOptionalEngineMethods  bool // EnableOptionalEngineMethods specifies whether to activate capella specific engine methods
 	EnableEIP4881                bool // EnableEIP4881 specifies whether to use the deposit tree from EIP4881
 
 	PrepareAllPayloads bool // PrepareAllPayloads informs the engine to prepare a block on every slot.
-
-	AggregateParallel bool // AggregateParallel aggregates attestations in parallel.
 
 	// KeystoreImportDebounceInterval specifies the time duration the validator waits to reload new keys if they have
 	// changed on disk. This feature is for advanced use cases only.
@@ -228,19 +225,9 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(enableVerboseSigVerification)
 		cfg.EnableVerboseSigVerification = true
 	}
-	cfg.EnableOptionalEngineMethods = true
-	if ctx.IsSet(disableOptionalEngineMethods.Name) {
-		logEnabled(disableOptionalEngineMethods)
-		cfg.EnableOptionalEngineMethods = false
-	}
 	if ctx.IsSet(prepareAllPayloads.Name) {
 		logEnabled(prepareAllPayloads)
 		cfg.PrepareAllPayloads = true
-	}
-	cfg.AggregateParallel = true
-	if ctx.IsSet(disableAggregateParallel.Name) {
-		logEnabled(disableAggregateParallel)
-		cfg.AggregateParallel = false
 	}
 	if ctx.IsSet(disableResourceManager.Name) {
 		logEnabled(disableResourceManager)

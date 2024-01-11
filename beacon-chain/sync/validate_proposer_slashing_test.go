@@ -117,10 +117,11 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	chain := &mock.ChainService{State: s, Genesis: time.Now()}
 	r := &Service{
 		cfg: &config{
-			p2p:         p,
-			chain:       chain,
-			clock:       startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
-			initialSync: &mockSync.Sync{IsSyncing: false},
+			p2p:               p,
+			chain:             chain,
+			clock:             startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			initialSync:       &mockSync.Sync{IsSyncing: false},
+			operationNotifier: chain.OperationNotifier(),
 		},
 		seenProposerSlashingCache: lruwrpr.New(10),
 	}
