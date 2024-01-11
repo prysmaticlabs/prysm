@@ -512,8 +512,8 @@ func TestBuildSignedBeaconBlockFromExecutionPayload(t *testing.T) {
 			BaseFeePerGas: make([]byte, fieldparams.RootLength),
 			BlockHash:     make([]byte, fieldparams.RootLength),
 			Transactions:  make([][]byte, 0),
-			ExcessBlobGas: 123,
 			BlobGasUsed:   321,
+			ExcessBlobGas: 123,
 		}
 		wrapped, err := WrappedExecutionPayloadDeneb(payload, 123)
 		require.NoError(t, err)

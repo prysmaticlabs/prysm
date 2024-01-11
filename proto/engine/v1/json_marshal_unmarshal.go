@@ -269,11 +269,11 @@ type ExecutionPayloadDenebJSON struct {
 	Timestamp     *hexutil.Uint64 `json:"timestamp"`
 	ExtraData     hexutil.Bytes   `json:"extraData"`
 	BaseFeePerGas string          `json:"baseFeePerGas"`
-	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
-	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
 	BlockHash     *common.Hash    `json:"blockHash"`
 	Transactions  []hexutil.Bytes `json:"transactions"`
 	Withdrawals   []*Withdrawal   `json:"withdrawals"`
+	BlobGasUsed   *hexutil.Uint64 `json:"blobGasUsed"`
+	ExcessBlobGas *hexutil.Uint64 `json:"excessBlobGas"`
 }
 
 // MarshalJSON --

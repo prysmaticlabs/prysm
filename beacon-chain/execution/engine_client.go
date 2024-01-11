@@ -838,8 +838,8 @@ func fullPayloadFromPayloadBody(
 				BlockHash:     header.BlockHash(),
 				Transactions:  body.Transactions,
 				Withdrawals:   body.Withdrawals,
-				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
+				ExcessBlobGas: ebg,
 			}, 0) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)

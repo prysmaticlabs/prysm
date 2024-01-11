@@ -489,13 +489,13 @@ func Test_NotifyNewPayload(t *testing.T) {
 			Slot: 1,
 			Body: &ethpb.BeaconBlockBodyBellatrix{
 				ExecutionPayload: &v1.ExecutionPayload{
-					BlockNumber:   1,
 					ParentHash:    make([]byte, fieldparams.RootLength),
 					FeeRecipient:  make([]byte, fieldparams.FeeRecipientLength),
 					StateRoot:     make([]byte, fieldparams.RootLength),
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:    make([]byte, fieldparams.RootLength),
+					BlockNumber:   1,
 					ExtraData:     make([]byte, 0),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),

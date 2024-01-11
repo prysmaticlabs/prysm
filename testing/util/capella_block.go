@@ -125,10 +125,10 @@ func GenerateFullBlockCapella(
 		LogsBloom:     make([]byte, 256),
 		PrevRandao:    random,
 		BlockNumber:   uint64(slot),
+		Timestamp:     uint64(timestamp.Unix()),
 		ExtraData:     params.BeaconConfig().ZeroHash[:],
 		BaseFeePerGas: params.BeaconConfig().ZeroHash[:],
 		BlockHash:     blockHash[:],
-		Timestamp:     uint64(timestamp.Unix()),
 		Transactions:  newTransactions,
 		Withdrawals:   newWithdrawals,
 	}

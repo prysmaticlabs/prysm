@@ -57,6 +57,13 @@ jobs:
           version: v1.55.2
           args: --config=.golangci.yml --out-${NO_FUTURE}format colored-line-number
 
+      - name: Struct Field Order
+        run: |
+          go install github.com/jtraglia/go-structfieldorder/cmd/structfieldorder@latest
+          structfieldorder \
+            -i 'github.com/prysmaticlabs/prysm/v4/proto/engine/v1\.ExecutionPayload.*' \
+            ./...
+
   build:
     name: Build
     runs-on: ubuntu-latest

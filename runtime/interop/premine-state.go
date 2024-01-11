@@ -624,8 +624,8 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			BlockHash:     gb.Hash().Bytes(),
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
-			ExcessBlobGas: *gb.ExcessBlobGas(),
 			BlobGasUsed:   *gb.BlobGasUsed(),
+			ExcessBlobGas: *gb.ExcessBlobGas(),
 		}
 		wep, err := blocks.WrappedExecutionPayloadDeneb(payload, 0)
 		if err != nil {
