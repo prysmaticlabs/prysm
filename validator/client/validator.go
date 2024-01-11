@@ -386,12 +386,10 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
-			if status.status.Status == ethpb.ValidatorStatus_ACTIVE {
-				log.WithFields(logrus.Fields{
-					"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
-					"index":     status.index,
-				}).Info("Validator activated")
-			}
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+				"index":     status.index,
+			}).Info("Validator activated")
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		case ethpb.ValidatorStatus_INVALID:
