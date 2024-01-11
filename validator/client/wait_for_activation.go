@@ -54,8 +54,8 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 	if err != nil {
 		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}
-	// loop while there are no validator keys ...
-	for len(validatingKeys) == 0 {
+	// if there are no validating keys, wait for some
+	if len(validatingKeys) == 0 {
 		log.Warn(msgNoKeysFetched)
 		select {
 		case <-ctx.Done():
