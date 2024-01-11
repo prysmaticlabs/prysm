@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorType "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 
@@ -191,6 +192,11 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 }
 
 func TestWaitForActivation_RefetchKeys(t *testing.T) {
+	params.SetupTestConfigCleanup(t)
+	cfg := params.MainnetConfig().Copy()
+	cfg.ConfigName = "test"
+	cfg.SecondsPerSlot = 1
+	params.OverrideBeaconConfig(cfg)
 	hook := logTest.NewGlobal()
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

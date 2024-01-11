@@ -70,6 +70,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 			return v.internalWaitForActivation(ctx, accountsChangedChan)
 		default:
 			if len(validatingKeys) == 0 {
+				time.Sleep((time.Duration(params.BeaconConfig().SecondsPerSlot) - slots.TimeIntoSlot(v.genesisTime)) * time.Second) // sleep for the rest of the slot
 				continue
 			}
 			stream, err := v.validatorClient.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
