@@ -216,3 +216,11 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 func (_ *Validator) StartEventStream(_ context.Context) error {
 	panic("implement me")
 }
+
+func (_ *Validator) EventStreamIsRunning() bool {
+	panic("implement me")
+}
+
+func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
+	panic("implement me")
+}

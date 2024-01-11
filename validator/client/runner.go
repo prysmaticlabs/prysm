@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -189,8 +190,13 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		if err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
+
 		if err = v.StartEventStream(ctx); err != nil {
 			log.WithError(err).Fatal("Could not start API event stream")
+		}
+
+		if features.Get().EnableBeaconRESTApi {
+			runHealthCheckRoutine(ctx, v)
 		}
 
 		headSlot, err = v.CanonicalHeadSlot(ctx)
@@ -274,4 +280,26 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
+}
+
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-healthCheckTicker.C:
+				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
+					if err := v.StartEventStream(ctx); err != nil {
+						log.WithError(err).Error("Could not start API event stream")
+					}
+				}
+			case <-ctx.Done():
+				if ctx.Err() != nil {
+					log.WithError(ctx.Err()).Error("Context cancelled")
+				}
+				log.Error("Context cancelled")
+				return
+			}
+		}
+	}()
 }

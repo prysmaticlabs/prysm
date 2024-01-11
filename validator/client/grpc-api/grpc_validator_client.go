@@ -146,3 +146,8 @@ func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 func (c *grpcValidatorClient) StartEventStream(context.Context) error {
 	return nil
 }
+
+// EventStreamIsRunning returns a dummy value for gRPC
+func (c *grpcValidatorClient) EventStreamIsRunning() bool {
+	return true
+}

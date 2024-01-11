@@ -431,7 +431,7 @@ func TestWaitSync_ContextCanceled(t *testing.T) {
 	n := validatormock.NewMockNodeClient(ctrl)
 
 	v := validator{
-		node: n,
+		nodeClient: n,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -451,7 +451,7 @@ func TestWaitSync_NotSyncing(t *testing.T) {
 	n := validatormock.NewMockNodeClient(ctrl)
 
 	v := validator{
-		node: n,
+		nodeClient: n,
 	}
 
 	n.EXPECT().GetSyncStatus(
@@ -468,7 +468,7 @@ func TestWaitSync_Syncing(t *testing.T) {
 	n := validatormock.NewMockNodeClient(ctrl)
 
 	v := validator{
-		node: n,
+		nodeClient: n,
 	}
 
 	n.EXPECT().GetSyncStatus(
@@ -1341,7 +1341,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1423,7 +1423,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1501,7 +1501,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1562,7 +1562,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1630,7 +1630,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1694,7 +1694,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
@@ -1789,7 +1789,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 			validatorSetter: func(t *testing.T) *validator {
 				v := validator{
 					validatorClient:              client,
-					node:                         nodeClient,
+					nodeClient:                   nodeClient,
 					db:                           db,
 					pubkeyToValidatorIndex:       make(map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex),
 					signedValidatorRegistrations: make(map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1),
