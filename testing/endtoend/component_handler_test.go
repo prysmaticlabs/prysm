@@ -28,6 +28,7 @@ type componentHandler struct {
 	web3Signer               e2etypes.ComponentRunner
 	bootnode                 e2etypes.ComponentRunner
 	eth1Miner                e2etypes.ComponentRunner
+	builders                 e2etypes.MultipleComponentRunners
 	eth1Proxy                e2etypes.MultipleComponentRunners
 	eth1Nodes                e2etypes.MultipleComponentRunners
 	beaconNodes              e2etypes.MultipleComponentRunners
@@ -137,23 +138,47 @@ func (c *componentHandler) setup() {
 	if config.TestCheckpointSync {
 		appendDebugEndpoints(config)
 	}
-	// Proxies
-	proxies := eth1.NewProxySet()
-	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
-			return errors.Wrap(err, "proxies require execution nodes to run")
-		}
-		if err := proxies.Start(ctx); err != nil {
-			return errors.Wrap(err, "failed to start proxies")
-		}
-		return nil
-	})
-	c.eth1Proxy = proxies
+
+	var builders *components.BuilderSet
+	var proxies *eth1.ProxySet
+	if config.UseBuilder {
+		// Builder
+		builders = components.NewBuilderSet()
+		g.Go(func() error {
+			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
+				return errors.Wrap(err, "builders require execution nodes to run")
+			}
+			if err := builders.Start(ctx); err != nil {
+				return errors.Wrap(err, "failed to start builders")
+			}
+			return nil
+		})
+		c.builders = builders
+	} else {
+		// Proxies
+		proxies = eth1.NewProxySet()
+		g.Go(func() error {
+			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes}); err != nil {
+				return errors.Wrap(err, "proxies require execution nodes to run")
+			}
+			if err := proxies.Start(ctx); err != nil {
+				return errors.Wrap(err, "failed to start proxies")
+			}
+			return nil
+		})
+		c.eth1Proxy = proxies
+	}
 
 	// Beacon nodes.
 	beaconNodes := components.NewBeaconNodes(config)
 	g.Go(func() error {
-		if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode}); err != nil {
+		wantedComponents := []e2etypes.ComponentRunner{eth1Nodes, bootNode}
+		if config.UseBuilder {
+			wantedComponents = append(wantedComponents, builders)
+		} else {
+			wantedComponents = append(wantedComponents, proxies)
+		}
+		if err := helpers.ComponentsStarted(ctx, wantedComponents); err != nil {
 			return errors.Wrap(err, "beacon nodes require proxies, execution and boot node to run")
 		}
 		beaconNodes.SetENR(bootNode.ENR())
@@ -167,7 +192,13 @@ func (c *componentHandler) setup() {
 	if multiClientActive {
 		lighthouseNodes = components.NewLighthouseBeaconNodes(config)
 		g.Go(func() error {
-			if err := helpers.ComponentsStarted(ctx, []e2etypes.ComponentRunner{eth1Nodes, proxies, bootNode, beaconNodes}); err != nil {
+			wantedComponents := []e2etypes.ComponentRunner{eth1Nodes, bootNode, beaconNodes}
+			if config.UseBuilder {
+				wantedComponents = append(wantedComponents, builders)
+			} else {
+				wantedComponents = append(wantedComponents, proxies)
+			}
+			if err := helpers.ComponentsStarted(ctx, wantedComponents); err != nil {
 				return errors.Wrap(err, "lighthouse beacon nodes require proxies, execution, beacon and boot node to run")
 			}
 			lighthouseNodes.SetENR(bootNode.ENR())
@@ -215,7 +246,12 @@ func (c *componentHandler) setup() {
 func (c *componentHandler) required() []e2etypes.ComponentRunner {
 	multiClientActive := e2e.TestParams.LighthouseBeaconNodeCount > 0
 	requiredComponents := []e2etypes.ComponentRunner{
-		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes, c.eth1Proxy,
+		c.tracingSink, c.eth1Nodes, c.bootnode, c.beaconNodes, c.validatorNodes,
+	}
+	if c.cfg.UseBuilder {
+		requiredComponents = append(requiredComponents, c.builders)
+	} else {
+		requiredComponents = append(requiredComponents, c.eth1Proxy)
 	}
 	if multiClientActive {
 		requiredComponents = append(requiredComponents, []e2etypes.ComponentRunner{c.keygen, c.lighthouseBeaconNodes, c.lighthouseValidatorNodes}...)
@@ -226,7 +262,7 @@ func (c *componentHandler) required() []e2etypes.ComponentRunner {
 func (c *componentHandler) printPIDs(logger func(string, ...interface{})) {
 	msg := "\nPID of components. Attach a debugger... if you dare!\n\n"
 
-	msg = "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
+	msg += "This test PID: " + strconv.Itoa(os.Getpid()) + " (parent=" + strconv.Itoa(os.Getppid()) + ")\n"
 
 	// Beacon chain nodes
 	msg += fmt.Sprintf("Beacon chain nodes: %v\n", PIDsFromMultiComponentRunner(c.beaconNodes))

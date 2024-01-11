@@ -24,12 +24,12 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.ReadOnlySignedBeaconBlock,
+	b interfaces.ReadOnlyBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := consensusblocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b == nil || b.IsNil() {
+		return nil, consensusblocks.ErrNilBeaconBlock
 	}
-	body := b.Block().Body()
+	body := b.Body()
 	totalBalance, err := helpers.TotalActiveBalance(beaconState)
 	if err != nil {
 		return nil, err
@@ -289,13 +289,13 @@ func AttestationParticipationFlagIndices(beaconState state.BeaconState, data *et
 	sourceFlagIndex := cfg.TimelySourceFlagIndex
 	targetFlagIndex := cfg.TimelyTargetFlagIndex
 	headFlagIndex := cfg.TimelyHeadFlagIndex
-	slotsPerEpoch := cfg.SlotsPerEpoch
 	sqtRootSlots := cfg.SqrRootSlotsPerEpoch
 	if matchedSrc && delay <= sqtRootSlots {
 		participatedFlags[sourceFlagIndex] = true
 	}
 	matchedSrcTgt := matchedSrc && matchedTgt
-	if matchedSrcTgt && delay <= slotsPerEpoch {
+	// Before Deneb no attestation should pass validation without having delay <= slotsPerEpoch.
+	if matchedSrcTgt {
 		participatedFlags[targetFlagIndex] = true
 	}
 	matchedSrcTgtHead := matchedHead && matchedSrcTgt

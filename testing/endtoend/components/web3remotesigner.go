@@ -142,7 +142,7 @@ func (w *Web3RemoteSigner) Stop() error {
 func (w *Web3RemoteSigner) monitorStart() {
 	client := &http.Client{}
 	for {
-		req, err := http.NewRequestWithContext(w.ctx, "GET", fmt.Sprintf("http://localhost:%d/upcheck", Web3RemoteSignerPort), nil)
+		req, err := http.NewRequestWithContext(w.ctx, http.MethodGet, fmt.Sprintf("http://localhost:%d/upcheck", Web3RemoteSignerPort), nil)
 		if err != nil {
 			panic(err)
 		}
@@ -172,7 +172,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 	w.wait(ctx)
 
 	client := &http.Client{}
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://localhost:%d/api/v1/eth2/publicKeys", Web3RemoteSignerPort), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://localhost:%d/api/v1/eth2/publicKeys", Web3RemoteSignerPort), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (w *Web3RemoteSigner) PublicKeys(ctx context.Context) ([]bls.PublicKey, err
 	if err != nil {
 		return nil, err
 	}
-	if res.StatusCode != 200 {
+	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("returned status code %d", res.StatusCode)
 	}
 	b, err := io.ReadAll(res.Body)
@@ -256,8 +256,9 @@ func createTestnetDir() (string, error) {
 	testNetDir := e2e.TestParams.TestPath + "/web3signer-testnet"
 	configPath := filepath.Join(testNetDir, "config.yaml")
 	rawYaml := params.ConfigToYaml(params.BeaconConfig())
+
 	// Add in deposit contract in yaml
-	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s", params.BeaconConfig().DepositContractAddress)
+	depContractStr := fmt.Sprintf("\nDEPOSIT_CONTRACT_ADDRESS: %s\n", params.BeaconConfig().DepositContractAddress)
 	rawYaml = append(rawYaml, []byte(depContractStr)...)
 
 	if err := file.MkdirAll(testNetDir); err != nil {

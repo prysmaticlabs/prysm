@@ -23,11 +23,11 @@ var _ = state.ReadOnlyValidator(readOnlyValidator{})
 
 // NewValidator initializes the read only wrapper for validator.
 func NewValidator(v *ethpb.Validator) (state.ReadOnlyValidator, error) {
+	if v == nil {
+		return nil, ErrNilWrappedValidator
+	}
 	rov := readOnlyValidator{
 		validator: v,
-	}
-	if rov.IsNil() {
-		return nil, ErrNilWrappedValidator
 	}
 	return rov, nil
 }

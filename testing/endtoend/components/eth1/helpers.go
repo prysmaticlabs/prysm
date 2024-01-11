@@ -46,7 +46,11 @@ func WaitForBlocks(web3 *ethclient.Client, key *keystore.Key, blocksToWait uint6
 	finishBlock := block.NumberU64() + blocksToWait
 
 	for block.NumberU64() <= finishBlock {
-		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), params.SpamTxGasLimit, big.NewInt(1e6), []byte{})
+		gasPrice, err := web3.SuggestGasPrice(context.Background())
+		if err != nil {
+			return err
+		}
+		spamTX := types.NewTransaction(nonce, key.Address, big.NewInt(0), params.SpamTxGasLimit, gasPrice, []byte{})
 		signed, err := types.SignTx(spamTX, types.NewEIP155Signer(chainID), key.PrivateKey)
 		if err != nil {
 			return err

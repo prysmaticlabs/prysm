@@ -172,11 +172,6 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 	}
 
 	_, _, index, _ := v.config, v.validatorNum, v.index, v.offset
-	beaconRPCPort := e2e.TestParams.Ports.PrysmBeaconNodeRPCPort + index
-	if beaconRPCPort >= e2e.TestParams.Ports.PrysmBeaconNodeRPCPort+e2e.TestParams.BeaconNodeCount {
-		// Point any extra validator clients to a node we know is running.
-		beaconRPCPort = e2e.TestParams.Ports.PrysmBeaconNodeRPCPort
-	}
 	kPath := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-validator-%d", index)
 	testNetDir := e2e.TestParams.TestPath + fmt.Sprintf("/lighthouse-testnet-%d", index)
 	httpPort := e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort
@@ -194,6 +189,10 @@ func (v *LighthouseValidatorNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--testnet-dir=%s", testNetDir),
 		fmt.Sprintf("--beacon-nodes=http://localhost:%d", httpPort+index),
 		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
+	}
+
+	if v.config.UseBuilder {
+		args = append(args, "--builder-proposals")
 	}
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...) // #nosec G204 -- Safe

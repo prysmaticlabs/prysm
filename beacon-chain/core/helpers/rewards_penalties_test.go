@@ -75,6 +75,8 @@ func TestTotalActiveBalance(t *testing.T) {
 }
 
 func TestTotalActiveBal_ReturnMin(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	tests := []struct {
 		vCount int
 	}{
@@ -96,6 +98,8 @@ func TestTotalActiveBal_ReturnMin(t *testing.T) {
 }
 
 func TestTotalActiveBalance_WithCache(t *testing.T) {
+	ClearCache()
+	defer ClearCache()
 	tests := []struct {
 		vCount    int
 		wantCount int

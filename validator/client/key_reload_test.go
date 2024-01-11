@@ -4,10 +4,12 @@ import (
 	"context"
 	"testing"
 
+	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -23,40 +25,36 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 
-		inactivePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
-		activePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var activePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(activePubKey[:], activePrivKey.PublicKey().Marshal())
-		km := &mockKeymanager{
-			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-				inactivePubKey: inactivePrivKey,
-			},
-		}
+		inactive := randKeypair(t)
+		active := randKeypair(t)
+
 		client := validatormock.NewMockValidatorClient(ctrl)
 		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 		v := validator{
-			validatorClient: client,
-			keyManager:      km,
-			genesisTime:     1,
-			beaconClient:    beaconClient,
+			validatorClient:   client,
+			keyManager:        newMockKeymanager(t, inactive),
+			genesisTime:       1,
+			beaconClient:      beaconClient,
+			prysmBeaconClient: prysmBeaconClient,
 		}
 
-		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactivePubKey[:], activePubKey[:]})
+		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		resp.Statuses[1].Status = ethpb.ValidatorStatus_ACTIVE
 		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
-				PublicKeys: [][]byte{inactivePubKey[:], activePubKey[:]},
+				PublicKeys: [][]byte{inactive.pub[:], active.pub[:]},
 			},
 		).Return(resp, nil)
-		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+		prysmBeaconClient.EXPECT().GetValidatorCount(
+			gomock.Any(),
+			"head",
+			[]validator2.Status{validator2.Active},
+		).Return([]iface.ValidatorCount{}, nil)
 
-		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey, activePubKey})
+		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactive.pub, active.pub})
 		require.NoError(t, err)
 		assert.Equal(t, true, anyActive)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -66,35 +64,33 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("no active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 
-		inactivePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
-		km := &mockKeymanager{
-			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-				inactivePubKey: inactivePrivKey,
-			},
-		}
 		client := validatormock.NewMockValidatorClient(ctrl)
 		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
+		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+		kp := randKeypair(t)
 		v := validator{
-			validatorClient: client,
-			keyManager:      km,
-			genesisTime:     1,
-			beaconClient:    beaconClient,
+			validatorClient:   client,
+			keyManager:        newMockKeymanager(t, kp),
+			genesisTime:       1,
+			beaconClient:      beaconClient,
+			prysmBeaconClient: prysmBeaconClient,
 		}
 
-		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactivePubKey[:]})
+		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
-				PublicKeys: [][]byte{inactivePubKey[:]},
+				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(resp, nil)
-		beaconClient.EXPECT().ListValidators(gomock.Any(), gomock.Any()).Return(&ethpb.Validators{}, nil)
+		prysmBeaconClient.EXPECT().GetValidatorCount(
+			gomock.Any(),
+			"head",
+			[]validator2.Status{validator2.Active},
+		).Return([]iface.ValidatorCount{}, nil)
 
-		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey})
+		anyActive, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{kp.pub})
 		require.NoError(t, err)
 		assert.Equal(t, false, anyActive)
 		assert.LogsContain(t, hook, "Waiting for deposit to be observed by beacon node")
@@ -102,30 +98,22 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	})
 
 	t.Run("error when getting status", func(t *testing.T) {
-		inactivePrivKey, err := bls.RandKey()
-		require.NoError(t, err)
-		var inactivePubKey [fieldparams.BLSPubkeyLength]byte
-		copy(inactivePubKey[:], inactivePrivKey.PublicKey().Marshal())
-		km := &mockKeymanager{
-			keysMap: map[[fieldparams.BLSPubkeyLength]byte]bls.SecretKey{
-				inactivePubKey: inactivePrivKey,
-			},
-		}
+		kp := randKeypair(t)
 		client := validatormock.NewMockValidatorClient(ctrl)
 		v := validator{
 			validatorClient: client,
-			keyManager:      km,
+			keyManager:      newMockKeymanager(t, kp),
 			genesisTime:     1,
 		}
 
 		client.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
-				PublicKeys: [][]byte{inactivePubKey[:]},
+				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(nil, errors.New("error"))
 
-		_, err = v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{inactivePubKey})
+		_, err := v.HandleKeyReload(context.Background(), [][fieldparams.BLSPubkeyLength]byte{kp.pub})
 		assert.ErrorContains(t, "error", err)
 	})
 }

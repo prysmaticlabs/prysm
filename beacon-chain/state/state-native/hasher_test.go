@@ -2,7 +2,6 @@ package state_native_test
 
 import (
 	"context"
-	"math/big"
 	"testing"
 
 	"github.com/prysmaticlabs/go-bitfield"
@@ -254,7 +253,7 @@ func TestComputeFieldRootsWithHasher_Capella(t *testing.T) {
 	require.NoError(t, beaconState.SetInactivityScores([]uint64{1, 2, 3}))
 	require.NoError(t, beaconState.SetCurrentSyncCommittee(syncCommittee("current")))
 	require.NoError(t, beaconState.SetNextSyncCommittee(syncCommittee("next")))
-	wrappedHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(executionPayloadHeaderCapella(), big.NewInt(0))
+	wrappedHeader, err := blocks.WrappedExecutionPayloadHeaderCapella(executionPayloadHeaderCapella(), 0)
 	require.NoError(t, err)
 	require.NoError(t, beaconState.SetLatestExecutionPayloadHeader(wrappedHeader))
 	require.NoError(t, beaconState.SetNextWithdrawalIndex(123))

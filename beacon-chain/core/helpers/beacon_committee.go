@@ -3,7 +3,6 @@
 package helpers
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -12,7 +11,9 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
@@ -295,97 +296,107 @@ func ShuffledIndices(s state.ReadOnlyBeaconState, epoch primitives.Epoch) ([]pri
 }
 
 // UpdateCommitteeCache gets called at the beginning of every epoch to cache the committee shuffled indices
-// list with committee index and epoch number. It caches the shuffled indices for current epoch and next epoch.
-func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
-	for _, e := range []primitives.Epoch{epoch, epoch + 1} {
-		seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
-		if err != nil {
-			return err
-		}
-		if committeeCache.HasEntry(string(seed[:])) {
-			return nil
-		}
-
-		shuffledIndices, err := ShuffledIndices(state, e)
-		if err != nil {
-			return err
-		}
-
-		count := SlotCommitteeCount(uint64(len(shuffledIndices)))
-
-		// Store the sorted indices as well as shuffled indices. In current spec,
-		// sorted indices is required to retrieve proposer index. This is also
-		// used for failing verify signature fallback.
-		sortedIndices := make([]primitives.ValidatorIndex, len(shuffledIndices))
-		copy(sortedIndices, shuffledIndices)
-		sort.Slice(sortedIndices, func(i, j int) bool {
-			return sortedIndices[i] < sortedIndices[j]
-		})
-
-		if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
-			ShuffledIndices: shuffledIndices,
-			CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
-			Seed:            seed,
-			SortedIndices:   sortedIndices,
-		}); err != nil {
-			return err
-		}
+// list with committee index and epoch number. It caches the shuffled indices for the input epoch.
+func UpdateCommitteeCache(ctx context.Context, state state.ReadOnlyBeaconState, e primitives.Epoch) error {
+	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconAttester)
+	if err != nil {
+		return err
+	}
+	if committeeCache.HasEntry(string(seed[:])) {
+		return nil
+	}
+	shuffledIndices, err := ShuffledIndices(state, e)
+	if err != nil {
+		return err
 	}
 
+	count := SlotCommitteeCount(uint64(len(shuffledIndices)))
+
+	// Store the sorted indices as well as shuffled indices. In current spec,
+	// sorted indices is required to retrieve proposer index. This is also
+	// used for failing verify signature fallback.
+	sortedIndices := make([]primitives.ValidatorIndex, len(shuffledIndices))
+	copy(sortedIndices, shuffledIndices)
+	sort.Slice(sortedIndices, func(i, j int) bool {
+		return sortedIndices[i] < sortedIndices[j]
+	})
+
+	if err := committeeCache.AddCommitteeShuffledList(ctx, &cache.Committees{
+		ShuffledIndices: shuffledIndices,
+		CommitteeCount:  uint64(params.BeaconConfig().SlotsPerEpoch.Mul(count)),
+		Seed:            seed,
+		SortedIndices:   sortedIndices,
+	}); err != nil {
+		return err
+	}
 	return nil
 }
 
 // UpdateProposerIndicesInCache updates proposer indices entry of the committee cache.
-func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState) error {
-	// The cache uses the state root at the (current epoch - 1)'s slot as key. (e.g. for epoch 2, the key is root at slot 63)
-	// Which is the reason why we skip genesis epoch.
-	if time.CurrentEpoch(state) <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+// Input state is used to retrieve active validator indices.
+// Input root is to use as key in the cache.
+// Input epoch is the epoch to retrieve proposer indices for.
+func UpdateProposerIndicesInCache(ctx context.Context, state state.ReadOnlyBeaconState, epoch primitives.Epoch) error {
+	// The cache uses the state root at the end of (current epoch - 1) as key.
+	// (e.g. for epoch 2, the key is root at slot 63)
+	if epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
 		return nil
 	}
-
-	// Use state root from (current_epoch - 1))
-	wantedEpoch := time.PrevEpoch(state)
-	s, err := slots.EpochEnd(wantedEpoch)
+	slot, err := slots.EpochEnd(epoch - 1)
 	if err != nil {
 		return err
 	}
-	r, err := StateRootAtSlot(state, s)
+	root, err := StateRootAtSlot(state, slot)
 	if err != nil {
 		return err
-	}
-	// Skip cache update if we have an invalid key
-	if r == nil || bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-		return nil
 	}
 	// Skip cache update if the key already exists
-	exists, err := proposerIndicesCache.HasProposerIndices(bytesutil.ToBytes32(r))
-	if err != nil {
-		return err
-	}
-	if exists {
+	_, ok := proposerIndicesCache.ProposerIndices(epoch, [32]byte(root))
+	if ok {
 		return nil
 	}
+	indices, err := ActiveValidatorIndices(ctx, state, epoch)
+	if err != nil {
+		return err
+	}
+	proposerIndices, err := precomputeProposerIndices(state, indices, epoch)
+	if err != nil {
+		return err
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return errors.New("invalid proposer length returned from state")
+	}
+	// This is here to deal with tests only
+	var indicesArray [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex
+	copy(indicesArray[:], proposerIndices)
+	proposerIndicesCache.Prune(epoch - 2)
+	proposerIndicesCache.Set(epoch, [32]byte(root), indicesArray)
+	return nil
+}
 
-	indices, err := ActiveValidatorIndices(ctx, state, time.CurrentEpoch(state))
+// UpdateCachedCheckpointToStateRoot updates the map from checkpoints to state root in the proposer indices cache
+func UpdateCachedCheckpointToStateRoot(state state.ReadOnlyBeaconState, cp *forkchoicetypes.Checkpoint) error {
+	if cp.Epoch <= params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
+		return nil
+	}
+	slot, err := slots.EpochEnd(cp.Epoch - 1)
 	if err != nil {
 		return err
 	}
-	proposerIndices, err := precomputeProposerIndices(state, indices)
+	root, err := state.StateRootAtIndex(uint64(slot % params.BeaconConfig().SlotsPerHistoricalRoot))
 	if err != nil {
 		return err
 	}
-	return proposerIndicesCache.AddProposerIndices(&cache.ProposerIndices{
-		BlockRoot:       bytesutil.ToBytes32(r),
-		ProposerIndices: proposerIndices,
-	})
+	proposerIndicesCache.SetCheckpoint(*cp, [32]byte(root))
+	return nil
 }
 
 // ClearCache clears the beacon committee cache and sync committee cache.
 func ClearCache() {
-	committeeCache = cache.NewCommitteesCache()
-	proposerIndicesCache = cache.NewProposerIndicesCache()
-	syncCommitteeCache = cache.NewSyncCommittee()
-	balanceCache = cache.NewEffectiveBalanceCache()
+	committeeCache.Clear()
+	proposerIndicesCache.Prune(0)
+	syncCommitteeCache.Clear()
+	balanceCache.Clear()
 }
 
 // computeCommittee returns the requested shuffled committee out of the total committees using
@@ -432,11 +443,10 @@ func computeCommittee(
 
 // This computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex) ([]primitives.ValidatorIndex, error) {
+func precomputeProposerIndices(state state.ReadOnlyBeaconState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]primitives.ValidatorIndex, params.BeaconConfig().SlotsPerEpoch)
 
-	e := time.CurrentEpoch(state)
 	seed, err := Seed(state, e, params.BeaconConfig().DomainBeaconProposer)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not generate seed")

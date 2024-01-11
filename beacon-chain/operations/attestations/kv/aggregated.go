@@ -2,6 +2,8 @@ package kv
 
 import (
 	"context"
+	"runtime"
+	"sync"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -23,21 +25,11 @@ func (c *AttCaches) AggregateUnaggregatedAttestations(ctx context.Context) error
 	if err != nil {
 		return err
 	}
-	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
+	return c.aggregateUnaggregatedAtts(ctx, unaggregatedAtts)
 }
 
-// AggregateUnaggregatedAttestationsBySlotIndex aggregates the unaggregated attestations and saves
-// newly aggregated attestations in the pool. Unaggregated attestations are filtered by slot and
-// committee index.
-func (c *AttCaches) AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) error {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregateUnaggregatedAttestationsBySlotIndex")
-	defer span.End()
-	unaggregatedAtts := c.UnaggregatedAttestationsBySlotIndex(ctx, slot, committeeIndex)
-	return c.aggregateUnaggregatedAttestations(ctx, unaggregatedAtts)
-}
-
-func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAttestations")
+func (c *AttCaches) aggregateUnaggregatedAtts(ctx context.Context, unaggregatedAtts []*ethpb.Attestation) error {
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.aggregateUnaggregatedAtts")
 	defer span.End()
 
 	attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(unaggregatedAtts))
@@ -52,27 +44,8 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 	// Aggregate unaggregated attestations from the pool and save them in the pool.
 	// Track the unaggregated attestations that aren't able to aggregate.
 	leftOverUnaggregatedAtt := make(map[[32]byte]bool)
-	for _, atts := range attsByDataRoot {
-		aggregatedAtts := make([]*ethpb.Attestation, 0, len(atts))
-		processedAtts, err := attaggregation.Aggregate(atts)
-		if err != nil {
-			return err
-		}
-		for _, att := range processedAtts {
-			if helpers.IsAggregated(att) {
-				aggregatedAtts = append(aggregatedAtts, att)
-			} else {
-				h, err := hashFn(att)
-				if err != nil {
-					return err
-				}
-				leftOverUnaggregatedAtt[h] = true
-			}
-		}
-		if err := c.SaveAggregatedAttestations(aggregatedAtts); err != nil {
-			return err
-		}
-	}
+
+	leftOverUnaggregatedAtt = c.aggregateParallel(attsByDataRoot, leftOverUnaggregatedAtt)
 
 	// Remove the unaggregated attestations from the pool that were successfully aggregated.
 	for _, att := range unaggregatedAtts {
@@ -87,8 +60,59 @@ func (c *AttCaches) aggregateUnaggregatedAttestations(ctx context.Context, unagg
 			return err
 		}
 	}
-
 	return nil
+}
+
+// aggregateParallel aggregates attestations in parallel for `atts` and saves them in the pool,
+// returns the unaggregated attestations that weren't able to aggregate.
+// Given `n` CPU cores, it creates a channel of size `n` and spawns `n` goroutines to aggregate attestations
+func (c *AttCaches) aggregateParallel(atts map[[32]byte][]*ethpb.Attestation, leftOver map[[32]byte]bool) map[[32]byte]bool {
+	var leftoverLock sync.Mutex
+	wg := sync.WaitGroup{}
+
+	n := runtime.GOMAXPROCS(0) // defaults to the value of runtime.NumCPU
+	ch := make(chan []*ethpb.Attestation, n)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func() {
+			defer wg.Done()
+			for as := range ch {
+				aggregated, err := attaggregation.AggregateDisjointOneBitAtts(as)
+				if err != nil {
+					log.WithError(err).Error("could not aggregate unaggregated attestations")
+					continue
+				}
+				if aggregated == nil {
+					log.Error("nil aggregated attestation")
+					continue
+				}
+				if helpers.IsAggregated(aggregated) {
+					if err := c.SaveAggregatedAttestations([]*ethpb.Attestation{aggregated}); err != nil {
+						log.WithError(err).Error("could not save aggregated attestation")
+						continue
+					}
+				} else {
+					h, err := hashFn(aggregated)
+					if err != nil {
+						log.WithError(err).Error("could not hash attestation")
+						continue
+					}
+					leftoverLock.Lock()
+					leftOver[h] = true
+					leftoverLock.Unlock()
+				}
+			}
+		}()
+	}
+
+	for _, as := range atts {
+		ch <- as
+	}
+
+	close(ch)
+	wg.Wait()
+
+	return leftOver
 }
 
 // SaveAggregatedAttestation saves an aggregated attestation in cache.
@@ -168,7 +192,7 @@ func (c *AttCaches) AggregatedAttestations() []*ethpb.Attestation {
 // AggregatedAttestationsBySlotIndex returns the aggregated attestations in cache,
 // filtered by committee index and slot.
 func (c *AttCaches) AggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.AggregatedAttestationsBySlotIndex")
 	defer span.End()
 
 	atts := make([]*ethpb.Attestation, 0)

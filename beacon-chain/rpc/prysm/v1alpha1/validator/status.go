@@ -23,6 +23,7 @@ import (
 )
 
 var errPubkeyDoesNotExist = errors.New("pubkey does not exist")
+var errHeadstateDoesNotExist = errors.New("head state does not exist")
 var errOptimisticMode = errors.New("the node is currently optimistic and cannot serve validators")
 var nonExistentIndex = primitives.ValidatorIndex(^uint64(0))
 
@@ -34,7 +35,7 @@ var errParticipation = status.Errorf(codes.Internal, "Failed to obtain epoch par
 //	DEPOSITED - validator's deposit has been recognized by Ethereum 1, not yet recognized by Ethereum.
 //	PENDING - validator is in Ethereum's activation queue.
 //	ACTIVE - validator is active.
-//	EXITING - validator has initiated an an exit request, or has dropped below the ejection balance and is being kicked out.
+//	EXITING - validator has initiated an exit request, or has dropped below the ejection balance and is being kicked out.
 //	EXITED - validator is no longer validating.
 //	SLASHING - validator has been kicked out due to meeting a slashing condition.
 //	UNKNOWN_STATUS - validator does not have a known status in the network.
@@ -46,7 +47,8 @@ func (vs *Server) ValidatorStatus(
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Could not get head state")
 	}
-	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey)
+
+	vStatus, _ := vs.validatorStatus(ctx, headState, req.PublicKey, func() (primitives.ValidatorIndex, error) { return helpers.LastActivatedValidatorIndex(ctx, headState) })
 	return vStatus, nil
 }
 
@@ -86,8 +88,9 @@ func (vs *Server) MultipleValidatorStatus(
 	// Fetch statuses from beacon state.
 	statuses := make([]*ethpb.ValidatorStatusResponse, len(pubKeys))
 	indices := make([]primitives.ValidatorIndex, len(pubKeys))
+	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
-		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey)
+		statuses[i], indices[i] = vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
 	}
 
 	return &ethpb.MultipleValidatorStatusResponse{
@@ -223,11 +226,13 @@ func (vs *Server) activationStatus(
 	}
 	activeValidatorExists := false
 	statusResponses := make([]*ethpb.ValidatorActivationResponse_Status, len(pubKeys))
+	// only run calculation of last activated once per state
+	lastActivated, hpErr := helpers.LastActivatedValidatorIndex(ctx, headState)
 	for i, pubKey := range pubKeys {
 		if ctx.Err() != nil {
 			return false, nil, ctx.Err()
 		}
-		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey)
+		vStatus, idx := vs.validatorStatus(ctx, headState, pubKey, func() (primitives.ValidatorIndex, error) { return lastActivated, hpErr })
 		if vStatus == nil {
 			continue
 		}
@@ -265,7 +270,6 @@ func (vs *Server) optimisticStatus(ctx context.Context) error {
 	}
 
 	return status.Errorf(codes.Unavailable, errOptimisticMode.Error())
-
 }
 
 // validatorStatus searches for the requested validator's state and deposit to retrieve its inclusion estimate. Also returns the validators index.
@@ -273,6 +277,7 @@ func (vs *Server) validatorStatus(
 	ctx context.Context,
 	headState state.ReadOnlyBeaconState,
 	pubKey []byte,
+	lastActiveValidatorFn func() (primitives.ValidatorIndex, error),
 ) (*ethpb.ValidatorStatusResponse, primitives.ValidatorIndex) {
 	ctx, span := trace.StartSpan(ctx, "ValidatorServer.validatorStatus")
 	defer span.End()
@@ -334,25 +339,19 @@ func (vs *Server) validatorStatus(
 			if vs.DepositFetcher == nil {
 				log.Warn("Not connected to ETH1. Cannot determine validator ETH1 deposit.")
 			} else {
-				// Check if there was a deposit deposit.
-				d, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
+				// Check if there was a deposit.
+				_, eth1BlockNumBigInt := vs.DepositFetcher.DepositByPubkey(ctx, pubKey)
 				if eth1BlockNumBigInt != nil {
-					resp.Status = depositStatus(d.Data.Amount)
 					resp.Eth1DepositBlockNumber = eth1BlockNumBigInt.Uint64()
 				}
 			}
 		}
-
-		var lastActivatedvalidatorIndex primitives.ValidatorIndex
-		for j := headState.NumValidators() - 1; j >= 0; j-- {
-			val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
-			if err != nil {
-				return resp, idx
-			}
-			if helpers.IsActiveValidatorUsingTrie(val, time.CurrentEpoch(headState)) {
-				lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
-				break
-			}
+		if lastActiveValidatorFn == nil {
+			return resp, idx
+		}
+		lastActivatedvalidatorIndex, err := lastActiveValidatorFn()
+		if err != nil {
+			return resp, idx
 		}
 		// Our position in the activation queue is the above index - our validator index.
 		if lastActivatedvalidatorIndex < idx {
@@ -392,7 +391,7 @@ func checkValidatorsAreRecent(headEpoch primitives.Epoch, req *ethpb.DoppelGange
 
 func statusForPubKey(headState state.ReadOnlyBeaconState, pubKey []byte) (ethpb.ValidatorStatus, primitives.ValidatorIndex, error) {
 	if headState == nil || headState.IsNil() {
-		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errors.New("head state does not exist")
+		return ethpb.ValidatorStatus_UNKNOWN_STATUS, 0, errHeadstateDoesNotExist
 	}
 	idx, ok := headState.ValidatorIndexByPubkey(bytesutil.ToBytes48(pubKey))
 	if !ok || uint64(idx) >= uint64(headState.NumValidators()) {

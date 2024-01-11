@@ -15,7 +15,6 @@ import (
 type Pool interface {
 	// For Aggregated attestations
 	AggregateUnaggregatedAttestations(ctx context.Context) error
-	AggregateUnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) error
 	SaveAggregatedAttestation(att *ethpb.Attestation) error
 	SaveAggregatedAttestations(atts []*ethpb.Attestation) error
 	AggregatedAttestations() []*ethpb.Attestation
@@ -33,7 +32,6 @@ type Pool interface {
 	UnaggregatedAttestationCount() int
 	// For attestations that were included in the block.
 	SaveBlockAttestation(att *ethpb.Attestation) error
-	SaveBlockAttestations(atts []*ethpb.Attestation) error
 	BlockAttestations() []*ethpb.Attestation
 	DeleteBlockAttestation(att *ethpb.Attestation) error
 	// For attestations to be passed to fork choice.

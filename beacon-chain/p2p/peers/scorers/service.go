@@ -7,6 +7,7 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 )
 
 var _ Scorer = (*Service)(nil)
@@ -137,8 +138,10 @@ func (s *Service) IsBadPeerNoLock(pid peer.ID) bool {
 	if s.scorers.peerStatusScorer.isBadPeer(pid) {
 		return true
 	}
-	if s.scorers.gossipScorer.isBadPeer(pid) {
-		return true
+	if features.Get().EnablePeerScorer {
+		if s.scorers.gossipScorer.isBadPeer(pid) {
+			return true
+		}
 	}
 	return false
 }

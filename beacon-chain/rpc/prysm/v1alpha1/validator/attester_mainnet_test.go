@@ -7,7 +7,7 @@ import (
 
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -48,37 +48,24 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 	require.NoError(t, err, "Could not hash beacon block")
 	justifiedBlockRoot, err := justifiedBlock.Block.HashTreeRoot()
 	require.NoError(t, err, "Could not hash justified block")
-	epochBoundaryRoot, err := epochBoundaryBlock.Block.HashTreeRoot()
-	require.NoError(t, err, "Could not hash justified block")
-	slot := primitives.Slot(10000)
 
-	beaconState, err := util.NewBeaconState()
-	require.NoError(t, err)
-	require.NoError(t, beaconState.SetSlot(slot))
-	err = beaconState.SetCurrentJustifiedCheckpoint(&ethpb.Checkpoint{
+	justifiedCheckpoint := &ethpb.Checkpoint{
 		Epoch: slots.ToEpoch(1500),
 		Root:  justifiedBlockRoot[:],
-	})
-	require.NoError(t, err)
-	blockRoots := beaconState.BlockRoots()
-	blockRoots[1] = blockRoot[:]
-	blockRoots[1*params.BeaconConfig().SlotsPerEpoch] = epochBoundaryRoot[:]
-	blockRoots[2*params.BeaconConfig().SlotsPerEpoch] = justifiedBlockRoot[:]
-	require.NoError(t, beaconState.SetBlockRoots(blockRoots))
-	chainService := &mock.ChainService{
-		Genesis: time.Now(),
 	}
+	require.NoError(t, err)
+	slot := primitives.Slot(10000)
 	offset := int64(slot.Mul(params.BeaconConfig().SecondsPerSlot))
 	attesterServer := &Server{
-		P2P:              &mockp2p.MockBroadcaster{},
-		AttestationCache: cache.NewAttestationCache(),
-		HeadFetcher:      &mock.ChainService{State: beaconState, Root: blockRoot[:]},
-		FinalizationFetcher: &mock.ChainService{
-			CurrentJustifiedCheckPoint: beaconState.CurrentJustifiedCheckpoint(),
+		SyncChecker:           &mockSync.Sync{IsSyncing: false},
+		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
+		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+		CoreService: &core.Service{
+			AttestationCache:   cache.NewAttestationCache(),
+			HeadFetcher:        &mock.ChainService{TargetRoot: blockRoot, Root: blockRoot[:]},
+			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
 		},
-		SyncChecker:   &mockSync.Sync{IsSyncing: false},
-		TimeFetcher:   &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-		StateNotifier: chainService.StateNotifier(),
 	}
 
 	req := &ethpb.AttestationDataRequest{

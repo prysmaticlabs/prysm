@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	mvslice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -35,13 +36,13 @@ func Test_handleEth1DataSlice_OutOfRange(t *testing.T) {
 func Test_handleValidatorSlice_OutOfRange(t *testing.T) {
 	vals := make([]*ethpb.Validator, 1)
 	indices := []uint64{3}
-	_, err := handleValidatorSlice(vals, indices, false)
+	_, err := handleValidatorMVSlice(mvslice.BuildEmptyCompositeSlice[*ethpb.Validator](vals), indices, false)
 	assert.ErrorContains(t, "index 3 greater than number of validators 1", err)
 }
 
 func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{}, true)
+	roots, err := handleBalanceMVSlice(mvslice.BuildEmptyCompositeSlice[uint64](balances), []uint64{}, true)
 	assert.NoError(t, err)
 
 	var root1 [32]byte
@@ -58,7 +59,7 @@ func TestBalancesSlice_CorrectRoots_All(t *testing.T) {
 
 func TestBalancesSlice_CorrectRoots_Some(t *testing.T) {
 	balances := []uint64{5, 2929, 34, 1291, 354305}
-	roots, err := handleBalanceSlice(balances, []uint64{2, 3}, false)
+	roots, err := handleBalanceMVSlice(mvslice.BuildEmptyCompositeSlice[uint64](balances), []uint64{2, 3}, false)
 	assert.NoError(t, err)
 
 	var root1 [32]byte
@@ -104,21 +105,11 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 		expectedLength int
 	}{
 		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
 			name: "BlockRoots customtypes.BlockRoots",
 			args: &args{
 				field:      types.FieldIndex(5),
 				indices:    []uint64{},
-				elements:   &customtypes.BlockRoots{},
+				elements:   customtypes.BlockRoots{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -133,34 +124,14 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for block roots",
-		},
-		{
-			name: "BlockRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(5),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
-			name: "StateRoots [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots",
 			args: &args{
 				field:      types.FieldIndex(6),
 				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
+				elements:   customtypes.StateRoots{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -175,45 +146,25 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for state roots",
-		},
-		{
-			name: "StateRoots [][]bytes convert all false",
-			args: &args{
-				field:      types.FieldIndex(6),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: false,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "StateRoots customtypes.StateRoots convert all false",
 			args: &args{
 				field:      types.FieldIndex(6),
 				indices:    []uint64{},
-				elements:   &customtypes.StateRoots{},
+				elements:   customtypes.StateRoots{},
 				convertAll: false,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
 			expectedLength: 8192,
 		},
 		{
-			name: "RandaoMixes [][]bytes",
-			args: &args{
-				field:      types.FieldIndex(13),
-				indices:    []uint64{},
-				elements:   [][]byte{[]byte("dfsadfsadf")},
-				convertAll: true,
-			},
-			wantHex: []string{"0x6466736164667361646600000000000000000000000000000000000000000000"},
-		},
-		{
 			name: "RandaoMixes customtypes.RandaoMixes",
 			args: &args{
 				field:      types.FieldIndex(13),
 				indices:    []uint64{},
-				elements:   &customtypes.RandaoMixes{},
+				elements:   customtypes.RandaoMixes{},
 				convertAll: true,
 			},
 			wantHex:        []string{"0x0000000000000000000000000000000000000000000000000000000000000000"},
@@ -228,7 +179,7 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				convertAll: true,
 			},
 			wantHex: nil,
-			errMsg:  "Incorrect type used for randao mixes",
+			errMsg:  "non-existent type provided",
 		},
 		{
 			name: "Eth1DataVotes type not found",
@@ -251,6 +202,10 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 				field:   types.FieldIndex(9),
 				indices: []uint64{1},
 				elements: []*ethpb.Eth1Data{
+					{
+						DepositRoot:  make([]byte, fieldparams.RootLength),
+						DepositCount: 2,
+					},
 					{
 						DepositRoot:  make([]byte, fieldparams.RootLength),
 						DepositCount: 1,
@@ -321,11 +276,14 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 			wantHex: []string{"0x7d7696e7f12593934afcd87a0d38e1a981bee63cb4cf0568ba36a6e0596eeccb"},
 		},
 		{
-			name: "Attestations",
+			name: "Attestations convertAll false",
 			args: &args{
 				field:   types.FieldIndex(15),
 				indices: []uint64{1},
 				elements: []*ethpb.PendingAttestation{
+					{
+						ProposerIndex: 0,
+					},
 					{
 						ProposerIndex: 1,
 					},
@@ -352,8 +310,12 @@ func TestFieldTrie_NativeState_fieldConvertersNative(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			roots, err := fieldConverters(tt.args.field, tt.args.indices, tt.args.elements, tt.args.convertAll)
-			if err != nil && tt.errMsg != "" {
-				require.ErrorContains(t, tt.errMsg, err)
+			if err != nil {
+				if tt.errMsg != "" {
+					require.ErrorContains(t, tt.errMsg, err)
+				} else {
+					t.Error("Unexpected error: " + err.Error())
+				}
 			} else {
 				for i, root := range roots {
 					hex := hexutil.Encode(root[:])

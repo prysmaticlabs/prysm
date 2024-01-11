@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -179,6 +180,7 @@ func TestIsSlashableValidator_OK(t *testing.T) {
 func TestBeaconProposerIndex_OK(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ClearCache()
+	defer ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -222,6 +224,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 		},
 	}
 
+	defer ClearCache()
 	for _, tt := range tests {
 		ClearCache()
 		require.NoError(t, state.SetSlot(tt.slot))
@@ -234,6 +237,7 @@ func TestBeaconProposerIndex_OK(t *testing.T) {
 func TestBeaconProposerIndex_BadState(t *testing.T) {
 	params.SetupTestConfigCleanup(t)
 	ClearCache()
+	defer ClearCache()
 	c := params.BeaconConfig()
 	c.MinGenesisActiveValidatorCount = 16384
 	params.OverrideBeaconConfig(c)
@@ -261,7 +265,6 @@ func TestBeaconProposerIndex_BadState(t *testing.T) {
 	require.NoError(t, state.SetSlot(100))
 	_, err = BeaconProposerIndex(context.Background(), state)
 	require.NoError(t, err)
-	assert.Equal(t, 0, proposerIndicesCache.Len())
 }
 
 func TestComputeProposerIndex_Compatibility(t *testing.T) {
@@ -345,6 +348,7 @@ func TestChurnLimit_OK(t *testing.T) {
 		{validatorCount: 1000000, wantedChurn: 15 /* validatorCount/churnLimitQuotient */},
 		{validatorCount: 2000000, wantedChurn: 30 /* validatorCount/churnLimitQuotient */},
 	}
+	defer ClearCache()
 	for _, test := range tests {
 		ClearCache()
 
@@ -363,9 +367,50 @@ func TestChurnLimit_OK(t *testing.T) {
 		require.NoError(t, err)
 		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
 		require.NoError(t, err)
-		resultChurn, err := ValidatorChurnLimit(validatorCount)
+		resultChurn := ValidatorActivationChurnLimit(validatorCount)
+		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorActivationChurnLimit(%d)", test.validatorCount)
+	}
+}
+
+func TestChurnLimitDeneb_OK(t *testing.T) {
+	tests := []struct {
+		validatorCount int
+		wantedChurn    uint64
+	}{
+		{1000, 4},
+		{100000, 4},
+		{1000000, params.BeaconConfig().MaxPerEpochActivationChurnLimit},
+		{2000000, params.BeaconConfig().MaxPerEpochActivationChurnLimit},
+	}
+
+	defer ClearCache()
+
+	for _, test := range tests {
+		ClearCache()
+
+		// Create validators
+		validators := make([]*ethpb.Validator, test.validatorCount)
+		for i := range validators {
+			validators[i] = &ethpb.Validator{
+				ExitEpoch: params.BeaconConfig().FarFutureEpoch,
+			}
+		}
+
+		// Initialize beacon state
+		beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+			Slot:        1,
+			Validators:  validators,
+			RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+		})
 		require.NoError(t, err)
-		assert.Equal(t, test.wantedChurn, resultChurn, "ValidatorChurnLimit(%d)", test.validatorCount)
+
+		// Get active validator count
+		validatorCount, err := ActiveValidatorCount(context.Background(), beaconState, time.CurrentEpoch(beaconState))
+		require.NoError(t, err)
+
+		// Test churn limit calculation
+		resultChurn := ValidatorActivationChurnLimitDeneb(validatorCount)
+		assert.Equal(t, test.wantedChurn, resultChurn)
 	}
 }
 
@@ -515,11 +560,24 @@ func TestActiveValidatorIndices(t *testing.T) {
 			},
 			want: []primitives.ValidatorIndex{0, 2, 3},
 		},
+		{
+			name: "impossible_zero_validators", // Regression test for issue #13051
+			args: args{
+				state: &ethpb.BeaconState{
+					RandaoMixes: make([][]byte, params.BeaconConfig().EpochsPerHistoricalVector),
+					Validators:  make([]*ethpb.Validator, 0),
+				},
+				epoch: 10,
+			},
+			wantedErr: "no active validator indices",
+		},
 	}
+	defer ClearCache()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s, err := state_native.InitializeFromProtoPhase0(tt.args.state)
 			require.NoError(t, err)
+			require.NoError(t, s.SetValidators(tt.args.state.Validators))
 			got, err := ActiveValidatorIndices(context.Background(), s, tt.args.epoch)
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
@@ -721,4 +779,42 @@ func computeProposerIndexWithValidators(validators []*ethpb.Validator, activeInd
 			return candidateIndex, nil
 		}
 	}
+}
+
+func TestLastActivatedValidatorIndex_OK(t *testing.T) {
+	beaconState, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{})
+	require.NoError(t, err)
+
+	validators := make([]*ethpb.Validator, 4)
+	balances := make([]uint64, len(validators))
+	for i := uint64(0); i < 4; i++ {
+		validators[i] = &ethpb.Validator{
+			PublicKey:             make([]byte, params.BeaconConfig().BLSPubkeyLength),
+			WithdrawalCredentials: make([]byte, 32),
+			EffectiveBalance:      32 * 1e9,
+			ExitEpoch:             params.BeaconConfig().FarFutureEpoch,
+		}
+		balances[i] = validators[i].EffectiveBalance
+	}
+	require.NoError(t, beaconState.SetValidators(validators))
+	require.NoError(t, beaconState.SetBalances(balances))
+
+	index, err := LastActivatedValidatorIndex(context.Background(), beaconState)
+	require.NoError(t, err)
+	require.Equal(t, index, primitives.ValidatorIndex(3))
+}
+
+func TestProposerIndexFromCheckpoint(t *testing.T) {
+	e := primitives.Epoch(2)
+	r := [32]byte{'a'}
+	root := [32]byte{'b'}
+	ids := [32]primitives.ValidatorIndex{}
+	slot := primitives.Slot(69) // slot 5 in the Epoch
+	ids[5] = primitives.ValidatorIndex(19)
+	proposerIndicesCache.Set(e, r, ids)
+	c := &forkchoicetypes.Checkpoint{Root: root, Epoch: e - 1}
+	proposerIndicesCache.SetCheckpoint(*c, r)
+	id, err := ProposerIndexAtSlotFromCheckpoint(c, slot)
+	require.NoError(t, err)
+	require.Equal(t, ids[5], id)
 }

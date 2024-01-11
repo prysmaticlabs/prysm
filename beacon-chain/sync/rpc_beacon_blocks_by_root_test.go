@@ -9,16 +9,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	gethTypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	gcache "github.com/patrickmn/go-cache"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2pTypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -26,6 +31,7 @@ import (
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
+	"github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -50,7 +56,7 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks(t *testing.T) {
 		blkRoots = append(blkRoots, root)
 	}
 
-	r := &Service{cfg: &config{p2p: p1, beaconDB: d}, rateLimiter: newRateLimiter(p1)}
+	r := &Service{cfg: &config{p2p: p1, beaconDB: d, clock: startup.NewClock(time.Unix(0, 0), [32]byte{})}, rateLimiter: newRateLimiter(p1)}
 	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
@@ -148,8 +154,9 @@ func TestRecentBeaconBlocksRPCHandler_ReturnsBlocks_ReconstructsPayload(t *testi
 		p2p:                           p1,
 		beaconDB:                      d,
 		executionPayloadReconstructor: mockEngine,
+		chain:                         &mock.ChainService{ValidatorsRoot: [32]byte{}},
+		clock:                         startup.NewClock(time.Unix(0, 0), [32]byte{}),
 	}, rateLimiter: newRateLimiter(p1)}
-	r.cfg.chain = &mock.ChainService{ValidatorsRoot: [32]byte{}}
 	pcl := protocol.ID(p2p.RPCBlocksByRootTopicV1)
 	topic := string(pcl)
 	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
@@ -204,16 +211,18 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 
 	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockBRoot, blockARoot}
 
+	chain := &mock.ChainService{
+		State:               genesisState,
+		FinalizedCheckPoint: finalizedCheckpt,
+		Root:                blockARoot[:],
+		Genesis:             time.Now(),
+		ValidatorsRoot:      [32]byte{},
+	}
 	r := &Service{
 		cfg: &config{
-			p2p: p1,
-			chain: &mock.ChainService{
-				State:               genesisState,
-				FinalizedCheckPoint: finalizedCheckpt,
-				Root:                blockARoot[:],
-				Genesis:             time.Now(),
-				ValidatorsRoot:      [32]byte{},
-			},
+			p2p:   p1,
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
 		seenPendingBlocks:   make(map[[32]byte]bool),
@@ -251,6 +260,77 @@ func TestRecentBeaconBlocks_RPCRequestSent(t *testing.T) {
 	}
 }
 
+func TestRecentBeaconBlocks_RPCRequestSent_IncorrectRoot(t *testing.T) {
+	p1 := p2ptest.NewTestP2P(t)
+	p2 := p2ptest.NewTestP2P(t)
+	p1.DelaySend = true
+
+	blockA := util.NewBeaconBlock()
+	blockA.Block.Slot = 111
+	blockB := util.NewBeaconBlock()
+	blockB.Block.Slot = 40
+	// Set up a head state with data we expect.
+	blockARoot, err := blockA.Block.HashTreeRoot()
+	require.NoError(t, err)
+	blockBRoot, err := blockB.Block.HashTreeRoot()
+	require.NoError(t, err)
+	genesisState, err := transition.GenesisBeaconState(context.Background(), nil, 0, &ethpb.Eth1Data{})
+	require.NoError(t, err)
+	require.NoError(t, genesisState.SetSlot(111))
+	require.NoError(t, genesisState.UpdateBlockRootAtIndex(111%uint64(params.BeaconConfig().SlotsPerHistoricalRoot), blockARoot))
+	finalizedCheckpt := &ethpb.Checkpoint{
+		Epoch: 5,
+		Root:  blockBRoot[:],
+	}
+
+	expectedRoots := p2pTypes.BeaconBlockByRootsReq{blockBRoot, blockARoot}
+
+	chain := &mock.ChainService{
+		State:               genesisState,
+		FinalizedCheckPoint: finalizedCheckpt,
+		Root:                blockARoot[:],
+		Genesis:             time.Now(),
+		ValidatorsRoot:      [32]byte{},
+	}
+	r := &Service{
+		cfg: &config{
+			p2p:   p1,
+			chain: chain,
+			clock: startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+		},
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+		ctx:                 context.Background(),
+		rateLimiter:         newRateLimiter(p1),
+	}
+
+	// Setup streams
+	pcl := protocol.ID("/eth2/beacon_chain/req/beacon_blocks_by_root/1/ssz_snappy")
+	topic := string(pcl)
+	r.rateLimiter.limiterMap[topic] = leakybucket.NewCollector(10000, 10000, time.Second, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	p2.BHost.SetStreamHandler(pcl, func(stream network.Stream) {
+		defer wg.Done()
+		out := new(p2pTypes.BeaconBlockByRootsReq)
+		assert.NoError(t, p2.Encoding().DecodeWithMaxLength(stream, out))
+		assert.DeepEqual(t, &expectedRoots, out, "Did not receive expected message")
+		blockB.Block.Slot = 123123 // Give it a bad slot
+		response := []*ethpb.SignedBeaconBlock{blockB, blockA}
+		for _, blk := range response {
+			_, err := stream.Write([]byte{responseCodeSuccess})
+			assert.NoError(t, err, "Could not write to stream")
+			_, err = p2.Encoding().EncodeWithMaxLength(stream, blk)
+			assert.NoError(t, err, "Could not send response back")
+		}
+		assert.NoError(t, stream.Close())
+	})
+
+	p1.Connect(p2)
+	require.ErrorContains(t, "received unexpected block with root", r.sendRecentBeaconBlocksRequest(context.Background(), &expectedRoots, p2.PeerID()))
+}
+
 func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	p1 := p2ptest.NewTestP2P(t)
 	p2 := p2ptest.NewTestP2P(t)
@@ -283,4 +363,113 @@ func TestRecentBeaconBlocksRPCHandler_HandleZeroBlocks(t *testing.T) {
 	lter, err := r.rateLimiter.retrieveCollector(topic)
 	require.NoError(t, err)
 	assert.Equal(t, 1, int(lter.Count(stream1.Conn().RemotePeer().String())))
+}
+
+func TestRequestPendingBlobs(t *testing.T) {
+	s := &Service{cfg: &config{blobStorage: filesystem.NewEphemeralBlobStorage(t)}}
+	t.Run("old block should not fail", func(t *testing.T) {
+		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+		require.NoError(t, err)
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+	})
+	t.Run("empty commitment block should not fail", func(t *testing.T) {
+		b, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
+		require.NoError(t, err)
+		require.NoError(t, s.requestPendingBlobs(context.Background(), b, [32]byte{}, "test"))
+	})
+	t.Run("unsupported protocol", func(t *testing.T) {
+		p1 := p2ptest.NewTestP2P(t)
+		p2 := p2ptest.NewTestP2P(t)
+		p1.Connect(p2)
+		require.Equal(t, 1, len(p1.BHost.Network().Peers()))
+		chain := &mock.ChainService{
+			FinalizedCheckPoint: &ethpb.Checkpoint{
+				Epoch: 1,
+				Root:  make([]byte, 32),
+			},
+			ValidatorsRoot: [32]byte{},
+			Genesis:        time.Now(),
+		}
+		p1.Peers().Add(new(enr.Record), p2.PeerID(), nil, network.DirOutbound)
+		p1.Peers().SetConnectionState(p2.PeerID(), peers.PeerConnected)
+		p1.Peers().SetChainState(p2.PeerID(), &ethpb.Status{FinalizedEpoch: 1})
+		s := &Service{
+			cfg: &config{
+				p2p:         p1,
+				chain:       chain,
+				clock:       startup.NewClock(time.Unix(0, 0), [32]byte{}),
+				beaconDB:    db.SetupDB(t),
+				blobStorage: filesystem.NewEphemeralBlobStorage(t),
+			},
+		}
+		b := util.NewBeaconBlockDeneb()
+		b.Block.Body.BlobKzgCommitments = make([][]byte, 1)
+		b1, err := blocks.NewSignedBeaconBlock(b)
+		require.NoError(t, err)
+		require.ErrorContains(t, "protocols not supported", s.requestPendingBlobs(context.Background(), b1, [32]byte{}, p2.PeerID()))
+	})
+}
+
+func TestConstructPendingBlobsRequest(t *testing.T) {
+	d := db.SetupDB(t)
+	bs := filesystem.NewEphemeralBlobStorage(t)
+	s := &Service{cfg: &config{beaconDB: d, blobStorage: bs}}
+	ctx := context.Background()
+
+	// No unknown indices.
+	root := [32]byte{1}
+	count := 3
+	actual, err := s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
+	require.Equal(t, 3, len(actual))
+	for i, id := range actual {
+		require.Equal(t, uint64(i), id.Index)
+		require.DeepEqual(t, root[:], id.BlockRoot)
+	}
+
+	// Has indices.
+	header := &ethpb.SignedBeaconBlockHeader{
+		Header: &ethpb.BeaconBlockHeader{
+			ParentRoot: bytesutil.PadTo([]byte{}, 32),
+			StateRoot:  bytesutil.PadTo([]byte{}, 32),
+			BodyRoot:   bytesutil.PadTo([]byte{}, 32),
+		},
+		Signature: bytesutil.PadTo([]byte{}, 96),
+	}
+	blobSidecars := []blocks.ROBlob{
+		util.GenerateTestDenebBlobSidecar(t, root, header, 0, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
+		util.GenerateTestDenebBlobSidecar(t, root, header, 2, bytesutil.PadTo([]byte{}, 48), make([][]byte, 0)),
+	}
+	vscs, err := verification.BlobSidecarSliceNoop(blobSidecars)
+	require.NoError(t, err)
+	for i := range vscs {
+		require.NoError(t, bs.Save(vscs[i]))
+	}
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 1, BlockRoot: root[:]},
+	}
+	actual, err = s.constructPendingBlobsRequest(ctx, root, count)
+	require.NoError(t, err)
+	require.Equal(t, expected[0].Index, actual[0].Index)
+	require.DeepEqual(t, expected[0].BlockRoot, actual[0].BlockRoot)
+}
+
+func TestFilterUnknownIndices(t *testing.T) {
+	haveIndices := [fieldparams.MaxBlobsPerBlock]bool{true, true, true, false, false, false}
+
+	blockRoot := [32]byte{}
+	count := 5
+
+	expected := []*eth.BlobIdentifier{
+		{Index: 3, BlockRoot: blockRoot[:]},
+		{Index: 4, BlockRoot: blockRoot[:]},
+	}
+
+	actual := requestsForMissingIndices(haveIndices, count, blockRoot)
+	require.Equal(t, len(expected), len(actual))
+	require.Equal(t, expected[0].Index, actual[0].Index)
+	require.DeepEqual(t, actual[0].BlockRoot, expected[0].BlockRoot)
+	require.Equal(t, expected[1].Index, actual[1].Index)
+	require.DeepEqual(t, actual[1].BlockRoot, expected[1].BlockRoot)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -355,21 +356,23 @@ func TestValidateAggregateAndProof_CanValidate(t *testing.T) {
 	require.NoError(t, beaconState.SetGenesisTime(uint64(time.Now().Unix())))
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	chain := &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
+		Optimistic:       true,
+		DB:               db,
+		State:            beaconState,
+		ValidAttestation: true,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  att.Data.BeaconBlockRoot,
+		}}
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
-			p2p:         p,
-			beaconDB:    db,
-			initialSync: &mockSync.Sync{IsSyncing: false},
-			chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
-				Optimistic:       true,
-				DB:               db,
-				State:            beaconState,
-				ValidAttestation: true,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  att.Data.BeaconBlockRoot,
-				}},
+			p2p:                 p,
+			beaconDB:            db,
+			initialSync:         &mockSync.Sync{IsSyncing: false},
+			chain:               chain,
+			clock:               startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			attPool:             attestations.NewPool(),
 			attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},
@@ -456,22 +459,23 @@ func TestVerifyIndexInCommittee_SeenAggregatorEpoch(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	chain := &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
+		DB:               db,
+		ValidatorsRoot:   [32]byte{'A'},
+		State:            beaconState,
+		ValidAttestation: true,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+			Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
+		}}
 	r := &Service{
 		ctx: ctx,
 		cfg: &config{
-			p2p:         p,
-			beaconDB:    db,
-			initialSync: &mockSync.Sync{IsSyncing: false},
-			chain: &mock.ChainService{Genesis: time.Now().Add(-oneEpoch()),
-				DB:               db,
-				ValidatorsRoot:   [32]byte{'A'},
-				State:            beaconState,
-				ValidAttestation: true,
-				FinalizedCheckPoint: &ethpb.Checkpoint{
-					Epoch: 0,
-					Root:  signedAggregateAndProof.Message.Aggregate.Data.BeaconBlockRoot,
-				}},
-
+			p2p:                 p,
+			beaconDB:            db,
+			initialSync:         &mockSync.Sync{IsSyncing: false},
+			chain:               chain,
+			clock:               startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			attPool:             attestations.NewPool(),
 			attestationNotifier: (&mock.ChainService{}).OperationNotifier(),
 		},

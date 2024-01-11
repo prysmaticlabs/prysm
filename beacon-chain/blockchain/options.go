@@ -3,9 +3,9 @@ package blockchain
 import (
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
@@ -13,6 +13,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -61,17 +62,25 @@ func WithExecutionEngineCaller(c execution.EngineCaller) Option {
 }
 
 // WithDepositCache for deposit lifecycle after chain inclusion.
-func WithDepositCache(c *depositcache.DepositCache) Option {
+func WithDepositCache(c cache.DepositCache) Option {
 	return func(s *Service) error {
 		s.cfg.DepositCache = c
 		return nil
 	}
 }
 
-// WithProposerIdsCache for proposer id cache.
-func WithProposerIdsCache(c *cache.ProposerPayloadIDsCache) Option {
+// WithPayloadIDCache for payload ID cache.
+func WithPayloadIDCache(c *cache.PayloadIDCache) Option {
 	return func(s *Service) error {
-		s.cfg.ProposerSlotIndexCache = c
+		s.cfg.PayloadIDCache = c
+		return nil
+	}
+}
+
+// WithTrackedValidatorsCache for tracked validators cache.
+func WithTrackedValidatorsCache(c *cache.TrackedValidatorsCache) Option {
+	return func(s *Service) error {
+		s.cfg.TrackedValidatorsCache = c
 		return nil
 	}
 }
@@ -160,6 +169,32 @@ func WithSlasherAttestationsFeed(f *event.Feed) Option {
 func WithFinalizedStateAtStartUp(st state.BeaconState) Option {
 	return func(s *Service) error {
 		s.cfg.FinalizedStateAtStartUp = st
+		return nil
+	}
+}
+
+// WithClockSynchronizer sets the ClockSetter/ClockWaiter values to be used by services that need to block until
+// the genesis timestamp is known (ClockWaiter) or which determine the genesis timestamp (ClockSetter).
+func WithClockSynchronizer(gs *startup.ClockSynchronizer) Option {
+	return func(s *Service) error {
+		s.clockSetter = gs
+		s.clockWaiter = gs
+		return nil
+	}
+}
+
+// WithSyncComplete sets a channel that is used to notify blockchain service that the node has synced to head.
+func WithSyncComplete(c chan struct{}) Option {
+	return func(s *Service) error {
+		s.syncComplete = c
+		return nil
+	}
+}
+
+// WithBlobStorage sets the blob storage backend for the blockchain service.
+func WithBlobStorage(b *filesystem.BlobStorage) Option {
+	return func(s *Service) error {
+		s.blobStorage = b
 		return nil
 	}
 }

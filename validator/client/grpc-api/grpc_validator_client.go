@@ -71,6 +71,10 @@ func (c *grpcValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedV
 	return c.beaconNodeValidatorClient.ProposeExit(ctx, in)
 }
 
+func (c *grpcValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
+	return c.beaconNodeValidatorClient.StreamSlots(ctx, in)
+}
+
 func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
 	return c.beaconNodeValidatorClient.StreamBlocksAltair(ctx, in)
 }
@@ -122,6 +126,16 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 	}
 
 	return stream.Recv()
+}
+
+func (c *grpcValidatorClient) AssignValidatorToSubnet(ctx context.Context, in *ethpb.AssignValidatorToSubnetRequest) (*empty.Empty, error) {
+	return c.beaconNodeValidatorClient.AssignValidatorToSubnet(ctx, in)
+}
+func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
+	ctx context.Context,
+	in *ethpb.AggregatedSigAndAggregationBitsRequest,
+) (*ethpb.AggregatedSigAndAggregationBitsResponse, error) {
+	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {

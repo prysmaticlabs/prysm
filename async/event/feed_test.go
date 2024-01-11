@@ -32,6 +32,8 @@ func TestFeedPanics(t *testing.T) {
 		f.Send(2)
 		want := feedTypeError{op: "Send", got: reflect.TypeOf(uint64(0)), want: reflect.TypeOf(0)}
 		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
+		// Validate it doesn't deadlock.
+		assert.NoError(t, checkPanic(want, func() { f.Send(uint64(2)) }))
 	}
 	{
 		var f Feed

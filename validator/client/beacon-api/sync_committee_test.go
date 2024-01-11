@@ -11,7 +11,9 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -33,25 +35,24 @@ func TestSubmitSyncMessage_Valid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonSyncCommitteeMessage := &apimiddleware.SyncCommitteeMessageJson{
+	jsonSyncCommitteeMessage := &shared.SyncCommitteeMessage{
 		Slot:            "42",
 		BeaconBlockRoot: beaconBlockRoot,
 		ValidatorIndex:  "12345",
 		Signature:       signature,
 	}
 
-	marshalledJsonRegistrations, err := json.Marshal([]*apimiddleware.SyncCommitteeMessageJson{jsonSyncCommitteeMessage})
+	marshalledJsonRegistrations, err := json.Marshal([]*shared.SyncCommitteeMessage{jsonSyncCommitteeMessage})
 	require.NoError(t, err)
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		context.Background(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		bytes.NewBuffer(marshalledJsonRegistrations),
 		nil,
 	).Return(
-		nil,
 		nil,
 	).Times(1)
 
@@ -73,21 +74,19 @@ func TestSubmitSyncMessage_BadRequest(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		context.Background(),
 		"/eth/v1/beacon/pool/sync_committees",
 		nil,
 		gomock.Any(),
 		nil,
 	).Return(
-		nil,
 		errors.New("foo error"),
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
 	_, err := validatorClient.SubmitSyncMessage(context.Background(), &ethpb.SyncCommitteeMessage{})
-	assert.ErrorContains(t, "failed to send POST data to `/eth/v1/beacon/pool/sync_committees` REST endpoint", err)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -100,12 +99,12 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 		name                 string
 		endpointError        error
 		expectedErrorMessage string
-		expectedResponse     apimiddleware.BlockRootResponseJson
+		expectedResponse     beacon.BlockRootResponse
 	}{
 		{
 			name: "valid request",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
-				Data: &apimiddleware.BlockRootContainerJson{
+			expectedResponse: beacon.BlockRootResponse{
+				Data: &beacon.BlockRoot{
 					Root: blockRoot,
 				},
 			},
@@ -117,20 +116,20 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 		},
 		{
 			name: "execution optimistic",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
+			expectedResponse: beacon.BlockRootResponse{
 				ExecutionOptimistic: true,
 			},
 			expectedErrorMessage: "the node is currently optimistic and cannot serve validators",
 		},
 		{
 			name:                 "no data",
-			expectedResponse:     apimiddleware.BlockRootResponseJson{},
+			expectedResponse:     beacon.BlockRootResponse{},
 			expectedErrorMessage: "no data returned",
 		},
 		{
 			name: "no root",
-			expectedResponse: apimiddleware.BlockRootResponseJson{
-				Data: new(apimiddleware.BlockRootContainerJson),
+			expectedResponse: beacon.BlockRootResponse{
+				Data: new(beacon.BlockRoot),
 			},
 			expectedErrorMessage: "no root returned",
 		},
@@ -139,16 +138,15 @@ func TestGetSyncMessageBlockRoot(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/blocks/head/root",
-				&apimiddleware.BlockRootResponseJson{},
+				&beacon.BlockRootResponse{},
 			).SetArg(
 				2,
 				test.expectedResponse,
 			).Return(
-				nil,
 				test.endpointError,
 			).Times(1)
 
@@ -182,7 +180,7 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 		SubnetId:  1,
 	}
 
-	contributionJson := &apimiddleware.SyncCommitteeContributionJson{
+	contributionJson := &shared.SyncCommitteeContribution{
 		Slot:              "1",
 		BeaconBlockRoot:   blockRoot,
 		SubcommitteeIndex: "1",
@@ -192,13 +190,13 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		contribution   apimiddleware.ProduceSyncCommitteeContributionResponseJson
+		contribution   validator.ProduceSyncCommitteeContributionResponse
 		endpointErr    error
 		expectedErrMsg string
 	}{
 		{
 			name:         "valid request",
-			contribution: apimiddleware.ProduceSyncCommitteeContributionResponseJson{Data: contributionJson},
+			contribution: validator.ProduceSyncCommitteeContributionResponse{Data: contributionJson},
 		},
 		{
 			name:           "bad request",
@@ -210,33 +208,31 @@ func TestGetSyncCommitteeContribution(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				"/eth/v1/beacon/blocks/head/root",
-				&apimiddleware.BlockRootResponseJson{},
+				&beacon.BlockRootResponse{},
 			).SetArg(
 				2,
-				apimiddleware.BlockRootResponseJson{
-					Data: &apimiddleware.BlockRootContainerJson{
+				beacon.BlockRootResponse{
+					Data: &beacon.BlockRoot{
 						Root: blockRoot,
 					},
 				},
 			).Return(
 				nil,
-				nil,
 			).Times(1)
 
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("/eth/v1/validator/sync_committee_contribution?beacon_block_root=%s&slot=%d&subcommittee_index=%d",
 					blockRoot, uint64(request.Slot), request.SubnetId),
-				&apimiddleware.ProduceSyncCommitteeContributionResponseJson{},
+				&validator.ProduceSyncCommitteeContributionResponse{},
 			).SetArg(
 				2,
 				test.contribution,
 			).Return(
-				nil,
 				test.endpointErr,
 			).Times(1)
 
@@ -268,7 +264,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 		Indices: []primitives.CommitteeIndex{123, 456},
 	}
 
-	syncDuties := []*apimiddleware.SyncCommitteeDuty{
+	syncDuties := []*validator.SyncCommitteeDuty{
 		{
 			Pubkey:         hexutil.Encode([]byte{1}),
 			ValidatorIndex: validatorIndex,
@@ -284,7 +280,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 
 	tests := []struct {
 		name             string
-		duties           []*apimiddleware.SyncCommitteeDuty
+		duties           []*validator.SyncCommitteeDuty
 		validatorsErr    error
 		dutiesErr        error
 		expectedErrorMsg string
@@ -295,7 +291,7 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 		},
 		{
 			name:             "no sync duties",
-			duties:           []*apimiddleware.SyncCommitteeDuty{},
+			duties:           []*validator.SyncCommitteeDuty{},
 			expectedErrorMsg: fmt.Sprintf("no sync committee duty for the given slot %d", slot),
 		},
 		{
@@ -313,26 +309,33 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
-			jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-			jsonRestHandler.EXPECT().GetRestJsonResponse(
+			valsReq := &beacon.GetValidatorsRequest{
+				Ids:      []string{pubkeyStr},
+				Statuses: []string{},
+			}
+			valsReqBytes, err := json.Marshal(valsReq)
+			require.NoError(t, err)
+			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+			jsonRestHandler.EXPECT().Post(
 				ctx,
-				fmt.Sprintf("%s?id=%s", validatorsEndpoint, pubkeyStr),
-				&apimiddleware.StateValidatorsResponseJson{},
+				validatorsEndpoint,
+				nil,
+				bytes.NewBuffer(valsReqBytes),
+				&beacon.GetValidatorsResponse{},
 			).SetArg(
-				2,
-				apimiddleware.StateValidatorsResponseJson{
-					Data: []*apimiddleware.ValidatorContainerJson{
+				4,
+				beacon.GetValidatorsResponse{
+					Data: []*beacon.ValidatorContainer{
 						{
 							Index:  validatorIndex,
 							Status: "active_ongoing",
-							Validator: &apimiddleware.ValidatorJson{
-								PublicKey: stringPubKey,
+							Validator: &beacon.Validator{
+								Pubkey: stringPubKey,
 							},
 						},
 					},
 				},
 			).Return(
-				nil,
 				test.validatorsErr,
 			).Times(1)
 
@@ -344,19 +347,18 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 				syncDutiesCalled = 1
 			}
 
-			jsonRestHandler.EXPECT().PostRestJson(
+			jsonRestHandler.EXPECT().Post(
 				ctx,
 				fmt.Sprintf("%s/%d", syncDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&apimiddleware.SyncCommitteeDutiesResponseJson{},
+				&validator.GetSyncCommitteeDutiesResponse{},
 			).SetArg(
 				4,
-				apimiddleware.SyncCommitteeDutiesResponseJson{
+				validator.GetSyncCommitteeDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(
-				nil,
 				test.dutiesErr,
 			).Times(syncDutiesCalled)
 

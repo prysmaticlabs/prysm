@@ -31,9 +31,7 @@ import (
 //	        store.justified_checkpoint = store.best_justified_checkpoint
 func (f *ForkChoice) NewSlot(ctx context.Context, slot primitives.Slot) error {
 	// Reset proposer boost root
-	if err := f.resetBoostedProposerRoot(ctx); err != nil {
-		return errors.Wrap(err, "could not reset boosted proposer root in fork choice")
-	}
+	f.store.proposerBoostRoot = [32]byte{}
 
 	// Return if it's not a new epoch.
 	if !slots.IsEpochStart(slot) {

@@ -1,14 +1,18 @@
 package forkchoice
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"path"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/snappy"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -77,6 +81,9 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 				case version.Capella:
 					beaconState = unmarshalCapellaState(t, preBeaconStateSSZ)
 					beaconBlock = unmarshalCapellaBlock(t, blockSSZ)
+				case version.Deneb:
+					beaconState = unmarshalDenebState(t, preBeaconStateSSZ)
+					beaconBlock = unmarshalDenebBlock(t, blockSSZ)
 				default:
 					t.Fatalf("unknown fork version: %v", fork)
 				}
@@ -87,12 +94,12 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 					if step.Tick != nil {
 						builder.Tick(t, int64(*step.Tick))
 					}
+					var beaconBlock interfaces.ReadOnlySignedBeaconBlock
 					if step.Block != nil {
 						blockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.Block, ".ssz_snappy"))
 						require.NoError(t, err)
 						blockSSZ, err := snappy.Decode(nil /* dst */, blockFile)
 						require.NoError(t, err)
-						var beaconBlock interfaces.ReadOnlySignedBeaconBlock
 						switch fork {
 						case version.Phase0:
 							beaconBlock = unmarshalSignedPhase0Block(t, blockSSZ)
@@ -102,9 +109,14 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 							beaconBlock = unmarshalSignedBellatrixBlock(t, blockSSZ)
 						case version.Capella:
 							beaconBlock = unmarshalSignedCapellaBlock(t, blockSSZ)
+						case version.Deneb:
+							beaconBlock = unmarshalSignedDenebBlock(t, blockSSZ)
 						default:
 							t.Fatalf("unknown fork version: %v", fork)
 						}
+					}
+					runBlobStep(t, step.Blobs, beaconBlock, fork, folder, testsFolderPath, step.Proofs, builder)
+					if beaconBlock != nil {
 						if step.Valid != nil && !*step.Valid {
 							builder.InvalidBlock(t, beaconBlock)
 						} else {
@@ -131,7 +143,6 @@ func runTest(t *testing.T, config string, fork int, basePath string) {
 					}
 					if step.PayloadStatus != nil {
 						require.NoError(t, builder.SetPayloadStatus(step.PayloadStatus))
-
 					}
 					if step.PowBlock != nil {
 						powBlockFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*step.PowBlock, ".ssz_snappy"))
@@ -243,4 +254,95 @@ func unmarshalSignedCapellaBlock(t *testing.T, raw []byte) interfaces.ReadOnlySi
 	blk, err := blocks.NewSignedBeaconBlock(base)
 	require.NoError(t, err)
 	return blk
+}
+
+func unmarshalDenebState(t *testing.T, raw []byte) state.BeaconState {
+	base := &ethpb.BeaconStateDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	st, err := state_native.InitializeFromProtoDeneb(base)
+	require.NoError(t, err)
+	return st
+}
+
+func unmarshalDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.BeaconBlockDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(&ethpb.SignedBeaconBlockDeneb{Block: base, Signature: make([]byte, fieldparams.BLSSignatureLength)})
+	require.NoError(t, err)
+	return blk
+}
+
+func unmarshalSignedDenebBlock(t *testing.T, raw []byte) interfaces.SignedBeaconBlock {
+	base := &ethpb.SignedBeaconBlockDeneb{}
+	require.NoError(t, base.UnmarshalSSZ(raw))
+	blk, err := blocks.NewSignedBeaconBlock(base)
+	require.NoError(t, err)
+	return blk
+}
+
+func runBlobStep(t *testing.T,
+	blobs *string,
+	beaconBlock interfaces.ReadOnlySignedBeaconBlock,
+	fork int,
+	folder os.DirEntry,
+	testsFolderPath string,
+	proofs []*string,
+	builder *Builder,
+) {
+	if blobs != nil && *blobs != "null" {
+		require.NotNil(t, beaconBlock)
+		require.Equal(t, true, fork >= version.Deneb)
+
+		block := beaconBlock.Block()
+		root, err := block.HashTreeRoot()
+		require.NoError(t, err)
+		kzgs, err := block.Body().BlobKzgCommitments()
+		require.NoError(t, err)
+
+		blobsFile, err := util.BazelFileBytes(testsFolderPath, folder.Name(), fmt.Sprint(*blobs, ".ssz_snappy"))
+		require.NoError(t, err)
+		blobsSSZ, err := snappy.Decode(nil /* dst */, blobsFile)
+		require.NoError(t, err)
+		sh, err := beaconBlock.Header()
+		require.NoError(t, err)
+		for index := uint64(0); index*fieldparams.BlobLength < uint64(len(blobsSSZ)); index++ {
+			var proof []byte
+			if index < uint64(len(proofs)) {
+				proofPTR := proofs[index]
+				require.NotNil(t, proofPTR)
+				proof, err = hexutil.Decode(*proofPTR)
+				require.NoError(t, err)
+			}
+
+			var kzg []byte
+			if uint64(len(kzgs)) < index {
+				kzg = kzgs[index]
+			}
+			if len(kzg) == 0 {
+				kzg = make([]byte, 48)
+			}
+			blob := [fieldparams.BlobLength]byte{}
+			copy(blob[:], blobsSSZ[index*fieldparams.BlobLength:])
+			fakeProof := make([][]byte, fieldparams.KzgCommitmentInclusionProofDepth)
+			for i := range fakeProof {
+				fakeProof[i] = make([]byte, fieldparams.RootLength)
+			}
+			if len(proof) == 0 {
+				proof = make([]byte, 48)
+			}
+			pb := &ethpb.BlobSidecar{
+				Index:                    index,
+				Blob:                     blob[:],
+				KzgCommitment:            kzg,
+				KzgProof:                 proof,
+				SignedBlockHeader:        sh,
+				CommitmentInclusionProof: fakeProof,
+			}
+			ro, err := blocks.NewROBlobWithRoot(pb, root)
+			require.NoError(t, err)
+			vsc, err := verification.BlobSidecarNoop(ro)
+			require.NoError(t, err)
+			require.NoError(t, builder.service.ReceiveBlob(context.Background(), vsc))
+		}
+	}
 }

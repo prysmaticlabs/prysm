@@ -56,7 +56,22 @@ const (
 
 // ComputeDomainAndSign computes the domain and signing root and sign it using the passed in private key.
 func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, obj fssz.HashRoot, domain [4]byte, key bls.SecretKey) ([]byte, error) {
-	d, err := Domain(st.Fork(), epoch, domain, st.GenesisValidatorsRoot())
+	return ComputeDomainAndSignWithoutState(st.Fork(), epoch, domain, st.GenesisValidatorsRoot(), obj, key)
+}
+
+// ComputeDomainAndSignWithoutState offers the same functionalit as ComputeDomainAndSign without the need to provide a BeaconState.
+// This is particularly helpful for signing values in tests.
+func ComputeDomainAndSignWithoutState(fork *ethpb.Fork, epoch primitives.Epoch, domain [4]byte, vr []byte, obj fssz.HashRoot, key bls.SecretKey) ([]byte, error) {
+	// EIP-7044: Beginning in Deneb, fix the fork version to Capella for signed exits.
+	// This allows for signed validator exits to be valid forever.
+	if domain == params.BeaconConfig().DomainVoluntaryExit && epoch >= params.BeaconConfig().DenebForkEpoch {
+		fork = &ethpb.Fork{
+			PreviousVersion: params.BeaconConfig().CapellaForkVersion,
+			CurrentVersion:  params.BeaconConfig().CapellaForkVersion,
+			Epoch:           params.BeaconConfig().CapellaForkEpoch,
+		}
+	}
+	d, err := Domain(fork, epoch, domain, vr)
 	if err != nil {
 		return nil, err
 	}
@@ -80,18 +95,24 @@ func ComputeDomainAndSign(st state.ReadOnlyBeaconState, epoch primitives.Epoch, 
 //	       domain=domain,
 //	   ))
 func ComputeSigningRoot(object fssz.HashRoot, domain []byte) ([32]byte, error) {
-	return SigningData(object.HashTreeRoot, domain)
+	return Data(object.HashTreeRoot, domain)
 }
 
-// SigningData computes the signing data by utilising the provided root function and then
+// Data computes the signing data by utilising the provided root function and then
 // returning the signing data of the container object.
-func SigningData(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
+func Data(rootFunc func() ([32]byte, error), domain []byte) ([32]byte, error) {
 	objRoot, err := rootFunc()
 	if err != nil {
 		return [32]byte{}, err
 	}
+	return ComputeSigningRootForRoot(objRoot, domain)
+}
+
+// ComputeSigningRootForRoot works the same as ComputeSigningRoot,
+// except that gets the root from an argument instead of a callback.
+func ComputeSigningRootForRoot(root [32]byte, domain []byte) ([32]byte, error) {
 	container := &ethpb.SigningData{
-		ObjectRoot: objRoot[:],
+		ObjectRoot: root[:],
 		Domain:     domain,
 	}
 	return container.HashTreeRoot()
@@ -140,7 +161,7 @@ func VerifyBlockHeaderSigningRoot(blkHdr *ethpb.BeaconBlockHeader, pub, signatur
 	if err != nil {
 		return errors.Wrap(err, "could not convert bytes to signature")
 	}
-	root, err := SigningData(blkHdr.HashTreeRoot, domain)
+	root, err := Data(blkHdr.HashTreeRoot, domain)
 	if err != nil {
 		return errors.Wrap(err, "could not compute signing root")
 	}
@@ -179,7 +200,7 @@ func BlockSignatureBatch(pub, signature, domain []byte, rootFunc func() ([32]byt
 		return nil, errors.Wrap(err, "could not convert bytes to public key")
 	}
 	// utilize custom block hashing function
-	root, err := SigningData(rootFunc, domain)
+	root, err := Data(rootFunc, domain)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not compute signing root")
 	}

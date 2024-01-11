@@ -64,7 +64,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	currentSecret := srv.jwtSecret
 	require.Equal(t, true, len(currentSecret) > 0)
 
-	authTokenPath := filepath.Join(walletDir, authTokenFileName)
+	authTokenPath := filepath.Join(walletDir, AuthTokenFileName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -81,7 +81,7 @@ func TestServer_RefreshJWTSecretOnFileChange(t *testing.T) {
 	newSecret := srv.jwtSecret
 	require.Equal(t, true, len(newSecret) > 0)
 	require.Equal(t, true, !bytes.Equal(currentSecret, newSecret))
-	err = os.Remove(authTokenFileName)
+	err = os.Remove(AuthTokenFileName)
 	require.NoError(t, err)
 }
 
@@ -112,7 +112,7 @@ func Test_initializeAuthToken(t *testing.T) {
 }
 
 // "createTokenString" now uses jwt.RegisteredClaims instead of jwt.StandardClaims (deprecated),
-// make sure emtpy jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
+// make sure empty jwt.RegisteredClaims and empty jwt.StandardClaims generates the same token.
 func Test_UseRegisteredClaimInsteadOfStandClaims(t *testing.T) {
 	jwtsecret, err := hex.DecodeString("12345678900123456789abcdeffedcba")
 	require.NoError(t, err)

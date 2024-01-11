@@ -2,6 +2,7 @@ package stategen
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -58,7 +59,7 @@ func (s *State) StateByRoot(ctx context.Context, blockRoot [32]byte) (state.Beac
 	if blockRoot == params.BeaconConfig().ZeroHash {
 		root, err := s.beaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get genesis block root")
+			return nil, stderrors.Join(ErrNoGenesisBlock, err)
 		}
 		blockRoot = root
 	}
@@ -252,8 +253,11 @@ func (s *State) latestAncestor(ctx context.Context, blockRoot [32]byte) (state.B
 	ctx, span := trace.StartSpan(ctx, "stateGen.latestAncestor")
 	defer span.End()
 
-	if s.isFinalizedRoot(blockRoot) && s.finalizedState() != nil {
-		return s.finalizedState(), nil
+	if s.isFinalizedRoot(blockRoot) {
+		finalizedState := s.finalizedState()
+		if finalizedState != nil {
+			return finalizedState, nil
+		}
 	}
 
 	b, err := s.beaconDB.Block(ctx, blockRoot)

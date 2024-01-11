@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,15 +10,18 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/local"
 	"github.com/prysmaticlabs/prysm/v4/validator/node"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/urfave/cli/v2"
 )
 
 func TestWalletWithKeymanager(t *testing.T) {
+	logHook := test.NewGlobal()
 	walletDir, passwordsDir, passwordFilePath := setupWalletAndPasswordsDir(t)
 	keysDir := filepath.Join(t.TempDir(), "keysDir")
 	require.NoError(t, os.MkdirAll(keysDir, os.ModePerm))
@@ -66,6 +70,10 @@ func TestWalletWithKeymanager(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(keys), 2)
 	require.Equal(t, w.KeymanagerKind(), keymanager.Local)
+
+	assert.LogsContain(t, logHook, fmt.Sprintf("Imported accounts"))
+	assert.LogsContain(t, logHook, hexutil.Encode(keys[0][:])[2:])
+	assert.LogsContain(t, logHook, hexutil.Encode(keys[1][:])[2:])
 }
 
 func TestWalletWithKeymanager_web3signer(t *testing.T) {

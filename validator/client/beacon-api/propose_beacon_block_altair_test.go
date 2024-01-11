@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -19,21 +19,21 @@ import (
 func TestProposeBeaconBlock_Altair(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	altairBlock := generateSignedAltairBlock()
 
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = altairBlock
 
-	jsonAltairBlock := &apimiddleware.SignedBeaconBlockAltairContainerJson{
+	jsonAltairBlock := &shared.SignedBeaconBlockAltair{
 		Signature: hexutil.Encode(altairBlock.Altair.Signature),
-		Message: &apimiddleware.BeaconBlockAltairJson{
+		Message: &shared.BeaconBlockAltair{
 			ParentRoot:    hexutil.Encode(altairBlock.Altair.Block.ParentRoot),
 			ProposerIndex: uint64ToString(altairBlock.Altair.Block.ProposerIndex),
 			Slot:          uint64ToString(altairBlock.Altair.Block.Slot),
 			StateRoot:     hexutil.Encode(altairBlock.Altair.Block.StateRoot),
-			Body: &apimiddleware.BeaconBlockBodyAltairJson{
+			Body: &shared.BeaconBlockBodyAltair{
 				Attestations:      jsonifyAttestations(altairBlock.Altair.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(altairBlock.Altair.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(altairBlock.Altair.Block.Body.Deposits),
@@ -42,7 +42,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(altairBlock.Altair.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(altairBlock.Altair.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(altairBlock.Altair.Block.Body.VoluntaryExits),
-				SyncAggregate: &apimiddleware.SyncAggregateJson{
+				SyncAggregate: &shared.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(altairBlock.Altair.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(altairBlock.Altair.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
@@ -57,7 +57,7 @@ func TestProposeBeaconBlock_Altair(t *testing.T) {
 
 	// Make sure that what we send in the POST body is the marshalled version of the protobuf block
 	headers := map[string]string{"Eth-Consensus-Version": "altair"}
-	jsonRestHandler.EXPECT().PostRestJson(
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		"/eth/v1/beacon/blocks",
 		headers,

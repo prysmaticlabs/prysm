@@ -88,13 +88,17 @@ func (bb *Builder) block(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) [
 // InvalidBlock receives the invalid block and notifies forkchoice.
 func (bb *Builder) InvalidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	require.Equal(t, true, bb.service.ReceiveBlock(context.TODO(), b, r) != nil)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	defer cancel()
+	require.Equal(t, true, bb.service.ReceiveBlock(ctx, b, r, nil) != nil)
 }
 
 // ValidBlock receives the valid block and notifies forkchoice.
 func (bb *Builder) ValidBlock(t testing.TB, b interfaces.ReadOnlySignedBeaconBlock) {
 	r := bb.block(t, b)
-	require.NoError(t, bb.service.ReceiveBlock(context.TODO(), b, r))
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(params.BeaconConfig().SecondsPerSlot)*time.Second)
+	defer cancel()
+	require.NoError(t, bb.service.ReceiveBlock(ctx, b, r, nil))
 }
 
 // PoWBlock receives the block and notifies a mocked execution engine.
@@ -104,7 +108,7 @@ func (bb *Builder) PoWBlock(pb *ethpb.PowBlock) {
 
 // Attestation receives the attestation and updates forkchoice.
 func (bb *Builder) Attestation(t testing.TB, a *ethpb.Attestation) {
-	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconNetworkConfig().MaximumGossipClockDisparity))
+	require.NoError(t, bb.service.OnAttestation(context.TODO(), a, params.BeaconConfig().MaximumGossipClockDisparityDuration()))
 }
 
 // AttesterSlashing receives an attester slashing and feeds it to forkchoice.
@@ -147,5 +151,14 @@ func (bb *Builder) Check(t testing.TB, c *Check) {
 		got := fmt.Sprintf("%#x", bb.service.ProposerBoost())
 		require.DeepEqual(t, want, got)
 	}
-
+	if c.GetProposerHead != nil {
+		want := fmt.Sprintf("%#x", common.FromHex(*c.GetProposerHead))
+		got := fmt.Sprintf("%#x", bb.service.GetProposerHead())
+		require.DeepEqual(t, want, got)
+	}
+	/* TODO: We need to mock the entire proposer system to be able to test this.
+	if c.ShouldOverrideFCU != nil {
+		require.DeepEqual(t, c.ShouldOverrideFCU.Result, bb.service.ShouldOverrideFCU())
+	}
+	*/
 }

@@ -84,7 +84,7 @@ func TestVerifyVerbosely_VerificationThrowsError(t *testing.T) {
 	valid, err := set.VerifyVerbosely()
 	assert.Equal(t, false, valid, "SignatureSet is expected to be invalid")
 	assert.StringContains(t, "signature 'signature of bad0' is invalid", err.Error())
-	assert.StringContains(t, "error: could not unmarshal bytes into signature", err.Error())
+	assert.StringContains(t, "could not unmarshal bytes into signature", err.Error())
 	assert.StringNotContains(t, "signature 'signature of good0' is invalid", err.Error())
 }
 
@@ -704,7 +704,7 @@ func NewInvalidSignatureSet(t *testing.T, msgBody string, num int, throwErr bool
 
 func messageBytes(message string) [32]byte {
 	var bytes [32]byte
-	copy(bytes[:], []byte(message))
+	copy(bytes[:], message)
 	return bytes
 }
 
@@ -737,6 +737,7 @@ func (s sorter) Swap(i, j int) {
 	s.set.Signatures[i], s.set.Signatures[j] = s.set.Signatures[j], s.set.Signatures[i]
 	s.set.PublicKeys[i], s.set.PublicKeys[j] = s.set.PublicKeys[j], s.set.PublicKeys[i]
 	s.set.Messages[i], s.set.Messages[j] = s.set.Messages[j], s.set.Messages[i]
+	s.set.Descriptions[i], s.set.Descriptions[j] = s.set.Descriptions[j], s.set.Descriptions[i]
 }
 
 func (s sorter) Less(i, j int) bool {

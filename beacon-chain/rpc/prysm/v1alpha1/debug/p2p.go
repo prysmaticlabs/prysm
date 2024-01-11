@@ -22,7 +22,7 @@ func (ds *Server) GetPeer(_ context.Context, peerReq *ethpb.PeerRequest) (*ethpb
 	return ds.getPeer(pid)
 }
 
-// ListPeers returns all peers known to the host node, irregardless of if they are connected/
+// ListPeers returns all peers known to the host node, regardless of if they are connected/
 // disconnected.
 func (ds *Server) ListPeers(_ context.Context, _ *empty.Empty) (*ethpb.DebugPeerResponses, error) {
 	var responses []*ethpb.DebugPeerResponse

@@ -13,7 +13,7 @@ import (
 var Commands = &cli.Command{
 	Name:     "slashing-protection-history",
 	Category: "slashing-protection-history",
-	Usage:    "defines commands for interacting your validator's slashing protection history",
+	Usage:    "Defines commands for interacting your validator's slashing protection history.",
 	Subcommands: []*cli.Command{
 		{
 			Name:        "export",
@@ -24,6 +24,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.SepoliaTestnet,
+				features.HoleskyTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {
@@ -51,6 +52,7 @@ var Commands = &cli.Command{
 				features.Mainnet,
 				features.PraterTestnet,
 				features.SepoliaTestnet,
+				features.HoleskyTestnet,
 				cmd.AcceptTosFlag,
 			}),
 			Before: func(cliCtx *cli.Context) error {

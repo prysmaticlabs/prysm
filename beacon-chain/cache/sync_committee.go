@@ -4,12 +4,14 @@ package cache
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -31,8 +33,9 @@ var (
 // SyncCommitteeCache utilizes a FIFO cache to sufficiently cache validator position within sync committee.
 // It is thread safe with concurrent read write.
 type SyncCommitteeCache struct {
-	cache *cache.FIFO
-	lock  sync.RWMutex
+	cache   *cache.FIFO
+	lock    sync.RWMutex
+	cleared *atomic.Uint64
 }
 
 // Index position of all validators in sync committee where `currentSyncCommitteeRoot` is the
@@ -51,9 +54,17 @@ type positionInCommittee struct {
 
 // NewSyncCommittee initializes and returns a new SyncCommitteeCache.
 func NewSyncCommittee() *SyncCommitteeCache {
-	return &SyncCommitteeCache{
-		cache: cache.NewFIFO(keyFn),
-	}
+	c := &SyncCommitteeCache{cleared: &atomic.Uint64{}}
+	c.Clear()
+	return c
+}
+
+// Clear resets the SyncCommitteeCache to its initial state
+func (s *SyncCommitteeCache) Clear() {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.cleared.Add(1)
+	s.cache = cache.NewFIFO(keyFn)
 }
 
 // CurrentPeriodIndexPosition returns current period index position of a validator index with respect with
@@ -123,6 +134,10 @@ func (s *SyncCommitteeCache) idxPositionInCommittee(
 // current epoch and next epoch. This should be called when `current_sync_committee` and `next_sync_committee`
 // change and that happens every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`.
 func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, st state.BeaconState) error {
+	// since we call UpdatePositionsInCommittee asynchronously, keep track of the cache value
+	// seen at the beginning of the routine and compare at the end before updating. If the underlying value has been
+	// cycled (new address), don't update it.
+	clearCount := s.cleared.Load()
 	csc, err := st.CurrentSyncCommittee()
 	if err != nil {
 		return err
@@ -162,6 +177,10 @@ func (s *SyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoo
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	if clearCount != s.cleared.Load() {
+		log.Warn("cache rotated during async committee update operation - abandoning cache update")
+		return nil
+	}
 
 	if err := s.cache.Add(&syncCommitteeIndexPosition{
 		currentSyncCommitteeRoot: syncCommitteeBoundaryRoot,

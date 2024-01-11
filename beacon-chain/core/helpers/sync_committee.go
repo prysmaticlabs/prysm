@@ -25,9 +25,7 @@ var (
 // along with the sync committee root.
 // 1. Checks if the public key exists in the sync committee cache
 // 2. If 1 fails, checks if the public key exists in the input current sync committee object
-func IsCurrentPeriodSyncCommittee(
-	st state.BeaconState, valIdx primitives.ValidatorIndex,
-) (bool, error) {
+func IsCurrentPeriodSyncCommittee(st state.BeaconState, valIdx primitives.ValidatorIndex) (bool, error) {
 	root, err := syncPeriodBoundaryRoot(st)
 	if err != nil {
 		return false, err
@@ -36,7 +34,7 @@ func IsCurrentPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -73,7 +71,7 @@ func IsNextPeriodSyncCommittee(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return false, nil
+			return false, err
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {
@@ -100,7 +98,7 @@ func CurrentPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		committee, err := st.CurrentSyncCommittee()
 		if err != nil {
@@ -134,7 +132,7 @@ func NextPeriodSyncSubcommitteeIndices(
 	if err == cache.ErrNonExistingSyncCommitteeKey {
 		val, err := st.ValidatorAtIndex(valIdx)
 		if err != nil {
-			return nil, nil
+			return nil, err
 		}
 		committee, err := st.NextSyncCommittee()
 		if err != nil {

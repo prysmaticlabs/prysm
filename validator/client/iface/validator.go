@@ -31,7 +31,7 @@ const (
 	RoleAggregator
 	// RoleSyncCommittee means that the validator should submit a sync committee message.
 	RoleSyncCommittee
-	// RoleSyncCommitteeAggregator means the valiator should aggregate sync committee messages and submit a sync committee contribution.
+	// RoleSyncCommitteeAggregator means the validator should aggregate sync committee messages and submit a sync committee contribution.
 	RoleSyncCommitteeAggregator
 )
 
@@ -56,15 +56,14 @@ type Validator interface {
 	LogSyncCommitteeMessagesSubmitted()
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
-	AllValidatorsAreExited(ctx context.Context) (bool, error)
 	Keymanager() (keymanager.IKeymanager, error)
-	ReceiveBlocks(ctx context.Context, connectionErrorChannel chan<- error)
+	ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
-	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, deadline time.Time) error
+	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
-	SetProposerSettings(*validatorserviceconfig.ProposerSettings)
+	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

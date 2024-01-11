@@ -97,7 +97,6 @@ func (vs *Server) canonicalEth1Data(
 	ctx context.Context,
 	beaconState state.BeaconState,
 	currentVote *ethpb.Eth1Data) (*ethpb.Eth1Data, *big.Int, error) {
-
 	var eth1BlockHash [32]byte
 
 	// Add in current vote, to get accurate vote tally

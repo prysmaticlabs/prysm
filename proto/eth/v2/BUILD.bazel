@@ -8,8 +8,6 @@ load("@rules_proto//proto:defs.bzl", "proto_library")
 proto_library(
     name = "proto",
     srcs = [
-        "beacon_block.proto",
-        "beacon_chain.proto",
         "ssz.proto",
         "version.proto",
         ":ssz_proto_files",
@@ -45,7 +43,14 @@ ssz_gen_marshal(
         "SignedBlindedBeaconBlockBellatrix",
         "SignedBeaconBlockCapella",
         "SignedBlindedBeaconBlockCapella",
+        "SignedBeaconBlockDeneb",
+        "SignedBlindedBeaconBlockDeneb",
+        "BlsToExecutionChange",
         "SignedBlsToExecutionChange",
+        "SignedBeaconBlockContentsDeneb",
+        "BeaconBlockContentsDeneb",
+        "SyncCommittee",
+        "BlobIdentifier",
     ],
 )
 
@@ -92,6 +97,8 @@ go_library(
 ssz_proto_files(
     name = "ssz_proto_files",
     srcs = [
+        "beacon_block.proto",
+        "beacon_lightclient.proto",
         "beacon_state.proto",
         "sync_committee.proto",
         "validator.proto",

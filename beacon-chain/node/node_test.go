@@ -4,6 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/monitor"
@@ -32,6 +35,12 @@ import (
 // Ensure BeaconNode implements interfaces.
 var _ statefeed.Notifier = (*BeaconNode)(nil)
 
+func newCliContextWithCancel(app *cli.App, set *flag.FlagSet) (*cli.Context, context.CancelFunc) {
+	context, cancel := context.WithCancel(context.Background())
+	parent := &cli.Context{Context: context}
+	return cli.NewContext(app, set, parent), cancel
+}
+
 // Test that beacon chain node can close.
 func TestNodeClose_OK(t *testing.T) {
 	hook := logTest.NewGlobal()
@@ -48,9 +57,9 @@ func TestNodeClose_OK(t *testing.T) {
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 	cmd.ValidatorMonitorIndicesFlag.Value = &cli.IntSlice{}
 	cmd.ValidatorMonitorIndicesFlag.Value.SetInt(1)
-	ctx := cli.NewContext(&app, set, nil)
+	ctx, cancel := newCliContextWithCancel(&app, set)
 
-	node, err := New(ctx)
+	node, err := New(ctx, cancel, WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 
 	node.Close()
@@ -67,10 +76,11 @@ func TestNodeStart_Ok(t *testing.T) {
 	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
 
-	ctx := cli.NewContext(&app, set, nil)
-	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
+	ctx, cancel := newCliContextWithCancel(&app, set)
+	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithExecutionChainOptions([]execution.Option{}))
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -79,7 +89,6 @@ func TestNodeStart_Ok(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	node.Close()
 	require.LogsContain(t, hook, "Starting beacon node")
-
 }
 
 func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
@@ -115,10 +124,11 @@ func TestNodeStart_Ok_registerDeterministicGenesisService(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile("genesis_ssz.json", genesisBytes, 0666))
 	set.String("genesis-state", "genesis_ssz.json", "")
-	ctx := cli.NewContext(&app, set, nil)
-	node, err := New(ctx, WithBlockchainFlagOptions([]blockchain.Option{}),
+	ctx, cancel := newCliContextWithCancel(&app, set)
+	node, err := New(ctx, cancel, WithBlockchainFlagOptions([]blockchain.Option{}),
 		WithBuilderFlagOptions([]builder.Option{}),
-		WithExecutionChainOptions([]execution.Option{}))
+		WithExecutionChainOptions([]execution.Option{}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)))
 	require.NoError(t, err)
 	node.services = &runtime.ServiceRegistry{}
 	go func() {
@@ -147,12 +157,13 @@ func TestClearDB(t *testing.T) {
 	set.Bool(cmd.ForceClearDB.Name, true, "force clear db")
 	set.String("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A", "fee recipient")
 	require.NoError(t, set.Set("suggested-fee-recipient", "0x6e35733c5af9B61374A128e6F85f553aF09ff89A"))
-	context := cli.NewContext(&app, set, nil)
-	_, err = New(context, WithExecutionChainOptions([]execution.Option{
-		execution.WithHttpEndpoint(endpoint),
-	}))
+	context, cancel := newCliContextWithCancel(&app, set)
+	options := []Option{
+		WithExecutionChainOptions([]execution.Option{execution.WithHttpEndpoint(endpoint)}),
+		WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
+	}
+	_, err = New(context, cancel, options...)
 	require.NoError(t, err)
-
 	require.LogsContain(t, hook, "Removing database")
 }
 
@@ -164,7 +175,7 @@ func TestMonitor_RegisteredCorrectly(t *testing.T) {
 	require.NoError(t, cliCtx.Set(cmd.ValidatorMonitorIndicesFlag.Name, "1,2"))
 	n := &BeaconNode{ctx: context.Background(), cliCtx: cliCtx, services: runtime.NewServiceRegistry()}
 	require.NoError(t, n.services.RegisterService(&blockchain.Service{}))
-	require.NoError(t, n.registerValidatorMonitorService())
+	require.NoError(t, n.registerValidatorMonitorService(make(chan struct{})))
 
 	var mService *monitor.Service
 	require.NoError(t, n.services.FetchService(&mService))
@@ -210,6 +221,53 @@ func Test_hasNetworkFlag(t *testing.T) {
 
 			if got := hasNetworkFlag(cliCtx); got != tt.want {
 				t.Errorf("hasNetworkFlag() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCORS(t *testing.T) {
+	// Mock CLI context with a test CORS domain
+	app := cli.App{}
+	set := flag.NewFlagSet("test", 0)
+	set.String(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com", "")
+	cliCtx := cli.NewContext(&app, set, nil)
+	require.NoError(t, cliCtx.Set(flags.GPRCGatewayCorsDomain.Name, "http://allowed-example.com"))
+
+	router := newRouter(cliCtx)
+
+	// Ensure a test route exists
+	router.HandleFunc("/some-path", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}).Methods(http.MethodGet)
+
+	// Define test cases
+	tests := []struct {
+		name        string
+		origin      string
+		expectAllow bool
+	}{
+		{"AllowedOrigin", "http://allowed-example.com", true},
+		{"DisallowedOrigin", "http://disallowed-example.com", false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			// Create a request and response recorder
+			req := httptest.NewRequest("GET", "http://example.com/some-path", nil)
+			req.Header.Set("Origin", tc.origin)
+			rr := httptest.NewRecorder()
+
+			// Serve HTTP
+			router.ServeHTTP(rr, req)
+
+			// Check the CORS headers based on the expected outcome
+			if tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != tc.origin {
+				t.Errorf("Expected Access-Control-Allow-Origin header to be %v, got %v", tc.origin, rr.Header().Get("Access-Control-Allow-Origin"))
+			}
+			if !tc.expectAllow && rr.Header().Get("Access-Control-Allow-Origin") != "" {
+				t.Errorf("Expected Access-Control-Allow-Origin header to be empty for disallowed origin, got %v", rr.Header().Get("Access-Control-Allow-Origin"))
 			}
 		})
 	}

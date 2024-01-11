@@ -364,7 +364,6 @@ func printStates(stateC <-chan *modifiedState, doneC chan<- bool) {
 		log.Infof("previous_justified_checkpoint : sizeSSZ = %s", humanize.Bytes(uint64(st.PreviousJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("current_justified_checkpoint  : sizeSSZ = %s", humanize.Bytes(uint64(st.CurrentJustifiedCheckpoint().SizeSSZ())))
 		log.Infof("finalized_checkpoint          : sizeSSZ = %s", humanize.Bytes(uint64(st.FinalizedCheckpoint().SizeSSZ())))
-
 	}
 	doneC <- true
 }

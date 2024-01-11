@@ -127,7 +127,6 @@ func (p *Pool) InsertBLSToExecChange(change *ethpb.SignedBLSToExecutionChange) {
 	p.m[change.Message.ValidatorIndex] = p.pending.Last()
 
 	blsToExecMessageInPoolTotal.Inc()
-
 }
 
 // MarkIncluded is used when an object has been included in a beacon block. Every block seen by this

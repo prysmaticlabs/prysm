@@ -2,19 +2,23 @@ package forkchoice
 
 import (
 	"context"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	gethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -31,8 +35,8 @@ func startChainService(t testing.TB,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	engineMock *engineMock,
 ) *blockchain.Service {
-	db := testDB.SetupDB(t)
 	ctx := context.Background()
+	db := testDB.SetupDB(t)
 	require.NoError(t, db.SaveBlock(ctx, block))
 	r, err := block.Block().HashTreeRoot()
 	require.NoError(t, err)
@@ -64,10 +68,15 @@ func startChainService(t testing.TB,
 		blockchain.WithStateNotifier(&mock.MockStateNotifier{}),
 		blockchain.WithAttestationPool(attestations.NewPool()),
 		blockchain.WithDepositCache(depositCache),
-		blockchain.WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
+		blockchain.WithTrackedValidatorsCache(cache.NewTrackedValidatorsCache()),
+		blockchain.WithPayloadIDCache(cache.NewPayloadIDCache()),
+		blockchain.WithClockSynchronizer(startup.NewClockSynchronizer()),
+		blockchain.WithBlobStorage(filesystem.NewEphemeralBlobStorage(t)),
 	)
 	service, err := blockchain.NewService(context.Background(), opts...)
 	require.NoError(t, err)
+	// force start kzg context here until Deneb fork epoch is decided
+	require.NoError(t, kzg.Start())
 	require.NoError(t, service.StartFromSavedState(st))
 	return service
 }
@@ -78,23 +87,26 @@ type engineMock struct {
 	payloadStatus   error
 }
 
-func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, error) {
+func (m *engineMock) GetPayload(context.Context, [8]byte, primitives.Slot) (interfaces.ExecutionData, *pb.BlobsBundle, bool, error) {
+	return nil, nil, false, nil
+}
+func (m *engineMock) GetPayloadV2(context.Context, [8]byte) (*pb.ExecutionPayloadCapella, error) {
 	return nil, nil
 }
-
 func (m *engineMock) ForkchoiceUpdated(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
 	return nil, m.latestValidHash, m.payloadStatus
 }
-func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData) ([]byte, error) {
+
+func (m *engineMock) NewPayload(context.Context, interfaces.ExecutionData, []common.Hash, *common.Hash) ([]byte, error) {
 	return m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) LatestExecutionBlock() (*pb.ExecutionBlock, error) {
-	return nil, nil
+func (m *engineMock) ForkchoiceUpdatedV2(context.Context, *pb.ForkchoiceState, payloadattribute.Attributer) (*pb.PayloadIDBytes, []byte, error) {
+	return nil, m.latestValidHash, m.payloadStatus
 }
 
-func (m *engineMock) ExchangeTransitionConfiguration(context.Context, *pb.TransitionConfiguration) error {
-	return nil
+func (m *engineMock) LatestExecutionBlock(context.Context) (*pb.ExecutionBlock, error) {
+	return nil, nil
 }
 
 func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _ bool) (*pb.ExecutionBlock, error) {
@@ -103,7 +115,7 @@ func (m *engineMock) ExecutionBlockByHash(_ context.Context, hash common.Hash, _
 		return nil, nil
 	}
 
-	td := bytesutil.LittleEndianBytesToBigInt(b.TotalDifficulty)
+	td := new(big.Int).SetBytes(bytesutil.ReverseByteOrder(b.TotalDifficulty))
 	tdHex := hexutil.EncodeBig(td)
 	return &pb.ExecutionBlock{
 		Header: gethtypes.Header{

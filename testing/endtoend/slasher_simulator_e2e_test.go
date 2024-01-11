@@ -9,6 +9,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockslashings "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	mockstategen "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen/mock"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -84,9 +85,10 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 	require.NoError(t, err)
 
 	mockChain := &mock.ChainService{State: beaconState}
-	gen := mockstategen.NewMockService()
+	gen := mockstategen.NewService()
 	gen.AddStateForRoot(beaconState, [32]byte{})
 
+	gs := startup.NewClockSynchronizer()
 	sim, err := slashersimulator.New(ctx, &slashersimulator.ServiceConfig{
 		Params:                      simulatorParams,
 		Database:                    slasherDB,
@@ -97,6 +99,8 @@ func TestEndToEnd_SlasherSimulator(t *testing.T) {
 		PrivateKeysByValidatorIndex: privKeys,
 		SlashingsPool:               &mockslashings.PoolMock{},
 		SyncChecker:                 mockSyncChecker{},
+		ClockWaiter:                 gs,
+		ClockSetter:                 gs,
 	})
 	require.NoError(t, err)
 	sim.Start()

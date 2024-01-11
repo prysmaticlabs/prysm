@@ -18,6 +18,8 @@ package file_test
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -45,14 +47,6 @@ func TestPathExpansion(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expected, expanded)
 	}
-}
-
-func TestMkdirAll_AlreadyExists_WrongPermissions(t *testing.T) {
-	dirName := t.TempDir() + "somedir"
-	err := os.MkdirAll(dirName, os.ModePerm)
-	require.NoError(t, err)
-	err = file.MkdirAll(dirName)
-	assert.ErrorContains(t, "already exists without proper 0700 permissions", err)
 }
 
 func TestMkdirAll_AlreadyExists_Override(t *testing.T) {
@@ -131,7 +125,7 @@ func TestWriteFile_OK(t *testing.T) {
 	require.NoError(t, err)
 	someFileName := filepath.Join(dirName, "somefile.txt")
 	require.NoError(t, file.WriteFile(someFileName, []byte("hi")))
-	exists := file.FileExists(someFileName)
+	exists := file.Exists(someFileName)
 	assert.Equal(t, true, exists)
 }
 
@@ -182,8 +176,8 @@ func TestCopyDir(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(tmpDir1, "subfolder2"), 0777))
 	for _, fd := range fds {
 		require.NoError(t, file.WriteFile(filepath.Join(tmpDir1, fd.path), fd.content))
-		assert.Equal(t, true, file.FileExists(filepath.Join(tmpDir1, fd.path)))
-		assert.Equal(t, false, file.FileExists(filepath.Join(tmpDir2, fd.path)))
+		assert.Equal(t, true, file.Exists(filepath.Join(tmpDir1, fd.path)))
+		assert.Equal(t, false, file.Exists(filepath.Join(tmpDir2, fd.path)))
 	}
 
 	// Make sure that files are copied into non-existent directory only. If directory exists function exits.
@@ -192,7 +186,7 @@ func TestCopyDir(t *testing.T) {
 
 	// Now, all files should have been copied.
 	for _, fd := range fds {
-		assert.Equal(t, true, file.FileExists(filepath.Join(tmpDir2, fd.path)))
+		assert.Equal(t, true, file.Exists(filepath.Join(tmpDir2, fd.path)))
 		assert.Equal(t, true, deepCompare(t, filepath.Join(tmpDir1, fd.path), filepath.Join(tmpDir2, fd.path)))
 	}
 	assert.Equal(t, true, file.DirsEqual(tmpDir1, tmpDir2))
@@ -242,6 +236,26 @@ func TestHashDir(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "hashdir:oSp9wRacwTIrnbgJWcwTvihHfv4B2zRbLYa0GZ7DDk0=", hash)
 	})
+}
+
+func TestHashFile(t *testing.T) {
+	originalData := []byte("test data")
+	originalChecksum := sha256.Sum256(originalData)
+
+	tempDir := t.TempDir()
+	tempfile, err := os.CreateTemp(tempDir, "testfile")
+	require.NoError(t, err)
+	_, err = tempfile.Write(originalData)
+	require.NoError(t, err)
+	err = tempfile.Close()
+	require.NoError(t, err)
+
+	// Calculate the checksum of the temporary file
+	checksum, err := file.HashFile(tempfile.Name())
+	require.NoError(t, err)
+
+	// Ensure the calculated checksum matches the original checksum
+	require.Equal(t, hex.EncodeToString(originalChecksum[:]), hex.EncodeToString(checksum))
 }
 
 func TestDirFiles(t *testing.T) {

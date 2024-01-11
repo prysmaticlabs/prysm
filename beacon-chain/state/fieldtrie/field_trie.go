@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stateutil"
+	multi_value_slice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	pmath "github.com/prysmaticlabs/prysm/v4/math"
 )
 
@@ -14,6 +15,14 @@ var (
 	ErrInvalidFieldTrie = errors.New("invalid field trie")
 	ErrEmptyFieldTrie   = errors.New("empty field trie")
 )
+
+// sliceAccessor describes an interface for a multivalue slice
+// object that returns information about the multivalue slice along with the
+// particular state instance we are referencing.
+type sliceAccessor interface {
+	Len(obj multi_value_slice.Identifiable) int
+	State() multi_value_slice.Identifiable
+}
 
 // FieldTrie is the representation of the representative
 // trie of the particular field.
@@ -31,11 +40,11 @@ type FieldTrie struct {
 // NewFieldTrie is the constructor for the field trie data structure. It creates the corresponding
 // trie according to the given parameters. Depending on whether the field is a basic/composite array
 // which is either fixed/variable length, it will appropriately determine the trie.
-func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
+func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements interface{}, length uint64) (*FieldTrie, error) {
 	if elements == nil {
 		return &FieldTrie{
 			field:      field,
-			dataType:   dataType,
+			dataType:   fieldInfo,
 			reference:  stateutil.NewRef(1),
 			RWMutex:    new(sync.RWMutex),
 			length:     length,
@@ -48,10 +57,16 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		return nil, err
 	}
 
-	if err := validateElements(field, dataType, elements, length); err != nil {
+	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	switch dataType {
+	numOfElems := 0
+	if val, ok := elements.(sliceAccessor); ok {
+		numOfElems = val.Len(val.State())
+	} else {
+		numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+	}
+	switch fieldInfo {
 	case types.BasicArray:
 		fl, err := stateutil.ReturnTrieLayer(fieldRoots, length)
 		if err != nil {
@@ -60,26 +75,25 @@ func NewFieldTrie(field types.FieldIndex, dataType types.DataType, elements inte
 		return &FieldTrie{
 			fieldLayers: fl,
 			field:       field,
-			dataType:    dataType,
+			dataType:    fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  numOfElems,
 		}, nil
 	case types.CompositeArray, types.CompressedArray:
 		return &FieldTrie{
 			fieldLayers: stateutil.ReturnTrieLayerVariable(fieldRoots, length),
 			field:       field,
-			dataType:    dataType,
+			dataType:    fieldInfo,
 			reference:   stateutil.NewRef(1),
 			RWMutex:     new(sync.RWMutex),
 			length:      length,
-			numOfElems:  reflect.Indirect(reflect.ValueOf(elements)).Len(),
+			numOfElems:  numOfElems,
 		}, nil
 	default:
-		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(dataType).Name())
+		return nil, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(fieldInfo).Name())
 	}
-
 }
 
 // RecomputeTrie rebuilds the affected branches in the trie according to the provided
@@ -101,20 +115,23 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 	if err := f.validateIndices(indices); err != nil {
 		return [32]byte{}, err
 	}
+	if val, ok := elements.(sliceAccessor); ok {
+		f.numOfElems = val.Len(val.State())
+	} else {
+		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
+	}
 	switch f.dataType {
 	case types.BasicArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayer(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return fieldRoot, nil
 	case types.CompositeArray:
 		fieldRoot, f.fieldLayers, err = stateutil.RecomputeFromLayerVariable(fieldRoots, indices, f.fieldLayers)
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return stateutil.AddInMixin(fieldRoot, uint64(len(f.fieldLayers[0])))
 	case types.CompressedArray:
 		numOfElems, err := f.field.ElemsInChunk()
@@ -143,7 +160,6 @@ func (f *FieldTrie) RecomputeTrie(indices []uint64, elements interface{}) ([32]b
 		if err != nil {
 			return [32]byte{}, err
 		}
-		f.numOfElems = reflect.Indirect(reflect.ValueOf(elements)).Len()
 		return stateutil.AddInMixin(fieldRoot, uint64(f.numOfElems))
 	default:
 		return [32]byte{}, errors.Errorf("unrecognized data type in field map: %v", reflect.TypeOf(f.dataType).Name())

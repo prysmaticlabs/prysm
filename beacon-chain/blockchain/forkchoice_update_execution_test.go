@@ -8,8 +8,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	mockExecution "github.com/prysmaticlabs/prysm/v4/beacon-chain/execution/testing"
-	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -18,15 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
-
-func TestService_isNewProposer(t *testing.T) {
-	beaconDB := testDB.SetupDB(t)
-	service := setupBeaconChain(t, beaconDB)
-	require.Equal(t, false, service.isNewProposer(service.CurrentSlot()+1))
-
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
-	require.Equal(t, true, service.isNewProposer(service.CurrentSlot()+1))
-}
 
 func TestService_isNewHead(t *testing.T) {
 	beaconDB := testDB.SetupDB(t)
@@ -69,31 +58,14 @@ func TestService_getHeadStateAndBlock(t *testing.T) {
 }
 
 func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
-	hook := logTest.NewGlobal()
 	ctx := context.Background()
 	opts := testServiceOptsWithDB(t)
 
 	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
-	service.cfg.ProposerSlotIndexCache = cache.NewProposerPayloadIDsCache()
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, service.headRoot(), service.CurrentSlot()+1))
-	hookErr := "could not notify forkchoice update"
-	invalidStateErr := "could not get state summary: could not find block in DB"
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-	gb, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlock())
-	require.NoError(t, err)
-	require.NoError(t, service.saveInitSyncBlock(ctx, [32]byte{'a'}, gb))
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{'a'}, service.CurrentSlot()+1))
-	require.LogsContain(t, hook, invalidStateErr)
+	service.cfg.PayloadIDCache = cache.NewPayloadIDCache()
+	service.cfg.TrackedValidatorsCache = cache.NewTrackedValidatorsCache()
 
-	hook.Reset()
-	service.head = &head{
-		root:  [32]byte{'a'},
-		block: nil, /* should not panic if notify head uses correct head */
-	}
-
-	// Block in Cache
 	b := util.NewBeaconBlock()
 	b.Block.Slot = 2
 	wsb, err := blocks.NewSignedBeaconBlock(b)
@@ -107,12 +79,7 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()))
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-
-	// Block in DB
+	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
 	b = util.NewBeaconBlock()
 	b.Block.Slot = 3
 	util.SaveBlock(t, ctx, service.cfg.BeaconDB, b)
@@ -124,38 +91,29 @@ func TestService_forkchoiceUpdateWithExecution_exceptionalCases(t *testing.T) {
 		block: wsb,
 		state: st,
 	}
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(2, 1, [8]byte{1}, [32]byte{2})
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r1, service.CurrentSlot()+1))
-	require.LogsDoNotContain(t, hook, invalidStateErr)
-	require.LogsDoNotContain(t, hook, hookErr)
-	vId, payloadID, has := service.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(2, [32]byte{2})
-	require.Equal(t, true, has)
-	require.Equal(t, primitives.ValidatorIndex(1), vId)
-	require.Equal(t, [8]byte{1}, payloadID)
+	service.cfg.PayloadIDCache.Set(2, [32]byte{2}, [8]byte{1})
+	args := &fcuConfig{
+		headState:     st,
+		headRoot:      r1,
+		headBlock:     wsb,
+		proposingSlot: service.CurrentSlot() + 1,
+	}
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, args))
 
-	// Test zero headRoot returns immediately.
-	headRoot := service.headRoot()
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, [32]byte{}, service.CurrentSlot()+1))
-	require.Equal(t, service.headRoot(), headRoot)
+	payloadID, has := service.cfg.PayloadIDCache.PayloadID(2, [32]byte{2})
+	require.Equal(t, true, has)
+	require.Equal(t, primitives.PayloadID{1}, payloadID)
 }
 
 func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
+	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
+
 	altairBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockAltair())
 	altairBlkRoot, err := altairBlk.Block().HashTreeRoot()
 	require.NoError(t, err)
 	bellatrixBlk := util.SaveBlock(t, ctx, beaconDB, util.NewBeaconBlockBellatrix())
 	bellatrixBlkRoot, err := bellatrixBlk.Block().HashTreeRoot()
-	require.NoError(t, err)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
 	require.NoError(t, err)
 	st, _ := util.DeterministicGenesisState(t, 10)
 	service.head = &head{
@@ -187,25 +145,22 @@ func TestService_forkchoiceUpdateWithExecution_SameHeadRootNewProposer(t *testin
 	service.head.root = r
 	service.head.block = sb
 	service.head.state = st
-	service.cfg.ProposerSlotIndexCache.SetProposerAndPayloadIDs(service.CurrentSlot()+1, 0, [8]byte{}, [32]byte{} /* root */)
-	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, r, service.CurrentSlot()+1))
-
+	service.cfg.PayloadIDCache.Set(service.CurrentSlot()+1, [32]byte{} /* root */, [8]byte{})
+	args := &fcuConfig{
+		headState:     st,
+		headBlock:     sb,
+		headRoot:      r,
+		proposingSlot: service.CurrentSlot() + 1,
+	}
+	require.NoError(t, service.forkchoiceUpdateWithExecution(ctx, args))
 }
 
 func TestShouldOverrideFCU(t *testing.T) {
 	hook := logTest.NewGlobal()
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-		WithForkChoiceStore(fcs),
-		WithProposerIdsCache(cache.NewProposerPayloadIDsCache()),
-	}
-	service, err := NewService(ctx, opts...)
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
+
 	service.SetGenesisTime(time.Now().Add(-time.Duration(2*params.BeaconConfig().SecondsPerSlot) * time.Second))
-	require.NoError(t, err)
 	headRoot := [32]byte{'b'}
 	parentRoot := [32]byte{'a'}
 	ojc := &ethpb.Checkpoint{}

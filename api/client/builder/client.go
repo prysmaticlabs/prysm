@@ -6,21 +6,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/big"
 	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/network"
-	"github.com/prysmaticlabs/prysm/v4/network/authorization"
+	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +36,6 @@ const (
 var errMalformedHostname = errors.New("hostname must include port, separated by one colon, like example.com:3500")
 var errMalformedRequest = errors.New("required request data are missing")
 var errNotBlinded = errors.New("submitted block is not blinded")
-var submitBlindedBlockTimeout = 3 * time.Second
 
 // ClientOpt is a functional option for the Client type (http.Client wrapper)
 type ClientOpt func(*Client)
@@ -89,7 +87,7 @@ type BuilderClient interface {
 	NodeURL() string
 	GetHeader(ctx context.Context, slot primitives.Slot, parentHash [32]byte, pubkey [48]byte) (SignedBid, error)
 	RegisterValidator(ctx context.Context, svr []*ethpb.SignedValidatorRegistrationV1) error
-	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error)
+	SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, *v1.BlobsBundle, error)
 	Status(ctx context.Context) error
 }
 
@@ -104,8 +102,7 @@ type Client struct {
 // `host` is the base host + port used to construct request urls. This value can be
 // a URL string, or NewClient will assume an http endpoint if just `host:port` is used.
 func NewClient(host string, opts ...ClientOpt) (*Client, error) {
-	endpoint := covertEndPoint(host)
-	u, err := urlForHost(endpoint.Url)
+	u, err := urlForHost(host)
 	if err != nil {
 		return nil, err
 	}
@@ -121,8 +118,7 @@ func NewClient(host string, opts ...ClientOpt) (*Client, error) {
 
 func urlForHost(h string) (*url.URL, error) {
 	// try to parse as url (being permissive)
-	u, err := url.Parse(h)
-	if err == nil && u.Host != "" {
+	if u, err := url.Parse(h); err == nil && u.Host != "" {
 		return u, nil
 	}
 	// try to parse as host:port
@@ -140,7 +136,7 @@ func (c *Client) NodeURL() string {
 
 type reqOption func(*http.Request)
 
-// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder/types.go.
+// do is a generic, opinionated request function to reduce boilerplate amongst the methods in this package api/client/builder.
 func (c *Client) do(ctx context.Context, method string, path string, body io.Reader, opts ...reqOption) (res []byte, err error) {
 	ctx, span := trace.StartSpan(ctx, "builder.client.do")
 	defer func() {
@@ -223,6 +219,16 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 		return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
 	}
 	switch strings.ToLower(v.Version) {
+	case strings.ToLower(version.String(version.Deneb)):
+		hr := &ExecHeaderResponseDeneb{}
+		if err := json.Unmarshal(hb, hr); err != nil {
+			return nil, errors.Wrapf(err, "error unmarshaling the builder GetHeader response, using slot=%d, parentHash=%#x, pubkey=%#x", slot, parentHash, pubkey)
+		}
+		p, err := hr.ToProto()
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not extract proto message from header")
+		}
+		return WrappedSignedBuilderBidDeneb(p)
 	case strings.ToLower(version.String(version.Capella)):
 		hr := &ExecHeaderResponseCapella{}
 		if err := json.Unmarshal(hb, hr); err != nil {
@@ -246,7 +252,6 @@ func (c *Client) GetHeader(ctx context.Context, slot primitives.Slot, parentHash
 	default:
 		return nil, fmt.Errorf("unsupported header version %s", strings.ToLower(v.Version))
 	}
-
 }
 
 // RegisterValidator encodes the SignedValidatorRegistrationV1 message to json (including hex-encoding the byte
@@ -261,9 +266,9 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	vs := make([]*SignedValidatorRegistration, len(svr))
+	vs := make([]*shared.SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
-		vs[i] = &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr[i]}
+		vs[i] = shared.SignedValidatorRegistrationFromConsensus(svr[i])
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {
@@ -278,73 +283,124 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 
 // SubmitBlindedBlock calls the builder API endpoint that binds the validator to the builder and submits the block.
 // The response is the full execution payload used to create the blinded block.
-func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, error) {
+func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlySignedBeaconBlock) (interfaces.ExecutionData, *v1.BlobsBundle, error) {
 	if !sb.IsBlinded() {
-		return nil, errNotBlinded
+		return nil, nil, errNotBlinded
 	}
 	switch sb.Version() {
 	case version.Bellatrix:
 		psb, err := sb.PbBlindedBellatrixBlock()
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get protobuf block")
+			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b := &SignedBlindedBeaconBlockBellatrix{SignedBlindedBeaconBlockBellatrix: psb}
+		b, err := shared.SignedBlindedBeaconBlockBellatrixFromConsensus(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockBellatrix to json marshalable type")
+		}
 		body, err := json.Marshal(b)
 		if err != nil {
-			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
+			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockBellatrix value body in SubmitBlindedBlock")
 		}
-
-		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-		defer cancel()
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Bellatrix))
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
+			return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockBellatrix to the builder api")
 		}
 		ep := &ExecPayloadResponse{}
 		if err := json.Unmarshal(rb, ep); err != nil {
-			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+			return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlock response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Bellatrix) {
+			return nil, nil, errors.New("not a bellatrix payload")
 		}
 		p, err := ep.ToProto()
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not extract proto message from payload")
+			return nil, nil, errors.Wrapf(err, "could not extract proto message from payload")
 		}
-		return blocks.WrappedExecutionPayload(p)
+		payload, err := blocks.WrappedExecutionPayload(p)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not wrap execution payload in interface")
+		}
+		return payload, nil, nil
 	case version.Capella:
 		psb, err := sb.PbBlindedCapellaBlock()
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get protobuf block")
+			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b := &SignedBlindedBeaconBlockCapella{SignedBlindedBeaconBlockCapella: psb}
+		b, err := shared.SignedBlindedBeaconBlockCapellaFromConsensus(&ethpb.SignedBlindedBeaconBlockCapella{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockCapella to json marshalable type")
+		}
 		body, err := json.Marshal(b)
 		if err != nil {
-			return nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
+			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockCapella value body in SubmitBlindedBlockCapella")
 		}
-
-		ctx, cancel := context.WithTimeout(ctx, submitBlindedBlockTimeout)
-		defer cancel()
 		versionOpt := func(r *http.Request) {
 			r.Header.Add("Eth-Consensus-Version", version.String(version.Capella))
 		}
 		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockCapella to the builder api")
+			return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockCapella to the builder api")
 		}
 		ep := &ExecPayloadResponseCapella{}
 		if err := json.Unmarshal(rb, ep); err != nil {
-			return nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
+			return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockCapella response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Capella) {
+			return nil, nil, errors.New("not a capella payload")
 		}
 		p, err := ep.ToProto()
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not extract proto message from payload")
+			return nil, nil, errors.Wrapf(err, "could not extract proto message from payload")
 		}
-		return blocks.WrappedExecutionPayloadCapella(p, big.NewInt(0))
+		payload, err := blocks.WrappedExecutionPayloadCapella(p, 0)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not wrap execution payload in interface")
+		}
+		return payload, nil, nil
+	case version.Deneb:
+		psb, err := sb.PbBlindedDenebBlock()
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
+		}
+		b, err := shared.SignedBlindedBeaconBlockDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockDeneb{Message: psb.Message, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockDeneb to json marshalable type")
+		}
+		body, err := json.Marshal(b)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error encoding the SignedBlindedBeaconBlockDeneb value body in SubmitBlindedBlockDeneb")
+		}
+
+		versionOpt := func(r *http.Request) {
+			r.Header.Add("Eth-Consensus-Version", version.String(version.Deneb))
+		}
+		rb, err := c.do(ctx, http.MethodPost, postBlindedBeaconBlockPath, bytes.NewBuffer(body), versionOpt)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "error posting the SignedBlindedBeaconBlockDeneb to the builder api")
+		}
+		ep := &ExecPayloadResponseDeneb{}
+		if err := json.Unmarshal(rb, ep); err != nil {
+			return nil, nil, errors.Wrap(err, "error unmarshaling the builder SubmitBlindedBlockDeneb response")
+		}
+		if strings.ToLower(ep.Version) != version.String(version.Deneb) {
+			return nil, nil, errors.New("not a deneb payload")
+		}
+		p, blobBundle, err := ep.ToProto()
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not extract proto message from payload")
+		}
+		payload, err := blocks.WrappedExecutionPayloadDeneb(p, 0)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "could not wrap execution payload in interface")
+		}
+		return payload, blobBundle, nil
 	default:
-		return nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
+		return nil, nil, fmt.Errorf("unsupported block version %s", version.String(sb.Version()))
 	}
 }
 
@@ -367,38 +423,29 @@ func non200Err(response *http.Response) error {
 	}
 	msg := fmt.Sprintf("code=%d, url=%s, body=%s", response.StatusCode, response.Request.URL, body)
 	switch response.StatusCode {
-	case 204:
+	case http.StatusNoContent:
 		log.WithError(ErrNoContent).Debug(msg)
 		return ErrNoContent
-	case 400:
-		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			return errors.Wrap(jsonErr, "unable to read response body")
-		}
+	case http.StatusBadRequest:
 		log.WithError(ErrBadRequest).Debug(msg)
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		return errors.Wrap(ErrBadRequest, errMessage.Message)
-	case 404:
-		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
-			return errors.Wrap(jsonErr, "unable to read response body")
-		}
+	case http.StatusNotFound:
 		log.WithError(ErrNotFound).Debug(msg)
-		return errors.Wrap(ErrNotFound, errMessage.Message)
-	case 500:
 		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
 			return errors.Wrap(jsonErr, "unable to read response body")
 		}
+		return errors.Wrap(ErrNotFound, errMessage.Message)
+	case http.StatusInternalServerError:
 		log.WithError(ErrNotOK).Debug(msg)
+		if jsonErr := json.Unmarshal(bodyBytes, &errMessage); jsonErr != nil {
+			return errors.Wrap(jsonErr, "unable to read response body")
+		}
 		return errors.Wrap(ErrNotOK, errMessage.Message)
 	default:
 		log.WithError(ErrNotOK).Debug(msg)
 		return errors.Wrap(ErrNotOK, fmt.Sprintf("unsupported error code: %d", response.StatusCode))
 	}
-}
-
-func covertEndPoint(ep string) network.Endpoint {
-	return network.Endpoint{
-		Url: ep,
-		Auth: network.AuthorizationData{ // Auth is not used for builder.
-			Method: authorization.None,
-			Value:  "",
-		}}
 }

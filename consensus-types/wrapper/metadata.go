@@ -72,7 +72,7 @@ func (m MetadataV0) MetadataObjV0() *pb.MetaDataV0 {
 	return m.md
 }
 
-// MetadataObjV1 returns the inner metatdata object in its type
+// MetadataObjV1 returns the inner metadata object in its type
 // specified form. If it doesn't exist then we return nothing.
 func (_ MetadataV0) MetadataObjV1() *pb.MetaDataV1 {
 	return nil
@@ -147,7 +147,7 @@ func (_ MetadataV1) MetadataObjV0() *pb.MetaDataV0 {
 	return nil
 }
 
-// MetadataObjV1 returns the inner metatdata object in its type
+// MetadataObjV1 returns the inner metadata object in its type
 // specified form. If it doesn't exist then we return nothing.
 func (m MetadataV1) MetadataObjV1() *pb.MetaDataV1 {
 	return m.md

@@ -5,6 +5,7 @@ package state
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/prysmaticlabs/go-bitfield"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -20,8 +21,10 @@ type BeaconState interface {
 	ReadOnlyBeaconState
 	WriteOnlyBeaconState
 	Copy() BeaconState
+	CopyAllTries()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
-	StateProver
+	Prover
+	json.Marshaler
 }
 
 // SpecParametersProvider provides fork-specific configuration parameters as
@@ -32,7 +35,7 @@ type SpecParametersProvider interface {
 }
 
 // StateProver defines the ability to create Merkle proofs for beacon state fields.
-type StateProver interface {
+type Prover interface {
 	FinalizedRootProof(ctx context.Context) ([][]byte, error)
 	CurrentSyncCommitteeProof(ctx context.Context) ([][]byte, error)
 	NextSyncCommitteeProof(ctx context.Context) ([][]byte, error)
@@ -63,6 +66,7 @@ type ReadOnlyBeaconState interface {
 	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
+	RecordStateMetrics()
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
@@ -234,7 +238,7 @@ type WriteOnlyBalances interface {
 // WriteOnlyRandaoMixes defines a struct which only has write access to randao mixes methods.
 type WriteOnlyRandaoMixes interface {
 	SetRandaoMixes(val [][]byte) error
-	UpdateRandaoMixesAtIndex(idx uint64, val []byte) error
+	UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error
 }
 
 // WriteOnlyCheckpoint defines a struct which only has write access to check point methods.

@@ -15,11 +15,12 @@ import (
 )
 
 type beaconApiValidatorClient struct {
-	genesisProvider         genesisProvider
+	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
-	stateValidatorsProvider stateValidatorsProvider
-	jsonRestHandler         jsonRestHandler
-	beaconBlockConverter    beaconBlockConverter
+	stateValidatorsProvider StateValidatorsProvider
+	jsonRestHandler         JsonRestHandler
+	beaconBlockConverter    BeaconBlockConverter
+	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
 
 func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.ValidatorClient {
@@ -34,6 +35,10 @@ func NewBeaconApiValidatorClient(host string, timeout time.Duration) iface.Valid
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{jsonRestHandler: jsonRestHandler},
 		jsonRestHandler:         jsonRestHandler,
 		beaconBlockConverter:    beaconApiBeaconBlockConverter{},
+		prysmBeaconChainCLient: prysmBeaconChainClient{
+			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
+			jsonRestHandler: jsonRestHandler,
+		},
 	}
 }
 
@@ -100,6 +105,10 @@ func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *e
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
 	return c.proposeExit(ctx, in)
+}
+
+func (c *beaconApiValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
+	return c.streamSlots(ctx, in, time.Second), nil
 }
 
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {

@@ -8,18 +8,14 @@ import (
 	"github.com/pkg/errors"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	payloadattribute "github.com/prysmaticlabs/prysm/v4/consensus-types/payload-attribute"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
-
-func (s *Service) isNewProposer(slot primitives.Slot) bool {
-	_, _, ok := s.cfg.ProposerSlotIndexCache.GetProposerPayloadIDs(slot, [32]byte{} /* root */)
-	return ok || features.Get().PrepareAllPayloads
-}
 
 func (s *Service) isNewHead(r [32]byte) bool {
 	s.headLock.RLock()
@@ -48,39 +44,66 @@ func (s *Service) getStateAndBlock(ctx context.Context, r [32]byte) (state.Beaco
 	return headState, newHeadBlock, nil
 }
 
-// fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
-func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, newHeadRoot [32]byte, proposingSlot primitives.Slot) error {
-	isNewHead := s.isNewHead(newHeadRoot)
-	if !isNewHead {
-		return nil
-	}
-	isNewProposer := s.isNewProposer(proposingSlot)
-	if isNewProposer && !features.Get().DisableReorgLateBlocks {
-		if s.shouldOverrideFCU(newHeadRoot, proposingSlot) {
-			return nil
-		}
-	}
-	headState, headBlock, err := s.getStateAndBlock(ctx, newHeadRoot)
-	if err != nil {
-		log.WithError(err).Error("Could not get forkchoice update argument")
-		return nil
-	}
+type fcuConfig struct {
+	headState     state.BeaconState
+	headBlock     interfaces.ReadOnlySignedBeaconBlock
+	headRoot      [32]byte
+	proposingSlot primitives.Slot
+	attributes    payloadattribute.Attributer
+}
 
-	_, err = s.notifyForkchoiceUpdate(ctx, &notifyForkchoiceUpdateArg{
-		headState: headState,
-		headRoot:  newHeadRoot,
-		headBlock: headBlock.Block(),
-	})
+// sendFCU handles the logic to notify the engine of a forckhoice update
+// for the first time when processing an incoming block during regular sync. It
+// always updates the shuffling caches and handles epoch transitions when the
+// incoming block is late, preparing payload attributes in this case while it
+// only sends a message with empty attributes for early blocks.
+func (s *Service) sendFCU(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) error {
+	if !s.isNewHead(cfg.headRoot) {
+		return nil
+	}
+	if fcuArgs.attributes != nil && !fcuArgs.attributes.IsEmpty() && s.shouldOverrideFCU(cfg.headRoot, s.CurrentSlot()+1) {
+		return nil
+	}
+	return s.forkchoiceUpdateWithExecution(cfg.ctx, fcuArgs)
+}
+
+// sendFCUWithAttributes computes the payload attributes and sends an FCU message
+// to the engine if needed
+func (s *Service) sendFCUWithAttributes(cfg *postBlockProcessConfig, fcuArgs *fcuConfig) {
+	slotCtx, cancel := context.WithTimeout(context.Background(), slotDeadline)
+	defer cancel()
+	cfg.ctx = slotCtx
+	if err := s.computePayloadAttributes(cfg, fcuArgs); err != nil {
+		log.WithError(err).Error("could not compute payload attributes")
+		return
+	}
+	if fcuArgs.attributes.IsEmpty() {
+		return
+	}
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	if _, err := s.notifyForkchoiceUpdate(cfg.ctx, fcuArgs); err != nil {
+		log.WithError(err).Error("could not update forkchoice with payload attributes for proposal")
+	}
+}
+
+// fockchoiceUpdateWithExecution is a wrapper around notifyForkchoiceUpdate. It decides whether a new call to FCU should be made.
+func (s *Service) forkchoiceUpdateWithExecution(ctx context.Context, args *fcuConfig) error {
+	_, span := trace.StartSpan(ctx, "beacon-chain.blockchain.forkchoiceUpdateWithExecution")
+	defer span.End()
+	// Note: Use the service context here to avoid the parent context being ended during a forkchoice update.
+	ctx = trace.NewContext(s.ctx, span)
+	_, err := s.notifyForkchoiceUpdate(ctx, args)
 	if err != nil {
 		return errors.Wrap(err, "could not notify forkchoice update")
 	}
 
-	if err := s.saveHead(ctx, newHeadRoot, headBlock, headState); err != nil {
+	if err := s.saveHead(ctx, args.headRoot, args.headBlock, args.headState); err != nil {
 		log.WithError(err).Error("could not save head")
 	}
 
 	// Only need to prune attestations from pool if the head has changed.
-	if err := s.pruneAttsFromPool(headBlock); err != nil {
+	if err := s.pruneAttsFromPool(args.headBlock); err != nil {
 		log.WithError(err).Error("could not prune attestations from pool")
 	}
 	return nil

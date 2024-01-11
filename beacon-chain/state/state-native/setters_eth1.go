@@ -42,7 +42,7 @@ func (b *BeaconState) SetEth1DepositIndex(val uint64) error {
 }
 
 // AppendEth1DataVotes for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -50,8 +50,8 @@ func (b *BeaconState) AppendEth1DataVotes(val *ethpb.Eth1Data) error {
 	votes := b.eth1DataVotes
 	if b.sharedFieldReferences[types.Eth1DataVotes].Refs() > 1 {
 		// Copy elements in underlying array by reference.
-		votes = make([]*ethpb.Eth1Data, len(b.eth1DataVotes))
-		copy(votes, b.eth1DataVotes)
+		votes = make([]*ethpb.Eth1Data, 0, len(b.eth1DataVotes)+1)
+		votes = append(votes, b.eth1DataVotes...)
 		b.sharedFieldReferences[types.Eth1DataVotes].MinusRef()
 		b.sharedFieldReferences[types.Eth1DataVotes] = stateutil.NewRef(1)
 	}

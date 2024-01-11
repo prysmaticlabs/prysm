@@ -45,7 +45,6 @@ func (s *EpochTicker) start(
 	secondsPerEpoch uint64,
 	since, until func(time.Time) time.Duration,
 	after func(time.Duration) <-chan time.Time) {
-
 	d := time.Duration(secondsPerEpoch) * time.Second
 
 	go func() {

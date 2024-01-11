@@ -26,7 +26,7 @@ type Streamer interface {
 	LogsFeed() *event.Feed
 }
 
-// StreamServer defines a a websocket server which can receive events from
+// StreamServer defines a websocket server which can receive events from
 // a feed and write them to open websocket connections.
 type StreamServer struct {
 	feed  *event.Feed
@@ -56,7 +56,7 @@ func (ss *StreamServer) GetLastFewLogs() [][]byte {
 	return messages
 }
 
-// LogsFeed returns a feed callers can subscribe to to receive logs via a channel.
+// LogsFeed returns a feed callers can subscribe to receive logs via a channel.
 func (ss *StreamServer) LogsFeed() *event.Feed {
 	return ss.feed
 }

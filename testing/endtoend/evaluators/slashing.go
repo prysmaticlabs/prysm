@@ -116,7 +116,6 @@ func validatorsLoseBalance(_ *e2eTypes.EvaluationContext, conns ...*grpc.ClientC
 				valResp.EffectiveBalance,
 			)
 		}
-
 	}
 	return nil
 }

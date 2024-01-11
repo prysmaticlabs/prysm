@@ -16,12 +16,17 @@ import (
 // incoming objects. (24 mins with mainnet spec)
 const MaxSlotBuffer = uint64(1 << 7)
 
+// startFromTime returns the slot start in terms of genesis time.Time
+func startFromTime(genesis time.Time, slot primitives.Slot) time.Time {
+	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
+	return genesis.Add(duration) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
+}
+
 // StartTime returns the start time in terms of its unix epoch
 // value.
 func StartTime(genesis uint64, slot primitives.Slot) time.Time {
-	duration := time.Second * time.Duration(slot.Mul(params.BeaconConfig().SecondsPerSlot))
-	startTime := time.Unix(int64(genesis), 0).Add(duration) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
-	return startTime
+	genesisTime := time.Unix(int64(genesis), 0) // lint:ignore uintcast -- Genesis timestamp will not exceed int64 in your lifetime.
+	return startFromTime(genesisTime, slot)
 }
 
 // SinceGenesis returns the number of slots since
@@ -158,6 +163,12 @@ func ToTime(genesisTimeSec uint64, slot primitives.Slot) (time.Time, error) {
 	return time.Unix(int64(sTime), 0), nil // lint:ignore uintcast -- A timestamp will not exceed int64 in your lifetime.
 }
 
+// BeginsAt computes the timestamp where the given slot begins, relative to the genesis timestamp.
+func BeginsAt(slot primitives.Slot, genesis time.Time) time.Time {
+	sd := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slot)
+	return genesis.Add(sd)
+}
+
 // Since computes the number of time slots that have occurred since the given timestamp.
 func Since(time time.Time) primitives.Slot {
 	return CurrentSlot(uint64(time.Unix()))
@@ -171,6 +182,14 @@ func CurrentSlot(genesisTimeSec uint64) primitives.Slot {
 		return 0
 	}
 	return primitives.Slot((now - genesisTimeSec) / params.BeaconConfig().SecondsPerSlot)
+}
+
+// Duration computes the span of time between two instants, represented as Slots.
+func Duration(start, end time.Time) primitives.Slot {
+	if end.Before(start) {
+		return 0
+	}
+	return primitives.Slot(uint64(end.Unix()-start.Unix()) / params.BeaconConfig().SecondsPerSlot)
 }
 
 // ValidateClock validates a provided slot against the local
@@ -233,9 +252,22 @@ func SyncCommitteePeriodStartEpoch(e primitives.Epoch) (primitives.Epoch, error)
 
 // SecondsSinceSlotStart returns the number of seconds transcurred since the
 // given slot start time
-func SecondsSinceSlotStart(s primitives.Slot, genesisTime uint64, timeStamp uint64) (uint64, error) {
+func SecondsSinceSlotStart(s primitives.Slot, genesisTime, timeStamp uint64) (uint64, error) {
 	if timeStamp < genesisTime+uint64(s)*params.BeaconConfig().SecondsPerSlot {
 		return 0, errors.New("could not compute seconds since slot start: invalid timestamp")
 	}
 	return timeStamp - genesisTime - uint64(s)*params.BeaconConfig().SecondsPerSlot, nil
+}
+
+// TimeIntoSlot returns the time duration elapsed between the current time and
+// the start of the current slot
+func TimeIntoSlot(genesisTime uint64) time.Duration {
+	return time.Since(StartTime(genesisTime, CurrentSlot(genesisTime)))
+}
+
+// WithinVotingWindow returns whether the current time is within the voting window
+// (eg. 4 seconds on mainnet) of the current slot.
+func WithinVotingWindow(genesisTime uint64, slot primitives.Slot) bool {
+	votingWindow := params.BeaconConfig().SecondsPerSlot / params.BeaconConfig().IntervalsPerSlot
+	return time.Since(StartTime(genesisTime, slot)) < time.Duration(votingWindow)*time.Second
 }

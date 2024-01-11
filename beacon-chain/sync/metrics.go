@@ -82,6 +82,13 @@ var (
 			Buckets: []float64{5, 10, 50, 100, 150, 250, 500, 1000, 2000},
 		},
 	)
+	rpcBlobsByRangeResponseLatency = promauto.NewHistogram(
+		prometheus.HistogramOpts{
+			Name:    "rpc_blobs_by_range_response_latency_milliseconds",
+			Help:    "Captures total time to respond to rpc BlobsByRange requests in a milliseconds distribution",
+			Buckets: []float64{5, 10, 50, 100, 150, 250, 500, 1000, 2000},
+		},
+	)
 	arrivalBlockPropagationHistogram = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "block_arrival_latency_milliseconds",
@@ -125,12 +132,40 @@ var (
 			Help: "Time to verify gossiped blocks",
 		},
 	)
+	blockArrivalGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_block_arrival_milliseconds",
+			Help: "Time for gossiped blocks to arrive",
+		},
+	)
+	blobSidecarArrivalGossipSummary = promauto.NewSummary(
+		prometheus.SummaryOpts{
+			Name: "gossip_blob_sidecar_arrival_milliseconds",
+			Help: "Time for gossiped blob sidecars to arrive",
+		},
+	)
+
+	// Sync committee verification performance.
+	syncMessagesForUnknownBlocks = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "sync_committee_messages_unknown_root",
+			Help: "The number of sync committee messages that are checked against DB to see if there vote is for an unknown root",
+		},
+	)
+
+	// Dropped blob sidecars due to missing parent block.
+	missingParentBlobSidecarCount = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "gossip_missing_parent_blob_sidecar_total",
+			Help: "The number of blob sidecars that were dropped due to missing parent block",
+		},
+	)
 )
 
 func (s *Service) updateMetrics() {
 	// do not update metrics if genesis time
 	// has not been initialized
-	if s.cfg.chain.GenesisTime().IsZero() {
+	if s.cfg.clock.GenesisTime().IsZero() {
 		return
 	}
 	// We update the dynamic subnet topics.
@@ -138,14 +173,14 @@ func (s *Service) updateMetrics() {
 	if err != nil {
 		log.WithError(err).Debugf("Could not compute fork digest")
 	}
-	indices := s.aggregatorSubnetIndices(s.cfg.chain.CurrentSlot())
-	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	indices := s.aggregatorSubnetIndices(s.cfg.clock.CurrentSlot())
+	syncIndices := cache.SyncSubnetIDs.GetAllSubnets(slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	attTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.Attestation{})]
 	syncTopic := p2p.GossipTypeMapping[reflect.TypeOf(&pb.SyncCommitteeMessage{})]
 	attTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
 	syncTopic += s.cfg.p2p.Encoding().ProtocolSuffix()
 	if flags.Get().SubscribeToAllSubnets {
-		for i := uint64(0); i < params.BeaconNetworkConfig().AttestationSubnetCount; i++ {
+		for i := uint64(0); i < params.BeaconConfig().AttestationSubnetCount; i++ {
 			s.collectMetricForSubnet(attTopic, digest, i)
 		}
 		for i := uint64(0); i < params.BeaconConfig().SyncCommitteeSubnetCount; i++ {

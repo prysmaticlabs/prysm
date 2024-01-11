@@ -59,7 +59,7 @@ func (s *Service) validateSyncContributionAndProof(ctx context.Context, pid peer
 	}
 
 	// The contribution's slot is for the current slot (with a `MAXIMUM_GOSSIP_CLOCK_DISPARITY` allowance).
-	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.chain.GenesisTime(), params.BeaconNetworkConfig().MaximumGossipClockDisparity); err != nil {
+	if err := altair.ValidateSyncMessageTime(m.Message.Contribution.Slot, s.cfg.clock.GenesisTime(), params.BeaconConfig().MaximumGossipClockDisparityDuration()); err != nil {
 		tracing.AnnotateError(span, err)
 		return pubsub.ValidationIgnore, err
 	}
@@ -118,7 +118,7 @@ func rejectIncorrectSubcommitteeIndex(
 	m *ethpb.SignedContributionAndProof,
 ) validationFn {
 	return func(ctx context.Context) (pubsub.ValidationResult, error) {
-		ctx, span := trace.StartSpan(ctx, "sync.rejectIncorrectSubcommitteeIndex")
+		_, span := trace.StartSpan(ctx, "sync.rejectIncorrectSubcommitteeIndex")
 		defer span.End()
 		// The subcommittee index is in the allowed range, i.e. `contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT`.
 		if m.Message.Contribution.SubcommitteeIndex >= params.BeaconConfig().SyncCommitteeSubnetCount {
@@ -329,7 +329,7 @@ func (s *Service) setSyncContributionBits(c *ethpb.SyncCommitteeContribution) er
 	}
 	bitsList, ok := v.([][]byte)
 	if !ok {
-		return errors.New("could not covert cached value to []bitfield.Bitvector")
+		return errors.New("could not convert cached value to []bitfield.Bitvector")
 	}
 	has, err := bitListOverlaps(bitsList, c.AggregationBits)
 	if err != nil {
@@ -354,7 +354,7 @@ func (s *Service) hasSeenSyncContributionBits(c *ethpb.SyncCommitteeContribution
 	}
 	bitsList, ok := v.([][]byte)
 	if !ok {
-		return false, errors.New("could not covert cached value to []bitfield.Bitvector128")
+		return false, errors.New("could not convert cached value to []bitfield.Bitvector128")
 	}
 	return bitListOverlaps(bitsList, c.AggregationBits.Bytes())
 }

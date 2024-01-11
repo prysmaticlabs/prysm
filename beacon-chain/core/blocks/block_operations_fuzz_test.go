@@ -275,7 +275,7 @@ func TestFuzzProcessAttestationsNoVerify_10000(t *testing.T) {
 		}
 		wsb, err := blocks.NewSignedBeaconBlock(b)
 		require.NoError(t, err)
-		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb)
+		r, err := ProcessAttestationsNoVerifySignature(ctx, s, wsb.Block())
 		if err != nil && r != nil {
 			t.Fatalf("return value should be nil on err. found: %v on error: %v for state: %v and block: %v", r, err, state, b)
 		}
@@ -413,7 +413,7 @@ func TestFuzzProcessVoluntaryExitsNoVerify_10000(t *testing.T) {
 	}
 }
 
-func TestFuzzVerifyExit_10000(_ *testing.T) {
+func TestFuzzVerifyExit_10000(t *testing.T) {
 	fuzzer := fuzz.NewWithSeed(0)
 	ve := &ethpb.SignedVoluntaryExit{}
 	rawVal := &ethpb.Validator{}
@@ -425,9 +425,18 @@ func TestFuzzVerifyExit_10000(_ *testing.T) {
 		fuzzer.Fuzz(rawVal)
 		fuzzer.Fuzz(fork)
 		fuzzer.Fuzz(&slot)
+
+		state := &ethpb.BeaconState{
+			Slot:                  slot,
+			Fork:                  fork,
+			GenesisValidatorsRoot: params.BeaconConfig().ZeroHash[:],
+		}
+		s, err := state_native.InitializeFromProtoUnsafePhase0(state)
+		require.NoError(t, err)
+
 		val, err := state_native.NewValidator(&ethpb.Validator{})
 		_ = err
-		err = VerifyExitAndSignature(val, slot, fork, ve, params.BeaconConfig().ZeroHash[:])
+		err = VerifyExitAndSignature(val, s, ve)
 		_ = err
 	}
 }

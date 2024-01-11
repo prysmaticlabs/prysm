@@ -152,6 +152,7 @@ func NewKVStore(ctx context.Context, dirPath string, config *Config) (*Store, er
 			pubKeysBucket,
 			migrationsBucket,
 			graffitiBucket,
+			proposerSettingsBucket,
 		)
 	}); err != nil {
 		return nil, err

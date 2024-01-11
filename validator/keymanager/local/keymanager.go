@@ -176,7 +176,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the local account keystores.
 func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
@@ -277,7 +277,6 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	accountsKeystore, err := CreateAccountsKeystoreRepresentation(ctx, store, km.wallet.Password())
 	if err != nil {
 		return err
-
 	}
 	encodedAccounts, err := json.MarshalIndent(accountsKeystore, "", "\t")
 	if err != nil {
@@ -322,6 +321,13 @@ func CreateAccountsKeystoreRepresentation(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
+}
+
+// CreateEmptyKeyStoreRepresentationForNewWallet creates a placeholder accounts keystore for a new Prysm Local Wallet.
+func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPassword string) (*AccountsKeystoreRepresentation, error) {
+	// make sure everything is clean when creating this.
+	ResetCaches()
+	return CreateAccountsKeystoreRepresentation(ctx, &accountStore{}, walletPassword)
 }
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
@@ -426,13 +432,10 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 func CreatePrintoutOfKeys(keys [][]byte) string {
 	var keysStr string
 	for i, k := range keys {
-		if i == 0 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else if i == len(keys)-1 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else {
-			keysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
+		if i != 0 {
+			keysStr += "," // Add a comma before each key except the first one
 		}
+		keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
 	}
 	return keysStr
 }

@@ -31,7 +31,7 @@ func TestContextWrite_NoWrites(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Nothing will be written to the stream
-	assert.NoError(t, writeContextToStream(nil, strm, nil))
+	assert.NoError(t, writeContextToStream([]byte{}, strm))
 	if util.WaitTimeout(wg, 1*time.Second) {
 		t.Fatal("Did not receive stream within 1 sec")
 	}
@@ -48,7 +48,7 @@ func TestContextRead_NoReads(t *testing.T) {
 	wantedData := []byte{'A', 'B', 'C', 'D'}
 	nPeer.BHost.SetStreamHandler(core.ProtocolID(prID), func(stream network.Stream) {
 		// No Context will be read from it
-		dt, err := readContextFromStream(stream, nil)
+		dt, err := readContextFromStream(stream)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(dt))
 

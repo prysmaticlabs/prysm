@@ -1,7 +1,9 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -10,7 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -19,14 +22,17 @@ import (
 
 type beaconApiBeaconChainClient struct {
 	fallbackClient          iface.BeaconChainClient
-	jsonRestHandler         jsonRestHandler
-	stateValidatorsProvider stateValidatorsProvider
+	jsonRestHandler         JsonRestHandler
+	stateValidatorsProvider StateValidatorsProvider
 }
 
-func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*apimiddleware.BlockHeaderResponseJson, error) {
-	blockHeader := apimiddleware.BlockHeaderResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
-		return nil, errors.Wrap(err, "failed to get head block header")
+const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
+
+func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
+	blockHeader := beacon.GetBlockHeaderResponse{}
+	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
+	if err != nil {
+		return nil, err
 	}
 
 	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
@@ -43,9 +49,9 @@ func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*a
 func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.Empty) (*ethpb.ChainHead, error) {
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
-	finalityCheckpoints := apimiddleware.StateFinalityCheckpointResponseJson{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
-		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
+	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
+	if err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints); err != nil {
+		return nil, err
 	}
 
 	if finalityCheckpoints.Data == nil {
@@ -179,7 +185,7 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 		pubkeys[idx] = hexutil.Encode(pubkey)
 	}
 
-	var stateValidators *apimiddleware.StateValidatorsResponseJson
+	var stateValidators *beacon.GetValidatorsResponse
 	var epoch primitives.Epoch
 
 	switch queryFilter := in.QueryFilter.(type) {
@@ -239,9 +245,9 @@ func (c beaconApiBeaconChainClient) ListValidators(ctx context.Context, in *ethp
 			return nil, errors.Errorf("state validator at index `%d` is nil", idx)
 		}
 
-		pubkey, err := hexutil.Decode(stateValidator.Validator.PublicKey)
+		pubkey, err := hexutil.Decode(stateValidator.Validator.Pubkey)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.PublicKey)
+			return nil, errors.Wrapf(err, "failed to decode validator pubkey `%s`", stateValidator.Validator.Pubkey)
 		}
 
 		withdrawalCredentials, err := hexutil.Decode(stateValidator.Validator.WithdrawalCredentials)
@@ -317,12 +323,29 @@ func (c beaconApiBeaconChainClient) GetValidatorQueue(ctx context.Context, in *e
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context, in *ethpb.ValidatorPerformanceRequest) (*ethpb.ValidatorPerformanceResponse, error) {
-	if c.fallbackClient != nil {
-		return c.fallbackClient.GetValidatorPerformance(ctx, in)
+	request, err := json.Marshal(validator.PerformanceRequest{
+		PublicKeys: in.PublicKeys,
+		Indices:    in.Indices,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal request")
+	}
+	resp := &validator.PerformanceResponse{}
+	if err = c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp); err != nil {
+		return nil, err
 	}
 
-	// TODO: Implement me
-	panic("beaconApiBeaconChainClient.GetValidatorPerformance is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
+	return &ethpb.ValidatorPerformanceResponse{
+		CurrentEffectiveBalances:      resp.CurrentEffectiveBalances,
+		CorrectlyVotedSource:          resp.CorrectlyVotedSource,
+		CorrectlyVotedTarget:          resp.CorrectlyVotedTarget,
+		CorrectlyVotedHead:            resp.CorrectlyVotedHead,
+		BalancesBeforeEpochTransition: resp.BalancesBeforeEpochTransition,
+		BalancesAfterEpochTransition:  resp.BalancesAfterEpochTransition,
+		MissingValidators:             resp.MissingValidators,
+		PublicKeys:                    resp.PublicKeys,
+		InactivityScores:              resp.InactivityScores,
+	}, nil
 }
 
 func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Context, in *ethpb.GetValidatorParticipationRequest) (*ethpb.ValidatorParticipationResponse, error) {

@@ -121,6 +121,9 @@ func (s *Service) topicScoreParams(topic string) (*pubsub.TopicScoreParams, erro
 		return defaultAttesterSlashingTopicParams(), nil
 	case strings.Contains(topic, GossipBlsToExecutionChangeMessage):
 		return defaultBlsToExecutionChangeTopicParams(), nil
+	case strings.Contains(topic, GossipBlobSidecarMessage):
+		// TODO(Deneb): Using the default block scoring. But this should be updated.
+		return defaultBlockTopicParams(), nil
 	default:
 		return nil, errors.Errorf("unrecognized topic provided for parameter registration: %s", topic)
 	}
@@ -281,7 +284,7 @@ func defaultSyncContributionTopicParams() *pubsub.TopicScoreParams {
 }
 
 func defaultAggregateSubnetTopicParams(activeValidators uint64) *pubsub.TopicScoreParams {
-	subnetCount := params.BeaconNetworkConfig().AttestationSubnetCount
+	subnetCount := params.BeaconConfig().AttestationSubnetCount
 	// Get weight for each specific subnet.
 	topicWeight := attestationTotalWeight / float64(subnetCount)
 	subnetWeight := activeValidators / subnetCount

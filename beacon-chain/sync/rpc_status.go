@@ -93,7 +93,7 @@ func (s *Service) resyncIfBehind() {
 			// Check if the current node is more than 1 epoch behind.
 			if highestEpoch > (syncedEpoch + 1) {
 				log.WithFields(logrus.Fields{
-					"currentEpoch": slots.ToEpoch(s.cfg.chain.CurrentSlot()),
+					"currentEpoch": slots.ToEpoch(s.cfg.clock.CurrentSlot()),
 					"syncedEpoch":  syncedEpoch,
 					"peersEpoch":   highestEpoch,
 				}).Info("Fallen behind peers; reverting to initial sync to catch up")
@@ -110,7 +110,7 @@ func (s *Service) resyncIfBehind() {
 // shouldReSync returns true if the node is not syncing and falls behind two epochs.
 func (s *Service) shouldReSync() bool {
 	syncedEpoch := slots.ToEpoch(s.cfg.chain.HeadSlot())
-	currentEpoch := slots.ToEpoch(s.cfg.chain.CurrentSlot())
+	currentEpoch := slots.ToEpoch(s.cfg.clock.CurrentSlot())
 	prevEpoch := primitives.Epoch(0)
 	if currentEpoch > 1 {
 		prevEpoch = currentEpoch - 1
@@ -140,7 +140,7 @@ func (s *Service) sendRPCStatusRequest(ctx context.Context, id peer.ID) error {
 		HeadRoot:       headRoot,
 		HeadSlot:       s.cfg.chain.HeadSlot(),
 	}
-	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, slots.ToEpoch(s.cfg.chain.CurrentSlot()))
+	topic, err := p2p.TopicFromMessage(p2p.StatusMessageName, slots.ToEpoch(s.cfg.clock.CurrentSlot()))
 	if err != nil {
 		return err
 	}
@@ -288,7 +288,7 @@ func (s *Service) validateStatusMessage(ctx context.Context, msg *pb.Status) err
 	if !bytes.Equal(forkDigest[:], msg.ForkDigest) {
 		return p2ptypes.ErrWrongForkDigestVersion
 	}
-	genesis := s.cfg.chain.GenesisTime()
+	genesis := s.cfg.clock.GenesisTime()
 	cp := s.cfg.chain.FinalizedCheckpt()
 	finalizedEpoch := cp.Epoch
 	maxEpoch := slots.EpochsSinceGenesis(genesis)

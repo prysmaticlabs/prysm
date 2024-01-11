@@ -6,6 +6,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,6 +28,9 @@ func (s *Service) processSyncCommitteeContribution(contribution *ethpb.SignedCon
 // processSyncAggregate logs the event when tracked validators is a sync-committee member and its contribution has been included
 func (s *Service) processSyncAggregate(state state.BeaconState, blk interfaces.ReadOnlyBeaconBlock) {
 	if blk == nil || blk.Body() == nil {
+		return
+	}
+	if blk.Version() == version.Phase0 {
 		return
 	}
 	bits, err := blk.Body().SyncAggregate()

@@ -54,6 +54,7 @@ type ReadOnlyDatabase interface {
 	// Fee recipients operations.
 	FeeRecipientByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (common.Address, error)
 	RegistrationByValidatorID(ctx context.Context, id primitives.ValidatorIndex) (*ethpb.ValidatorRegistrationV1, error)
+
 	// origin checkpoint sync support
 	OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error)
 	BackfillBlockRoot(ctx context.Context) ([32]byte, error)
@@ -161,7 +162,7 @@ type SlasherDatabase interface {
 // Database interface with full access.
 type Database interface {
 	io.Closer
-	backup.BackupExporter
+	backup.Exporter
 	HeadAccessDatabase
 
 	DatabasePath() string

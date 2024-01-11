@@ -8,8 +8,10 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -292,6 +294,8 @@ func TestService_roundRobinSync(t *testing.T) {
 
 			st, err := util.NewBeaconState()
 			require.NoError(t, err)
+			gt := time.Now()
+			vr := [32]byte{}
 			mc := &mock.ChainService{
 				State: st,
 				Root:  genesisRoot[:],
@@ -299,14 +303,16 @@ func TestService_roundRobinSync(t *testing.T) {
 				FinalizedCheckPoint: &eth.Checkpoint{
 					Epoch: 0,
 				},
-				Genesis:        time.Now(),
-				ValidatorsRoot: [32]byte{},
+				Genesis:        gt,
+				ValidatorsRoot: vr,
 			} // no-op mock
+			clock := startup.NewClock(gt, vr)
 			s := &Service{
 				ctx:          context.Background(),
 				cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
 				synced:       abool.New(),
 				chainStarted: abool.NewBool(true),
+				clock:        clock,
 			}
 			assert.NoError(t, s.roundRobinSync(makeGenesisTime(tt.currentSlot)))
 			if s.cfg.Chain.HeadSlot() < tt.currentSlot {
@@ -364,30 +370,36 @@ func TestService_processBlock(t *testing.T) {
 		// Process block normally.
 		wsb, err := blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
-		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
+		rowsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		err = s.processBlock(ctx, genesis, blocks.BlockWithROBlobs{Block: rowsb}, func(
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
+			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot, nil))
 			return nil
-		})
+		}, nil)
 		assert.NoError(t, err)
 
 		// Duplicate processing should trigger error.
 		wsb, err = blocks.NewSignedBeaconBlock(blk1)
 		require.NoError(t, err)
-		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
+		rowsb, err = blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		err = s.processBlock(ctx, genesis, blocks.BlockWithROBlobs{Block: rowsb}, func(
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
 			return nil
-		})
+		}, nil)
 		assert.ErrorContains(t, errBlockAlreadyProcessed.Error(), err)
 
 		// Continue normal processing, should proceed w/o errors.
 		wsb, err = blocks.NewSignedBeaconBlock(blk2)
 		require.NoError(t, err)
-		err = s.processBlock(ctx, genesis, wsb, func(
-			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot))
+		rowsb, err = blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		err = s.processBlock(ctx, genesis, blocks.BlockWithROBlobs{Block: rowsb}, func(
+			ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte, _ das.AvailabilityStore) error {
+			assert.NoError(t, s.cfg.Chain.ReceiveBlock(ctx, block, blockRoot, nil))
 			return nil
-		})
+		}, nil)
 		assert.NoError(t, err)
 		assert.Equal(t, primitives.Slot(2), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
@@ -418,7 +430,7 @@ func TestService_processBlockBatch(t *testing.T) {
 	genesis := makeGenesisTime(32)
 
 	t.Run("process non-linear batch", func(t *testing.T) {
-		var batch []interfaces.ReadOnlySignedBeaconBlock
+		var batch []blocks.BlockWithROBlobs
 		currBlockRoot := genesisBlkRoot
 		for i := primitives.Slot(1); i < 10; i++ {
 			parentRoot := currBlockRoot
@@ -430,11 +442,13 @@ func TestService_processBlockBatch(t *testing.T) {
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
 			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
-			batch = append(batch, wsb)
+			rowsb, err := blocks.NewROBlock(wsb)
+			require.NoError(t, err)
+			batch = append(batch, blocks.BlockWithROBlobs{Block: rowsb})
 			currBlockRoot = blk1Root
 		}
 
-		var batch2 []interfaces.ReadOnlySignedBeaconBlock
+		var batch2 []blocks.BlockWithROBlobs
 		for i := primitives.Slot(10); i < 20; i++ {
 			parentRoot := currBlockRoot
 			blk1 := util.NewBeaconBlock()
@@ -445,26 +459,29 @@ func TestService_processBlockBatch(t *testing.T) {
 			util.SaveBlock(t, context.Background(), beaconDB, blk1)
 			wsb, err := blocks.NewSignedBeaconBlock(blk1)
 			require.NoError(t, err)
-			batch2 = append(batch2, wsb)
+			rowsb, err := blocks.NewROBlock(wsb)
+			require.NoError(t, err)
+			batch2 = append(batch2, blocks.BlockWithROBlobs{Block: rowsb})
 			currBlockRoot = blk1Root
 		}
 
-		// Process block normally.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
+		cbnormal := func(ctx context.Context, blks []blocks.ROBlock, avs das.AvailabilityStore) error {
+			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, avs))
 			return nil
-		})
+		}
+		// Process block normally.
+		err = s.processBatchedBlocks(ctx, genesis, batch, cbnormal)
 		assert.NoError(t, err)
 
-		// Duplicate processing should trigger error.
-		err = s.processBatchedBlocks(ctx, genesis, batch, func(
-			ctx context.Context, blocks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
+		cbnil := func(ctx context.Context, blocks []blocks.ROBlock, _ das.AvailabilityStore) error {
 			return nil
-		})
+		}
+
+		// Duplicate processing should trigger error.
+		err = s.processBatchedBlocks(ctx, genesis, batch, cbnil)
 		assert.ErrorContains(t, "block is already processed", err)
 
-		var badBatch2 []interfaces.ReadOnlySignedBeaconBlock
+		var badBatch2 []blocks.BlockWithROBlobs
 		for i, b := range batch2 {
 			// create a non-linear batch
 			if i%3 == 0 && i != 0 {
@@ -474,19 +491,12 @@ func TestService_processBlockBatch(t *testing.T) {
 		}
 
 		// Bad batch should fail because it is non linear
-		err = s.processBatchedBlocks(ctx, genesis, badBatch2, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
-			return nil
-		})
+		err = s.processBatchedBlocks(ctx, genesis, badBatch2, cbnil)
 		expectedSubErr := "expected linear block list"
 		assert.ErrorContains(t, expectedSubErr, err)
 
 		// Continue normal processing, should proceed w/o errors.
-		err = s.processBatchedBlocks(ctx, genesis, batch2, func(
-			ctx context.Context, blks []interfaces.ReadOnlySignedBeaconBlock, blockRoots [][32]byte) error {
-			assert.NoError(t, s.cfg.Chain.ReceiveBlockBatch(ctx, blks, blockRoots))
-			return nil
-		})
+		err = s.processBatchedBlocks(ctx, genesis, batch2, cbnormal)
 		assert.NoError(t, err)
 		assert.Equal(t, primitives.Slot(19), s.cfg.Chain.HeadSlot(), "Unexpected head slot")
 	})
@@ -537,6 +547,8 @@ func TestService_blockProviderScoring(t *testing.T) {
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
 	require.NoError(t, err)
+	gt := time.Now()
+	vr := [32]byte{}
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
@@ -545,14 +557,16 @@ func TestService_blockProviderScoring(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{},
+		Genesis:        gt,
+		ValidatorsRoot: vr,
 	} // no-op mock
+	clock := startup.NewClock(gt, vr)
 	s := &Service{
 		ctx:          context.Background(),
 		cfg:          &Config{Chain: mc, P2P: p, DB: beaconDB},
 		synced:       abool.New(),
 		chainStarted: abool.NewBool(true),
+		clock:        clock,
 	}
 	scorer := s.cfg.P2P.Peers().Scorers().BlockProviderScorer()
 	expectedBlockSlots := makeSequence(1, 160)
@@ -601,6 +615,9 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
+	gt := time.Now()
+	vr := [32]byte{}
+	clock := startup.NewClock(gt, vr)
 	mc := &mock.ChainService{
 		State: st,
 		Root:  genesisRoot[:],
@@ -609,8 +626,8 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 			Epoch: 0,
 			Root:  make([]byte, 32),
 		},
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{},
+		Genesis:        gt,
+		ValidatorsRoot: vr,
 	}
 	s := &Service{
 		ctx:          context.Background(),
@@ -618,6 +635,7 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 		synced:       abool.New(),
 		chainStarted: abool.NewBool(true),
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
+		clock:        clock,
 	}
 	expectedBlockSlots := makeSequence(1, 191)
 	currentSlot := primitives.Slot(191)
@@ -649,4 +667,39 @@ func TestService_syncToFinalizedEpoch(t *testing.T) {
 	hook.Reset()
 	assert.NoError(t, s.syncToFinalizedEpoch(context.Background(), genesis))
 	assert.LogsContain(t, hook, "Already synced to finalized epoch")
+}
+
+func TestService_ValidUnprocessed(t *testing.T) {
+	beaconDB := dbtest.SetupDB(t)
+	genesisBlk := util.NewBeaconBlock()
+	genesisBlkRoot, err := genesisBlk.Block.HashTreeRoot()
+	require.NoError(t, err)
+	util.SaveBlock(t, context.Background(), beaconDB, genesisBlk)
+
+	var batch []blocks.BlockWithROBlobs
+	currBlockRoot := genesisBlkRoot
+	for i := primitives.Slot(1); i < 10; i++ {
+		parentRoot := currBlockRoot
+		blk1 := util.NewBeaconBlock()
+		blk1.Block.Slot = i
+		blk1.Block.ParentRoot = parentRoot[:]
+		blk1Root, err := blk1.Block.HashTreeRoot()
+		require.NoError(t, err)
+		util.SaveBlock(t, context.Background(), beaconDB, blk1)
+		wsb, err := blocks.NewSignedBeaconBlock(blk1)
+		require.NoError(t, err)
+		rowsb, err := blocks.NewROBlock(wsb)
+		require.NoError(t, err)
+		batch = append(batch, blocks.BlockWithROBlobs{Block: rowsb})
+		currBlockRoot = blk1Root
+	}
+
+	retBlocks, err := validUnprocessed(context.Background(), batch, 2, func(ctx context.Context, block blocks.ROBlock) bool {
+		// Ignore first 2 blocks in the batch.
+		return block.Block().Slot() <= 2
+	})
+	require.NoError(t, err)
+
+	// Ensure that the unprocessed batch is returned correctly.
+	assert.Equal(t, len(retBlocks), len(batch)-2)
 }

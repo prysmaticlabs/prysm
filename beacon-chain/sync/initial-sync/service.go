@@ -11,11 +11,13 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	blockfeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/block"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
@@ -34,27 +36,44 @@ type blockchainService interface {
 
 // Config to set up the initial sync service.
 type Config struct {
-	P2P           p2p.P2P
-	DB            db.ReadOnlyDatabase
-	Chain         blockchainService
-	StateNotifier statefeed.Notifier
-	BlockNotifier blockfeed.Notifier
+	P2P                 p2p.P2P
+	DB                  db.NoHeadAccessDatabase
+	Chain               blockchainService
+	StateNotifier       statefeed.Notifier
+	BlockNotifier       blockfeed.Notifier
+	ClockWaiter         startup.ClockWaiter
+	InitialSyncComplete chan struct{}
+	BlobStorage         *filesystem.BlobStorage
 }
 
 // Service service.
 type Service struct {
-	cfg          *Config
-	ctx          context.Context
-	cancel       context.CancelFunc
-	synced       *abool.AtomicBool
-	chainStarted *abool.AtomicBool
-	counter      *ratecounter.RateCounter
-	genesisChan  chan time.Time
+	cfg             *Config
+	ctx             context.Context
+	cancel          context.CancelFunc
+	synced          *abool.AtomicBool
+	chainStarted    *abool.AtomicBool
+	counter         *ratecounter.RateCounter
+	genesisChan     chan time.Time
+	clock           *startup.Clock
+	verifierWaiter  *verification.InitializerWaiter
+	newBlobVerifier verification.NewBlobVerifier
+}
+
+// Option is a functional option for the initial-sync Service.
+type Option func(*Service)
+
+// WithVerifierWaiter sets the verification.InitializerWaiter
+// for the initial-sync Service.
+func WithVerifierWaiter(viw *verification.InitializerWaiter) Option {
+	return func(s *Service) {
+		s.verifierWaiter = viw
+	}
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
 // latest head of the blockchain.
-func NewService(ctx context.Context, cfg *Config) *Service {
+func NewService(ctx context.Context, cfg *Config, opts ...Option) *Service {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &Service{
 		cfg:          cfg,
@@ -64,33 +83,52 @@ func NewService(ctx context.Context, cfg *Config) *Service {
 		chainStarted: abool.New(),
 		counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 		genesisChan:  make(chan time.Time),
+		clock:        startup.NewClock(time.Unix(0, 0), [32]byte{}), // default clock to prevent panic
 	}
-
-	// The reason why we have this goroutine in the constructor is to avoid a race condition
-	// between services' Start method and the initialization event.
-	// See https://github.com/prysmaticlabs/prysm/issues/10602 for details.
-	go s.waitForStateInitialization()
-
+	for _, o := range opts {
+		o(s)
+	}
 	return s
 }
 
 // Start the initial sync service.
 func (s *Service) Start() {
-	// Wait for state initialized event.
-	genesis := <-s.genesisChan
-	if genesis.IsZero() {
+	log.Info("Waiting for state to be initialized")
+	clock, err := s.cfg.ClockWaiter.WaitForClock(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("initial-sync failed to receive startup event")
+		return
+	}
+	s.clock = clock
+	log.Info("Received state initialized event")
+
+	v, err := s.verifierWaiter.WaitForInitializer(s.ctx)
+	if err != nil {
+		log.WithError(err).Error("Could not get verification initializer")
+		return
+	}
+	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+
+	gt := clock.GenesisTime()
+	if gt.IsZero() {
 		log.Debug("Exiting Initial Sync Service")
 		return
 	}
-	if genesis.After(prysmTime.Now()) {
-		s.markSynced(genesis)
-		log.WithField("genesisTime", genesis).Info("Genesis time has not arrived - not syncing")
+	// Exit entering round-robin sync if we require 0 peers to sync.
+	if flags.Get().MinimumSyncPeers == 0 {
+		s.markSynced()
+		log.WithField("genesisTime", gt).Info("Due to number of peers required for sync being set at 0, entering regular sync immediately.")
 		return
 	}
-	currentSlot := slots.Since(genesis)
+	if gt.After(prysmTime.Now()) {
+		s.markSynced()
+		log.WithField("genesisTime", gt).Info("Genesis time has not arrived - not syncing")
+		return
+	}
+	currentSlot := clock.CurrentSlot()
 	if slots.ToEpoch(currentSlot) == 0 {
-		log.WithField("genesisTime", genesis).Info("Chain started within the last epoch - not syncing")
-		s.markSynced(genesis)
+		log.WithField("genesisTime", gt).Info("Chain started within the last epoch - not syncing")
+		s.markSynced()
 		return
 	}
 	s.chainStarted.Set()
@@ -98,18 +136,18 @@ func (s *Service) Start() {
 	// Are we already in sync, or close to it?
 	if slots.ToEpoch(s.cfg.Chain.HeadSlot()) == slots.ToEpoch(currentSlot) {
 		log.Info("Already synced to the current chain head")
-		s.markSynced(genesis)
+		s.markSynced()
 		return
 	}
 	s.waitForMinimumPeers()
-	if err := s.roundRobinSync(genesis); err != nil {
+	if err := s.roundRobinSync(gt); err != nil {
 		if errors.Is(s.ctx.Err(), context.Canceled) {
 			return
 		}
 		panic(err)
 	}
 	log.Infof("Synced up to slot %d", s.cfg.Chain.HeadSlot())
-	s.markSynced(genesis)
+	s.markSynced()
 }
 
 // Stop initial sync.
@@ -181,48 +219,8 @@ func (s *Service) waitForMinimumPeers() {
 	}
 }
 
-// waitForStateInitialization makes sure that beacon node is ready to be accessed: it is either
-// already properly configured or system waits up until state initialized event is triggered.
-func (s *Service) waitForStateInitialization() {
-	// Wait for state to be initialized.
-	stateChannel := make(chan *feed.Event, 1)
-	stateSub := s.cfg.StateNotifier.StateFeed().Subscribe(stateChannel)
-	defer stateSub.Unsubscribe()
-	log.Info("Waiting for state to be initialized")
-	for {
-		select {
-		case event := <-stateChannel:
-			if event.Type == statefeed.Initialized {
-				data, ok := event.Data.(*statefeed.InitializedData)
-				if !ok {
-					log.Error("Event feed data is not type *statefeed.InitializedData")
-					continue
-				}
-				log.WithField("starttime", data.StartTime).Debug("Received state initialized event")
-				s.genesisChan <- data.StartTime
-				return
-			}
-		case <-s.ctx.Done():
-			log.Debug("Context closed, exiting goroutine")
-			// Send a zero time in the event we are exiting.
-			s.genesisChan <- time.Time{}
-			return
-		case err := <-stateSub.Err():
-			log.WithError(err).Error("Subscription to state notifier failed")
-			// Send a zero time in the event we are exiting.
-			s.genesisChan <- time.Time{}
-			return
-		}
-	}
-}
-
 // markSynced marks node as synced and notifies feed listeners.
-func (s *Service) markSynced(genesis time.Time) {
+func (s *Service) markSynced() {
 	s.synced.Set()
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Synced,
-		Data: &statefeed.SyncedData{
-			StartTime: genesis,
-		},
-	})
+	close(s.cfg.InitialSyncComplete)
 }

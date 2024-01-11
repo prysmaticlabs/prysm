@@ -12,13 +12,15 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/kzg"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositcache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	coreTime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/execution"
 	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -27,13 +29,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
@@ -44,19 +47,24 @@ import (
 // Service represents a service that handles the internal
 // logic of managing the full PoS beacon chain.
 type Service struct {
-	cfg                   *config
-	ctx                   context.Context
-	cancel                context.CancelFunc
-	genesisTime           time.Time
-	head                  *head
-	headLock              sync.RWMutex
-	originBlockRoot       [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
-	nextEpochBoundarySlot primitives.Slot
-	boundaryRoots         [][32]byte
-	checkpointStateCache  *cache.CheckpointStateCache
-	initSyncBlocks        map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
-	initSyncBlocksLock    sync.RWMutex
-	wsVerifier            *WeakSubjectivityVerifier
+	cfg                  *config
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	genesisTime          time.Time
+	head                 *head
+	headLock             sync.RWMutex
+	originBlockRoot      [32]byte // genesis root, or weak subjectivity checkpoint root, depending on how the node is initialized
+	boundaryRoots        [][32]byte
+	checkpointStateCache *cache.CheckpointStateCache
+	initSyncBlocks       map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	initSyncBlocksLock   sync.RWMutex
+	wsVerifier           *WeakSubjectivityVerifier
+	clockSetter          startup.ClockSetter
+	clockWaiter          startup.ClockWaiter
+	syncComplete         chan struct{}
+	blobNotifiers        *blobNotifierMap
+	blockBeingSynced     *currentlySyncingBlock
+	blobStorage          *filesystem.BlobStorage
 }
 
 // config options for the service.
@@ -64,8 +72,9 @@ type config struct {
 	BeaconBlockBuf          int
 	ChainStartFetcher       execution.ChainStartFetcher
 	BeaconDB                db.HeadAccessDatabase
-	DepositCache            *depositcache.DepositCache
-	ProposerSlotIndexCache  *cache.ProposerPayloadIDsCache
+	DepositCache            cache.DepositCache
+	PayloadIDCache          *cache.PayloadIDCache
+	TrackedValidatorsCache  *cache.TrackedValidatorsCache
 	AttPool                 attestations.Pool
 	ExitPool                voluntaryexits.PoolManager
 	SlashingPool            slashings.PoolManager
@@ -83,24 +92,93 @@ type config struct {
 	ExecutionEngineCaller   execution.EngineCaller
 }
 
+var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")
+
+type blobNotifierMap struct {
+	sync.RWMutex
+	notifiers map[[32]byte]chan uint64
+	seenIndex map[[32]byte][fieldparams.MaxBlobsPerBlock]bool
+}
+
+// notifyIndex notifies a blob by its index for a given root.
+// It uses internal maps to keep track of seen indices and notifier channels.
+func (bn *blobNotifierMap) notifyIndex(root [32]byte, idx uint64) {
+	if idx >= fieldparams.MaxBlobsPerBlock {
+		return
+	}
+
+	bn.Lock()
+	seen := bn.seenIndex[root]
+	if seen[idx] {
+		bn.Unlock()
+		return
+	}
+	seen[idx] = true
+	bn.seenIndex[root] = seen
+
+	// Retrieve or create the notifier channel for the given root.
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+
+	bn.Unlock()
+
+	c <- idx
+}
+
+func (bn *blobNotifierMap) forRoot(root [32]byte) chan uint64 {
+	bn.Lock()
+	defer bn.Unlock()
+	c, ok := bn.notifiers[root]
+	if !ok {
+		c = make(chan uint64, fieldparams.MaxBlobsPerBlock)
+		bn.notifiers[root] = c
+	}
+	return c
+}
+
+func (bn *blobNotifierMap) delete(root [32]byte) {
+	bn.Lock()
+	defer bn.Unlock()
+	delete(bn.seenIndex, root)
+	delete(bn.notifiers, root)
+}
+
 // NewService instantiates a new block service instance that will
 // be registered into a running beacon node.
 func NewService(ctx context.Context, opts ...Option) (*Service, error) {
+	var err error
+	if params.DenebEnabled() {
+		err = kzg.Start()
+		if err != nil {
+			return nil, errors.Wrap(err, "could not initialize go-kzg context")
+		}
+	}
 	ctx, cancel := context.WithCancel(ctx)
+	bn := &blobNotifierMap{
+		notifiers: make(map[[32]byte]chan uint64),
+		seenIndex: make(map[[32]byte][fieldparams.MaxBlobsPerBlock]bool),
+	}
 	srv := &Service{
 		ctx:                  ctx,
 		cancel:               cancel,
 		boundaryRoots:        [][32]byte{},
 		checkpointStateCache: cache.NewCheckpointStateCache(),
 		initSyncBlocks:       make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock),
-		cfg:                  &config{ProposerSlotIndexCache: cache.NewProposerPayloadIDsCache()},
+		blobNotifiers:        bn,
+		cfg:                  &config{},
+		blockBeingSynced:     &currentlySyncingBlock{roots: make(map[[32]byte]struct{})},
 	}
 	for _, opt := range opts {
 		if err := opt(srv); err != nil {
 			return nil, err
 		}
 	}
-	var err error
+	if srv.clockSetter == nil {
+		return nil, ErrMissingClockSetter
+	}
 	srv.wsVerifier, err = NewWeakSubjectivityVerifier(srv.cfg.WeakSubjectivityCheckpt, srv.cfg.BeaconDB)
 	if err != nil {
 		return nil, err
@@ -121,8 +199,8 @@ func (s *Service) Start() {
 			log.Fatal(err)
 		}
 	}
-	s.spawnProcessAttestationsRoutine(s.cfg.StateNotifier.StateFeed())
-	s.fillMissingPayloadIDRoutine(s.ctx, s.cfg.StateNotifier.StateFeed())
+	s.spawnProcessAttestationsRoutine()
+	go s.runLateBlockTasks()
 }
 
 // Stop the blockchain service's main event loop and associated goroutines.
@@ -236,13 +314,10 @@ func (s *Service) StartFromSavedState(saved state.BeaconState) error {
 		return errors.Wrap(err, "could not verify initial checkpoint provided for chain sync")
 	}
 
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime:             s.genesisTime,
-			GenesisValidatorsRoot: saved.GenesisValidatorsRoot(),
-		},
-	})
+	vr := bytesutil.ToBytes32(saved.GenesisValidatorsRoot())
+	if err := s.clockSetter.SetClock(startup.NewClock(s.genesisTime, vr)); err != nil {
+		return errors.Wrap(err, "failed to initialize blockchain service")
+	}
 
 	return nil
 }
@@ -302,7 +377,13 @@ func (s *Service) initializeHeadFromDB(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "could not get finalized block")
 	}
-	if err := s.setHead(finalizedRoot, finalizedBlock, finalizedState); err != nil {
+	if err := s.setHead(&head{
+		finalizedRoot,
+		finalizedBlock,
+		finalizedState,
+		finalizedBlock.Block().Slot(),
+		false,
+	}); err != nil {
 		return errors.Wrap(err, "could not set head")
 	}
 
@@ -335,7 +416,7 @@ func (s *Service) startFromExecutionChain() error {
 				log.Debug("Context closed, exiting goroutine")
 				return
 			case err := <-stateSub.Err():
-				log.WithError(err).Error("Subscription to state notifier failed")
+				log.WithError(err).Error("Subscription to state forRoot failed")
 				return
 			}
 		}
@@ -359,15 +440,10 @@ func (s *Service) onExecutionChainStart(ctx context.Context, genesisTime time.Ti
 	}
 	go slots.CountdownToGenesis(ctx, genesisTime, uint64(initializedState.NumValidators()), gRoot)
 
-	// We send out a state initialized event to the rest of the services
-	// running in the beacon node.
-	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
-		Type: statefeed.Initialized,
-		Data: &statefeed.InitializedData{
-			StartTime:             genesisTime,
-			GenesisValidatorsRoot: initializedState.GenesisValidatorsRoot(),
-		},
-	})
+	vr := bytesutil.ToBytes32(initializedState.GenesisValidatorsRoot())
+	if err := s.clockSetter.SetClock(startup.NewClock(genesisTime, vr)); err != nil {
+		log.WithError(err).Fatal("failed to initialize blockchain service from execution start event")
+	}
 }
 
 // initializes the state and genesis block of the beacon chain to persistent storage
@@ -401,7 +477,7 @@ func (s *Service) initializeBeaconChain(
 	if err := helpers.UpdateCommitteeCache(ctx, genesisState, 0); err != nil {
 		return nil, err
 	}
-	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState); err != nil {
+	if err := helpers.UpdateProposerIndicesInCache(ctx, genesisState, coreTime.CurrentEpoch(genesisState)); err != nil {
 		return nil, err
 	}
 
@@ -439,7 +515,13 @@ func (s *Service) saveGenesisData(ctx context.Context, genesisState state.Beacon
 	}
 	s.cfg.ForkChoiceStore.SetGenesisTime(uint64(s.genesisTime.Unix()))
 
-	if err := s.setHead(genesisBlkRoot, genesisBlk, genesisState); err != nil {
+	if err := s.setHead(&head{
+		genesisBlkRoot,
+		genesisBlk,
+		genesisState,
+		genesisBlk.Block().Slot(),
+		false,
+	}); err != nil {
 		log.WithError(err).Fatal("Could not set head")
 	}
 	return nil

@@ -37,6 +37,8 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 		// differentiate them below.
 	case strings.Contains(topic, p2p.GossipSyncCommitteeMessage) && !strings.Contains(topic, p2p.SyncContributionAndProofSubnetTopicFormat):
 		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.SyncCommitteeMessage{})]
+	case strings.Contains(topic, p2p.GossipBlobSidecarMessage):
+		topic = p2p.GossipTypeMapping[reflect.TypeOf(&ethpb.BlobSidecar{})]
 	}
 
 	base := p2p.GossipTopicMappings(topic, 0)
@@ -49,7 +51,7 @@ func (s *Service) decodePubsubMessage(msg *pubsub.Message) (ssz.Unmarshaler, err
 	}
 	// Handle different message types across forks.
 	if topic == p2p.BlockSubnetTopicFormat {
-		m, err = extractBlockDataType(fDigest[:], s.cfg.chain)
+		m, err = extractBlockDataType(fDigest[:], s.cfg.clock)
 		if err != nil {
 			return nil, err
 		}

@@ -5,6 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ '*' ]
+  merge_group:
+    types: [checks_requested]
 
 jobs:
   formatting:
@@ -26,15 +28,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Set up Go 1.19
+      - name: Set up Go 1.21
         uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version: '1.21.5'
       - name: Run Gosec Security Scanner
         run: | # https://github.com/securego/gosec/issues/469
           export PATH=$PATH:$(go env GOPATH)/bin
-          go install github.com/securego/gosec/v2/cmd/gosec@v2.12.0
-          gosec -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
+          go install github.com/securego/gosec/v2/cmd/gosec@v2.15.0
+          gosec -exclude-generated -exclude=G307 -exclude-dir=crypto/bls/herumi ./...
 
   lint:
     name: Lint
@@ -43,16 +45,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set up Go 1.19
+      - name: Set up Go 1.21
         uses: actions/setup-go@v3
         with:
-          go-version: 1.19
+          go-version: '1.21.5'
           id: go
 
       - name: Golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.50.1
+          version: v1.55.2
           args: --config=.golangci.yml --out-${NO_FUTURE}format colored-line-number
 
   build:
@@ -62,7 +64,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: 1.19
+          go-version: '1.21.5'
         id: go
 
       - name: Check out code into the Go module directory
@@ -75,14 +77,14 @@ jobs:
       - name: Build
         # Use blst tag to allow go and bazel builds for blst.
         run: go build -v ./...
-        env: 
-           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+        env:
+           CGO_CFLAGS: "-O2 -D__BLST_PORTABLE__"
         # fuzz leverage go tag based stubs at compile time.
         # Building and testing with these tags should be checked and enforced at pre-submit.
       - name: Test for fuzzing
         run: go test  -tags=fuzz,develop ./...  -test.run=^Fuzz
-        env: 
-           CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+        env:
+           CGO_CFLAGS: "-O2 -D__BLST_PORTABLE__"
 
 # Tests run via Bazel for now...
 #      - name: Test

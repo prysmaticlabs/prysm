@@ -15,6 +15,7 @@ import (
 	db "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
@@ -90,12 +91,14 @@ func TestMetadataRPCHandler_SendsMetadata(t *testing.T) {
 	})
 
 	// Set up a head state in the database with data we expect.
+	chain := &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}}
 	d := db.SetupDB(t)
 	r := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p1,
-			chain:    &mock.ChainService{Genesis: time.Now(), ValidatorsRoot: [32]byte{}},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
@@ -158,20 +161,24 @@ func TestMetadataRPCHandler_SendsMetadataAltair(t *testing.T) {
 
 	// Set up a head state in the database with data we expect.
 	d := db.SetupDB(t)
+	chain := &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}}
 	r := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p1,
-			chain:    &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
+			chain:    chain,
+			clock:    startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p1),
 	}
 
+	chain2 := &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}}
 	r2 := &Service{
 		cfg: &config{
 			beaconDB: d,
 			p2p:      p2,
-			chain:    &mock.ChainService{Genesis: time.Now().Add(-5 * oneEpoch()), ValidatorsRoot: [32]byte{}},
+			chain:    chain2,
+			clock:    startup.NewClock(chain2.Genesis, chain2.ValidatorsRoot),
 		},
 		rateLimiter: newRateLimiter(p2),
 	}
@@ -236,7 +243,7 @@ func TestExtractMetaDataType(t *testing.T) {
 
 	type args struct {
 		digest []byte
-		chain  blockchain.ChainInfoFetcher
+		clock  blockchain.TemporalOracle
 	}
 	tests := []struct {
 		name    string
@@ -248,7 +255,7 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "no digest",
 			args: args{
 				digest: []byte{},
-				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+				clock:  startup.NewClock(time.Now(), [32]byte{}),
 			},
 			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
@@ -257,7 +264,7 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "invalid digest",
 			args: args{
 				digest: []byte{0x00, 0x01},
-				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+				clock:  startup.NewClock(time.Now(), [32]byte{}),
 			},
 			want:    nil,
 			wantErr: true,
@@ -266,7 +273,7 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "non existent digest",
 			args: args{
 				digest: []byte{0x00, 0x01, 0x02, 0x03},
-				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+				clock:  startup.NewClock(time.Now(), [32]byte{}),
 			},
 			want:    nil,
 			wantErr: true,
@@ -275,7 +282,7 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "genesis fork version",
 			args: args{
 				digest: genDigest[:],
-				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+				clock:  startup.NewClock(time.Now(), [32]byte{}),
 			},
 			want:    wrapper.WrappedMetadataV0(&pb.MetaDataV0{}),
 			wantErr: false,
@@ -284,7 +291,7 @@ func TestExtractMetaDataType(t *testing.T) {
 			name: "altair fork version",
 			args: args{
 				digest: altairDigest[:],
-				chain:  &mock.ChainService{ValidatorsRoot: [32]byte{}},
+				clock:  startup.NewClock(time.Now(), [32]byte{}),
 			},
 			want:    wrapper.WrappedMetadataV1(&pb.MetaDataV1{}),
 			wantErr: false,
@@ -292,7 +299,7 @@ func TestExtractMetaDataType(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := extractMetaDataType(tt.args.digest, tt.args.chain)
+			got, err := extractMetaDataType(tt.args.digest, tt.args.clock)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("extractMetaDataType() error = %v, wantErr %v", err, tt.wantErr)
 				return

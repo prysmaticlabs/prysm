@@ -130,9 +130,15 @@ func performValidatorStateMigration(ctx context.Context, bar *progressbar.Progre
 				return err
 			}
 			item := enc
-			if hasAltairKey(item) {
+			switch {
+			case hasAltairKey(enc):
 				item = item[len(altairKey):]
+			case hasBellatrixKey(enc):
+				item = item[len(bellatrixKey):]
+			case hasCapellaKey(enc):
+				item = item[len(capellaKey):]
 			}
+
 			detector, err := detect.FromState(item)
 			if err != nil {
 				return err
@@ -165,9 +171,14 @@ func performValidatorStateMigration(ctx context.Context, bar *progressbar.Progre
 				return err
 			}
 			var stateBytes []byte
-			if hasAltairKey(enc) {
+			switch {
+			case hasAltairKey(enc):
 				stateBytes = snappy.Encode(nil, append(altairKey, rawObj...))
-			} else {
+			case hasBellatrixKey(enc):
+				stateBytes = snappy.Encode(nil, append(bellatrixKey, rawObj...))
+			case hasCapellaKey(enc):
+				stateBytes = snappy.Encode(nil, append(capellaKey, rawObj...))
+			default:
 				stateBytes = snappy.Encode(nil, rawObj)
 			}
 			if stateErr := stateBkt.Put(keys[index], stateBytes); stateErr != nil {

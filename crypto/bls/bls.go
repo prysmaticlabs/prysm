@@ -1,5 +1,5 @@
 // Package bls implements a go-wrapper around a library implementing the
-// the BLS12-381 curve and signature scheme. This package exposes a public API for
+// BLS12-381 curve and signature scheme. This package exposes a public API for
 // verifying and aggregating BLS signatures used by Ethereum.
 package bls
 
@@ -11,7 +11,7 @@ import (
 
 // Initialize herumi temporarily while we transition to blst for ethdo.
 func init() {
-	herumi.HerumiInit()
+	herumi.Init()
 }
 
 // SecretKeyFromBytes creates a BLS private key from a BigEndian byte slice.
@@ -22,6 +22,13 @@ func SecretKeyFromBytes(privKey []byte) (SecretKey, error) {
 // PublicKeyFromBytes creates a BLS public key from a  BigEndian byte slice.
 func PublicKeyFromBytes(pubKey []byte) (PublicKey, error) {
 	return blst.PublicKeyFromBytes(pubKey)
+}
+
+// SignatureFromBytesNoValidation creates a BLS signature from a LittleEndian byte slice.
+// It does not check validity of the signature, use only when the byte slice has
+// already been verified
+func SignatureFromBytesNoValidation(sig []byte) (Signature, error) {
+	return blst.SignatureFromBytesNoValidation(sig)
 }
 
 // SignatureFromBytes creates a BLS signature from a LittleEndian byte slice.

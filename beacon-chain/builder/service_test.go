@@ -3,6 +3,7 @@ package builder
 import (
 	"context"
 	"testing"
+	"time"
 
 	buildertesting "github.com/prysmaticlabs/prysm/v4/api/client/builder/testing"
 	blockchainTesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
@@ -38,6 +39,21 @@ func Test_RegisterValidator(t *testing.T) {
 	assert.Equal(t, true, builder.RegisteredVals[pubkey])
 }
 
+func Test_RegisterValidator_WithCache(t *testing.T) {
+	ctx := context.Background()
+	headFetcher := &blockchainTesting.ChainService{}
+	builder := buildertesting.NewClient()
+	s, err := NewService(ctx, WithRegistrationCache(), WithHeadFetcher(headFetcher), WithBuilderClient(&builder))
+	require.NoError(t, err)
+	pubkey := bytesutil.ToBytes48([]byte("pubkey"))
+	var feeRecipient [20]byte
+	reg := &eth.ValidatorRegistrationV1{Pubkey: pubkey[:], Timestamp: uint64(time.Now().UTC().Unix()), FeeRecipient: feeRecipient[:]}
+	require.NoError(t, s.RegisterValidator(ctx, []*eth.SignedValidatorRegistrationV1{{Message: reg}}))
+	registration, err := s.registrationCache.RegistrationByIndex(0)
+	require.NoError(t, err)
+	require.DeepEqual(t, reg, registration)
+}
+
 func Test_BuilderMethodsWithouClient(t *testing.T) {
 	s, err := NewService(context.Background())
 	require.NoError(t, err)
@@ -46,7 +62,7 @@ func Test_BuilderMethodsWithouClient(t *testing.T) {
 	_, err = s.GetHeader(context.Background(), 0, [32]byte{}, [48]byte{})
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 
-	_, err = s.SubmitBlindedBlock(context.Background(), nil)
+	_, _, err = s.SubmitBlindedBlock(context.Background(), nil)
 	assert.ErrorContains(t, ErrNoBuilder.Error(), err)
 
 	err = s.RegisterValidator(context.Background(), nil)

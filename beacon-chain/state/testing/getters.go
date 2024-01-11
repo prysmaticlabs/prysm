@@ -123,7 +123,6 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				n := b.Copy()
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
-
 			},
 			exists:      false,
 			expectedIdx: 0,
@@ -136,7 +135,6 @@ func VerifyBeaconStateValidatorByPubkey(t *testing.T, factory getState) {
 				n := b.Copy()
 				// Append to another state
 				assert.NoError(t, n.AppendValidator(&ethpb.Validator{PublicKey: key[:]}))
-
 			},
 			exists:      false,
 			expectedIdx: 0,

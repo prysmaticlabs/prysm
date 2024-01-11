@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/capella"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/deneb"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/execution"
 	prysmtime "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
@@ -36,12 +37,12 @@ func (_ *State) replayBlocks(
 	var err error
 
 	start := time.Now()
-	log = log.WithFields(logrus.Fields{
+	rLog := log.WithFields(logrus.Fields{
 		"startSlot": state.Slot(),
 		"endSlot":   targetSlot,
 		"diff":      targetSlot - state.Slot(),
 	})
-	log.Debug("Replaying state")
+	rLog.Debug("Replaying state")
 	// The input block list is sorted in decreasing slots order.
 	if len(signed) > 0 {
 		for i := len(signed) - 1; i >= 0; i-- {
@@ -71,9 +72,11 @@ func (_ *State) replayBlocks(
 	}
 
 	duration := time.Since(start)
-	log.WithFields(logrus.Fields{
+	rLog.WithFields(logrus.Fields{
 		"duration": duration,
 	}).Debug("Replayed state")
+
+	replayBlocksSummary.Observe(float64(duration.Milliseconds()))
 
 	return state, nil
 }
@@ -205,7 +208,7 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 					tracing.AnnotateError(span, err)
 					return nil, errors.Wrap(err, "could not process epoch with optimizations")
 				}
-			case version.Altair, version.Bellatrix, version.Capella:
+			case version.Altair, version.Bellatrix, version.Capella, version.Deneb:
 				state, err = altair.ProcessEpoch(ctx, state)
 				if err != nil {
 					tracing.AnnotateError(span, err)
@@ -238,6 +241,14 @@ func ReplayProcessSlots(ctx context.Context, state state.BeaconState, slot primi
 
 		if prysmtime.CanUpgradeToCapella(state.Slot()) {
 			state, err = capella.UpgradeToCapella(state)
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return nil, err
+			}
+		}
+
+		if prysmtime.CanUpgradeToDeneb(state.Slot()) {
+			state, err = deneb.UpgradeToDeneb(state)
 			if err != nil {
 				tracing.AnnotateError(span, err)
 				return nil, err

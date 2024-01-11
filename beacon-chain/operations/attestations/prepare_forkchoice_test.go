@@ -88,7 +88,9 @@ func TestBatchAttestations_Multiple(t *testing.T) {
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(unaggregatedAtts))
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(aggregatedAtts))
-	require.NoError(t, s.cfg.Pool.SaveBlockAttestations(blockAtts))
+	for _, att := range blockAtts {
+		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))
+	}
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
 	wanted, err := attaggregation.Aggregate([]*ethpb.Attestation{aggregatedAtts[0], blockAtts[0]})
@@ -142,7 +144,10 @@ func TestBatchAttestations_Single(t *testing.T) {
 	}
 	require.NoError(t, s.cfg.Pool.SaveUnaggregatedAttestations(unaggregatedAtts))
 	require.NoError(t, s.cfg.Pool.SaveAggregatedAttestations(aggregatedAtts))
-	require.NoError(t, s.cfg.Pool.SaveBlockAttestations(blockAtts))
+
+	for _, att := range blockAtts {
+		require.NoError(t, s.cfg.Pool.SaveBlockAttestation(att))
+	}
 	require.NoError(t, s.batchForkChoiceAtts(context.Background()))
 
 	wanted, err := attaggregation.Aggregate(append(aggregatedAtts, unaggregatedAtts...))

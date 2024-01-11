@@ -20,6 +20,7 @@ import (
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
@@ -67,6 +68,7 @@ func FuzzValidateBeaconBlockPubSub_Phase0(f *testing.F) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -150,6 +152,7 @@ func FuzzValidateBeaconBlockPubSub_Altair(f *testing.F) {
 			chain:         chainService,
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 		},
 		seenBlockCache:      lruwrpr.New(10),
 		badBlockCache:       lruwrpr.New(10),
@@ -229,6 +232,7 @@ func FuzzValidateBeaconBlockPubSub_Bellatrix(f *testing.F) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},

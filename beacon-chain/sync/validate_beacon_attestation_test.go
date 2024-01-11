@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -26,7 +27,6 @@ import (
 )
 
 func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
-	ctx := context.Background()
 	p := p2ptest.NewTestP2P(t)
 	db := dbtest.SetupDB(t)
 	chain := &mockChain.ChainService{
@@ -46,6 +46,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 			p2p:                 p,
 			beaconDB:            db,
 			chain:               chain,
+			clock:               startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			attestationNotifier: (&mockChain.ChainService{}).OperationNotifier(),
 		},
 		blkRootToPendingAtts:             make(map[[32]byte][]*ethpb.SignedAggregateAttestationAndProof),
@@ -305,11 +306,7 @@ func TestService_validateCommitteeIndexBeaconAttestation(t *testing.T) {
 }
 
 func TestService_setSeenCommitteeIndicesSlot(t *testing.T) {
-	chainService := &mockChain.ChainService{
-		Genesis:        time.Now(),
-		ValidatorsRoot: [32]byte{'A'},
-	}
-	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)), WithStateNotifier(chainService.StateNotifier()))
+	s := NewService(context.Background(), WithP2P(p2ptest.NewTestP2P(t)))
 	s.initCaches()
 
 	// Empty cache

@@ -37,7 +37,7 @@ func TestBeaconState_ProtoBeaconStateCompatibility(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, r1, r2, "Mismatched roots")
 
-	// We then write to the the state and compare hash tree roots again.
+	// We then write to the state and compare hash tree roots again.
 	balances := genesis.Balances
 	balances[0] = 3823
 	require.NoError(t, customState.SetBalances(balances))
@@ -185,7 +185,7 @@ func TestBeaconState_ImmutabilityWithSharedResources(t *testing.T) {
 
 	// Randao mixes
 	require.DeepEqual(t, a.RandaoMixes(), b.RandaoMixes(), "Test precondition failed, fields are not equal")
-	require.NoError(t, a.UpdateRandaoMixesAtIndex(1, []byte("foo")))
+	require.NoError(t, a.UpdateRandaoMixesAtIndex(1, bytesutil.ToBytes32([]byte("foo"))))
 	if reflect.DeepEqual(a.RandaoMixes(), b.RandaoMixes()) {
 		t.Error("Expect a.RandaoMixes() to be different from b.RandaoMixes()")
 	}

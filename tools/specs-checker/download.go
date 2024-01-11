@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,7 +41,7 @@ func download(cliCtx *cli.Context) error {
 
 func getAndSaveFile(specDocUrl, outFilePath string) error {
 	// Create output file.
-	f, err := os.Create(filepath.Clean(outFilePath))
+	f, err := os.OpenFile(filepath.Clean(outFilePath), os.O_CREATE|os.O_EXCL, params.BeaconIoConfig().ReadWritePermissions)
 	if err != nil {
 		return fmt.Errorf("cannot create output file: %w", err)
 	}

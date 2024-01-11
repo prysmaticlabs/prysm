@@ -90,7 +90,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
-	stdin.Write([]byte(accounts.ExitPassphrase))
+	stdin.Write([]byte("Y"))
 	rawPubKeys, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(
 		cliCtx, &stdin, validatingPublicKeys, false,
 	)
@@ -134,7 +134,6 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 
 	mockNodeClient.EXPECT().
 		GetGenesis(gomock.Any(), gomock.Any()).
-		Times(2).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
 	mockValidatorClient.EXPECT().
@@ -191,7 +190,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 
 	// Prepare user input for final confirmation step
 	var stdin bytes.Buffer
-	stdin.Write([]byte(accounts.ExitPassphrase))
+	stdin.Write([]byte("Y"))
 	rawPubKeys, formattedPubKeys, err := accounts.FilterExitAccountsFromUserInput(
 		cliCtx, &stdin, validatingPublicKeys, false,
 	)
@@ -396,5 +395,5 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 	require.Equal(t, 1, len(formattedExitedKeys))
 	assert.Equal(t, "0x"+keystore.Pubkey[:12], formattedExitedKeys[0])
 
-	require.Equal(t, true, file.FileExists(path.Join(out, "validator-exit-1.json")), "Expected file to exist")
+	require.Equal(t, true, file.Exists(path.Join(out, "validator-exit-1.json")), "Expected file to exist")
 }

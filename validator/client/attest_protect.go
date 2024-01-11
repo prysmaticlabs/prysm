@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/slashings"
@@ -15,7 +14,6 @@ import (
 )
 
 var failedAttLocalProtectionErr = "attempted to make slashable attestation, rejected by local slashing protection"
-var failedPostAttSignExternalErr = "attempted to make slashable attestation, rejected by external slasher service"
 
 // Checks if an attestation is slashable by comparing it with the attesting
 // history for the given public key in our DB. If it is not, we then update the history
@@ -24,10 +22,12 @@ func (v *validator) slashableAttestationCheck(
 	ctx context.Context,
 	indexedAtt *ethpb.IndexedAttestation,
 	pubKey [fieldparams.BLSPubkeyLength]byte,
-	signingRoot [32]byte,
+	signingRoot32 [32]byte,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "validator.postAttSignUpdate")
 	defer span.End()
+
+	signingRoot := signingRoot32[:]
 
 	// Based on EIP3076, validator should refuse to sign any attestation with source epoch less
 	// than the minimum source epoch present in that signer’s attestations.
@@ -78,21 +78,9 @@ func (v *validator) slashableAttestationCheck(
 		return errors.Wrap(err, failedAttLocalProtectionErr)
 	}
 
-	if err := v.db.SaveAttestationForPubKey(ctx, pubKey, signingRoot, indexedAtt); err != nil {
+	if err := v.db.SaveAttestationForPubKey(ctx, pubKey, signingRoot32, indexedAtt); err != nil {
 		return errors.Wrap(err, "could not save attestation history for validator public key")
 	}
 
-	if features.Get().RemoteSlasherProtection {
-		slashing, err := v.slashingProtectionClient.IsSlashableAttestation(ctx, indexedAtt)
-		if err != nil {
-			return errors.Wrap(err, "could not check if attestation is slashable")
-		}
-		if slashing != nil && len(slashing.AttesterSlashings) > 0 {
-			if v.emitAccountMetrics {
-				ValidatorAttestFailVecSlasher.WithLabelValues(fmtKey).Inc()
-			}
-			return errors.New(failedPostAttSignExternalErr)
-		}
-	}
 	return nil
 }

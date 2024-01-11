@@ -751,11 +751,113 @@ func TestForkChoice_UnrealizedJustifiedPayloadBlockHash(t *testing.T) {
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
 
 	f.store.unrealizedJustifiedCheckpoint.Root = [32]byte{'a'}
-	got, err := f.UnrealizedJustifiedPayloadBlockHash()
-	require.NoError(t, err)
+	got := f.UnrealizedJustifiedPayloadBlockHash()
 	require.Equal(t, [32]byte{'A'}, got)
+}
 
-	f.store.unrealizedJustifiedCheckpoint.Root = [32]byte{'b'}
-	_, err = f.UnrealizedJustifiedPayloadBlockHash()
-	require.ErrorIs(t, err, ErrNilNode)
+func TestForkChoiceIsViableForCheckpoint(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+
+	st, root, err := prepareForkchoiceState(ctx, 0, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	// No Node
+	viable, err := f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// No Children
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 0})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 2})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	st, bRoot, err := prepareForkchoiceState(ctx, 1, [32]byte{'b'}, root, [32]byte{'B'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, bRoot))
+
+	// Epoch start
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: root, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// No Children but impossible checkpoint
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	st, cRoot, err := prepareForkchoiceState(ctx, 2, [32]byte{'c'}, bRoot, [32]byte{'C'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, cRoot))
+
+	// Children in same epoch
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	st, dRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch, [32]byte{'d'}, bRoot, [32]byte{'D'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, dRoot))
+
+	// Children in next epoch but boundary
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// Boundary block
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: dRoot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: dRoot, Epoch: 0})
+	require.NoError(t, err)
+	require.Equal(t, false, viable)
+
+	// Children in next epoch
+	st, eRoot, err := prepareForkchoiceState(ctx, params.BeaconConfig().SlotsPerEpoch+1, [32]byte{'e'}, bRoot, [32]byte{'E'}, 0, 0)
+	require.NoError(t, err)
+	require.NoError(t, f.InsertNode(ctx, st, eRoot))
+
+	viable, err = f.IsViableForCheckpoint(&forkchoicetypes.Checkpoint{Root: bRoot, Epoch: 1})
+	require.NoError(t, err)
+	require.Equal(t, true, viable)
+}
+
+func TestForkChoiceSlot(t *testing.T) {
+	f := setup(0, 0)
+	ctx := context.Background()
+	st, root, err := prepareForkchoiceState(ctx, 3, [32]byte{'a'}, params.BeaconConfig().ZeroHash, [32]byte{'A'}, 0, 0)
+	require.NoError(t, err)
+	// No Node
+	_, err = f.Slot(root)
+	require.ErrorIs(t, ErrNilNode, err)
+
+	require.NoError(t, f.InsertNode(ctx, st, root))
+	slot, err := f.Slot(root)
+	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(3), slot)
 }

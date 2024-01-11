@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//api/gateway:go_default_library",
         "//cmd/beacon-chain/flags:go_default_library",
-        "//proto/eth/service:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_grpc_ecosystem_grpc_gateway_v2//runtime:go_default_library",
         "@org_golang_google_protobuf//encoding/protojson:go_default_library",

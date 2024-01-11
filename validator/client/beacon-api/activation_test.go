@@ -1,15 +1,16 @@
 package beacon_api
 
 import (
+	"bytes"
 	"context"
-	"strings"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	rpcmiddleware "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -61,15 +62,6 @@ func TestActivation_Nominal(t *testing.T) {
 	}
 
 	pubKeys := make([][]byte, len(stringPubKeys))
-
-	url := strings.Join([]string{
-		"/eth/v1/beacon/states/head/validators?",
-		"id=0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13&",
-		"id=0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526&",
-		"id=0x424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242424242&",
-		"id=0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
-	}, "")
-
 	for i, stringPubKey := range stringPubKeys {
 		pubKey, err := hexutil.Decode(stringPubKey)
 		require.NoError(t, err)
@@ -108,44 +100,52 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	}
 
-	stateValidatorsResponseJson := rpcmiddleware.StateValidatorsResponseJson{}
+	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
 
 	// Instantiate a cancellable context.
 	ctx, cancel := context.WithCancel(context.Background())
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	// GetRestJsonResponse does not return any result for non existing key
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	req := &beacon.GetValidatorsRequest{
+		Ids:      stringPubKeys,
+		Statuses: []string{},
+	}
+	reqBytes, err := json.Marshal(req)
+	require.NoError(t, err)
+
+	// Get does not return any result for non existing key
+	jsonRestHandler.EXPECT().Post(
 		ctx,
-		url,
+		"/eth/v1/beacon/states/head/validators",
+		nil,
+		bytes.NewBuffer(reqBytes),
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
-		nil,
 	).SetArg(
-		2,
-		rpcmiddleware.StateValidatorsResponseJson{
-			Data: []*rpcmiddleware.ValidatorContainerJson{
+		4,
+		beacon.GetValidatorsResponse{
+			Data: []*beacon.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[0],
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKeys[0],
 					},
 				},
 				{
 					Index:  "11877",
 					Status: "active_exiting",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[1],
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKeys[1],
 					},
 				},
 				{
 					Index:  "210439",
 					Status: "exited_slashed",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKeys[3],
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKeys[3],
 					},
 				},
 			},
@@ -186,17 +186,17 @@ func TestActivation_Nominal(t *testing.T) {
 func TestActivation_InvalidData(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		data                 []*rpcmiddleware.ValidatorContainerJson
+		data                 []*beacon.ValidatorContainer
 		expectedErrorMessage string
 	}{
 		{
 			name: "bad validator public key",
-			data: []*rpcmiddleware.ValidatorContainerJson{
+			data: []*beacon.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: "NotAPubKey",
+					Validator: &beacon.Validator{
+						Pubkey: "NotAPubKey",
 					},
 				},
 			},
@@ -204,12 +204,12 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "bad validator index",
-			data: []*rpcmiddleware.ValidatorContainerJson{
+			data: []*beacon.ValidatorContainer{
 				{
 					Index:  "NotAnIndex",
 					Status: "active_ongoing",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKey,
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKey,
 					},
 				},
 			},
@@ -217,12 +217,12 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid validator status",
-			data: []*rpcmiddleware.ValidatorContainerJson{
+			data: []*beacon.ValidatorContainer{
 				{
 					Index:  "12345",
 					Status: "NotAStatus",
-					Validator: &rpcmiddleware.ValidatorJson{
-						PublicKey: stringPubKey,
+					Validator: &beacon.Validator{
+						Pubkey: stringPubKey,
 					},
 				},
 			},
@@ -238,17 +238,18 @@ func TestActivation_InvalidData(t *testing.T) {
 
 				ctx := context.Background()
 
-				jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-				jsonRestHandler.EXPECT().GetRestJsonResponse(
+				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+				jsonRestHandler.EXPECT().Post(
 					ctx,
+					gomock.Any(),
+					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
 					nil,
-					nil,
 				).SetArg(
-					2,
-					rpcmiddleware.StateValidatorsResponseJson{
+					4,
+					beacon.GetValidatorsResponse{
 						Data: testCase.data,
 					},
 				).Times(1)
@@ -278,13 +279,14 @@ func TestActivation_JsonResponseError(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRestHandler := mock.NewMockjsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().GetRestJsonResponse(
+	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
+	jsonRestHandler.EXPECT().Post(
 		ctx,
 		gomock.Any(),
 		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
 	).Return(
-		nil,
 		errors.New("some specific json error"),
 	).Times(1)
 

@@ -37,4 +37,8 @@ var (
 	// Graffiti ordered index and hash keys
 	graffitiOrderedIndexKey = []byte("graffiti-ordered-index")
 	graffitiFileHashKey     = []byte("graffiti-file-hash")
+
+	// ProposerSettings stores the encoded proposer settings file
+	proposerSettingsBucket = []byte("proposer-settings-bucket")
+	proposerSettingsKey    = []byte("proposer-settings")
 )

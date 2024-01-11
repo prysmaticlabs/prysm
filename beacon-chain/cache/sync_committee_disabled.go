@@ -30,3 +30,8 @@ func (s *FakeSyncCommitteeCache) NextPeriodIndexPosition(root [32]byte, valIdx p
 func (s *FakeSyncCommitteeCache) UpdatePositionsInCommittee(syncCommitteeBoundaryRoot [32]byte, state state.BeaconState) error {
 	return nil
 }
+
+// Clear -- fake.
+func (s *FakeSyncCommitteeCache) Clear() {
+	return
+}

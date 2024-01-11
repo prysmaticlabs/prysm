@@ -27,7 +27,6 @@ func walletWithKeymanager(c *cli.Context) (*wallet.Wallet, keymanager.IKeymanage
 		return nil, nil, errors.Wrap(err, accounts.ErrCouldNotInitializeKeymanager)
 	}
 	return w, km, nil
-
 }
 
 func walletWithWeb3SignerKeymanager(c *cli.Context, config *remote_web3signer.SetupConfig) (*wallet.Wallet, keymanager.IKeymanager, error) {

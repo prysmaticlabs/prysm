@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -42,7 +41,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 
 	connectionErrorChannel := make(chan error, 1)
-	go v.ReceiveBlocks(ctx, connectionErrorChannel)
+	go v.ReceiveSlots(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
@@ -53,63 +52,39 @@ func run(ctx context.Context, v iface.Validator) {
 		log.WithError(err).Fatal("Could not get keymanager")
 	}
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
+	// check if proposer settings is still nil
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if v.ProposerSettings() != nil {
-		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
-			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		deadline := time.Now().Add(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-		if err := v.PushProposerSettings(ctx, km, deadline); err != nil {
-			if errors.Is(err, ErrBuilderValidatorRegistration) {
-				log.WithError(err).Warn("Push proposer settings error")
-			} else {
-				log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
-			}
-		}
-	} else {
-		log.Warnln("Validator client started without proposer settings such as fee recipient" +
+	if v.ProposerSettings() == nil {
+		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-
+	deadline := time.Now().Add(5 * time.Minute)
+	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+		if errors.Is(err, ErrBuilderValidatorRegistration) {
+			log.WithError(err).Warn("Push proposer settings error")
+		} else {
+			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+		}
+	}
 	for {
-		_, cancel := context.WithCancel(ctx)
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
-
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
 			span.End()
-			cancel()
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case blocksError := <-connectionErrorChannel:
-			if blocksError != nil {
-				log.WithError(blocksError).Warn("block stream interrupted")
-				go v.ReceiveBlocks(ctx, connectionErrorChannel)
+		case slotsError := <-connectionErrorChannel:
+			if slotsError != nil {
+				log.WithError(slotsError).Warn("slots stream interrupted")
+				go v.ReceiveSlots(ctx, connectionErrorChannel)
 				continue
 			}
 		case currentKeys := <-accountsChangedChan:
-			anyActive, err := v.HandleKeyReload(ctx, currentKeys)
-			if err != nil {
-				log.WithError(err).Error("Could not properly handle reloaded keys")
-			}
-			if !anyActive {
-				log.Warn("No active keys found. Waiting for activation...")
-				err := v.WaitForActivation(ctx, accountsChangedChan)
-				if err != nil {
-					log.WithError(err).Warn("Could not wait for validator activation")
-				}
-			}
+			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
-			allExited, err := v.AllValidatorsAreExited(ctx)
-			if err != nil {
-				log.WithError(err).Error("Could not check if validators are exited")
-			}
-			if allExited {
-				log.Info("All validators are exited, no more work to perform...")
-				continue
-			}
 
 			deadline := v.SlotDeadline(slot)
 			slotCtx, cancel := context.WithDeadline(ctx, deadline)
@@ -125,11 +100,13 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			// call push proposer setting at the start of each epoch to account for the following edge case:
+			// proposer is activated at the start of epoch and tries to propose immediately
+			if slots.IsEpochStart(slot) {
 				go func() {
-					//deadline set for end of epoch
+					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
-					if err := v.PushProposerSettings(ctx, km, epochDeadline); err != nil {
+					if err := v.PushProposerSettings(ctx, km, slot, epochDeadline); err != nil {
 						log.WithError(err).Warn("Failed to update proposer settings")
 					}
 				}()
@@ -150,6 +127,20 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		}
+	}
+}
+
+func onAccountsChanged(ctx context.Context, v iface.Validator, current [][48]byte, ac chan [][fieldparams.BLSPubkeyLength]byte) {
+	anyActive, err := v.HandleKeyReload(ctx, current)
+	if err != nil {
+		log.WithError(err).Error("Could not properly handle reloaded keys")
+	}
+	if !anyActive {
+		log.Warn("No active keys found. Waiting for activation...")
+		err := v.WaitForActivation(ctx, ac)
+		if err != nil {
+			log.WithError(err).Warn("Could not wait for validator activation")
 		}
 	}
 }
@@ -271,7 +262,9 @@ func isConnectionError(err error) bool {
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
-	if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
+	if errors.Is(err, ErrValidatorsAllExited) {
+		log.Warn(ErrValidatorsAllExited)
+	} else if errCode, ok := status.FromError(err); ok && errCode.Code() == codes.NotFound {
 		log.WithField(
 			"epoch", slot/params.BeaconConfig().SlotsPerEpoch,
 		).Warn("Validator not yet assigned to epoch")

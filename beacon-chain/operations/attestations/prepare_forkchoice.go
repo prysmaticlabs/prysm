@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
@@ -14,19 +16,36 @@ import (
 	"go.opencensus.io/trace"
 )
 
-// Prepare attestations for fork choice three times per slot.
-var prepareForkChoiceAttsPeriod = slots.DivideSlotBy(3 /* times-per-slot */)
-
 // This prepares fork choice attestations by running batchForkChoiceAtts
 // every prepareForkChoiceAttsPeriod.
 func (s *Service) prepareForkChoiceAtts() {
-	ticker := time.NewTicker(prepareForkChoiceAttsPeriod)
-	defer ticker.Stop()
+	intervals := features.Get().AggregateIntervals
+	slotDuration := time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second
+	// Adjust intervals for networks with a lower slot duration (Hive, e2e, etc)
+	for {
+		if intervals[len(intervals)-1] >= slotDuration {
+			for i, offset := range intervals {
+				intervals[i] = offset / 2
+			}
+		} else {
+			break
+		}
+	}
+	ticker := slots.NewSlotTickerWithIntervals(time.Unix(int64(s.genesisTime), 0), intervals[:])
 	for {
 		select {
-		case <-ticker.C:
+		case slotInterval := <-ticker.C():
+			t := time.Now()
 			if err := s.batchForkChoiceAtts(s.ctx); err != nil {
 				log.WithError(err).Error("Could not prepare attestations for fork choice")
+			}
+			switch slotInterval.Interval {
+			case 0:
+				duration := time.Since(t)
+				log.WithField("Duration", duration).Debug("aggregated unaggregated attestations")
+				batchForkChoiceAttsT1.Observe(float64(duration.Milliseconds()))
+			case 1:
+				batchForkChoiceAttsT2.Observe(float64(time.Since(t).Milliseconds()))
 			}
 		case <-s.ctx.Done():
 			log.Debug("Context closed, exiting routine")
@@ -100,7 +119,7 @@ func (s *Service) aggregateAndSaveForkChoiceAtts(atts []*ethpb.Attestation) erro
 // This checks if the attestation has previously been aggregated for fork choice
 // return true if yes, false if no.
 func (s *Service) seen(att *ethpb.Attestation) (bool, error) {
-	attRoot, err := hash.HashProto(att.Data)
+	attRoot, err := hash.Proto(att.Data)
 	if err != nil {
 		return false, err
 	}

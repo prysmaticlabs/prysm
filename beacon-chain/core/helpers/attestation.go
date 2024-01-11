@@ -8,11 +8,15 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	ErrTooLate = errors.New("attestation is too late")
 )
 
 // ValidateNilAttestation checks if any composite field of input attestation is nil.
@@ -66,25 +70,6 @@ func IsAggregator(committeeCount uint64, slotSig []byte) (bool, error) {
 	return binary.LittleEndian.Uint64(b[:8])%modulo == 0, nil
 }
 
-// AggregateSignature returns the aggregated signature of the input attestations.
-//
-// Spec pseudocode definition:
-//
-//	def get_aggregate_signature(attestations: Sequence[Attestation]) -> BLSSignature:
-//	 signatures = [attestation.signature for attestation in attestations]
-//	 return bls.Aggregate(signatures)
-func AggregateSignature(attestations []*ethpb.Attestation) (bls.Signature, error) {
-	sigs := make([]bls.Signature, len(attestations))
-	var err error
-	for i := 0; i < len(sigs); i++ {
-		sigs[i], err = bls.SignatureFromBytes(attestations[i].Signature)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return bls.AggregateSignatures(sigs), nil
-}
-
 // IsAggregated returns true if the attestation is an aggregated attestation,
 // false otherwise.
 func IsAggregated(attestation *ethpb.Attestation) bool {
@@ -128,7 +113,7 @@ func ComputeSubnetFromCommitteeAndSlot(activeValCount uint64, comIdx primitives.
 	slotSinceStart := slots.SinceEpochStarts(attSlot)
 	comCount := SlotCommitteeCount(activeValCount)
 	commsSinceStart := uint64(slotSinceStart.Mul(comCount))
-	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconNetworkConfig().AttestationSubnetCount
+	computedSubnet := (commsSinceStart + uint64(comIdx)) % params.BeaconConfig().AttestationSubnetCount
 	return computedSubnet
 }
 
@@ -166,8 +151,8 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 	// An attestation cannot be older than the current slot - attestation propagation slot range
 	// with a minor tolerance for peer clock disparity.
 	lowerBoundsSlot := primitives.Slot(0)
-	if currentSlot > params.BeaconNetworkConfig().AttestationPropagationSlotRange {
-		lowerBoundsSlot = currentSlot - params.BeaconNetworkConfig().AttestationPropagationSlotRange
+	if currentSlot > params.BeaconConfig().AttestationPropagationSlotRange {
+		lowerBoundsSlot = currentSlot - params.BeaconConfig().AttestationPropagationSlotRange
 	}
 	lowerTime, err := slots.ToTime(uint64(genesisTime.Unix()), lowerBoundsSlot)
 	if err != nil {
@@ -182,14 +167,39 @@ func ValidateAttestationTime(attSlot primitives.Slot, genesisTime time.Time, clo
 		lowerBoundsSlot,
 		currentSlot,
 	)
-	if attTime.Before(lowerBounds) {
+	if attTime.After(upperBounds) {
 		attReceivedTooEarlyCount.Inc()
 		return attError
 	}
-	if attTime.After(upperBounds) {
-		attReceivedTooLateCount.Inc()
-		return attError
+
+	attEpoch := slots.ToEpoch(attSlot)
+	if attEpoch < params.BeaconConfig().DenebForkEpoch {
+		if attTime.Before(lowerBounds) {
+			attReceivedTooLateCount.Inc()
+			return errors.Join(ErrTooLate, attError)
+		}
+		return nil
 	}
+
+	// EIP-7045: Starting in Deneb, allow any attestations from the current or previous epoch.
+
+	currentEpoch := slots.ToEpoch(currentSlot)
+	prevEpoch, err := currentEpoch.SafeSub(1)
+	if err != nil {
+		log.WithError(err).Debug("Ignoring underflow for a deneb attestation inclusion check in epoch 0")
+		prevEpoch = 0
+	}
+	attSlotEpoch := slots.ToEpoch(attSlot)
+	if attSlotEpoch != currentEpoch && attSlotEpoch != prevEpoch {
+		attError = fmt.Errorf(
+			"attestation epoch %d not within current epoch %d or previous epoch %d",
+			attSlot/params.BeaconConfig().SlotsPerEpoch,
+			currentEpoch,
+			prevEpoch,
+		)
+		return errors.Join(ErrTooLate, attError)
+	}
+
 	return nil
 }
 

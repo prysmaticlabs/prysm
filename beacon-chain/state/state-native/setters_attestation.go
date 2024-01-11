@@ -44,7 +44,7 @@ func (b *BeaconState) setCurrentEpochAttestations(val []*ethpb.PendingAttestatio
 }
 
 // AppendCurrentEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -54,7 +54,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 	}
 
 	atts := b.currentEpochAttestations
-	max := uint64(params.BeaconConfig().CurrentEpochAttestationsLength())
+	max := params.BeaconConfig().CurrentEpochAttestationsLength()
 	if uint64(len(atts)) >= max {
 		return fmt.Errorf("current pending attestation exceeds max length %d", max)
 	}
@@ -74,7 +74,7 @@ func (b *BeaconState) AppendCurrentEpochAttestations(val *ethpb.PendingAttestati
 }
 
 // AppendPreviousEpochAttestations for the beacon state. Appends the new value
-// to the the end of list.
+// to the end of list.
 func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestation) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -84,14 +84,14 @@ func (b *BeaconState) AppendPreviousEpochAttestations(val *ethpb.PendingAttestat
 	}
 
 	atts := b.previousEpochAttestations
-	max := uint64(params.BeaconConfig().PreviousEpochAttestationsLength())
+	max := params.BeaconConfig().PreviousEpochAttestationsLength()
 	if uint64(len(atts)) >= max {
 		return fmt.Errorf("previous pending attestation exceeds max length %d", max)
 	}
 
 	if b.sharedFieldReferences[types.PreviousEpochAttestations].Refs() > 1 {
-		atts = make([]*ethpb.PendingAttestation, len(b.previousEpochAttestations))
-		copy(atts, b.previousEpochAttestations)
+		atts = make([]*ethpb.PendingAttestation, 0, len(b.previousEpochAttestations)+1)
+		atts = append(atts, b.previousEpochAttestations...)
 		b.sharedFieldReferences[types.PreviousEpochAttestations].MinusRef()
 		b.sharedFieldReferences[types.PreviousEpochAttestations] = stateutil.NewRef(1)
 	}

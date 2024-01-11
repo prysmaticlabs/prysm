@@ -16,12 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/sirupsen/logrus"
@@ -29,7 +31,8 @@ import (
 )
 
 var (
-	ErrOptimisticParent = errors.New("parent of the block is optimistic")
+	ErrOptimisticParent    = errors.New("parent of the block is optimistic")
+	errRejectCommitmentLen = errors.New("[REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer")
 )
 
 // validateBeaconBlockPubSub checks that the incoming block has a valid BLS signature.
@@ -91,6 +94,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 		}()
 	}
 
+	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+		return pubsub.ValidationReject, err
+	}
+
 	// Verify the block is the first block received for the proposer for the slot.
 	if s.hasSeenBlockIndexSlot(blk.Block().Slot(), blk.Block().ProposerIndex()) {
 		return pubsub.ValidationIgnore, nil
@@ -122,7 +129,7 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Be lenient in handling early blocks. Instead of discarding blocks arriving later than
 	// MAXIMUM_GOSSIP_CLOCK_DISPARITY in future, we tolerate blocks arriving at max two slots
 	// earlier (SECONDS_PER_SLOT * 2 seconds). Queue such blocks and process them at the right slot.
-	genesisTime := uint64(s.cfg.chain.GenesisTime().Unix())
+	genesisTime := uint64(s.cfg.clock.GenesisTime().Unix())
 	if err := slots.VerifyTime(genesisTime, blk.Block().Slot(), earlyBlockProcessingTolerance); err != nil {
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Ignored block: could not verify slot time")
 		return pubsub.ValidationIgnore, nil
@@ -149,6 +156,10 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	// Process the block if the clock jitter is less than MAXIMUM_GOSSIP_CLOCK_DISPARITY.
 	// Otherwise queue it for processing in the right slot.
 	if isBlockQueueable(genesisTime, blk.Block().Slot(), receivedTime) {
+		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
+			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
+			return res, err
+		}
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -156,13 +167,17 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 			return pubsub.ValidationIgnore, err
 		}
 		s.pendingQueueLock.Unlock()
-		err := fmt.Errorf("early block, with current slot %d < block slot %d", s.cfg.chain.CurrentSlot(), blk.Block().Slot())
+		err := fmt.Errorf("early block, with current slot %d < block slot %d", s.cfg.clock.CurrentSlot(), blk.Block().Slot())
 		log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not process early block")
 		return pubsub.ValidationIgnore, err
 	}
 
 	// Handle block when the parent is unknown.
 	if !s.cfg.chain.HasBlock(ctx, blk.Block().ParentRoot()) {
+		if res, err := s.verifyPendingBlockSignature(ctx, blk, blockRoot); err != nil {
+			log.WithError(err).WithFields(getBlockFields(blk)).Debug("Could not verify block signature")
+			return res, err
+		}
 		s.pendingQueueLock.Lock()
 		if err := s.insertBlockToPendingQueue(blk.Block().Slot(), blk, blockRoot); err != nil {
 			s.pendingQueueLock.Unlock()
@@ -195,25 +210,36 @@ func (s *Service) validateBeaconBlockPubSub(ctx context.Context, pid peer.ID, ms
 	msg.ValidatorData = blkPb // Used in downstream subscriber
 
 	// Log the arrival time of the accepted block
-	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
 	graffiti := blk.Block().Body().Graffiti()
-	log.WithFields(logrus.Fields{
-		"blockSlot":          blk.Block().Slot(),
-		"sinceSlotStartTime": receivedTime.Sub(startTime),
-		"proposerIndex":      blk.Block().ProposerIndex(),
-		"graffiti":           string(graffiti[:]),
-	}).Debug("Received block")
+	startTime, err := slots.ToTime(genesisTime, blk.Block().Slot())
+	logFields := logrus.Fields{
+		"blockSlot":     blk.Block().Slot(),
+		"proposerIndex": blk.Block().ProposerIndex(),
+		"graffiti":      string(graffiti[:]),
+	}
+	if err != nil {
+		log.WithError(err).WithFields(logFields).Warn("Received block, could not report timing information.")
+		return pubsub.ValidationAccept, nil
+	}
+	sinceSlotStartTime := receivedTime.Sub(startTime)
+	validationTime := prysmTime.Now().Sub(receivedTime)
+	logFields["sinceSlotStartTime"] = sinceSlotStartTime
+	logFields["validationTime"] = validationTime
+	log.WithFields(logFields).Debug("Received block")
 
-	blockVerificationGossipSummary.Observe(float64(prysmTime.Since(receivedTime).Milliseconds()))
+	blockArrivalGossipSummary.Observe(float64(sinceSlotStartTime))
+	blockVerificationGossipSummary.Observe(float64(validationTime))
 	return pubsub.ValidationAccept, nil
 }
 
 func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blockRoot [32]byte) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateBeaconBlock")
 	defer span.End()
+
+	if err := validateDenebBeaconBlock(blk.Block()); err != nil {
+		s.setBadBlock(ctx, blockRoot)
+		return err
+	}
 
 	if !s.cfg.chain.InForkchoice(blk.Block().ParentRoot()) {
 		s.setBadBlock(ctx, blockRoot)
@@ -252,6 +278,22 @@ func (s *Service) validateBeaconBlock(ctx context.Context, blk interfaces.ReadOn
 		// for other kinds of errors, set this block as a bad block.
 		s.setBadBlock(ctx, blockRoot)
 		return err
+	}
+	return nil
+}
+
+func validateDenebBeaconBlock(blk interfaces.ReadOnlyBeaconBlock) error {
+	if blk.Version() < version.Deneb {
+		return nil
+	}
+	commits, err := blk.Body().BlobKzgCommitments()
+	if err != nil {
+		return errors.New("unable to read commitments from deneb block")
+	}
+	// [REJECT] The length of KZG commitments is less than or equal to the limitation defined in Consensus Layer
+	// -- i.e. validate that len(body.signed_beacon_block.message.blob_kzg_commitments) <= MAX_BLOBS_PER_BLOCK
+	if len(commits) > fieldparams.MaxBlobsPerBlock {
+		return errors.Wrapf(errRejectCommitmentLen, "%d > %d", len(commits), fieldparams.MaxBlobsPerBlock)
 	}
 	return nil
 }
@@ -307,6 +349,24 @@ func (s *Service) validateBellatrixBeaconBlock(ctx context.Context, parentState 
 		return ErrOptimisticParent
 	}
 	return nil
+}
+
+// Verifies the signature of the pending block with respect to the current head state.
+func (s *Service) verifyPendingBlockSignature(ctx context.Context, blk interfaces.ReadOnlySignedBeaconBlock, blkRoot [32]byte) (pubsub.ValidationResult, error) {
+	roState, err := s.cfg.chain.HeadStateReadOnly(ctx)
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	// Ignore block in the event of non-existent proposer.
+	_, err = roState.ValidatorAtIndex(blk.Block().ProposerIndex())
+	if err != nil {
+		return pubsub.ValidationIgnore, err
+	}
+	if err := blocks.VerifyBlockSignatureUsingCurrentFork(roState, blk); err != nil {
+		s.setBadBlock(ctx, blkRoot)
+		return pubsub.ValidationReject, err
+	}
+	return pubsub.ValidationAccept, nil
 }
 
 // Returns true if the block is not the first block proposed for the proposer for the slot.
@@ -368,7 +428,7 @@ func isBlockQueueable(genesisTime uint64, slot primitives.Slot, receivedTime tim
 		return false
 	}
 
-	currentTimeWithDisparity := receivedTime.Add(params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+	currentTimeWithDisparity := receivedTime.Add(params.BeaconConfig().MaximumGossipClockDisparityDuration())
 	return currentTimeWithDisparity.Unix() < slotTime.Unix()
 }
 

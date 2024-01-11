@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -20,7 +21,33 @@ import (
 
 // Variables defined in the placeholderFields will not be tested in `TestLoadConfigFile`.
 // These are variables that we don't use in Prysm. (i.e. future hardfork, light client... etc)
-var placeholderFields = []string{"UPDATE_TIMEOUT", "DENEB_FORK_EPOCH", "DENEB_FORK_VERSION"}
+// IMPORTANT: Use one field per line and sort these alphabetically to reduce conflicts.
+var placeholderFields = []string{
+	"EIP6110_FORK_EPOCH",
+	"EIP6110_FORK_VERSION",
+	"EIP7002_FORK_EPOCH",
+	"EIP7002_FORK_VERSION",
+	"MAX_BLOBS_PER_BLOCK",
+	"REORG_HEAD_WEIGHT_THRESHOLD",
+	"UPDATE_TIMEOUT",
+	"WHISK_EPOCHS_PER_SHUFFLING_PHASE",
+	"WHISK_FORK_EPOCH",
+	"WHISK_FORK_VERSION",
+	"WHISK_PROPOSER_SELECTION_GAP",
+}
+
+func TestPlaceholderFieldsDistinctSorted(t *testing.T) {
+	m := make(map[string]struct{})
+	for i := 0; i < len(placeholderFields)-1; i++ {
+		if _, ok := m[placeholderFields[i]]; ok {
+			t.Fatalf("duplicate placeholder field %s", placeholderFields[i])
+		}
+		m[placeholderFields[i]] = struct{}{}
+	}
+	if !sort.StringsAreSorted(placeholderFields) {
+		t.Fatal("placeholderFields must be sorted")
+	}
+}
 
 func assertEqualConfigs(t *testing.T, name string, fields []string, expected, actual *params.BeaconChainConfig) {
 	//  Misc params.
@@ -111,11 +138,13 @@ func assertEqualConfigs(t *testing.T, name string, fields []string, expected, ac
 	assert.Equal(t, expected.AltairForkEpoch, actual.AltairForkEpoch, "%s: AltairForkEpoch", name)
 	assert.Equal(t, expected.BellatrixForkEpoch, actual.BellatrixForkEpoch, "%s: BellatrixForkEpoch", name)
 	assert.Equal(t, expected.CapellaForkEpoch, actual.CapellaForkEpoch, "%s: CapellaForkEpoch", name)
+	assert.Equal(t, expected.DenebForkEpoch, actual.DenebForkEpoch, "%s: DenebForkEpoch", name)
 	assert.Equal(t, expected.SqrRootSlotsPerEpoch, actual.SqrRootSlotsPerEpoch, "%s: SqrRootSlotsPerEpoch", name)
 	assert.DeepEqual(t, expected.GenesisForkVersion, actual.GenesisForkVersion, "%s: GenesisForkVersion", name)
 	assert.DeepEqual(t, expected.AltairForkVersion, actual.AltairForkVersion, "%s: AltairForkVersion", name)
 	assert.DeepEqual(t, expected.BellatrixForkVersion, actual.BellatrixForkVersion, "%s: BellatrixForkVersion", name)
 	assert.DeepEqual(t, expected.CapellaForkVersion, actual.CapellaForkVersion, "%s: CapellaForkVersion", name)
+	assert.DeepEqual(t, expected.DenebForkVersion, actual.DenebForkVersion, "%s: DenebForkVersion", name)
 
 	assertYamlFieldsMatch(t, name, fields, expected, actual)
 }
@@ -124,8 +153,10 @@ func TestModifiedE2E(t *testing.T) {
 	c := params.E2ETestConfig().Copy()
 	c.DepositContractAddress = "0x4242424242424242424242424242424242424242"
 	c.TerminalTotalDifficulty = "0"
-	c.AltairForkEpoch = 0
-	c.BellatrixForkEpoch = 0
+	c.AltairForkEpoch = 112
+	c.BellatrixForkEpoch = 123
+	c.CapellaForkEpoch = 235
+	c.DenebForkEpoch = 358
 	y := params.ConfigToYaml(c)
 	cfg, err := params.UnmarshalConfig(y, nil)
 	require.NoError(t, err)

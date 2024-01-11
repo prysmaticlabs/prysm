@@ -16,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 )
 
-// IsForkNextEpoch checks if an alloted fork is in the following epoch.
+// IsForkNextEpoch checks if an allotted fork is in the following epoch.
 func IsForkNextEpoch(genesisTime time.Time, genesisValidatorsRoot []byte) (bool, error) {
 	if genesisTime.IsZero() {
 		return false, errors.New("genesis time is not set")
@@ -181,4 +181,22 @@ func SortedForkVersions(forkSchedule map[[4]byte]primitives.Epoch) [][4]byte {
 		return bytes.Compare(va[:], vb[:]) < 0
 	})
 	return sortedVersions
+}
+
+// LastForkEpoch returns the last valid fork epoch that exists in our
+// fork schedule.
+func LastForkEpoch() primitives.Epoch {
+	fSchedule := params.BeaconConfig().ForkVersionSchedule
+	sortedForkVersions := SortedForkVersions(fSchedule)
+	lastValidEpoch := primitives.Epoch(0)
+	numOfVersions := len(sortedForkVersions)
+	for i := numOfVersions - 1; i >= 0; i-- {
+		v := sortedForkVersions[i]
+		fEpoch := fSchedule[v]
+		if fEpoch != math.MaxUint64 {
+			lastValidEpoch = fEpoch
+			break
+		}
+	}
+	return lastValidEpoch
 }

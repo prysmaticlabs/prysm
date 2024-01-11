@@ -10,7 +10,6 @@ import (
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -72,16 +71,8 @@ func TestHeadRoot_Nil(t *testing.T) {
 }
 
 func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx, fcs := tr.ctx, tr.fcs
 
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
@@ -97,16 +88,8 @@ func TestFinalizedCheckpt_GenesisRootOk(t *testing.T) {
 }
 
 func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	jroot := [32]byte{'j'}
 	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: jroot}
@@ -120,16 +103,8 @@ func TestCurrentJustifiedCheckpt_CanRetrieve(t *testing.T) {
 }
 
 func TestFinalizedBlockHash(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx, beaconDB, fcs := tr.ctx, tr.db, tr.fcs
 
 	r := [32]byte{'f'}
 	cp := &forkchoicetypes.Checkpoint{Epoch: 6, Root: r}
@@ -153,8 +128,7 @@ func TestUnrealizedJustifiedBlockHash(t *testing.T) {
 	service.cfg.ForkChoiceStore.SetBalancesByRooter(func(_ context.Context, _ [32]byte) ([]uint64, error) { return []uint64{}, nil })
 	require.NoError(t, service.cfg.ForkChoiceStore.UpdateJustifiedCheckpoint(ctx, &forkchoicetypes.Checkpoint{Epoch: 6, Root: [32]byte{'j'}}))
 
-	h, err := service.UnrealizedJustifiedPayloadBlockHash()
-	require.NoError(t, err)
+	h := service.UnrealizedJustifiedPayloadBlockHash()
 	require.Equal(t, params.BeaconConfig().ZeroHash, h)
 	require.Equal(t, [32]byte{'j'}, service.cfg.ForkChoiceStore.JustifiedCheckpoint().Root)
 }
@@ -171,16 +145,9 @@ func TestHeadSlot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_CanRetrieve(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx := tr.ctx
+
 	gs, _ := util.DeterministicGenesisState(t, 32)
 	require.NoError(t, service.saveGenesisData(ctx, gs))
 
@@ -190,16 +157,8 @@ func TestHeadRoot_CanRetrieve(t *testing.T) {
 }
 
 func TestHeadRoot_UseDB(t *testing.T) {
-	ctx := context.Background()
-	beaconDB := testDB.SetupDB(t)
-	fcs := doublylinkedtree.New()
-	opts := []Option{
-		WithDatabase(beaconDB),
-		WithForkChoiceStore(fcs),
-		WithStateGen(stategen.New(beaconDB, fcs)),
-	}
-	service, err := NewService(ctx, opts...)
-	require.NoError(t, err)
+	service, tr := minimalTestService(t)
+	ctx, beaconDB := tr.ctx, tr.db
 
 	service.head = &head{root: params.BeaconConfig().ZeroHash}
 	b := util.NewBeaconBlock()
@@ -463,7 +422,18 @@ func TestService_IsOptimistic(t *testing.T) {
 
 	opt, err := c.IsOptimistic(ctx)
 	require.NoError(t, err)
+	require.Equal(t, primitives.Slot(0), c.CurrentSlot())
+	require.Equal(t, false, opt)
+
+	c.SetGenesisTime(time.Now().Add(-time.Second * time.Duration(4*params.BeaconConfig().SecondsPerSlot)))
+	opt, err = c.IsOptimistic(ctx)
+	require.NoError(t, err)
 	require.Equal(t, true, opt)
+
+	// If head is nil, for some reason, an error should be returned rather than panic.
+	c = &Service{}
+	_, err = c.IsOptimistic(ctx)
+	require.ErrorIs(t, err, ErrNilHead)
 }
 
 func TestService_IsOptimisticBeforeBellatrix(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	params2 "github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -24,6 +25,7 @@ func TestSlasher_receiveAttestations_OK(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		},
 		attsQueue: newAttestationsQueue(),
 	}
@@ -207,6 +209,7 @@ func TestSlasher_receiveAttestations_OnlyValidAttestations(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			IndexedAttestationsFeed: new(event.Feed),
 			StateNotifier:           &mock.MockStateNotifier{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		},
 		attsQueue: newAttestationsQueue(),
 	}
@@ -245,6 +248,7 @@ func TestSlasher_receiveBlocks_OK(t *testing.T) {
 		serviceCfg: &ServiceConfig{
 			BeaconBlockHeadersFeed: new(event.Feed),
 			StateNotifier:          &mock.MockStateNotifier{},
+			ClockWaiter:            startup.NewClockSynchronizer(),
 		},
 		blksQueue: newBlocksQueue(),
 	}
@@ -288,6 +292,7 @@ func TestService_processQueuedBlocks(t *testing.T) {
 			Database:         slasherDB,
 			StateNotifier:    &mock.MockStateNotifier{},
 			HeadStateFetcher: mockChain,
+			ClockWaiter:      startup.NewClockSynchronizer(),
 		},
 		blksQueue: newBlocksQueue(),
 	}

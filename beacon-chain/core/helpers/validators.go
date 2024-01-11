@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
+	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -17,12 +18,17 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
+	"go.opencensus.io/trace"
 )
 
-var CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
-	Name: "committee_cache_in_progress_hit",
-	Help: "The number of committee requests that are present in the cache.",
-})
+var (
+	CommitteeCacheInProgressHit = promauto.NewCounter(prometheus.CounterOpts{
+		Name: "committee_cache_in_progress_hit",
+		Help: "The number of committee requests that are present in the cache.",
+	})
+
+	errProposerIndexMiss = errors.New("propoposer index not found in cache")
+)
 
 // IsActiveValidator returns the boolean value on whether the validator
 // is active or not.
@@ -135,6 +141,10 @@ func ActiveValidatorIndices(ctx context.Context, s state.ReadOnlyBeaconState, ep
 		return nil, err
 	}
 
+	if len(indices) == 0 {
+		return nil, errors.New("no active validator indices")
+	}
+
 	if err := UpdateCommitteeCache(ctx, s, epoch); err != nil {
 		return nil, errors.Wrap(err, "could not update committee cache")
 	}
@@ -205,10 +215,7 @@ func ActivationExitEpoch(epoch primitives.Epoch) primitives.Epoch {
 	return epoch + 1 + params.BeaconConfig().MaxSeedLookahead
 }
 
-// ValidatorChurnLimit returns the number of validators that are allowed to
-// enter and exit validator pool for an epoch.
-//
-// Spec pseudocode definition:
+// calculateChurnLimit based on the formula in the spec.
 //
 //	def get_validator_churn_limit(state: BeaconState) -> uint64:
 //	 """
@@ -216,12 +223,32 @@ func ActivationExitEpoch(epoch primitives.Epoch) primitives.Epoch {
 //	 """
 //	 active_validator_indices = get_active_validator_indices(state, get_current_epoch(state))
 //	 return max(MIN_PER_EPOCH_CHURN_LIMIT, uint64(len(active_validator_indices)) // CHURN_LIMIT_QUOTIENT)
-func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
+func calculateChurnLimit(activeValidatorCount uint64) uint64 {
 	churnLimit := activeValidatorCount / params.BeaconConfig().ChurnLimitQuotient
 	if churnLimit < params.BeaconConfig().MinPerEpochChurnLimit {
-		churnLimit = params.BeaconConfig().MinPerEpochChurnLimit
+		return params.BeaconConfig().MinPerEpochChurnLimit
 	}
-	return churnLimit, nil
+	return churnLimit
+}
+
+// ValidatorActivationChurnLimit returns the maximum number of validators that can be activated in a slot.
+func ValidatorActivationChurnLimit(activeValidatorCount uint64) uint64 {
+	return calculateChurnLimit(activeValidatorCount)
+}
+
+// ValidatorExitChurnLimit returns the maximum number of validators that can be exited in a slot.
+func ValidatorExitChurnLimit(activeValidatorCount uint64) uint64 {
+	return calculateChurnLimit(activeValidatorCount)
+}
+
+// ValidatorActivationChurnLimitDeneb returns the maximum number of validators that can be activated in a slot post Deneb.
+func ValidatorActivationChurnLimitDeneb(activeValidatorCount uint64) uint64 {
+	limit := calculateChurnLimit(activeValidatorCount)
+	// New in Deneb.
+	if limit > params.BeaconConfig().MaxPerEpochActivationChurnLimit {
+		return params.BeaconConfig().MaxPerEpochActivationChurnLimit
+	}
+	return limit
 }
 
 // BeaconProposerIndex returns proposer index of a current slot.
@@ -237,12 +264,43 @@ func ValidatorChurnLimit(activeValidatorCount uint64) (uint64, error) {
 //	  indices = get_active_validator_indices(state, epoch)
 //	  return compute_proposer_index(state, indices, seed)
 func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
-	e := time.CurrentEpoch(state)
+	return BeaconProposerIndexAtSlot(ctx, state, state.Slot())
+}
+
+// cachedProposerIndexAtSlot returns the proposer index at the given slot from
+// the cache at the given root key.
+func cachedProposerIndexAtSlot(slot primitives.Slot, root [32]byte) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.ProposerIndices(slots.ToEpoch(slot), root)
+	if !has {
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// ProposerIndexAtSlotFromCheckpoint returns the proposer index at the given
+// slot from the cache at the given checkpoint
+func ProposerIndexAtSlotFromCheckpoint(c *forkchoicetypes.Checkpoint, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	proposerIndices, has := proposerIndicesCache.IndicesFromCheckpoint(*c)
+	if !has {
+		return 0, errProposerIndexMiss
+	}
+	if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
+		return 0, errProposerIndexMiss
+	}
+	return proposerIndices[slot%params.BeaconConfig().SlotsPerEpoch], nil
+}
+
+// BeaconProposerIndexAtSlot returns proposer index at the given slot from the
+// point of view of the given state as head state
+func BeaconProposerIndexAtSlot(ctx context.Context, state state.ReadOnlyBeaconState, slot primitives.Slot) (primitives.ValidatorIndex, error) {
+	e := slots.ToEpoch(slot)
 	// The cache uses the state root of the previous epoch - minimum_seed_lookahead last slot as key. (e.g. Starting epoch 1, slot 32, the key would be block root at slot 31)
 	// For simplicity, the node will skip caching of genesis epoch.
 	if e > params.BeaconConfig().GenesisEpoch+params.BeaconConfig().MinSeedLookahead {
-		wantedEpoch := time.PrevEpoch(state)
-		s, err := slots.EpochEnd(wantedEpoch)
+		s, err := slots.EpochEnd(e - 1)
 		if err != nil {
 			return 0, err
 		}
@@ -251,18 +309,16 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 			return 0, err
 		}
 		if r != nil && !bytes.Equal(r, params.BeaconConfig().ZeroHash[:]) {
-			proposerIndices, err := proposerIndicesCache.ProposerIndices(bytesutil.ToBytes32(r))
-			if err != nil {
-				return 0, errors.Wrap(err, "could not interface with committee cache")
+			pid, err := cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
-			if proposerIndices != nil {
-				if len(proposerIndices) != int(params.BeaconConfig().SlotsPerEpoch) {
-					return 0, errors.Errorf("length of proposer indices is not equal %d to slots per epoch", len(proposerIndices))
-				}
-				return proposerIndices[state.Slot()%params.BeaconConfig().SlotsPerEpoch], nil
+			if err := UpdateProposerIndicesInCache(ctx, state, e); err != nil {
+				return 0, errors.Wrap(err, "could not update proposer index cache")
 			}
-			if err := UpdateProposerIndicesInCache(ctx, state); err != nil {
-				return 0, errors.Wrap(err, "could not update committee cache")
+			pid, err = cachedProposerIndexAtSlot(slot, [32]byte(r))
+			if err == nil {
+				return pid, nil
 			}
 		}
 	}
@@ -272,7 +328,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 		return 0, errors.Wrap(err, "could not generate seed")
 	}
 
-	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(state.Slot()))...)
+	seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot))...)
 	seedWithSlotHash := hash.Hash(seedWithSlot)
 
 	indices, err := ActiveValidatorIndices(ctx, state, e)
@@ -285,6 +341,7 @@ func BeaconProposerIndex(ctx context.Context, state state.ReadOnlyBeaconState) (
 
 // ComputeProposerIndex returns the index sampled by effective balance, which is used to calculate proposer.
 //
+// nolint:dupword
 // Spec pseudocode definition:
 //
 //	def compute_proposer_index(state: BeaconState, indices: Sequence[ValidatorIndex], seed: Bytes32) -> ValidatorIndex:
@@ -394,4 +451,23 @@ func IsEligibleForActivationUsingTrie(state state.ReadOnlyCheckpoint, validator 
 func isEligibleForActivation(activationEligibilityEpoch, activationEpoch, finalizedEpoch primitives.Epoch) bool {
 	return activationEligibilityEpoch <= finalizedEpoch &&
 		activationEpoch == params.BeaconConfig().FarFutureEpoch
+}
+
+// LastActivatedValidatorIndex provides the last activated validator given a state
+func LastActivatedValidatorIndex(ctx context.Context, st state.ReadOnlyBeaconState) (primitives.ValidatorIndex, error) {
+	_, span := trace.StartSpan(ctx, "helpers.LastActivatedValidatorIndex")
+	defer span.End()
+	var lastActivatedvalidatorIndex primitives.ValidatorIndex
+	// linear search because status are not sorted
+	for j := st.NumValidators() - 1; j >= 0; j-- {
+		val, err := st.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(j))
+		if err != nil {
+			return 0, err
+		}
+		if IsActiveValidatorUsingTrie(val, time.CurrentEpoch(st)) {
+			lastActivatedvalidatorIndex = primitives.ValidatorIndex(j)
+			break
+		}
+	}
+	return lastActivatedvalidatorIndex, nil
 }

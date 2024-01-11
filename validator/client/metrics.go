@@ -190,12 +190,23 @@ var (
 			"pubkey",
 		},
 	)
-	// ValidatorInSyncCommitteeGaugeVec used to track validator statuses by public key.
+	// ValidatorInSyncCommitteeGaugeVec used to track whether validator is in the current sync committee.
 	ValidatorInSyncCommitteeGaugeVec = promauto.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Namespace: "validator",
 			Name:      "in_sync_committee",
 			Help:      "validator sync committee.New in Altair hardfork",
+		},
+		[]string{
+			"pubkey",
+		},
+	)
+	// ValidatorInNextSyncCommitteeGaugeVec used to track whether validator is in the next sync committee.
+	ValidatorInNextSyncCommitteeGaugeVec = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "validator",
+			Name:      "in_next_sync_committee",
+			Help:      "validator next sync committee. New in Altair hardfork",
 		},
 		[]string{
 			"pubkey",
@@ -244,6 +255,8 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	}
 
 	if v.emitAccountMetrics {
+		// There is no distinction between unknown and pending validators here.
+		// The balance is recorded as 0, as this metric is the effective balance of a participating validator.
 		for _, missingPubKey := range resp.MissingValidators {
 			fmtKey := fmt.Sprintf("%#x", missingPubKey)
 			ValidatorBalancesGaugeVec.WithLabelValues(fmtKey).Set(0)

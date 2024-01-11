@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"math/bits"
 	"testing"
 	"time"
 
@@ -184,64 +185,54 @@ func TestBothProposesAndAttests_NextSlot(t *testing.T) {
 	assert.Equal(t, uint64(slot), v.ProposeBlockArg1, "ProposeBlock was called with wrong arg")
 }
 
-func TestAllValidatorsAreExited_NextSlot(t *testing.T) {
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), testutil.AllValidatorsAreExitedCtxKey, true))
-	hook := logTest.NewGlobal()
-
-	slot := primitives.Slot(55)
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-
-		cancel()
-	}()
-	run(ctx, v)
-	assert.LogsContain(t, hook, "All validators are exited")
-}
-
 func TestKeyReload_ActiveKey(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges([][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey})
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{testutil.ActiveKey}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	// We expect that WaitForActivation will only be called once,
-	// at the very beginning, and not after account changes.
-	assert.Equal(t, 1, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. WaitForActivation is only called if none of the keys are active, so it shouldn't be called at all.
+	assert.Equal(t, 0, v.WaitForActivationCalled)
 }
 
 func TestKeyReload_NoActiveKey(t *testing.T) {
-	t.Skip("Flakey test. Skipping until we can figure out how to test this properly")
-
-	ctx, cancel := context.WithCancel(context.Background())
+	na := notActive(t)
+	ctx := context.Background()
 	km := &mockKeymanager{}
 	v := &testutil.FakeValidator{Km: km}
-	go func() {
-		km.SimulateAccountChanges(make([][fieldparams.BLSPubkeyLength]byte, 0))
-
-		cancel()
-	}()
-	run(ctx, v)
+	ac := make(chan [][fieldparams.BLSPubkeyLength]byte)
+	current := [][fieldparams.BLSPubkeyLength]byte{na}
+	onAccountsChanged(ctx, v, current, ac)
 	assert.Equal(t, true, v.HandleKeyReloadCalled)
-	assert.Equal(t, 2, v.WaitForActivationCalled)
+	// HandleKeyReloadCalled in the FakeValidator returns true if one of the keys is equal to the
+	// ActiveKey. Since we are using a key we know is not active, it should return false, which
+	// should cause the account change handler to call WaitForActivationCalled.
+	assert.Equal(t, 1, v.WaitForActivationCalled)
+}
+
+func notActive(t *testing.T) [fieldparams.BLSPubkeyLength]byte {
+	var r [fieldparams.BLSPubkeyLength]byte
+	copy(r[:], testutil.ActiveKey[:])
+	for i := 0; i < len(r); i++ {
+		r[i] = bits.Reverse8(r[i])
+	}
+	require.DeepNotEqual(t, r, testutil.ActiveKey)
+	return r
 }
 
 func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch
@@ -257,39 +248,16 @@ func TestUpdateProposerSettingsAt_EpochStart(t *testing.T) {
 	assert.LogsContain(t, hook, "updated proposer settings")
 }
 
-func TestUpdateProposerSettingsAt_EpochEndExceeded(t *testing.T) {
-	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot+1) * time.Second}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
-		DefaultConfig: &validatorserviceconfig.ProposerOption{
-			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
-				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
-			},
-		},
-	})
-	ctx, cancel := context.WithCancel(context.Background())
-	hook := logTest.NewGlobal()
-	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
-	ticker := make(chan primitives.Slot)
-	v.NextSlotRet = ticker
-	go func() {
-		ticker <- slot
-		cancel()
-	}()
-
-	run(ctx, v)
-	// can't test "Failed to update proposer settings" because of log.fatal
-	assert.LogsContain(t, hook, "deadline exceeded")
-}
-
 func TestUpdateProposerSettingsAt_EpochEndOk(t *testing.T) {
 	v := &testutil.FakeValidator{Km: &mockKeymanager{accountsChangedFeed: &event.Feed{}}, ProposerSettingWait: time.Duration(params.BeaconConfig().SecondsPerSlot-1) * time.Second}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch - 1 //have it set close to the end of epoch
@@ -311,13 +279,14 @@ func TestUpdateProposerSettings_ContinuesAfterValidatorRegistrationFails(t *test
 		ProposerSettingsErr: errors.Wrap(ErrBuilderValidatorRegistration, errSomeotherError.Error()),
 		Km:                  &mockKeymanager{accountsChangedFeed: &event.Feed{}},
 	}
-	v.SetProposerSettings(&validatorserviceconfig.ProposerSettings{
+	err := v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 		DefaultConfig: &validatorserviceconfig.ProposerOption{
 			FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x046Fb65722E7b2455012BFEBf6177F1D2e9738D9"),
 			},
 		},
 	})
+	require.NoError(t, err)
 	ctx, cancel := context.WithCancel(context.Background())
 	hook := logTest.NewGlobal()
 	slot := params.BeaconConfig().SlotsPerEpoch

@@ -4,6 +4,7 @@ package math
 import (
 	"errors"
 	stdmath "math"
+	"math/big"
 	"math/bits"
 	"sync"
 
@@ -188,7 +189,7 @@ func Mod64(a, b uint64) (uint64, error) {
 	return val, nil
 }
 
-// Int returns the integer value of the uint64 argument. If there is an overlow, then an error is
+// Int returns the integer value of the uint64 argument. If there is an overflow, then an error is
 // returned.
 func Int(u uint64) (int, error) {
 	if u > stdmath.MaxInt {
@@ -208,7 +209,29 @@ func AddInt(i ...int) (int, error) {
 		}
 
 		sum += ii
-
 	}
 	return sum, nil
+}
+
+// Wei is the smallest unit of Ether, represented as a pointer to a bigInt.
+type Wei *big.Int
+
+// Gwei is a denomination of 1e9 Wei represented as an uint64.
+type Gwei uint64
+
+// WeiToGwei converts big int wei to uint64 gwei.
+// The input `v` is copied before being modified.
+func WeiToGwei(v Wei) Gwei {
+	if v == nil {
+		return 0
+	}
+	gweiPerEth := big.NewInt(1e9)
+	copied := big.NewInt(0).Set(v)
+	copied.Div(copied, gweiPerEth)
+	return Gwei(copied.Uint64())
+}
+
+// IsValidUint256 given a bigint checks if the value is a valid Uint256
+func IsValidUint256(bi *big.Int) bool {
+	return bi.Cmp(big.NewInt(0)) >= 0 && bi.BitLen() <= 256
 }

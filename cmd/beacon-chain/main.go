@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/execution"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	jwtcommands "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/jwt"
+	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/storage"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -53,6 +55,8 @@ var appFlags = []cli.Flag{
 	flags.SetGCPercent,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
+	flags.BlobBatchLimit,
+	flags.BlobBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropNumValidatorsFlag,
 	flags.InteropGenesisTimeFlag,
@@ -73,6 +77,7 @@ var appFlags = []cli.Flag{
 	flags.MaxBuilderEpochMissedSlots,
 	flags.MaxBuilderConsecutiveMissedSlots,
 	flags.EngineEndpointTimeoutSeconds,
+	flags.LocalBlockValueBoost,
 	cmd.BackupWebhookOutputDir,
 	cmd.MinimalConfigFlag,
 	cmd.E2EConfigFlag,
@@ -92,6 +97,7 @@ var appFlags = []cli.Flag{
 	cmd.P2PMetadata,
 	cmd.P2PAllowList,
 	cmd.P2PDenyList,
+	cmd.PubsubQueueSize,
 	cmd.DataDirFlag,
 	cmd.VerbosityFlag,
 	cmd.EnableTracingFlag,
@@ -129,6 +135,9 @@ var appFlags = []cli.Flag{
 	genesis.StatePath,
 	genesis.BeaconAPIURL,
 	flags.SlasherDirFlag,
+	flags.JwtId,
+	storage.BlobStoragePathFlag,
+	storage.BlobRetentionEpochFlag,
 }
 
 func init() {
@@ -136,11 +145,14 @@ func init() {
 }
 
 func main() {
+	// rctx = root context with cancellation.
+	// note other instances of ctx in this func are *cli.Context.
+	rctx, cancel := context.WithCancel(context.Background())
 	app := cli.App{}
 	app.Name = "beacon-chain"
 	app.Usage = "this is a beacon chain implementation for Ethereum"
 	app.Action = func(ctx *cli.Context) error {
-		if err := startNode(ctx); err != nil {
+		if err := startNode(ctx, cancel); err != nil {
 			return cli.Exit(err.Error(), 1)
 		}
 		return nil
@@ -213,12 +225,12 @@ func main() {
 		}
 	}()
 
-	if err := app.Run(os.Args); err != nil {
+	if err := app.RunContext(rctx, os.Args); err != nil {
 		log.Error(err.Error())
 	}
 }
 
-func startNode(ctx *cli.Context) error {
+func startNode(ctx *cli.Context, cancel context.CancelFunc) error {
 	// Fix data dir for Windows users.
 	outdatedDataDir := filepath.Join(file.HomeDir(), "AppData", "Roaming", "Eth2")
 	currentDataDir := ctx.String(cmd.DataDirFlag.Name)
@@ -271,9 +283,10 @@ func startNode(ctx *cli.Context) error {
 		node.WithBuilderFlagOptions(builderFlagOpts),
 	}
 
-	optFuncs := []func(*cli.Context) (node.Option, error){
+	optFuncs := []func(*cli.Context) ([]node.Option, error){
 		genesis.BeaconNodeOptions,
 		checkpoint.BeaconNodeOptions,
+		storage.BeaconNodeOptions,
 	}
 	for _, of := range optFuncs {
 		ofo, err := of(ctx)
@@ -281,13 +294,13 @@ func startNode(ctx *cli.Context) error {
 			return err
 		}
 		if ofo != nil {
-			opts = append(opts, ofo)
+			opts = append(opts, ofo...)
 		}
 	}
 
-	beacon, err := node.New(ctx, opts...)
+	beacon, err := node.New(ctx, cancel, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start beacon node: %w", err)
 	}
 	beacon.Start()
 	return nil

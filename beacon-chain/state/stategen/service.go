@@ -5,7 +5,9 @@ package stategen
 
 import (
 	"context"
+	stderrors "errors"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
@@ -14,11 +16,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"go.opencensus.io/trace"
 )
 
 var defaultHotStateDBInterval primitives.Slot = 128
+
+var populatePubkeyCacheOnce sync.Once
 
 // StateManager represents a management object that handles the internal
 // logic of maintaining both hot and cold states in DB.
@@ -70,17 +75,17 @@ type finalizedInfo struct {
 	lock  sync.RWMutex
 }
 
-// StateGenOption is a functional option for controlling the initialization of a *State value
-type StateGenOption func(*State)
+// Option is a functional option for controlling the initialization of a *State value
+type Option func(*State)
 
-func WithBackfillStatus(bfs *backfill.Status) StateGenOption {
+func WithBackfillStatus(bfs *backfill.Status) Option {
 	return func(sg *State) {
 		sg.backfillStatus = bfs
 	}
 }
 
 // New returns a new state management object.
-func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...StateGenOption) *State {
+func New(beaconDB db.NoHeadAccessDatabase, fc forkchoice.ForkChoicer, opts ...Option) *State {
 	s := &State{
 		beaconDB:                beaconDB,
 		hotStateCache:           newHotStateCache(),
@@ -121,7 +126,7 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 		// Save genesis state in the hot state cache.
 		gbr, err := s.beaconDB.GenesisBlockRoot(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "could not get genesis block root")
+			return nil, stderrors.Join(ErrNoGenesisBlock, err)
 		}
 		return st, s.SaveState(ctx, gbr, st)
 	}
@@ -137,6 +142,24 @@ func (s *State) Resume(ctx context.Context, fState state.BeaconState) (state.Bea
 	}()
 
 	s.finalizedInfo = &finalizedInfo{slot: fState.Slot(), root: fRoot, state: fState.Copy()}
+
+	// Pre-populate the pubkey cache with the validator public keys from the finalized state.
+	// This process takes about 30 seconds on mainnet with 450,000 validators.
+	go populatePubkeyCacheOnce.Do(func() {
+		log.Debug("Populating pubkey cache")
+		start := time.Now()
+		if err := fState.ReadFromEveryValidator(func(_ int, val state.ReadOnlyValidator) error {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			pub := val.PublicKey()
+			_, err := bls.PublicKeyFromBytes(pub[:])
+			return err
+		}); err != nil {
+			log.WithError(err).Error("Failed to populate pubkey cache")
+		}
+		log.WithField("duration", time.Since(start)).Debug("Done populating pubkey cache")
+	})
 
 	return fState, nil
 }

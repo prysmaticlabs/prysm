@@ -23,6 +23,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/attestations"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	mockSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync/testing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
@@ -79,6 +80,7 @@ func TestValidateBeaconBlockPubSub_InvalidSignature(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -122,6 +124,7 @@ func TestValidateBeaconBlockPubSub_BlockAlreadyPresentInDB(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
@@ -183,6 +186,7 @@ func TestValidateBeaconBlockPubSub_CanRecoverStateSummary(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -248,6 +252,7 @@ func TestValidateBeaconBlockPubSub_IsInCache(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -313,6 +318,7 @@ func TestValidateBeaconBlockPubSub_ValidProposerSignature(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -380,6 +386,7 @@ func TestValidateBeaconBlockPubSub_WithLookahead(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -448,6 +455,7 @@ func TestValidateBeaconBlockPubSub_AdvanceEpochsForState(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -546,13 +554,15 @@ func TestValidateBeaconBlockPubSub_IgnoreAndQueueBlocksFromNearFuture(t *testing
 		FinalizedCheckPoint: &ethpb.Checkpoint{
 			Epoch: 0,
 			Root:  make([]byte, 32),
-		}}
+		},
+		State: beaconState}
 	r := &Service{
 		cfg: &config{
 			p2p:           p,
 			beaconDB:      db,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -604,6 +614,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromFuture(t *testing.T) {
 			beaconDB:      db,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		chainStarted:        abool.New(),
@@ -657,6 +668,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromThePast(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache: lruwrpr.New(10),
@@ -714,6 +726,7 @@ func TestValidateBeaconBlockPubSub_SeenProposerSlot(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 		},
 		seenBlockCache:      lruwrpr.New(10),
@@ -763,6 +776,7 @@ func TestValidateBeaconBlockPubSub_FilterByFinalizedEpoch(t *testing.T) {
 			beaconDB:      db,
 			p2p:           p,
 			chain:         chain,
+			clock:         startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
 			blockNotifier: chain.BlockNotifier(),
 			attPool:       attestations.NewPool(),
 			initialSync:   &mockSync.Sync{IsSyncing: false},
@@ -848,6 +862,7 @@ func TestValidateBeaconBlockPubSub_ParentNotFinalizedDescendant(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -913,6 +928,101 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
+			blockNotifier: chainService.BlockNotifier(),
+			stateGen:      stateGen,
+		},
+		seenBlockCache:      lruwrpr.New(10),
+		badBlockCache:       lruwrpr.New(10),
+		slotToPendingBlocks: gcache.New(time.Second, 2*time.Second),
+		seenPendingBlocks:   make(map[[32]byte]bool),
+	}
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
+	digest, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, digest)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
+	require.ErrorContains(t, "could not unmarshal bytes into signature", err)
+	assert.Equal(t, res, pubsub.ValidationReject, "block with invalid signature should be rejected")
+
+	require.NoError(t, copied.SetSlot(2))
+	proposerIdx, err = helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+
+	msg = util.NewBeaconBlock()
+	msg.Block.Slot = 2
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.ParentRoot = currBlockRoot[:]
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	buf = new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, msg)
+	require.NoError(t, err)
+	m = &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+	chainService = &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(2*params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r.cfg.chain = chainService
+	r.cfg.clock = startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot)
+
+	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
+	require.ErrorContains(t, "has an invalid parent", err)
+	// Expect block with bad parent to fail too
+	assert.Equal(t, res, pubsub.ValidationReject, "block with invalid parent should be ignored")
+}
+
+func TestValidateBeaconBlockPubSub_InsertValidPendingBlock(t *testing.T) {
+	db := dbtest.SetupDB(t)
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+	beaconState, privKeys := util.DeterministicGenesisState(t, 100)
+	parentBlock := util.NewBeaconBlock()
+	util.SaveBlock(t, ctx, db, parentBlock)
+	bRoot, err := parentBlock.Block.HashTreeRoot()
+	require.NoError(t, err)
+	require.NoError(t, db.SaveState(ctx, beaconState, bRoot))
+	require.NoError(t, db.SaveStateSummary(ctx, &ethpb.StateSummary{Root: bRoot[:]}))
+	copied := beaconState.Copy()
+	require.NoError(t, copied.SetSlot(1))
+	proposerIdx, err := helpers.BeaconProposerIndex(ctx, copied)
+	require.NoError(t, err)
+	msg := util.NewBeaconBlock()
+	msg.Block.ProposerIndex = proposerIdx
+	msg.Block.Slot = 1
+	msg.Block.ParentRoot = bRoot[:]
+	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
+	require.NoError(t, err)
+
+	stateGen := stategen.New(db, doublylinkedtree.New())
+	chainService := &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(params.BeaconConfig().SecondsPerSlot), 0),
+		State: beaconState,
+		FinalizedCheckPoint: &ethpb.Checkpoint{
+			Epoch: 0,
+		}}
+	r := &Service{
+		cfg: &config{
+			beaconDB:      db,
+			p2p:           p,
+			initialSync:   &mockSync.Sync{IsSyncing: false},
+			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -936,37 +1046,10 @@ func TestValidateBeaconBlockPubSub_InvalidParentBlock(t *testing.T) {
 	}
 	res, err := r.validateBeaconBlockPubSub(ctx, "", m)
 	require.ErrorContains(t, "unknown parent for block", err)
-	assert.Equal(t, res, pubsub.ValidationIgnore, "block with invalid parent should be ignored")
-
-	require.NoError(t, copied.SetSlot(2))
-	proposerIdx, err = helpers.BeaconProposerIndex(ctx, copied)
-	require.NoError(t, err)
-
-	msg = util.NewBeaconBlock()
-	msg.Block.Slot = 2
-	msg.Block.ProposerIndex = proposerIdx
-	msg.Block.ParentRoot = currBlockRoot[:]
-
-	buf = new(bytes.Buffer)
-	_, err = p.Encoding().EncodeGossip(buf, msg)
-	require.NoError(t, err)
-	m = &pubsub.Message{
-		Message: &pubsubpb.Message{
-			Data:  buf.Bytes(),
-			Topic: &topic,
-		},
-	}
-	chainService = &mock.ChainService{Genesis: time.Unix(time.Now().Unix()-int64(2*params.BeaconConfig().SecondsPerSlot), 0),
-		State: beaconState,
-		FinalizedCheckPoint: &ethpb.Checkpoint{
-			Epoch: 0,
-		}}
-	r.cfg.chain = chainService
-
-	res, err = r.validateBeaconBlockPubSub(ctx, "", m)
-	require.ErrorContains(t, "unknown parent for block", err)
-	// Expect block with bad parent to fail too
-	assert.Equal(t, res, pubsub.ValidationIgnore, "block with invalid parent should be ignored")
+	assert.Equal(t, res, pubsub.ValidationIgnore, "block with unknown parent should be ignored")
+	bRoot, err = msg.Block.HashTreeRoot()
+	assert.NoError(t, err)
+	assert.Equal(t, true, r.seenPendingBlocks[bRoot])
 }
 
 func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
@@ -1022,6 +1105,7 @@ func TestValidateBeaconBlockPubSub_RejectBlocksFromBadParent(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -1106,8 +1190,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"), []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -1126,6 +1209,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 			chain:         chainService,
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -1135,7 +1219,7 @@ func TestValidateBeaconBlockPubSub_ValidExecutionPayload(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1178,8 +1262,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"), []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -1196,6 +1279,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 			p2p:           p,
 			initialSync:   &mockSync.Sync{IsSyncing: false},
 			chain:         chainService,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
 		},
@@ -1207,7 +1291,7 @@ func TestValidateBeaconBlockPubSub_InvalidPayloadTimestamp(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	assert.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1281,8 +1365,7 @@ func Test_validateBellatrixBeaconBlockParentValidation(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"), []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -1339,8 +1422,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	msg.Block.Body.ExecutionPayload.GasLimit = 11
 	msg.Block.Body.ExecutionPayload.BlockHash = bytesutil.PadTo([]byte("blockHash"), 32)
 	msg.Block.Body.ExecutionPayload.ParentHash = bytesutil.PadTo([]byte("parentHash"), 32)
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"))
-	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 2"))
+	msg.Block.Body.ExecutionPayload.Transactions = append(msg.Block.Body.ExecutionPayload.Transactions, []byte("transaction 1"), []byte("transaction 2"))
 	msg.Signature, err = signing.ComputeDomainAndSign(beaconState, 0, msg.Block, params.BeaconConfig().DomainBeaconProposer, privKeys[proposerIdx])
 	require.NoError(t, err)
 
@@ -1359,6 +1441,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 			chain:         chainService,
 			blockNotifier: chainService.BlockNotifier(),
 			stateGen:      stateGen,
+			clock:         startup.NewClock(chainService.Genesis, chainService.ValidatorsRoot),
 		},
 		seenBlockCache: lruwrpr.New(10),
 		badBlockCache:  lruwrpr.New(10),
@@ -1368,7 +1451,7 @@ func Test_validateBeaconBlockProcessingWhenParentIsOptimistic(t *testing.T) {
 	_, err = p.Encoding().EncodeGossip(buf, msg)
 	require.NoError(t, err)
 	topic := p2p.GossipTypeMapping[reflect.TypeOf(msg)]
-	genesisValidatorsRoot := r.cfg.chain.GenesisValidatorsRoot()
+	genesisValidatorsRoot := r.cfg.clock.GenesisValidatorsRoot()
 	BellatrixDigest, err := signing.ComputeForkDigest(params.BeaconConfig().BellatrixForkVersion, genesisValidatorsRoot[:])
 	require.NoError(t, err)
 	topic = r.addDigestToTopic(topic, BellatrixDigest)
@@ -1398,4 +1481,17 @@ func Test_getBlockFields(t *testing.T) {
 
 	require.LogsContain(t, hook, "nil block")
 	require.LogsContain(t, hook, "bad block")
+}
+
+func Test_validateDenebBeaconBlock(t *testing.T) {
+	bb := util.NewBeaconBlockBellatrix()
+	b, err := blocks.NewSignedBeaconBlock(bb)
+	require.NoError(t, err)
+	require.NoError(t, validateDenebBeaconBlock(b.Block()))
+
+	bd := util.NewBeaconBlockDeneb()
+	bd.Block.Body.BlobKzgCommitments = make([][]byte, 7)
+	bdb, err := blocks.NewSignedBeaconBlock(bd)
+	require.NoError(t, err)
+	require.ErrorIs(t, validateDenebBeaconBlock(bdb.Block()), errRejectCommitmentLen)
 }

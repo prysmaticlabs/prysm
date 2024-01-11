@@ -11,6 +11,7 @@ import (
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	slashingsmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings/mock"
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
@@ -239,6 +240,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 					HeadStateFetcher:        mockChain,
 					AttestationStateFetcher: mockChain,
 					SlashingPoolInserter:    &slashingsmock.PoolMock{},
+					ClockWaiter:             startup.NewClockSynchronizer(),
 				})
 			require.NoError(t, err)
 			s.genesisTime = genesisTime
@@ -296,6 +298,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
@@ -361,6 +364,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 			HeadStateFetcher:        mockChain,
 			AttestationStateFetcher: mockChain,
 			SlashingPoolInserter:    &slashingsmock.PoolMock{},
+			ClockWaiter:             startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 	s.genesisTime = genesisTime
@@ -475,6 +479,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -535,6 +540,7 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -602,6 +608,7 @@ func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
 		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -638,6 +645,7 @@ func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -683,6 +691,7 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 		&ServiceConfig{
 			Database:      slasherDB,
 			StateNotifier: &mock.MockStateNotifier{},
+			ClockWaiter:   startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -769,6 +778,7 @@ func TestService_processQueuedAttestations(t *testing.T) {
 			Database:         slasherDB,
 			StateNotifier:    &mock.MockStateNotifier{},
 			HeadStateFetcher: mockChain,
+			ClockWaiter:      startup.NewClockSynchronizer(),
 		})
 	require.NoError(t, err)
 
@@ -805,6 +815,7 @@ func BenchmarkCheckSlashableAttestations(b *testing.B) {
 		Database:         slasherDB,
 		StateNotifier:    &mock.MockStateNotifier{},
 		HeadStateFetcher: mockChain,
+		ClockWaiter:      startup.NewClockSynchronizer(),
 	})
 	require.NoError(b, err)
 

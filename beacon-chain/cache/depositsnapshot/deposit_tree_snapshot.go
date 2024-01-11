@@ -1,21 +1,13 @@
 package depositsnapshot
 
 import (
-	"crypto/sha256"
-
-	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/container/trie"
+	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	protodb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
-var (
-	// ErrZeroIndex occurs when the value of index is 0.
-	ErrZeroIndex = errors.New("index should be greater than 0")
-)
-
-// DepositTreeSnapshot represents the data used to create a
-// deposit tree given a snapshot.
-//
-//nolint:unused
+// DepositTreeSnapshot represents the data used to create a deposit tree given a snapshot.
 type DepositTreeSnapshot struct {
 	finalized      [][32]byte
 	depositRoot    [32]byte
@@ -27,29 +19,27 @@ type DepositTreeSnapshot struct {
 func (ds *DepositTreeSnapshot) CalculateRoot() ([32]byte, error) {
 	size := ds.depositCount
 	index := len(ds.finalized)
-	root := Zerohashes[0]
+	root := trie.ZeroHashes[0]
 	for i := 0; i < DepositContractDepth; i++ {
 		if (size & 1) == 1 {
 			if index == 0 {
-				return [32]byte{}, ErrZeroIndex
+				break
 			}
 			index--
-			root = sha256.Sum256(append(ds.finalized[index][:], root[:]...))
+			root = hash.Hash(append(ds.finalized[index][:], root[:]...))
 		} else {
-			root = sha256.Sum256(append(root[:], Zerohashes[i][:]...))
+			root = hash.Hash(append(root[:], trie.ZeroHashes[i][:]...))
 		}
 		size >>= 1
 	}
-	return sha256.Sum256(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(ds.depositCount)...)), nil
+	return hash.Hash(append(root[:], bytesutil.Uint64ToBytesLittleEndian32(ds.depositCount)...)), nil
 }
 
 // fromTreeParts constructs the deposit tree from pre-existing data.
-//
-//nolint:unused
 func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock executionBlock) (DepositTreeSnapshot, error) {
 	snapshot := DepositTreeSnapshot{
 		finalized:      finalised,
-		depositRoot:    Zerohashes[0],
+		depositRoot:    trie.ZeroHashes[0],
 		depositCount:   depositCount,
 		executionBlock: executionBlock,
 	}
@@ -59,4 +49,37 @@ func fromTreeParts(finalised [][32]byte, depositCount uint64, executionBlock exe
 	}
 	snapshot.depositRoot = root
 	return snapshot, nil
+}
+
+// ToProto converts the underlying trie into its corresponding proto object.
+func (ds *DepositTreeSnapshot) ToProto() *protodb.DepositSnapshot {
+	tree := &protodb.DepositSnapshot{
+		Finalized:      make([][]byte, len(ds.finalized)),
+		DepositRoot:    bytesutil.SafeCopyBytes(ds.depositRoot[:]),
+		DepositCount:   ds.depositCount,
+		ExecutionHash:  bytesutil.SafeCopyBytes(ds.executionBlock.Hash[:]),
+		ExecutionDepth: ds.executionBlock.Depth,
+	}
+	for i := range ds.finalized {
+		tree.Finalized[i] = bytesutil.SafeCopyBytes(ds.finalized[i][:])
+	}
+	return tree
+}
+
+// DepositTreeFromSnapshotProto generates a deposit tree object from a provided snapshot.
+func DepositTreeFromSnapshotProto(snapshotProto *protodb.DepositSnapshot) (*DepositTree, error) {
+	finalized := make([][32]byte, len(snapshotProto.Finalized))
+	for i := range snapshotProto.Finalized {
+		finalized[i] = bytesutil.ToBytes32(snapshotProto.Finalized[i])
+	}
+	snapshot := DepositTreeSnapshot{
+		finalized:    finalized,
+		depositRoot:  bytesutil.ToBytes32(snapshotProto.DepositRoot),
+		depositCount: snapshotProto.DepositCount,
+		executionBlock: executionBlock{
+			Hash:  bytesutil.ToBytes32(snapshotProto.ExecutionHash),
+			Depth: snapshotProto.ExecutionDepth,
+		},
+	}
+	return fromSnapshot(snapshot)
 }

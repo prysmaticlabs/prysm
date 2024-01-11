@@ -12,8 +12,10 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/golang/protobuf/proto"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	v1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -36,7 +38,7 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 		},
 		Signature: make([]byte, 96),
 	}
-	a := &SignedValidatorRegistration{SignedValidatorRegistrationV1: svr}
+	a := shared.SignedValidatorRegistrationFromConsensus(svr)
 	je, err := json.Marshal(a)
 	require.NoError(t, err)
 	// decode with a struct w/ plain strings so we can check the string encoding of the hex fields
@@ -53,11 +55,11 @@ func TestSignedValidatorRegistration_MarshalJSON(t *testing.T) {
 	require.Equal(t, "0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", un.Message.Pubkey)
 
 	t.Run("roundtrip", func(t *testing.T) {
-		b := &SignedValidatorRegistration{}
+		b := &shared.SignedValidatorRegistration{}
 		if err := json.Unmarshal(je, b); err != nil {
 			require.NoError(t, err)
 		}
-		require.Equal(t, proto.Equal(a.SignedValidatorRegistrationV1, b.SignedValidatorRegistrationV1), true)
+		require.DeepEqual(t, a, b)
 	})
 }
 
@@ -116,6 +118,69 @@ var testExampleHeaderResponseCapella = `{
   }
 }`
 
+var testExampleHeaderResponseDeneb = `{
+  "version": "deneb",
+  "data": {
+    "message": {
+      "header": {
+        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "block_number": "1",
+        "gas_limit": "1",
+        "gas_used": "1",
+        "timestamp": "1",
+        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"blob_gas_used": "1",	
+		"excess_blob_gas": "2"	
+      },
+      "blob_kzg_commitments": [
+          "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"
+	  ],
+      "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
+      "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+}`
+
+var testExampleHeaderResponseDenebNoBundle = `{
+  "version": "deneb",
+  "data": {
+    "message": {
+      "header": {
+        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "block_number": "1",
+        "gas_limit": "1",
+        "gas_used": "1",
+        "timestamp": "1",
+        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"blob_gas_used": "1",	
+		"excess_blob_gas": "2"	
+      },
+      "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
+      "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+}`
+
 var testExampleHeaderResponseUnknownVersion = `{
   "version": "bad",
   "data": {
@@ -137,6 +202,39 @@ var testExampleHeaderResponseUnknownVersion = `{
         "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
         "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"
       },
+      "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
+      "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
+    },
+    "signature": "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
+  }
+}`
+
+var testExampleHeaderResponseDenebTooManyBlobs = `{
+  "version": "deneb",
+  "data": {
+    "message": {
+      "header": {
+        "parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+        "state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "block_number": "1",
+        "gas_limit": "1",
+        "gas_used": "1",
+        "timestamp": "1",
+        "extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "transactions_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+        "withdrawals_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"blob_gas_used": "1",	
+		"excess_blob_gas": "2"	
+      },
+      "blob_kzg_commitments": [
+          "","","","","","",""
+	  ],
       "value": "652312848583266388373324160190187140051835877600158453279131187530910662656",
       "pubkey": "0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a"
     },
@@ -518,6 +616,196 @@ var testExampleExecutionPayloadCapella = `{
   }
 }`
 
+var testExampleExecutionPayloadDeneb = fmt.Sprintf(`{
+  "version": "deneb",
+  "data": {
+	"execution_payload":{
+		"parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+		"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"block_number": "1",
+		"gas_limit": "1",
+		"gas_used": "1",
+		"timestamp": "1",
+		"extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"transactions": [
+		  "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+		],
+		"withdrawals": [
+		  {
+			"index": "1",
+			"validator_index": "1",
+			"address": "0xcf8e0d4e9587369b2301d0790347320302cc0943",
+			"amount": "1"
+		  }
+		],
+		"blob_gas_used": "2",
+ 		"excess_blob_gas": "3"
+	  },
+	"blobs_bundle": {
+      "commitments": [
+        "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"
+      ],
+      "proofs": [
+        "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"
+      ],
+      "blobs": [
+        "%s"
+      ]
+    }
+  }
+}`, hexutil.Encode(make([]byte, fieldparams.BlobLength)))
+
+var testExampleExecutionPayloadDenebTooManyBlobs = fmt.Sprintf(`{
+  "version": "deneb",
+  "data": {
+	"execution_payload":{
+		"parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+		"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"block_number": "1",
+		"gas_limit": "1",
+		"gas_used": "1",
+		"timestamp": "1",
+		"extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"transactions": [
+		  "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+		],
+		"withdrawals": [
+		  {
+			"index": "1",
+			"validator_index": "1",
+			"address": "0xcf8e0d4e9587369b2301d0790347320302cc0943",
+			"amount": "1"
+		  }
+		],
+		"blob_gas_used": "2",
+ 		"excess_blob_gas": "3"
+	  },
+	"blobs_bundle": {
+      "commitments": [
+        "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"
+      ],
+      "proofs": [
+        "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"
+      ],
+      "blobs": %s
+    }
+  }
+}`, beyondMaxEmptyBlobs())
+
+func beyondMaxEmptyBlobs() string {
+	moreThanMax := fieldparams.MaxBlobCommitmentsPerBlock + 2
+	blobs := make([]string, moreThanMax)
+	b, err := json.Marshal(blobs)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
+var testExampleExecutionPayloadDenebDifferentCommitmentCount = fmt.Sprintf(`{
+  "version": "deneb",
+  "data": {
+	"execution_payload":{
+		"parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+		"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"block_number": "1",
+		"gas_limit": "1",
+		"gas_used": "1",
+		"timestamp": "1",
+		"extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"transactions": [
+		  "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+		],
+		"withdrawals": [
+		  {
+			"index": "1",
+			"validator_index": "1",
+			"address": "0xcf8e0d4e9587369b2301d0790347320302cc0943",
+			"amount": "1"
+		  }
+		],
+		"blob_gas_used": "2",
+ 		"excess_blob_gas": "3"
+	  },
+	"blobs_bundle": {
+      "commitments": [
+        "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f",
+        "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "proofs": [
+        "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a"
+      ],
+      "blobs": [
+        "%s"
+      ]
+    }
+  }
+}`, hexutil.Encode(make([]byte, fieldparams.BlobLength)))
+
+var testExampleExecutionPayloadDenebDifferentProofCount = fmt.Sprintf(`{
+  "version": "deneb",
+  "data": {
+	"execution_payload":{
+		"parent_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"fee_recipient": "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+		"state_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"receipts_root": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"logs_bloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"prev_randao": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"block_number": "1",
+		"gas_limit": "1",
+		"gas_used": "1",
+		"timestamp": "1",
+		"extra_data": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"base_fee_per_gas": "452312848583266388373324160190187140051835877600158453279131187530910662656",
+		"block_hash": "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+		"transactions": [
+		  "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+		],
+		"withdrawals": [
+		  {
+			"index": "1",
+			"validator_index": "1",
+			"address": "0xcf8e0d4e9587369b2301d0790347320302cc0943",
+			"amount": "1"
+		  }
+		],
+		"blob_gas_used": "2",
+ 		"excess_blob_gas": "3"
+	  },
+	"blobs_bundle": {
+      "commitments": [
+        "0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f"
+      ],
+      "proofs": [
+        "0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a",
+        "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+      ],
+      "blobs": [
+        "%s"
+      ]
+    }
+  }
+}`, hexutil.Encode(make([]byte, fieldparams.BlobLength)))
+
 func TestExecutionPayloadResponseUnmarshal(t *testing.T) {
 	epr := &ExecPayloadResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayload), epr))
@@ -689,6 +977,107 @@ func TestExecutionPayloadResponseCapellaUnmarshal(t *testing.T) {
 	assert.Equal(t, uint64(1), w.Amount.Uint64())
 }
 
+func TestExecutionPayloadResponseDenebUnmarshal(t *testing.T) {
+	epr := &ExecPayloadResponseDeneb{}
+	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDeneb), epr))
+	cases := []struct {
+		expected string
+		actual   string
+		name     string
+	}{
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.ParentHash),
+			name:     "ExecPayloadResponse.ExecutionPayload.ParentHash",
+		},
+		{
+			expected: "0xabcf8e0d4e9587369b2301d0790347320302cc09",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.FeeRecipient),
+			name:     "ExecPayloadResponse.ExecutionPayload.FeeRecipient",
+		},
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.StateRoot),
+			name:     "ExecPayloadResponse.ExecutionPayload.StateRoot",
+		},
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.ReceiptsRoot),
+			name:     "ExecPayloadResponse.ExecutionPayload.ReceiptsRoot",
+		},
+		{
+			expected: "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.LogsBloom),
+			name:     "ExecPayloadResponse.ExecutionPayload.LogsBloom",
+		},
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.PrevRandao),
+			name:     "ExecPayloadResponse.ExecutionPayload.PrevRandao",
+		},
+		{
+			expected: "1",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.BlockNumber),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlockNumber",
+		},
+		{
+			expected: "1",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.GasLimit),
+			name:     "ExecPayloadResponse.ExecutionPayload.GasLimit",
+		},
+		{
+			expected: "1",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.GasUsed),
+			name:     "ExecPayloadResponse.ExecutionPayload.GasUsed",
+		},
+		{
+			expected: "1",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.Timestamp),
+			name:     "ExecPayloadResponse.ExecutionPayload.Timestamp",
+		},
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.ExtraData),
+			name:     "ExecPayloadResponse.ExecutionPayload.ExtraData",
+		},
+		{
+			expected: "452312848583266388373324160190187140051835877600158453279131187530910662656",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.BaseFeePerGas),
+			name:     "ExecPayloadResponse.ExecutionPayload.BaseFeePerGas",
+		},
+		{
+			expected: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
+			actual:   hexutil.Encode(epr.Data.ExecutionPayload.BlockHash),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlockHash",
+		},
+		{
+			expected: "2",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.BlobGasUsed),
+			name:     "ExecPayloadResponse.ExecutionPayload.BlobGasUsed",
+		},
+		{
+			expected: "3",
+			actual:   fmt.Sprintf("%d", epr.Data.ExecutionPayload.ExcessBlobGas),
+			name:     "ExecPayloadResponse.ExecutionPayload.ExcessBlobGas",
+		},
+	}
+	for _, c := range cases {
+		require.Equal(t, c.expected, c.actual, fmt.Sprintf("unexpected value for field %s", c.name))
+	}
+	require.Equal(t, 1, len(epr.Data.ExecutionPayload.Transactions))
+	txHash := "0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86"
+	require.Equal(t, txHash, hexutil.Encode(epr.Data.ExecutionPayload.Transactions[0]))
+
+	require.Equal(t, 1, len(epr.Data.ExecutionPayload.Withdrawals))
+	w := epr.Data.ExecutionPayload.Withdrawals[0]
+	assert.Equal(t, uint64(1), w.Index.Uint64())
+	assert.Equal(t, uint64(1), w.ValidatorIndex.Uint64())
+	assert.DeepEqual(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943", w.Address.String())
+	assert.Equal(t, uint64(1), w.Amount.Uint64())
+	assert.Equal(t, uint64(2), uint64(epr.Data.ExecutionPayload.BlobGasUsed))
+	assert.Equal(t, uint64(3), uint64(epr.Data.ExecutionPayload.ExcessBlobGas))
+}
+
 func TestExecutionPayloadResponseToProto(t *testing.T) {
 	hr := &ExecPayloadResponse{}
 	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayload), hr))
@@ -793,7 +1182,105 @@ func TestExecutionPayloadResponseCapellaToProto(t *testing.T) {
 		},
 	}
 	require.DeepEqual(t, expected, p)
+}
 
+func TestExecutionPayloadResponseDenebToProto(t *testing.T) {
+	hr := &ExecPayloadResponseDeneb{}
+	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDeneb), hr))
+	p, blobsBundle, err := hr.ToProto()
+	require.NoError(t, err)
+
+	parentHash, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+	feeRecipient, err := hexutil.Decode("0xabcf8e0d4e9587369b2301d0790347320302cc09")
+	require.NoError(t, err)
+	stateRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+	receiptsRoot, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+	logsBloom, err := hexutil.Decode("0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+	require.NoError(t, err)
+	prevRandao, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+	extraData, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+	blockHash, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2")
+	require.NoError(t, err)
+
+	tx, err := hexutil.Decode("0x02f878831469668303f51d843b9ac9f9843b9aca0082520894c93269b73096998db66be0441e836d873535cb9c8894a19041886f000080c001a031cc29234036afbf9a1fb9476b463367cb1f957ac0b919b69bbc798436e604aaa018c4e9c3914eb27aadd0b91e10b18655739fcf8c1fc398763a9f1beecb8ddc86")
+	require.NoError(t, err)
+	txList := [][]byte{tx}
+	address, err := hexutil.Decode("0xcf8e0d4e9587369b2301d0790347320302cc0943")
+	require.NoError(t, err)
+
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
+	expected := &v1.ExecutionPayloadDeneb{
+		ParentHash:    parentHash,
+		FeeRecipient:  feeRecipient,
+		StateRoot:     stateRoot,
+		ReceiptsRoot:  receiptsRoot,
+		LogsBloom:     logsBloom,
+		PrevRandao:    prevRandao,
+		BlockNumber:   1,
+		GasLimit:      1,
+		GasUsed:       1,
+		Timestamp:     1,
+		ExtraData:     extraData,
+		BaseFeePerGas: bfpg.SSZBytes(),
+		BlockHash:     blockHash,
+		Transactions:  txList,
+		Withdrawals: []*v1.Withdrawal{
+			{
+				Index:          1,
+				ValidatorIndex: 1,
+				Address:        address,
+				Amount:         1,
+			},
+		},
+		BlobGasUsed:   2,
+		ExcessBlobGas: 3,
+	}
+	require.DeepEqual(t, expected, p)
+	commitment, err := hexutil.Decode("0x8dab030c51e16e84be9caab84ee3d0b8bbec1db4a0e4de76439da8424d9b957370a10a78851f97e4b54d2ce1ab0d686f")
+	require.NoError(t, err)
+	proof, err := hexutil.Decode("0xb4021b0de10f743893d4f71e1bf830c019e832958efd6795baf2f83b8699a9eccc5dc99015d8d4d8ec370d0cc333c06a")
+	require.NoError(t, err)
+
+	expectedBlobs := &v1.BlobsBundle{
+		KzgCommitments: [][]byte{
+			commitment,
+		},
+		Proofs: [][]byte{
+			proof,
+		},
+		Blobs: [][]byte{
+			make([]byte, fieldparams.BlobLength),
+		},
+	}
+
+	require.DeepEqual(t, blobsBundle, expectedBlobs)
+}
+
+func TestExecutionPayloadResponseDenebToProtoInvalidBlobCount(t *testing.T) {
+	hr := &ExecPayloadResponseDeneb{}
+	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebTooManyBlobs), hr))
+	_, _, err := hr.ToProto()
+	require.ErrorContains(t, fmt.Sprintf("blobs length %d is more than max %d", fieldparams.MaxBlobCommitmentsPerBlock+2, fieldparams.MaxBlobCommitmentsPerBlock), err)
+}
+
+func TestExecutionPayloadResponseDenebToProtoDifferentCommitmentCount(t *testing.T) {
+	hr := &ExecPayloadResponseDeneb{}
+	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebDifferentCommitmentCount), hr))
+	_, _, err := hr.ToProto()
+	require.ErrorContains(t, "commitments length 2 does not equal blobs length 1", err)
+}
+
+func TestExecutionPayloadResponseDenebToProtoDifferentProofCount(t *testing.T) {
+	hr := &ExecPayloadResponseDeneb{}
+	require.NoError(t, json.Unmarshal([]byte(testExampleExecutionPayloadDenebDifferentProofCount), hr))
+	_, _, err := hr.ToProto()
+	require.ErrorContains(t, "proofs length 2 does not equal blobs length 1", err)
 }
 
 func pbEth1Data() *eth.Eth1Data {
@@ -1026,6 +1513,30 @@ func pbExecutionPayloadHeaderCapella(t *testing.T) *v1.ExecutionPayloadHeaderCap
 	}
 }
 
+func pbExecutionPayloadHeaderDeneb(t *testing.T) *v1.ExecutionPayloadHeaderDeneb {
+	bfpg, err := stringToUint256("452312848583266388373324160190187140051835877600158453279131187530910662656")
+	require.NoError(t, err)
+	return &v1.ExecutionPayloadHeaderDeneb{
+		ParentHash:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		FeeRecipient:     ezDecode(t, "0xabcf8e0d4e9587369b2301d0790347320302cc09"),
+		StateRoot:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		ReceiptsRoot:     ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		LogsBloom:        ezDecode(t, "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"),
+		PrevRandao:       ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		BlockNumber:      1,
+		GasLimit:         1,
+		GasUsed:          1,
+		Timestamp:        1,
+		ExtraData:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		BaseFeePerGas:    bfpg.SSZBytes(),
+		BlockHash:        ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		TransactionsRoot: ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		WithdrawalsRoot:  ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
+		BlobGasUsed:      1,
+		ExcessBlobGas:    2,
+	}
+}
+
 func TestExecutionPayloadHeader_MarshalJSON(t *testing.T) {
 	h := &ExecutionPayloadHeader{
 		ExecutionPayloadHeader: pbExecutionPayloadHeader(t),
@@ -1043,6 +1554,16 @@ func TestExecutionPayloadHeaderCapella_MarshalJSON(t *testing.T) {
 	b, err := json.Marshal(h)
 	require.NoError(t, err)
 	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"452312848583266388373324160190187140051835877600158453279131187530910662656","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","withdrawals_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"}`
+	require.Equal(t, expected, string(b))
+}
+
+func TestExecutionPayloadHeaderDeneb_MarshalJSON(t *testing.T) {
+	h := &ExecutionPayloadHeaderDeneb{
+		ExecutionPayloadHeaderDeneb: pbExecutionPayloadHeaderDeneb(t),
+	}
+	b, err := json.Marshal(h)
+	require.NoError(t, err)
+	expected := `{"parent_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","fee_recipient":"0xabcf8e0d4e9587369b2301d0790347320302cc09","state_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","receipts_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","logs_bloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prev_randao":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","block_number":"1","gas_limit":"1","gas_used":"1","timestamp":"1","extra_data":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","base_fee_per_gas":"452312848583266388373324160190187140051835877600158453279131187530910662656","block_hash":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","transactions_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","withdrawals_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2","blob_gas_used":"1","excess_blob_gas":"2"}`
 	require.Equal(t, expected, string(b))
 }
 
@@ -1104,40 +1625,40 @@ func TestIsValidUint256(t *testing.T) {
 	_, ok = value.SetString("-10000000000000000000000000000000000000000000000000000000000000000", 16)
 	require.Equal(t, true, ok)
 	require.Equal(t, 257, value.BitLen())
-	require.Equal(t, false, isValidUint256(value))
+	require.Equal(t, false, math.IsValidUint256(value))
 
 	// negative uint256.max
 	_, ok = value.SetString("-ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
 	require.Equal(t, true, ok)
 	require.Equal(t, 256, value.BitLen())
-	require.Equal(t, false, isValidUint256(value))
+	require.Equal(t, false, math.IsValidUint256(value))
 
 	// negative number
 	_, ok = value.SetString("-1", 16)
 	require.Equal(t, true, ok)
-	require.Equal(t, false, isValidUint256(value))
+	require.Equal(t, false, math.IsValidUint256(value))
 
 	// uint256.min
 	_, ok = value.SetString("0", 16)
 	require.Equal(t, true, ok)
-	require.Equal(t, true, isValidUint256(value))
+	require.Equal(t, true, math.IsValidUint256(value))
 
 	// positive number
 	_, ok = value.SetString("1", 16)
 	require.Equal(t, true, ok)
-	require.Equal(t, true, isValidUint256(value))
+	require.Equal(t, true, math.IsValidUint256(value))
 
 	// uint256.max
 	_, ok = value.SetString("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", 16)
 	require.Equal(t, true, ok)
 	require.Equal(t, 256, value.BitLen())
-	require.Equal(t, true, isValidUint256(value))
+	require.Equal(t, true, math.IsValidUint256(value))
 
 	// uint256.max + 1
 	_, ok = value.SetString("10000000000000000000000000000000000000000000000000000000000000000", 16)
 	require.Equal(t, true, ok)
 	require.Equal(t, 257, value.BitLen())
-	require.Equal(t, false, isValidUint256(value))
+	require.Equal(t, false, math.IsValidUint256(value))
 }
 
 func TestUint256Unmarshal(t *testing.T) {
@@ -1154,6 +1675,14 @@ func TestUint256Unmarshal(t *testing.T) {
 	require.NoError(t, err)
 	expected := `{"big_number":"452312848583266388373324160190187140051835877600158453279131187530910662656"}`
 	require.Equal(t, expected, string(m))
+}
+
+func TestUint256Unmarshal_BadData(t *testing.T) {
+	var bigNum Uint256
+
+	assert.ErrorContains(t, "provided Uint256 json string is too short", bigNum.UnmarshalJSON([]byte{'"'}))
+	assert.ErrorContains(t, "provided Uint256 json string is malformed", bigNum.UnmarshalJSON([]byte{'"', '1', '2'}))
+
 }
 
 func TestUint256UnmarshalNegative(t *testing.T) {
@@ -1189,7 +1718,7 @@ func TestUint256UnmarshalTooBig(t *testing.T) {
 func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 	expected, err := os.ReadFile("testdata/blinded-block.json")
 	require.NoError(t, err)
-	b := &BlindedBeaconBlockBellatrix{BlindedBeaconBlockBellatrix: &eth.BlindedBeaconBlockBellatrix{
+	b, err := shared.BlindedBeaconBlockBellatrixFromConsensus(&eth.BlindedBeaconBlockBellatrix{
 		Slot:          1,
 		ProposerIndex: 1,
 		ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -1206,7 +1735,8 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 			SyncAggregate:          pbSyncAggregate(),
 			ExecutionPayloadHeader: pbExecutionPayloadHeader(t),
 		},
-	}}
+	})
+	require.NoError(t, err)
 	m, err := json.Marshal(b)
 	require.NoError(t, err)
 	// string error output is easier to deal with
@@ -1218,7 +1748,7 @@ func TestMarshalBlindedBeaconBlockBodyBellatrix(t *testing.T) {
 func TestMarshalBlindedBeaconBlockBodyCapella(t *testing.T) {
 	expected, err := os.ReadFile("testdata/blinded-block-capella.json")
 	require.NoError(t, err)
-	b := &BlindedBeaconBlockCapella{BlindedBeaconBlockCapella: &eth.BlindedBeaconBlockCapella{
+	b, err := shared.BlindedBeaconBlockCapellaFromConsensus(&eth.BlindedBeaconBlockCapella{
 		Slot:          1,
 		ProposerIndex: 1,
 		ParentRoot:    ezDecode(t, "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"),
@@ -1235,7 +1765,8 @@ func TestMarshalBlindedBeaconBlockBodyCapella(t *testing.T) {
 			SyncAggregate:          pbSyncAggregate(),
 			ExecutionPayloadHeader: pbExecutionPayloadHeaderCapella(t),
 		},
-	}}
+	})
+	require.NoError(t, err)
 	m, err := json.Marshal(b)
 	require.NoError(t, err)
 	// string error output is easier to deal with

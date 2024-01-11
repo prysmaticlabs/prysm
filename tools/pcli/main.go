@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/kr/pretty"
 	fssz "github.com/prysmaticlabs/fastssz"
@@ -62,7 +64,7 @@ func main() {
 						"signed_block_header|" +
 						"signed_voluntary_exit|" +
 						"voluntary_exit|" +
-						"state",
+						"state_capella",
 					Required:    true,
 					Destination: &sszType,
 				},
@@ -92,12 +94,46 @@ func main() {
 					data = &ethpb.SignedVoluntaryExit{}
 				case "voluntary_exit":
 					data = &ethpb.VoluntaryExit{}
-				case "state":
-					data = &ethpb.BeaconState{}
+				case "state_capella":
+					data = &ethpb.BeaconStateCapella{}
 				default:
 					log.Fatal("Invalid type")
 				}
 				prettyPrint(sszPath, data)
+				return nil
+			},
+		},
+		{
+			Name:    "benchmark-hash",
+			Aliases: []string{"b"},
+			Usage:   "benchmark-hash SSZ data",
+			Flags: []cli.Flag{
+				&cli.StringFlag{
+					Name:        "ssz-path",
+					Usage:       "Path to file(ssz)",
+					Required:    true,
+					Destination: &sszPath,
+				},
+				&cli.StringFlag{
+					Name: "data-type",
+					Usage: "ssz file data type: " +
+						"block_capella|" +
+						"blinded_block_capella|" +
+						"signed_block_capella|" +
+						"attestation|" +
+						"block_header|" +
+						"deposit|" +
+						"proposer_slashing|" +
+						"signed_block_header|" +
+						"signed_voluntary_exit|" +
+						"voluntary_exit|" +
+						"state_capella",
+					Required:    true,
+					Destination: &sszType,
+				},
+			},
+			Action: func(c *cli.Context) error {
+				benchmarkHash(sszPath, sszType)
 				return nil
 			},
 		},
@@ -229,4 +265,40 @@ func prettyPrint(sszPath string, data fssz.Unmarshaler) {
 	re := regexp.MustCompile("(?m)[\r\n]+^.*XXX_.*$")
 	str = re.ReplaceAllString(str, "")
 	fmt.Print(str)
+}
+
+func benchmarkHash(sszPath string, sszType string) {
+	switch sszType {
+	case "state_capella":
+		st := &ethpb.BeaconStateCapella{}
+		rawFile, err := os.ReadFile(sszPath) // #nosec G304
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		startDeserialize := time.Now()
+		if err := st.UnmarshalSSZ(rawFile); err != nil {
+			log.Fatal(err)
+		}
+		deserializeDuration := time.Since(startDeserialize)
+
+		stateTrieState, err := state_native.InitializeFromProtoCapella(st)
+		if err != nil {
+			log.Fatal(err)
+		}
+		start := time.Now()
+		stat := &runtime.MemStats{}
+		runtime.ReadMemStats(stat)
+		root, err := stateTrieState.HashTreeRoot(context.Background())
+		if err != nil {
+			log.Fatal("couldn't hash")
+		}
+		newStat := &runtime.MemStats{}
+		runtime.ReadMemStats(newStat)
+		fmt.Printf("Deserialize Duration: %v, Hashing Duration: %v HTR: %#x\n", deserializeDuration, time.Since(start), root)
+		fmt.Printf("Total Memory Allocation Differential: %d bytes, Heap Memory Allocation Differential: %d bytes\n", int64(newStat.TotalAlloc)-int64(stat.TotalAlloc), int64(newStat.HeapAlloc)-int64(stat.HeapAlloc))
+		return
+	default:
+		log.Fatal("Invalid type")
+	}
 }

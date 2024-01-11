@@ -1,7 +1,6 @@
 package blocks_test
 
 import (
-	"math/big"
 	"math/rand"
 	"testing"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
-	"github.com/prysmaticlabs/prysm/v4/proto/migration"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -153,7 +151,7 @@ func TestProcessBLSToExecutionChange(t *testing.T) {
 		}
 
 		_, err = blocks.ProcessBLSToExecutionChange(st, signed)
-		require.ErrorContains(t, "out of range", err)
+		require.ErrorContains(t, "out of bounds", err)
 	})
 
 	t.Run("signature does not verify", func(t *testing.T) {
@@ -644,7 +642,7 @@ func TestProcessBlindWithdrawals(t *testing.T) {
 			require.NoError(t, err)
 			wdRoot, err := ssz.WithdrawalSliceRoot(test.Args.Withdrawals, fieldparams.MaxWithdrawalsPerPayload)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]}, big.NewInt(0))
+			p, err := consensusblocks.WrappedExecutionPayloadHeaderCapella(&enginev1.ExecutionPayloadHeaderCapella{WithdrawalsRoot: wdRoot[:]}, 0)
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {
@@ -1062,7 +1060,7 @@ func TestProcessWithdrawals(t *testing.T) {
 			}
 			st, err := prepareValidators(spb, test.Args)
 			require.NoError(t, err)
-			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals}, big.NewInt(0))
+			p, err := consensusblocks.WrappedExecutionPayloadCapella(&enginev1.ExecutionPayloadCapella{Withdrawals: test.Args.Withdrawals}, 0)
 			require.NoError(t, err)
 			post, err := blocks.ProcessWithdrawals(st, p)
 			if test.Control.ExpectedError {
@@ -1136,12 +1134,9 @@ func TestProcessBLSToExecutionChanges(t *testing.T) {
 	bpb := &ethpb.BeaconBlockCapella{
 		Body: body,
 	}
-	sbpb := &ethpb.SignedBeaconBlockCapella{
-		Block: bpb,
-	}
-	signed, err := consensusblocks.NewSignedBeaconBlock(sbpb)
+	bb, err := consensusblocks.NewBeaconBlock(bpb)
 	require.NoError(t, err)
-	st, err = blocks.ProcessBLSToExecutionChanges(st, signed)
+	st, err = blocks.ProcessBLSToExecutionChanges(st, bb)
 	require.NoError(t, err)
 	vals := st.Validators()
 	for _, val := range vals {
@@ -1210,8 +1205,7 @@ func TestBLSChangesSignatureBatch(t *testing.T) {
 	require.Equal(t, true, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 }
 
 func TestBLSChangesSignatureBatchWrongFork(t *testing.T) {
@@ -1275,8 +1269,7 @@ func TestBLSChangesSignatureBatchWrongFork(t *testing.T) {
 	require.Equal(t, false, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.ErrorIs(t, signing.ErrSigFailedToVerify, blocks.VerifyBLSChangeSignature(st, change))
+	require.ErrorIs(t, signing.ErrSigFailedToVerify, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 }
 
 func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
@@ -1363,7 +1356,6 @@ func TestBLSChangesSignatureBatchFromBellatrix(t *testing.T) {
 	require.Equal(t, true, verify)
 
 	// Verify a single change
-	change := migration.V1Alpha1SignedBLSToExecChangeToV2(signedChanges[0])
-	require.NoError(t, blocks.VerifyBLSChangeSignature(st, change))
+	require.NoError(t, blocks.VerifyBLSChangeSignature(st, signedChanges[0]))
 	params.OverrideBeaconConfig(savedConfig)
 }

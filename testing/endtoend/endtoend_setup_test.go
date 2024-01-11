@@ -8,20 +8,20 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ev "github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators"
-	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi_evaluators"
+	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators/beaconapi"
 	e2eParams "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/types"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
 
-func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
+func e2eMinimal(t *testing.T, cfg *params.BeaconChainConfig, cfgo ...types.E2EConfigOpt) *testRunner {
 	params.SetupTestConfigCleanup(t)
-	require.NoError(t, params.SetActive(types.StartAt(v, params.E2ETestConfig())))
+	require.NoError(t, params.SetActive(cfg))
 	require.NoError(t, e2eParams.Init(t, e2eParams.StandardBeaconCount))
 
 	// Run for 12 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 14
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -56,7 +56,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.APIMiddlewareVerifyIntegrity,
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -77,7 +77,7 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 		TestFeature:         true,
 		TestDeposits:        true,
 		UsePrysmShValidator: false,
-		UsePprof:            !longRunning,
+		UsePprof:            true,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		EvalInterceptor:     defaultInterceptor,
@@ -85,6 +85,9 @@ func e2eMinimal(t *testing.T, v int, cfgo ...types.E2EConfigOpt) *testRunner {
 	}
 	for _, o := range cfgo {
 		o(testConfig)
+	}
+	if testConfig.UseBuilder {
+		testConfig.Evaluators = append(testConfig.Evaluators, ev.BuilderIsActive)
 	}
 
 	return newTestRunner(t, testConfig)
@@ -100,7 +103,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	}
 	// Run for 10 epochs if not in long-running to confirm long-running has no issues.
 	var err error
-	epochsToRun := 12
+	epochsToRun := 14
 	epochStr, longRunning := os.LookupEnv("E2E_EPOCHS")
 	if longRunning {
 		epochsToRun, err = strconv.Atoi(epochStr)
@@ -129,7 +132,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.APIMiddlewareVerifyIntegrity,
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -150,7 +153,7 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 		TestDeposits:        true,
 		UseFixedPeerIDs:     true,
 		UsePrysmShValidator: usePrysmSh,
-		UsePprof:            !longRunning,
+		UsePprof:            true,
 		TracingSinkEndpoint: tracingEndpoint,
 		Evaluators:          evals,
 		EvalInterceptor:     defaultInterceptor,
@@ -163,7 +166,10 @@ func e2eMainnet(t *testing.T, usePrysmSh, useMultiClient bool, cfg *params.Beaco
 	// In the event we use the cross-client e2e option, we add in an additional
 	// evaluator for multiclient runs to verify the beacon api conformance.
 	if testConfig.UseValidatorCrossClient {
-		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi_evaluators.BeaconAPIMultiClientVerifyIntegrity)
+		testConfig.Evaluators = append(testConfig.Evaluators, beaconapi.MultiClientVerifyIntegrity)
+	}
+	if testConfig.UseBuilder {
+		testConfig.Evaluators = append(testConfig.Evaluators, ev.BuilderIsActive)
 	}
 	return newTestRunner(t, testConfig)
 }
@@ -182,7 +188,7 @@ func scenarioEvals() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.APIMiddlewareVerifyIntegrity,
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,
@@ -203,7 +209,7 @@ func scenarioEvalsMulti() []types.Evaluator {
 		ev.AltairForkTransition,
 		ev.BellatrixForkTransition,
 		ev.CapellaForkTransition,
-		ev.APIMiddlewareVerifyIntegrity,
+		ev.DenebForkTransition,
 		ev.APIGatewayV1Alpha1VerifyIntegrity,
 		ev.FinishedSyncing,
 		ev.AllNodesHaveSameHead,

@@ -10,8 +10,6 @@ import (
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
-	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -42,44 +40,6 @@ func TestAttestation_IsAggregator(t *testing.T) {
 		agg, err := helpers.IsAggregator(uint64(len(committee)), sig.Marshal())
 		require.NoError(t, err)
 		assert.Equal(t, false, agg, "Wanted aggregator false")
-	})
-}
-
-func TestAttestation_AggregateSignature(t *testing.T) {
-	t.Run("verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := bytesutil.ToBytes32([]byte("hello"))
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg[:])
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts)
-		require.NoError(t, err)
-		assert.Equal(t, true, aggSig.FastAggregateVerify(pubkeys, msg), "Signature did not verify")
-	})
-
-	t.Run("not verified", func(t *testing.T) {
-		pubkeys := make([]bls.PublicKey, 0, 100)
-		atts := make([]*ethpb.Attestation, 0, 100)
-		msg := []byte("hello")
-		for i := 0; i < 100; i++ {
-			priv, err := bls.RandKey()
-			require.NoError(t, err)
-			pub := priv.PublicKey()
-			sig := priv.Sign(msg)
-			pubkeys = append(pubkeys, pub)
-			att := &ethpb.Attestation{Signature: sig.Marshal()}
-			atts = append(atts, att)
-		}
-		aggSig, err := helpers.AggregateSignature(atts[0 : len(atts)-2])
-		require.NoError(t, err)
-		assert.Equal(t, false, aggSig.FastAggregateVerify(pubkeys, bytesutil.ToBytes32(msg)), "Signature not suppose to verify")
 	})
 }
 
@@ -125,7 +85,12 @@ func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
 }
 
 func Test_ValidateAttestationTime(t *testing.T) {
-	if params.BeaconNetworkConfig().MaximumGossipClockDisparity < 200*time.Millisecond {
+	cfg := params.BeaconConfig().Copy()
+	cfg.DenebForkEpoch = 5
+	params.OverrideBeaconConfig(cfg)
+	params.SetupTestConfigCleanup(t)
+
+	if params.BeaconConfig().MaximumGossipClockDisparityDuration() < 200*time.Millisecond {
 		t.Fatal("This test expects the maximum clock disparity to be at least 200ms")
 	}
 
@@ -174,7 +139,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 		{
 			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
 			args: args{
-				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange - 1,
+				attSlot:     100 - params.BeaconConfig().AttestationPropagationSlotRange - 1,
 				genesisTime: prysmTime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 			wantedErr: "not within attestation propagation range",
@@ -182,18 +147,51 @@ func Test_ValidateAttestationTime(t *testing.T) {
 		{
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE",
 			args: args{
-				attSlot:     100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				attSlot:     100 - params.BeaconConfig().AttestationPropagationSlotRange,
 				genesisTime: prysmTime.Now().Add(-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
 			},
 		},
 		{
 			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late",
 			args: args{
-				attSlot: 100 - params.BeaconNetworkConfig().AttestationPropagationSlotRange,
+				attSlot: 100 - params.BeaconConfig().AttestationPropagationSlotRange,
 				genesisTime: prysmTime.Now().Add(
 					-100 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
 				).Add(200 * time.Millisecond),
 			},
+		},
+		{
+			name: "attestation.slot < current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE in deneb",
+			args: args{
+				attSlot:     300 - params.BeaconConfig().AttestationPropagationSlotRange - 1,
+				genesisTime: prysmTime.Now().Add(-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE in deneb",
+			args: args{
+				attSlot:     300 - params.BeaconConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second),
+			},
+		},
+		{
+			name: "attestation.slot = current_slot-ATTESTATION_PROPAGATION_SLOT_RANGE, received 200ms late in deneb",
+			args: args{
+				attSlot: 300 - params.BeaconConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(
+					-300 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(200 * time.Millisecond),
+			},
+		},
+		{
+			name: "attestation.slot != current epoch or previous epoch in deneb",
+			args: args{
+				attSlot: 300 - params.BeaconConfig().AttestationPropagationSlotRange,
+				genesisTime: prysmTime.Now().Add(
+					-500 * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second,
+				).Add(200 * time.Millisecond),
+			},
+			wantedErr: "attestation epoch 8 not within current epoch 15 or previous epoch 14",
 		},
 		{
 			name: "attestation.slot is well beyond current slot",
@@ -207,7 +205,7 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime,
-				params.BeaconNetworkConfig().MaximumGossipClockDisparity)
+				params.BeaconConfig().MaximumGossipClockDisparityDuration())
 			if tt.wantedErr != "" {
 				assert.ErrorContains(t, tt.wantedErr, err)
 			} else {

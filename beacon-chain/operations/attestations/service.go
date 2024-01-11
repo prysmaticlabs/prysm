@@ -5,6 +5,7 @@ package attestations
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -26,8 +27,9 @@ type Service struct {
 
 // Config options for the service.
 type Config struct {
-	Pool          Pool
-	pruneInterval time.Duration
+	Pool                Pool
+	pruneInterval       time.Duration
+	InitialSyncComplete chan struct{}
 }
 
 // NewService instantiates a new attestation pool service instance that will
@@ -51,8 +53,22 @@ func NewService(ctx context.Context, cfg *Config) (*Service, error) {
 
 // Start an attestation pool service's main event loop.
 func (s *Service) Start() {
+	if err := s.waitForSync(s.cfg.InitialSyncComplete); err != nil {
+		log.WithError(err).Error("failed to wait for initial sync")
+		return
+	}
 	go s.prepareForkChoiceAtts()
 	go s.pruneAttsPool()
+}
+
+// waitForSync waits until the beacon node is synced to the latest head.
+func (s *Service) waitForSync(syncChan chan struct{}) error {
+	select {
+	case <-syncChan:
+		return nil
+	case <-s.ctx.Done():
+		return errors.New("context closed, exiting goroutine")
+	}
 }
 
 // Stop the beacon block attestation pool service's main event loop

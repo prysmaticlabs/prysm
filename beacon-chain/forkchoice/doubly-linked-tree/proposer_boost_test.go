@@ -49,6 +49,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot := primitives.Slot(1)
 		driftGenesisTime(f, slot, 0)
 		newRoot := indexToHash(1)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			slot,
@@ -74,6 +75,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = primitives.Slot(2)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(2)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
@@ -101,6 +103,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = primitives.Slot(3)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(3)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
@@ -129,6 +132,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		slot = primitives.Slot(4)
 		driftGenesisTime(f, slot, 0)
 		newRoot = indexToHash(4)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			slot,
@@ -152,9 +156,9 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// Ancestors have the added weights of their children. Genesis is a special exception at 0 weight,
 		require.Equal(t, f.store.treeRootNode.weight, uint64(0))
 
-		// Proposer boost score with this tests parameters is 8
+		// Proposer boost score with these test parameters is 8
 		// Each of the nodes received one attestation accounting for 10.
-		// Node D is the only one with a proposer boost still applied:
+		// Node D is the only one with proposer boost still applied:
 		//
 		// (1: 48) -> (2: 38) -> (3: 10)
 		//		    \--------------->(4: 18)
@@ -335,6 +339,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		cSlot := primitives.Slot(2)
 		driftGenesisTime(f, cSlot, 0)
 		c := indexToHash(2)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err := prepareForkchoiceState(
 			ctx,
 			cSlot,
@@ -354,6 +359,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 
 		bSlot := primitives.Slot(1)
 		b := indexToHash(1)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			bSlot,
@@ -378,6 +384,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// A block D, building on B, is received at slot N+3. It should not be able to win without boosting.
 		dSlot := primitives.Slot(3)
 		d := indexToHash(3)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			dSlot,
@@ -398,6 +405,7 @@ func TestForkChoice_BoostProposerRoot_PreventsExAnteAttack(t *testing.T) {
 		// If the same block arrives with boosting then it becomes head:
 		driftGenesisTime(f, dSlot, 0)
 		d2 := indexToHash(30)
+		f.store.proposerBoostRoot = [32]byte{}
 		state, blkRoot, err = prepareForkchoiceState(
 			ctx,
 			dSlot,

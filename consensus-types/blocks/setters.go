@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -35,12 +36,6 @@ func (b *SignedBeaconBlock) SetParentRoot(parentRoot []byte) {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetStateRoot(root []byte) {
 	copy(b.block.stateRoot[:], root)
-}
-
-// SetBlinded sets the blinded flag of the beacon block.
-// This function is not thread safe, it is only used during block creation.
-func (b *SignedBeaconBlock) SetBlinded(blinded bool) {
-	b.block.body.isBlinded = blinded
 }
 
 // SetRandaoReveal sets the randao reveal in the block body.
@@ -95,7 +90,7 @@ func (b *SignedBeaconBlock) SetVoluntaryExits(v []*eth.SignedVoluntaryExit) {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetSyncAggregate(s *eth.SyncAggregate) error {
 	if b.version == version.Phase0 {
-		return ErrNotSupported("SyncAggregate", b.version)
+		return consensus_types.ErrNotSupported("SyncAggregate", b.version)
 	}
 	b.block.body.syncAggregate = s
 	return nil
@@ -105,9 +100,9 @@ func (b *SignedBeaconBlock) SetSyncAggregate(s *eth.SyncAggregate) error {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 	if b.version == version.Phase0 || b.version == version.Altair {
-		return ErrNotSupported("Execution", b.version)
+		return consensus_types.ErrNotSupported("Execution", b.version)
 	}
-	if b.block.body.isBlinded {
+	if e.IsBlinded() {
 		b.block.body.executionPayloadHeader = e
 		return nil
 	}
@@ -119,8 +114,21 @@ func (b *SignedBeaconBlock) SetExecution(e interfaces.ExecutionData) error {
 // This function is not thread safe, it is only used during block creation.
 func (b *SignedBeaconBlock) SetBLSToExecutionChanges(blsToExecutionChanges []*eth.SignedBLSToExecutionChange) error {
 	if b.version < version.Capella {
-		return ErrNotSupported("BLSToExecutionChanges", b.version)
+		return consensus_types.ErrNotSupported("BLSToExecutionChanges", b.version)
 	}
 	b.block.body.blsToExecutionChanges = blsToExecutionChanges
 	return nil
+}
+
+// SetBlobKzgCommitments sets the blob kzg commitments in the block.
+func (b *SignedBeaconBlock) SetBlobKzgCommitments(c [][]byte) error {
+	switch b.version {
+	case version.Phase0, version.Altair, version.Bellatrix, version.Capella:
+		return consensus_types.ErrNotSupported("SetBlobKzgCommitments", b.version)
+	case version.Deneb:
+		b.block.body.blobKzgCommitments = c
+		return nil
+	default:
+		return errIncorrectBlockVersion
+	}
 }

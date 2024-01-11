@@ -108,7 +108,7 @@ func (s *Simulator) generateAttestationsForSlot(
 }
 
 func (s *Simulator) aggregateSigForAttestation(
-	beaconState state.BeaconState, att *ethpb.IndexedAttestation,
+	beaconState state.ReadOnlyBeaconState, att *ethpb.IndexedAttestation,
 ) (bls.Signature, error) {
 	domain, err := signing.Domain(
 		beaconState.Fork(),

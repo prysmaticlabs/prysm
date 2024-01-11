@@ -14,10 +14,11 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
-	v1alpha1validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/v1alpha1/validator"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 // Server defines a server implementation of the gRPC Beacon Chain service,
@@ -37,11 +38,14 @@ type Server struct {
 	Stater                        lookup.Stater
 	Blocker                       lookup.Blocker
 	HeadFetcher                   blockchain.HeadFetcher
+	TimeFetcher                   blockchain.TimeFetcher
 	OptimisticModeFetcher         blockchain.OptimisticModeFetcher
-	V1Alpha1ValidatorServer       *v1alpha1validator.Server
+	V1Alpha1ValidatorServer       eth.BeaconNodeValidatorServer
 	SyncChecker                   sync.Checker
 	CanonicalHistory              *stategen.CanonicalHistory
-	ExecutionPayloadReconstructor execution.ExecutionPayloadReconstructor
+	ExecutionPayloadReconstructor execution.PayloadReconstructor
 	FinalizationFetcher           blockchain.FinalizationFetcher
 	BLSChangesPool                blstoexec.PoolManager
+	ForkchoiceFetcher             blockchain.ForkchoiceFetcher
+	CoreService                   *core.Service
 }
