@@ -48,7 +48,5 @@ func (v *validator) HandleKeyReload(ctx context.Context, currentKeys [][fieldpar
 		valCount = int64(valCounts[0].Count)
 	}
 
-	anyActive = v.checkAndLogValidatorStatus(statuses, valCount)
-
-	return anyActive, nil
+	return v.checkAndLogValidatorStatus(statuses, valCount), nil
 }
