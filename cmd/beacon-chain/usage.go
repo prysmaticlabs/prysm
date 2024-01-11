@@ -62,7 +62,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
-			cmd.BackupWebhookOutputDir,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
@@ -183,6 +182,12 @@ var appHelpFlagGroups = []flagGroup{
 			genesis.StatePath,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
+		},
+	},
+	{
+		Name: "deprecated",
+		Flags: []cli.Flag{
+			cmd.BackupWebhookOutputDir,
 		},
 	},
 }
