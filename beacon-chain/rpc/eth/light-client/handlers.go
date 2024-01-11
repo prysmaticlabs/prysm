@@ -8,8 +8,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
-	"github.com/wealdtech/go-bytesutil"
 	"go.opencensus.io/trace"
+
+	"github.com/wealdtech/go-bytesutil"
 
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -219,11 +220,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	response := &LightClientUpdatesByRangeResponse{
-		Updates: updates,
-	}
-
-	httputil.WriteJson(w, response)
+	httputil.WriteJson(w, updates)
 }
 
 // GetLightClientFinalityUpdate - implements https://github.com/ethereum/beacon-APIs/blob/263f4ed6c263c967f13279c7a9f5629b51c5fc55/apis/beacon/light_client/finality_update.yaml

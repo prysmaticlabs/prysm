@@ -92,3 +92,27 @@ type BlobSidecarEvent struct {
 	KzgCommitment string `json:"kzg_commitment"`
 	VersionedHash string `json:"versioned_hash"`
 }
+
+type LightClientFinalityUpdateEvent struct {
+	Version string                     `json:"version"`
+	Data    *LightClientFinalityUpdate `json:"data"`
+}
+
+type LightClientFinalityUpdate struct {
+	AttestedHeader  *shared.BeaconBlockHeader `json:"attested_header"`
+	FinalizedHeader *shared.BeaconBlockHeader `json:"finalized_header"`
+	FinalityBranch  []string                  `json:"finality_branch"`
+	SyncAggregate   *shared.SyncAggregate     `json:"sync_aggregate"`
+	SignatureSlot   string                    `json:"signature_slot"`
+}
+
+type LightClientOptimisticUpdateEvent struct {
+	Version string                       `json:"version"`
+	Data    *LightClientOptimisticUpdate `json:"data"`
+}
+
+type LightClientOptimisticUpdate struct {
+	AttestedHeader *shared.BeaconBlockHeader `json:"attested_header"`
+	SyncAggregate  *shared.SyncAggregate     `json:"sync_aggregate"`
+	SignatureSlot  string                    `json:"signature_slot"`
+}

@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -29,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // A custom slot deadline for processing state slots in our cache.
@@ -67,6 +68,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	fcuArgs := &fcuConfig{}
 
 	defer s.handleSecondFCUCall(cfg, fcuArgs)
+	defer s.sendLightClientFeeds(cfg)
 	defer s.sendStateFeedOnBlock(cfg)
 	defer reportProcessingTime(startTime)
 	defer reportAttestationInclusion(cfg.signed.Block())
@@ -102,6 +104,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	if err := s.sendFCU(cfg, fcuArgs); err != nil {
 		return errors.Wrap(err, "could not send FCU to engine")
 	}
+
 	return nil
 }
 
