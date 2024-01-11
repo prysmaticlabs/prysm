@@ -149,7 +149,7 @@ func insertDoubleAttestationIntoPool(_ *e2eTypes.EvaluationContext, conns ...*gr
 
 	var committeeIndex primitives.CommitteeIndex
 	var committee []primitives.ValidatorIndex
-	for _, duty := range duties.Duties {
+	for _, duty := range duties.CurrentEpochDuties {
 		if duty.AttesterSlot == chainHead.HeadSlot-1 {
 			committeeIndex = duty.CommitteeIndex
 			committee = duty.Committee
