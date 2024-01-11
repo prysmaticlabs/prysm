@@ -13,29 +13,29 @@ import (
 )
 
 type JsonRestHandler interface {
-	Get(ctx context.Context, query string, resp interface{}) error
+	Get(ctx context.Context, endpoint string, resp interface{}) error
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
 }
 
-type beaconApiJsonRestHandler struct {
-	httpClient http.Client
-	host       string
+type BeaconApiJsonRestHandler struct {
+	HttpClient http.Client
+	Host       string
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
+func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
 	if resp == nil {
 		return errors.New("resp is nil")
 	}
 
-	url := c.host + endpoint
+	url := c.Host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
 	}
 
-	httpResp, err := c.httpClient.Do(req)
+	httpResp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}
@@ -50,7 +50,7 @@ func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 
 // Post sends a POST request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
-func (c beaconApiJsonRestHandler) Post(
+func (c BeaconApiJsonRestHandler) Post(
 	ctx context.Context,
 	apiEndpoint string,
 	headers map[string]string,
@@ -61,7 +61,7 @@ func (c beaconApiJsonRestHandler) Post(
 		return errors.New("data is nil")
 	}
 
-	url := c.host + apiEndpoint
+	url := c.Host + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -72,7 +72,7 @@ func (c beaconApiJsonRestHandler) Post(
 	}
 	req.Header.Set("Content-Type", api.JsonMediaType)
 
-	httpResp, err := c.httpClient.Do(req)
+	httpResp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return errors.Wrapf(err, "failed to perform request for endpoint %s", url)
 	}

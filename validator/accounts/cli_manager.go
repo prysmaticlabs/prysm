@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
 	validatorClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/validator-client-factory"
@@ -80,14 +82,18 @@ func (acm *CLIManager) prepareBeaconClients(ctx context.Context) (*iface.Validat
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "could not dial endpoint %s", acm.beaconRPCProvider)
 	}
-
 	conn := validatorHelpers.NewNodeConnection(
 		grpcConn,
 		acm.beaconApiEndpoint,
 		acm.beaconApiTimeout,
 	)
 
-	validatorClient := validatorClientFactory.NewValidatorClient(conn)
-	nodeClient := nodeClientFactory.NewNodeClient(conn)
+	restHandler := &beaconApi.BeaconApiJsonRestHandler{
+		HttpClient: http.Client{Timeout: acm.beaconApiTimeout},
+		Host:       acm.beaconApiEndpoint,
+	}
+	validatorClient := validatorClientFactory.NewValidatorClient(conn, restHandler)
+	nodeClient := nodeClientFactory.NewNodeClient(conn, restHandler)
+
 	return &validatorClient, &nodeClient, nil
 }
