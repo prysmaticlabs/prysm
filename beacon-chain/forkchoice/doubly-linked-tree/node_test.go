@@ -144,9 +144,14 @@ func TestNode_ViableForHead(t *testing.T) {
 	}{
 		{&Node{}, 0, true},
 		{&Node{}, 1, false},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 1, true},
-		{&Node{finalizedEpoch: 1, justifiedEpoch: 1}, 2, false},
-		{&Node{finalizedEpoch: 3, justifiedEpoch: 4}, 4, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1, unrealizedJustifiedEpoch: 1}, 1, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1, unrealizedJustifiedEpoch: 1}, 2, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1, unrealizedJustifiedEpoch: 2}, 2, true},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1, unrealizedJustifiedEpoch: 2}, 3, false},
+		{&Node{finalizedEpoch: 1, justifiedEpoch: 1, unrealizedJustifiedEpoch: 3}, 3, true},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 2, unrealizedJustifiedEpoch: 2}, 4, false},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 2, unrealizedJustifiedEpoch: 3}, 4, true},
+		{&Node{finalizedEpoch: 3, justifiedEpoch: 3, unrealizedJustifiedEpoch: 4}, 4, true},
 	}
 	for _, tc := range tests {
 		got := tc.n.viableForHead(tc.justifiedEpoch, 5)
