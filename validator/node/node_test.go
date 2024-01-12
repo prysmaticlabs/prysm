@@ -129,6 +129,13 @@ func TestGetLegacyDatabaseLocation(t *testing.T) {
 			expectedDataFile: dataFile,
 		},
 		{
+			name:             "wallet is nil",
+			dataDir:          cmd.DefaultDataDir(),
+			dataFile:         nonExistingDataFile,
+			expectedDataDir:  cmd.DefaultDataDir(),
+			expectedDataFile: nonExistingDataFile,
+		},
+		{
 			name:     "web3signer url is not set and legacy data file does not exist",
 			dataDir:  cmd.DefaultDataDir(),
 			dataFile: nonExistingDataFile,
