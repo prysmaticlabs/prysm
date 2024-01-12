@@ -184,7 +184,7 @@ func (b *BeaconState) PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.
 // PublicKeys builds a list of all validator public keys, with each key's index aligned to its validator index.
 func (b *BeaconState) PublicKeys() [][fieldparams.BLSPubkeyLength]byte {
 	b.lock.RLock()
-	defer b.lock.RLock()
+	defer b.lock.RUnlock()
 
 	res := make([][fieldparams.BLSPubkeyLength]byte, len(b.validators))
 	for i := 0; i < len(b.validators); i++ {
