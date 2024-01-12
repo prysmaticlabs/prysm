@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -290,7 +291,7 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 
 	if !existedPreviously {
 		// manually reload the account from the keystore the first time
-		km.reloadAccountsFromKeystoreFile()
+		km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
 		// listen to account changes of the new file
 		go km.listenForAccountChanges(ctx)
 	} else {
