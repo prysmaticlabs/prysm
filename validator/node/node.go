@@ -539,6 +539,10 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 }
 
 func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServiceConfig.ProposerSettings, error) {
+	if db == nil {
+		return nil, errors.New("db is nil")
+	}
+
 	var fileConfig *validatorpb.ProposerSettingsPayload
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
@@ -606,6 +610,9 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 
 	if builderConfigFromFlag != nil {
 		config := builderConfigFromFlag.Clone()
+		if config == nil {
+			return nil, errors.New("cloned config is nil")
+		}
 		if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && vpSettings.DefaultConfig.BuilderConfig != nil {
 			config.GasLimit = vpSettings.DefaultConfig.BuilderConfig.GasLimit
 		}
@@ -637,6 +644,9 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			currentBuilderConfig := validatorServiceConfig.ToBuilderConfig(option.Builder)
 			if builderConfigFromFlag != nil {
 				config := builderConfigFromFlag.Clone()
+				if config == nil {
+					return nil, errors.New("cloned config is nil")
+				}
 				if config.GasLimit == validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit) && currentBuilderConfig != nil {
 					config.GasLimit = currentBuilderConfig.GasLimit
 				}
@@ -711,13 +721,20 @@ func handleNoProposerSettingsFlagsProvided(cliCtx *cli.Context,
 }
 
 func overrideBuilderSettings(settings *validatorServiceConfig.ProposerSettings, builderConfigFromFlag *validatorServiceConfig.BuilderConfig) {
+	if settings == nil {
+		return
+	}
 	// override the db settings with the results based on whether the --enable-builder flag is provided.
 	if builderConfigFromFlag == nil {
 		log.Infof("proposer settings loaded from db. validator registration to builder is not enabled, please use the --%s flag if you wish to use a builder.", flags.EnableBuilderFlag.Name)
 	}
 	if settings.ProposeConfig != nil {
 		for key := range settings.ProposeConfig {
-			settings.ProposeConfig[key].BuilderConfig = builderConfigFromFlag
+			proposerConfig := settings.ProposeConfig[key]
+			if proposerConfig == nil {
+				return
+			}
+			proposerConfig.BuilderConfig = builderConfigFromFlag
 		}
 	}
 	if settings.DefaultConfig != nil {
@@ -959,6 +976,9 @@ func unmarshalFromURL(ctx context.Context, from string, to interface{}) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, resperr := http.DefaultClient.Do(req)
+	if resp == nil {
+		return errors.New("http response is nil")
+	}
 	if resperr != nil {
 		return errors.Wrap(resperr, "failed to send http request")
 	}
