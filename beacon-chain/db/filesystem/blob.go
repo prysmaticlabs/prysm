@@ -185,6 +185,12 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 	return verification.BlobSidecarNoop(ro)
 }
 
+// Remove removes all blobs for a given root.
+func (bs *BlobStorage) Remove(root [32]byte) error {
+	rootDir := blobNamer{root: root}.dir()
+	return bs.fs.RemoveAll(rootDir)
+}
+
 // Indices generates a bitmap representing which BlobSidecar.Index values are present on disk for a given root.
 // This value can be compared to the commitments observed in a block to determine which indices need to be found
 // on the network to confirm data availability.
