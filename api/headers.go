@@ -8,4 +8,5 @@ const (
 	JsonMediaType                 = "application/json"
 	OctetStreamMediaType          = "application/octet-stream"
 	EventStreamMediaType          = "text/event-stream"
+	KeepAlive                     = "keep-alive"
 )

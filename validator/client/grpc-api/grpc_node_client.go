@@ -29,9 +29,8 @@ func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb
 	return c.nodeClient.ListPeers(ctx, in)
 }
 
-// IsHealthy returns a dummy value for gRPC
 func (c *grpcNodeClient) IsHealthy(context.Context) bool {
-	return true
+	panic("function not supported for gRPC client")
 }
 
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {

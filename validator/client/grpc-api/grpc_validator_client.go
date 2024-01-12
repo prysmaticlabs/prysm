@@ -142,12 +142,10 @@ func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
 }
 
-// StartEventStream doesn't do anything in gRPC client
 func (c *grpcValidatorClient) StartEventStream(context.Context) error {
-	return nil
+	panic("function not supported for gRPC client")
 }
 
-// EventStreamIsRunning returns a dummy value for gRPC
 func (c *grpcValidatorClient) EventStreamIsRunning() bool {
-	return true
+	panic("function not supported for gRPC client")
 }

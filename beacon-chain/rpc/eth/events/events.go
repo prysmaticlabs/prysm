@@ -117,7 +117,7 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 
 	// Set up SSE response headers
 	w.Header().Set("Content-Type", api.EventStreamMediaType)
-	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Connection", api.KeepAlive)
 
 	// Handle each event received and context cancellation.
 	// We send a keepalive dummy message immediately to prevent clients

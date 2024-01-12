@@ -54,20 +54,23 @@ func (h *EventHandler) get(ctx context.Context, topics []string) error {
 	if len(topics) == 0 {
 		return errors.New("no topics provided")
 	}
+	if h.running {
+		log.Warn("Event listener is already running, ignoring function call")
+	}
 
 	go func() {
 		h.running = true
 		defer func() { h.running = false }()
 
 		allTopics := strings.Join(topics, ",")
-		log.Info("Starting listening to Beacon API events on topics " + allTopics)
+		log.Info("Starting listening to Beacon API events on topics: " + allTopics)
 		url := h.host + "/eth/v1/events?topics=" + allTopics
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			log.WithError(err).Error("Failed to create HTTP request")
 		}
 		req.Header.Set("Accept", api.EventStreamMediaType)
-		req.Header.Set("Connection", "keep-alive")
+		req.Header.Set("Connection", api.KeepAlive)
 		resp, err := h.httpClient.Do(req)
 		if err != nil {
 			log.WithError(err).Error("Failed to perform HTTP request")
