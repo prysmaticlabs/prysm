@@ -98,7 +98,7 @@ func (km *Keymanager) reloadAccountsFromKeystoreFile() {
 		log.Error("Could not reload accounts because wallet was undefined")
 		return
 	}
-	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
+	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, filepath.Clean(AccountsKeystoreFileName))
 	fileBytes, err := os.ReadFile(accountsFilePath)
 	if err != nil {
 		log.WithError(err).Errorf("Could not read file at path: %s", accountsFilePath)
