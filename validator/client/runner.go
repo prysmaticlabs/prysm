@@ -191,8 +191,10 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
-		if err = v.StartEventStream(ctx); err != nil {
-			log.WithError(err).Fatal("Could not start API event stream")
+		if features.Get().EnableBeaconRESTApi {
+			if err = v.StartEventStream(ctx); err != nil {
+				log.WithError(err).Fatal("Could not start API event stream")
+			}
 		}
 
 		if features.Get().EnableBeaconRESTApi {
