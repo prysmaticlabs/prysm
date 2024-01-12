@@ -7,21 +7,26 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts"
+	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbTest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	remoteweb3signer "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer"
@@ -65,6 +70,138 @@ func TestNode_Builds(t *testing.T) {
 	require.NoError(t, err, "Failed to create ValidatorClient")
 	err = valClient.db.Close()
 	require.NoError(t, err)
+}
+
+func TestGetLegacyDatabaseLocation(t *testing.T) {
+	dataDir := t.TempDir()
+	dataFile := path.Join(dataDir, "dataFile")
+	nonExistingDataFile := path.Join(dataDir, "nonExistingDataFile")
+	_, err := os.Create(dataFile)
+	require.NoError(t, err, "Failed to create data file")
+
+	walletDir := t.TempDir()
+	derivedDir := path.Join(walletDir, "derived")
+	err = file.MkdirAll(derivedDir)
+	require.NoError(t, err, "Failed to create derived dir")
+
+	derivedDbFile := path.Join(derivedDir, kv.ProtectionDbFileName)
+	_, err = os.Create(derivedDbFile)
+	require.NoError(t, err, "Failed to create derived db file")
+
+	dbFile := path.Join(walletDir, kv.ProtectionDbFileName)
+	_, err = os.Create(dbFile)
+	require.NoError(t, err, "Failed to create db file")
+
+	nonExistingWalletDir := t.TempDir()
+
+	testCases := []struct {
+		name                      string
+		isInteropNumValidatorsSet bool
+		isWeb3SignerURLFlagSet    bool
+		dataDir                   string
+		dataFile                  string
+		walletDir                 string
+		validatorClient           *ValidatorClient
+		wallet                    *wallet.Wallet
+		expectedDataDir           string
+		expectedDataFile          string
+	}{
+		{
+			name:                      "interop num validators set",
+			isInteropNumValidatorsSet: true,
+			dataDir:                   dataDir,
+			dataFile:                  dataFile,
+			expectedDataDir:           dataDir,
+			expectedDataFile:          dataFile,
+		},
+		{
+			name:             "dataDir differs from default",
+			dataDir:          dataDir,
+			dataFile:         dataFile,
+			expectedDataDir:  dataDir,
+			expectedDataFile: dataFile,
+		},
+		{
+			name:             "dataFile exists",
+			dataDir:          cmd.DefaultDataDir(),
+			dataFile:         dataFile,
+			expectedDataDir:  cmd.DefaultDataDir(),
+			expectedDataFile: dataFile,
+		},
+		{
+			name:             "wallet is nil",
+			dataDir:          cmd.DefaultDataDir(),
+			dataFile:         nonExistingDataFile,
+			expectedDataDir:  cmd.DefaultDataDir(),
+			expectedDataFile: nonExistingDataFile,
+		},
+		{
+			name:     "web3signer url is not set and legacy data file does not exist",
+			dataDir:  cmd.DefaultDataDir(),
+			dataFile: nonExistingDataFile,
+			wallet: wallet.New(&wallet.Config{
+				WalletDir:      nonExistingWalletDir,
+				KeymanagerKind: keymanager.Derived,
+			}),
+			expectedDataDir:  cmd.DefaultDataDir(),
+			expectedDataFile: nonExistingDataFile,
+		},
+		{
+			name:     "web3signer url is not set and legacy data file does exist",
+			dataDir:  cmd.DefaultDataDir(),
+			dataFile: nonExistingDataFile,
+			wallet: wallet.New(&wallet.Config{
+				WalletDir:      walletDir,
+				KeymanagerKind: keymanager.Derived,
+			}),
+			expectedDataDir:  path.Join(walletDir, "derived"),
+			expectedDataFile: path.Join(walletDir, "derived", kv.ProtectionDbFileName),
+		},
+		{
+			name:                   "web3signer url is set and legacy data file does not exist",
+			isWeb3SignerURLFlagSet: true,
+			dataDir:                cmd.DefaultDataDir(),
+			dataFile:               nonExistingDataFile,
+			walletDir:              nonExistingWalletDir,
+			wallet: wallet.New(&wallet.Config{
+				WalletDir:      walletDir,
+				KeymanagerKind: keymanager.Derived,
+			}),
+			expectedDataDir:  cmd.DefaultDataDir(),
+			expectedDataFile: nonExistingDataFile,
+		},
+		{
+			name:                   "web3signer url is set and legacy data file does exist",
+			isWeb3SignerURLFlagSet: true,
+			dataDir:                cmd.DefaultDataDir(),
+			dataFile:               nonExistingDataFile,
+			walletDir:              walletDir,
+			wallet: wallet.New(&wallet.Config{
+				WalletDir:      walletDir,
+				KeymanagerKind: keymanager.Derived,
+			}),
+			expectedDataDir:  walletDir,
+			expectedDataFile: path.Join(walletDir, kv.ProtectionDbFileName),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			validatorClient := &ValidatorClient{wallet: tt.wallet}
+			actualDataDir, actualDataFile := validatorClient.getLegacyDatabaseLocation(
+				tt.isInteropNumValidatorsSet,
+				tt.isWeb3SignerURLFlagSet,
+				tt.dataDir,
+				tt.dataFile,
+				tt.walletDir,
+			)
+
+			assert.Equal(t, tt.expectedDataDir, actualDataDir, "data dir should be equal")
+			assert.Equal(t, tt.expectedDataFile, actualDataFile, "data file should be equal")
+		})
+
+	}
+
 }
 
 // TestClearDB tests clearing the database
