@@ -218,7 +218,7 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	dataFile string,
 	walletDir string,
 ) (string, string) {
-	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) {
+	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) || c.wallet == nil {
 		return dataDir, dataFile
 	}
 
