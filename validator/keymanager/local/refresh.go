@@ -57,7 +57,27 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 			log.Errorf("Type %T is not a valid file system event", event)
 			return
 		}
-		km.reloadAccountsFromKeystoreFile(ev.Name)
+		fileBytes, err := os.ReadFile(ev.Name)
+		if err != nil {
+			log.WithError(err).Errorf("Could not read file at path: %s", ev.Name)
+			return
+		}
+		if fileBytes == nil {
+			log.WithError(err).Errorf("Loaded in an empty file: %s", ev.Name)
+			return
+		}
+		accountsKeystore := &AccountsKeystoreRepresentation{}
+		if err := json.Unmarshal(fileBytes, accountsKeystore); err != nil {
+			log.WithError(
+				err,
+			).Errorf("Could not read valid, EIP-2335 keystore json file at path: %s", ev.Name)
+			return
+		}
+		if err := km.reloadAccountsFromKeystore(accountsKeystore); err != nil {
+			log.WithError(
+				err,
+			).Error("Could not replace the accounts store from keystore file")
+		}
 	})
 	for {
 		select {
@@ -73,7 +93,12 @@ func (km *Keymanager) listenForAccountChanges(ctx context.Context) {
 	}
 }
 
-func (km *Keymanager) reloadAccountsFromKeystoreFile(accountsFilePath string) {
+func (km *Keymanager) reloadAccountsFromKeystoreFile() {
+	if km.wallet == nil {
+		log.Error("Could not reload accounts because wallet was undefined")
+		return
+	}
+	accountsFilePath := filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName)
 	fileBytes, err := os.ReadFile(accountsFilePath)
 	if err != nil {
 		log.WithError(err).Errorf("Could not read file at path: %s", accountsFilePath)
