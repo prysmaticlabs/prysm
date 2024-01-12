@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
@@ -189,15 +191,16 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
-	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
-	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
+	restHandler := &beaconApi.BeaconApiJsonRestHandler{
+		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		Host:       v.conn.GetBeaconApiUrl(),
+	}
 
 	valStruct := &validator{
 		db:                             v.db,
-		validatorClient:                validatorClient,
-		beaconClient:                   beaconClient,
-		node:                           nodeClientFactory.NewNodeClient(v.conn),
+		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn, restHandler),
+		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
+		node:                           nodeClientFactory.NewNodeClient(v.conn, restHandler),
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -221,7 +224,7 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              prysmBeaconClient,
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 	}
 
