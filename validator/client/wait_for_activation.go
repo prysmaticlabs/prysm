@@ -80,50 +80,57 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
 	}
 
-	// Recv polls for validator statuses
-	res, err := stream.Recv()
-	// If the stream is closed, we stop the loop.
-	if errors.Is(err, io.EOF) {
-		log.Warn("validator wait for activation stream closed...")
-		return nil
-	}
-	// If context is canceled we return from the function.
-	if ctx.Err() == context.Canceled {
-		return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-	}
-	if err != nil {
-		tracing.AnnotateError(span, err)
-		attempts := streamAttempts(ctx)
-		log.WithError(err).WithField("attempts", attempts).
-			Error("Stream broken while waiting for activation. Reconnecting...")
-		// Reconnection attempt backoff, up to 60s.
-		time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
-		return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
-	}
+	someAreActive := false
+	for !someAreActive {
+		select {
+		case <-ctx.Done():
+			log.Debug("Context closed, exiting fetching validating keys")
+			return ctx.Err()
+		case <-accountsChangedChan:
+			// Accounts (keys) changed, restart the process.
+			return v.internalWaitForActivation(ctx, accountsChangedChan)
+		default:
+			res, err := (stream).Recv() // retrieve from stream one loop at a time
+			// If the stream is closed, we stop the loop.
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			// If context is canceled we return from the function.
+			if ctx.Err() == context.Canceled {
+				return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+			}
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				attempts := streamAttempts(ctx)
+				log.WithError(err).WithField("attempts", attempts).
+					Error("Stream broken while waiting for activation. Reconnecting...")
+				// Reconnection attempt backoff, up to 60s.
+				time.Sleep(time.Second * time.Duration(math.Min(uint64(attempts), 60)))
+				return v.internalWaitForActivation(incrementRetries(ctx), accountsChangedChan)
+			}
 
-	statuses := make([]*validatorStatus, len(res.Statuses))
-	for i, s := range res.Statuses {
-		statuses[i] = &validatorStatus{
-			publicKey: s.PublicKey,
-			status:    s.Status,
-			index:     s.Index,
+			statuses := make([]*validatorStatus, len(res.Statuses))
+			for i, s := range res.Statuses {
+				statuses[i] = &validatorStatus{
+					publicKey: s.PublicKey,
+					status:    s.Status,
+					index:     s.Index,
+				}
+			}
+
+			// "-1" indicates that validator count endpoint is not supported by the beacon node.
+			var valCount int64 = -1
+			valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
+			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
+				return errors.Wrap(err, "could not get active validator count")
+			}
+
+			if len(valCounts) > 0 {
+				valCount = int64(valCounts[0].Count)
+			}
+
+			someAreActive = v.checkAndLogValidatorStatus(statuses, valCount)
 		}
-	}
-
-	// "-1" indicates that validator count endpoint is not supported by the beacon node.
-	var valCount int64 = -1
-	valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
-	if err != nil && !errors.Is(err, iface.ErrNotSupported) {
-		return errors.Wrap(err, "could not get active validator count")
-	}
-
-	if len(valCounts) > 0 {
-		valCount = int64(valCounts[0].Count)
-	}
-
-	if !v.checkAndLogValidatorStatus(statuses, valCount) {
-		// if it's not activated try this process again
-		return v.internalWaitForActivation(ctx, accountsChangedChan)
 	}
 
 	return nil
