@@ -431,7 +431,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	validatorClient.EXPECT().WaitForActivation(
 		gomock.Any(),
 		gomock.Any(),
-	).Return(clientStream, nil).Times(2)
+	).Return(clientStream, nil)
 	prysmBeaconClient.EXPECT().GetValidatorCount(
 		gomock.Any(),
 		"head",
