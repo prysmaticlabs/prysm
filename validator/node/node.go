@@ -423,16 +423,22 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
-	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-	cert := c.cliCtx.String(flags.CertFlag.Name)
-	graffiti := c.cliCtx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var interopKeysConfig *local.InteropKeymanagerConfig
+	var (
+		endpoint             string        = c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+		dataDir              string        = c.cliCtx.String(cmd.DataDirFlag.Name)
+		logValidatorBalances bool          = !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+		emitAccountMetrics   bool          = !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
+		cert                 string        = c.cliCtx.String(flags.CertFlag.Name)
+		graffiti             string        = c.cliCtx.String(flags.GraffitiFlag.Name)
+		maxCallRecvMsgSize   int           = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+		grpcRetries          uint          = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+		grpcRetryDelay       time.Duration = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+
+		interopKeysConfig *local.InteropKeymanagerConfig
+		err               error
+	)
+
+	// Configure interop.
 	if c.cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		interopKeysConfig = &local.InteropKeymanagerConfig{
 			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
@@ -440,27 +446,28 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
-	gStruct := &g.Graffiti{}
-	var err error
+	// Configure graffiti.
+	graffitiStruct := &g.Graffiti{}
 	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
-		n := c.cliCtx.String(flags.GraffitiFileFlag.Name)
-		gStruct, err = g.ParseGraffitiFile(n)
+		graffitiFilePath := c.cliCtx.String(flags.GraffitiFileFlag.Name)
+
+		graffitiStruct, err = g.ParseGraffitiFile(graffitiFilePath)
 		if err != nil {
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
 
-	wsc, err := Web3SignerConfig(c.cliCtx)
+	web3signerConfig, err := Web3SignerConfig(c.cliCtx)
 	if err != nil {
 		return err
 	}
 
-	bpc, err := proposerSettings(c.cliCtx, c.db)
+	proposerSettings, err := proposerSettings(c.cliCtx, c.db)
 	if err != nil {
 		return err
 	}
 
-	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
+	validatorService, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		LogValidatorBalances:       logValidatorBalances,
@@ -476,9 +483,9 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		InteropKeysConfig:          interopKeysConfig,
 		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
-		GraffitiStruct:             gStruct,
-		Web3SignerConfig:           wsc,
-		ProposerSettings:           bpc,
+		GraffitiStruct:             graffitiStruct,
+		Web3SignerConfig:           web3signerConfig,
+		ProposerSettings:           proposerSettings,
 		BeaconApiTimeout:           time.Second * 30,
 		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		ValidatorsRegBatchSize:     c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
@@ -487,7 +494,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize validator service")
 	}
 
-	return c.services.RegisterService(v)
+	return c.services.RegisterService(validatorService)
 }
 
 func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
