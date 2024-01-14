@@ -10,6 +10,7 @@ import (
 	runtimeDebug "runtime/debug"
 
 	joonix "github.com/joonix/log"
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	accountcommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/accounts"
 	dbcommands "github.com/prysmaticlabs/prysm/v4/cmd/validator/db"
@@ -34,7 +35,7 @@ import (
 var log = logrus.WithField("prefix", "main")
 
 func startNode(ctx *cli.Context) error {
-	// verify if ToS accepted
+	// Verify if ToS is accepted.
 	if err := tos.VerifyTosAcceptedOrPrompt(ctx); err != nil {
 		return err
 	}
@@ -143,6 +144,8 @@ func main() {
 				return err
 			}
 
+			logFileName := ctx.String(cmd.LogFileName.Name)
+
 			format := ctx.String(cmd.LogFormat.Name)
 			switch format {
 			case "text":
@@ -150,8 +153,8 @@ func main() {
 				formatter.TimestampFormat = "2006-01-02 15:04:05"
 				formatter.FullTimestamp = true
 				// If persistent log files are written - we disable the log messages coloring because
-				// the colors are ANSI codes and seen as Gibberish in the log files.
-				formatter.DisableColors = ctx.String(cmd.LogFileName.Name) != ""
+				// the colors are ANSI codes and seen as gibberish in the log files.
+				formatter.DisableColors = logFileName != ""
 				logrus.SetFormatter(formatter)
 			case "fluentd":
 				f := joonix.NewFormatter()
@@ -169,7 +172,6 @@ func main() {
 				return fmt.Errorf("unknown log format %s", format)
 			}
 
-			logFileName := ctx.String(cmd.LogFileName.Name)
 			if logFileName != "" {
 				if err := logs.ConfigurePersistentLogging(logFileName); err != nil {
 					log.WithError(err).Error("Failed to configuring logging to disk.")
@@ -184,8 +186,9 @@ func main() {
 			}
 
 			if err := debug.Setup(ctx); err != nil {
-				return err
+				return errors.Wrap(err, "failed to setup debug")
 			}
+
 			return cmd.ValidateNoArgs(ctx)
 		},
 		After: func(ctx *cli.Context) error {
