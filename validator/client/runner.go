@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// time to wait before trying to reconnect with beacon node.
+// Time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 
 // Run the main validator routine. This routine exits if the context is
@@ -149,8 +149,13 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot primitives.Slot
 	firstTime := true
+
+	var (
+		headSlot primitives.Slot
+		err      error
+	)
+
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
@@ -158,35 +163,35 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 				return headSlot, errors.New("context canceled")
 			}
 			<-ticker.C
-		} else {
-			firstTime = false
 		}
-		err := v.WaitForChainStart(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not determine if beacon chain started")
-			continue
-		}
-		if err != nil {
+
+		firstTime = false
+
+		if err := v.WaitForChainStart(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not determine if beacon chain started")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not determine if beacon chain started")
 		}
 
-		err = v.WaitForKeymanagerInitialization(ctx)
-		if err != nil {
+		if err := v.WaitForKeymanagerInitialization(ctx); err != nil {
 			// log.Fatal will prevent defer from being called
 			v.Done()
 			log.WithError(err).Fatal("Wallet is not ready")
 		}
 
-		err = v.WaitForSync(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not determine if beacon chain started")
-			continue
-		}
-		if err != nil {
+		if err := v.WaitForSync(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not determine if beacon chain started")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not determine if beacon node synced")
 		}
-		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if err != nil {
+
+		if err := v.WaitForActivation(ctx, nil /* accountsChangedChan */); err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
@@ -195,15 +200,17 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Warn("Could not get current canonical head slot")
 			continue
 		}
+
 		if err != nil {
 			log.WithError(err).Fatal("Could not get current canonical head slot")
 		}
-		err = v.CheckDoppelGanger(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not wait for checking doppelganger")
-			continue
-		}
-		if err != nil {
+
+		if err := v.CheckDoppelGanger(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not wait for checking doppelganger")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not succeed with doppelganger check")
 		}
 		break

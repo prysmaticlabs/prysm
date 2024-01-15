@@ -96,6 +96,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Amount of references beyond which a multivalue object is considered
+// fragmented.
+const fragmentationLimit = 50000
+
 // Id is an object identifier.
 type Id = uint64
 
@@ -422,6 +426,58 @@ func (s *Slice[V]) MultiValueStatistics() MultiValueStatistics {
 	stats.TotalAppendedElemReferences = totalAppRefs
 
 	return stats
+}
+
+// IsFragmented checks if our mutlivalue object is fragmented (individual references held).
+// If the number of references is higher than our threshold we return true.
+func (s *Slice[V]) IsFragmented() bool {
+	stats := s.MultiValueStatistics()
+	return stats.TotalIndividualElemReferences+stats.TotalAppendedElemReferences >= fragmentationLimit
+}
+
+// Reset builds a new multivalue object with respect to the
+// provided object's id. The base slice will be based on this
+// particular id.
+func (s *Slice[V]) Reset(obj Identifiable) *Slice[V] {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	l, ok := s.cachedLengths[obj.Id()]
+	if !ok {
+		l = len(s.sharedItems)
+	}
+
+	items := make([]V, l)
+	copy(items, s.sharedItems)
+	for i, ind := range s.individualItems {
+		for _, v := range ind.Values {
+			_, found := containsId(v.ids, obj.Id())
+			if found {
+				items[i] = v.val
+				break
+			}
+		}
+	}
+
+	index := len(s.sharedItems)
+	for _, app := range s.appendedItems {
+		found := true
+		for _, v := range app.Values {
+			_, found = containsId(v.ids, obj.Id())
+			if found {
+				items[index] = v.val
+				index++
+				break
+			}
+		}
+		if !found {
+			break
+		}
+	}
+
+	reset := &Slice[V]{}
+	reset.Init(items)
+	return reset
 }
 
 func (s *Slice[V]) fillOriginalItems(obj Identifiable, items *[]V) {
