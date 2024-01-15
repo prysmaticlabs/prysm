@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/pkg/errors"
 	ssz "github.com/prysmaticlabs/fastssz"
@@ -9,6 +10,7 @@ import (
 	consensus_types "github.com/prysmaticlabs/prysm/v4/consensus-types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/math"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
@@ -371,7 +373,26 @@ func (b *SignedBeaconBlock) IsBlinded() bool {
 	return b.version >= version.Bellatrix && b.block.body.executionPayload == nil
 }
 
-// ValueInGwei metadata on the payload value returned by the builder. Value is 0 by default if local.
+// ValueInWei metadata on the payload value returned by the builder.
+func (b *SignedBeaconBlock) ValueInWei() math.Wei {
+	exec, err := b.block.body.Execution()
+	if err != nil {
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
+		return big.NewInt(0)
+	}
+	val, err := exec.ValueInWei()
+	if err != nil {
+		if !errors.Is(err, consensus_types.ErrUnsupportedField) {
+			log.WithError(err).Warn("failed to retrieve execution payload")
+		}
+		return big.NewInt(0)
+	}
+	return val
+}
+
+// ValueInGwei metadata on the payload value returned by the builder.
 func (b *SignedBeaconBlock) ValueInGwei() uint64 {
 	exec, err := b.block.body.Execution()
 	if err != nil {
@@ -1068,7 +1089,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				if !ok {
 					return nil, errPayloadHeaderWrongType
 				}
-				return WrappedExecutionPayloadHeaderCapella(ph, 0)
+				return WrappedExecutionPayloadHeaderCapella(ph, big.NewInt(0))
 			}
 		}
 		var p *enginev1.ExecutionPayloadCapella
@@ -1079,30 +1100,12 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 				return nil, errPayloadWrongType
 			}
 		}
-		return WrappedExecutionPayloadCapella(p, 0)
+		return WrappedExecutionPayloadCapella(p, big.NewInt(0))
 	case version.Deneb:
 		if b.IsBlinded() {
-			var ph *enginev1.ExecutionPayloadHeaderDeneb
-			var ok bool
-			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderDeneb)
-				if !ok {
-					return nil, errPayloadHeaderWrongType
-				}
-				return WrappedExecutionPayloadHeaderDeneb(ph, 0)
-			}
+			return b.executionPayloadHeader, nil
 		}
-		var p *enginev1.ExecutionPayloadDeneb
-		var ok bool
-		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadDeneb)
-			if !ok {
-				return nil, errPayloadWrongType
-			}
-		}
-		return WrappedExecutionPayloadDeneb(p, 0)
-	default:
-		return nil, errIncorrectBlockVersion
+		return b.executionPayload, nil
 	}
 }
 

@@ -567,7 +567,7 @@ func (b *BlindedBeaconBlockBellatrix) ToGeneric() (*eth.GenericBeaconBlock, erro
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedBellatrix{BlindedBellatrix: block}, IsBlinded: true, PayloadValue: "0" /* can't get payload value from blinded block */}, nil
 }
 
 func (b *BlindedBeaconBlockBellatrix) ToConsensus() (*eth.BlindedBeaconBlockBellatrix, error) {
@@ -1024,7 +1024,7 @@ func (b *BlindedBeaconBlockCapella) ToGeneric() (*eth.GenericBeaconBlock, error)
 	if err != nil {
 		return nil, err
 	}
-	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedCapella{BlindedCapella: block}, IsBlinded: true, PayloadValue: 0 /* can't get payload value from blinded block */}, nil
+	return &eth.GenericBeaconBlock{Block: &eth.GenericBeaconBlock_BlindedCapella{BlindedCapella: block}, IsBlinded: true, PayloadValue: "0" /* can't get payload value from blinded block */}, nil
 }
 
 func (b *BlindedBeaconBlockCapella) ToConsensus() (*eth.BlindedBeaconBlockCapella, error) {
