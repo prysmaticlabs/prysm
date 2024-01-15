@@ -195,9 +195,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			if err = v.StartEventStream(ctx); err != nil {
 				log.WithError(err).Fatal("Could not start API event stream")
 			}
-		}
-
-		if features.Get().EnableBeaconRESTApi {
 			runHealthCheckRoutine(ctx, v)
 		}
 
