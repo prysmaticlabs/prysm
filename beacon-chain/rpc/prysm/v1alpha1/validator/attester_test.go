@@ -223,9 +223,10 @@ func TestGetAttestationData_Optimistic(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now()},
 		CoreService: &core.Service{
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now()},
-			HeadFetcher:        &mock.ChainService{},
-			AttestationCache:   cache.NewAttestationCache(),
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now()},
+			HeadFetcher:           &mock.ChainService{},
+			AttestationCache:      cache.NewAttestationCache(),
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: true},
 		},
 	}
 	_, err := as.GetAttestationData(context.Background(), &ethpb.AttestationDataRequest{})
