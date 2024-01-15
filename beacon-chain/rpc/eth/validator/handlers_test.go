@@ -915,10 +915,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				GenesisTimeFetcher: chain,
-				HeadFetcher:        chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				GenesisTimeFetcher:    chain,
+				HeadFetcher:           chain,
+				FinalizedFetcher:      chain,
+				OptimisticModeFetcher: chain,
 			},
 		}
 
@@ -960,8 +961,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				GenesisTimeFetcher:    chain,
+				OptimisticModeFetcher: chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1018,10 +1020,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				StateGen:           stategen.New(db, doublylinkedtree.New()),
-				FinalizedFetcher:   chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				OptimisticModeFetcher: chain,
+				StateGen:              stategen.New(db, doublylinkedtree.New()),
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1066,10 +1069,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				OptimisticModeFetcher: chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1152,10 +1156,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				OptimisticModeFetcher: chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
