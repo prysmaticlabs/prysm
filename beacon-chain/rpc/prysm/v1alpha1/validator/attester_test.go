@@ -116,8 +116,9 @@ func TestGetAttestationData_OK(t *testing.T) {
 			GenesisTimeFetcher: &mock.ChainService{
 				Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second),
 			},
-			FinalizedFetcher: &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
-			AttestationCache: cache.NewAttestationCache(),
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			AttestationCache:      cache.NewAttestationCache(),
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 
