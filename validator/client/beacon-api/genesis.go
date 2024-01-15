@@ -45,10 +45,6 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 		return nil, errors.Wrapf(err, "failed to parse genesis time: %s", genesis.GenesisTime)
 	}
 
-	chainStartResponse := &ethpb.ChainStartResponse{}
-	chainStartResponse.Started = true
-	chainStartResponse.GenesisTime = genesisTime
-
 	if !validRoot(genesis.GenesisValidatorsRoot) {
 		return nil, errors.Errorf("invalid genesis validators root: %s", genesis.GenesisValidatorsRoot)
 	}
@@ -57,7 +53,12 @@ func (c beaconApiValidatorClient) waitForChainStart(ctx context.Context) (*ethpb
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode genesis validators root")
 	}
-	chainStartResponse.GenesisValidatorsRoot = genesisValidatorRoot
+
+	chainStartResponse := &ethpb.ChainStartResponse{
+		Started:               true,
+		GenesisTime:           genesisTime,
+		GenesisValidatorsRoot: genesisValidatorRoot,
+	}
 
 	return chainStartResponse, nil
 }

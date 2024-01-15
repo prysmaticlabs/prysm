@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -238,50 +239,65 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km key
 func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
+
 	// First, check if the beacon chain has started.
 	log.Info("Syncing with beacon node to align on chain genesis info")
+
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err != io.EOF {
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			return errors.Wrap(
-				iface.ErrConnectionIssue,
-				errors.Wrap(err, "could not receive ChainStart from stream").Error(),
-			)
-		}
-		v.genesisTime = chainStartRes.GenesisTime
-		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get current genesis validators root")
-		}
-		if len(curGenValRoot) == 0 {
-			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-				return errors.Wrap(err, "could not save genesis validators root")
-			}
-		} else {
-			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
-				log.Errorf("The genesis validators root received from the beacon node does not match what is in " +
-					"your validator database. This could indicate that this is a database meant for another network. If " +
-					"you were previously running this validator database on another network, please run --clear-db to " +
-					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues")
-				return fmt.Errorf(
-					"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
-					chainStartRes.GenesisValidatorsRoot,
-					curGenValRoot,
-				)
-			}
-		}
-	} else {
+	if err == io.EOF {
 		return iface.ErrConnectionIssue
 	}
 
+	if ctx.Err() == context.Canceled {
+		return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+	}
+
+	if err != nil {
+		return errors.Wrap(
+			iface.ErrConnectionIssue,
+			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
+		)
+	}
+
+	v.genesisTime = chainStartRes.GenesisTime
+
+	curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get current genesis validators root")
+	}
+
+	if len(curGenValRoot) == 0 {
+		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis validators root")
+		}
+
+		v.setTicker()
+		return nil
+	}
+
+	if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
+		log.Errorf(`The genesis validators root received from the beacon node does not match what is in
+			your validator database. This could indicate that this is a database meant for another network. If
+			you were previously running this validator database on another network, please run --%s to
+			clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues`,
+			cmd.ClearDB.Name,
+		)
+		return fmt.Errorf(
+			"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
+			chainStartRes.GenesisValidatorsRoot,
+			curGenValRoot,
+		)
+	}
+
+	v.setTicker()
+	return nil
+}
+
+func (v *validator) setTicker() {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
-	return nil
 }
 
 // WaitForSync checks whether the beacon node has sync to the latest head.
