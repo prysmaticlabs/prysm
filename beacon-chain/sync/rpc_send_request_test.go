@@ -479,11 +479,12 @@ func TestSendRequest_SendBeaconBlocksByRootRequest(t *testing.T) {
 }
 
 func TestBlobValidatorFromRootReq(t *testing.T) {
-	validRoot := bytesutil.PadTo([]byte("valid"), 32)
-	invalidRoot := bytesutil.PadTo([]byte("invalid"), 32)
+	rootA := bytesutil.PadTo([]byte("valid"), 32)
+	rootB := bytesutil.PadTo([]byte("invalid"), 32)
 	header := &ethpb.SignedBeaconBlockHeader{}
-	validb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(validRoot), header, 0, []byte{}, make([][]byte, 0))
-	invalidb := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(invalidRoot), header, 0, []byte{}, make([][]byte, 0))
+	blobSidecarA0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 0, []byte{}, make([][]byte, 0))
+	blobSidecarA1 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootA), header, 1, []byte{}, make([][]byte, 0))
+	blobSidecarB0 := util.GenerateTestDenebBlobSidecar(t, bytesutil.ToBytes32(rootB), header, 0, []byte{}, make([][]byte, 0))
 	cases := []struct {
 		name     string
 		ids      []*ethpb.BlobIdentifier
@@ -491,15 +492,21 @@ func TestBlobValidatorFromRootReq(t *testing.T) {
 		err      error
 	}{
 		{
-			name:     "valid",
-			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []blocks.ROBlob{validb},
+			name:     "expected",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarA0},
 		},
 		{
-			name:     "invalid",
-			ids:      []*ethpb.BlobIdentifier{{BlockRoot: validRoot}},
-			response: []blocks.ROBlob{invalidb},
-			err:      errUnrequestedRoot,
+			name:     "wrong root",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarB0},
+			err:      errUnrequested,
+		},
+		{
+			name:     "wrong index",
+			ids:      []*ethpb.BlobIdentifier{{BlockRoot: rootA, Index: 0}},
+			response: []blocks.ROBlob{blobSidecarA1},
+			err:      errUnrequested,
 		},
 	}
 	for _, c := range cases {

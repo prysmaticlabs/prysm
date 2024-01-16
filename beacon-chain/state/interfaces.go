@@ -22,6 +22,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	CopyAllTries()
+	Defragment()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	Prover
 	json.Marshaler
@@ -66,6 +67,7 @@ type ReadOnlyBeaconState interface {
 	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
+	RecordStateMetrics()
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int

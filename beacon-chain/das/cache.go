@@ -103,7 +103,7 @@ func (e *cacheEntry) filter(root [32]byte, kc safeCommitmentArray) ([]blocks.ROB
 	return scs, nil
 }
 
-// safeCommitemntArray is a fixed size array of commitment byte slices. This is helpful for avoiding
+// safeCommitmentArray is a fixed size array of commitment byte slices. This is helpful for avoiding
 // gratuitous bounds checks.
 type safeCommitmentArray [fieldparams.MaxBlobsPerBlock][]byte
 

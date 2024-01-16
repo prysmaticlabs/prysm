@@ -140,6 +140,10 @@ var (
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP-4881.",
 	}
+	EnableLightClient = &cli.BoolFlag{
+		Name:  "enable-lightclient",
+		Usage: "Enables the light client support in the beacon node",
+	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager.",
@@ -204,6 +208,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
+	EnableLightClient,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

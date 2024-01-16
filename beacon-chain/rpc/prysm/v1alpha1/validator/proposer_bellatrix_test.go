@@ -113,17 +113,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		require.NoError(t, err)
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
+				ParentHash:       params.BeaconConfig().ZeroHash[:],
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 				StateRoot:        make([]byte, fieldparams.RootLength),
 				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BlockNumber:      2,
+				Timestamp:        uint64(ti.Unix()),
+				ExtraData:        make([]byte, 0),
 				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 				BlockHash:        make([]byte, fieldparams.RootLength),
 				TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
-				ParentHash:       params.BeaconConfig().ZeroHash[:],
-				Timestamp:        uint64(ti.Unix()),
-				BlockNumber:      2,
 				WithdrawalsRoot:  make([]byte, fieldparams.RootLength),
 			},
 			Pubkey: sk.PublicKey().Marshal(),
@@ -176,17 +177,18 @@ func TestServer_setExecutionData(t *testing.T) {
 		builderValue := bytesutil.ReverseByteOrder(big.NewInt(1e9).Bytes())
 		bid := &ethpb.BuilderBidCapella{
 			Header: &v1.ExecutionPayloadHeaderCapella{
+				ParentHash:       params.BeaconConfig().ZeroHash[:],
 				FeeRecipient:     make([]byte, fieldparams.FeeRecipientLength),
 				StateRoot:        make([]byte, fieldparams.RootLength),
 				ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 				LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:       make([]byte, fieldparams.RootLength),
+				BlockNumber:      2,
+				Timestamp:        uint64(ti.Unix()),
+				ExtraData:        make([]byte, 0),
 				BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 				BlockHash:        make([]byte, fieldparams.RootLength),
 				TransactionsRoot: bytesutil.PadTo([]byte{1}, fieldparams.RootLength),
-				ParentHash:       params.BeaconConfig().ZeroHash[:],
-				Timestamp:        uint64(ti.Unix()),
-				BlockNumber:      2,
 				WithdrawalsRoot:  wr[:],
 			},
 			Pubkey: sk.PublicKey().Marshal(),

@@ -23,7 +23,7 @@ type Wallet interface {
 	// Read methods for important wallet and accounts-related files.
 	ReadFileAtPath(ctx context.Context, filePath string, fileName string) ([]byte, error)
 	// Write methods to persist important wallet and accounts-related files to disk.
-	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) error
+	WriteFileAtPath(ctx context.Context, pathName string, fileName string, data []byte) (bool, error)
 	// Method for initializing a new keymanager.
 	InitializeKeymanager(ctx context.Context, cfg InitKeymanagerConfig) (keymanager.IKeymanager, error)
 }

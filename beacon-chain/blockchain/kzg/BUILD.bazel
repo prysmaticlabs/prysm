@@ -11,7 +11,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//consensus-types/blocks:go_default_library",
-        "//proto/prysm/v1alpha1:go_default_library",
         "@com_github_crate_crypto_go_kzg_4844//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
     ],
@@ -25,7 +24,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//proto/prysm/v1alpha1:go_default_library",
+        "//consensus-types/blocks:go_default_library",
         "//testing/require:go_default_library",
         "@com_github_consensys_gnark_crypto//ecc/bls12-381/fr:go_default_library",
         "@com_github_crate_crypto_go_kzg_4844//:go_default_library",
