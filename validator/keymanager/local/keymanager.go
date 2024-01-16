@@ -289,12 +289,7 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 		return err
 	}
 
-	if !existedPreviously {
-		// manually reload the account from the keystore the first time
-		km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
-		// listen to account changes of the new file
-		go km.listenForAccountChanges(ctx)
-	} else {
+        if existedPreviously {
 		// Reinitialize account store and cache
 		// This will update the in-memory information instead of reading from the file itself for safety concerns
 		km.accountsStore = store
@@ -302,6 +297,14 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 		if err != nil {
 			return errors.Wrap(err, "failed to initialize keys caches")
 		}
+		
+		return nil
+	}
+	
+        // manually reload the account from the keystore the first time
+        km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
+        // listen to account changes of the new file
+        go km.listenForAccountChanges(ctx)
 	}
 	return nil
 }
