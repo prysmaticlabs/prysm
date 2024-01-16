@@ -900,6 +900,15 @@ func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Graffiti == "" {
+		httputil.HandleError(w, "graffiti is empty", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.validatorService.SetGraffiti(ctx, bytesutil.ToBytes48(pubkey), []byte(req.Graffiti)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
 }
 
 func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
@@ -910,9 +919,14 @@ func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Validator service not ready.", http.StatusServiceUnavailable)
 		return
 	}
-	rawPubkey, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
+
+	_, pubkey, ok := shared.HexFromRoute(w, r, "pubkey", fieldparams.BLSPubkeyLength)
 	if !ok {
 		return
 	}
 
+	if err := s.validatorService.DeleteGraffiti(ctx, bytesutil.ToBytes48(pubkey)); err != nil {
+		httputil.HandleError(w, err.Error(), http.StatusNotFound)
+		return
+	}
 }

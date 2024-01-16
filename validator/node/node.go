@@ -602,6 +602,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 			FeeRecipient: common.HexToAddress(fileConfig.DefaultConfig.FeeRecipient),
 		},
 		BuilderConfig: validatorServiceConfig.ToBuilderConfig(fileConfig.DefaultConfig.Builder),
+		Graffiti:      fileConfig.DefaultConfig.Graffiti,
 	}
 
 	if builderConfigFromFlag != nil {
@@ -649,6 +650,7 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*validatorServ
 					FeeRecipient: common.HexToAddress(option.FeeRecipient),
 				},
 				BuilderConfig: currentBuilderConfig,
+				Graffiti:      option.Graffiti,
 			}
 			pubkeyB := bytesutil.ToBytes48(decodedKey)
 			vpSettings.ProposeConfig[pubkeyB] = o

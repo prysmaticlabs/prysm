@@ -109,6 +109,7 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 			if option.BuilderConfig != nil {
 				p.Builder = option.BuilderConfig.ToPayload()
 			}
+			p.Graffiti = option.Graffiti
 			payload.ProposerConfig[hexutil.Encode(key[:])] = p
 		}
 	}
@@ -120,6 +121,7 @@ func (ps *ProposerSettings) ToPayload() *validatorpb.ProposerSettingsPayload {
 		if ps.DefaultConfig.BuilderConfig != nil {
 			p.Builder = ps.DefaultConfig.BuilderConfig.ToPayload()
 		}
+		p.Graffiti = ps.DefaultConfig.Graffiti
 		payload.DefaultConfig = p
 	}
 	return payload
@@ -134,6 +136,7 @@ type FeeRecipientConfig struct {
 type ProposerOption struct {
 	FeeRecipientConfig *FeeRecipientConfig
 	BuilderConfig      *BuilderConfig
+	Graffiti           string
 }
 
 // Clone creates a deep copy of the proposer settings
@@ -211,5 +214,6 @@ func (po *ProposerOption) Clone() *ProposerOption {
 	if po.BuilderConfig != nil {
 		p.BuilderConfig = po.BuilderConfig.Clone()
 	}
+	p.Graffiti = po.Graffiti
 	return p
 }

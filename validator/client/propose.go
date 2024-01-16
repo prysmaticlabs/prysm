@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -24,7 +26,6 @@ import (
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-	g "github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
@@ -386,6 +387,19 @@ func signVoluntaryExit(
 // GetGraffiti Gets the graffiti from cli or file for the validator public key.
 func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	// Check proposer settings first
+	if v.proposerSettings != nil {
+		if v.proposerSettings.ProposeConfig != nil {
+			option, ok := v.proposerSettings.ProposeConfig[pubKey]
+			if ok && option.Graffiti != "" {
+				return []byte(option.Graffiti), nil
+			}
+		}
+		if v.proposerSettings.DefaultConfig != nil {
+			if v.proposerSettings.DefaultConfig.Graffiti != "" {
+				return []byte(v.proposerSettings.DefaultConfig.Graffiti), nil
+			}
+		}
+	}
 
 	// When specified, default graffiti from the command line takes the second priority.
 	if len(v.graffiti) != 0 {
@@ -434,19 +448,32 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 }
 
 func (v *validator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	var graffitiStruct *g.Graffiti
-	if v.graffitiStruct == nil {
-		graffitiStruct = &g.Graffiti{}
-	} else if v.graffiti != nil {
-		graffitiStruct = &g.Graffiti{Default: string(v.graffiti)}
-	} else {
-		graffitiStruct = v.graffitiStruct
+	if v.proposerSettings != nil {
+		ps := v.proposerSettings.Clone()
+		if ps.ProposeConfig != nil {
+			var option *validatorserviceconfig.ProposerOption
+			option, ok := ps.ProposeConfig[pubKey]
+			if ok && option != nil {
+				option.Graffiti = string(graffiti)
+				return v.SetProposerSettings(ctx, ps) // save the proposer settings
+			}
+			return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:]))
+		}
 	}
-
-	return nil
+	return errors.New("attempted to set graffiti without proposer settings, graffiti will default to flag options")
 }
 
 func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
-
-	return nil
+	if v.proposerSettings != nil {
+		ps := v.proposerSettings.Clone()
+		if ps.ProposeConfig != nil {
+			option, ok := ps.ProposeConfig[pubKey]
+			if ok && option != nil {
+				option.Graffiti = ""
+				return v.SetProposerSettings(ctx, ps) // save the proposer settings
+			}
+			return fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
+		}
+	}
+	return errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
 }

@@ -354,3 +354,17 @@ func (v *ValidatorService) GetGraffiti(ctx context.Context, pubKey [fieldparams.
 	}
 	return v.validator.GetGraffiti(ctx, pubKey)
 }
+
+func (v *ValidatorService) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.SetGraffiti(ctx, pubKey, graffiti)
+}
+
+func (v *ValidatorService) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+	if v.validator == nil {
+		return errors.New("validator is unavailable")
+	}
+	return v.validator.DeleteGraffiti(ctx, pubKey)
+}
