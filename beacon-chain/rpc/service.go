@@ -359,16 +359,17 @@ func (s *Service) Start() {
 	})
 
 	coreService := &core.Service{
-		HeadFetcher:        s.cfg.HeadFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		SyncChecker:        s.cfg.SyncService,
-		Broadcaster:        s.cfg.Broadcaster,
-		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
-		OperationNotifier:  s.cfg.OperationNotifier,
-		AttestationCache:   cache.NewAttestationCache(),
-		StateGen:           s.cfg.StateGen,
-		P2P:                s.cfg.Broadcaster,
-		FinalizedFetcher:   s.cfg.FinalizationFetcher,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		Broadcaster:           s.cfg.Broadcaster,
+		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
+		OperationNotifier:     s.cfg.OperationNotifier,
+		AttestationCache:      cache.NewAttestationCache(),
+		StateGen:              s.cfg.StateGen,
+		P2P:                   s.cfg.Broadcaster,
+		FinalizedFetcher:      s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{
