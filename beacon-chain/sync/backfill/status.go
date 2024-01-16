@@ -17,7 +17,7 @@ import (
 var errBatchDisconnected = errors.New("Highest block root in backfill batch doesn't match next parent_root")
 
 // NewUpdater correctly initializes a StatusUpdater value with the required database value.
-func NewUpdater(ctx context.Context, store BackfillDB) (*Store, error) {
+func NewUpdater(ctx context.Context, store BeaconDB) (*Store, error) {
 	s := &Store{
 		store: store,
 	}
@@ -39,7 +39,7 @@ func NewUpdater(ctx context.Context, store BackfillDB) (*Store, error) {
 // via the AvailableBlock() method, and to see the current StartGap() and EndGap().
 type Store struct {
 	sync.RWMutex
-	store       BackfillDB
+	store       BeaconDB
 	genesisSync bool
 	bs          *dbval.BackfillStatus
 }
@@ -158,8 +158,8 @@ func (s *Store) originState(ctx context.Context) (state.BeaconState, error) {
 	return s.store.StateOrError(ctx, bytesutil.ToBytes32(s.status().OriginRoot))
 }
 
-// BackfillDB describes the set of DB methods that the StatusUpdater type needs to function.
-type BackfillDB interface {
+// BeaconDB describes the set of DB methods that the StatusUpdater type needs to function.
+type BeaconDB interface {
 	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
 	BackfillStatus(context.Context) (*dbval.BackfillStatus, error)
 	BackfillFinalizedIndex(ctx context.Context, blocks []blocks.ROBlock, finalizedChildRoot [32]byte) error
