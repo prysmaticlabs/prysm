@@ -81,8 +81,12 @@ func newBackfillVerifier(st state.BeaconState) (*verifier, error) {
 	if err != nil {
 		return nil, err
 	}
+	keys, err := st.PublicKeys()
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
+	}
 	v := &verifier{
-		keys:   st.PublicKeys(),
+		keys:   keys,
 		domain: dc,
 	}
 	v.maxVal = primitives.ValidatorIndex(len(v.keys) - 1)
