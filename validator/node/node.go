@@ -237,7 +237,7 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 		which was the legacy default.
 		The next time you run the validator client without a database,
 		it will be created into the --datadir directory (%s).
-		To silent this message, you can move the database from (%s)
+		To silence this message, you can move the database from (%s)
 		to (%s).`,
 			dataDir, legacyDataDir, dataDir, legacyDataFile, dataFile)
 
