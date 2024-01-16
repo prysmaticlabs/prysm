@@ -273,55 +273,76 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveBlocks")
 	defer span.End()
 
-	// Performing marshaling, hashing, and indexing outside the bolt transaction
-	// to minimize the time we hold the DB lock.
-	blockRoots := make([][]byte, len(blks))
-	encodedBlocks := make([][]byte, len(blks))
-	indicesForBlocks := make([]map[string][]byte, len(blks))
-	for i, blk := range blks {
-		blockRoot, err := blk.Block().HashTreeRoot()
+	robs := make([]blocks.ROBlock, len(blks))
+	for i := range blks {
+		rb, err := blocks.NewROBlock(blks[i])
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to make an ROBlock for a block in SaveBlocks")
 		}
-		enc, err := s.marshalBlock(ctx, blk)
-		if err != nil {
-			return err
-		}
-		blockRoots[i] = blockRoot[:]
-		encodedBlocks[i] = enc
-		indicesByBucket := createBlockIndicesFromBlock(ctx, blk.Block())
-		indicesForBlocks[i] = indicesByBucket
+		robs[i] = rb
 	}
+	if err := s.SaveROBlocks(ctx, robs); err != nil {
+		return err
+	}
+
 	saveBlinded, err := s.shouldSaveBlinded(ctx)
 	if err != nil {
 		return err
 	}
-	return s.db.Update(func(tx *bolt.Tx) error {
-		bkt := tx.Bucket(blocksBucket)
-		for i, blk := range blks {
-			if existingBlock := bkt.Get(blockRoots[i]); existingBlock != nil {
+	for i := range robs {
+		if saveBlinded {
+			blindedBlock, err := blks[i].ToBlinded()
+			if err == nil {
+				s.blockCache.Set(string(robs[i].RootSlice()), blindedBlock, int64(blindedBlock.SizeSSZ()))
 				continue
 			}
-			if err := updateValueForIndices(ctx, indicesForBlocks[i], blockRoots[i], tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
-			}
-			if saveBlinded {
-				blindedBlock, err := blk.ToBlinded()
-				if err != nil {
-					if !errors.Is(err, blocks.ErrUnsupportedVersion) {
-						return err
-					}
-				} else {
-					blk = blindedBlock
-				}
-			}
-			s.blockCache.Set(string(blockRoots[i]), blk, int64(len(encodedBlocks[i])))
-			if err := bkt.Put(blockRoots[i], encodedBlocks[i]); err != nil {
+			if !errors.Is(err, blocks.ErrUnsupportedVersion) {
 				return err
+			}
+		}
+		s.blockCache.Set(string(robs[i].RootSlice()), blks[i], int64(robs[i].SizeSSZ()))
+	}
+	return err
+}
+
+func (s *Store) SaveROBlocks(ctx context.Context, blks []blocks.ROBlock) error {
+	// Performing marshaling, hashing, and indexing outside the bolt transaction
+	// to minimize the time we hold the DB lock.
+	encoded := make([][]byte, len(blks))
+	for i := range blks {
+		enc, err := s.marshalBlock(ctx, blks[i])
+		if err != nil {
+			return err
+		}
+		encoded[i] = enc
+	}
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(blocksBucket)
+		for i := range blks {
+			b := blks[i]
+			root := b.RootSlice()
+			if exists := bkt.Get(root); exists != nil {
+				continue
+			}
+			if err := bkt.Put(root, encoded[i]); err != nil {
+				return err
+			}
+			if err := updateValueForIndices(ctx, blockIndices(b.Block().Slot(), b.Block().ParentRoot()), b.RootSlice(), tx); err != nil {
+				return errors.Wrap(err, "could not update DB indices")
 			}
 		}
 		return nil
 	})
+}
+
+// blockIndices takes in a beacon block and returns
+// a map of bolt DB index buckets corresponding to each particular key for indices for
+// data, such as (shard indices bucket -> shard 5).
+func blockIndices(slot primitives.Slot, parentRoot [32]byte) map[string][]byte {
+	return map[string][]byte{
+		string(blockSlotIndicesBucket):       bytesutil.SlotToBytesBigEndian(slot),
+		string(blockParentRootIndicesBucket): parentRoot[:],
+	}
 }
 
 // SaveHeadBlockRoot to the db.
@@ -694,31 +715,6 @@ func blockRootsBySlot(ctx context.Context, tx *bolt.Tx, slot primitives.Slot) ([
 		return r, nil
 	}
 	return [][32]byte{}, nil
-}
-
-// createBlockIndicesFromBlock takes in a beacon block and returns
-// a map of bolt DB index buckets corresponding to each particular key for indices for
-// data, such as (shard indices bucket -> shard 5).
-func createBlockIndicesFromBlock(ctx context.Context, block interfaces.ReadOnlyBeaconBlock) map[string][]byte {
-	_, span := trace.StartSpan(ctx, "BeaconDB.createBlockIndicesFromBlock")
-	defer span.End()
-	indicesByBucket := make(map[string][]byte)
-	// Every index has a unique bucket for fast, binary-search
-	// range scans for filtering across keys.
-	buckets := [][]byte{
-		blockSlotIndicesBucket,
-	}
-	indices := [][]byte{
-		bytesutil.SlotToBytesBigEndian(block.Slot()),
-	}
-	buckets = append(buckets, blockParentRootIndicesBucket)
-	parentRoot := block.ParentRoot()
-	indices = append(indices, parentRoot[:])
-
-	for i := 0; i < len(buckets); i++ {
-		indicesByBucket[string(buckets[i])] = indices[i]
-	}
-	return indicesByBucket
 }
 
 // createBlockFiltersFromIndices takes in filter criteria and returns

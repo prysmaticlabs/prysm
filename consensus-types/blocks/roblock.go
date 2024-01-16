@@ -23,7 +23,9 @@ func (b ROBlock) Root() [32]byte {
 // RootSlice returns a slice of the value returned by Root(). This is convenient because slicing the result of a func
 // is not allowed, so only offering a fixed-length array version results in boilerplate code to
 func (b ROBlock) RootSlice() []byte {
-	return append(make([]byte, 0, 32), b.root[:]...)
+	r := make([]byte, 32)
+	copy(r, b.root[:])
+	return r
 }
 
 // NewROBlockWithRoot creates an ROBlock embedding the given block with its root. It accepts the root as parameter rather than
