@@ -614,6 +614,13 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if has {
 		return
 	}
+
+	attribute := s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	// return early if we are not proposing next slot
+	if attribute.IsEmpty() {
+		return
+	}
+
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
@@ -624,14 +631,10 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	s.headLock.RUnlock()
 
 	fcuArgs := &fcuConfig{
-		headState: headState,
-		headRoot:  headRoot,
-		headBlock: headBlock,
-	}
-	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
-	// return early if we are not proposing next slot
-	if fcuArgs.attributes.IsEmpty() {
-		return
+		headState:  headState,
+		headRoot:   headRoot,
+		headBlock:  headBlock,
+		attributes: attribute,
 	}
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
 	if err != nil {
