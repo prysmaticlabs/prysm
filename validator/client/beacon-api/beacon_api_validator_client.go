@@ -166,7 +166,7 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context) error {
 	if c.eventHandler != nil {
 		if err := c.eventHandler.get(ctx, []string{"head"}); err != nil {
-			return errors.Wrapf(err, "event handler stopped working")
+			return errors.Wrapf(err, "could not invoke event handler")
 		}
 	}
 	return nil
