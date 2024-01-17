@@ -55,6 +55,7 @@ type FakeValidator struct {
 	proposerSettings                  *validatorserviceconfig.ProposerSettings
 	ProposerSettingWait               time.Duration
 	Km                                keymanager.IKeymanager
+	Graffiti                          string
 }
 
 // Done for mocking.
@@ -283,5 +284,21 @@ func (f *FakeValidator) ProposerSettings() *validatorserviceconfig.ProposerSetti
 // SetProposerSettings for mocking
 func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	f.proposerSettings = settings
+	return nil
+}
+
+// GetGraffiti for mocking
+func (f *FakeValidator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(f.Graffiti), nil
+}
+
+// SetGraffiti for mocking
+func (f *FakeValidator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	f.Graffiti = string(graffiti)
+	return nil
+}
+
+// DeleteGraffiti for mocking
+func (f *FakeValidator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
 	return nil
 }
