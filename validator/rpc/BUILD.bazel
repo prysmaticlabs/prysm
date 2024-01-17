@@ -128,6 +128,7 @@ go_test(
         "//validator/accounts/testing:go_default_library",
         "//validator/accounts/wallet:go_default_library",
         "//validator/client:go_default_library",
+        "//validator/client/iface:go_default_library",
         "//validator/db/kv:go_default_library",
         "//validator/db/testing:go_default_library",
         "//validator/keymanager:go_default_library",

@@ -288,17 +288,17 @@ func (f *FakeValidator) SetProposerSettings(_ context.Context, settings *validat
 }
 
 // GetGraffiti for mocking
-func (f *FakeValidator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+func (f *FakeValidator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	return []byte(f.Graffiti), nil
 }
 
 // SetGraffiti for mocking
-func (f *FakeValidator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+func (f *FakeValidator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
 	f.Graffiti = string(graffiti)
 	return nil
 }
 
 // DeleteGraffiti for mocking
-func (f *FakeValidator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
+func (f *FakeValidator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
 	return nil
 }

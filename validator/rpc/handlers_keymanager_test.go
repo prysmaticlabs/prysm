@@ -30,6 +30,7 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
@@ -1853,4 +1854,16 @@ func TestServer_DeleteFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
 	assert.NotEqual(t, http.StatusNoContent, w.Code)
 
 	require.StringContains(t, "pubkey is invalid", w.Body.String())
+}
+
+func TestServer_GetGraffiti(t *testing.T) {
+
+}
+
+func TestServer_SetGraffiti(t *testing.T) {
+
+}
+
+func TestServer_DeleteGraffiti(t *testing.T) {
+
 }

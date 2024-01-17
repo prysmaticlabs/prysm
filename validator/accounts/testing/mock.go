@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -90,6 +91,7 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 type Validator struct {
 	Km               keymanager.IKeymanager
 	proposerSettings *validatorserviceconfig.ProposerSettings
+	Graffiti         string
 }
 
 func (_ *Validator) LogSyncCommitteeMessagesSubmitted() {}
@@ -210,5 +212,21 @@ func (m *Validator) ProposerSettings() *validatorserviceconfig.ProposerSettings 
 // SetProposerSettings for mocking
 func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
 	m.proposerSettings = settings
+	return nil
+}
+
+// GetGraffiti for mocking
+func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	return []byte(m.Graffiti), nil
+}
+
+// SetGraffiti for mocking
+func (m *Validator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
+	m.Graffiti = string(graffiti)
+	return nil
+}
+
+// DeleteGraffiti for mocking
+func (m *Validator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
 	return nil
 }
