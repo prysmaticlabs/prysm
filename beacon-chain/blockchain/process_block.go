@@ -67,7 +67,9 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	startTime := time.Now()
 	fcuArgs := &fcuConfig{}
 
-	defer s.handleSecondFCUCall(cfg, fcuArgs)
+	if s.inRegularSync() {
+		defer s.handleSecondFCUCall(cfg, fcuArgs)
+	}
 	defer s.sendLightClientFeeds(cfg)
 	defer s.sendStateFeedOnBlock(cfg)
 	defer reportProcessingTime(startTime)
@@ -580,10 +582,15 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if s.CurrentSlot() == s.HeadSlot() {
 		return
 	}
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	// return early if we are in init sync
+	if !s.inRegularSync() {
+		return
+	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.MissedSlot,
 	})
-
 	s.headLock.RLock()
 	headRoot := s.headRoot()
 	headState := s.headState(ctx)
@@ -598,12 +605,9 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
-	// handleEpochBoundary requires a forkchoice lock to obtain the target root.
-	s.cfg.ForkChoiceStore.RLock()
 	if err := s.handleEpochBoundary(ctx, currentSlot, headState, headRoot[:]); err != nil {
 		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
-	s.cfg.ForkChoiceStore.RUnlock()
 	// return early if we already started building a block for the current
 	// head root
 	_, has := s.cfg.PayloadIDCache.PayloadID(s.CurrentSlot()+1, headRoot)
@@ -629,9 +633,7 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if fcuArgs.attributes.IsEmpty() {
 		return
 	}
-	s.cfg.ForkChoiceStore.RLock()
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
-	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}
