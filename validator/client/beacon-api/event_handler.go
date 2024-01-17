@@ -68,12 +68,14 @@ func (h *EventHandler) get(ctx context.Context, topics []string) error {
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 		if err != nil {
 			log.WithError(err).Error("Failed to create HTTP request")
+			return
 		}
 		req.Header.Set("Accept", api.EventStreamMediaType)
 		req.Header.Set("Connection", api.KeepAlive)
 		resp, err := h.httpClient.Do(req)
 		if err != nil {
 			log.WithError(err).Error("Failed to perform HTTP request")
+			return
 		}
 
 		defer func() {
