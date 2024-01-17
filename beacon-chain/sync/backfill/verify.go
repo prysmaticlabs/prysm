@@ -98,7 +98,6 @@ type domainCache struct {
 	fsched      forks.OrderedSchedule
 	forkDomains map[[4]byte][]byte
 	dType       [bls.DomainByteLength]byte
-	vRoot       []byte
 }
 
 func newDomainCache(vRoot []byte, dType [bls.DomainByteLength]byte, fsched forks.OrderedSchedule) (*domainCache, error) {
