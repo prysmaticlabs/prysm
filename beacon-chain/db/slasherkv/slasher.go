@@ -314,43 +314,60 @@ func (s *Store) SaveSlasherChunks(
 }
 
 // CheckDoubleBlockProposals takes in a list of proposals and for each,
-// checks if there already exists a proposal at the same slot+validatorIndex combination. If so,
-// We check if the existing signing root is not-empty and is different than the incoming
-// proposal signing root. If so, we return a double block proposal object.
+// checks if there already exists a proposal at the same slot+validatorIndex combination.
+// If so, it checks if the existing signing root is not-empty and is different than
+// the incoming proposal signing root.
+// If so, it returns a double block proposal object.
 func (s *Store) CheckDoubleBlockProposals(
-	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
+	ctx context.Context, incomingProposals []*slashertypes.SignedBlockHeaderWrapper,
 ) ([]*ethpb.ProposerSlashing, error) {
 	_, span := trace.StartSpan(ctx, "BeaconDB.CheckDoubleBlockProposals")
 	defer span.End()
-	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(proposals))
+
+	proposerSlashings := make([]*ethpb.ProposerSlashing, 0, len(incomingProposals))
+
 	err := s.db.View(func(tx *bolt.Tx) error {
+		// Retrieve the proposal records bucket
 		bkt := tx.Bucket(proposalRecordsBucket)
-		for _, proposal := range proposals {
+
+		for _, incomingProposal := range incomingProposals {
+			// Build the key corresponding to this slot + validator index combination
 			key, err := keyForValidatorProposal(
-				proposal.SignedBeaconBlockHeader.Header.Slot,
-				proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
+				incomingProposal.SignedBeaconBlockHeader.Header.Slot,
+				incomingProposal.SignedBeaconBlockHeader.Header.ProposerIndex,
 			)
+
 			if err != nil {
 				return err
 			}
+
+			// Retrieve the existing proposal record from the database
 			encExistingProposalWrapper := bkt.Get(key)
+
+			// If there is no existing proposal record (empty result), then there is no double proposal.
+			// We can continue to the next proposal.
 			if len(encExistingProposalWrapper) < signingRootSize {
 				continue
 			}
+
+			// Compare the existing in DB proposal signing root with the incoming proposal signing root.
+			// If they differ, we have a double proposal.
 			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:signingRootSize])
-			if existingSigningRoot != proposal.SigningRoot {
+			if existingSigningRoot != incomingProposal.SigningRoot {
 				existingProposalWrapper, err := decodeProposalRecord(encExistingProposalWrapper)
 				if err != nil {
 					return err
 				}
+
 				proposerSlashings = append(proposerSlashings, &ethpb.ProposerSlashing{
 					Header_1: existingProposalWrapper.SignedBeaconBlockHeader,
-					Header_2: proposal.SignedBeaconBlockHeader,
+					Header_2: incomingProposal.SignedBeaconBlockHeader,
 				})
 			}
 		}
 		return nil
 	})
+
 	return proposerSlashings, err
 }
 
@@ -384,14 +401,20 @@ func (s *Store) BlockProposalForValidator(
 
 // SaveBlockProposals takes in a list of block proposals and saves them to our
 // proposal records bucket in the database.
+// If multiple proposals are provided for the same slot + validatorIndex combination,
+// then only the last one is saved in the database.
 func (s *Store) SaveBlockProposals(
 	ctx context.Context, proposals []*slashertypes.SignedBlockHeaderWrapper,
 ) error {
 	_, span := trace.StartSpan(ctx, "BeaconDB.SaveBlockProposals")
 	defer span.End()
+
 	encodedKeys := make([][]byte, len(proposals))
 	encodedProposals := make([][]byte, len(proposals))
+
+	// Loop over all proposals to encode keys and proposals themselves.
 	for i, proposal := range proposals {
+		// Encode the key for this proposal.
 		key, err := keyForValidatorProposal(
 			proposal.SignedBeaconBlockHeader.Header.Slot,
 			proposal.SignedBeaconBlockHeader.Header.ProposerIndex,
@@ -399,20 +422,29 @@ func (s *Store) SaveBlockProposals(
 		if err != nil {
 			return err
 		}
+
+		// Encode the proposal itself.
 		enc, err := encodeProposalRecord(proposal)
 		if err != nil {
 			return err
 		}
+
 		encodedKeys[i] = key
 		encodedProposals[i] = enc
 	}
+
+	// All proposals are saved into the DB in a single transaction.
 	return s.db.Update(func(tx *bolt.Tx) error {
+		// Retrieve the proposal records bucket.
 		bkt := tx.Bucket(proposalRecordsBucket)
+
+		// Save all proposals.
 		for i := range proposals {
 			if err := bkt.Put(encodedKeys[i], encodedProposals[i]); err != nil {
 				return err
 			}
 		}
+
 		return nil
 	})
 }
@@ -472,7 +504,7 @@ func suffixForAttestationRecordsKey(key, encodedValidatorIndex []byte) bool {
 	return bytes.Equal(encIdx, encodedValidatorIndex)
 }
 
-// Disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
+// keyForValidatorProposal returns a disk key for a validator proposal, including a slot+validatorIndex as a byte slice.
 func keyForValidatorProposal(slot primitives.Slot, proposerIndex primitives.ValidatorIndex) ([]byte, error) {
 	encSlot, err := slot.MarshalSSZ()
 	if err != nil {
