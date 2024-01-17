@@ -232,7 +232,19 @@ func TestHostIsResolved(t *testing.T) {
 	list, err := s.createListener(ip, key)
 	require.NoError(t, err)
 
+	// net.LookupIP returns IPv6 as first element, following by IPv4, when running with a public IPv6
+	// order of IPs is reversed when running with public IPv4
+	// Node.IP() in enode package prefers IPv4 address, even when running on public IPv6
+	// hence newIP is always IPv4
 	newIP := list.Self().IP()
+
+	// Fallback IPv4 is retunred while running on IPv6
+	if newIP.String() == ip.String() {
+		assert.Equal(t, ip.String(), newIP.String(), "Did not resolve to expected IP")
+		return
+	}
+
+	// Else, host's IPv4 is returned
 	assert.Equal(t, exampleIP, newIP.String(), "Did not resolve to expected IP")
 }
 
