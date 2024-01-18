@@ -141,3 +141,11 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
 	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
 }
+
+func (c *grpcValidatorClient) StartEventStream(context.Context) error {
+	panic("function not supported for gRPC client")
+}
+
+func (c *grpcValidatorClient) EventStreamIsRunning() bool {
+	panic("function not supported for gRPC client")
+}

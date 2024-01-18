@@ -12,4 +12,5 @@ type NodeClient interface {
 	GetGenesis(ctx context.Context, in *empty.Empty) (*ethpb.Genesis, error)
 	GetVersion(ctx context.Context, in *empty.Empty) (*ethpb.Version, error)
 	ListPeers(ctx context.Context, in *empty.Empty) (*ethpb.Peers, error)
+	IsHealthy(ctx context.Context) bool
 }

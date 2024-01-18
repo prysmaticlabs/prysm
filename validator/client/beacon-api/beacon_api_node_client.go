@@ -98,6 +98,10 @@ func (c *beaconApiNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*
 	panic("beaconApiNodeClient.ListPeers is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiNodeClientWithFallback.")
 }
 
+func (c *beaconApiNodeClient) IsHealthy(ctx context.Context) bool {
+	return c.jsonRestHandler.Get(ctx, "/eth/v1/node/health", nil) == nil
+}
+
 func NewNodeClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient iface.NodeClient) iface.NodeClient {
 	return &beaconApiNodeClient{
 		jsonRestHandler: jsonRestHandler,

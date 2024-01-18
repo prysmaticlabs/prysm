@@ -67,6 +67,9 @@ type Validator interface {
 	GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error)
 	SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error
 	DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error
+	StartEventStream(ctx context.Context) error
+	EventStreamIsRunning() bool
+	NodeIsHealthy(ctx context.Context) bool
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

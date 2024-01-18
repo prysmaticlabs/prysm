@@ -234,3 +234,16 @@ func (m *Validator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLe
 	m.Graffiti = ""
 	return nil
 }
+
+func (_ *Validator) StartEventStream(_ context.Context) error {
+	panic("implement me")
+}
+
+func (_ *Validator) EventStreamIsRunning() bool {
+	panic("implement me")
+}
+
+func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
+	panic("implement me")
+
+}

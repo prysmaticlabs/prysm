@@ -103,17 +103,29 @@ func Test_decodeResp(t *testing.T) {
 	t.Run("200 non-JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
 		r := &http.Response{
+			Status:     "200",
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.OctetStreamMediaType}},
 		}
 		require.NoError(t, decodeResp(r, nil))
 	})
-	t.Run("non-200 non-JSON", func(t *testing.T) {
+	t.Run("204 non-JSON", func(t *testing.T) {
+		body := bytes.Buffer{}
+		r := &http.Response{
+			Status:     "204",
+			StatusCode: http.StatusNoContent,
+			Body:       io.NopCloser(&body),
+			Header:     map[string][]string{"Content-Type": {api.OctetStreamMediaType}},
+		}
+		require.NoError(t, decodeResp(r, nil))
+	})
+	t.Run("500 non-JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
 		_, err := body.WriteString("foo")
 		require.NoError(t, err)
 		r := &http.Response{
+			Status:     "500",
 			StatusCode: http.StatusInternalServerError,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.OctetStreamMediaType}},
@@ -130,6 +142,7 @@ func Test_decodeResp(t *testing.T) {
 		require.NoError(t, err)
 		body.Write(b)
 		r := &http.Response{
+			Status:     "200",
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
@@ -141,18 +154,30 @@ func Test_decodeResp(t *testing.T) {
 	t.Run("200 JSON without resp", func(t *testing.T) {
 		body := bytes.Buffer{}
 		r := &http.Response{
+			Status:     "200",
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
 		}
 		require.NoError(t, decodeResp(r, nil))
 	})
-	t.Run("non-200 JSON", func(t *testing.T) {
+	t.Run("204 JSON", func(t *testing.T) {
+		body := bytes.Buffer{}
+		r := &http.Response{
+			Status:     "204",
+			StatusCode: http.StatusNoContent,
+			Body:       io.NopCloser(&body),
+			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
+		}
+		require.NoError(t, decodeResp(r, nil))
+	})
+	t.Run("500 JSON", func(t *testing.T) {
 		body := bytes.Buffer{}
 		b, err := json.Marshal(&httputil.DefaultJsonError{Code: http.StatusInternalServerError, Message: "error"})
 		require.NoError(t, err)
 		body.Write(b)
 		r := &http.Response{
+			Status:     "500",
 			StatusCode: http.StatusInternalServerError,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
@@ -168,6 +193,7 @@ func Test_decodeResp(t *testing.T) {
 		_, err := body.WriteString("foo")
 		require.NoError(t, err)
 		r := &http.Response{
+			Status:     "200",
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},
@@ -177,11 +203,12 @@ func Test_decodeResp(t *testing.T) {
 		err = decodeResp(r, resp)
 		assert.ErrorContains(t, "failed to decode response body into json", err)
 	})
-	t.Run("non-200 JSON cannot decode", func(t *testing.T) {
+	t.Run("500 JSON cannot decode", func(t *testing.T) {
 		body := bytes.Buffer{}
 		_, err := body.WriteString("foo")
 		require.NoError(t, err)
 		r := &http.Response{
+			Status:     "500",
 			StatusCode: http.StatusInternalServerError,
 			Body:       io.NopCloser(&body),
 			Header:     map[string][]string{"Content-Type": {api.JsonMediaType}},

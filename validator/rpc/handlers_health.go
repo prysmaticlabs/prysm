@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -39,9 +40,9 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.health.StreamBeaconLogs")
 	defer span.End()
 	// Set up SSE response headers
-	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Connection", api.KeepAlive)
 
 	// Flush helper function to ensure data is sent to client
 	flusher, ok := w.(http.Flusher)
@@ -108,9 +109,9 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 		close(ch)
 	}()
 	// Set up SSE response headers
-	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Connection", api.KeepAlive)
 
 	recentLogs := s.logsStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
