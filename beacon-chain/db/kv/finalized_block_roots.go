@@ -79,6 +79,8 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	for i, r := range finalized {
 		var container *ethpb.FinalizedBlockRootContainer
 		if i == len(finalized)-1 {
+			// We don't know the finalized child of the new finalized checkpoint.
+			// It will be filled out in the next function call.
 			container = &ethpb.FinalizedBlockRootContainer{}
 		} else {
 			container = &ethpb.FinalizedBlockRootContainer{
