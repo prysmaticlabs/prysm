@@ -62,7 +62,7 @@ func (s *Server) GetBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if httputil.SszRequested(r) {
+	if httputil.RespondWithSsz(r) {
 		s.getBlockSSZ(ctx, w, blk)
 	} else {
 		s.getBlock(ctx, w, blk)
@@ -105,7 +105,7 @@ func (s *Server) GetBlockV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if httputil.SszRequested(r) {
+	if httputil.RespondWithSsz(r) {
 		s.getBlockSSZV2(ctx, w, blk)
 	} else {
 		s.getBlockV2(ctx, w, blk)
@@ -205,7 +205,7 @@ func (s *Server) GetBlindedBlock(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if httputil.SszRequested(r) {
+	if httputil.RespondWithSsz(r) {
 		s.getBlindedBlockSSZ(ctx, w, blk)
 	} else {
 		s.getBlindedBlock(ctx, w, blk)
@@ -953,8 +953,7 @@ func (s *Server) PublishBlindedBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := httputil.SszRequested(r)
-	if isSSZ {
+	if httputil.IsRequestSsz(r) {
 		s.publishBlindedBlockSSZ(ctx, w, r, false)
 	} else {
 		s.publishBlindedBlock(ctx, w, r, false)
@@ -978,8 +977,7 @@ func (s *Server) PublishBlindedBlockV2(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := httputil.SszRequested(r)
-	if isSSZ {
+	if httputil.IsRequestSsz(r) {
 		s.publishBlindedBlockSSZ(ctx, w, r, true)
 	} else {
 		s.publishBlindedBlock(ctx, w, r, true)
@@ -1250,8 +1248,7 @@ func (s *Server) PublishBlock(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := httputil.SszRequested(r)
-	if isSSZ {
+	if httputil.IsRequestSsz(r) {
 		s.publishBlockSSZ(ctx, w, r, false)
 	} else {
 		s.publishBlock(ctx, w, r, false)
@@ -1273,8 +1270,7 @@ func (s *Server) PublishBlockV2(w http.ResponseWriter, r *http.Request) {
 	if shared.IsSyncing(r.Context(), w, s.SyncChecker, s.HeadFetcher, s.TimeFetcher, s.OptimisticModeFetcher) {
 		return
 	}
-	isSSZ := httputil.SszRequested(r)
-	if isSSZ {
+	if httputil.IsRequestSsz(r) {
 		s.publishBlockSSZ(ctx, w, r, true)
 	} else {
 		s.publishBlock(ctx, w, r, true)

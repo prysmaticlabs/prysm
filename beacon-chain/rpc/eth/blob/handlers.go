@@ -46,8 +46,7 @@ func (s *Server) Blobs(w http.ResponseWriter, r *http.Request) {
 	for i := range verifiedBlobs {
 		sidecars = append(sidecars, verifiedBlobs[i].BlobSidecar)
 	}
-	ssz := httputil.SszRequested(r)
-	if ssz {
+	if httputil.RespondWithSsz(r) {
 		sidecarResp := &eth.BlobSidecars{
 			Sidecars: sidecars,
 		}
