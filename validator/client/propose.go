@@ -12,6 +12,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -26,6 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const domainDataErr = "could not get domain data"
@@ -74,9 +76,10 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 
 	// Request block from beacon node
 	b, err := v.validatorClient.GetBeaconBlock(ctx, &ethpb.BlockRequest{
-		Slot:         slot,
-		RandaoReveal: randaoReveal,
-		Graffiti:     g,
+		Slot:               slot,
+		RandaoReveal:       randaoReveal,
+		Graffiti:           g,
+		BuilderBoostFactor: findBuilderBoost(pubKey, v.proposerSettings),
 	})
 	if err != nil {
 		log.WithField("blockSlot", slot).WithError(err).Error("Failed to request block from beacon node")
@@ -218,6 +221,27 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	if v.emitAccountMetrics {
 		ValidatorProposeSuccessVec.WithLabelValues(fmtKey).Inc()
 	}
+}
+
+func findBuilderBoost(pubKey [fieldparams.BLSPubkeyLength]byte, proposerSettings *validatorserviceconfig.ProposerSettings) *wrapperspb.UInt64Value {
+	if proposerSettings != nil {
+		if proposerSettings.ProposeConfig != nil {
+			option, ok := proposerSettings.ProposeConfig[pubKey]
+			if ok && option.BuilderConfig != nil && option.BuilderConfig.BuilderBoostFactor != nil {
+				return &wrapperspb.UInt64Value{
+					Value: *option.BuilderConfig.BuilderBoostFactor,
+				}
+			}
+		}
+		if proposerSettings.DefaultConfig != nil &&
+			proposerSettings.DefaultConfig.BuilderConfig != nil &&
+			proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor != nil {
+			return &wrapperspb.UInt64Value{
+				Value: *proposerSettings.DefaultConfig.BuilderConfig.BuilderBoostFactor,
+			}
+		}
+	}
+	return nil
 }
 
 // ProposeExit performs a voluntary exit on a validator.
