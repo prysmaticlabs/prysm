@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
@@ -31,6 +32,7 @@ func main() {
 	var blockPath string
 	var preStatePath string
 	var expectedPostStatePath string
+	var network string
 	var sszPath string
 	var sszType string
 
@@ -160,8 +162,36 @@ func main() {
 					Usage:       "Path to expected post state file(ssz)",
 					Destination: &expectedPostStatePath,
 				},
+				&cli.StringFlag{
+					Name:        "network",
+					Usage:       "Network to run the state transition in",
+					Destination: &network,
+				},
 			},
 			Action: func(c *cli.Context) error {
+				if network != "" {
+					switch network {
+					case params.PraterName:
+						if err := params.SetActive(params.PraterConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.GoerliName:
+						if err := params.SetActive(params.PraterConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.SepoliaName:
+						if err := params.SetActive(params.SepoliaConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.HoleskyName:
+						if err := params.SetActive(params.HoleskyConfig()); err != nil {
+							log.Fatal(err)
+						}
+					default:
+						log.Fatalf("Unknown network provided: %s", network)
+					}
+				}
+
 				if blockPath == "" {
 					log.Info("Block path not provided for state transition. " +
 						"Please provide path")
