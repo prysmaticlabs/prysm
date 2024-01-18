@@ -2,7 +2,6 @@ package beacon_api
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -22,29 +21,17 @@ func WithEventHandler(h *EventHandler) ValidatorClientOpt {
 	}
 }
 
-func WithEventErrorChannel(ch chan error) ValidatorClientOpt {
-	return func(c *beaconApiValidatorClient) {
-		c.eventErrCh = ch
-	}
-}
-
 type beaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
 	eventHandler            *EventHandler
-	eventErrCh              chan error
 	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
 }
 
-func NewBeaconApiValidatorClient(host string, timeout time.Duration, opts ...ValidatorClientOpt) iface.ValidatorClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
-	}
-
+func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
 	c := &beaconApiValidatorClient{
 		genesisProvider:         beaconApiGenesisProvider{jsonRestHandler: jsonRestHandler},
 		dutiesProvider:          beaconApiDutiesProvider{jsonRestHandler: jsonRestHandler},
@@ -178,12 +165,13 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 
 func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context) error {
 	if c.eventHandler != nil {
-		if c.eventErrCh == nil {
-			return errors.New("event handler cannot be initialized without an event error channel")
-		}
-		if err := c.eventHandler.get(ctx, []string{"head"}, c.eventErrCh); err != nil {
-			return errors.Wrapf(err, "event handler stopped working")
+		if err := c.eventHandler.get(ctx, []string{"head"}); err != nil {
+			return errors.Wrapf(err, "could not invoke event handler")
 		}
 	}
 	return nil
+}
+
+func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
+	return c.eventHandler.running
 }

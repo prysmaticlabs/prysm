@@ -191,24 +191,21 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
-	evErrCh := make(chan error)
-	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler), beaconApi.WithEventErrorChannel(evErrCh)}
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, opts...)
-	go func() {
-		e := <-evErrCh
-		log.WithError(e).Error("Event streaming failed")
-		v.cancel()
-	}()
+	restHandler := &beaconApi.BeaconApiJsonRestHandler{
+		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		Host:       v.conn.GetBeaconApiUrl(),
+	}
 
-	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
-	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
 
 	valStruct := &validator{
-		db:                             v.db,
 		validatorClient:                validatorClient,
-		beaconClient:                   beaconClient,
-		node:                           nodeClientFactory.NewNodeClient(v.conn),
+		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
+		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
+		db:                             v.db,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -232,7 +229,6 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              prysmBeaconClient,
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 	}
 

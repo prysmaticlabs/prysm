@@ -20,6 +20,7 @@ type Forkchoicer interface {
 	HasNode([32]byte) bool
 	IsCanonical(root [32]byte) bool
 	Slot([32]byte) (primitives.Slot, error)
+	TargetRootForEpoch([32]byte, primitives.Epoch) ([32]byte, error)
 }
 
 // StateByRooter describes a stategen-ish type that can produce arbitrary states by their root
@@ -45,12 +46,12 @@ type Initializer struct {
 }
 
 // NewBlobVerifier creates a BlobVerifier for a single blob, with the given set of requirements.
-func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs ...Requirement) *BlobVerifier {
-	return &BlobVerifier{
+func (ini *Initializer) NewBlobVerifier(b blocks.ROBlob, reqs []Requirement) *ROBlobVerifier {
+	return &ROBlobVerifier{
 		sharedResources:      ini.shared,
 		blob:                 b,
 		results:              newResults(reqs...),
-		verifyBlobCommitment: kzg.VerifyROBlobCommitment,
+		verifyBlobCommitment: kzg.Verify,
 	}
 }
 

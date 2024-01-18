@@ -289,3 +289,11 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *valida
 func (fv *FakeValidator) StartEventStream(_ context.Context) error {
 	return nil
 }
+
+func (fv *FakeValidator) EventStreamIsRunning() bool {
+	return true
+}
+
+func (fv *FakeValidator) NodeIsHealthy(context.Context) bool {
+	return true
+}

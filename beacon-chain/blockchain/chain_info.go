@@ -6,7 +6,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	f "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -18,7 +21,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // ChainInfoFetcher defines a common interface for methods in blockchain service which
@@ -334,12 +336,21 @@ func (s *Service) HeadValidatorIndexToPublicKey(_ context.Context, index primiti
 	return v.PublicKey(), nil
 }
 
+// ForkChoicer returns the forkchoice interface.
+func (s *Service) ForkChoicer() f.ForkChoicer {
+	return s.cfg.ForkChoiceStore
+}
+
 // IsOptimistic returns true if the current head is optimistic.
 func (s *Service) IsOptimistic(_ context.Context) (bool, error) {
 	if slots.ToEpoch(s.CurrentSlot()) < params.BeaconConfig().BellatrixForkEpoch {
 		return false, nil
 	}
 	s.headLock.RLock()
+	if s.head == nil {
+		s.headLock.RUnlock()
+		return false, ErrNilHead
+	}
 	headRoot := s.head.root
 	headSlot := s.head.slot
 	headOptimistic := s.head.optimistic
@@ -544,4 +555,19 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 	s.cfg.ForkChoiceStore.RLock()
 	defer s.cfg.ForkChoiceStore.RUnlock()
 	return s.cfg.ForkChoiceStore.Slot(root)
+}
+
+// inRegularSync applies the following heuristics to decide if the node is in
+// regular sync mode vs init sync mode using only forkchoice.
+// It checks that the highest received block is behind the current time by at least 2 epochs
+// and that it was imported at least one epoch late if both of these
+// tests pass then the node is in init sync. The caller of this function MUST
+// have a lock on forkchoice
+func (s *Service) inRegularSync() bool {
+	currentSlot := s.CurrentSlot()
+	fc := s.cfg.ForkChoiceStore
+	if currentSlot-fc.HighestReceivedBlockSlot() < 2*params.BeaconConfig().SlotsPerEpoch {
+		return true
+	}
+	return fc.HighestReceivedBlockDelay() < params.BeaconConfig().SlotsPerEpoch
 }

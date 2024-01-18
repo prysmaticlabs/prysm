@@ -151,8 +151,10 @@ func Test_NotifyForkchoiceUpdate(t *testing.T) {
 							ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 							LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 							PrevRandao:    make([]byte, fieldparams.RootLength),
+							ExtraData:     make([]byte, 0),
 							BaseFeePerGas: make([]byte, fieldparams.RootLength),
 							BlockHash:     make([]byte, fieldparams.RootLength),
+							Transactions:  make([][]byte, 0),
 						},
 					},
 				}})
@@ -494,8 +496,10 @@ func Test_NotifyNewPayload(t *testing.T) {
 					ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 					LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:    make([]byte, fieldparams.RootLength),
+					ExtraData:     make([]byte, 0),
 					BaseFeePerGas: make([]byte, fieldparams.RootLength),
 					BlockHash:     make([]byte, fieldparams.RootLength),
+					Transactions:  make([][]byte, 0),
 				},
 			},
 		},
@@ -597,8 +601,10 @@ func Test_NotifyNewPayload(t *testing.T) {
 								ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 								LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 								PrevRandao:    make([]byte, fieldparams.RootLength),
+								ExtraData:     make([]byte, 0),
 								BaseFeePerGas: make([]byte, fieldparams.RootLength),
 								BlockHash:     make([]byte, fieldparams.RootLength),
+								Transactions:  make([][]byte, 0),
 							},
 						},
 					},
@@ -1095,4 +1101,36 @@ func TestKZGCommitmentToVersionedHashes(t *testing.T) {
 	require.Equal(t, 2, len(vhs))
 	require.Equal(t, vhs[0].String(), vh0)
 	require.Equal(t, vhs[1].String(), vh1)
+}
+
+func TestComputePayloadAttribute(t *testing.T) {
+	service, tr := minimalTestService(t, WithPayloadIDCache(cache.NewPayloadIDCache()))
+	ctx := tr.ctx
+
+	st, _ := util.DeterministicGenesisStateBellatrix(t, 1)
+
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, Index: 0})
+	// Cache hit, advance state, no fee recipient
+	slot := primitives.Slot(1)
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	cfg := &postBlockProcessConfig{
+		ctx:       ctx,
+		blockRoot: [32]byte{'a'},
+	}
+	fcu := &fcuConfig{
+		headState:     st,
+		proposingSlot: slot,
+		headRoot:      [32]byte{},
+	}
+	require.NoError(t, service.computePayloadAttributes(cfg, fcu))
+	require.Equal(t, false, fcu.attributes.IsEmpty())
+	require.Equal(t, params.BeaconConfig().EthBurnAddressHex, common.BytesToAddress(fcu.attributes.SuggestedFeeRecipient()).String())
+
+	// Cache hit, advance state, has fee recipient
+	suggestedAddr := common.HexToAddress("123")
+	service.cfg.TrackedValidatorsCache.Set(cache.TrackedValidator{Active: true, FeeRecipient: primitives.ExecutionAddress(suggestedAddr), Index: 0})
+	service.cfg.PayloadIDCache.Set(slot, [32]byte{}, [8]byte{})
+	require.NoError(t, service.computePayloadAttributes(cfg, fcu))
+	require.Equal(t, false, fcu.attributes.IsEmpty())
+	require.Equal(t, suggestedAddr, common.BytesToAddress(fcu.attributes.SuggestedFeeRecipient()))
 }

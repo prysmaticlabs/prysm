@@ -27,6 +27,10 @@ const (
 	NewHead
 	// MissedSlot is sent when we need to notify users that a slot was missed.
 	MissedSlot
+	// LightClientFinalityUpdate event
+	LightClientFinalityUpdate
+	// LightClientOptimisticUpdate event
+	LightClientOptimisticUpdate
 )
 
 // BlockProcessedData is the data sent with BlockProcessed events.

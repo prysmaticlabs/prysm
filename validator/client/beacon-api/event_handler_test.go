@@ -40,7 +40,7 @@ func TestEventHandler(t *testing.T) {
 	handler.subscribe(sub2)
 	handler.subscribe(sub3)
 
-	require.NoError(t, handler.get(context.Background(), []string{"head"}, make(chan error)))
+	require.NoError(t, handler.get(context.Background(), []string{"head"}))
 	// make sure the goroutine inside handler.get is invoked
 	time.Sleep(500 * time.Millisecond)
 

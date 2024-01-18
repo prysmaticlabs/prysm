@@ -28,6 +28,8 @@ var (
 	// ErrNotCheckpoint is returned when a given checkpoint is not a
 	// checkpoint in any chain known to forkchoice
 	ErrNotCheckpoint = errors.New("not a checkpoint in forkchoice")
+	// ErrNilHead is returned when no head is present in the blockchain service.
+	ErrNilHead = errors.New("nil head")
 )
 
 var errMaxBlobsExceeded = errors.New("Expected commitments in block exceeds MAX_BLOBS_PER_BLOCK")

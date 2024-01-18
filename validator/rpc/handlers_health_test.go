@@ -96,7 +96,7 @@ func TestStreamBeaconLogs(t *testing.T) {
 	require.Equal(t, ct[0], api.EventStreamMediaType)
 	cn, ok := resp.Header["Connection"]
 	require.Equal(t, ok, true)
-	require.Equal(t, cn[0], "keep-alive")
+	require.Equal(t, cn[0], api.KeepAlive)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	require.NotNil(t, body)
@@ -147,7 +147,7 @@ func TestStreamValidatorLogs(t *testing.T) {
 	require.Equal(t, ct[0], api.EventStreamMediaType)
 	cn, ok := resp.Header["Connection"]
 	require.Equal(t, ok, true)
-	require.Equal(t, cn[0], "keep-alive")
+	require.Equal(t, cn[0], api.KeepAlive)
 	// Check if data was written
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)

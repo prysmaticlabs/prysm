@@ -8,11 +8,13 @@ import (
 	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 )
 
-func NewValidatorClient(validatorConn validatorHelpers.NodeConnection, opt ...beaconApi.ValidatorClientOpt) iface.ValidatorClient {
-	featureFlags := features.Get()
-
-	if featureFlags.EnableBeaconRESTApi {
-		return beaconApi.NewBeaconApiValidatorClient(validatorConn.GetBeaconApiUrl(), validatorConn.GetBeaconApiTimeout(), opt...)
+func NewValidatorClient(
+	validatorConn validatorHelpers.NodeConnection,
+	jsonRestHandler beaconApi.JsonRestHandler,
+	opt ...beaconApi.ValidatorClientOpt,
+) iface.ValidatorClient {
+	if features.Get().EnableBeaconRESTApi {
+		return beaconApi.NewBeaconApiValidatorClient(jsonRestHandler, opt...)
 	} else {
 		return grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -41,7 +42,15 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 			OperationNotifier: &mockChain.MockOperationNotifier{},
 		}
 
-		topics := []string{AttestationTopic, VoluntaryExitTopic, SyncCommitteeContributionTopic, BLSToExecutionChangeTopic, BlobSidecarTopic}
+		topics := []string{
+			AttestationTopic,
+			VoluntaryExitTopic,
+			SyncCommitteeContributionTopic,
+			BLSToExecutionChangeTopic,
+			BlobSidecarTopic,
+			AttesterSlashingTopic,
+			ProposerSlashingTopic,
+		}
 		for i, topic := range topics {
 			topics[i] = "topics=" + topic
 		}
@@ -124,6 +133,65 @@ func TestStreamEvents_OperationsEvents(t *testing.T) {
 				Blob: &vblob,
 			},
 		})
+
+		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.AttesterSlashingReceived,
+			Data: &operation.AttesterSlashingReceivedData{
+				AttesterSlashing: &eth.AttesterSlashing{
+					Attestation_1: &eth.IndexedAttestation{
+						AttestingIndices: []uint64{0, 1},
+						Data: &eth.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+					Attestation_2: &eth.IndexedAttestation{
+						AttestingIndices: []uint64{0, 1},
+						Data: &eth.AttestationData{
+							BeaconBlockRoot: make([]byte, fieldparams.RootLength),
+							Source: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+							Target: &eth.Checkpoint{
+								Root: make([]byte, fieldparams.RootLength),
+							},
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+				},
+			},
+		})
+
+		s.OperationNotifier.OperationFeed().Send(&feed.Event{
+			Type: operation.ProposerSlashingReceived,
+			Data: &operation.ProposerSlashingReceivedData{
+				ProposerSlashing: &eth.ProposerSlashing{
+					Header_1: &eth.SignedBeaconBlockHeader{
+						Header: &eth.BeaconBlockHeader{
+							ParentRoot: make([]byte, fieldparams.RootLength),
+							StateRoot:  make([]byte, fieldparams.RootLength),
+							BodyRoot:   make([]byte, fieldparams.RootLength),
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+					Header_2: &eth.SignedBeaconBlockHeader{
+						Header: &eth.BeaconBlockHeader{
+							ParentRoot: make([]byte, fieldparams.RootLength),
+							StateRoot:  make([]byte, fieldparams.RootLength),
+							BodyRoot:   make([]byte, fieldparams.RootLength),
+						},
+						Signature: make([]byte, fieldparams.BLSSignatureLength),
+					},
+				},
+			},
+		})
+
 		time.Sleep(1 * time.Second)
 		request.Context().Done()
 
@@ -326,6 +394,12 @@ data: {"message":{"validator_index":"0","from_bls_pubkey":"0x0000000000000000000
 
 event: blob_sidecar
 data: {"block_root":"0xc78009fdf07fc56a11f122370658a353aaa542ed63e44c4bc15ff4cd105ab33c","index":"0","slot":"0","kzg_commitment":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","versioned_hash":"0x01b0761f87b081d5cf10757ccc89f12be355c70e2e29df288b65b30710dcbcd1"}
+
+event: attester_slashing
+data: {"attestation_1":{"attesting_indices":["0","1"],"data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"attestation_2":{"attesting_indices":["0","1"],"data":{"slot":"0","index":"0","beacon_block_root":"0x0000000000000000000000000000000000000000000000000000000000000000","source":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"target":{"epoch":"0","root":"0x0000000000000000000000000000000000000000000000000000000000000000"}},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
+
+event: proposer_slashing
+data: {"signed_header_1":{"message":{"slot":"0","proposer_index":"0","parent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","state_root":"0x0000000000000000000000000000000000000000000000000000000000000000","body_root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"},"signed_header_2":{"message":{"slot":"0","proposer_index":"0","parent_root":"0x0000000000000000000000000000000000000000000000000000000000000000","state_root":"0x0000000000000000000000000000000000000000000000000000000000000000","body_root":"0x0000000000000000000000000000000000000000000000000000000000000000"},"signature":"0x000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}}
 
 `
 

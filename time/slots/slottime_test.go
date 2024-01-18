@@ -603,7 +603,7 @@ func TestTimeIntoSlot(t *testing.T) {
 
 func TestWithinVotingWindow(t *testing.T) {
 	genesisTime := uint64(time.Now().Add(-37 * time.Second).Unix())
-	require.Equal(t, true, WithinVotingWindow(genesisTime))
+	require.Equal(t, true, WithinVotingWindow(genesisTime, 3))
 	genesisTime = uint64(time.Now().Add(-40 * time.Second).Unix())
-	require.Equal(t, false, WithinVotingWindow(genesisTime))
+	require.Equal(t, false, WithinVotingWindow(genesisTime, 3))
 }

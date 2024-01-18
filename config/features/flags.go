@@ -132,10 +132,6 @@ var (
 		Name:  "enable-verbose-sig-verification",
 		Usage: "Enables identifying invalid signatures if batch verification fails when processing block.",
 	}
-	disableOptionalEngineMethods = &cli.BoolFlag{
-		Name:  "disable-optional-engine-methods",
-		Usage: "Disables the optional engine methods.",
-	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
@@ -143,6 +139,10 @@ var (
 	EnableEIP4881 = &cli.BoolFlag{
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP-4881.",
+	}
+	EnableLightClient = &cli.BoolFlag{
+		Name:  "enable-lightclient",
+		Usage: "Enables the light client support in the beacon node",
 	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
@@ -153,11 +153,6 @@ var (
 	DisableRegistrationCache = &cli.BoolFlag{
 		Name:  "disable-registration-cache",
 		Usage: "Temporary flag for disabling the validator registration cache instead of using the DB. Note: registrations do not clear on restart while using the DB.",
-	}
-
-	disableAggregateParallel = &cli.BoolFlag{
-		Name:  "disable-aggregate-parallel",
-		Usage: "Disables parallel aggregation of attestations.",
 	}
 )
 
@@ -206,7 +201,6 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
 	enableVerboseSigVerification,
-	disableOptionalEngineMethods,
 	prepareAllPayloads,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
@@ -214,7 +208,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
-	disableAggregateParallel,
+	EnableLightClient,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

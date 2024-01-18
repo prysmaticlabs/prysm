@@ -35,4 +35,5 @@ type ValidatorClient interface {
 	StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error)
 	SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error)
 	StartEventStream(ctx context.Context) error
+	EventStreamIsRunning() bool
 }

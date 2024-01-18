@@ -19,6 +19,7 @@ const eventByteLimit = 512
 type EventHandler struct {
 	httpClient *http.Client
 	host       string
+	running    bool
 	subs       []eventSub
 	sync.Mutex
 }
@@ -38,6 +39,7 @@ func NewEventHandler(httpClient *http.Client, host string) *EventHandler {
 	return &EventHandler{
 		httpClient: httpClient,
 		host:       host,
+		running:    false,
 		subs:       make([]eventSub, 0),
 	}
 }
@@ -48,28 +50,34 @@ func (h *EventHandler) subscribe(sub eventSub) {
 	h.Unlock()
 }
 
-func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan<- error) error {
+func (h *EventHandler) get(ctx context.Context, topics []string) error {
 	if len(topics) == 0 {
 		return errors.New("no topics provided")
 	}
-
-	allTopics := strings.Join(topics, ",")
-	log.Info("Starting listening to Beacon API events on topics " + allTopics)
-	url := h.host + "/eth/v1/events?topics=" + allTopics
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to create HTTP request")
-	}
-
-	req.Header.Set("Accept", api.EventStreamMediaType)
-	req.Header.Set("Connection", "keep-alive")
-
-	resp, err := h.httpClient.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "failed to perform HTTP request")
+	if h.running {
+		log.Warn("Event listener is already running, ignoring function call")
 	}
 
 	go func() {
+		h.running = true
+		defer func() { h.running = false }()
+
+		allTopics := strings.Join(topics, ",")
+		log.Info("Starting listening to Beacon API events on topics: " + allTopics)
+		url := h.host + "/eth/v1/events?topics=" + allTopics
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		if err != nil {
+			log.WithError(err).Error("Failed to create HTTP request")
+			return
+		}
+		req.Header.Set("Accept", api.EventStreamMediaType)
+		req.Header.Set("Connection", api.KeepAlive)
+		resp, err := h.httpClient.Do(req)
+		if err != nil {
+			log.WithError(err).Error("Failed to perform HTTP request")
+			return
+		}
+
 		defer func() {
 			if closeErr := resp.Body.Close(); closeErr != nil {
 				log.WithError(closeErr).Error("Failed to close events response body")
@@ -81,7 +89,7 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 		eof := false
 		for {
 			if ctx.Err() != nil {
-				eventErrCh <- ctx.Err()
+				log.WithError(ctx.Err()).Error("Stopping listening to Beacon API events")
 				return
 			}
 
@@ -89,10 +97,10 @@ func (h *EventHandler) get(ctx context.Context, topics []string, eventErrCh chan
 			_, err = resp.Body.Read(rawData)
 			if err != nil {
 				if strings.Contains(err.Error(), "EOF") {
-					log.Error("Received EOF while reading events response body")
+					log.Error("Received EOF while reading events response body. Stopping listening to Beacon API events")
 					eof = true
 				} else {
-					eventErrCh <- err
+					log.WithError(err).Error("Stopping listening to Beacon API events")
 					return
 				}
 			}

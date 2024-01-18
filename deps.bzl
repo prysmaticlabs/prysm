@@ -2990,8 +2990,8 @@ def prysm_deps():
     go_repository(
         name = "com_github_multiformats_go_multiaddr",
         importpath = "github.com/multiformats/go-multiaddr",
-        sum = "h1:1QlibTFkoXJuDjjYsMHhE73TnzJQl8FSWatk/0gxGzE=",
-        version = "v0.12.0",
+        sum = "h1:vm+BA/WZA8QZDp1pF1FWhi5CT3g1tbi5GJmqpb6wnlk=",
+        version = "v0.12.1",
     )
     go_repository(
         name = "com_github_multiformats_go_multiaddr_dns",
@@ -3617,8 +3617,8 @@ def prysm_deps():
             "gazelle:exclude tools.go",
         ],
         importpath = "github.com/quic-go/quic-go",
-        sum = "h1:o3YB6t2SR+HU/pgwF29kJ6g4jJIJEwEZ8CKia1h1TKg=",
-        version = "v0.39.3",
+        sum = "h1:PelfiuG7wXEffUT2yceiqz5V6Pc0TA5ruOd1LcmFc1s=",
+        version = "v0.39.4",
     )
     go_repository(
         name = "com_github_quic_go_webtransport_go",

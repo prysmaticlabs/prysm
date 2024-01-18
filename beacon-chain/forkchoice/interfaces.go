@@ -64,6 +64,7 @@ type FastGetter interface {
 	FinalizedPayloadBlockHash() [32]byte
 	HasNode([32]byte) bool
 	HighestReceivedBlockSlot() primitives.Slot
+	HighestReceivedBlockDelay() primitives.Slot
 	IsCanonical(root [32]byte) bool
 	IsOptimistic(root [32]byte) (bool, error)
 	IsViableForCheckpoint(*forkchoicetypes.Checkpoint) (bool, error)

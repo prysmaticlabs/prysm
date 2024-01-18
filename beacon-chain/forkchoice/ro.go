@@ -114,6 +114,13 @@ func (ro *ROForkChoice) HighestReceivedBlockSlot() primitives.Slot {
 	return ro.getter.HighestReceivedBlockSlot()
 }
 
+// HighestReceivedBlockDelay delegates to the underlying forkchoice call, under a lock.
+func (ro *ROForkChoice) HighestReceivedBlockDelay() primitives.Slot {
+	ro.l.RLock()
+	defer ro.l.RUnlock()
+	return ro.getter.HighestReceivedBlockDelay()
+}
+
 // ReceivedBlocksLastEpoch delegates to the underlying forkchoice call, under a lock.
 func (ro *ROForkChoice) ReceivedBlocksLastEpoch() (uint64, error) {
 	ro.l.RLock()

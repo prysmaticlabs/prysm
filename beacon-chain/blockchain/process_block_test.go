@@ -1,7 +1,6 @@
 package blockchain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -17,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -40,7 +40,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
@@ -69,7 +68,7 @@ func TestStore_OnBlockBatch(t *testing.T) {
 		require.NoError(t, err)
 		blks = append(blks, rwsb)
 	}
-	err := service.onBlockBatch(ctx, blks)
+	err := service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{})
 	require.NoError(t, err)
 	jcp := service.CurrentJustifiedCheckpt()
 	jroot := bytesutil.ToBytes32(jcp.Root)
@@ -99,7 +98,7 @@ func TestStore_OnBlockBatch_NotifyNewPayload(t *testing.T) {
 		require.NoError(t, service.saveInitSyncBlock(ctx, rwsb.Root(), wsb))
 		blks = append(blks, rwsb)
 	}
-	require.NoError(t, service.onBlockBatch(ctx, blks))
+	require.NoError(t, service.onBlockBatch(ctx, blks, &das.MockAvailabilityStore{}))
 }
 
 func TestCachedPreState_CanGetFromStateSummary(t *testing.T) {
@@ -567,7 +566,7 @@ func TestOnBlock_CanFinalize_WithOnTick(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, true))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, r, [32]byte{}, postState, true}))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
 		require.NoError(t, err)
@@ -615,7 +614,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, true))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, r, [32]byte{}, postState, true}))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
 		require.NoError(t, err)
@@ -641,7 +640,7 @@ func TestOnBlock_CanFinalize(t *testing.T) {
 
 func TestOnBlock_NilBlock(t *testing.T) {
 	service, tr := minimalTestService(t)
-	err := service.postBlockProcess(tr.ctx, nil, [32]byte{}, nil, true)
+	err := service.postBlockProcess(&postBlockProcessConfig{tr.ctx, nil, [32]byte{}, [32]byte{}, nil, true})
 	require.Equal(t, true, IsInvalidBlock(err))
 }
 
@@ -689,7 +688,7 @@ func TestOnBlock_CallNewPayloadAndForkchoiceUpdated(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, r, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, r, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, r, [32]byte{}, postState, false}))
 		testState, err = service.cfg.StateGen.StateByRoot(ctx, r)
 		require.NoError(t, err)
 	}
@@ -924,8 +923,10 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 				ReceiptsRoot:  make([]byte, fieldparams.RootLength),
 				LogsBloom:     make([]byte, fieldparams.LogsBloomLength),
 				PrevRandao:    make([]byte, fieldparams.RootLength),
+				ExtraData:     make([]byte, 0),
 				BaseFeePerGas: make([]byte, fieldparams.RootLength),
 				BlockHash:     make([]byte, fieldparams.RootLength),
+				Transactions:  make([][]byte, 0),
 			},
 		},
 		{
@@ -969,6 +970,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 					ReceiptsRoot:     make([]byte, fieldparams.RootLength),
 					LogsBloom:        make([]byte, fieldparams.LogsBloomLength),
 					PrevRandao:       make([]byte, fieldparams.RootLength),
+					ExtraData:        make([]byte, 0),
 					BaseFeePerGas:    make([]byte, fieldparams.RootLength),
 					BlockHash:        make([]byte, fieldparams.RootLength),
 					TransactionsRoot: make([]byte, fieldparams.RootLength),
@@ -1111,7 +1113,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			postState, err := service.validateStateTransition(ctx, preState, wsb1)
 			require.NoError(t, err)
 			lock.Lock()
-			require.NoError(t, service.postBlockProcess(ctx, wsb1, r1, postState, true))
+			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb1, r1, [32]byte{}, postState, true}))
 			lock.Unlock()
 			wg.Done()
 		}()
@@ -1121,7 +1123,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			postState, err := service.validateStateTransition(ctx, preState, wsb2)
 			require.NoError(t, err)
 			lock.Lock()
-			require.NoError(t, service.postBlockProcess(ctx, wsb2, r2, postState, true))
+			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb2, r2, [32]byte{}, postState, true}))
 			lock.Unlock()
 			wg.Done()
 		}()
@@ -1131,7 +1133,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			postState, err := service.validateStateTransition(ctx, preState, wsb3)
 			require.NoError(t, err)
 			lock.Lock()
-			require.NoError(t, service.postBlockProcess(ctx, wsb3, r3, postState, true))
+			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb3, r3, [32]byte{}, postState, true}))
 			lock.Unlock()
 			wg.Done()
 		}()
@@ -1141,7 +1143,7 @@ func TestOnBlock_ProcessBlocksParallel(t *testing.T) {
 			postState, err := service.validateStateTransition(ctx, preState, wsb4)
 			require.NoError(t, err)
 			lock.Lock()
-			require.NoError(t, service.postBlockProcess(ctx, wsb4, r4, postState, true))
+			require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb4, r4, [32]byte{}, postState, true}))
 			lock.Unlock()
 			wg.Done()
 		}()
@@ -1216,7 +1218,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 	}
 
 	for i := 6; i < 12; i++ {
@@ -1234,7 +1236,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 
@@ -1253,7 +1255,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 	// Check that we haven't justified the second epoch yet
@@ -1275,7 +1277,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, firstInvalidRoot, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, firstInvalidRoot, postState, false)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, firstInvalidRoot, [32]byte{}, postState, false})
 	require.NoError(t, err)
 	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
@@ -1303,7 +1305,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, root, postState, false)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
 	// Check that forkchoice's head is the last invalid block imported. The
 	// store's headroot is the previous head (since the invalid block did
@@ -1332,7 +1334,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, root, postState, true)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, true})
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
 	// checkpoint and the node is no longer optimistic
@@ -1394,7 +1396,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 	}
 
 	for i := 6; i < 12; i++ {
@@ -1412,7 +1414,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 
@@ -1432,7 +1434,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 	// Check that we haven't justified the second epoch yet
@@ -1454,7 +1456,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, firstInvalidRoot, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, firstInvalidRoot, postState, false)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, firstInvalidRoot, [32]byte{}, postState, false})
 	require.NoError(t, err)
 	jc = service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(2), jc.Epoch)
@@ -1510,7 +1512,7 @@ func TestStore_NoViableHead_NewPayload(t *testing.T) {
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, root, postState, true)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, true})
 	require.NoError(t, err)
 	// Check the newly imported block is head, it justified the right
 	// checkpoint and the node is no longer optimistic
@@ -1574,7 +1576,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 	}
 
 	for i := 6; i < 12; i++ {
@@ -1593,7 +1595,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 
@@ -1612,7 +1614,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, lastValidRoot, postState, false)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, lastValidRoot, [32]byte{}, postState, false})
 	require.NoError(t, err)
 	// save the post state and the payload Hash of this block since it will
 	// be the LVH
@@ -1639,7 +1641,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, invalidRoots[i-13], wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, invalidRoots[i-13], postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, invalidRoots[i-13], [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 	// Check that we have justified the second epoch
@@ -1704,7 +1706,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, true))
+	require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, true}))
 	// Check that the head is still INVALID and the node is still optimistic
 	require.Equal(t, invalidHeadRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	optimistic, err = service.IsOptimistic(ctx)
@@ -1727,7 +1729,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, true)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, true})
 		require.NoError(t, err)
 		st, err = service.cfg.StateGen.StateByRoot(ctx, root)
 		require.NoError(t, err)
@@ -1753,7 +1755,7 @@ func TestStore_NoViableHead_Liveness(t *testing.T) {
 	postState, err = service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, root, postState, true)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, true})
 	require.NoError(t, err)
 	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
 	sjc = service.CurrentJustifiedCheckpt()
@@ -1809,7 +1811,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 	}
 
 	for i := 6; i < 12; i++ {
@@ -1827,7 +1829,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		err = service.postBlockProcess(ctx, wsb, root, postState, false)
+		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
 
@@ -1846,7 +1848,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, lastValidRoot, wsb, postState))
-	err = service.postBlockProcess(ctx, wsb, lastValidRoot, postState, false)
+	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, lastValidRoot, [32]byte{}, postState, false})
 	require.NoError(t, err)
 	// save the post state and the payload Hash of this block since it will
 	// be the LVH
@@ -1875,7 +1877,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 		postState, err := service.validateStateTransition(ctx, preState, wsb)
 		require.NoError(t, err)
 		require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-		require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+		require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 		require.NoError(t, service.updateJustificationOnBlock(ctx, preState, postState, currStoreJustifiedEpoch))
 		_, err = service.updateFinalizationOnBlock(ctx, preState, postState, currStoreFinalizedEpoch)
 		require.NoError(t, err)
@@ -1946,7 +1948,7 @@ func TestNoViableHead_Reboot(t *testing.T) {
 	rwsb, err := consensusblocks.NewROBlock(wsb)
 	require.NoError(t, err)
 	// We use onBlockBatch here because the valid chain is missing in forkchoice
-	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}))
+	require.NoError(t, service.onBlockBatch(ctx, []consensusblocks.ROBlock{rwsb}, &das.MockAvailabilityStore{}))
 	// Check that the head is now VALID and the node is not optimistic
 	require.Equal(t, genesisRoot, service.ensureRootNotZeros(service.cfg.ForkChoiceStore.CachedHeadRoot()))
 	headRoot, err = service.HeadRoot(ctx)
@@ -1990,7 +1992,7 @@ func TestOnBlock_HandleBlockAttestations(t *testing.T) {
 	postState, err := service.validateStateTransition(ctx, preState, wsb)
 	require.NoError(t, err)
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
-	require.NoError(t, service.postBlockProcess(ctx, wsb, root, postState, false))
+	require.NoError(t, service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false}))
 
 	st, err = service.HeadState(ctx)
 	require.NoError(t, err)
@@ -2047,74 +2049,6 @@ func TestFillMissingBlockPayloadId_PrepareAllPayloads(t *testing.T) {
 func driftGenesisTime(s *Service, slot, delay int64) {
 	offset := slot*int64(params.BeaconConfig().SecondsPerSlot) + delay
 	s.SetGenesisTime(time.Unix(time.Now().Unix()-offset, 0))
-}
-
-func Test_commitmentsToCheck(t *testing.T) {
-	windowSlots, err := slots.EpochEnd(params.BeaconConfig().MinEpochsForBlobsSidecarsRequest)
-	require.NoError(t, err)
-	commits := [][]byte{
-		bytesutil.PadTo([]byte("a"), 48),
-		bytesutil.PadTo([]byte("b"), 48),
-		bytesutil.PadTo([]byte("c"), 48),
-		bytesutil.PadTo([]byte("d"), 48),
-	}
-	cases := []struct {
-		name    string
-		commits [][]byte
-		block   func(*testing.T) consensusblocks.ROBlock
-		slot    primitives.Slot
-	}{
-		{
-			name: "pre deneb",
-			block: func(t *testing.T) consensusblocks.ROBlock {
-				bb := util.NewBeaconBlockBellatrix()
-				sb, err := consensusblocks.NewSignedBeaconBlock(bb)
-				require.NoError(t, err)
-				rb, err := consensusblocks.NewROBlock(sb)
-				require.NoError(t, err)
-				return rb
-			},
-		},
-		{
-			name: "commitments within da",
-			block: func(t *testing.T) consensusblocks.ROBlock {
-				d := util.NewBeaconBlockDeneb()
-				d.Block.Body.BlobKzgCommitments = commits
-				d.Block.Slot = 100
-				sb, err := consensusblocks.NewSignedBeaconBlock(d)
-				require.NoError(t, err)
-				rb, err := consensusblocks.NewROBlock(sb)
-				require.NoError(t, err)
-				return rb
-			},
-			commits: commits,
-			slot:    100,
-		},
-		{
-			name: "commitments outside da",
-			block: func(t *testing.T) consensusblocks.ROBlock {
-				d := util.NewBeaconBlockDeneb()
-				// block is from slot 0, "current slot" is window size +1 (so outside the window)
-				d.Block.Body.BlobKzgCommitments = commits
-				sb, err := consensusblocks.NewSignedBeaconBlock(d)
-				require.NoError(t, err)
-				rb, err := consensusblocks.NewROBlock(sb)
-				require.NoError(t, err)
-				return rb
-			},
-			slot: windowSlots + 1,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			b := c.block(t)
-			co := commitmentsToCheck(b, c.slot)
-			require.Equal(t, len(c.commits), len(co))
-			for i := 0; i < len(c.commits); i++ {
-				require.Equal(t, true, bytes.Equal(c.commits[i], co[i]))
-			}
-		})
-	}
 }
 
 func TestMissingIndices(t *testing.T) {
@@ -2195,6 +2129,35 @@ func TestMissingIndices(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_getFCUArgs(t *testing.T) {
+	s, tr := minimalTestService(t)
+	ctx := tr.ctx
+	st, keys := util.DeterministicGenesisState(t, 64)
+	b, err := util.GenerateFullBlock(st, keys, util.DefaultBlockGenConfig(), 1)
+	require.NoError(t, err)
+	wsb, err := consensusblocks.NewSignedBeaconBlock(b)
+	require.NoError(t, err)
+
+	cfg := &postBlockProcessConfig{
+		ctx:            ctx,
+		signed:         wsb,
+		blockRoot:      [32]byte{'a'},
+		postState:      st,
+		isValidPayload: true,
+	}
+	// error branch
+	fcuArgs := &fcuConfig{}
+	err = s.getFCUArgs(cfg, fcuArgs)
+	require.ErrorContains(t, "block does not exist", err)
+
+	// canonical branch
+	cfg.headRoot = cfg.blockRoot
+	fcuArgs = &fcuConfig{}
+	err = s.getFCUArgs(cfg, fcuArgs)
+	require.NoError(t, err)
+	require.Equal(t, cfg.blockRoot, fcuArgs.headRoot)
 }
 
 func fakeCommitments(n int) [][]byte {

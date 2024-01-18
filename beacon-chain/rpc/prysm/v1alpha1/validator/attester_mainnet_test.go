@@ -61,10 +61,11 @@ func TestAttestationDataAtSlot_HandlesFarAwayJustifiedEpoch(t *testing.T) {
 		OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		TimeFetcher:           &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
 		CoreService: &core.Service{
-			AttestationCache:   cache.NewAttestationCache(),
-			HeadFetcher:        &mock.ChainService{TargetRoot: blockRoot, Root: blockRoot[:]},
-			GenesisTimeFetcher: &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
-			FinalizedFetcher:   &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			AttestationCache:      cache.NewAttestationCache(),
+			HeadFetcher:           &mock.ChainService{TargetRoot: blockRoot, Root: blockRoot[:]},
+			GenesisTimeFetcher:    &mock.ChainService{Genesis: time.Now().Add(time.Duration(-1*offset) * time.Second)},
+			FinalizedFetcher:      &mock.ChainService{CurrentJustifiedCheckPoint: justifiedCheckpoint},
+			OptimisticModeFetcher: &mock.ChainService{Optimistic: false},
 		},
 	}
 
