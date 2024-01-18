@@ -220,32 +220,40 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
 	encodedIndices := make([][]byte, len(attestations))
-	for i, att := range attestations {
-		encEpoch := encodeTargetEpoch(att.IndexedAttestation.Data.Target.Epoch)
-		value, err := encodeAttestationRecord(att)
+
+	for i, attestation := range attestations {
+		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
+
+		value, err := encodeAttestationRecord(attestation)
 		if err != nil {
 			return err
 		}
-		indicesBytes := make([]byte, len(att.IndexedAttestation.AttestingIndices)*8)
-		for _, idx := range att.IndexedAttestation.AttestingIndices {
+
+		indicesBytes := make([]byte, len(attestation.IndexedAttestation.AttestingIndices)*8)
+		for _, idx := range attestation.IndexedAttestation.AttestingIndices {
 			encodedIdx := encodeValidatorIndex(primitives.ValidatorIndex(idx))
 			indicesBytes = append(indicesBytes, encodedIdx...)
 		}
+
 		encodedIndices[i] = indicesBytes
 		encodedTargetEpoch[i] = encEpoch
 		encodedRecords[i] = value
 	}
+
 	return s.db.Update(func(tx *bolt.Tx) error {
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
-		for i, att := range attestations {
-			if err := attRecordsBkt.Put(att.SigningRoot[:], encodedRecords[i]); err != nil {
+
+		for i, attestation := range attestations {
+			if err := attRecordsBkt.Put(attestation.SigningRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
-			for _, valIdx := range att.IndexedAttestation.AttestingIndices {
+
+			for _, valIdx := range attestation.IndexedAttestation.AttestingIndices {
 				encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
+
 				key := append(encodedTargetEpoch[i], encIdx...)
-				if err := signingRootsBkt.Put(key, att.SigningRoot[:]); err != nil {
+				if err := signingRootsBkt.Put(key, attestation.SigningRoot[:]); err != nil {
 					return err
 				}
 			}
@@ -544,37 +552,55 @@ func decodeSlasherChunk(enc []byte) ([]uint16, error) {
 	return chunk, nil
 }
 
-// Decode attestation record from bytes.
+// Encode attestation record to bytes.
+// The output encoded attestation record consists in the signing root concatened with the compressed attestation record.
 func encodeAttestationRecord(att *slashertypes.IndexedAttestationWrapper) ([]byte, error) {
 	if att == nil || att.IndexedAttestation == nil {
 		return []byte{}, errors.New("nil proposal record")
 	}
+
+	// Encode attestation.
 	encodedAtt, err := att.IndexedAttestation.MarshalSSZ()
 	if err != nil {
 		return nil, err
 	}
+
+	// Compress attestation.
 	compressedAtt := snappy.Encode(nil, encodedAtt)
+
 	return append(att.SigningRoot[:], compressedAtt...), nil
 }
 
 // Decode attestation record from bytes.
+// The input encoded attestation record consists in the signing root concatened with the compressed attestation record.
 func decodeAttestationRecord(encoded []byte) (*slashertypes.IndexedAttestationWrapper, error) {
 	if len(encoded) < signingRootSize {
-		return nil, fmt.Errorf("wrong length for encoded attestation record, want 32, got %d", len(encoded))
+		return nil, fmt.Errorf("wrong length for encoded attestation record, want minimum %d, got %d", signingRootSize, len(encoded))
 	}
-	signingRoot := encoded[:signingRootSize]
-	decodedAtt := &ethpb.IndexedAttestation{}
+
+	// Decompress attestation.
 	decodedAttBytes, err := snappy.Decode(nil, encoded[signingRootSize:])
 	if err != nil {
 		return nil, err
 	}
+
+	// Decode attestation.
+	decodedAtt := &ethpb.IndexedAttestation{}
 	if err := decodedAtt.UnmarshalSSZ(decodedAttBytes); err != nil {
 		return nil, err
 	}
-	return &slashertypes.IndexedAttestationWrapper{
+
+	// Decode signing root.
+	signingRootBytes := encoded[:signingRootSize]
+	signingRoot := bytesutil.ToBytes32(signingRootBytes)
+
+	// Return decoded attestation.
+	attestation := &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: decodedAtt,
-		SigningRoot:        bytesutil.ToBytes32(signingRoot),
-	}, nil
+		SigningRoot:        signingRoot,
+	}
+
+	return attestation, nil
 }
 
 func encodeProposalRecord(blkHdr *slashertypes.SignedBlockHeaderWrapper) ([]byte, error) {
