@@ -113,7 +113,10 @@ func (r *configset) replace(cfg *BeaconChainConfig) error {
 
 func (r *configset) replaceWithUndo(cfg *BeaconChainConfig) (func() error, error) {
 	name := cfg.ConfigName
-	prev := r.nameToConfig[name].Copy()
+	prev := r.nameToConfig[name]
+	if prev != nil {
+		prev = prev.Copy()
+	}
 	if err := r.replace(cfg); err != nil {
 		return nil, err
 	}
@@ -142,6 +145,10 @@ func (r *configset) setActive(c *BeaconChainConfig) error {
 }
 
 func (r *configset) setActiveWithUndo(c *BeaconChainConfig) (func() error, error) {
+	if r.active == nil {
+		return nil, errors.Wrap(errCannotNullifyActive,
+			"active config is currently nil, refusing to construct undo method that will leave it nil again")
+	}
 	active := r.active.Copy()
 	r.active = c
 	undo, err := r.replaceWithUndo(c)
