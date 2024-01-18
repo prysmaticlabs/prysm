@@ -116,6 +116,7 @@ func (p *p2pBatchWorkerPool) batchRouter(pa PeerAssigner) {
 			p.fromRouter <- b
 		case <-p.ctx.Done():
 			log.WithError(p.ctx.Err()).Info("p2pBatchWorkerPool context canceled, shutting down")
+			p.shutdown(p.ctx.Err())
 			return
 		}
 		if len(todo) == 0 {

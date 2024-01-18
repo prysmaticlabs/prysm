@@ -247,6 +247,9 @@ func (s *Service) Start() {
 	}
 
 	for {
+		if ctx.Err() != nil {
+			return
+		}
 		if allComplete := s.updateComplete(); allComplete {
 			return
 		}
