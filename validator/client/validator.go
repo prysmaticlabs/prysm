@@ -54,14 +54,13 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod                = 30 * time.Second
 	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
 	ErrValidatorsAllExited          = errors.New("All validators are exited, no more work to perform...")
 )
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
-	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
 )
 
 type validator struct {
@@ -403,6 +402,10 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+				"index":     status.index,
+			}).Info("Validator activated")
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		case ethpb.ValidatorStatus_INVALID:
@@ -414,18 +417,6 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 		}
 	}
 	return validatorActivated
-}
-
-func logActiveValidatorStatus(statuses []*validatorStatus) {
-	for _, s := range statuses {
-		if s.status.Status != ethpb.ValidatorStatus_ACTIVE {
-			continue
-		}
-		log.WithFields(logrus.Fields{
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
-			"index":     s.index,
-		}).Info("Validator activated")
-	}
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the

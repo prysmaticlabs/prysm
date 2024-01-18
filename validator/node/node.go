@@ -232,8 +232,15 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
 
 	if file.Exists(legacyDataFile) {
-		log.Warningf("Database not found in `--datadir` (%s) but found in `--wallet-dir` (%s).", dataFile, legacyDataFile)
-		log.Warningf("Please move the database from (%s) to (%s).", legacyDataFile, dataFile)
+		log.Infof(`Database not found in the --datadir directory (%s)
+		but found in the --wallet-dir directory (%s),
+		which was the legacy default.
+		The next time you run the validator client without a database,
+		it will be created into the --datadir directory (%s).
+		To silence this message, you can move the database from (%s)
+		to (%s).`,
+			dataDir, legacyDataDir, dataDir, legacyDataFile, dataFile)
+
 		dataDir = legacyDataDir
 		dataFile = legacyDataFile
 	}
