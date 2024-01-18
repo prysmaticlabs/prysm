@@ -245,5 +245,4 @@ func (_ *Validator) EventStreamIsRunning() bool {
 
 func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
 	panic("implement me")
-
 }

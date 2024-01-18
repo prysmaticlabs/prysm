@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -879,6 +882,11 @@ func TestGetGraffiti_Ok(t *testing.T) {
 		validatorClient: validatormock.NewMockValidatorClient(ctrl),
 	}
 	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+	config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+	config[pubKey] = &validatorserviceconfig.ProposerOption{
+		Graffiti: "specific graffiti",
+	}
+
 	tests := []struct {
 		name string
 		v    *validator
@@ -938,11 +946,43 @@ func TestGetGraffiti_Ok(t *testing.T) {
 			},
 			want: []byte{},
 		},
+		{name: "graffiti from proposer settings for specific pubkey",
+			v: &validator{
+				validatorClient: m.validatorClient,
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: config,
+				},
+			},
+			want: []byte("specific graffiti"),
+		},
+		{name: "graffiti from proposer settings default config",
+			v: &validator{
+				validatorClient: m.validatorClient,
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						Graffiti: "default graffiti",
+					},
+				},
+			},
+			want: []byte("default graffiti"),
+		},
+		{name: "graffiti from proposer settings , specific pubkey overrides default config",
+			v: &validator{
+				validatorClient: m.validatorClient,
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: config,
+					DefaultConfig: &validatorserviceconfig.ProposerOption{
+						Graffiti: "default graffiti",
+					},
+				},
+			},
+			want: []byte("specific graffiti"),
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if !strings.Contains(tt.name, "use default cli graffiti") {
+			if !strings.Contains(tt.name, "use default cli graffiti") && tt.v.proposerSettings == nil {
 				m.validatorClient.EXPECT().
 					ValidatorIndex(gomock.Any(), &ethpb.ValidatorIndexRequest{PublicKey: pubKey[:]}).
 					Return(&ethpb.ValidatorIndexResponse{Index: 2}, nil)
@@ -978,5 +1018,135 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 		got, err := v.GetGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
+	}
+}
+
+func Test_validator_DeleteGraffiti(t *testing.T) {
+	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+	tests := []struct {
+		name             string
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		wantErr          string
+	}{
+		{
+			name: "delete existing graffiti ok",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+					config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+					config[pubKey] = &validatorserviceconfig.ProposerOption{
+						Graffiti: "specific graffiti",
+					}
+					return config
+				}(),
+			},
+		},
+		{
+			name: "delete with proposer settings but only default configs",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					Graffiti: "default graffiti",
+				},
+			},
+			wantErr: "attempted to delete graffiti without proposer settings, graffiti will default to flag options",
+		},
+		{
+			name: "delete with proposer settings but without the specific public key setting",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+					config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+					pk := make([]byte, fieldparams.BLSPubkeyLength)
+					config[bytesutil.ToBytes48(pk)] = &validatorserviceconfig.ProposerOption{
+						Graffiti: "specific graffiti",
+					}
+					return config
+				}(),
+			},
+			wantErr: fmt.Sprintf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:])),
+		},
+		{
+			name:    "delete without proposer settings",
+			wantErr: "attempted to delete graffiti without proposer settings, graffiti will default to flag options",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &validator{
+				db:               testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}),
+				proposerSettings: tt.proposerSettings,
+			}
+			err := v.DeleteGraffiti(context.Background(), pubKey)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, v.proposerSettings.ProposeConfig[pubKey].Graffiti, "")
+			}
+		})
+	}
+}
+
+func Test_validator_SetGraffiti(t *testing.T) {
+	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+	tests := []struct {
+		name             string
+		graffiti         string
+		proposerSettings *validatorserviceconfig.ProposerSettings
+		wantErr          string
+	}{
+		{
+			name:     "setting existing graffiti ok",
+			graffiti: "new graffiti",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+					config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+					config[pubKey] = &validatorserviceconfig.ProposerOption{
+						Graffiti: "specific graffiti",
+					}
+					return config
+				}(),
+			},
+		},
+		{
+			name: "set with proposer settings but only default configs",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				DefaultConfig: &validatorserviceconfig.ProposerOption{
+					Graffiti: "default graffiti",
+				},
+			},
+			wantErr: "attempted to set graffiti without proposer settings, graffiti will default to flag options",
+		},
+		{
+			name: "set with proposer settings but without the specific public key setting",
+			proposerSettings: &validatorserviceconfig.ProposerSettings{
+				ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+					config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+					pk := make([]byte, fieldparams.BLSPubkeyLength)
+					config[bytesutil.ToBytes48(pk)] = &validatorserviceconfig.ProposerOption{
+						Graffiti: "specific graffiti",
+					}
+					return config
+				}(),
+			},
+			wantErr: fmt.Sprintf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:])),
+		},
+		{
+			name:    "set without proposer settings",
+			wantErr: "attempted to set graffiti without proposer settings, graffiti will default to flag options",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &validator{
+				db:               testing2.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{pubKey}),
+				proposerSettings: tt.proposerSettings,
+			}
+			err := v.SetGraffiti(context.Background(), pubKey, []byte(tt.graffiti))
+			if tt.wantErr != "" {
+				require.ErrorContains(t, tt.wantErr, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, v.proposerSettings.ProposeConfig[pubKey].Graffiti, tt.graffiti)
+			}
+		})
 	}
 }
