@@ -52,12 +52,12 @@ func (s *Service) groupByChunkIndex(
 // This function returns a list of valid attestations, a list of attestations that are
 // valid in the future, and the number of attestations dropped.
 func (s *Service) filterAttestations(
-	atts []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
+	attWrappers []*slashertypes.IndexedAttestationWrapper, currentEpoch primitives.Epoch,
 ) (valid, validInFuture []*slashertypes.IndexedAttestationWrapper, numDropped int) {
-	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
-	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(atts))
+	valid = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
+	validInFuture = make([]*slashertypes.IndexedAttestationWrapper, 0, len(attWrappers))
 
-	for _, attWrapper := range atts {
+	for _, attWrapper := range attWrappers {
 		if attWrapper == nil || !validateAttestationIntegrity(attWrapper.IndexedAttestation) {
 			numDropped++
 			continue
@@ -73,9 +73,11 @@ func (s *Service) filterAttestations(
 		// If an attestations's target epoch is in the future, we defer processing for later.
 		if attWrapper.IndexedAttestation.Data.Target.Epoch > currentEpoch {
 			validInFuture = append(validInFuture, attWrapper)
-		} else {
-			valid = append(valid, attWrapper)
+			continue
 		}
+
+		// The attestation is valid.
+		valid = append(valid, attWrapper)
 	}
 	return
 }
