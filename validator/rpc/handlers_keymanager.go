@@ -855,7 +855,7 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 
 	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
-		httputil.HandleError(w, errors.Wrap(err, "graffit was not set").Error(), http.StatusNotFound)
+		httputil.HandleError(w, errors.Wrap(err, "graffiti was not set").Error(), http.StatusNotFound)
 		return
 	}
 
