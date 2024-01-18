@@ -79,13 +79,6 @@ func (s *Service) processPendingAtts(ctx context.Context) error {
 			seen := s.seenPendingBlocks[bRoot]
 			s.pendingQueueLock.RUnlock()
 			if !seen {
-				// Pending attestation's missing block has not arrived yet.
-				log.WithFields(logrus.Fields{
-					"currentSlot": s.cfg.clock.CurrentSlot(),
-					"attSlot":     attestations[0].Message.Aggregate.Data.Slot,
-					"attCount":    len(attestations),
-					"blockRoot":   hex.EncodeToString(bytesutil.Trunc(bRoot[:])),
-				}).Debug("Requesting block for pending attestation")
 				pendingRoots = append(pendingRoots, bRoot)
 			}
 		}
