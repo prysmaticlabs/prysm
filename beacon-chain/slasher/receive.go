@@ -16,6 +16,8 @@ import (
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
 func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan *ethpb.IndexedAttestation) {
+	defer s.wg.Done()
+
 	sub := s.serviceCfg.IndexedAttestationsFeed.Subscribe(indexedAttsChan)
 	defer sub.Unsubscribe()
 	for {
@@ -45,6 +47,8 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 
 // Receive beacon blocks from some source event feed,
 func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan *ethpb.SignedBeaconBlockHeader) {
+	defer s.wg.Done()
+
 	sub := s.serviceCfg.BeaconBlockHeadersFeed.Subscribe(beaconBlockHeadersChan)
 	defer sub.Unsubscribe()
 	for {
@@ -77,6 +81,8 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 // This grouping will allow us to perform detection on batches of attestations
 // per validator chunk index which can be done concurrently.
 func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -132,6 +138,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 // Process queued blocks every time an epoch ticker fires. We retrieve
 // these blocks from a queue, then perform double proposal detection.
 func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case currentSlot := <-slotTicker:
@@ -172,6 +180,8 @@ func (s *Service) processQueuedBlocks(ctx context.Context, slotTicker <-chan pri
 
 // Prunes slasher data on each slot tick to prevent unnecessary build-up of disk space usage.
 func (s *Service) pruneSlasherData(ctx context.Context, slotTicker <-chan primitives.Slot) {
+	defer s.wg.Done()
+
 	for {
 		select {
 		case <-slotTicker:

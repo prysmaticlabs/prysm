@@ -75,10 +75,9 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	require.NoError(t, err)
 
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedBlocks(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 
 	signedBlkHeaders := []*slashertypes.SignedBlockHeaderWrapper{
@@ -108,7 +107,7 @@ func Test_processQueuedBlocks_DetectsDoubleProposals(t *testing.T) {
 	currentSlot := primitives.Slot(4)
 	currentSlotChan <- currentSlot
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsContain(t, hook, "Proposer slashing detected")
 }
 
@@ -137,10 +136,9 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 		blksQueue: newBlocksQueue(),
 	}
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedBlocks(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 	s.blksQueue.extend([]*slashertypes.SignedBlockHeaderWrapper{
 		createProposalWrapper(t, 4, 1, []byte{1}),
@@ -148,7 +146,7 @@ func Test_processQueuedBlocks_NotSlashable(t *testing.T) {
 	})
 	currentSlotChan <- currentSlot
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Proposer slashing detected")
 }
 

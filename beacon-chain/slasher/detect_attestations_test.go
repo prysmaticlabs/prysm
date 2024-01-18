@@ -246,16 +246,15 @@ func Test_processQueuedAttestations(t *testing.T) {
 			s.genesisTime = genesisTime
 
 			currentSlotChan := make(chan primitives.Slot)
-			exitChan := make(chan struct{})
+			s.wg.Add(1)
 			go func() {
 				s.processQueuedAttestations(ctx, currentSlotChan)
-				exitChan <- struct{}{}
 			}()
 			s.attsQueue.extend(tt.args.attestationQueue)
 			currentSlotChan <- slot
 			time.Sleep(time.Millisecond * 200)
 			cancel()
-			<-exitChan
+			s.wg.Wait()
 			if tt.shouldNotBeSlashable {
 				require.LogsDoNotContain(t, hook, "Attester slashing detected")
 			} else {
@@ -304,10 +303,9 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 	s.genesisTime = genesisTime
 
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 
 	for i := startEpoch; i <= endEpoch; i++ {
@@ -331,7 +329,7 @@ func Test_processQueuedAttestations_MultipleChunkIndices(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
@@ -370,10 +368,9 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 	s.genesisTime = genesisTime
 
 	currentSlotChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, currentSlotChan)
-		exitChan <- struct{}{}
 	}()
 
 	// We create two attestations fully spanning chunk indices 0 and chunk 1
@@ -392,7 +389,7 @@ func Test_processQueuedAttestations_OverlappingChunkIndices(t *testing.T) {
 
 	time.Sleep(time.Millisecond * 200)
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	require.LogsDoNotContain(t, hook, "Slashable offenses found")
 	require.LogsDoNotContain(t, hook, "Could not detect")
 }
@@ -787,16 +784,15 @@ func TestService_processQueuedAttestations(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	tickerChan := make(chan primitives.Slot)
-	exitChan := make(chan struct{})
+	s.wg.Add(1)
 	go func() {
 		s.processQueuedAttestations(ctx, tickerChan)
-		exitChan <- struct{}{}
 	}()
 
 	// Send a value over the ticker.
 	tickerChan <- 1
 	cancel()
-	<-exitChan
+	s.wg.Wait()
 	assert.LogsContain(t, hook, "Processing queued")
 }
 
