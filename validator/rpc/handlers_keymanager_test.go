@@ -1876,6 +1876,7 @@ func TestServer_Graffiti(t *testing.T) {
 	vs, err := client.NewValidatorService(context.Background(), &client.Config{
 		Validator: m,
 	})
+	require.NoError(t, err)
 	s := &Server{
 		validatorService: vs,
 	}
