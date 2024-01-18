@@ -137,7 +137,11 @@ func (s *Service) initVerifier(ctx context.Context) (*verifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newBackfillVerifier(cps)
+	keys, err := cps.PublicKeys()
+	if err != nil {
+		return nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
+	}
+	return newBackfillVerifier(cps.GenesisValidatorsRoot(), keys)
 }
 
 func (s *Service) updateComplete() bool {

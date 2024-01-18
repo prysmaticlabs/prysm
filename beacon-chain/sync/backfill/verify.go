@@ -3,7 +3,6 @@ package backfill
 import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -27,6 +26,7 @@ type verifier struct {
 	domain *domainCache
 }
 
+// TODO: rewrite this to use ROBlock.
 func (vr verifier) verify(blks []interfaces.ReadOnlySignedBeaconBlock) (VerifiedROBlocks, error) {
 	var err error
 	result := make([]blocks.ROBlock, len(blks))
@@ -75,15 +75,11 @@ func (vr verifier) blockSignatureBatch(b blocks.ROBlock) (*bls.SignatureBatch, e
 	return signing.BlockSignatureBatch(pk, sig[:], dom, rootF)
 }
 
-func newBackfillVerifier(st state.BeaconState) (*verifier, error) {
-	dc, err := newDomainCache(st.GenesisValidatorsRoot(),
-		params.BeaconConfig().DomainBeaconProposer, forks.NewOrderedSchedule(params.BeaconConfig()))
+func newBackfillVerifier(vr []byte, keys [][fieldparams.BLSPubkeyLength]byte) (*verifier, error) {
+	dc, err := newDomainCache(vr, params.BeaconConfig().DomainBeaconProposer,
+		forks.NewOrderedSchedule(params.BeaconConfig()))
 	if err != nil {
 		return nil, err
-	}
-	keys, err := st.PublicKeys()
-	if err != nil {
-		return nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
 	}
 	v := &verifier{
 		keys:   keys,

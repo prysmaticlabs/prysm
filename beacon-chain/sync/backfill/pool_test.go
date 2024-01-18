@@ -36,7 +36,9 @@ func TestPoolDetectAllEnded(t *testing.T) {
 	pool := newP2PBatchWorkerPool(p2p, nw)
 	st, err := util.NewBeaconState()
 	require.NoError(t, err)
-	v, err := newBackfillVerifier(st)
+	keys, err := st.PublicKeys()
+	require.NoError(t, err)
+	v, err := newBackfillVerifier(st.GenesisValidatorsRoot(), keys)
 	require.NoError(t, err)
 	pool.spawn(ctx, nw, startup.NewClock(time.Now(), [32]byte{}), ma, v)
 	br := batcher{min: 10, size: 10}
