@@ -54,7 +54,7 @@ func (s *Server) GetBeaconStateV2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if httputil.SszRequested(r) {
+	if httputil.RespondWithSsz(r) {
 		s.getBeaconStateSSZV2(ctx, w, []byte(stateId))
 	} else {
 		s.getBeaconStateV2(ctx, w, []byte(stateId))

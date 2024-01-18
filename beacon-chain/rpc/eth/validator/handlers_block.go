@@ -201,7 +201,7 @@ func (s *Server) ProduceBlockV3(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *http.Request, v1alpha1req *eth.BlockRequest, requiredType blockType) {
-	isSSZ := httputil.SszRequested(r)
+	isSSZ := httputil.RespondWithSsz(r)
 	v1alpha1resp, err := s.V1Alpha1Server.GetBeaconBlock(ctx, v1alpha1req)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
