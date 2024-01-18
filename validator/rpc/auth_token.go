@@ -149,7 +149,16 @@ func saveAuthToken(walletDirPath string, jwtKey []byte, token string) error {
 	if _, err := bytesBuf.WriteString("\n"); err != nil {
 		return err
 	}
-	return file.WriteFile(hashFilePath, bytesBuf.Bytes())
+
+	if err := file.MkdirAll(walletDirPath); err != nil {
+		return errors.Wrapf(err, "could not create directory %s", walletDirPath)
+	}
+
+	if err := file.WriteFile(hashFilePath, bytesBuf.Bytes()); err != nil {
+		return errors.Wrapf(err, "could not write to file %s", hashFilePath)
+	}
+
+	return nil
 }
 
 func readAuthTokenFile(r io.Reader) (secret []byte, token string, err error) {

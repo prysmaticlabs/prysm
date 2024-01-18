@@ -11,9 +11,10 @@ import (
 func NewValidatorClient(
 	validatorConn validatorHelpers.NodeConnection,
 	jsonRestHandler beaconApi.JsonRestHandler,
+	opt ...beaconApi.ValidatorClientOpt,
 ) iface.ValidatorClient {
 	if features.Get().EnableBeaconRESTApi {
-		return beaconApi.NewBeaconApiValidatorClient(jsonRestHandler)
+		return beaconApi.NewBeaconApiValidatorClient(jsonRestHandler, opt...)
 	} else {
 		return grpcApi.NewGrpcValidatorClient(validatorConn.GetGrpcClientConn())
 	}

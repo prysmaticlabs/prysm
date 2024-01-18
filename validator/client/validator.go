@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -53,14 +54,13 @@ import (
 // keyFetchPeriod is the frequency that we try to refetch validating keys
 // in case no keys were fetched previously.
 var (
-	keyRefetchPeriod                = 30 * time.Second
 	ErrBuilderValidatorRegistration = errors.New("Builder API validator registration unsuccessful")
 	ErrValidatorsAllExited          = errors.New("All validators are exited, no more work to perform...")
 )
 
 var (
 	msgCouldNotFetchKeys = "could not fetch validating keys"
-	msgNoKeysFetched     = "No validating keys fetched. Trying again"
+	msgNoKeysFetched     = "No validating keys fetched. Waiting for keys..."
 )
 
 type validator struct {
@@ -91,19 +91,19 @@ type validator struct {
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
-	node                               iface.NodeClient
-	db                                 vdb.Database
 	beaconClient                       iface.BeaconChainClient
+	nodeClient                         iface.NodeClient
+	validatorClient                    iface.ValidatorClient
+	prysmBeaconClient                  iface.PrysmBeaconChainClient
+	db                                 vdb.Database
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
-	validatorClient                    iface.ValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
-	prysmBeaconClient                  iface.PrysmBeaconChainClient
 	validatorsRegBatchSize             int
 }
 
@@ -238,50 +238,65 @@ func recheckValidatingKeysBucket(ctx context.Context, valDB vdb.Database, km key
 func (v *validator) WaitForChainStart(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForChainStart")
 	defer span.End()
+
 	// First, check if the beacon chain has started.
 	log.Info("Syncing with beacon node to align on chain genesis info")
+
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
-	if err != io.EOF {
-		if ctx.Err() == context.Canceled {
-			return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
-		}
-		if err != nil {
-			return errors.Wrap(
-				iface.ErrConnectionIssue,
-				errors.Wrap(err, "could not receive ChainStart from stream").Error(),
-			)
-		}
-		v.genesisTime = chainStartRes.GenesisTime
-		curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
-		if err != nil {
-			return errors.Wrap(err, "could not get current genesis validators root")
-		}
-		if len(curGenValRoot) == 0 {
-			if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
-				return errors.Wrap(err, "could not save genesis validators root")
-			}
-		} else {
-			if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
-				log.Errorf("The genesis validators root received from the beacon node does not match what is in " +
-					"your validator database. This could indicate that this is a database meant for another network. If " +
-					"you were previously running this validator database on another network, please run --clear-db to " +
-					"clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues")
-				return fmt.Errorf(
-					"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
-					chainStartRes.GenesisValidatorsRoot,
-					curGenValRoot,
-				)
-			}
-		}
-	} else {
+	if err == io.EOF {
 		return iface.ErrConnectionIssue
 	}
 
+	if ctx.Err() == context.Canceled {
+		return errors.Wrap(ctx.Err(), "context has been canceled so shutting down the loop")
+	}
+
+	if err != nil {
+		return errors.Wrap(
+			iface.ErrConnectionIssue,
+			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
+		)
+	}
+
+	v.genesisTime = chainStartRes.GenesisTime
+
+	curGenValRoot, err := v.db.GenesisValidatorsRoot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "could not get current genesis validators root")
+	}
+
+	if len(curGenValRoot) == 0 {
+		if err := v.db.SaveGenesisValidatorsRoot(ctx, chainStartRes.GenesisValidatorsRoot); err != nil {
+			return errors.Wrap(err, "could not save genesis validators root")
+		}
+
+		v.setTicker()
+		return nil
+	}
+
+	if !bytes.Equal(curGenValRoot, chainStartRes.GenesisValidatorsRoot) {
+		log.Errorf(`The genesis validators root received from the beacon node does not match what is in
+			your validator database. This could indicate that this is a database meant for another network. If
+			you were previously running this validator database on another network, please run --%s to
+			clear the database. If not, please file an issue at https://github.com/prysmaticlabs/prysm/issues`,
+			cmd.ClearDB.Name,
+		)
+		return fmt.Errorf(
+			"genesis validators root from beacon node (%#x) does not match root saved in validator db (%#x)",
+			chainStartRes.GenesisValidatorsRoot,
+			curGenValRoot,
+		)
+	}
+
+	v.setTicker()
+	return nil
+}
+
+func (v *validator) setTicker() {
 	// Once the ChainStart log is received, we update the genesis time of the validator client
 	// and begin a slot ticker used to track the current slot the beacon node is in.
 	v.ticker = slots.NewSlotTicker(time.Unix(int64(v.genesisTime), 0), params.BeaconConfig().SecondsPerSlot)
 	log.WithField("genesisTime", time.Unix(int64(v.genesisTime), 0)).Info("Beacon chain started")
-	return nil
 }
 
 // WaitForSync checks whether the beacon node has sync to the latest head.
@@ -289,7 +304,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
+	s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
@@ -301,7 +316,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot.
 		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
-			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
+			s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
@@ -315,7 +330,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// ReceiveSlots starts a gRPC client stream listener to obtain
+// ReceiveSlots starts a stream listener to obtain
 // slots from the beacon node when it imports a block. Upon receiving a slot, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
@@ -333,13 +348,14 @@ func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel cha
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node, " + iface.ErrConnectionIssue.Error())
+			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
 			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 			return
 		}
 		if res == nil {
 			continue
 		}
+		log.Error("Setting highest slot")
 		v.setHighestSlot(res.Slot)
 	}
 }
@@ -387,6 +403,10 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 			}
 		case ethpb.ValidatorStatus_ACTIVE, ethpb.ValidatorStatus_EXITING:
 			validatorActivated = true
+			log.WithFields(logrus.Fields{
+				"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(status.publicKey)),
+				"index":     status.index,
+			}).Info("Validator activated")
 		case ethpb.ValidatorStatus_EXITED:
 			log.Info("Validator exited")
 		case ethpb.ValidatorStatus_INVALID:
@@ -398,18 +418,6 @@ func (v *validator) checkAndLogValidatorStatus(statuses []*validatorStatus, acti
 		}
 	}
 	return validatorActivated
-}
-
-func logActiveValidatorStatus(statuses []*validatorStatus) {
-	for _, s := range statuses {
-		if s.status.Status != ethpb.ValidatorStatus_ACTIVE {
-			continue
-		}
-		log.WithFields(logrus.Fields{
-			"publicKey": fmt.Sprintf("%#x", bytesutil.Trunc(s.publicKey)),
-			"index":     s.index,
-		}).Info("Validator activated")
-	}
 }
 
 // CanonicalHeadSlot returns the slot of canonical block currently found in the
@@ -1033,6 +1041,18 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 	return nil
+}
+
+func (v *validator) StartEventStream(ctx context.Context) error {
+	return v.validatorClient.StartEventStream(ctx)
+}
+
+func (v *validator) EventStreamIsRunning() bool {
+	return v.validatorClient.EventStreamIsRunning()
+}
+
+func (v *validator) NodeIsHealthy(ctx context.Context) bool {
+	return v.nodeClient.IsHealthy(ctx)
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {
