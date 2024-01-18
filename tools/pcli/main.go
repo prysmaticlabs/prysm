@@ -11,10 +11,14 @@ import (
 	"time"
 
 	"github.com/kr/pretty"
+	"github.com/pkg/errors"
 	fssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
+	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/detect"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz/equality"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prefixed "github.com/prysmaticlabs/prysm/v4/runtime/logging/logrus-prefixed-formatter"
@@ -28,6 +32,7 @@ func main() {
 	var blockPath string
 	var preStatePath string
 	var expectedPostStatePath string
+	var network string
 	var sszPath string
 	var sszType string
 
@@ -157,8 +162,36 @@ func main() {
 					Usage:       "Path to expected post state file(ssz)",
 					Destination: &expectedPostStatePath,
 				},
+				&cli.StringFlag{
+					Name:        "network",
+					Usage:       "Network to run the state transition in",
+					Destination: &network,
+				},
 			},
 			Action: func(c *cli.Context) error {
+				if network != "" {
+					switch network {
+					case params.PraterName:
+						if err := params.SetActive(params.PraterConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.GoerliName:
+						if err := params.SetActive(params.PraterConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.SepoliaName:
+						if err := params.SetActive(params.SepoliaConfig()); err != nil {
+							log.Fatal(err)
+						}
+					case params.HoleskyName:
+						if err := params.SetActive(params.HoleskyConfig()); err != nil {
+							log.Fatal(err)
+						}
+					default:
+						log.Fatalf("Unknown network provided: %s", network)
+					}
+				}
+
 				if blockPath == "" {
 					log.Info("Block path not provided for state transition. " +
 						"Please provide path")
@@ -172,11 +205,11 @@ func main() {
 					}
 					blockPath = text
 				}
-				block := &ethpb.SignedBeaconBlock{}
-				if err := dataFetcher(blockPath, block); err != nil {
+				block, err := detectBlock(blockPath)
+				if err != nil {
 					log.Fatal(err)
 				}
-				blkRoot, err := block.Block.HashTreeRoot()
+				blkRoot, err := block.Block().HashTreeRoot()
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -193,11 +226,7 @@ func main() {
 					}
 					preStatePath = text
 				}
-				preState := &ethpb.BeaconState{}
-				if err := dataFetcher(preStatePath, preState); err != nil {
-					log.Fatal(err)
-				}
-				stateObj, err := state_native.InitializeFromProtoPhase0(preState)
+				stateObj, err := detectState(preStatePath)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -206,18 +235,14 @@ func main() {
 					log.Fatal(err)
 				}
 				log.WithFields(log.Fields{
-					"blockSlot":    fmt.Sprintf("%d", block.Block.Slot),
+					"blockSlot":    fmt.Sprintf("%d", block.Block().Slot()),
 					"preStateSlot": fmt.Sprintf("%d", stateObj.Slot()),
 				}).Infof(
 					"Performing state transition with a block root of %#x and pre state root of %#x",
 					blkRoot,
 					preStateRoot,
 				)
-				wsb, err := blocks.NewSignedBeaconBlock(block)
-				if err != nil {
-					log.Fatal(err)
-				}
-				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, wsb)
+				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, block)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -229,12 +254,12 @@ func main() {
 
 				// Diff the state if a post state is provided.
 				if expectedPostStatePath != "" {
-					expectedState := &ethpb.BeaconState{}
-					if err := dataFetcher(expectedPostStatePath, expectedState); err != nil {
+					expectedState, err := detectState(expectedPostStatePath)
+					if err != nil {
 						log.Fatal(err)
 					}
-					if !equality.DeepEqual(expectedState, postState.ToProtoUnsafe()) {
-						diff, _ := messagediff.PrettyDiff(expectedState, postState.ToProtoUnsafe())
+					if !equality.DeepEqual(expectedState.ToProtoUnsafe(), postState.ToProtoUnsafe()) {
+						diff, _ := messagediff.PrettyDiff(expectedState.ToProtoUnsafe(), postState.ToProtoUnsafe())
 						log.Errorf("Derived state differs from provided post state: %s", diff)
 					}
 				}
@@ -255,6 +280,34 @@ func dataFetcher(fPath string, data fssz.Unmarshaler) error {
 		return err
 	}
 	return data.UnmarshalSSZ(rawFile)
+}
+
+func detectState(fPath string) (state.BeaconState, error) {
+	rawFile, err := os.ReadFile(fPath) // #nosec G304
+	if err != nil {
+		return nil, err
+	}
+	vu, err := detect.FromState(rawFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "error detecting state from file")
+	}
+	s, err := vu.UnmarshalBeaconState(rawFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "error unmarshalling state")
+	}
+	return s, nil
+}
+
+func detectBlock(fPath string) (interfaces.SignedBeaconBlock, error) {
+	rawFile, err := os.ReadFile(fPath) // #nosec G304
+	if err != nil {
+		return nil, err
+	}
+	vu, err := detect.FromBlock(rawFile)
+	if err != nil {
+		return nil, err
+	}
+	return vu.UnmarshalBeaconBlock(rawFile)
 }
 
 func prettyPrint(sszPath string, data fssz.Unmarshaler) {
