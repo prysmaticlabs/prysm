@@ -81,10 +81,9 @@ func (s *Service) filterAttestations(
 }
 
 // Validates the attestation data integrity, ensuring we have no nil values for
-// source, epoch, and that the source epoch of the attestation must be less than
-// the target epoch, which is a precondition for performing slashing detection.
-// This function also checks the attestation source epoch is within the history size
-// we keep track of for slashing detection.
+// source and target epochs, and that the source epoch of the attestation must
+// be less than the target epoch, which is a precondition for performing slashing
+// detection (except for the genesis epoch).
 func validateAttestationIntegrity(att *ethpb.IndexedAttestation) bool {
 	// If an attestation is malformed, we drop it.
 	if att == nil ||
