@@ -67,6 +67,20 @@ func (mr *MockValidatorClientMockRecorder) DomainData(arg0, arg1 interface{}) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainData", reflect.TypeOf((*MockValidatorClient)(nil).DomainData), arg0, arg1)
 }
 
+// EventStreamIsRunning mocks base method.
+func (m *MockValidatorClient) EventStreamIsRunning() bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EventStreamIsRunning")
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// EventStreamIsRunning indicates an expected call of EventStreamIsRunning.
+func (mr *MockValidatorClientMockRecorder) EventStreamIsRunning() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventStreamIsRunning", reflect.TypeOf((*MockValidatorClient)(nil).EventStreamIsRunning))
+}
+
 // GetAttestationData mocks base method.
 func (m *MockValidatorClient) GetAttestationData(arg0 context.Context, arg1 *eth.AttestationDataRequest) (*eth.AttestationData, error) {
 	m.ctrl.T.Helper()
@@ -245,6 +259,20 @@ func (m *MockValidatorClient) ProposeExit(arg0 context.Context, arg1 *eth.Signed
 func (mr *MockValidatorClientMockRecorder) ProposeExit(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProposeExit", reflect.TypeOf((*MockValidatorClient)(nil).ProposeExit), arg0, arg1)
+}
+
+// StartEventStream mocks base method.
+func (m *MockValidatorClient) StartEventStream(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartEventStream", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartEventStream indicates an expected call of StartEventStream.
+func (mr *MockValidatorClientMockRecorder) StartEventStream(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartEventStream", reflect.TypeOf((*MockValidatorClient)(nil).StartEventStream), arg0)
 }
 
 // StreamSlots mocks base method.

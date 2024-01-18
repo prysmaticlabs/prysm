@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
@@ -25,10 +26,6 @@ type BeaconApiJsonRestHandler struct {
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
 // If an HTTP error is returned, the body is decoded as a DefaultJsonError JSON object and returned as the first return value.
 func (c BeaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp interface{}) error {
-	if resp == nil {
-		return errors.New("resp is nil")
-	}
-
 	url := c.Host + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -92,14 +89,16 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 	}
 
 	if httpResp.Header.Get("Content-Type") != api.JsonMediaType {
-		if httpResp.StatusCode == http.StatusOK {
+		// 2XX codes are a success
+		if strings.HasPrefix(httpResp.Status, "2") {
 			return nil
 		}
 		return &httputil.DefaultJsonError{Code: httpResp.StatusCode, Message: string(body)}
 	}
 
 	decoder := json.NewDecoder(bytes.NewBuffer(body))
-	if httpResp.StatusCode != http.StatusOK {
+	// non-2XX codes are a failure
+	if !strings.HasPrefix(httpResp.Status, "2") {
 		errorJson := &httputil.DefaultJsonError{}
 		if err = decoder.Decode(errorJson); err != nil {
 			return errors.Wrapf(err, "failed to decode response body into error json for %s", httpResp.Request.URL)
