@@ -156,7 +156,7 @@ func (bs *BlobStorage) Save(sidecar blocks.VerifiedROBlob) error {
 	}
 	partialMoved = true
 	blobsWrittenCounter.Inc()
-	blobSaveLatency.Observe(time.Since(startTime).Seconds())
+	blobSaveLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	return nil
 }
 
@@ -180,7 +180,7 @@ func (bs *BlobStorage) Get(root [32]byte, idx uint64) (blocks.VerifiedROBlob, er
 		return blocks.VerifiedROBlob{}, err
 	}
 	defer func() {
-		blobFetchLatency.Observe(time.Since(startTime).Seconds())
+		blobFetchLatency.Observe(float64(time.Since(startTime).Milliseconds()))
 	}()
 	return verification.BlobSidecarNoop(ro)
 }
