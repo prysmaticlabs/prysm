@@ -81,6 +81,20 @@ func (mr *MockNodeClientMockRecorder) GetVersion(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVersion", reflect.TypeOf((*MockNodeClient)(nil).GetVersion), arg0, arg1)
 }
 
+// IsHealthy mocks base method.
+func (m *MockNodeClient) IsHealthy(arg0 context.Context) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsHealthy", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsHealthy indicates an expected call of IsHealthy.
+func (mr *MockNodeClientMockRecorder) IsHealthy(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHealthy", reflect.TypeOf((*MockNodeClient)(nil).IsHealthy), arg0)
+}
+
 // ListPeers mocks base method.
 func (m *MockNodeClient) ListPeers(arg0 context.Context, arg1 *emptypb.Empty) (*eth.Peers, error) {
 	m.ctrl.T.Helper()

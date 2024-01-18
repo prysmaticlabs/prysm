@@ -91,19 +91,19 @@ type validator struct {
 	interopKeysConfig                  *local.InteropKeymanagerConfig
 	wallet                             *wallet.Wallet
 	graffitiStruct                     *graffiti.Graffiti
-	node                               iface.NodeClient
-	db                                 vdb.Database
 	beaconClient                       iface.BeaconChainClient
+	nodeClient                         iface.NodeClient
+	validatorClient                    iface.ValidatorClient
+	prysmBeaconClient                  iface.PrysmBeaconChainClient
+	db                                 vdb.Database
 	keyManager                         keymanager.IKeymanager
 	ticker                             slots.Ticker
-	validatorClient                    iface.ValidatorClient
 	graffiti                           []byte
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
-	prysmBeaconClient                  iface.PrysmBeaconChainClient
 	validatorsRegBatchSize             int
 }
 
@@ -304,7 +304,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForSync")
 	defer span.End()
 
-	s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
+	s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
 		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
@@ -316,7 +316,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		select {
 		// Poll every half slot.
 		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
-			s, err := v.node.GetSyncStatus(ctx, &emptypb.Empty{})
+			s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
 				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
@@ -330,7 +330,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 	}
 }
 
-// ReceiveSlots starts a gRPC client stream listener to obtain
+// ReceiveSlots starts a stream listener to obtain
 // slots from the beacon node when it imports a block. Upon receiving a slot, the service
 // broadcasts it to a feed for other usages to subscribe to.
 func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
@@ -348,13 +348,14 @@ func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel cha
 		}
 		res, err := stream.Recv()
 		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node, " + iface.ErrConnectionIssue.Error())
+			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
 			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
 			return
 		}
 		if res == nil {
 			continue
 		}
+		log.Error("Setting highest slot")
 		v.setHighestSlot(res.Slot)
 	}
 }
@@ -1040,6 +1041,18 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 		return errors.Wrap(ErrBuilderValidatorRegistration, err.Error())
 	}
 	return nil
+}
+
+func (v *validator) StartEventStream(ctx context.Context) error {
+	return v.validatorClient.StartEventStream(ctx)
+}
+
+func (v *validator) EventStreamIsRunning() bool {
+	return v.validatorClient.EventStreamIsRunning()
+}
+
+func (v *validator) NodeIsHealthy(ctx context.Context) bool {
+	return v.nodeClient.IsHealthy(ctx)
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

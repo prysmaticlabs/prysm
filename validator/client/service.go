@@ -196,11 +196,16 @@ func (v *ValidatorService) Start() {
 		Host:       v.conn.GetBeaconApiUrl(),
 	}
 
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
+
 	valStruct := &validator{
-		db:                             v.db,
-		validatorClient:                validatorClientFactory.NewValidatorClient(v.conn, restHandler),
+		validatorClient:                validatorClient,
 		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
-		node:                           nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
+		db:                             v.db,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -224,7 +229,6 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 	}
 

@@ -26,6 +26,7 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -865,7 +866,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 			},
 		}),
 		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{}, // TODO: remove this
+			api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{}, // TODO: remove this
 		),
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)
