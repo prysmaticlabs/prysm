@@ -456,7 +456,7 @@ func TestUpdateDuties_DoesNothingWhenNotEpochStart_AlreadyExistingAssignments(t 
 	v := validator{
 		validatorClient: client,
 		duties: &ethpb.DutiesResponse{
-			Duties: []*ethpb.DutiesResponse_Duty{
+			CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 				{
 					Committee:      []primitives.ValidatorIndex{},
 					AttesterSlot:   10,
@@ -482,7 +482,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 		validatorClient: client,
 		keyManager:      newMockKeymanager(t, randKeypair(t)),
 		duties: &ethpb.DutiesResponse{
-			Duties: []*ethpb.DutiesResponse_Duty{
+			CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 				{
 					CommitteeIndex: 1,
 				},
@@ -570,7 +570,7 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 	}
 
 	resp := &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{},
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{},
 	}
 	client.EXPECT().GetDuties(
 		gomock.Any(),
@@ -644,7 +644,7 @@ func TestRolesAt_OK(t *testing.T) {
 	defer finish()
 
 	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex:  1,
 				AttesterSlot:    1,
@@ -684,7 +684,7 @@ func TestRolesAt_OK(t *testing.T) {
 
 	// Test sync committee role at epoch boundary.
 	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex:  1,
 				AttesterSlot:    1,
@@ -720,7 +720,7 @@ func TestRolesAt_DoesNotAssignProposer_Slot0(t *testing.T) {
 	defer finish()
 
 	v.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				CommitteeIndex: 1,
 				AttesterSlot:   0,
@@ -847,7 +847,7 @@ func TestCheckAndLogValidatorStatus_OK(t *testing.T) {
 			v := validator{
 				validatorClient: client,
 				duties: &ethpb.DutiesResponse{
-					Duties: []*ethpb.DutiesResponse_Duty{
+					CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 						{
 							CommitteeIndex: 1,
 						},
