@@ -100,7 +100,7 @@ type SetFeeRecipientByPubkeyRequest struct {
 }
 
 // Graffiti keymanager api
-type GetGraffiti struct {
+type GetGraffitiResponse struct {
 	Data *GraffitiData `json:"data"`
 }
 

@@ -30,7 +30,6 @@ import (
 	mock "github.com/prysmaticlabs/prysm/v4/validator/accounts/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/db/kv"
 	dbtest "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
@@ -1857,13 +1856,67 @@ func TestServer_DeleteFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
 }
 
 func TestServer_GetGraffiti(t *testing.T) {
+	s := &Server{
+		validatorService: &client.ValidatorService{},
+	}
 
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.GetGraffiti(w, req)
 }
 
-func TestServer_SetGraffiti(t *testing.T) {
+func TestServer_Graffiti(t *testing.T) {
+	graffiti := "graffiti"
+	m := &mock.Validator{
+		Graffiti: graffiti,
+	}
+	vs, err := client.NewValidatorService(context.Background(), &client.Config{
+		Validator: m,
+	})
+	s := &Server{
+		validatorService: vs,
+	}
 
-}
+	var request struct {
+		Graffiti string `json:"graffiti"`
+	}
+	request.Graffiti = graffiti
+	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
+	var buf bytes.Buffer
+	err = json.NewEncoder(&buf).Encode(request)
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), &buf)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w := httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.SetGraffiti(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
 
-func TestServer_DeleteGraffiti(t *testing.T) {
+	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w = httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.GetGraffiti(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	resp := &GetGraffitiResponse{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
+	assert.Equal(t, resp.Data.Graffiti, request.Graffiti)
+	assert.Equal(t, resp.Data.Pubkey, pubkey)
 
+	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w = httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.DeleteGraffiti(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
+	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
+	w = httptest.NewRecorder()
+	w.Body = &bytes.Buffer{}
+	s.GetGraffiti(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
 }

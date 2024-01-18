@@ -217,6 +217,9 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 
 // GetGraffiti for mocking
 func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
+	if m.Graffiti == "" {
+		return nil, errors.New("graffiti is missing ")
+	}
 	return []byte(m.Graffiti), nil
 }
 
@@ -228,5 +231,6 @@ func (m *Validator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLengt
 
 // DeleteGraffiti for mocking
 func (m *Validator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
+	m.Graffiti = ""
 	return nil
 }

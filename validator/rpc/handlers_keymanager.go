@@ -855,11 +855,11 @@ func (s *Server) GetGraffiti(w http.ResponseWriter, r *http.Request) {
 
 	graffiti, err := s.validatorService.GetGraffiti(ctx, bytesutil.ToBytes48(pubkey))
 	if err != nil {
-		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
+		httputil.HandleError(w, errors.Wrap(err, "graffit was not set").Error(), http.StatusNotFound)
 		return
 	}
 
-	httputil.WriteJson(w, &GetGraffiti{
+	httputil.WriteJson(w, &GetGraffitiResponse{
 		Data: &GraffitiData{
 			Pubkey:   rawPubkey,
 			Graffiti: string(graffiti),
