@@ -12,6 +12,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	couldNotSaveAttRecord            = "Could not save attestation records to DB"
+	couldNotSaveSlashableAtt         = "Could not check slashable attestations"
+	couldNotProcessAttesterSlashings = "Could not process attester slashings"
+)
+
 // Receive indexed attestations from some source event feed,
 // validating their integrity before appending them to an attestation queue
 // for batch processing in a separate routine.
@@ -112,21 +118,21 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
 			); err != nil {
-				log.WithError(err).Error("Could not save attestation records to DB")
+				log.WithError(err).Error(couldNotSaveAttRecord)
 				continue
 			}
 
 			// Check for slashings.
 			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
 			if err != nil {
-				log.WithError(err).Error("Could not check slashable attestations")
+				log.WithError(err).Error(couldNotSaveSlashableAtt)
 				continue
 			}
 
 			// Process attester slashings by verifying their signatures, submitting
 			// to the beacon node's operations pool, and logging them.
 			if err := s.processAttesterSlashings(ctx, slashings); err != nil {
-				log.WithError(err).Error("Could not process attester slashings")
+				log.WithError(err).Error(couldNotProcessAttesterSlashings)
 				continue
 			}
 

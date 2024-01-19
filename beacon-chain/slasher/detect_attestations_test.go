@@ -260,6 +260,10 @@ func Test_processQueuedAttestations(t *testing.T) {
 			} else {
 				require.LogsContain(t, hook, "Attester slashing detected")
 			}
+
+			require.LogsDoNotContain(t, hook, couldNotSaveAttRecord)
+			require.LogsDoNotContain(t, hook, couldNotSaveSlashableAtt)
+			require.LogsDoNotContain(t, hook, couldNotProcessAttesterSlashings)
 		})
 	}
 }
