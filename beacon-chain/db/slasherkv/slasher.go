@@ -219,7 +219,6 @@ func (s *Store) SaveAttestationRecordsForValidators(
 	defer span.End()
 	encodedTargetEpoch := make([][]byte, len(attestations))
 	encodedRecords := make([][]byte, len(attestations))
-	encodedIndices := make([][]byte, len(attestations))
 
 	for i, attestation := range attestations {
 		encEpoch := encodeTargetEpoch(attestation.IndexedAttestation.Data.Target.Epoch)
@@ -229,13 +228,6 @@ func (s *Store) SaveAttestationRecordsForValidators(
 			return err
 		}
 
-		indicesBytes := make([]byte, len(attestation.IndexedAttestation.AttestingIndices)*8)
-		for _, idx := range attestation.IndexedAttestation.AttestingIndices {
-			encodedIdx := encodeValidatorIndex(primitives.ValidatorIndex(idx))
-			indicesBytes = append(indicesBytes, encodedIdx...)
-		}
-
-		encodedIndices[i] = indicesBytes
 		encodedTargetEpoch[i] = encEpoch
 		encodedRecords[i] = value
 	}
@@ -258,6 +250,7 @@ func (s *Store) SaveAttestationRecordsForValidators(
 				}
 			}
 		}
+
 		return nil
 	})
 }
