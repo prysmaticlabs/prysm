@@ -30,9 +30,9 @@ func Test_processQueuedAttestations(t *testing.T) {
 		currentEpoch     primitives.Epoch
 	}
 	tests := []struct {
-		name                 string
-		args                 args
-		shouldNotBeSlashable bool
+		name              string
+		args              args
+		shouldBeSlashable bool
 	}{
 		{
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
@@ -43,6 +43,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
@@ -53,6 +54,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 1000,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
@@ -63,6 +65,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Detects double vote, (source 1, target 2), (source 0, target 2)",
@@ -73,6 +76,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
+			shouldBeSlashable: true,
 		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
@@ -83,7 +87,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
@@ -94,7 +98,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
@@ -111,7 +115,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
@@ -128,7 +132,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 1, target 2), (source 2, target 3)",
@@ -139,7 +143,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
@@ -150,7 +154,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 2), (source 0, target 3)",
@@ -161,7 +165,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 		{
 			name: "Not slashable, (source 0, target 3), (source 0, target 2)",
@@ -172,7 +176,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 				},
 				currentEpoch: 4,
 			},
-			shouldNotBeSlashable: true,
+			shouldBeSlashable: false,
 		},
 	}
 	for _, tt := range tests {
@@ -255,10 +259,10 @@ func Test_processQueuedAttestations(t *testing.T) {
 			time.Sleep(time.Millisecond * 200)
 			cancel()
 			s.wg.Wait()
-			if tt.shouldNotBeSlashable {
-				require.LogsDoNotContain(t, hook, "Attester slashing detected")
-			} else {
+			if tt.shouldBeSlashable {
 				require.LogsContain(t, hook, "Attester slashing detected")
+			} else {
+				require.LogsDoNotContain(t, hook, "Attester slashing detected")
 			}
 
 			require.LogsDoNotContain(t, hook, couldNotSaveAttRecord)
