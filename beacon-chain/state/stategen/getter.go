@@ -333,7 +333,7 @@ func (s *State) CombinedCache() *CombinedCache {
 
 func (s *State) slotAvailable(slot primitives.Slot) bool {
 	if s.avb == nil {
-		return false
+		return true
 	}
 	return s.avb.AvailableBlock(slot)
 }
