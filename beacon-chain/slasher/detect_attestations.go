@@ -145,23 +145,25 @@ func (s *Service) checkDoubleVotes(
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
 	defer span.End()
+
 	// We check if there are any slashable double votes in the input list
 	// of attestations with respect to each other.
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 	existingAtts := make(map[string]*slashertypes.IndexedAttestationWrapper)
-	for _, att := range attestations {
-		for _, valIdx := range att.IndexedAttestation.AttestingIndices {
-			key := uintToString(uint64(att.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
+
+	for _, attestation := range attestations {
+		for _, valIdx := range attestation.IndexedAttestation.AttestingIndices {
+			key := uintToString(uint64(attestation.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
 			existingAtt, ok := existingAtts[key]
 			if !ok {
-				existingAtts[key] = att
+				existingAtts[key] = attestation
 				continue
 			}
-			if att.SigningRoot != existingAtt.SigningRoot {
+			if attestation.SigningRoot != existingAtt.SigningRoot {
 				doubleVotesTotal.Inc()
 				slashings = append(slashings, &ethpb.AttesterSlashing{
 					Attestation_1: existingAtt.IndexedAttestation,
-					Attestation_2: att.IndexedAttestation,
+					Attestation_2: attestation.IndexedAttestation,
 				})
 			}
 		}
