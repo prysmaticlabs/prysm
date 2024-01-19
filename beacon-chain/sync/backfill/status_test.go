@@ -30,7 +30,7 @@ type mockBackfillDB struct {
 	status                    *dbval.BackfillStatus
 	err                       error
 	states                    map[[32]byte]state.BeaconState
-	blocks                    map[[32]byte]interfaces.ReadOnlySignedBeaconBlock
+	blocks                    map[[32]byte]blocks.ROBlock
 }
 
 var _ BeaconDB = &mockBackfillDB{}
@@ -83,15 +83,13 @@ func (d *mockBackfillDB) Block(ctx context.Context, blockRoot [32]byte) (interfa
 	return b, nil
 }
 
-func (d *mockBackfillDB) SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock) error {
+func (d *mockBackfillDB) SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error {
 	if d.blocks == nil {
-		d.blocks = make(map[[32]byte]interfaces.ReadOnlySignedBeaconBlock)
+		d.blocks = make(map[[32]byte]blocks.ROBlock)
 	}
-	r, err := signed.Block().HashTreeRoot()
-	if err != nil {
-		return err
+	for i := range blks {
+		d.blocks[blks[i].Root()] = blks[i]
 	}
-	d.blocks[r] = signed
 	return nil
 }
 
@@ -142,11 +140,12 @@ func TestSlotCovered(t *testing.T) {
 func TestStatusUpdater_FillBack(t *testing.T) {
 	ctx := context.Background()
 	mdb := &mockBackfillDB{}
-	s := &Store{bs: &dbval.BackfillStatus{LowSlot: 100}, store: mdb}
 	b, err := setupTestBlock(90)
 	require.NoError(t, err)
 	rob, err := blocks.NewROBlock(b)
 	require.NoError(t, err)
+	s := &Store{bs: &dbval.BackfillStatus{LowSlot: 100, LowParentRoot: rob.RootSlice()}, store: mdb}
+	require.Equal(t, false, s.AvailableBlock(95))
 	_, err = s.fillBack(ctx, []blocks.ROBlock{rob})
 	require.NoError(t, err)
 	require.Equal(t, true, s.AvailableBlock(95))
