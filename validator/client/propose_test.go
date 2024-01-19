@@ -1065,6 +1065,28 @@ func Test_findBuilderBoost(t *testing.T) {
 			},
 		},
 		{
+			name: "Proposer settings with builder settings and specific propose config but wrong pubkey",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+						bb := uint64(123)
+						config[[fieldparams.BLSPubkeyLength]byte{'z'}] = &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
 			name: "Proposer settings with builder settings and default config",
 			args: args{
 				proposerSettings: &validatorserviceconfig.ProposerSettings{
