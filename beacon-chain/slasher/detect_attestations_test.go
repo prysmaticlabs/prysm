@@ -620,44 +620,6 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NotNil(t, slashing)
 }
 
-func Test_checkDoubleVotes_SlashableInputAttestations(t *testing.T) {
-	slasherDB := dbtest.SetupSlasherDB(t)
-	ctx := context.Background()
-	// For a list of input attestations, check that we can
-	// indeed check there could exist a double vote offense
-	// within the list with respect to other entries in the list.
-	atts := []*slashertypes.IndexedAttestationWrapper{
-		createAttestationWrapper(t, 0, 1, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1}),
-		createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2}), // Different signing root.
-	}
-	srv, err := New(context.Background(),
-		&ServiceConfig{
-			Database:      slasherDB,
-			StateNotifier: &mock.MockStateNotifier{},
-			ClockWaiter:   startup.NewClockSynchronizer(),
-		})
-	require.NoError(t, err)
-
-	prev1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur1 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	prev2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{1})
-	cur2 := createAttestationWrapper(t, 0, 2, []uint64{1, 2}, []byte{2})
-	wanted := []*ethpb.AttesterSlashing{
-		{
-			Attestation_1: prev1.IndexedAttestation,
-			Attestation_2: cur1.IndexedAttestation,
-		},
-		{
-			Attestation_1: prev2.IndexedAttestation,
-			Attestation_2: cur2.IndexedAttestation,
-		},
-	}
-	slashings, err := srv.checkDoubleVotes(ctx, atts)
-	require.NoError(t, err)
-	require.DeepEqual(t, wanted, slashings)
-}
-
 func Test_checkDoubleVotes_SlashableAttestationsOnDisk(t *testing.T) {
 	slasherDB := dbtest.SetupSlasherDB(t)
 	ctx := context.Background()

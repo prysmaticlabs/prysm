@@ -136,50 +136,8 @@ func (s *Service) detectAllAttesterSlashings(
 	return slashings, nil
 }
 
-// Check for attester slashing double votes by looking at every single validator index
-// in each attestation's attesting indices and checking if there already exist records for such
-// attestation's target epoch. If so, we append a double vote slashing object to a list of slashings
-// we return to the caller.
-func (s *Service) checkDoubleVotes(
-	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
-) ([]*ethpb.AttesterSlashing, error) {
-	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotes")
-	defer span.End()
-
-	// We check if there are any slashable double votes in the input list
-	// of attestations with respect to each other.
-	slashings := make([]*ethpb.AttesterSlashing, 0)
-	existingAtts := make(map[string]*slashertypes.IndexedAttestationWrapper)
-
-	for _, attestation := range attestations {
-		for _, valIdx := range attestation.IndexedAttestation.AttestingIndices {
-			key := uintToString(uint64(attestation.IndexedAttestation.Data.Target.Epoch)) + ":" + uintToString(valIdx)
-			existingAtt, ok := existingAtts[key]
-			if !ok {
-				existingAtts[key] = attestation
-				continue
-			}
-			if attestation.SigningRoot != existingAtt.SigningRoot {
-				doubleVotesTotal.Inc()
-				slashings = append(slashings, &ethpb.AttesterSlashing{
-					Attestation_1: existingAtt.IndexedAttestation,
-					Attestation_2: attestation.IndexedAttestation,
-				})
-			}
-		}
-	}
-
-	// We check if there are any slashable double votes in the input list
-	// of attestations with respect to our database.
-	moreSlashings, err := s.checkDoubleVotesOnDisk(ctx, attestations)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not check attestation double votes on disk")
-	}
-	return append(slashings, moreSlashings...), nil
-}
-
 // Check for double votes in our database given a list of incoming attestations.
-func (s *Service) checkDoubleVotesOnDisk(
+func (s *Service) checkDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.checkDoubleVotesOnDisk")
