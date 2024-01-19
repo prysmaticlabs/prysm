@@ -130,68 +130,89 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 	return nil
 }
 
-// CheckAttesterDoubleVotes retries any slashable double votes that exist
-// for a series of input attestations.
+// CheckAttesterDoubleVotes retrieves any slashable double votes that exist
+// for a series of input attestations with respect to the database.
 func (s *Store) CheckAttesterDoubleVotes(
 	ctx context.Context, attestations []*slashertypes.IndexedAttestationWrapper,
 ) ([]*slashertypes.AttesterDoubleVote, error) {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.CheckAttesterDoubleVotes")
 	defer span.End()
+
 	doubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
-	doubleVotesMu := sync.Mutex{}
+	mu := sync.Mutex{}
 	eg, egctx := errgroup.WithContext(ctx)
-	for _, att := range attestations {
+
+	for _, attestation := range attestations {
 		// Copy the iteration instance to a local variable to give each go-routine its own copy to play with.
 		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
-		attToProcess := att
-		// process every attestation parallelly.
+		attToProcess := attestation
+
+		// Process every attestation parallelly.
 		eg.Go(func() error {
 			err := s.db.View(func(tx *bolt.Tx) error {
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 				attRecordsBkt := tx.Bucket(attestationRecordsBucket)
+
 				encEpoch := encodeTargetEpoch(attToProcess.IndexedAttestation.Data.Target.Epoch)
-				localDoubleVotes := make([]*slashertypes.AttesterDoubleVote, 0)
+				localDoubleVotes := []*slashertypes.AttesterDoubleVote{}
+
 				for _, valIdx := range attToProcess.IndexedAttestation.AttestingIndices {
+					// Check if there is signing root in the database for this combination
+					// of validator index and target epoch.
 					encIdx := encodeValidatorIndex(primitives.ValidatorIndex(valIdx))
 					validatorEpochKey := append(encEpoch, encIdx...)
 					attRecordsKey := signingRootsBkt.Get(validatorEpochKey)
+
 					// An attestation record key is comprised of a signing root (32 bytes).
 					if len(attRecordsKey) < attestationRecordKeySize {
+						// If there is no signing root for this combination,
+						// then there is no double vote. We can continue to the next validator.
 						continue
 					}
+
+					// Retrieve the attestation record corresponding to the signing root
+					// from the database.
 					encExistingAttRecord := attRecordsBkt.Get(attRecordsKey)
 					if encExistingAttRecord == nil {
 						continue
 					}
+
 					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
 					if existingSigningRoot != attToProcess.SigningRoot {
 						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
 						if err != nil {
 							return err
 						}
+
+						// Build the proof of double vote.
 						slashAtt := &slashertypes.AttesterDoubleVote{
 							ValidatorIndex:         primitives.ValidatorIndex(valIdx),
 							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
 							PrevAttestationWrapper: existingAttRecord,
 							AttestationWrapper:     attToProcess,
 						}
+
 						localDoubleVotes = append(localDoubleVotes, slashAtt)
 					}
 				}
-				// if any routine is cancelled, then cancel this routine too
+
+				// If any routine is cancelled, then cancel this routine too.
 				select {
 				case <-egctx.Done():
 					return egctx.Err()
 				default:
 				}
-				// if there are any doible votes in this attestation, add it to the global double votes
+
+				// If there are any double votes in this attestation, add it to the global double votes.
 				if len(localDoubleVotes) > 0 {
-					doubleVotesMu.Lock()
-					defer doubleVotesMu.Unlock()
+					mu.Lock()
+					defer mu.Unlock()
 					doubleVotes = append(doubleVotes, localDoubleVotes...)
 				}
+
 				return nil
 			})
+
 			return err
 		})
 	}
@@ -231,6 +252,8 @@ func (s *Store) AttestationRecordForValidator(
 }
 
 // SaveAttestationRecordsForValidators saves attestation records for the specified indices.
+// If multiple attestations are provided for the same validator index + target epoch combination,
+// then only the last one is (arbitrarily) saved in the `attestationDataRootsBucket` bucket.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
