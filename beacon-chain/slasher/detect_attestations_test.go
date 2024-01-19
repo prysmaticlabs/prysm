@@ -35,6 +35,28 @@ func Test_processQueuedAttestations(t *testing.T) {
 		shouldBeSlashable bool
 	}{
 		{
+			name: "Same target with different signing roots",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{2}),
+				},
+				currentEpoch: 4,
+			},
+			shouldBeSlashable: true,
+		},
+		{
+			name: "Same target with same signing roots",
+			args: args{
+				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+					createAttestationWrapper(t, 1, 2, []uint64{0, 1}, []byte{1}),
+				},
+				currentEpoch: 4,
+			},
+			shouldBeSlashable: false,
+		},
+		{
 			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
