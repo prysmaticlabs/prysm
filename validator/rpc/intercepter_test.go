@@ -79,7 +79,8 @@ func TestServer_JwtHttpInterceptor(t *testing.T) {
 	testHandler := s.JwtHttpInterceptor(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Your test handler logic here
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Test Response"))
+		_, err := w.Write([]byte("Test Response"))
+		require.NoError(t, err)
 	}))
 	t.Run("no jwt was sent", func(t *testing.T) {
 		rr := httptest.NewRecorder()
