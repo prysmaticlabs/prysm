@@ -4,14 +4,17 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	blocktest "github.com/prysmaticlabs/prysm/v4/consensus-types/blocks/testing"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -28,6 +31,7 @@ import (
 	testing2 "github.com/prysmaticlabs/prysm/v4/validator/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/validator/graffiti"
 	logTest "github.com/sirupsen/logrus/hooks/test"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type mocks struct {
@@ -978,5 +982,136 @@ func TestGetGraffitiOrdered_Ok(t *testing.T) {
 		got, err := v.getGraffiti(context.Background(), pubKey)
 		require.NoError(t, err)
 		require.DeepEqual(t, want, got)
+	}
+}
+
+func Test_findBuilderBoost(t *testing.T) {
+	pubKey := [fieldparams.BLSPubkeyLength]byte{'a'}
+
+	type args struct {
+		proposerSettings *validatorserviceconfig.ProposerSettings
+	}
+	tests := []struct {
+		name string
+		args args
+		want *wrapperspb.UInt64Value
+	}{
+		{
+			name: "no proposer settings",
+			args: args{
+				proposerSettings: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings without builder settings",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+						config[pubKey] = &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings with builder settings but without builder boost factor",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+						config[pubKey] = &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled: true,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Proposer settings with builder settings and specific propose config",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					ProposeConfig: func() map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption {
+						config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
+						bb := uint64(123)
+						config[pubKey] = &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+						return config
+					}(),
+				},
+			},
+			want: &wrapperspb.UInt64Value{
+				Value: 123,
+			},
+		},
+		{
+			name: "Proposer settings with builder settings and default config",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					DefaultConfig: func() *validatorserviceconfig.ProposerOption {
+						bb := uint64(123)
+						return &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: &bb,
+							},
+						}
+					}(),
+				},
+			},
+			want: &wrapperspb.UInt64Value{
+				Value: 123,
+			},
+		},
+		{
+			name: "Proposer settings with nil boost settings",
+			args: args{
+				proposerSettings: &validatorserviceconfig.ProposerSettings{
+					DefaultConfig: func() *validatorserviceconfig.ProposerOption {
+						var bb *uint64
+						return &validatorserviceconfig.ProposerOption{
+							FeeRecipientConfig: &validatorserviceconfig.FeeRecipientConfig{
+								FeeRecipient: common.HexToAddress("a"),
+							},
+							BuilderConfig: &validatorserviceconfig.BuilderConfig{
+								Enabled:            true,
+								BuilderBoostFactor: bb,
+							},
+						}
+					}(),
+				},
+			},
+			want: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := findBuilderBoost(pubKey, tt.args.proposerSettings); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("findBuilderBoost() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
