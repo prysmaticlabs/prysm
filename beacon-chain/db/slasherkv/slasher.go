@@ -69,40 +69,50 @@ func (s *Store) LastEpochWrittenForValidators(
 // SaveLastEpochsWrittenForValidators updates the latest epoch a slice
 // of validator indices has attested to.
 func (s *Store) SaveLastEpochsWrittenForValidators(
-	ctx context.Context, epochByValidator map[primitives.ValidatorIndex]primitives.Epoch,
+	ctx context.Context, epochByValIndex map[primitives.ValidatorIndex]primitives.Epoch,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB.SaveLastEpochsWrittenForValidators")
 	defer span.End()
-	encodedIndices := make([][]byte, 0, len(epochByValidator))
-	encodedEpochs := make([][]byte, 0, len(epochByValidator))
-	for valIdx, epoch := range epochByValidator {
+
+	const batchSize = 10000
+
+	encodedIndexes := make([][]byte, 0, len(epochByValIndex))
+	encodedEpochs := make([][]byte, 0, len(epochByValIndex))
+
+	for valIndex, epoch := range epochByValIndex {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+
 		encodedEpoch, err := epoch.MarshalSSZ()
 		if err != nil {
 			return err
 		}
-		encodedIndices = append(encodedIndices, encodeValidatorIndex(valIdx))
+
+		encodedIndexes = append(encodedIndexes, encodeValidatorIndex(valIndex))
 		encodedEpochs = append(encodedEpochs, encodedEpoch)
 	}
+
 	// The list of validators might be too massive for boltdb to handle in a single transaction,
 	// so instead we split it into batches and write each batch.
-	batchSize := 10000
-	for i := 0; i < len(encodedIndices); i += batchSize {
+	for i := 0; i < len(encodedIndexes); i += batchSize {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+
 		if err := s.db.Update(func(tx *bolt.Tx) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
+
 			bkt := tx.Bucket(attestedEpochsByValidator)
+
 			min := i + batchSize
-			if min > len(encodedIndices) {
-				min = len(encodedIndices)
+			if min > len(encodedIndexes) {
+				min = len(encodedIndexes)
 			}
-			for j, encodedIndex := range encodedIndices[i:min] {
+
+			for j, encodedIndex := range encodedIndexes[i:min] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
@@ -110,11 +120,13 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 					return err
 				}
 			}
+
 			return nil
 		}); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
