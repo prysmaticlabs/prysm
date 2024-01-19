@@ -191,7 +191,6 @@ func createTokenString(jwtKey []byte) (string, error) {
 	return tokenString, nil
 }
 
-// DEPRECATED: associated to Initialize Web UI API
 func createRandomJWTSecret() ([]byte, error) {
 	r := rand.NewGenerator()
 	jwtKey := make([]byte, 32)
