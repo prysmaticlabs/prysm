@@ -66,18 +66,28 @@ func TestVerifyIndexInCommittee_ExistsInBeaconCommittee(t *testing.T) {
 	s, _ := util.DeterministicGenesisState(t, validators)
 	require.NoError(t, s.SetSlot(params.BeaconConfig().SlotsPerEpoch))
 
-	bf := []byte{0xff}
 	att := &ethpb.Attestation{Data: &ethpb.AttestationData{
-		Target: &ethpb.Checkpoint{Epoch: 0}},
-		AggregationBits: bf}
+		Target: &ethpb.Checkpoint{Epoch: 0}}}
 
 	committee, err := helpers.BeaconCommitteeFromState(context.Background(), s, att.Data.Slot, att.Data.CommitteeIndex)
 	require.NoError(t, err)
+
+	bl := bitfield.NewBitlist(uint64(len(committee)))
+	att.AggregationBits = bl
+
+	require.ErrorContains(t, "no attesting indices", validateIndexInCommittee(ctx, s, att, committee[0]))
+	att.AggregationBits.SetBitAt(0, true)
 
 	require.NoError(t, validateIndexInCommittee(ctx, s, att, committee[0]))
 
 	wanted := "validator index 1000 is not within the committee"
 	assert.ErrorContains(t, wanted, validateIndexInCommittee(ctx, s, att, 1000))
+
+	att.AggregationBits = bitfield.NewBitlist(1)
+	require.ErrorContains(t, "bitfield length 1 does not match committee length 4", validateIndexInCommittee(ctx, s, att, committee[0]))
+
+	att.Data.CommitteeIndex = 10000
+	require.ErrorContains(t, "committee index 10000 is greater than committee count 2", validateIndexInCommittee(ctx, s, att, committee[0]))
 }
 
 func TestVerifySelection_NotAnAggregator(t *testing.T) {

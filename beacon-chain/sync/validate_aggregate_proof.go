@@ -20,6 +20,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -216,15 +217,44 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 	s.seenAggregatedAttestationCache.Add(string(b), true)
 }
 
-// This validates the aggregator's index in state is within the beacon committee.
+// This validates the bitfield is correct and aggregator's index in state is within the beacon committee.
+// It implements the following checks from the consensus spec:
+//   - [REJECT] The committee index is within the expected range -- i.e. `aggregate.data.index < get_committee_count_per_slot(state, aggregate.data.target.epoch)`.
+//   - [REJECT] The number of aggregation bits matches the committee size --
+//     i.e. len(aggregate.aggregation_bits) == len(get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)).
+//   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
+//   - [REJECT] The aggregator's validator index is within the committee --
+//     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
 func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) error {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
+
+	ac, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.Data.Slot))
+	if err != nil {
+		return err
+	}
+	cc := helpers.SlotCommitteeCount(ac)
+	if uint64(a.Data.CommitteeIndex) >= helpers.SlotCommitteeCount(ac) {
+		return fmt.Errorf("committee index %d is greater than committee count %d",
+			a.Data.CommitteeIndex, cc)
+	}
 
 	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, a.Data.Slot, a.Data.CommitteeIndex)
 	if err != nil {
 		return err
 	}
+	if uint64(len(committee)) != a.AggregationBits.Len() {
+		return fmt.Errorf("bitfield length %d does not match committee length %d",
+			a.AggregationBits.Len(), uint64(len(committee)))
+	}
+	indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
+	if err != nil {
+		return err
+	}
+	if len(indices) == 0 {
+		return errors.New("no attesting indices")
+	}
+
 	var withinCommittee bool
 	for _, i := range committee {
 		if validatorIndex == i {
