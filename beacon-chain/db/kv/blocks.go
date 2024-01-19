@@ -281,58 +281,77 @@ func (s *Store) SaveBlocks(ctx context.Context, blks []interfaces.ReadOnlySigned
 		}
 		robs[i] = rb
 	}
-	if err := s.SaveROBlocks(ctx, robs); err != nil {
-		return err
-	}
+	return s.SaveROBlocks(ctx, robs, true)
+}
 
-	saveBlinded, err := s.shouldSaveBlinded(ctx)
+type blockBatchEntry struct {
+	root    []byte
+	block   interfaces.ReadOnlySignedBeaconBlock
+	enc     []byte
+	updated bool
+	indices map[string][]byte
+}
+
+func prepareBlockBatch(blks []blocks.ROBlock, shouldBlind bool) ([]blockBatchEntry, error) {
+	batch := make([]blockBatchEntry, len(blks))
+	for i := range blks {
+		batch[i].root, batch[i].block = blks[i].RootSlice(), blks[i].ReadOnlySignedBeaconBlock
+		batch[i].indices = blockIndices(batch[i].block.Block().Slot(), batch[i].block.Block().ParentRoot())
+		if shouldBlind {
+			blinded, err := batch[i].block.ToBlinded()
+			if err != nil {
+				if !errors.Is(err, blocks.ErrUnsupportedVersion) {
+					return nil, errors.Wrapf(err, "could not convert block to blinded format for root %#x", batch[i].root)
+				}
+				// Pre-deneb blocks give ErrUnsupportedVersion; use the full block already in the batch entry.
+			} else {
+				batch[i].block = blinded
+			}
+		}
+		enc, err := encodeBlock(batch[i].block)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to encode block for root %#x", batch[i].root)
+		}
+		batch[i].enc = enc
+	}
+	return batch, nil
+}
+
+func (s *Store) SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error {
+	shouldBlind, err := s.shouldSaveBlinded(ctx)
 	if err != nil {
 		return err
 	}
-	for i := range robs {
-		if saveBlinded {
-			blindedBlock, err := blks[i].ToBlinded()
-			if err == nil {
-				s.blockCache.Set(string(robs[i].RootSlice()), blindedBlock, int64(blindedBlock.SizeSSZ()))
-				continue
-			}
-			if !errors.Is(err, blocks.ErrUnsupportedVersion) {
-				return err
-			}
-		}
-		s.blockCache.Set(string(robs[i].RootSlice()), blks[i], int64(robs[i].SizeSSZ()))
+	// Precompute expensive values outside the db transaction.
+	batch, err := prepareBlockBatch(blks, shouldBlind)
+	if err != nil {
+		return errors.Wrap(err, "failed to encode all blocks in batch for saving to the db")
 	}
-	return err
-}
-
-func (s *Store) SaveROBlocks(ctx context.Context, blks []blocks.ROBlock) error {
-	// Performing marshaling, hashing, and indexing outside the bolt transaction
-	// to minimize the time we hold the DB lock.
-	encoded := make([][]byte, len(blks))
-	for i := range blks {
-		enc, err := s.marshalBlock(ctx, blks[i])
-		if err != nil {
-			return err
-		}
-		encoded[i] = enc
-	}
-	return s.db.Update(func(tx *bolt.Tx) error {
+	err = s.db.Update(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(blocksBucket)
-		for i := range blks {
-			b := blks[i]
-			root := b.RootSlice()
-			if exists := bkt.Get(root); exists != nil {
+		for i := range batch {
+			if exists := bkt.Get(batch[i].root); exists != nil {
 				continue
 			}
-			if err := bkt.Put(root, encoded[i]); err != nil {
-				return err
+			if err := bkt.Put(batch[i].root, batch[i].enc); err != nil {
+				return errors.Wrapf(err, "could write block to db with root %#x", batch[i].root)
 			}
-			if err := updateValueForIndices(ctx, blockIndices(b.Block().Slot(), b.Block().ParentRoot()), b.RootSlice(), tx); err != nil {
-				return errors.Wrap(err, "could not update DB indices")
+			if err := updateValueForIndices(ctx, batch[i].indices, batch[i].root, tx); err != nil {
+				return errors.Wrapf(err, "could not update DB indices for root %#x", batch[i].root)
 			}
+			batch[i].updated = true
 		}
 		return nil
 	})
+	if !cache {
+		return err
+	}
+	for i := range batch {
+		if batch[i].updated {
+			s.blockCache.Set(string(batch[i].root), batch[i].block, int64(len(batch[i].enc)))
+		}
+	}
+	return err
 }
 
 // blockIndices takes in a beacon block and returns
@@ -804,74 +823,44 @@ func unmarshalBlock(_ context.Context, enc []byte) (interfaces.ReadOnlySignedBea
 	return blocks.NewSignedBeaconBlock(rawBlock)
 }
 
-func (s *Store) marshalBlock(
-	ctx context.Context,
-	blk interfaces.ReadOnlySignedBeaconBlock,
-) ([]byte, error) {
-	shouldBlind, err := s.shouldSaveBlinded(ctx)
+func encodeBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
+	key, err := keyForBlock(blk)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not determine version encoding key for block")
 	}
-	if shouldBlind {
-		return marshalBlockBlinded(ctx, blk)
+	enc, err := blk.MarshalSSZ()
+	if err != nil {
+		return nil, errors.Wrap(err, "could not marshal block")
 	}
-	return marshalBlockFull(ctx, blk)
+	dbfmt := make([]byte, len(key)+len(enc))
+	if len(key) > 0 {
+		copy(dbfmt, key)
+	}
+	copy(dbfmt[len(key):], enc)
+	return snappy.Encode(nil, dbfmt), nil
 }
 
-// Encodes a full beacon block to the DB with its associated key.
-func marshalBlockFull(
-	_ context.Context,
-	blk interfaces.ReadOnlySignedBeaconBlock,
-) ([]byte, error) {
-	var encodedBlock []byte
-	var err error
-	encodedBlock, err = blk.MarshalSSZ()
-	if err != nil {
-		return nil, err
-	}
+func keyForBlock(blk interfaces.ReadOnlySignedBeaconBlock) ([]byte, error) {
 	switch blk.Version() {
 	case version.Deneb:
-		return snappy.Encode(nil, append(denebKey, encodedBlock...)), nil
-	case version.Capella:
-		return snappy.Encode(nil, append(capellaKey, encodedBlock...)), nil
-	case version.Bellatrix:
-		return snappy.Encode(nil, append(bellatrixKey, encodedBlock...)), nil
-	case version.Altair:
-		return snappy.Encode(nil, append(altairKey, encodedBlock...)), nil
-	case version.Phase0:
-		return snappy.Encode(nil, encodedBlock), nil
-	default:
-		return nil, errors.New("unknown block version")
-	}
-}
-
-// Encodes a blinded beacon block with its associated key.
-// If the block does not support blinding, we then encode it as a full
-// block with its associated key by calling marshalBlockFull.
-func marshalBlockBlinded(
-	ctx context.Context,
-	blk interfaces.ReadOnlySignedBeaconBlock,
-) ([]byte, error) {
-	blindedBlock, err := blk.ToBlinded()
-	if err != nil {
-		switch {
-		case errors.Is(err, blocks.ErrUnsupportedVersion):
-			return marshalBlockFull(ctx, blk)
-		default:
-			return nil, errors.Wrap(err, "could not convert block to blinded format")
+		if blk.IsBlinded() {
+			return denebBlindKey, nil
 		}
-	}
-	encodedBlock, err := blindedBlock.MarshalSSZ()
-	if err != nil {
-		return nil, errors.Wrap(err, "could not marshal blinded block")
-	}
-	switch blk.Version() {
-	case version.Deneb:
-		return snappy.Encode(nil, append(denebBlindKey, encodedBlock...)), nil
+		return denebKey, nil
 	case version.Capella:
-		return snappy.Encode(nil, append(capellaBlindKey, encodedBlock...)), nil
+		if blk.IsBlinded() {
+			return capellaBlindKey, nil
+		}
+		return capellaKey, nil
 	case version.Bellatrix:
-		return snappy.Encode(nil, append(bellatrixBlindKey, encodedBlock...)), nil
+		if blk.IsBlinded() {
+			return bellatrixBlindKey, nil
+		}
+		return bellatrixKey, nil
+	case version.Altair:
+		return altairKey, nil
+	case version.Phase0:
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported block version: %v", blk.Version())
 	}

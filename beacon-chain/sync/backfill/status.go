@@ -87,10 +87,8 @@ func (s *Store) fillBack(ctx context.Context, blocks []blocks.ROBlock) (*dbval.B
 			status.LowParentRoot, highest.Root(), status.LowSlot, highest.Block().Slot())
 	}
 
-	for _, b := range blocks {
-		if err := s.store.SaveBlock(ctx, b); err != nil {
-			return nil, errors.Wrapf(err, "error saving backfill block with root=%#x, slot=%d", b.Root(), b.Block().Slot())
-		}
+	if err := s.store.SaveROBlocks(ctx, blocks, false); err != nil {
+		return nil, errors.Wrapf(err, "error saving backfill blocks")
 	}
 
 	// Update finalized block index.
@@ -165,7 +163,7 @@ type BeaconDB interface {
 	BackfillFinalizedIndex(ctx context.Context, blocks []blocks.ROBlock, finalizedChildRoot [32]byte) error
 	OriginCheckpointBlockRoot(context.Context) ([32]byte, error)
 	Block(context.Context, [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
-	SaveBlock(ctx context.Context, signed interfaces.ReadOnlySignedBeaconBlock) error
+	SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error
 	GenesisBlockRoot(context.Context) ([32]byte, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
