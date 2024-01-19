@@ -1059,49 +1059,7 @@ func (b *BeaconBlockBody) Execution() (interfaces.ExecutionData, error) {
 	switch b.version {
 	case version.Phase0, version.Altair:
 		return nil, consensus_types.ErrNotSupported("Execution", b.version)
-	case version.Bellatrix:
-		if b.IsBlinded() {
-			var ph *enginev1.ExecutionPayloadHeader
-			var ok bool
-			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeader)
-				if !ok {
-					return nil, errPayloadHeaderWrongType
-				}
-			}
-			return WrappedExecutionPayloadHeader(ph)
-		}
-		var p *enginev1.ExecutionPayload
-		var ok bool
-		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayload)
-			if !ok {
-				return nil, errPayloadWrongType
-			}
-		}
-		return WrappedExecutionPayload(p)
-	case version.Capella:
-		if b.IsBlinded() {
-			var ph *enginev1.ExecutionPayloadHeaderCapella
-			var ok bool
-			if b.executionPayloadHeader != nil {
-				ph, ok = b.executionPayloadHeader.Proto().(*enginev1.ExecutionPayloadHeaderCapella)
-				if !ok {
-					return nil, errPayloadHeaderWrongType
-				}
-				return WrappedExecutionPayloadHeaderCapella(ph, big.NewInt(0))
-			}
-		}
-		var p *enginev1.ExecutionPayloadCapella
-		var ok bool
-		if b.executionPayload != nil {
-			p, ok = b.executionPayload.Proto().(*enginev1.ExecutionPayloadCapella)
-			if !ok {
-				return nil, errPayloadWrongType
-			}
-		}
-		return WrappedExecutionPayloadCapella(p, big.NewInt(0))
-	case version.Deneb:
+	default:
 		if b.IsBlinded() {
 			return b.executionPayloadHeader, nil
 		}
