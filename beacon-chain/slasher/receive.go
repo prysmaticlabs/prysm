@@ -107,6 +107,8 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			}).Info("Processing queued attestations for slashing detection")
 
 			// Save the attestation records to our database.
+			// If multiple attestations are provided for the same validator index + target epoch combination,
+			// then last (validator index + target epoch) => signing root) link is kept into the database.
 			if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(
 				ctx, validAtts,
 			); err != nil {
