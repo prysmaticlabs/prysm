@@ -50,7 +50,7 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 			_, err := jwt.Parse(token, s.validateJWT)
 			if err != nil {
 				fmt.Println(err)
-				http.Error(w, fmt.Errorf("unauthorized:could not parse JWT token: %v", err).Error(), http.StatusForbidden)
+				http.Error(w, fmt.Errorf("forbidden: could not parse JWT token: %v", err).Error(), http.StatusForbidden)
 				return
 			}
 		}
