@@ -15,11 +15,12 @@ import (
 
 // AttDelta contains rewards and penalties for a single attestation.
 type AttDelta struct {
-	HeadReward    uint64
-	SourceReward  uint64
-	SourcePenalty uint64
-	TargetReward  uint64
-	TargetPenalty uint64
+	HeadReward        uint64
+	SourceReward      uint64
+	SourcePenalty     uint64
+	TargetReward      uint64
+	TargetPenalty     uint64
+	InactivityPenalty uint64
 }
 
 // InitializePrecomputeValidators precomputes individual validator for its attested balances and the total sum of validators attested balances of the epoch.
@@ -251,7 +252,7 @@ func ProcessRewardsAndPenaltiesPrecompute(
 		if err != nil {
 			return nil, err
 		}
-		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], delta.SourcePenalty+delta.TargetPenalty)
+		balances[i] = helpers.DecreaseBalanceWithVal(balances[i], delta.SourcePenalty+delta.TargetPenalty+delta.InactivityPenalty)
 
 		vals[i].AfterEpochTransitionBalance = balances[i]
 	}
@@ -351,7 +352,7 @@ func attestationDelta(
 		if err != nil {
 			return &AttDelta{}, err
 		}
-		attDelta.TargetPenalty += n / inactivityDenominator
+		attDelta.InactivityPenalty = n / inactivityDenominator
 	}
 
 	return attDelta, nil

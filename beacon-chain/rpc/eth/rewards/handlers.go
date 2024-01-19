@@ -62,7 +62,6 @@ func (s *Server) BlockRewards(w http.ResponseWriter, r *http.Request) {
 
 // AttestationRewards retrieves attestation reward info for validators specified by array of public keys or validator index.
 // If no array is provided, return reward info for every validator.
-// TODO: Inclusion delay
 func (s *Server) AttestationRewards(w http.ResponseWriter, r *http.Request) {
 	st, ok := s.attRewardsState(w, r)
 	if !ok {
@@ -277,7 +276,10 @@ func idealAttRewards(
 					IsPrevEpochTargetAttester:    true,
 					IsPrevEpochHeadAttester:      true,
 				})
-				idealRewards = append(idealRewards, IdealAttestationReward{EffectiveBalance: strconv.FormatUint(effectiveBalance, 10)})
+				idealRewards = append(idealRewards, IdealAttestationReward{
+					EffectiveBalance: strconv.FormatUint(effectiveBalance, 10),
+					Inactivity:       strconv.FormatUint(0, 10),
+				})
 				break
 			}
 		}
@@ -298,6 +300,11 @@ func idealAttRewards(
 			idealRewards[i].Target = fmt.Sprintf("-%s", strconv.FormatUint(d.TargetPenalty, 10))
 		} else {
 			idealRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
+		}
+		if d.InactivityPenalty > 0 {
+			idealRewards[i].Inactivity = fmt.Sprintf("-%s", strconv.FormatUint(d.InactivityPenalty, 10))
+		} else {
+			idealRewards[i].Inactivity = strconv.FormatUint(d.InactivityPenalty, 10)
 		}
 	}
 	return idealRewards, true
@@ -330,6 +337,11 @@ func totalAttRewards(
 			totalRewards[i].Target = fmt.Sprintf("-%s", strconv.FormatUint(d.TargetPenalty, 10))
 		} else {
 			totalRewards[i].Target = strconv.FormatUint(d.TargetReward, 10)
+		}
+		if d.InactivityPenalty > 0 {
+			totalRewards[i].Inactivity = fmt.Sprintf("-%s", strconv.FormatUint(d.InactivityPenalty, 10))
+		} else {
+			totalRewards[i].Inactivity = strconv.FormatUint(d.InactivityPenalty, 10)
 		}
 	}
 	return totalRewards, true
