@@ -41,7 +41,7 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 		// if it's not initialize or has a web prefix
 		if !strings.Contains(r.URL.Path, api.WebUrlPrefix+"initialize") && // ignore some routes
 			!strings.Contains(r.URL.Path, api.WebUrlPrefix+"health/logs") &&
-			strings.Contains(r.URL.Path, api.WebUrlPrefix) {
+			(strings.Contains(r.URL.Path, api.WebUrlPrefix) || api.IsKeymanagerUrlPrefix(r.URL.Path)) {
 			reqToken := r.Header.Get("Authorization")
 			if reqToken == "" {
 				http.Error(w, "unauthorized: no Authorization header passed. Please use an Authorization header with the jwt created in the prysm wallet", http.StatusUnauthorized)
@@ -50,7 +50,7 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 			token := strings.Split(reqToken, "Bearer ")[1]
 			_, err := jwt.Parse(token, s.validateJWT)
 			if err != nil {
-				http.Error(w, fmt.Errorf("unauthorized:could not parse JWT token: %v", err).Error(), http.StatusUnauthorized)
+				http.Error(w, fmt.Errorf("unauthorized:could not parse JWT token: %v", err).Error(), http.StatusForbidden)
 				return
 			}
 		}
