@@ -16,6 +16,7 @@ go_library(
         "operations.go",
         "peers.go",
         "slashing.go",
+        "slashing_helper.go",
         "validator.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/testing/endtoend/evaluators",
