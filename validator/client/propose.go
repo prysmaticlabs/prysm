@@ -448,35 +448,27 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 }
 
 func (v *validator) SetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	noValidSettingErr := errors.New("attempted to set graffiti without proposer settings, graffiti will default to flag options")
-	if v.proposerSettings == nil {
-		return noValidSettingErr
-	}
-	if v.proposerSettings.ProposeConfig == nil {
-		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:]))
+	if v.proposerSettings == nil || v.proposerSettings.ProposeConfig == nil {
+		return errors.New("attempted to set graffiti without proposer settings, graffiti will default to flag options")
 	}
 	ps := v.proposerSettings.Clone()
 	var option *validatorserviceconfig.ProposerOption
 	option, ok := ps.ProposeConfig[pubKey]
 	if !ok || option == nil {
-		return noValidSettingErr
+		return fmt.Errorf("attempted to set graffiti but proposer settings are missing for pubkey:%s", hexutil.Encode(pubKey[:]))
 	}
 	option.Graffiti = string(graffiti)
 	return v.SetProposerSettings(ctx, ps) // save the proposer settings
 }
 
 func (v *validator) DeleteGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) error {
-	noValidSettingErr := errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
-	if v.proposerSettings == nil {
-		return noValidSettingErr
-	}
-	if v.proposerSettings.ProposeConfig == nil {
-		return fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
+	if v.proposerSettings == nil || v.proposerSettings.ProposeConfig == nil {
+		return errors.New("attempted to delete graffiti without proposer settings, graffiti will default to flag options")
 	}
 	ps := v.proposerSettings.Clone()
 	option, ok := ps.ProposeConfig[pubKey]
 	if !ok || option == nil {
-		return noValidSettingErr
+		return fmt.Errorf("graffiti not found in proposer settings for pubkey:%s", hexutil.Encode(pubKey[:]))
 	}
 	option.Graffiti = ""
 	return v.SetProposerSettings(ctx, ps) // save the proposer settings
