@@ -1,6 +1,7 @@
 package backfill
 
 import (
+	"bytes"
 	"context"
 	"testing"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/testing/util"
@@ -22,7 +22,6 @@ var errEmptyMockDBMethod = errors.New("uninitialized mock db method called")
 
 type mockBackfillDB struct {
 	saveBackfillBlockRoot     func(ctx context.Context, blockRoot [32]byte) error
-	genesisBlockRoot          func(ctx context.Context) ([32]byte, error)
 	originCheckpointBlockRoot func(ctx context.Context) ([32]byte, error)
 	block                     func(ctx context.Context, blockRoot [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	saveBackfillStatus        func(ctx context.Context, status *dbval.BackfillStatus) error
@@ -56,13 +55,6 @@ func (d *mockBackfillDB) BackfillStatus(ctx context.Context) (*dbval.BackfillSta
 		return d.backfillStatus(ctx)
 	}
 	return d.status, nil
-}
-
-func (d *mockBackfillDB) GenesisBlockRoot(ctx context.Context) ([32]byte, error) {
-	if d.genesisBlockRoot != nil {
-		return d.genesisBlockRoot(ctx)
-	}
-	return [32]byte{}, errEmptyMockDBMethod
 }
 
 func (d *mockBackfillDB) OriginCheckpointBlockRoot(ctx context.Context) ([32]byte, error) {
@@ -166,9 +158,8 @@ func setupTestBlock(slot primitives.Slot) (interfaces.ReadOnlySignedBeaconBlock,
 	return blocktest.SetBlockSlot(b, slot)
 }
 
-func TestReload(t *testing.T) {
+func TestNewUpdater(t *testing.T) {
 	ctx := context.Background()
-	derp := errors.New("derp")
 
 	originSlot := primitives.Slot(100)
 	var originRoot [32]byte
@@ -178,164 +169,39 @@ func TestReload(t *testing.T) {
 
 	backfillSlot := primitives.Slot(50)
 	var backfillRoot [32]byte
-	copy(originRoot[:], []byte{0x02})
+	copy(backfillRoot[:], []byte{0x02})
 	backfillBlock, err := setupTestBlock(backfillSlot)
 	require.NoError(t, err)
-
+	var parentRoot [32]byte
+	copy(parentRoot[:], []byte{0x03})
+	var rootSlice = func(r [32]byte) []byte { return r[:] }
+	typicalBackfillStatus := &dbval.BackfillStatus{
+		LowSlot:       23,
+		LowRoot:       backfillRoot[:],
+		LowParentRoot: parentRoot[:],
+		OriginSlot:    1123,
+		OriginRoot:    originRoot[:],
+	}
 	cases := []struct {
 		name     string
 		db       BeaconDB
 		err      error
 		expected *Store
 	}{
-		/*{
+		{
 			name: "origin not found, implying genesis sync ",
 			db: &mockBackfillDB{
-				genesisBlockRoot: goodBlockRoot(params.BeaconConfig().ZeroHash),
+				backfillStatus: func(context.Context) (*dbval.BackfillStatus, error) {
+					return nil, db.ErrNotFound
+				},
 				originCheckpointBlockRoot: func(ctx context.Context) ([32]byte, error) {
 					return [32]byte{}, db.ErrNotFoundOriginBlockRoot
 				}},
-			expected: &StatusUpdater{genesisSync: true},
+			expected: &Store{genesisSync: true},
 		},
-		{
-			name: "genesis not found error",
-			err:  db.ErrNotFoundGenesisBlockRoot,
-			db: &mockBackfillDB{
-				genesisBlockRoot: func(ctx context.Context) ([32]byte, error) {
-					return [32]byte{}, db.ErrNotFoundGenesisBlockRoot
-				},
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					switch root {
-					case originRoot:
-						return originBlock, nil
-					}
-					return nil, nil
-				},
-			},
-		},
-		{
-			name: "other genesis error",
-			err:  derp,
-			db: &mockBackfillDB{
-				genesisBlockRoot: func(ctx context.Context) ([32]byte, error) {
-					return [32]byte{}, derp
-				},
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					switch root {
-					case originRoot:
-						return originBlock, nil
-					}
-					return nil, nil
-				},
-			},
-		},
-		{
-			name: "origin other error",
-			db: &mockBackfillDB{
-				genesisBlockRoot: goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: func(ctx context.Context) ([32]byte, error) {
-					return [32]byte{}, derp
-				}},
-			err: derp,
-		},
-		{
-			name: "origin root found, block missing",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					return nil, nil
-				},
-			},
-			err: blocks.ErrNilSignedBeaconBlock,
-		},
-		{
-			name: "origin root found, block error",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					return nil, derp
-				},
-			},
-			err: derp,
-		},
-		{
-			name: "origin root found, block found, backfill root not found",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					return originBlock, nil
-				},
-				backfillBlockRoot: func(ctx context.Context) ([32]byte, error) {
-					return [32]byte{}, db.ErrNotFoundBackfillBlockRoot
-				},
-			},
-			err: db.ErrNotFoundBackfillBlockRoot,
-		},
-		{
-			name: "origin root found, block found, random backfill root err",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					switch root {
-					case originRoot:
-						return originBlock, nil
-					case backfillRoot:
-						return nil, nil
-					}
-					return nil, derp
-				},
-				backfillBlockRoot: func(ctx context.Context) ([32]byte, error) {
-					return [32]byte{}, derp
-				},
-			},
-			err: derp,
-		},
-		{
-			name: "origin root found, block found, backfill root found, backfill block not found",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					switch root {
-					case originRoot:
-						return originBlock, nil
-					case backfillRoot:
-						return nil, nil
-					}
-					return nil, derp
-				},
-				backfillBlockRoot: goodBlockRoot(backfillRoot),
-			},
-			err: blocks.ErrNilSignedBeaconBlock,
-		},
-		{
-			name: "origin root found, block found, backfill root found, backfill block random err",
-			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
-				originCheckpointBlockRoot: goodBlockRoot(originRoot),
-				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
-					switch root {
-					case originRoot:
-						return originBlock, nil
-					case backfillRoot:
-						return nil, derp
-					}
-					return nil, errors.New("not derp")
-				},
-				backfillBlockRoot: goodBlockRoot(backfillRoot),
-			},
-			err: derp,
-		},*/
 		{
 			name: "legacy recovery",
 			db: &mockBackfillDB{
-				genesisBlockRoot:          goodBlockRoot(params.BeaconConfig().ZeroHash),
 				originCheckpointBlockRoot: goodBlockRoot(originRoot),
 				block: func(ctx context.Context, root [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
 					switch root {
@@ -348,22 +214,42 @@ func TestReload(t *testing.T) {
 				},
 				backfillStatus: func(context.Context) (*dbval.BackfillStatus, error) { return nil, db.ErrNotFound },
 			},
-			err:      derp,
-			expected: &Store{genesisSync: false, bs: &dbval.BackfillStatus{LowSlot: uint64(originSlot)}},
+			expected: &Store{bs: &dbval.BackfillStatus{
+				LowSlot: uint64(originSlot), OriginSlot: uint64(originSlot),
+				LowRoot: originRoot[:], OriginRoot: originRoot[:], LowParentRoot: rootSlice(originBlock.Block().ParentRoot()),
+			}},
+		},
+		{
+			name: "backfill found",
+			db: &mockBackfillDB{backfillStatus: func(ctx context.Context) (*dbval.BackfillStatus, error) {
+				return typicalBackfillStatus, nil
+			}},
+			expected: &Store{bs: typicalBackfillStatus},
 		},
 	}
 
 	for _, c := range cases {
-		s, err := NewUpdater(ctx, c.db)
-		if err != nil {
-			require.ErrorIs(t, err, c.err)
-			continue
-		}
-		require.NoError(t, err)
-		if c.expected == nil {
-			continue
-		}
-		require.Equal(t, c.expected.genesisSync, s.genesisSync)
-		require.Equal(t, c.expected.bs.LowSlot, s.bs.LowSlot)
+		t.Run(c.name, func(t *testing.T) {
+			s, err := NewUpdater(ctx, c.db)
+			if c.err != nil {
+				require.ErrorIs(t, err, c.err)
+				return
+			}
+			require.NoError(t, err)
+			if c.expected == nil {
+				return
+			}
+			require.Equal(t, c.expected.genesisSync, s.genesisSync)
+			if c.expected.genesisSync {
+				require.IsNil(t, s.bs)
+				return
+			}
+			require.Equal(t, c.expected.bs.LowSlot, s.bs.LowSlot)
+			require.Equal(t, c.expected.bs.OriginSlot, s.bs.OriginSlot)
+			require.Equal(t, true, bytes.Equal(c.expected.bs.OriginRoot, s.bs.OriginRoot))
+			require.Equal(t, true, bytes.Equal(c.expected.bs.LowRoot, s.bs.LowRoot))
+			require.Equal(t, true, bytes.Equal(c.expected.bs.LowParentRoot, s.bs.LowParentRoot))
+		})
 	}
+
 }

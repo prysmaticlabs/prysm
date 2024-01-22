@@ -164,6 +164,5 @@ type BeaconDB interface {
 	OriginCheckpointBlockRoot(context.Context) ([32]byte, error)
 	Block(context.Context, [32]byte) (interfaces.ReadOnlySignedBeaconBlock, error)
 	SaveROBlocks(ctx context.Context, blks []blocks.ROBlock, cache bool) error
-	GenesisBlockRoot(context.Context) ([32]byte, error)
 	StateOrError(ctx context.Context, blockRoot [32]byte) (state.BeaconState, error)
 }
