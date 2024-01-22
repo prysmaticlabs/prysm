@@ -37,7 +37,6 @@ func buildGetBeaconBlockUrlValues(randaoReveal []byte, graffiti []byte, builderB
 }
 
 func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte, builderBoostFactor *wrapperspb.UInt64Value) (*ethpb.GenericBeaconBlock, error) {
-
 	var ver string
 	var blinded bool
 	var decoder *json.Decoder
