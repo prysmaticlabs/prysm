@@ -1198,14 +1198,14 @@ func TestGetAttestationData(t *testing.T) {
 func TestProduceSyncCommitteeContribution(t *testing.T) {
 	root := bytesutil.PadTo([]byte("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), 32)
 	sig := bls.NewAggregateSignature().Marshal()
-	messsage := &ethpbalpha.SyncCommitteeMessage{
+	message := &ethpbalpha.SyncCommitteeMessage{
 		Slot:           1,
 		BlockRoot:      root,
 		ValidatorIndex: 0,
 		Signature:      sig,
 	}
 	syncCommitteePool := synccommittee.NewStore()
-	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
+	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(message))
 	server := Server{
 		CoreService: &core.Service{
 			HeadFetcher: &mockChain.ChainService{
