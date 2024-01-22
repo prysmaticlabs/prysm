@@ -401,7 +401,7 @@ func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubk
 		}
 	}
 
-	// When specified, default graffiti from the command line takes the second priority.
+	// When specified, use default graffiti from the command line.
 	if len(v.graffiti) != 0 {
 		return bytesutil.PadTo(v.graffiti, 32), nil
 	}
