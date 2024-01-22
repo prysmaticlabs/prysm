@@ -218,7 +218,7 @@ func TestProduceBlockV2(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -566,7 +566,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -848,7 +848,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -1192,7 +1192,7 @@ func TestProduceBlockV3(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -1554,7 +1554,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
