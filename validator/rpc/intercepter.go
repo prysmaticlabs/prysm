@@ -49,7 +49,6 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 			token := strings.Split(reqToken, "Bearer ")[1]
 			_, err := jwt.Parse(token, s.validateJWT)
 			if err != nil {
-				fmt.Println(err)
 				http.Error(w, fmt.Errorf("forbidden: could not parse JWT token: %v", err).Error(), http.StatusForbidden)
 				return
 			}
@@ -84,6 +83,5 @@ func (s *Server) validateJWT(token *jwt.Token) (interface{}, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected JWT signing method: %v", token.Header["alg"])
 	}
-	fmt.Println(s.jwtSecret)
 	return s.jwtSecret, nil
 }
