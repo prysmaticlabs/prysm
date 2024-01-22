@@ -361,7 +361,6 @@ func debugStateTransition(
 	st state.BeaconState,
 	signed interfaces.ReadOnlySignedBeaconBlock,
 ) (state.BeaconState, error) {
-
 	var err error
 
 	parentRoot := signed.Block().ParentRoot()
