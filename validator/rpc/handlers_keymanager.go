@@ -905,7 +905,7 @@ func (s *Server) SetGraffiti(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) DeleteGraffiti(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.SetGraffiti")
+	ctx, span := trace.StartSpan(r.Context(), "validator.keymanagerAPI.DeleteGraffiti")
 	defer span.End()
 
 	if s.validatorService == nil {
