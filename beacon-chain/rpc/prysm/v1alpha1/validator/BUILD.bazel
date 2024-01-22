@@ -4,7 +4,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "aggregator.go",
-        "assignments.go",
+        "duties.go",
         "attester.go",
         "blocks.go",
         "construct_generic_block.go",
@@ -178,7 +178,7 @@ go_test(
     timeout = "moderate",
     srcs = [
         "aggregator_test.go",
-        "assignments_test.go",
+        "duties_test.go",
         "attester_test.go",
         "blocks_test.go",
         "construct_generic_block_test.go",
