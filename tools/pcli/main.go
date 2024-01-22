@@ -242,7 +242,7 @@ func main() {
 					blkRoot,
 					preStateRoot,
 				)
-				postState, err := transition.ExecuteStateTransition(context.Background(), stateObj, block)
+				postState, err := debugStateTransition(context.Background(), stateObj, block)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -354,4 +354,33 @@ func benchmarkHash(sszPath string, sszType string) {
 	default:
 		log.Fatal("Invalid type")
 	}
+}
+
+func debugStateTransition(
+	ctx context.Context,
+	st state.BeaconState,
+	signed interfaces.ReadOnlySignedBeaconBlock,
+) (state.BeaconState, error) {
+	var err error
+
+	parentRoot := signed.Block().ParentRoot()
+	st, err = transition.ProcessSlotsUsingNextSlotCache(ctx, st, parentRoot[:], signed.Block().Slot())
+	if err != nil {
+		return st, errors.Wrap(err, "could not process slots")
+	}
+
+	// Execute per block transition.
+	set, st, err := transition.ProcessBlockNoVerifyAnySig(ctx, st, signed)
+	if err != nil {
+		return st, errors.Wrap(err, "could not process block")
+	}
+	var valid bool
+	valid, err = set.VerifyVerbosely()
+	if err != nil {
+		return st, errors.Wrap(err, "could not batch verify signature")
+	}
+	if !valid {
+		return st, errors.New("signature in block failed to verify")
+	}
+	return st, nil
 }
