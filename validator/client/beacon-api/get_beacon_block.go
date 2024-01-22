@@ -16,6 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type abstractProduceBlockResponseJson struct {
@@ -23,12 +24,19 @@ type abstractProduceBlockResponseJson struct {
 	Data    json.RawMessage `json:"data"`
 }
 
-func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte) (*ethpb.GenericBeaconBlock, error) {
+func buildGetBeaconBlockUrlValues(randaoReveal []byte, graffiti []byte, builderBoostFactor *wrapperspb.UInt64Value) neturl.Values {
 	queryParams := neturl.Values{}
+	if builderBoostFactor != nil {
+		queryParams.Add("builder_boost_factor", fmt.Sprint(builderBoostFactor.Value))
+	}
 	queryParams.Add("randao_reveal", hexutil.Encode(randaoReveal))
 	if len(graffiti) > 0 {
 		queryParams.Add("graffiti", hexutil.Encode(graffiti))
 	}
+	return queryParams
+}
+
+func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primitives.Slot, randaoReveal []byte, graffiti []byte, builderBoostFactor *wrapperspb.UInt64Value) (*ethpb.GenericBeaconBlock, error) {
 
 	var ver string
 	var blinded bool
@@ -36,7 +44,7 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 
 	// Try v3 endpoint first. If it's not supported, then we fall back to older endpoints.
 	// We try the blinded block endpoint first. If it fails, we assume that we got a full block and try the full block endpoint.
-	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), queryParams)
+	queryUrl := buildURL(fmt.Sprintf("/eth/v3/validator/blocks/%d", slot), buildGetBeaconBlockUrlValues(randaoReveal, graffiti, builderBoostFactor))
 	produceBlockV3ResponseJson := validator.ProduceBlockV3Response{}
 	err := c.jsonRestHandler.Get(ctx, queryUrl, &produceBlockV3ResponseJson)
 	errJson := &httputil.DefaultJsonError{}
@@ -48,14 +56,14 @@ func (c beaconApiValidatorClient) getBeaconBlock(ctx context.Context, slot primi
 			return nil, errJson
 		}
 		log.Debug("Endpoint /eth/v3/validator/blocks is not supported, falling back to older endpoints for block proposal.")
-		fallbackResp, err := c.fallBackToBlinded(ctx, slot, queryParams)
+		fallbackResp, err := c.fallBackToBlinded(ctx, slot, buildGetBeaconBlockUrlValues(randaoReveal, graffiti, nil))
 		errJson = &httputil.DefaultJsonError{}
 		if err != nil {
 			if !errors.As(err, &errJson) {
 				return nil, err
 			}
 			log.Debug("Endpoint /eth/v1/validator/blinded_blocks failed to produce a blinded block, trying /eth/v2/validator/blocks.")
-			fallbackResp, err = c.fallBackToFull(ctx, slot, queryParams)
+			fallbackResp, err = c.fallBackToFull(ctx, slot, buildGetBeaconBlockUrlValues(randaoReveal, graffiti, nil))
 			if err != nil {
 				return nil, err
 			}

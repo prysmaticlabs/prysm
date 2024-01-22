@@ -18,6 +18,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/mock"
 	test_helpers "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api/test-helpers"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestGetBeaconBlock_RequestFailed(t *testing.T) {
@@ -36,7 +37,7 @@ func TestGetBeaconBlock_RequestFailed(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
+	_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2}, nil)
 	assert.ErrorContains(t, "foo error", err)
 }
 
@@ -139,7 +140,7 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			).Times(1)
 
 			validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-			_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2})
+			_, err := validatorClient.getBeaconBlock(ctx, 1, []byte{1}, []byte{2}, nil)
 			assert.ErrorContains(t, testCase.expectedErrorMessage, err)
 		})
 	}
@@ -175,7 +176,7 @@ func TestGetBeaconBlock_Phase0Valid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -218,7 +219,7 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -262,7 +263,7 @@ func TestGetBeaconBlock_BellatrixValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -307,7 +308,7 @@ func TestGetBeaconBlock_BlindedBellatrixValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -352,7 +353,7 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -397,7 +398,7 @@ func TestGetBeaconBlock_BlindedCapellaValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -442,7 +443,7 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, nil)
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -473,7 +474,7 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
-		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		fmt.Sprintf("/eth/v3/validator/blocks/%d?builder_boost_factor=%s&graffiti=%s&randao_reveal=%s", slot, "100", hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).SetArg(
 		2,
@@ -487,7 +488,7 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, &wrapperspb.UInt64Value{Value: 100})
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -518,7 +519,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
-		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		fmt.Sprintf("/eth/v3/validator/blocks/%d?builder_boost_factor=%s&graffiti=%s&randao_reveal=%s", slot, "100", hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
@@ -538,7 +539,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, &wrapperspb.UInt64Value{Value: 100})
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
@@ -569,7 +570,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
-		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
+		fmt.Sprintf("/eth/v3/validator/blocks/%d?builder_boost_factor=%s&graffiti=%s&randao_reveal=%s", slot, "100", hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
 		&validator.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
@@ -596,7 +597,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	).Times(1)
 
 	validatorClient := &beaconApiValidatorClient{jsonRestHandler: jsonRestHandler}
-	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti)
+	beaconBlock, err := validatorClient.getBeaconBlock(ctx, slot, randaoReveal, graffiti, &wrapperspb.UInt64Value{Value: 100})
 	require.NoError(t, err)
 
 	expectedBeaconBlock := &ethpb.GenericBeaconBlock{
