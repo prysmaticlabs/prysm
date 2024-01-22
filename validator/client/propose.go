@@ -384,7 +384,7 @@ func signVoluntaryExit(
 	return sig.Marshal(), nil
 }
 
-// GetGraffiti Gets the graffiti from cli or file for the validator public key.
+// GetGraffiti gets the graffiti from cli or file for the validator public key.
 func (v *validator) GetGraffiti(ctx context.Context, pubKey [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
 	// Check proposer settings first
 	if v.proposerSettings != nil {
