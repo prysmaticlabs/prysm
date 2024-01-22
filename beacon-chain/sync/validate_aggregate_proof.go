@@ -153,10 +153,11 @@ func (s *Service) validateAggregatedAtt(ctx context.Context, signed *ethpb.Signe
 	}
 
 	// Verify validator index is within the beacon committee.
-	if err := validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex); err != nil {
+	result, err := s.validateIndexInCommittee(ctx, bs, signed.Message.Aggregate, signed.Message.AggregatorIndex)
+	if result != pubsub.ValidationAccept {
 		wrappedErr := errors.Wrapf(err, "Could not validate index in committee")
 		tracing.AnnotateError(span, wrappedErr)
-		return pubsub.ValidationReject, wrappedErr
+		return result, wrappedErr
 	}
 
 	// Verify selection proof reflects to the right validator.
@@ -225,34 +226,26 @@ func (s *Service) setAggregatorIndexEpochSeen(epoch primitives.Epoch, aggregator
 //   - [REJECT] The aggregate attestation has participants -- that is, len(get_attesting_indices(state, aggregate.data, aggregate.aggregation_bits)) >= 1.
 //   - [REJECT] The aggregator's validator index is within the committee --
 //     i.e. `aggregate_and_proof.aggregator_index in get_beacon_committee(state, aggregate.data.slot, aggregate.data.index)`.
-func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) error {
+func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState, a *ethpb.Attestation, validatorIndex primitives.ValidatorIndex) (pubsub.ValidationResult, error) {
 	ctx, span := trace.StartSpan(ctx, "sync.validateIndexInCommittee")
 	defer span.End()
 
-	ac, err := helpers.ActiveValidatorCount(ctx, bs, slots.ToEpoch(a.Data.Slot))
-	if err != nil {
-		return err
-	}
-	cc := helpers.SlotCommitteeCount(ac)
-	if uint64(a.Data.CommitteeIndex) >= helpers.SlotCommitteeCount(ac) {
-		return fmt.Errorf("committee index %d is greater than committee count %d",
-			a.Data.CommitteeIndex, cc)
+	_, result, err := s.validateCommitteeIndex(ctx, a, bs)
+	if result != pubsub.ValidationAccept {
+		return result, err
 	}
 
-	committee, err := helpers.BeaconCommitteeFromState(ctx, bs, a.Data.Slot, a.Data.CommitteeIndex)
-	if err != nil {
-		return err
+	committee, result, err := s.validateBitLength(ctx, a, bs)
+	if result != pubsub.ValidationAccept {
+		return result, err
 	}
-	if uint64(len(committee)) != a.AggregationBits.Len() {
-		return fmt.Errorf("bitfield length %d does not match committee length %d",
-			a.AggregationBits.Len(), uint64(len(committee)))
-	}
+
 	indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
 	if err != nil {
-		return err
+		return pubsub.ValidationIgnore, err
 	}
 	if len(indices) == 0 {
-		return errors.New("no attesting indices")
+		return pubsub.ValidationReject, errors.New("no attesting indices")
 	}
 
 	var withinCommittee bool
@@ -263,10 +256,10 @@ func validateIndexInCommittee(ctx context.Context, bs state.ReadOnlyBeaconState,
 		}
 	}
 	if !withinCommittee {
-		return fmt.Errorf("validator index %d is not within the committee: %v",
+		return pubsub.ValidationReject, fmt.Errorf("validator index %d is not within the committee: %v",
 			validatorIndex, committee)
 	}
-	return nil
+	return pubsub.ValidationAccept, nil
 }
 
 // This validates selection proof by validating it's from the correct validator index of the slot.
