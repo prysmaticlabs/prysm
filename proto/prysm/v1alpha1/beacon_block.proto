@@ -53,7 +53,6 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
-    uint64 payload_value = 101;
 }
 
 message GenericBeaconBlock {

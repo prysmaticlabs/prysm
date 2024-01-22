@@ -911,7 +911,7 @@ func Test_validateMergeTransitionBlock(t *testing.T) {
 			name:         "state older than Bellatrix, nil payload",
 			stateVersion: 1,
 			payload:      nil,
-			errString:    "attempted to wrap nil",
+			errString:    "empty payload",
 		},
 		{
 			name:         "state older than Bellatrix, empty payload",

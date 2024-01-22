@@ -435,6 +435,9 @@ func (s *Service) validateMergeTransitionBlock(ctx context.Context, stateVersion
 	if err != nil {
 		return invalidBlock{error: err}
 	}
+	if payload == nil {
+		return invalidBlock{error: errors.New("empty payload")}
+	}
 	isEmpty, err := consensusblocks.IsEmptyExecutionData(payload)
 	if err != nil {
 		return err
