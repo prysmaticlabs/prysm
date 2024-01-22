@@ -1855,24 +1855,9 @@ func TestServer_DeleteFeeRecipientByPubkey_InvalidPubKey(t *testing.T) {
 	require.StringContains(t, "pubkey is invalid", w.Body.String())
 }
 
-func TestServer_GetGraffiti(t *testing.T) {
-	s := &Server{
-		validatorService: &client.ValidatorService{},
-	}
-
-	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
-	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
-	w := httptest.NewRecorder()
-	w.Body = &bytes.Buffer{}
-	s.GetGraffiti(w, req)
-}
-
 func TestServer_Graffiti(t *testing.T) {
 	graffiti := "graffiti"
-	m := &mock.Validator{
-		Graffiti: graffiti,
-	}
+	m := &mock.Validator{}
 	vs, err := client.NewValidatorService(context.Background(), &client.Config{
 		Validator: m,
 	})
@@ -1913,11 +1898,4 @@ func TestServer_Graffiti(t *testing.T) {
 	w.Body = &bytes.Buffer{}
 	s.DeleteGraffiti(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
-
-	req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/eth/v1/validator/{pubkey}/graffiti"), nil)
-	req = mux.SetURLVars(req, map[string]string{"pubkey": pubkey})
-	w = httptest.NewRecorder()
-	w.Body = &bytes.Buffer{}
-	s.GetGraffiti(w, req)
-	require.Equal(t, http.StatusNotFound, w.Code)
 }

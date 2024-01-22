@@ -91,7 +91,7 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 type Validator struct {
 	Km               keymanager.IKeymanager
 	proposerSettings *validatorserviceconfig.ProposerSettings
-	Graffiti         string
+	graffiti         string
 }
 
 func (_ *Validator) LogSyncCommitteeMessagesSubmitted() {}
@@ -217,21 +217,18 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 
 // GetGraffiti for mocking
 func (m *Validator) GetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) ([]byte, error) {
-	if m.Graffiti == "" {
-		return nil, errors.New("graffiti is missing ")
-	}
-	return []byte(m.Graffiti), nil
+	return []byte(m.graffiti), nil
 }
 
 // SetGraffiti for mocking
 func (m *Validator) SetGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte, graffiti []byte) error {
-	m.Graffiti = string(graffiti)
+	m.graffiti = string(graffiti)
 	return nil
 }
 
 // DeleteGraffiti for mocking
 func (m *Validator) DeleteGraffiti(_ context.Context, _ [fieldparams.BLSPubkeyLength]byte) error {
-	m.Graffiti = ""
+	m.graffiti = ""
 	return nil
 }
 
