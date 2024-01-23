@@ -36,6 +36,18 @@ func init() {
 	logrus.SetOutput(io.Discard)
 }
 
+func combineMaps(maps ...map[string][]string) map[string][]string {
+	combinedMap := make(map[string][]string)
+
+	for _, m := range maps {
+		for k, v := range m {
+			combinedMap[k] = v
+		}
+	}
+
+	return combinedMap
+}
+
 func TestServer_InitializeRoutes(t *testing.T) {
 	s := Service{
 		cfg: &Config{
@@ -58,80 +70,106 @@ func TestServer_InitializeRoutes(t *testing.T) {
 	s.initializePrysmNodeServerRoutes(&nodeprysm.Server{})
 	s.initializePrysmValidatorServerRoutes(&validatorprysm.Server{})
 
-	wantRouteList := map[string][]string{
-		"/eth/v1/beacon/rewards/blocks/{block_id}":                   {http.MethodGet},
-		"/eth/v1/beacon/rewards/attestations/{epoch}":                {http.MethodPost},
-		"/eth/v1/beacon/rewards/sync_committee/{block_id}":           {http.MethodPost},
-		"/eth/v1/builder/states/{state_id}/expected_withdrawals":     {http.MethodGet},
-		"/eth/v1/beacon/blob_sidecars/{block_id}":                    {http.MethodGet},
-		"/eth/v1/validator/aggregate_attestation":                    {http.MethodGet},
-		"/eth/v1/validator/contribution_and_proofs":                  {http.MethodPost},
-		"/eth/v1/validator/aggregate_and_proofs":                     {http.MethodPost},
-		"/eth/v1/validator/sync_committee_contribution":              {http.MethodGet},
-		"/eth/v1/validator/sync_committee_subscriptions":             {http.MethodPost},
-		"/eth/v1/validator/beacon_committee_subscriptions":           {http.MethodPost},
-		"/eth/v1/validator/attestation_data":                         {http.MethodGet},
-		"/eth/v1/validator/register_validator":                       {http.MethodPost},
-		"/eth/v1/validator/duties/attester/{epoch}":                  {http.MethodPost},
-		"/eth/v1/validator/duties/proposer/{epoch}":                  {http.MethodGet},
-		"/eth/v1/validator/duties/sync/{epoch}":                      {http.MethodPost},
-		"/eth/v1/validator/prepare_beacon_proposer":                  {http.MethodPost},
-		"/eth/v1/validator/liveness/{epoch}":                         {http.MethodPost},
-		"/eth/v2/validator/blocks/{slot}":                            {http.MethodGet},
-		"/eth/v1/validator/blinded_blocks/{slot}":                    {http.MethodGet},
-		"/eth/v3/validator/blocks/{slot}":                            {http.MethodGet},
-		"/eth/v1/node/syncing":                                       {http.MethodGet},
-		"/eth/v1/node/identity":                                      {http.MethodGet},
-		"/eth/v1/node/peers/{peer_id}":                               {http.MethodGet},
-		"/eth/v1/node/peers":                                         {http.MethodGet},
-		"/eth/v1/node/peer_count":                                    {http.MethodGet},
-		"/eth/v1/node/version":                                       {http.MethodGet},
-		"/eth/v1/node/health":                                        {http.MethodGet},
-		"/eth/v1/beacon/states/{state_id}/committees":                {http.MethodGet},
-		"/eth/v1/beacon/states/{state_id}/fork":                      {http.MethodGet},
-		"/eth/v1/beacon/states/{state_id}/root":                      {http.MethodGet},
-		"/eth/v1/beacon/states/{state_id}/sync_committees":           {http.MethodGet},
-		"/eth/v1/beacon/states/{state_id}/randao":                    {http.MethodGet},
-		"/eth/v1/beacon/blocks":                                      {http.MethodPost},
-		"/eth/v1/beacon/blinded_blocks":                              {http.MethodPost},
-		"/eth/v2/beacon/blocks":                                      {http.MethodPost},
-		"/eth/v2/beacon/blinded_blocks":                              {http.MethodPost},
-		"/eth/v1/beacon/blocks/{block_id}":                           {http.MethodGet},
-		"/eth/v2/beacon/blocks/{block_id}":                           {http.MethodGet},
-		"/eth/v1/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
-		"/eth/v1/beacon/blinded_blocks/{block_id}":                   {http.MethodGet},
-		"/eth/v1/beacon/blocks/{block_id}/root":                      {http.MethodGet},
-		"/eth/v1/beacon/pool/attestations":                           {http.MethodGet, http.MethodPost},
-		"/eth/v1/beacon/pool/voluntary_exits":                        {http.MethodGet, http.MethodPost},
-		"/eth/v1/beacon/pool/sync_committees":                        {http.MethodPost},
-		"/eth/v1/beacon/pool/bls_to_execution_changes":               {http.MethodGet, http.MethodPost},
-		"/eth/v1/beacon/pool/attester_slashings":                     {http.MethodGet, http.MethodPost},
-		"/eth/v1/beacon/pool/proposer_slashings":                     {http.MethodGet, http.MethodPost},
-		"/eth/v1/beacon/headers":                                     {http.MethodGet},
-		"/eth/v1/beacon/headers/{block_id}":                          {http.MethodGet},
+	beaconRoutes := map[string][]string{
 		"/eth/v1/beacon/genesis":                                     {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/root":                      {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/fork":                      {http.MethodGet},
 		"/eth/v1/beacon/states/{state_id}/finality_checkpoints":      {http.MethodGet},
 		"/eth/v1/beacon/states/{state_id}/validators":                {http.MethodGet, http.MethodPost},
 		"/eth/v1/beacon/states/{state_id}/validators/{validator_id}": {http.MethodGet},
 		"/eth/v1/beacon/states/{state_id}/validator_balances":        {http.MethodGet, http.MethodPost},
-		"/eth/v1/config/deposit_contract":                            {http.MethodGet},
-		"/eth/v1/config/fork_schedule":                               {http.MethodGet},
-		"/eth/v1/config/spec":                                        {http.MethodGet},
-		"/eth/v1/events":                                             {http.MethodGet},
-		"/eth/v1/beacon/light_client/bootstrap/{block_root}":         {http.MethodGet},
-		"/eth/v1/beacon/light_client/updates":                        {http.MethodGet},
-		"/eth/v1/beacon/light_client/finality_update":                {http.MethodGet},
-		"/eth/v1/beacon/light_client/optimistic_update":              {http.MethodGet},
-		"/eth/v1/debug/beacon/states/{state_id}":                     {http.MethodGet},
-		"/eth/v2/debug/beacon/states/{state_id}":                     {http.MethodGet},
-		"/eth/v2/debug/beacon/heads":                                 {http.MethodGet},
-		"/eth/v2/debug/fork_choice":                                  {http.MethodGet},
-		"/prysm/v1/beacon/weak_subjectivity":                         {http.MethodGet},
-		"/prysm/node/trusted_peers":                                  {http.MethodGet, http.MethodPost},
-		"/prysm/node/trusted_peers/{peer_id}":                        {http.MethodDelete},
-		"/prysm/validators/performance":                              {http.MethodPost},
-		"/eth/v1/beacon/states/{state_id}/validator_count":           {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/committees":                {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/sync_committees":           {http.MethodGet},
+		"/eth/v1/beacon/states/{state_id}/randao":                    {http.MethodGet},
+		"/eth/v1/beacon/headers":                                     {http.MethodGet},
+		"/eth/v1/beacon/headers/{block_id}":                          {http.MethodGet},
+		"/eth/v1/beacon/blinded_blocks":                              {http.MethodPost},
+		"/eth/v2/beacon/blinded_blocks":                              {http.MethodPost},
+		"/eth/v1/beacon/blocks":                                      {http.MethodPost},
+		"/eth/v2/beacon/blocks":                                      {http.MethodPost},
+		"/eth/v1/beacon/blocks/{block_id}":                           {http.MethodGet}, //deprecated
+		"/eth/v2/beacon/blocks/{block_id}":                           {http.MethodGet},
+		"/eth/v1/beacon/blocks/{block_id}/root":                      {http.MethodGet},
+		"/eth/v1/beacon/blocks/{block_id}/attestations":              {http.MethodGet},
+		"/eth/v1/beacon/blob_sidecars/{block_id}":                    {http.MethodGet},
+		"/eth/v1/beacon/rewards/sync_committee/{block_id}":           {http.MethodPost},
+		//"/eth/v1/beacon/deposit_snapshot": {http.MethodGet}, not implemented
+		"/eth/v1/beacon/rewards/blocks/{block_id}":           {http.MethodGet},
+		"/eth/v1/beacon/rewards/attestations/{epoch}":        {http.MethodPost},
+		"/eth/v1/beacon/blinded_blocks/{block_id}":           {http.MethodGet},
+		"/eth/v1/beacon/light_client/bootstrap/{block_root}": {http.MethodGet},
+		"/eth/v1/beacon/light_client/updates":                {http.MethodGet},
+		"/eth/v1/beacon/light_client/finality_update":        {http.MethodGet},
+		"/eth/v1/beacon/light_client/optimistic_update":      {http.MethodGet},
+		"/eth/v1/beacon/pool/attestations":                   {http.MethodGet, http.MethodPost},
+		"/eth/v1/beacon/pool/attester_slashings":             {http.MethodGet, http.MethodPost},
+		"/eth/v1/beacon/pool/proposer_slashings":             {http.MethodGet, http.MethodPost},
+		"/eth/v1/beacon/pool/sync_committees":                {http.MethodPost},
+		"/eth/v1/beacon/pool/voluntary_exits":                {http.MethodGet, http.MethodPost},
+		"/eth/v1/beacon/pool/bls_to_execution_changes":       {http.MethodGet, http.MethodPost},
 	}
+
+	builderRoutes := map[string][]string{
+		"/eth/v1/builder/states/{state_id}/expected_withdrawals": {http.MethodGet},
+	}
+
+	configRoutes := map[string][]string{
+		"/eth/v1/config/fork_schedule":    {http.MethodGet},
+		"/eth/v1/config/spec":             {http.MethodGet},
+		"/eth/v1/config/deposit_contract": {http.MethodGet},
+	}
+
+	debugRoutes := map[string][]string{
+		"/eth/v1/debug/beacon/states/{state_id}": {http.MethodGet}, //deprecated
+		"/eth/v2/debug/beacon/states/{state_id}": {http.MethodGet},
+		"/eth/v2/debug/beacon/heads":             {http.MethodGet},
+		"/eth/v1/debug/fork_choice":              {http.MethodGet},
+	}
+
+	eventsRoutes := map[string][]string{
+		"/eth/v1/events": {http.MethodGet},
+	}
+
+	nodeRoutes := map[string][]string{
+		"/eth/v1/node/identity":        {http.MethodGet},
+		"/eth/v1/node/peers":           {http.MethodGet},
+		"/eth/v1/node/peers/{peer_id}": {http.MethodGet},
+		"/eth/v1/node/peer_count":      {http.MethodGet},
+		"/eth/v1/node/version":         {http.MethodGet},
+		"/eth/v1/node/syncing":         {http.MethodGet},
+		"/eth/v1/node/health":          {http.MethodGet},
+	}
+
+	validatorRoutes := map[string][]string{
+		"/eth/v1/validator/duties/attester/{epoch}":        {http.MethodPost},
+		"/eth/v1/validator/duties/proposer/{epoch}":        {http.MethodGet},
+		"/eth/v1/validator/duties/sync/{epoch}":            {http.MethodPost},
+		"/eth/v2/validator/blocks/{slot}":                  {http.MethodGet}, //deprecated
+		"/eth/v3/validator/blocks/{slot}":                  {http.MethodGet},
+		"/eth/v1/validator/blinded_blocks/{slot}":          {http.MethodGet}, //deprecated
+		"/eth/v1/validator/attestation_data":               {http.MethodGet},
+		"/eth/v1/validator/aggregate_attestation":          {http.MethodGet},
+		"/eth/v1/validator/aggregate_and_proofs":           {http.MethodPost},
+		"/eth/v1/validator/beacon_committee_subscriptions": {http.MethodPost},
+		"/eth/v1/validator/sync_committee_subscriptions":   {http.MethodPost},
+		//"/eth/v1/validator/beacon_committee_selections":   {http.MethodPost}, // not implemented
+		"/eth/v1/validator/sync_committee_contribution": {http.MethodGet},
+		//"/eth/v1/validator/sync_committee_selections":  {http.MethodPost}, // not implemented
+		"/eth/v1/validator/contribution_and_proofs": {http.MethodPost},
+		"/eth/v1/validator/prepare_beacon_proposer": {http.MethodPost},
+		"/eth/v1/validator/register_validator":      {http.MethodPost},
+		"/eth/v1/validator/liveness/{epoch}":        {http.MethodPost},
+	}
+
+	prysmCustomRoutes := map[string][]string{
+		"/prysm/v1/beacon/weak_subjectivity":               {http.MethodGet},
+		"/prysm/node/trusted_peers":                        {http.MethodGet, http.MethodPost},
+		"/prysm/node/trusted_peers/{peer_id}":              {http.MethodDelete},
+		"/prysm/validators/performance":                    {http.MethodPost},
+		"/eth/v1/beacon/states/{state_id}/validator_count": {http.MethodGet},
+	}
+
+	wantRouteList := combineMaps(beaconRoutes, builderRoutes, configRoutes, debugRoutes, eventsRoutes, nodeRoutes, validatorRoutes, prysmCustomRoutes)
 	gotRouteList := make(map[string][]string)
 	err := s.cfg.Router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		tpl, err1 := route.GetPathTemplate()
