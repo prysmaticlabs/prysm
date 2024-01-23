@@ -1,7 +1,5 @@
 package params
 
-import "math"
-
 // UseHoleskyNetworkConfig uses the Holesky beacon chain specific network config.
 func UseHoleskyNetworkConfig() {
 	cfg := BeaconNetworkConfig().Copy()
@@ -36,7 +34,7 @@ func HoleskyConfig() *BeaconChainConfig {
 	cfg.BellatrixForkVersion = []byte{0x3, 0x1, 0x70, 0x0}
 	cfg.CapellaForkEpoch = 256
 	cfg.CapellaForkVersion = []byte{0x4, 0x1, 0x70, 0x0}
-	cfg.DenebForkEpoch = math.MaxUint64
+	cfg.DenebForkEpoch = 29696
 	cfg.DenebForkVersion = []byte{0x40, 0x1, 0x70, 0x0}
 	cfg.TerminalTotalDifficulty = "0"
 	cfg.DepositContractAddress = "0x4242424242424242424242424242424242424242"
