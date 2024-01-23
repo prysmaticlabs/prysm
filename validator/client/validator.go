@@ -589,7 +589,7 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		log.WithError(err).Error("error getting validator duties")
 		return err
 	}
-	if diff, isDiff := messagediff.PrettyDiff(resp.Duties, resp.CurrentEpochDuties); isDiff {
+	if diff, isEqual := messagediff.PrettyDiff(resp.Duties, resp.CurrentEpochDuties); !isEqual {
 		v.dutiesLock.Lock()
 		v.duties = nil // Clear assignments so we know to retry the request.
 		v.dutiesLock.Unlock()
