@@ -20,7 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
@@ -240,11 +239,7 @@ func (s *Service) validateIndexInCommittee(ctx context.Context, bs state.ReadOnl
 		return result, err
 	}
 
-	indices, err := attestation.AttestingIndices(a.AggregationBits, committee)
-	if err != nil {
-		return pubsub.ValidationIgnore, err
-	}
-	if len(indices) == 0 {
+	if a.AggregationBits.Count() == 0 {
 		return pubsub.ValidationReject, errors.New("no attesting indices")
 	}
 

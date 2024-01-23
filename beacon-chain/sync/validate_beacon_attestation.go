@@ -202,7 +202,7 @@ func (s *Service) validateCommitteeIndex(ctx context.Context, a *eth.Attestation
 	if uint64(a.Data.CommitteeIndex) > count {
 		return 0, pubsub.ValidationReject, errors.Errorf("committee index %d > %d", a.Data.CommitteeIndex, count)
 	}
-	return 0, pubsub.ValidationAccept, nil
+	return valCount, pubsub.ValidationAccept, nil
 }
 
 // This validates beacon unaggregated attestation using the given state, the validation consists of bitfield length and count consistency
