@@ -25,14 +25,22 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// ErrInvalidFetchedData is used to signal that an error occurred which should result in peer downscoring.
-var ErrInvalidFetchedData = errors.New("invalid data returned from peer")
-
-var errMaxRequestBlobSidecarsExceeded = errors.Wrap(ErrInvalidFetchedData, "peer exceeded req blob chunk tx limit")
 var errBlobChunkedReadFailure = errors.New("failed to read stream of chunk-encoded blobs")
 var errBlobUnmarshal = errors.New("Could not unmarshal chunk-encoded blob")
-var errUnrequested = errors.New("Received BlobSidecar in response that was not requested")
-var errBlobResponseOutOfBounds = errors.New("received BlobSidecar with slot outside BlobSidecarsByRangeRequest bounds")
+
+// Any error from the following declaration block should result in peer downscoring.
+var (
+	// ErrInvalidFetchedData is used to signal that an error occurred which should result in peer downscoring.
+	ErrInvalidFetchedData             = errors.New("invalid data returned from peer")
+	errBlobIndexOutOfBounds           = errors.Wrap(ErrInvalidFetchedData, "blob index out of range")
+	errMaxRequestBlobSidecarsExceeded = errors.Wrap(ErrInvalidFetchedData, "peer exceeded req blob chunk tx limit")
+	errChunkResponseSlotNotAsc        = errors.Wrap(ErrInvalidFetchedData, "blob slot not higher than previous block root")
+	errChunkResponseIndexNotAsc       = errors.Wrap(ErrInvalidFetchedData, "blob indices for a block must start at 0 and increase by 1")
+	errUnrequested                    = errors.Wrap(ErrInvalidFetchedData, "received BlobSidecar in response that was not requested")
+	errBlobResponseOutOfBounds        = errors.Wrap(ErrInvalidFetchedData, "received BlobSidecar with slot outside BlobSidecarsByRangeRequest bounds")
+	errChunkResponseBlockMismatch     = errors.Wrap(ErrInvalidFetchedData, "blob block details do not match")
+	errChunkResponseParentMismatch    = errors.Wrap(ErrInvalidFetchedData, "parent root for response element doesn't match previous element root")
+)
 
 // BeaconBlockProcessor defines a block processing function, which allows to start utilizing
 // blocks even before all blocks are ready.
@@ -167,7 +175,8 @@ func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle,
 	if max > req.Count*fieldparams.MaxBlobsPerBlock {
 		max = req.Count * fieldparams.MaxBlobsPerBlock
 	}
-	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRangeReq(req), max)
+	blobVal := composeBlobValidations(blobValidatorFromRangeReq(req), newSequentialBlobValidator())
+	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobVal, max)
 }
 
 func SendBlobSidecarByRoot(
@@ -197,6 +206,70 @@ func SendBlobSidecarByRoot(
 }
 
 type blobResponseValidation func(blocks.ROBlob) error
+
+func composeBlobValidations(vf ...blobResponseValidation) blobResponseValidation {
+	return func(blob blocks.ROBlob) error {
+		for i := range vf {
+			if err := vf[i](blob); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+type seqBlobValid struct {
+	prev *blocks.ROBlob
+}
+
+func (sbv *seqBlobValid) nextValid(blob blocks.ROBlob) error {
+	if blob.Index >= fieldparams.MaxBlobsPerBlock {
+		return errBlobIndexOutOfBounds
+	}
+	if sbv.prev == nil {
+		// The first blob we see for a block must have index 0.
+		if blob.Index != 0 {
+			return errChunkResponseIndexNotAsc
+		}
+		sbv.prev = &blob
+		return nil
+	}
+	if sbv.prev.Slot() == blob.Slot() {
+		if sbv.prev.BlockRoot() != blob.BlockRoot() {
+			return errors.Wrap(errChunkResponseBlockMismatch, "block roots do not match")
+		}
+		if sbv.prev.ParentRoot() != blob.ParentRoot() {
+			return errors.Wrap(errChunkResponseBlockMismatch, "block parent roots do not match")
+		}
+		// Blob indices in responses should be strictly monotonically incrementing.
+		if blob.Index != sbv.prev.Index+1 {
+			return errChunkResponseIndexNotAsc
+		}
+	} else {
+		// If the slot is adjacent we know there are no intervening blocks with missing blobs, so we can
+		// check that the new blob descends from the last seen.
+		if blob.Slot() == sbv.prev.Slot()+1 && blob.ParentRoot() != sbv.prev.BlockRoot() {
+			return errChunkResponseParentMismatch
+		}
+		// The first blob we see for a block must have index 0.
+		if blob.Index != 0 {
+			return errChunkResponseIndexNotAsc
+		}
+		// Blocks must be in ascending slot order.
+		if sbv.prev.Slot() >= blob.Slot() {
+			return errChunkResponseSlotNotAsc
+		}
+	}
+	sbv.prev = &blob
+	return nil
+}
+
+func newSequentialBlobValidator() blobResponseValidation {
+	sbv := &seqBlobValid{}
+	return func(blob blocks.ROBlob) error {
+		return sbv.nextValid(blob)
+	}
+}
 
 func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseValidation {
 	blobIds := make(map[[32]byte]map[uint64]bool)
