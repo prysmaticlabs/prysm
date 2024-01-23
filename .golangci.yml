@@ -80,7 +80,6 @@ linters:
     - thelper
     - unparam
     - varnamelen
-    - wastedassign
     - wrapcheck
     - wsl
 
