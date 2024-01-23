@@ -2082,6 +2082,10 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	snapshot := eth1data.DepositSnapshot
+	if snapshot == nil {
+		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
+		return
+	}
 	finalized := make([][]string, 0, len(snapshot.Finalized))
 	for _, f := range snapshot.Finalized {
 		finalized = append(finalized, []string{hexutil.Encode(f)})

@@ -76,6 +76,7 @@ go_test(
         "//api:go_default_library",
         "//api/server:go_default_library",
         "//beacon-chain/blockchain/testing:go_default_library",
+        "//beacon-chain/cache/depositsnapshot:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
