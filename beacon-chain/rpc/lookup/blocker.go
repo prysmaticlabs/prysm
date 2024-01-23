@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
+	log "github.com/sirupsen/logrus"
 )
 
 // BlockIdParseError represents an error scenario where a block ID could not be parsed.
@@ -210,7 +211,10 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 	if len(indices) == 0 {
 		m, err := p.BlobStorage.Indices(bytesutil.ToBytes32(root))
 		if err != nil {
-			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob indices for root %#x", root), Reason: core.Internal}
+			log.WithFields(log.Fields{
+				"block root": hexutil.Encode(root),
+			}).Error(errors.Wrapf(err, "could not retrieve blob indices for root %#x", root))
+			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob indices for root %#x", root), Reason: core.Internal}
 		}
 		for k, v := range m {
 			if v {
@@ -223,7 +227,11 @@ func (p *BeaconDbBlocker) Blobs(ctx context.Context, id string, indices []uint64
 	for i, index := range indices {
 		vblob, err := p.BlobStorage.Get(bytesutil.ToBytes32(root), index)
 		if err != nil {
-			return nil, &core.RpcError{Err: errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
+			log.WithFields(log.Fields{
+				"block root": hexutil.Encode(root),
+				"blob index": index,
+			}).Error(errors.Wrapf(err, "could not retrieve blob for block root %#x at index %d", root, index))
+			return nil, &core.RpcError{Err: fmt.Errorf("could not retrieve blob for block root %#x at index %d", root, index), Reason: core.Internal}
 		}
 		blobs[i] = &vblob
 	}
