@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -161,6 +162,83 @@ func (s *Store) updateFinalizedBlockRoots(ctx context.Context, tx *bolt.Tx, chec
 	}
 
 	return bkt.Put(previousFinalizedCheckpointKey, enc)
+}
+
+// BackfillFinalizedIndex updates the finalized index for a contiguous chain of blocks that are the ancestors of the
+// given finalized child root. This is needed to update the finalized index during backfill, because the usual
+// updateFinalizedBlockRoots has assumptions that are incompatible with backfill processing.
+func (s *Store) BackfillFinalizedIndex(ctx context.Context, blocks []blocks.ROBlock, finalizedChildRoot [32]byte) error {
+	ctx, span := trace.StartSpan(ctx, "BeaconDB.BackfillFinalizedIndex")
+	defer span.End()
+	if len(blocks) == 0 {
+		return errEmptyBlockSlice
+	}
+
+	fbrs := make([]*ethpb.FinalizedBlockRootContainer, len(blocks))
+	encs := make([][]byte, len(blocks))
+	for i := range blocks {
+		pr := blocks[i].Block().ParentRoot()
+		fbrs[i] = &ethpb.FinalizedBlockRootContainer{
+			ParentRoot: pr[:],
+			// ChildRoot: will be filled in on the next iteration when we look at the descendent block.
+		}
+		if i == 0 {
+			continue
+		}
+		if blocks[i-1].Root() != blocks[i].Block().ParentRoot() {
+			return errors.Wrapf(errIncorrectBlockParent, "previous root=%#x, slot=%d; child parent_root=%#x, root=%#x, slot=%d",
+				blocks[i-1].Root(), blocks[i-1].Block().Slot(), blocks[i].Block().ParentRoot(), blocks[i].Root(), blocks[i].Block().Slot())
+		}
+
+		// We know the previous index is the parent of this one thanks to the assertion above,
+		// so we can set the ChildRoot of the previous value to the root of the current value.
+		fbrs[i-1].ChildRoot = blocks[i].RootSlice()
+		// Now that the value for fbrs[i-1] is complete, perform encoding here to minimize time in Update,
+		// which holds the global db lock.
+		penc, err := encode(ctx, fbrs[i-1])
+		if err != nil {
+			tracing.AnnotateError(span, err)
+			return err
+		}
+		encs[i-1] = penc
+
+		// The final element is the parent of finalizedChildRoot. This is checked inside the db transaction using
+		// the parent_root value stored in the index data for finalizedChildRoot.
+		if i == len(blocks)-1 {
+			fbrs[i].ChildRoot = finalizedChildRoot[:]
+			// Final element is complete, so it is pre-encoded like the others.
+			enc, err := encode(ctx, fbrs[i])
+			if err != nil {
+				tracing.AnnotateError(span, err)
+				return err
+			}
+			encs[i] = enc
+		}
+	}
+
+	return s.db.Update(func(tx *bolt.Tx) error {
+		bkt := tx.Bucket(finalizedBlockRootsIndexBucket)
+		child := bkt.Get(finalizedChildRoot[:])
+		if len(child) == 0 {
+			return errFinalizedChildNotFound
+		}
+		fcc := &ethpb.FinalizedBlockRootContainer{}
+		if err := decode(ctx, child, fcc); err != nil {
+			return errors.Wrapf(err, "unable to decode finalized block root container for root=%#x", finalizedChildRoot)
+		}
+		// Ensure that the existing finalized chain descends from the new segment.
+		if !bytes.Equal(fcc.ParentRoot, blocks[len(blocks)-1].RootSlice()) {
+			return errors.Wrapf(errNotConnectedToFinalized, "finalized block root container for root=%#x has parent_root=%#x, not %#x",
+				finalizedChildRoot, fcc.ParentRoot, blocks[len(blocks)-1].RootSlice())
+		}
+		// Update the finalized index with entries for each block in the new segment.
+		for i := range fbrs {
+			if err := bkt.Put(blocks[i].RootSlice(), encs[i]); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // IsFinalizedBlock returns true if the block root is present in the finalized block root index.
