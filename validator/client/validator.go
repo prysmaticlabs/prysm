@@ -49,6 +49,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"gopkg.in/d4l3k/messagediff.v1"
 )
 
 // keyFetchPeriod is the frequency that we try to refetch validating keys
@@ -587,6 +588,14 @@ func (v *validator) UpdateDuties(ctx context.Context, slot primitives.Slot) erro
 		v.dutiesLock.Unlock()
 		log.WithError(err).Error("error getting validator duties")
 		return err
+	}
+	if diff, isDiff := messagediff.PrettyDiff(resp.Duties, resp.CurrentEpochDuties); isDiff {
+		v.dutiesLock.Lock()
+		v.duties = nil // Clear assignments so we know to retry the request.
+		v.dutiesLock.Unlock()
+		wrappedErr := errors.Errorf("duties are different: %s", diff)
+		log.WithError(wrappedErr).Error("error getting validator duties")
+		return wrappedErr
 	}
 
 	v.dutiesLock.Lock()
