@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/golang/protobuf/ptypes/empty"
-
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"

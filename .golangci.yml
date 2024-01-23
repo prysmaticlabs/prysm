@@ -40,7 +40,6 @@ linters:
     - forbidigo
     - forcetypeassert
     - funlen
-    - gci
     - gochecknoglobals
     - gochecknoinits
     - goconst

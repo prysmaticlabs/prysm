@@ -14,15 +14,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/wrapper"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	mathutil "github.com/prysmaticlabs/prysm/v4/math"
-	"go.opencensus.io/trace"
-
-	"github.com/prysmaticlabs/prysm/v4/config/params"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"go.opencensus.io/trace"
 )
 
 var attestationSubnetCount = params.BeaconConfig().AttestationSubnetCount

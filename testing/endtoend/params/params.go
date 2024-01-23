@@ -14,9 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/core/types"
-
 	"github.com/bazelbuild/rules_go/go/tools/bazel"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 )
 

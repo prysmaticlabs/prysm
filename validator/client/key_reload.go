@@ -4,11 +4,10 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validator2 "github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"go.opencensus.io/trace"
 )
 
