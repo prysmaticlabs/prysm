@@ -20,7 +20,7 @@ func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, s
 	}
 
 	var resp aggregatedSelectionResponse
-	err := c.jsonRestHandler.Post(ctx, "/eth/v1/validator/beacon_committee_selections", nil, bytes.NewBuffer(body), &resp)
+	err = c.jsonRestHandler.Post(ctx, "/eth/v1/validator/beacon_committee_selections", nil, bytes.NewBuffer(body), &resp)
 	if err != nil {
 		return nil, errors.Wrap(err, "error calling post endpoint")
 	}
