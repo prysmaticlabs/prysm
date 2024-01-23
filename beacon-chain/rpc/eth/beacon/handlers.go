@@ -2070,3 +2070,31 @@ func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
 	}
 	httputil.WriteJson(w, resp)
 }
+
+// GetDepositSnapshot returns the deposit snapshot.
+func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
+	ctx, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
+	defer span.End()
+
+	eth1data, err := s.BeaconDB.ExecutionChainData(ctx)
+	if err != nil {
+		httputil.HandleError(w, "Could not retrieve execution chain data: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	snapshot := eth1data.DepositSnapshot
+	finalized := make([][]string, 0, len(snapshot.Finalized))
+	for _, f := range snapshot.Finalized {
+		finalized = append(finalized, []string{hexutil.Encode(f)})
+	}
+
+	response := &GetDepositSnapshotResponse{
+		Data: &DepositSnapshot{
+			Finalized:            finalized,
+			DepositRoot:          hexutil.Encode(snapshot.DepositRoot),
+			DepositCount:         strconv.FormatUint(snapshot.DepositCount, 10),
+			ExecutionBlockHash:   hexutil.Encode(snapshot.ExecutionHash),
+			ExecutionBlockHeight: strconv.FormatUint(snapshot.ExecutionDepth, 10),
+		},
+	}
+	httputil.WriteJson(w, response)
+}
