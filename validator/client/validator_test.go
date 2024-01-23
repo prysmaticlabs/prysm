@@ -2261,7 +2261,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigDisabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{})
 
 	v := validator{
@@ -2346,7 +2346,7 @@ func TestValidator_buildSignedRegReqs_DefaultConfigEnabled(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 	signature.EXPECT().Marshal().Return([]byte{}).Times(2)
 
 	v := validator{
@@ -2468,7 +2468,7 @@ func TestValidator_buildSignedRegReqs_TimestampBeforeGenesis(t *testing.T) {
 	ctx := context.Background()
 	client := validatormock.NewMockValidatorClient(ctrl)
 
-	signature := blsmock.NewSignature(ctrl)
+	signature := blsmock.NewMockSignature(ctrl)
 
 	v := validator{
 		signedValidatorRegistrations: map[[48]byte]*ethpb.SignedValidatorRegistrationV1{},
