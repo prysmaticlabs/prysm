@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -76,6 +78,7 @@ type ValidatorService struct {
 	Web3SignerConfig       *remoteweb3signer.SetupConfig
 	proposerSettings       *validatorserviceconfig.ProposerSettings
 	validatorsRegBatchSize int
+	distributed            bool
 }
 
 // Config for the validator service.
@@ -102,6 +105,7 @@ type Config struct {
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
 	ValidatorsRegBatchSize     int
+	Distributed                bool
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -131,6 +135,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		Web3SignerConfig:       cfg.Web3SignerConfig,
 		proposerSettings:       cfg.ProposerSettings,
 		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
+		distributed:            cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -230,6 +235,8 @@ func (v *ValidatorService) Start() {
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
+		distributed:                    v.distributed,
+		attSelections:                  make(map[attSelectionKey]shared.BeaconCommitteeSelection),
 	}
 
 	v.validator = valStruct

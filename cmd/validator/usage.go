@@ -122,6 +122,7 @@ var appHelpFlagGroups = []flagGroup{
 			flags.EnableBuilderFlag,
 			flags.BuilderGasLimitFlag,
 			flags.ValidatorsRegistrationBatchSizeFlag,
+			flags.EnableDistributed,
 		},
 	},
 	{

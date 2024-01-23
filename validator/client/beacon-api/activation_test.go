@@ -1,9 +1,8 @@
 package beacon_api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
+	"net/url"
 	"testing"
 	"time"
 
@@ -111,20 +110,25 @@ func TestActivation_Nominal(t *testing.T) {
 		Ids:      stringPubKeys,
 		Statuses: []string{},
 	}
-	reqBytes, err := json.Marshal(req)
-	require.NoError(t, err)
+	queryParams := url.Values{}
+	for _, id := range req.Ids {
+		queryParams.Add("id", id)
+	}
+	for _, st := range req.Statuses {
+		queryParams.Add("status", st)
+	}
+
+	query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
 
 	// Get does not return any result for non existing key
-	jsonRestHandler.EXPECT().Post(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
-		"/eth/v1/beacon/states/head/validators",
-		nil,
-		bytes.NewBuffer(reqBytes),
+		query,
 		&stateValidatorsResponseJson,
 	).Return(
 		nil,
 	).SetArg(
-		4,
+		2,
 		beacon.GetValidatorsResponse{
 			Data: []*beacon.ValidatorContainer{
 				{
@@ -239,16 +243,14 @@ func TestActivation_InvalidData(t *testing.T) {
 				ctx := context.Background()
 
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-				jsonRestHandler.EXPECT().Post(
+				jsonRestHandler.EXPECT().Get(
 					ctx,
-					gomock.Any(),
-					gomock.Any(),
 					gomock.Any(),
 					gomock.Any(),
 				).Return(
 					nil,
 				).SetArg(
-					4,
+					2,
 					beacon.GetValidatorsResponse{
 						Data: testCase.data,
 					},
@@ -280,10 +282,8 @@ func TestActivation_JsonResponseError(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	jsonRestHandler.EXPECT().Post(
+	jsonRestHandler.EXPECT().Get(
 		ctx,
-		gomock.Any(),
-		gomock.Any(),
 		gomock.Any(),
 		gomock.Any(),
 	).Return(

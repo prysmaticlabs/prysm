@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -637,6 +639,92 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 	err := v.UpdateDuties(context.Background(), slot)
 	require.ErrorContains(t, ErrValidatorsAllExited.Error(), err)
 
+}
+
+func TestUpdateDuties_Distributed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	client := validatormock.NewMockValidatorClient(ctrl)
+
+	// Start of third epoch.
+	slot := 2 * params.BeaconConfig().SlotsPerEpoch
+	keys := randKeypair(t)
+	resp := &ethpb.DutiesResponse{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot, // First slot in epoch.
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				PublicKey:      keys.pub[:],
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+			},
+		},
+		NextEpochDuties: []*ethpb.DutiesResponse_Duty{
+			{
+				AttesterSlot:   slot + params.BeaconConfig().SlotsPerEpoch, // First slot in next epoch.
+				ValidatorIndex: 200,
+				CommitteeIndex: 100,
+				PublicKey:      keys.pub[:],
+				Status:         ethpb.ValidatorStatus_ACTIVE,
+			},
+		},
+	}
+
+	v := validator{
+		keyManager:      newMockKeymanager(t, keys),
+		validatorClient: client,
+		distributed:     true,
+	}
+
+	sigDomain := make([]byte, 32)
+
+	client.EXPECT().GetDuties(
+		gomock.Any(),
+		gomock.Any(),
+	).Return(resp, nil)
+
+	client.EXPECT().DomainData(
+		gomock.Any(), // ctx
+		gomock.Any(), // epoch
+	).Return(
+		&ethpb.DomainResponse{SignatureDomain: sigDomain},
+		nil, /*err*/
+	).Times(2)
+
+	client.EXPECT().GetAggregatedSelections(
+		gomock.Any(),
+		gomock.Any(), // fill this properly
+	).Return(
+		[]shared.BeaconCommitteeSelection{
+			{
+				SelectionProof: make([]byte, 32),
+				Slot:           slot,
+				ValidatorIndex: 200,
+			},
+			{
+				SelectionProof: make([]byte, 32),
+				Slot:           slot + params.BeaconConfig().SlotsPerEpoch,
+				ValidatorIndex: 200,
+			},
+		},
+		nil,
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	client.EXPECT().SubscribeCommitteeSubnets(
+		gomock.Any(),
+		gomock.Any(),
+		gomock.Any(),
+	).DoAndReturn(func(_ context.Context, _ *ethpb.CommitteeSubnetsSubscribeRequest, _ []primitives.ValidatorIndex) (*emptypb.Empty, error) {
+		wg.Done()
+		return nil, nil
+	})
+
+	require.NoError(t, v.UpdateDuties(context.Background(), slot), "Could not update assignments")
+	util.WaitTimeout(&wg, 2*time.Second)
+	require.Equal(t, 2, len(v.attSelections))
 }
 
 func TestRolesAt_OK(t *testing.T) {

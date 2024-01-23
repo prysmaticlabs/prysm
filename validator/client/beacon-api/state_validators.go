@@ -1,10 +1,9 @@
 package beacon_api
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -86,12 +85,19 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 		}
 	}
 
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to marshal request into JSON")
+	queryParams := url.Values{}
+	for _, id := range req.Ids {
+		queryParams.Add("id", id)
 	}
+	for _, st := range req.Statuses {
+		queryParams.Add("status", st)
+	}
+
+	query := buildURL(endpoint, queryParams)
 	stateValidatorsJson := &beacon.GetValidatorsResponse{}
-	if err = c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson); err != nil {
+
+	err := c.jsonRestHandler.Get(ctx, query, stateValidatorsJson)
+	if err != nil {
 		return nil, err
 	}
 

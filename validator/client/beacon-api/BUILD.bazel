@@ -12,6 +12,7 @@ go_library(
         "beacon_block_converter.go",
         "beacon_block_json_helpers.go",
         "beacon_block_proto_helpers.go",
+        "beacon_committee_selections.go",
         "domain_data.go",
         "doppelganger.go",
         "duties.go",

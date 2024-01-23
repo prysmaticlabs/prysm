@@ -3,6 +3,8 @@ package iface
 import (
 	"context"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -36,4 +38,5 @@ type ValidatorClient interface {
 	SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error)
 	StartEventStream(ctx context.Context) error
 	EventStreamIsRunning() bool
+	GetAggregatedSelections(ctx context.Context, selections []shared.BeaconCommitteeSelection) ([]shared.BeaconCommitteeSelection, error)
 }
