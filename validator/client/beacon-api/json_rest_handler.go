@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
@@ -15,11 +16,12 @@ import (
 type JsonRestHandler interface {
 	Get(ctx context.Context, query string, resp interface{}) error
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
+	SwitchBeaconEndpoint(ctx context.Context, beaconApiUrls []string)
 }
 
 type beaconApiJsonRestHandler struct {
 	httpClient http.Client
-	host       string
+	host       func() string
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.
@@ -29,7 +31,7 @@ func (c beaconApiJsonRestHandler) Get(ctx context.Context, endpoint string, resp
 		return errors.New("resp is nil")
 	}
 
-	url := c.host + endpoint
+	url := c.host() + endpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -60,8 +62,7 @@ func (c beaconApiJsonRestHandler) Post(
 	if data == nil {
 		return errors.New("data is nil")
 	}
-
-	url := c.host + apiEndpoint
+	url := c.host() + apiEndpoint
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to create request for endpoint %s", url)
@@ -114,4 +115,35 @@ func decodeResp(httpResp *http.Response, resp interface{}) error {
 	}
 
 	return nil
+}
+
+// SwitchBeaconEndpoint switches to the next available endpoint, this is circular.
+func (c beaconApiJsonRestHandler) SwitchBeaconEndpoint(ctx context.Context, beaconApiUrls []string) {
+	const endpoint = "/eth/v1/node/health"
+	ticker := time.NewTicker(5 * time.Second) // Check every 5 seconds
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				// GET request to the health endpoint using the current host
+				err := c.Get(ctx, endpoint, nil)
+				if err != nil {
+					for i, url := range beaconApiUrls {
+						if url == c.host() {
+							next := (i + 1) % len(beaconApiUrls)
+							c.changeHost(beaconApiUrls[next])
+							break
+						}
+					}
+				}
+			}
+		}
+	}()
+	defer ticker.Stop()
+	select {}
+}
+
+// changeHost updates the host function in beaconApiJsonRestHandler
+func (c beaconApiJsonRestHandler) changeHost(newHost string) {
+	c.host = func() string { return newHost }
 }

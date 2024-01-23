@@ -1,6 +1,9 @@
 package validator_client_factory
 
 import (
+	"context"
+	"strings"
+
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	grpcApi "github.com/prysmaticlabs/prysm/v4/validator/client/grpc-api"
@@ -9,19 +12,21 @@ import (
 	validatorHelpers "github.com/prysmaticlabs/prysm/v4/validator/helpers"
 )
 
-func NewBeaconChainClient(validatorConn validatorHelpers.NodeConnection) iface.BeaconChainClient {
+func NewBeaconChainClient(ctx context.Context, validatorConn validatorHelpers.NodeConnection) iface.BeaconChainClient {
 	grpcClient := grpcApi.NewGrpcBeaconChainClient(validatorConn.GetGrpcClientConn())
 	featureFlags := features.Get()
 
 	if featureFlags.EnableBeaconRESTApi {
-		return beaconApi.NewBeaconApiBeaconChainClientWithFallback(
-			validatorConn.GetBeaconApiUrl(),
+		urls := strings.Split(validatorConn.GetBeaconApiUrl(), ",")
+		bc := beaconApi.NewBeaconApiBeaconChainClientWithFallback(
+			urls[0],
 			validatorConn.GetBeaconApiTimeout(),
 			grpcClient,
 		)
-	} else {
-		return grpcClient
+		bc.MultipleEndpointResolver(ctx)
+		return bc
 	}
+	return grpcClient
 }
 
 func NewPrysmBeaconClient(validatorConn validatorHelpers.NodeConnection) iface.PrysmBeaconChainClient {

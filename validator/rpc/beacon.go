@@ -51,7 +51,7 @@ func (s *Server) registerBeaconClient() error {
 		s.beaconApiTimeout,
 	)
 
-	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn)
+	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(s.ctx, conn)
 	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn)
 	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn)
 	return nil

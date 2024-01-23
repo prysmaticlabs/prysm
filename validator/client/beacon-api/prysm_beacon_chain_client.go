@@ -19,7 +19,7 @@ import (
 func NewPrysmBeaconChainClient(host string, timeout time.Duration, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
 	jsonRestHandler := beaconApiJsonRestHandler{
 		httpClient: http.Client{Timeout: timeout},
-		host:       host,
+		host:       func() string { return host },
 	}
 
 	return prysmBeaconChainClient{

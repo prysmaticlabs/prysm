@@ -190,7 +190,7 @@ func (v *ValidatorService) Start() {
 	}
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
-	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
+	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.ctx, v.conn)
 	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
 
 	valStruct := &validator{
