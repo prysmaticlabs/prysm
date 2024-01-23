@@ -19,6 +19,7 @@ import (
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -3616,4 +3617,45 @@ func TestGetGenesis(t *testing.T) {
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.StringContains(t, "Chain genesis info is not yet known", e.Message)
 	})
+}
+
+func TestGetDepositSnapshot(t *testing.T) {
+	beaconDB := dbTest.SetupDB(t)
+	mockTrie := depositsnapshot.NewDepositTree()
+	finalized := [][32]byte{bytesutil.ToBytes32([]byte{1}), bytesutil.ToBytes32([]byte{2})}
+	for i, leaf := range finalized {
+		err := mockTrie.Insert(leaf[:], 0)
+		require.NoError(t, err)
+		err = mockTrie.Finalize(int64(i), leaf, 0)
+		require.NoError(t, err)
+	}
+
+	snapshot, err := mockTrie.GetSnapshot()
+	require.NoError(t, err)
+	root, err := mockTrie.HashTreeRoot()
+	require.NoError(t, err)
+	snapRoot, err := snapshot.CalculateRoot()
+	require.NoError(t, err)
+	assert.Equal(t, root, snapRoot)
+	chainData := &eth.ETH1ChainData{
+		DepositSnapshot: snapshot.ToProto(),
+	}
+	err = beaconDB.SaveExecutionChainData(context.Background(), chainData)
+	require.NoError(t, err)
+	s := Server{
+		BeaconDB: beaconDB,
+	}
+	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/deposit_snapshot", nil)
+	writer := httptest.NewRecorder()
+	writer.Body = &bytes.Buffer{}
+
+	s.GetDepositSnapshot(writer, request)
+	assert.Equal(t, http.StatusOK, writer.Code)
+	resp := &GetDepositSnapshotResponse{}
+	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+	require.NotNil(t, resp.Data)
+
+	assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
+	assert.Equal(t, "0x0200000000000000000000000000000000000000000000000000000000000000", resp.Data.ExecutionBlockHash)
+	assert.Equal(t, "2", resp.Data.DepositCount)
 }
