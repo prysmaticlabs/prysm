@@ -20,6 +20,14 @@ func (b ROBlock) Root() [32]byte {
 	return b.root
 }
 
+// RootSlice returns a slice of the value returned by Root(). This is convenient because slicing the result of a func
+// is not allowed, so only offering a fixed-length array version results in boilerplate code to
+func (b ROBlock) RootSlice() []byte {
+	r := make([]byte, 32)
+	copy(r, b.root[:])
+	return r
+}
+
 // NewROBlockWithRoot creates an ROBlock embedding the given block with its root. It accepts the root as parameter rather than
 // computing it internally, because in some cases a block is retrieved by its root and recomputing it is a waste.
 func NewROBlockWithRoot(b interfaces.ReadOnlySignedBeaconBlock, root [32]byte) (ROBlock, error) {
@@ -40,6 +48,20 @@ func NewROBlock(b interfaces.ReadOnlySignedBeaconBlock) (ROBlock, error) {
 		return ROBlock{}, err
 	}
 	return ROBlock{ReadOnlySignedBeaconBlock: b, root: root}, nil
+}
+
+// NewROBlockSlice is a helper method for converting a slice of the ReadOnlySignedBeaconBlock interface
+// to a slice of ROBlock.
+func NewROBlockSlice(blks []interfaces.ReadOnlySignedBeaconBlock) ([]ROBlock, error) {
+	robs := make([]ROBlock, len(blks))
+	var err error
+	for i := range blks {
+		robs[i], err = NewROBlock(blks[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return robs, nil
 }
 
 // ROBlockSlice implements sort.Interface so that slices of ROBlocks can be easily sorted.

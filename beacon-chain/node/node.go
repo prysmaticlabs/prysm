@@ -42,6 +42,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/voluntaryexits"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
@@ -49,6 +50,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
 	regularsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/backfill/coverage"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/genesis"
 	initialsync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync/initial-sync"
@@ -113,6 +115,7 @@ type BeaconNode struct {
 	CheckpointInitializer   checkpoint.Initializer
 	forkChoicer             forkchoice.ForkChoicer
 	clockWaiter             startup.ClockWaiter
+	BackfillOpts            []backfill.ServiceOption
 	initialSyncComplete     chan struct{}
 	BlobStorage             *filesystem.BlobStorage
 	blobRetentionEpochs     primitives.Epoch
@@ -215,9 +218,22 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 		return nil, err
 	}
 
-	bfs := backfill.NewStatus(beacon.db)
-	if err := bfs.Reload(ctx); err != nil {
+	log.Debugln("Registering P2P Service")
+	if err := beacon.registerP2P(cliCtx); err != nil {
+		return nil, err
+	}
+
+	bfs, err := backfill.NewUpdater(ctx, beacon.db)
+	if err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
+	}
+	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
+	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, beacon.fetchP2P(), pa, beacon.BackfillOpts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing backfill service")
+	}
+	if err := beacon.services.RegisterService(bf); err != nil {
+		return nil, errors.Wrap(err, "error registering backfill service")
 	}
 
 	log.Debugln("Starting State Gen")
@@ -232,11 +248,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
 		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
-
-	log.Debugln("Registering P2P Service")
-	if err := beacon.registerP2P(cliCtx); err != nil {
-		return nil, err
-	}
 
 	log.Debugln("Registering POW Chain Service")
 	if err := beacon.registerPOWChainService(); err != nil {
@@ -534,8 +545,8 @@ func (b *BeaconNode) startSlasherDB(cliCtx *cli.Context) error {
 	return nil
 }
 
-func (b *BeaconNode) startStateGen(ctx context.Context, bfs *backfill.Status, fc forkchoice.ForkChoicer) error {
-	opts := []stategen.Option{stategen.WithBackfillStatus(bfs)}
+func (b *BeaconNode) startStateGen(ctx context.Context, bfs coverage.AvailableBlocker, fc forkchoice.ForkChoicer) error {
+	opts := []stategen.Option{stategen.WithAvailableBlocker(bfs)}
 	sg := stategen.New(b.db, fc, opts...)
 
 	cp, err := b.db.FinalizedCheckpoint(ctx)
