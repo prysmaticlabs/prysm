@@ -169,19 +169,28 @@ func ErrorContains(loggerFn assertionLoggerFn, want string, err error, msg ...in
 
 // NotNil asserts that passed value is not nil.
 func NotNil(loggerFn assertionLoggerFn, obj interface{}, msg ...interface{}) {
-	if isNil(obj) {
+	if deepNil(obj) {
 		errMsg := parseMsg("Unexpected nil value", msg...)
 		_, file, line, _ := runtime.Caller(2)
 		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
 	}
 }
 
-// isNil checks that underlying value of obj is nil.
-func isNil(obj interface{}) bool {
-	if obj == nil {
+// IsNil asserts that observed value is nil.
+func IsNil(loggerFn assertionLoggerFn, got interface{}, msg ...interface{}) {
+	if !deepNil(got) {
+		errMsg := parseMsg("Value is unexpectedly not nil", msg...)
+		_, file, line, _ := runtime.Caller(2)
+		loggerFn("%s:%d %s", filepath.Base(file), line, errMsg)
+	}
+}
+
+// deepNil checks that underlying value of obj is nil.
+func deepNil(got interface{}) bool {
+	if got == nil {
 		return true
 	}
-	value := reflect.ValueOf(obj)
+	value := reflect.ValueOf(got)
 	switch value.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
 		return value.IsNil()
