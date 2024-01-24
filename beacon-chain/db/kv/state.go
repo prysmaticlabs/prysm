@@ -893,6 +893,7 @@ func createStateIndicesFromStateSlot(ctx context.Context, slot primitives.Slot) 
 //
 // 3.) state with current finalized root
 // 4.) unfinalized States
+// 5.) not origin root
 func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint primitives.Slot) error {
 	ctx, span := trace.StartSpan(ctx, "BeaconDB. CleanUpDirtyStates")
 	defer span.End()
@@ -914,14 +915,20 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint pr
 				return ctx.Err()
 			}
 
-			finalizedChkpt := bytesutil.ToBytes32(f.Root) == bytesutil.ToBytes32(v)
+			root := bytesutil.ToBytes32(v)
+			finalizedChkpt := bytesutil.ToBytes32(f.Root) == root
 			slot := bytesutil.BytesToSlotBigEndian(k)
 			mod := slot % slotsPerArchivedPoint
 			nonFinalized := slot > finalizedSlot
+			oRoot, err := s.OriginCheckpointBlockRoot(ctx)
+			if err != nil {
+				return err
+			}
+			oMatches := oRoot == root
 
 			// The following conditions cover 1, 2, 3 and 4 above.
-			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized {
-				deletedRoots = append(deletedRoots, bytesutil.ToBytes32(v))
+			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized && !oMatches {
+				deletedRoots = append(deletedRoots, root)
 			}
 			return nil
 		})
