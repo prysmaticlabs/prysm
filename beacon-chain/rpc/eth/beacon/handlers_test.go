@@ -3649,18 +3649,33 @@ func TestGetDepositSnapshot(t *testing.T) {
 	s := Server{
 		BeaconDB: beaconDB,
 	}
+
 	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/deposit_snapshot", nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
+	t.Run("JSON response", func(t *testing.T) {
+		s.GetDepositSnapshot(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetDepositSnapshotResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.NotNil(t, resp.Data)
 
-	s.GetDepositSnapshot(writer, request)
-	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetDepositSnapshotResponse{}
-	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	require.NotNil(t, resp.Data)
+		assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
+		assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
+		assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
+		assert.Equal(t, finalized, len(resp.Data.Finalized))
+	})
+	t.Run("SSZ response", func(t *testing.T) {
+		request.Header.Set("Accept", api.OctetStreamMediaType)
+		s.GetDepositSnapshot(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &GetDepositSnapshotResponse{}
+		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
+		require.NotNil(t, resp.Data)
 
-	assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
-	assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
-	assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
-	assert.Equal(t, finalized, len(resp.Data.Finalized))
+		assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
+		assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
+		assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
+		assert.Equal(t, finalized, len(resp.Data.Finalized))
+	})
 }

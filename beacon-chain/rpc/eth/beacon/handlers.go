@@ -2099,7 +2099,6 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	for _, f := range snapshot.Finalized {
 		finalized = append(finalized, []string{hexutil.Encode(f)})
 	}
-
 	response := &GetDepositSnapshotResponse{
 		Data: &DepositSnapshot{
 			Finalized:            finalized,
@@ -2109,5 +2108,14 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			ExecutionBlockHeight: strconv.FormatUint(snapshot.ExecutionDepth, 10),
 		},
 	}
-	httputil.WriteJson(w, response)
+	if httputil.RespondWithSsz(r) {
+		sszData, err := response.MarshalSSZ()
+		if err != nil {
+			httputil.HandleError(w, "Could not marshal deposit snapshot into SSZ", http.StatusInternalServerError)
+			return
+		}
+		httputil.WriteSsz(w, sszData, "deposit_snapshot.ssz")
+	} else {
+		httputil.WriteJson(w, response)
+	}
 }
