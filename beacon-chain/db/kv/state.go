@@ -908,6 +908,11 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint pr
 	}
 	deletedRoots := make([][32]byte, 0)
 
+	oRoot, err := s.OriginCheckpointBlockRoot(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(stateSlotIndicesBucket)
 		return bkt.ForEach(func(k, v []byte) error {
@@ -916,20 +921,30 @@ func (s *Store) CleanUpDirtyStates(ctx context.Context, slotsPerArchivedPoint pr
 			}
 
 			root := bytesutil.ToBytes32(v)
-			finalizedChkpt := bytesutil.ToBytes32(f.Root) == root
 			slot := bytesutil.BytesToSlotBigEndian(k)
 			mod := slot % slotsPerArchivedPoint
-			nonFinalized := slot > finalizedSlot
-			oRoot, err := s.OriginCheckpointBlockRoot(ctx)
-			if err != nil {
-				return err
-			}
-			oMatches := oRoot == root
 
-			// The following conditions cover 1, 2, 3 and 4 above.
-			if mod != 0 && mod <= slotsPerArchivedPoint-slotsPerArchivedPoint/3 && !finalizedChkpt && !nonFinalized && !oMatches {
-				deletedRoots = append(deletedRoots, root)
+			if mod == 0 {
+				return nil
 			}
+
+			if mod > slotsPerArchivedPoint-slotsPerArchivedPoint/3 {
+				return nil
+			}
+
+			if bytesutil.ToBytes32(f.Root) == root {
+				return nil
+			}
+
+			if slot > finalizedSlot {
+				return nil
+			}
+
+			if oRoot == root {
+				return nil
+			}
+
+			deletedRoots = append(deletedRoots, root)
 			return nil
 		})
 	})
