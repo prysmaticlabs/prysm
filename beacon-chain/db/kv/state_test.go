@@ -3,6 +3,7 @@ package kv
 import (
 	"context"
 	"encoding/binary"
+	"math/big"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -99,7 +100,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: make([]byte, 32),
 					WithdrawalsRoot:  make([]byte, 32),
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
 				return st
@@ -124,7 +125,7 @@ func TestState_CanSaveRetrieve(t *testing.T) {
 					BlockHash:        make([]byte, 32),
 					TransactionsRoot: make([]byte, 32),
 					WithdrawalsRoot:  make([]byte, 32),
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				require.NoError(t, st.SetLatestExecutionPayloadHeader(p))
 				return st

@@ -260,7 +260,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToGwei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadDeneb(result.Payload, blocks.PayloadValueToWei(result.Value))
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -273,7 +273,7 @@ func (s *Service) GetPayload(ctx context.Context, payloadId [8]byte, slot primit
 		if err != nil {
 			return nil, nil, false, handleRPCError(err)
 		}
-		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToGwei(result.Value))
+		ed, err := blocks.WrappedExecutionPayloadCapella(result.Payload, blocks.PayloadValueToWei(result.Value))
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -734,7 +734,7 @@ func fullPayloadFromExecutionBlock(
 			BlockHash:     blockHash[:],
 			Transactions:  txs,
 			Withdrawals:   block.Withdrawals,
-		}, 0) // We can't get the block value and don't care about the block value for this instance
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -763,7 +763,7 @@ func fullPayloadFromExecutionBlock(
 				Withdrawals:   block.Withdrawals,
 				BlobGasUsed:   bgu,
 				ExcessBlobGas: ebg,
-			}, 0) // We can't get the block value and don't care about the block value for this instance
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version %d", block.Version)
 	}
@@ -811,7 +811,7 @@ func fullPayloadFromPayloadBody(
 			BlockHash:     header.BlockHash(),
 			Transactions:  body.Transactions,
 			Withdrawals:   body.Withdrawals,
-		}, 0) // We can't get the block value and don't care about the block value for this instance
+		}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	case version.Deneb:
 		ebg, err := header.ExcessBlobGas()
 		if err != nil {
@@ -840,7 +840,7 @@ func fullPayloadFromPayloadBody(
 				Withdrawals:   body.Withdrawals,
 				ExcessBlobGas: ebg,
 				BlobGasUsed:   bgu,
-			}, 0) // We can't get the block value and don't care about the block value for this instance
+			}, big.NewInt(0)) // We can't get the block value and don't care about the block value for this instance
 	default:
 		return nil, fmt.Errorf("unknown execution block version for payload %d", bVersion)
 	}

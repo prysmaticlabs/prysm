@@ -2,6 +2,7 @@ package interop
 
 import (
 	"context"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/pkg/errors"
@@ -595,7 +596,7 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			Transactions:  make([][]byte, 0),
 			Withdrawals:   make([]*enginev1.Withdrawal, 0),
 		}
-		wep, err := blocks.WrappedExecutionPayloadCapella(payload, 0)
+		wep, err := blocks.WrappedExecutionPayloadCapella(payload, big.NewInt(0))
 		if err != nil {
 			return err
 		}
@@ -603,7 +604,7 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		ed, err = blocks.WrappedExecutionPayloadHeaderCapella(eph, 0)
+		ed, err = blocks.WrappedExecutionPayloadHeaderCapella(eph, big.NewInt(0))
 		if err != nil {
 			return err
 		}
@@ -627,7 +628,7 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 			ExcessBlobGas: *gb.ExcessBlobGas(),
 			BlobGasUsed:   *gb.BlobGasUsed(),
 		}
-		wep, err := blocks.WrappedExecutionPayloadDeneb(payload, 0)
+		wep, err := blocks.WrappedExecutionPayloadDeneb(payload, big.NewInt(0))
 		if err != nil {
 			return err
 		}
@@ -635,7 +636,7 @@ func (s *PremineGenesisConfig) setExecutionPayload(g state.BeaconState) error {
 		if err != nil {
 			return err
 		}
-		ed, err = blocks.WrappedExecutionPayloadHeaderDeneb(eph, 0)
+		ed, err = blocks.WrappedExecutionPayloadHeaderDeneb(eph, big.NewInt(0))
 		if err != nil {
 			return err
 		}

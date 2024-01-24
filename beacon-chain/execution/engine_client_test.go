@@ -127,7 +127,7 @@ func TestClient_IPC(t *testing.T) {
 		require.Equal(t, true, ok)
 		req, ok := fix["ExecutionPayloadCapella"].(*pb.ExecutionPayloadCapella)
 		require.Equal(t, true, ok)
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(req, big.NewInt(0))
 		require.NoError(t, err)
 		latestValidHash, err := srv.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -476,7 +476,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.NoError(t, err)
@@ -490,7 +490,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.NoError(t, err)
@@ -518,7 +518,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -532,7 +532,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrAcceptedSyncingPayloadStatus, err)
@@ -560,7 +560,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -574,7 +574,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidBlockHashPayloadStatus, err)
@@ -602,7 +602,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV2Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadCapella(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -616,7 +616,7 @@ func TestClient_HTTP(t *testing.T) {
 		client := newPayloadV3Setup(t, want, execPayload)
 
 		// We call the RPC method via HTTP and expect a proper result.
-		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, 0)
+		wrappedPayload, err := blocks.WrappedExecutionPayloadDeneb(execPayload, big.NewInt(0))
 		require.NoError(t, err)
 		resp, err := client.NewPayload(ctx, wrappedPayload, []common.Hash{}, &common.Hash{'a'})
 		require.ErrorIs(t, ErrInvalidPayloadStatus, err)
@@ -1537,7 +1537,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadCapella(&pb.ExecutionPayloadCapella{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1545,7 +1545,7 @@ func Test_fullPayloadFromExecutionBlockCapella(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderCapella(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
@@ -1598,7 +1598,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 				p, err := blocks.WrappedExecutionPayloadDeneb(&pb.ExecutionPayloadDeneb{
 					BlockHash:    wantedHash[:],
 					Transactions: [][]byte{},
-				}, 0)
+				}, big.NewInt(0))
 				require.NoError(t, err)
 				return p
 			},
@@ -1606,7 +1606,7 @@ func Test_fullPayloadFromExecutionBlockDeneb(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, 0)
+			wrapped, err := blocks.WrappedExecutionPayloadHeaderDeneb(tt.args.header, big.NewInt(0))
 			require.NoError(t, err)
 			got, err := fullPayloadFromExecutionBlock(tt.args.version, wrapped, tt.args.block)
 			if err != nil {
