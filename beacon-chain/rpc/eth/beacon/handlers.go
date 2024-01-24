@@ -2071,7 +2071,8 @@ func (s *Server) GetGenesis(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJson(w, resp)
 }
 
-// GetDepositSnapshot returns the deposit snapshot.
+// GetDepositSnapshot retrieves the EIP-4881 Deposit Tree Snapshot. Either a JSON or,
+// if the Accept header was added, bytes serialized by SSZ will be returned.
 func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
 	defer span.End()

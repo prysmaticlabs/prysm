@@ -3622,21 +3622,25 @@ func TestGetGenesis(t *testing.T) {
 func TestGetDepositSnapshot(t *testing.T) {
 	beaconDB := dbTest.SetupDB(t)
 	mockTrie := depositsnapshot.NewDepositTree()
-	finalized := [][32]byte{bytesutil.ToBytes32([]byte{1}), bytesutil.ToBytes32([]byte{2})}
-	for i, leaf := range finalized {
+	deposits := [][32]byte{
+		bytesutil.ToBytes32([]byte{1}),
+		bytesutil.ToBytes32([]byte{2}),
+		bytesutil.ToBytes32([]byte{3}),
+	}
+	finalized := 2
+	for _, leaf := range deposits {
 		err := mockTrie.Insert(leaf[:], 0)
 		require.NoError(t, err)
-		err = mockTrie.Finalize(int64(i), leaf, 0)
-		require.NoError(t, err)
 	}
+	err := mockTrie.Finalize(1, deposits[1], 1)
+	require.NoError(t, err)
+	err = mockTrie.Finalize(2, deposits[2], 2)
+	require.NoError(t, err)
 
 	snapshot, err := mockTrie.GetSnapshot()
 	require.NoError(t, err)
-	root, err := mockTrie.HashTreeRoot()
+	root, err := snapshot.CalculateRoot()
 	require.NoError(t, err)
-	snapRoot, err := snapshot.CalculateRoot()
-	require.NoError(t, err)
-	assert.Equal(t, root, snapRoot)
 	chainData := &eth.ETH1ChainData{
 		DepositSnapshot: snapshot.ToProto(),
 	}
@@ -3656,6 +3660,7 @@ func TestGetDepositSnapshot(t *testing.T) {
 	require.NotNil(t, resp.Data)
 
 	assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
-	assert.Equal(t, "0x0200000000000000000000000000000000000000000000000000000000000000", resp.Data.ExecutionBlockHash)
-	assert.Equal(t, "2", resp.Data.DepositCount)
+	assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
+	assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
+	assert.Equal(t, finalized, len(resp.Data.Finalized))
 }
