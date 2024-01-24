@@ -22,6 +22,10 @@ def prysm_image_upload(
         entrypoint = entrypoint,
         tars = [
             "//tools:passwd_tar",
+        ] + select({
+          "@platforms//cpu:x86_64": ["@amd64_debian11_coreutils"],
+          "@platforms//cpu:arm64": ["@arm64_debian11_coreutils"],
+        }) + [
             "//tools:libtinfo6_tar",
             "//tools:bash_tar",
             ":binary_tar",

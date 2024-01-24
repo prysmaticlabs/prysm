@@ -57,3 +57,15 @@ genrule(
     cmd = "ar x $< && xz -d data.tar.xz -c >> $@",
     visibility = ["//visibility:public"],
 )
+
+# coreutils provides common helpful utlities and is often expected in docker images.
+genrule(
+    name = "coreutils_tar",
+    srcs = select({
+        "@platforms//cpu:x86_64": ["@coreutils_amd64//file"],
+        "@platforms//cpu:arm64": ["@coreutils_arm64//file"],
+    }),
+    outs = ["coreutils.tar"],
+    cmd = "ar x $< && xz -d data.tar.xz -c >> $@",
+    visibility = ["//visibility:public"],
+)
