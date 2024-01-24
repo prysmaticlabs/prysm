@@ -13,17 +13,17 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/prysmaticlabs/prysm/v4/api/client"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/network/forks"
-	v1 "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
-
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/apimiddleware"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/api/server"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	apibeacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/network/forks"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,7 +32,7 @@ const (
 	getSignedBlockPath       = "/eth/v2/beacon/blocks"
 	getBlockRootPath         = "/eth/v1/beacon/blocks/{{.Id}}/root"
 	getForkForStatePath      = "/eth/v1/beacon/states/{{.Id}}/fork"
-	getWeakSubjectivityPath  = "/eth/v1/beacon/weak_subjectivity"
+	getWeakSubjectivityPath  = "/prysm/v1/beacon/weak_subjectivity"
 	getForkSchedulePath      = "/eth/v1/config/fork_schedule"
 	getConfigSpecPath        = "/eth/v1/config/spec"
 	getStatePath             = "/eth/v2/debug/beacon/states"
@@ -179,12 +179,12 @@ func (c *Client) GetForkSchedule(ctx context.Context) (forks.OrderedSchedule, er
 }
 
 // GetConfigSpec retrieve the current configs of the network used by the beacon node.
-func (c *Client) GetConfigSpec(ctx context.Context) (*v1.SpecResponse, error) {
+func (c *Client) GetConfigSpec(ctx context.Context) (*config.GetSpecResponse, error) {
 	body, err := c.Get(ctx, getConfigSpecPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "error requesting configSpecPath")
 	}
-	fsr := &v1.SpecResponse{}
+	fsr := &config.GetSpecResponse{}
 	err = json.Unmarshal(body, fsr)
 	if err != nil {
 		return nil, err
@@ -259,16 +259,16 @@ func (c *Client) GetWeakSubjectivity(ctx context.Context) (*WeakSubjectivityData
 	if err != nil {
 		return nil, err
 	}
-	v := &apimiddleware.WeakSubjectivityResponse{}
+	v := &apibeacon.GetWeakSubjectivityResponse{}
 	err = json.Unmarshal(body, v)
 	if err != nil {
 		return nil, err
 	}
-	epoch, err := strconv.ParseUint(v.Data.Checkpoint.Epoch, 10, 64)
+	epoch, err := strconv.ParseUint(v.Data.WsCheckpoint.Epoch, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	blockRoot, err := hexutil.Decode(v.Data.Checkpoint.Root)
+	blockRoot, err := hexutil.Decode(v.Data.WsCheckpoint.Root)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +306,7 @@ func (c *Client) SubmitChangeBLStoExecution(ctx context.Context, request []*shar
 	if resp.StatusCode != http.StatusOK {
 		decoder := json.NewDecoder(resp.Body)
 		decoder.DisallowUnknownFields()
-		errorJson := &apimiddleware.IndexedVerificationFailureErrorJson{}
+		errorJson := &server.IndexedVerificationFailureError{}
 		if err := decoder.Decode(errorJson); err != nil {
 			return errors.Wrapf(err, "failed to decode error JSON for %s", resp.Request.URL)
 		}

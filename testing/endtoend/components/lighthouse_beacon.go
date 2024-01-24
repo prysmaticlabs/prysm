@@ -178,12 +178,11 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		fmt.Sprintf("--testnet-dir=%s", testDir),
 		"--staking",
 		"--enr-address=127.0.0.1",
-		fmt.Sprintf("--enr-udp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
-		fmt.Sprintf("--enr-tcp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
-		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index),
+		fmt.Sprintf("--enr-udp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index*2), // multiply by 2 because LH adds 1 for quic4 port
+		fmt.Sprintf("--enr-tcp-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index*2), // multiply by 2 because LH adds 1 for quic4 port
+		fmt.Sprintf("--port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeP2PPort+index*2),         // multiply by 2 because LH adds 1 for quic4 port
 		fmt.Sprintf("--http-port=%d", e2e.TestParams.Ports.LighthouseBeaconNodeHTTPPort+index),
 		fmt.Sprintf("--target-peers=%d", 10),
-		fmt.Sprintf("--eth1-endpoints=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1RPCPort+prysmNodeCount+index),
 		fmt.Sprintf("--execution-endpoint=http://127.0.0.1:%d", e2e.TestParams.Ports.Eth1ProxyPort+prysmNodeCount+index),
 		fmt.Sprintf("--jwt-secrets=%s", jwtPath),
 		fmt.Sprintf("--boot-nodes=%s", node.enr),
@@ -193,7 +192,6 @@ func (node *LighthouseBeaconNode) Start(ctx context.Context) error {
 		"--http-allow-sync-stalled",
 		"--enable-private-discovery",
 		"--debug-level=debug",
-		"--merge",
 		"--suggested-fee-recipient=0x878705ba3f8bc32fcf7f4caa1a35e72af65cf766",
 	}
 	if node.config.UseFixedPeerIDs {

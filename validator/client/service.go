@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,10 +18,10 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
+	beaconApi "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-api"
 	beaconChainClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/beacon-chain-client-factory"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	nodeClientFactory "github.com/prysmaticlabs/prysm/v4/validator/client/node-client-factory"
@@ -52,28 +53,29 @@ type GenesisFetcher interface {
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
-	useWeb                bool
-	emitAccountMetrics    bool
-	logValidatorBalances  bool
-	interopKeysConfig     *local.InteropKeymanagerConfig
-	conn                  validatorHelpers.NodeConnection
-	grpcRetryDelay        time.Duration
-	grpcRetries           uint
-	maxCallRecvMsgSize    int
-	cancel                context.CancelFunc
-	walletInitializedFeed *event.Feed
-	wallet                *wallet.Wallet
-	graffitiStruct        *graffiti.Graffiti
-	dataDir               string
-	withCert              string
-	endpoint              string
-	ctx                   context.Context
-	validator             iface.Validator
-	db                    db.Database
-	grpcHeaders           []string
-	graffiti              []byte
-	Web3SignerConfig      *remoteweb3signer.SetupConfig
-	proposerSettings      *validatorserviceconfig.ProposerSettings
+	useWeb                 bool
+	emitAccountMetrics     bool
+	logValidatorBalances   bool
+	interopKeysConfig      *local.InteropKeymanagerConfig
+	conn                   validatorHelpers.NodeConnection
+	grpcRetryDelay         time.Duration
+	grpcRetries            uint
+	maxCallRecvMsgSize     int
+	cancel                 context.CancelFunc
+	walletInitializedFeed  *event.Feed
+	wallet                 *wallet.Wallet
+	graffitiStruct         *graffiti.Graffiti
+	dataDir                string
+	withCert               string
+	endpoint               string
+	ctx                    context.Context
+	validator              iface.Validator
+	db                     db.Database
+	grpcHeaders            []string
+	graffiti               []byte
+	Web3SignerConfig       *remoteweb3signer.SetupConfig
+	proposerSettings       *validatorserviceconfig.ProposerSettings
+	validatorsRegBatchSize int
 }
 
 // Config for the validator service.
@@ -99,6 +101,7 @@ type Config struct {
 	ProposerSettings           *validatorserviceconfig.ProposerSettings
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
+	ValidatorsRegBatchSize     int
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -106,27 +109,28 @@ type Config struct {
 func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	s := &ValidatorService{
-		ctx:                   ctx,
-		cancel:                cancel,
-		endpoint:              cfg.Endpoint,
-		withCert:              cfg.CertFlag,
-		dataDir:               cfg.DataDir,
-		graffiti:              []byte(cfg.GraffitiFlag),
-		logValidatorBalances:  cfg.LogValidatorBalances,
-		emitAccountMetrics:    cfg.EmitAccountMetrics,
-		maxCallRecvMsgSize:    cfg.GrpcMaxCallRecvMsgSizeFlag,
-		grpcRetries:           cfg.GrpcRetriesFlag,
-		grpcRetryDelay:        cfg.GrpcRetryDelay,
-		grpcHeaders:           strings.Split(cfg.GrpcHeadersFlag, ","),
-		validator:             cfg.Validator,
-		db:                    cfg.ValDB,
-		wallet:                cfg.Wallet,
-		walletInitializedFeed: cfg.WalletInitializedFeed,
-		useWeb:                cfg.UseWeb,
-		interopKeysConfig:     cfg.InteropKeysConfig,
-		graffitiStruct:        cfg.GraffitiStruct,
-		Web3SignerConfig:      cfg.Web3SignerConfig,
-		proposerSettings:      cfg.ProposerSettings,
+		ctx:                    ctx,
+		cancel:                 cancel,
+		endpoint:               cfg.Endpoint,
+		withCert:               cfg.CertFlag,
+		dataDir:                cfg.DataDir,
+		graffiti:               []byte(cfg.GraffitiFlag),
+		logValidatorBalances:   cfg.LogValidatorBalances,
+		emitAccountMetrics:     cfg.EmitAccountMetrics,
+		maxCallRecvMsgSize:     cfg.GrpcMaxCallRecvMsgSizeFlag,
+		grpcRetries:            cfg.GrpcRetriesFlag,
+		grpcRetryDelay:         cfg.GrpcRetryDelay,
+		grpcHeaders:            strings.Split(cfg.GrpcHeadersFlag, ","),
+		validator:              cfg.Validator,
+		db:                     cfg.ValDB,
+		wallet:                 cfg.Wallet,
+		walletInitializedFeed:  cfg.WalletInitializedFeed,
+		useWeb:                 cfg.UseWeb,
+		interopKeysConfig:      cfg.InteropKeysConfig,
+		graffitiStruct:         cfg.GraffitiStruct,
+		Web3SignerConfig:       cfg.Web3SignerConfig,
+		proposerSettings:       cfg.ProposerSettings,
+		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -187,15 +191,21 @@ func (v *ValidatorService) Start() {
 		return
 	}
 
-	validatorClient := validatorClientFactory.NewValidatorClient(v.conn)
-	beaconClient := beaconChainClientFactory.NewBeaconChainClient(v.conn)
-	prysmBeaconClient := beaconChainClientFactory.NewPrysmBeaconClient(v.conn)
+	restHandler := &beaconApi.BeaconApiJsonRestHandler{
+		HttpClient: http.Client{Timeout: v.conn.GetBeaconApiTimeout()},
+		Host:       v.conn.GetBeaconApiUrl(),
+	}
+
+	evHandler := beaconApi.NewEventHandler(http.DefaultClient, v.conn.GetBeaconApiUrl())
+	opts := []beaconApi.ValidatorClientOpt{beaconApi.WithEventHandler(evHandler)}
+	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler, opts...)
 
 	valStruct := &validator{
-		db:                             v.db,
 		validatorClient:                validatorClient,
-		beaconClient:                   beaconClient,
-		node:                           nodeClientFactory.NewNodeClient(v.conn),
+		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
+		nodeClient:                     nodeClientFactory.NewNodeClient(v.conn, restHandler),
+		prysmBeaconClient:              beaconChainClientFactory.NewPrysmBeaconClient(v.conn, restHandler),
+		db:                             v.db,
 		graffiti:                       v.graffiti,
 		logValidatorBalances:           v.logValidatorBalances,
 		emitAccountMetrics:             v.emitAccountMetrics,
@@ -212,25 +222,15 @@ func (v *ValidatorService) Start() {
 		interopKeysConfig:              v.interopKeysConfig,
 		wallet:                         v.wallet,
 		walletInitializedFeed:          v.walletInitializedFeed,
-		blockFeed:                      new(event.Feed),
+		slotFeed:                       new(event.Feed),
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		eipImportBlacklistedPublicKeys: slashablePublicKeys,
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
-		prysmBeaconClient:              prysmBeaconClient,
+		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 	}
-
-	// To resolve a race condition at startup due to the interface
-	// nature of the abstracted block type. We initialize
-	// the inner type of the feed before hand. So that
-	// during future accesses, there will be no panics here
-	// from type incompatibility.
-	tempChan := make(chan interfaces.ReadOnlySignedBeaconBlock)
-	sub := valStruct.blockFeed.Subscribe(tempChan)
-	sub.Unsubscribe()
-	close(tempChan)
 
 	v.validator = valStruct
 	go run(v.ctx, v.validator)

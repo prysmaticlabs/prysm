@@ -29,6 +29,10 @@ func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb
 	return c.nodeClient.ListPeers(ctx, in)
 }
 
+func (c *grpcNodeClient) IsHealthy(context.Context) bool {
+	panic("function not supported for gRPC client")
+}
+
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {
 	return &grpcNodeClient{ethpb.NewNodeClient(cc)}
 }

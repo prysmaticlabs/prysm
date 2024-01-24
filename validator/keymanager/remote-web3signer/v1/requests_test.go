@@ -465,47 +465,6 @@ func TestGetBlockV2BlindedSignRequest(t *testing.T) {
 	}
 }
 
-func TestGetBlobSignRequest(t *testing.T) {
-	type args struct {
-		request *validatorpb.SignRequest
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *v1.BlobSidecarSignRequest
-		wantErr bool
-	}{
-		{
-			name: "Happy Path Test",
-			args: args{
-				request: mock.GetMockSignRequest("BLOB_SIDECAR"),
-			},
-			want:    mock.BlobSidecarSignRequest(),
-			wantErr: false,
-		},
-		{
-			name: "Happy Path Test Blinded",
-			args: args{
-				request: mock.GetMockSignRequest("BLINDED_BLOB_SIDECAR"),
-			},
-			want:    mock.BlobSidecarSignRequest(),
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := v1.GetBlobSignRequest(tt.args.request, make([]byte, fieldparams.RootLength))
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetBlobSignRequest() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBlobSignRequest() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestGetValidatorRegistrationSignRequest(t *testing.T) {
 	type args struct {
 		request *validatorpb.SignRequest

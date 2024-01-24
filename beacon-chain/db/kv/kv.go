@@ -133,10 +133,13 @@ var Buckets = [][]byte{
 	blobsBucket,
 }
 
+// KVStoreOption is a functional option that modifies a kv.Store.
+type KVStoreOption func(*Store)
+
 // NewKVStore initializes a new boltDB key-value store at the directory
 // path specified, creates the kv-buckets based on the schema, and stores
 // an open connection db object as a property of the Store struct.
-func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
+func NewKVStore(ctx context.Context, dirPath string, opts ...KVStoreOption) (*Store, error) {
 	hasDir, err := file.HasDir(dirPath)
 	if err != nil {
 		return nil, err
@@ -189,6 +192,9 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 		stateSummaryCache:   newStateSummaryCache(),
 		ctx:                 ctx,
 	}
+	for _, o := range opts {
+		o(kv)
+	}
 	if err := kv.db.Update(func(tx *bolt.Tx) error {
 		return createBuckets(tx, Buckets...)
 	}); err != nil {
@@ -200,10 +206,6 @@ func NewKVStore(ctx context.Context, dirPath string) (*Store, error) {
 	// Setup the type of block storage used depending on whether or not this is a fresh database.
 	if err := kv.setupBlockStorageType(ctx); err != nil {
 		return nil, err
-	}
-
-	if err := checkEpochsForBlobSidecarsRequestBucket(boltDB); err != nil {
-		return nil, errors.Wrap(err, "failed to check epochs for blob sidecars request bucket")
 	}
 
 	return kv, nil

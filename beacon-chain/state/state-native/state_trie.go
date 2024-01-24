@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
+	mvslice "github.com/prysmaticlabs/prysm/v4/container/multi-value-slice"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/ssz"
@@ -931,6 +932,68 @@ func (b *BeaconState) FieldReferencesCount() map[string]uint64 {
 	return refMap
 }
 
+// RecordStateMetrics proceeds to record any state related metrics data.
+func (b *BeaconState) RecordStateMetrics() {
+	b.lock.RLock()
+	defer b.lock.RUnlock()
+	// Only run this for nodes running with the experimental state.
+	if !features.Get().EnableExperimentalState {
+		return
+	}
+
+	// Validators
+	if b.validatorsMultiValue != nil {
+		stats := b.validatorsMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.Validators.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+
+	// Balances
+	if b.balancesMultiValue != nil {
+		stats := b.balancesMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.Balances.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+
+	// InactivityScores
+	if b.inactivityScoresMultiValue != nil {
+		stats := b.inactivityScoresMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.InactivityScores.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+	// BlockRoots
+	if b.blockRootsMultiValue != nil {
+		stats := b.blockRootsMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.BlockRoots.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+
+	// StateRoots
+	if b.stateRootsMultiValue != nil {
+		stats := b.stateRootsMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.StateRoots.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+	// RandaoMixes
+	if b.randaoMixesMultiValue != nil {
+		stats := b.randaoMixesMultiValue.MultiValueStatistics()
+		multiValueIndividualElementsCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalIndividualElements))
+		multiValueIndividualElementReferencesCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalIndividualElemReferences))
+		multiValueAppendedElementsCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalAppendedElements))
+		multiValueAppendedElementReferencesCountGauge.WithLabelValues(types.RandaoMixes.String()).Set(float64(stats.TotalAppendedElemReferences))
+	}
+}
+
 // IsNil checks if the state and the underlying proto
 // object are nil.
 func (b *BeaconState) IsNil() bool {
@@ -938,7 +1001,7 @@ func (b *BeaconState) IsNil() bool {
 }
 
 func (b *BeaconState) rootSelector(ctx context.Context, field types.FieldIndex) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "beaconState.rootSelector")
+	_, span := trace.StartSpan(ctx, "beaconState.rootSelector")
 	defer span.End()
 	span.AddAttributes(trace.StringAttribute("field", field.String()))
 
@@ -1178,7 +1241,10 @@ func finalizerCleanup(b *BeaconState) {
 func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, customtypes.BlockRoots(b.blockRootsMultiValue.Value(b)), fieldparams.BlockRootsLength)
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.blockRootsMultiValue,
+			}, fieldparams.BlockRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1192,7 +1258,10 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, customtypes.BlockRoots(b.blockRootsMultiValue.Value(b)))
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.blockRootsMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.blockRoots)
 	}
@@ -1201,7 +1270,10 @@ func (b *BeaconState) blockRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, customtypes.StateRoots(b.stateRootsMultiValue.Value(b)), fieldparams.StateRootsLength)
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.stateRootsMultiValue,
+			}, fieldparams.StateRootsLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1215,7 +1287,10 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, customtypes.StateRoots(b.stateRootsMultiValue.Value(b)))
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.stateRootsMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.stateRoots)
 	}
@@ -1224,7 +1299,10 @@ func (b *BeaconState) stateRootsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.validatorsMultiValue.Value(b), fieldparams.ValidatorRegistryLimit)
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[*ethpb.Validator]{
+				Identifiable:    b,
+				MultiValueSlice: b.validatorsMultiValue,
+			}, fieldparams.ValidatorRegistryLimit)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1238,7 +1316,10 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, b.validatorsMultiValue.Value(b))
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[*ethpb.Validator]{
+			Identifiable:    b,
+			MultiValueSlice: b.validatorsMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.validators)
 	}
@@ -1247,7 +1328,10 @@ func (b *BeaconState) validatorsRootSelector(field types.FieldIndex) ([32]byte, 
 func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, b.balancesMultiValue.Value(b), stateutil.ValidatorLimitForBalancesChunks())
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[uint64]{
+				Identifiable:    b,
+				MultiValueSlice: b.balancesMultiValue,
+			}, stateutil.ValidatorLimitForBalancesChunks())
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1261,7 +1345,10 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, b.balancesMultiValue.Value(b))
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[uint64]{
+			Identifiable:    b,
+			MultiValueSlice: b.balancesMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.balances)
 	}
@@ -1270,7 +1357,10 @@ func (b *BeaconState) balancesRootSelector(field types.FieldIndex) ([32]byte, er
 func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte, error) {
 	if b.rebuildTrie[field] {
 		if features.Get().EnableExperimentalState {
-			err := b.resetFieldTrie(field, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)), fieldparams.RandaoMixesLength)
+			err := b.resetFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+				Identifiable:    b,
+				MultiValueSlice: b.randaoMixesMultiValue,
+			}, fieldparams.RandaoMixesLength)
 			if err != nil {
 				return [32]byte{}, err
 			}
@@ -1284,7 +1374,10 @@ func (b *BeaconState) randaoMixesRootSelector(field types.FieldIndex) ([32]byte,
 		return b.stateFieldLeaves[field].TrieRoot()
 	}
 	if features.Get().EnableExperimentalState {
-		return b.recomputeFieldTrie(field, customtypes.RandaoMixes(b.randaoMixesMultiValue.Value(b)))
+		return b.recomputeFieldTrie(field, mvslice.MultiValueSliceComposite[[32]byte]{
+			Identifiable:    b,
+			MultiValueSlice: b.randaoMixesMultiValue,
+		})
 	} else {
 		return b.recomputeFieldTrie(field, b.randaoMixes)
 	}

@@ -28,7 +28,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls/blst"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	http2 "github.com/prysmaticlabs/prysm/v4/network/http"
+	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -209,7 +209,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Block rewards are not supported for Phase 0 blocks", e.Message)
@@ -396,7 +396,7 @@ func TestAttestationRewards(t *testing.T) {
 		FinalizationFetcher:   mockChainService,
 	}
 
-	t.Run("ok - ideal rewards", func(t *testing.T) {
+	t.Run("ideal rewards", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
@@ -419,7 +419,7 @@ func TestAttestationRewards(t *testing.T) {
 		}
 		assert.Equal(t, uint64(20756849), sum)
 	})
-	t.Run("ok - filtered vals", func(t *testing.T) {
+	t.Run("filtered vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		var body bytes.Buffer
 		pubkey := fmt.Sprintf("%#x", secretKeys[10].PublicKey().Marshal())
@@ -448,7 +448,7 @@ func TestAttestationRewards(t *testing.T) {
 		}
 		assert.Equal(t, uint64(794265), sum)
 	})
-	t.Run("ok - all vals", func(t *testing.T) {
+	t.Run("all vals", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
 		request := httptest.NewRequest("POST", url, nil)
 		writer := httptest.NewRecorder()
@@ -471,38 +471,12 @@ func TestAttestationRewards(t *testing.T) {
 		}
 		assert.Equal(t, uint64(54221955), sum)
 	})
-	t.Run("ok - penalty", func(t *testing.T) {
-		st, err := util.NewBeaconStateCapella()
-		require.NoError(t, err)
-		require.NoError(t, st.SetSlot(params.BeaconConfig().SlotsPerEpoch*3-1))
-		validators := make([]*eth.Validator, 0, valCount)
-		balances := make([]uint64, 0, valCount)
-		secretKeys := make([]bls.SecretKey, 0, valCount)
-		for i := 0; i < valCount; i++ {
-			blsKey, err := bls.RandKey()
-			require.NoError(t, err)
-			secretKeys = append(secretKeys, blsKey)
-			validators = append(validators, &eth.Validator{
-				PublicKey:         blsKey.PublicKey().Marshal(),
-				ExitEpoch:         params.BeaconConfig().FarFutureEpoch,
-				WithdrawableEpoch: params.BeaconConfig().FarFutureEpoch,
-				EffectiveBalance:  params.BeaconConfig().MaxEffectiveBalance / 64 * uint64(i),
-			})
-			balances = append(balances, params.BeaconConfig().MaxEffectiveBalance/64*uint64(i))
-		}
+	t.Run("penalty", func(t *testing.T) {
+		st := st.Copy()
+		validators := st.Validators()
 		validators[63].Slashed = true
 		require.NoError(t, st.SetValidators(validators))
-		require.NoError(t, st.SetBalances(balances))
-		require.NoError(t, st.SetInactivityScores(make([]uint64, len(validators))))
-		participation := make([]byte, len(validators))
-		for i := range participation {
-			participation[i] = 0b111
-		}
-		require.NoError(t, st.SetCurrentParticipationBits(participation))
-		require.NoError(t, st.SetPreviousParticipationBits(participation))
 
-		currentSlot := params.BeaconConfig().SlotsPerEpoch * 3
-		mockChainService := &mock.ChainService{Optimistic: true, Slot: &currentSlot}
 		s := &Server{
 			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
 				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
@@ -527,8 +501,44 @@ func TestAttestationRewards(t *testing.T) {
 		resp := &AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.TotalRewards[0].Head)
-		assert.Equal(t, "-432270", resp.Data.TotalRewards[0].Source)
-		assert.Equal(t, "-802788", resp.Data.TotalRewards[0].Target)
+		assert.Equal(t, "-439299", resp.Data.TotalRewards[0].Source)
+		assert.Equal(t, "-815841", resp.Data.TotalRewards[0].Target)
+		assert.Equal(t, "0", resp.Data.TotalRewards[0].Inactivity)
+	})
+	t.Run("inactivity", func(t *testing.T) {
+		st := st.Copy()
+		validators := st.Validators()
+		validators[63].Slashed = true
+		require.NoError(t, st.SetValidators(validators))
+		inactivityScores, err := st.InactivityScores()
+		require.NoError(t, err)
+		inactivityScores[63] = 10
+		require.NoError(t, st.SetInactivityScores(inactivityScores))
+
+		s := &Server{
+			Stater: &testutil.MockStater{StatesBySlot: map[primitives.Slot]state.BeaconState{
+				params.BeaconConfig().SlotsPerEpoch*3 - 1: st,
+			}},
+			TimeFetcher:           mockChainService,
+			OptimisticModeFetcher: mockChainService,
+			FinalizationFetcher:   mockChainService,
+		}
+
+		url := "http://only.the.epoch.number.at.the.end.is.important/1"
+		var body bytes.Buffer
+		valIds, err := json.Marshal([]string{"63"})
+		require.NoError(t, err)
+		_, err = body.Write(valIds)
+		require.NoError(t, err)
+		request := httptest.NewRequest("POST", url, &body)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+
+		s.AttestationRewards(writer, request)
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &AttestationRewardsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		assert.Equal(t, "-4768", resp.Data.TotalRewards[0].Inactivity)
 	})
 	t.Run("invalid validator index/pubkey", func(t *testing.T) {
 		url := "http://only.the.epoch.number.at.the.end.is.important/1"
@@ -543,7 +553,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "foo is not a validator index or pubkey", e.Message)
@@ -564,7 +574,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "No validator index found for pubkey "+pubkey, e.Message)
@@ -582,7 +592,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Validator index 999 is too large. Maximum allowed index is 63", e.Message)
@@ -595,7 +605,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are not supported for Phase 0", e.Message)
@@ -608,7 +618,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, true, strings.Contains(e.Message, "Could not decode epoch"))
@@ -621,7 +631,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusNotFound, e.Code)
 		assert.Equal(t, "Attestation rewards are available after two epoch transitions to ensure all attestations have a chance of inclusion", e.Message)
@@ -846,7 +856,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "foo is not a validator index or pubkey", e.Message)
@@ -873,7 +883,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "No validator index found for pubkey "+pubkey, e.Message)
@@ -897,7 +907,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Validator index 9999 is too large. Maximum allowed index is 1023", e.Message)
@@ -916,7 +926,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		e := &http2.DefaultErrorJson{}
+		e := &httputil.DefaultJsonError{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), e))
 		assert.Equal(t, http.StatusBadRequest, e.Code)
 		assert.Equal(t, "Sync committee rewards are not supported for Phase 0", e.Message)

@@ -164,6 +164,7 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 	}
 	isValid, err := IsValid(cliCtx.String(flags.WalletDirFlag.Name))
 	if errors.Is(err, ErrNoWalletFound) {
+		// reprompts the user for a valid dir
 		return otherwise(cliCtx)
 	}
 	if err != nil {
@@ -191,6 +192,65 @@ func OpenWalletOrElseCli(cliCtx *cli.Context, otherwise func(cliCtx *cli.Context
 		WalletDir:      walletDir,
 		WalletPassword: walletPassword,
 	})
+}
+
+// OpenOrCreateNewWallet takes a cli and returns a wallet either opening an existing valid wallet or creating a new one.
+func OpenOrCreateNewWallet(cliCtx *cli.Context) (*Wallet, error) {
+	walletDir, err := accountsprompt.InputDirectory(cliCtx, accountsprompt.WalletDirPromptText, flags.WalletDirFlag)
+	if err != nil {
+		return nil, err
+	}
+	exists, err := Exists(walletDir)
+	if err != nil {
+		return nil, errors.Wrap(err, CheckExistsErrMsg)
+	}
+	if exists {
+		isValid, err := IsValid(walletDir)
+		if err != nil {
+			return nil, errors.Wrap(err, CheckValidityErrMsg)
+		}
+		if !isValid {
+			return nil, errors.New(InvalidWalletErrMsg)
+		}
+		walletPassword, err := InputPassword(
+			cliCtx,
+			flags.WalletPasswordFileFlag,
+			PasswordPromptText,
+			false, /* Do not confirm password */
+			ValidateExistingPass,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return OpenWallet(cliCtx.Context, &Config{
+			WalletDir:      walletDir,
+			WalletPassword: walletPassword,
+		})
+	}
+	// create a new wallet in the dir
+	walletPassword, err := prompt.InputPassword(
+		cliCtx,
+		flags.WalletPasswordFileFlag,
+		NewWalletPasswordPromptText,
+		ConfirmPasswordPromptText,
+		true, /* Should confirm password */
+		prompt.ValidatePasswordInput,
+	)
+	if err != nil {
+		return nil, err
+	}
+	w := New(&Config{
+		KeymanagerKind: keymanager.Local,
+		WalletDir:      walletDir,
+		WalletPassword: walletPassword,
+	})
+	if err := w.SaveWallet(); err != nil {
+		return nil, errors.Wrap(err, "could not save wallet to disk")
+	}
+	log.WithField("wallet-path", walletDir).Info(
+		"Successfully created new wallet",
+	)
+	return w, nil
 }
 
 // NewWalletForWeb3Signer returns a new wallet for web3 signer which is temporary and not stored locally.
@@ -306,26 +366,27 @@ func (w *Wallet) InitializeKeymanager(ctx context.Context, cfg iface.InitKeymana
 }
 
 // WriteFileAtPath within the wallet directory given the desired path, filename, and raw data.
-func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) error {
+func (w *Wallet) WriteFileAtPath(_ context.Context, filePath, fileName string, data []byte) (bool /* exited previously */, error) {
 	accountPath := filepath.Join(w.accountsPath, filePath)
 	hasDir, err := file.HasDir(accountPath)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if !hasDir {
 		if err := file.MkdirAll(accountPath); err != nil {
-			return errors.Wrapf(err, "could not create path: %s", accountPath)
+			return false, errors.Wrapf(err, "could not create path: %s", accountPath)
 		}
 	}
 	fullPath := filepath.Join(accountPath, fileName)
+	existedPreviously := file.Exists(fullPath)
 	if err := file.WriteFile(fullPath, data); err != nil {
-		return errors.Wrapf(err, "could not write %s", filePath)
+		return false, errors.Wrapf(err, "could not write %s", filePath)
 	}
 	log.WithFields(logrus.Fields{
 		"path":     fullPath,
 		"fileName": fileName,
 	}).Debug("Wrote new file at path")
-	return nil
+	return existedPreviously, nil
 }
 
 // ReadFileAtPath within the wallet directory given the desired path and filename.

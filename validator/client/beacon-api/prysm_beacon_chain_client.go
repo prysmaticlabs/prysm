@@ -3,11 +3,9 @@ package beacon_api
 import (
 	"context"
 	"fmt"
-	"net/http"
 	neturl "net/url"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
@@ -16,12 +14,7 @@ import (
 )
 
 // NewPrysmBeaconChainClient returns implementation of iface.PrysmBeaconChainClient.
-func NewPrysmBeaconChainClient(host string, timeout time.Duration, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
-	}
-
+func NewPrysmBeaconChainClient(jsonRestHandler JsonRestHandler, nodeClient iface.NodeClient) iface.PrysmBeaconChainClient {
 	return prysmBeaconChainClient{
 		jsonRestHandler: jsonRestHandler,
 		nodeClient:      nodeClient,
@@ -29,7 +22,7 @@ func NewPrysmBeaconChainClient(host string, timeout time.Duration, nodeClient if
 }
 
 type prysmBeaconChainClient struct {
-	jsonRestHandler jsonRestHandler
+	jsonRestHandler JsonRestHandler
 	nodeClient      iface.NodeClient
 }
 
@@ -52,8 +45,8 @@ func (c prysmBeaconChainClient) GetValidatorCount(ctx context.Context, stateID s
 	queryUrl := buildURL(fmt.Sprintf("/eth/v1/beacon/states/%s/validator_count", stateID), queryParams)
 
 	var validatorCountResponse validator.CountResponse
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, queryUrl, &validatorCountResponse); err != nil {
-		return nil, errors.Wrap(err, "failed to query GET REST endpoint")
+	if err = c.jsonRestHandler.Get(ctx, queryUrl, &validatorCountResponse); err != nil {
+		return nil, err
 	}
 
 	if validatorCountResponse.Data == nil {

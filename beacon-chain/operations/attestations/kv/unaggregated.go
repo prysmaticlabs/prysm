@@ -71,7 +71,7 @@ func (c *AttCaches) UnaggregatedAttestations() ([]*ethpb.Attestation, error) {
 // UnaggregatedAttestationsBySlotIndex returns the unaggregated attestations in cache,
 // filtered by committee index and slot.
 func (c *AttCaches) UnaggregatedAttestationsBySlotIndex(ctx context.Context, slot primitives.Slot, committeeIndex primitives.CommitteeIndex) []*ethpb.Attestation {
-	ctx, span := trace.StartSpan(ctx, "operations.attestations.kv.UnaggregatedAttestationsBySlotIndex")
+	_, span := trace.StartSpan(ctx, "operations.attestations.kv.UnaggregatedAttestationsBySlotIndex")
 	defer span.End()
 
 	atts := make([]*ethpb.Attestation, 0)
@@ -121,15 +121,11 @@ func (c *AttCaches) DeleteSeenUnaggregatedAttestations() (int, error) {
 	defer c.unAggregateAttLock.Unlock()
 
 	count := 0
-	for _, att := range c.unAggregatedAtt {
+	for r, att := range c.unAggregatedAtt {
 		if att == nil || helpers.IsAggregated(att) {
 			continue
 		}
 		if seen, err := c.hasSeenBit(att); err == nil && seen {
-			r, err := hashFn(att)
-			if err != nil {
-				return count, errors.Wrap(err, "could not tree hash attestation")
-			}
 			delete(c.unAggregatedAtt, r)
 			count++
 		}

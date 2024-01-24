@@ -15,22 +15,12 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	ethpbservice "github.com/prysmaticlabs/prysm/v4/proto/eth/service"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/petnames"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/internal"
 	web3signerv1 "github.com/prysmaticlabs/prysm/v4/validator/keymanager/remote-web3signer/v1"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	StatusImported  = "IMPORTED"
-	StatusError     = "ERROR"
-	StatusDuplicate = "DUPLICATE"
-	StatusUnknown   = "UNKNOWN"
-	StatusNotFound  = "NOT_FOUND"
-	StatusDeleted   = "DELETED"
 )
 
 // SetupConfig includes configuration values for initializing.
@@ -162,10 +152,6 @@ func getSignRequestJson(ctx context.Context, validator *validator.Validate, requ
 		return handleContributionAndProof(ctx, validator, request, genesisValidatorsRoot)
 	case *validatorpb.SignRequest_Registration:
 		return handleRegistration(ctx, validator, request)
-	case *validatorpb.SignRequest_Blob:
-		return handleBlob(ctx, validator, request, genesisValidatorsRoot)
-	case *validatorpb.SignRequest_BlindedBlob:
-		return handleBlindedBlob(ctx, validator, request, genesisValidatorsRoot)
 	default:
 		return nil, fmt.Errorf("web3signer sign request type %T not supported", request.Object)
 	}
@@ -375,30 +361,6 @@ func handleRegistration(ctx context.Context, validator *validator.Validate, requ
 	return json.Marshal(validatorRegistrationRequest)
 }
 
-func handleBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
-	if err != nil {
-		return nil, err
-	}
-	if err = validator.StructCtx(ctx, blobRequest); err != nil {
-		return nil, err
-	}
-	blobSignRequestsTotal.Inc()
-	return json.Marshal(blobRequest)
-}
-
-func handleBlindedBlob(ctx context.Context, validator *validator.Validate, request *validatorpb.SignRequest, genesisValidatorsRoot []byte) ([]byte, error) {
-	blindedBlobRequest, err := web3signerv1.GetBlobSignRequest(request, genesisValidatorsRoot)
-	if err != nil {
-		return nil, err
-	}
-	if err = validator.StructCtx(ctx, blindedBlobRequest); err != nil {
-		return nil, err
-	}
-	blindedBlobSignRequestsTotal.Inc()
-	return json.Marshal(blindedBlobRequest)
-}
-
 // SubscribeAccountChanges returns the event subscription for changes to public keys.
 func (km *Keymanager) SubscribeAccountChanges(pubKeysChan chan [][fieldparams.BLSPubkeyLength]byte) event.Subscription {
 	return km.accountsChangedFeed.Subscribe(pubKeysChan)
@@ -412,7 +374,7 @@ func (*Keymanager) ExtractKeystores(
 }
 
 // DeleteKeystores is not supported for the remote-web3signer keymanager type.
-func (km *Keymanager) DeleteKeystores(context.Context, [][]byte) ([]*ethpbservice.DeletedKeystoreStatus, error) {
+func (km *Keymanager) DeleteKeystores(context.Context, [][]byte) ([]*keymanager.KeyStatus, error) {
 	return nil, errors.New("Wrong wallet type: web3-signer. Only Imported or Derived wallets can delete accounts")
 }
 
@@ -465,14 +427,14 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 		pubkeyBytes, err := hexutil.Decode(pubkey)
 		if err != nil {
 			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-				Status:  StatusError,
+				Status:  keymanager.StatusError,
 				Message: err.Error(),
 			}
 			continue
 		}
 		if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
 			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-				Status:  StatusError,
+				Status:  keymanager.StatusError,
 				Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
 			}
 			continue
@@ -485,14 +447,14 @@ func (km *Keymanager) AddPublicKeys(pubKeys []string) []*keymanager.KeyStatus {
 		}
 		if found {
 			importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-				Status:  StatusDuplicate,
+				Status:  keymanager.StatusDuplicate,
 				Message: fmt.Sprintf("Duplicate pubkey: %v, already in use", pubkey),
 			}
 			continue
 		}
 		km.providedPublicKeys = append(km.providedPublicKeys, bytesutil.ToBytes48(pubkeyBytes))
 		importedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-			Status:  StatusImported,
+			Status:  keymanager.StatusImported,
 			Message: fmt.Sprintf("Successfully added pubkey: %v", pubkey),
 		}
 		log.Debug("Added pubkey to keymanager for web3signer", "pubkey", pubkey)
@@ -507,7 +469,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 	if len(km.providedPublicKeys) == 0 {
 		for i := range deletedRemoteKeysStatuses {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-				Status:  StatusNotFound,
+				Status:  keymanager.StatusNotFound,
 				Message: "No pubkeys are set in validator",
 			}
 		}
@@ -518,14 +480,14 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 			pubkeyBytes, err := hexutil.Decode(pubkey)
 			if err != nil {
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  StatusError,
+					Status:  keymanager.StatusError,
 					Message: err.Error(),
 				}
 				continue
 			}
 			if len(pubkeyBytes) != fieldparams.BLSPubkeyLength {
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  StatusError,
+					Status:  keymanager.StatusError,
 					Message: fmt.Sprintf("pubkey byte length (%d) did not match bls pubkey byte length (%d)", len(pubkeyBytes), fieldparams.BLSPubkeyLength),
 				}
 				continue
@@ -533,7 +495,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 			if bytes.Equal(key[:], pubkeyBytes) {
 				km.providedPublicKeys = append(km.providedPublicKeys[:in], km.providedPublicKeys[in+1:]...)
 				deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-					Status:  StatusDeleted,
+					Status:  keymanager.StatusDeleted,
 					Message: fmt.Sprintf("Successfully deleted pubkey: %v", pubkey),
 				}
 				log.Debug("Deleted pubkey from keymanager for web3signer", "pubkey", pubkey)
@@ -542,7 +504,7 @@ func (km *Keymanager) DeletePublicKeys(pubKeys []string) []*keymanager.KeyStatus
 		}
 		if deletedRemoteKeysStatuses[i] == nil {
 			deletedRemoteKeysStatuses[i] = &keymanager.KeyStatus{
-				Status:  StatusNotFound,
+				Status:  keymanager.StatusNotFound,
 				Message: fmt.Sprintf("Pubkey: %v not found", pubkey),
 			}
 		}

@@ -9,9 +9,11 @@ import (
 	"github.com/paulbellamy/ratecounter"
 	"github.com/prysmaticlabs/prysm/v4/async/abool"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	p2pt "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -157,6 +159,7 @@ func TestService_InitStartStop(t *testing.T) {
 				StateNotifier:       &mock.MockStateNotifier{},
 				InitialSyncComplete: make(chan struct{}),
 			})
+			s.verifierWaiter = verification.NewInitializerWaiter(gs, nil, nil)
 			time.Sleep(500 * time.Millisecond)
 			assert.NotNil(t, s)
 			if tt.setGenesis != nil {
@@ -199,6 +202,7 @@ func TestService_waitForStateInitialization(t *testing.T) {
 			counter:      ratecounter.NewRateCounter(counterSeconds * time.Second),
 			genesisChan:  make(chan time.Time),
 		}
+		s.verifierWaiter = verification.NewInitializerWaiter(cs, nil, nil)
 		return s, cs
 	}
 
@@ -382,6 +386,7 @@ func TestService_Resync(t *testing.T) {
 				P2P:           p,
 				Chain:         mc,
 				StateNotifier: mc.StateNotifier(),
+				BlobStorage:   filesystem.NewEphemeralBlobStorage(t),
 			})
 			assert.NotNil(t, s)
 			assert.Equal(t, primitives.Slot(0), s.cfg.Chain.HeadSlot())

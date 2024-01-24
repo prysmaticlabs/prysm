@@ -1134,12 +1134,9 @@ func TestProcessBLSToExecutionChanges(t *testing.T) {
 	bpb := &ethpb.BeaconBlockCapella{
 		Body: body,
 	}
-	sbpb := &ethpb.SignedBeaconBlockCapella{
-		Block: bpb,
-	}
-	signed, err := consensusblocks.NewSignedBeaconBlock(sbpb)
+	bb, err := consensusblocks.NewBeaconBlock(bpb)
 	require.NoError(t, err)
-	st, err = blocks.ProcessBLSToExecutionChanges(st, signed)
+	st, err = blocks.ProcessBLSToExecutionChanges(st, bb)
 	require.NoError(t, err)
 	vals := st.Validators()
 	for _, val := range vals {

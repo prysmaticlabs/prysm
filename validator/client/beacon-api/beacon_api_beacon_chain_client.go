@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"strconv"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -22,16 +20,17 @@ import (
 
 type beaconApiBeaconChainClient struct {
 	fallbackClient          iface.BeaconChainClient
-	jsonRestHandler         jsonRestHandler
-	stateValidatorsProvider stateValidatorsProvider
+	jsonRestHandler         JsonRestHandler
+	stateValidatorsProvider StateValidatorsProvider
 }
 
 const getValidatorPerformanceEndpoint = "/prysm/validators/performance"
 
 func (c beaconApiBeaconChainClient) getHeadBlockHeaders(ctx context.Context) (*beacon.GetBlockHeaderResponse, error) {
 	blockHeader := beacon.GetBlockHeaderResponse{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, "/eth/v1/beacon/headers/head", &blockHeader); err != nil {
-		return nil, errors.Wrap(err, "failed to get head block header")
+	err := c.jsonRestHandler.Get(ctx, "/eth/v1/beacon/headers/head", &blockHeader)
+	if err != nil {
+		return nil, err
 	}
 
 	if blockHeader.Data == nil || blockHeader.Data.Header == nil {
@@ -49,8 +48,8 @@ func (c beaconApiBeaconChainClient) GetChainHead(ctx context.Context, _ *empty.E
 	const endpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 
 	finalityCheckpoints := beacon.GetFinalityCheckpointsResponse{}
-	if _, err := c.jsonRestHandler.GetRestJsonResponse(ctx, endpoint, &finalityCheckpoints); err != nil {
-		return nil, errors.Wrapf(err, "failed to query %s", endpoint)
+	if err := c.jsonRestHandler.Get(ctx, endpoint, &finalityCheckpoints); err != nil {
+		return nil, err
 	}
 
 	if finalityCheckpoints.Data == nil {
@@ -330,14 +329,8 @@ func (c beaconApiBeaconChainClient) GetValidatorPerformance(ctx context.Context,
 		return nil, errors.Wrap(err, "failed to marshal request")
 	}
 	resp := &validator.PerformanceResponse{}
-	if _, err := c.jsonRestHandler.PostRestJson(
-		ctx,
-		getValidatorPerformanceEndpoint,
-		nil,
-		bytes.NewBuffer(request),
-		resp,
-	); err != nil {
-		return nil, errors.Wrap(err, "failed to get validator performance")
+	if err = c.jsonRestHandler.Post(ctx, getValidatorPerformanceEndpoint, nil, bytes.NewBuffer(request), resp); err != nil {
+		return nil, err
 	}
 
 	return &ethpb.ValidatorPerformanceResponse{
@@ -362,12 +355,7 @@ func (c beaconApiBeaconChainClient) GetValidatorParticipation(ctx context.Contex
 	panic("beaconApiBeaconChainClient.GetValidatorParticipation is not implemented. To use a fallback client, pass a fallback client as the last argument of NewBeaconApiBeaconChainClientWithFallback.")
 }
 
-func NewBeaconApiBeaconChainClientWithFallback(host string, timeout time.Duration, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
-	jsonRestHandler := beaconApiJsonRestHandler{
-		httpClient: http.Client{Timeout: timeout},
-		host:       host,
-	}
-
+func NewBeaconApiBeaconChainClientWithFallback(jsonRestHandler JsonRestHandler, fallbackClient iface.BeaconChainClient) iface.BeaconChainClient {
 	return &beaconApiBeaconChainClient{
 		jsonRestHandler:         jsonRestHandler,
 		fallbackClient:          fallbackClient,

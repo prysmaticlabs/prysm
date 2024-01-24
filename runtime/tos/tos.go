@@ -16,18 +16,18 @@ import (
 const (
 	acceptTosFilename   = "tosaccepted"
 	acceptTosPromptText = `
-Prysmatic Labs Terms of Use
+Prysm Terms of Use
 
 By downloading, accessing or using the Prysm implementation (“Prysm”), you (referenced herein
 as “you” or the “user”) certify that you have read and agreed to the terms and conditions below.
 
-TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md
+TERMS AND CONDITIONS: https://github.com/prysmaticlabs/prysm/blob/develop/TERMS_OF_SERVICE.md
 
 
 Type "accept" to accept this terms and conditions [accept/decline]:`
 	acceptTosPromptErrText = `could not scan text input, if you are trying to run in non-interactive environment, you
 can use the --accept-terms-of-use flag after reading the terms and conditions here: 
-https://github.com/prysmaticlabs/prysm/blob/master/TERMS_OF_SERVICE.md`
+https://github.com/prysmaticlabs/prysm/blob/develop/TERMS_OF_SERVICE.md`
 )
 
 var (
@@ -35,11 +35,13 @@ var (
 	log = logrus.WithField("prefix", "tos")
 )
 
-// VerifyTosAcceptedOrPrompt check if Tos was accepted before or asks to accept.
+// VerifyTosAcceptedOrPrompt checks if Tos was accepted before or asks to accept.
 func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
-	if file.Exists(filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)) {
+	tosFilePath := filepath.Join(ctx.String(cmd.DataDirFlag.Name), acceptTosFilename)
+	if file.Exists(tosFilePath) {
 		return nil
 	}
+
 	if ctx.Bool(cmd.AcceptTosFlag.Name) {
 		saveTosAccepted(ctx)
 		return nil
@@ -49,6 +51,7 @@ func VerifyTosAcceptedOrPrompt(ctx *cli.Context) error {
 	if err != nil {
 		return errors.New(acceptTosPromptErrText)
 	}
+
 	if !strings.EqualFold(input, "accept") {
 		return errors.New("you have to accept Terms and Conditions in order to continue")
 	}

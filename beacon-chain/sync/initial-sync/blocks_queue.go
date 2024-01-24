@@ -92,7 +92,7 @@ type blocksQueue struct {
 // blocksQueueFetchedData is a data container that is returned from a queue on each step.
 type blocksQueueFetchedData struct {
 	pid peer.ID
-	bwb []blocks.BlockWithVerifiedBlobs
+	bwb []blocks.BlockWithROBlobs
 }
 
 // newBlocksQueue creates initialized priority queue.

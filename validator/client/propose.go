@@ -122,45 +122,20 @@ func (v *validator) ProposeBlock(ctx context.Context, slot primitives.Slot, pubK
 	}
 
 	var genericSignedBlock *ethpb.GenericSignedBeaconBlock
-	if blk.Version() >= version.Deneb {
-		if !blk.IsBlinded() {
-			signedBlobs, err := v.signDenebBlobs(ctx, b.GetDeneb().Blobs, pubKey)
-			if err != nil {
-				log.WithError(err).Error("Failed to sign blobs")
-				return
-			}
-			denebBlock, err := blk.PbDenebBlock()
-			if err != nil {
-				log.WithError(err).Error("Failed to get deneb block")
-				return
-			}
-			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-				Block: &ethpb.GenericSignedBeaconBlock_Deneb{
-					Deneb: &ethpb.SignedBeaconBlockAndBlobsDeneb{
-						Block: denebBlock,
-						Blobs: signedBlobs,
-					},
+	if blk.Version() >= version.Deneb && !blk.IsBlinded() {
+		denebBlock, err := blk.PbDenebBlock()
+		if err != nil {
+			log.WithError(err).Error("Failed to get deneb block")
+			return
+		}
+		genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
+			Block: &ethpb.GenericSignedBeaconBlock_Deneb{
+				Deneb: &ethpb.SignedBeaconBlockContentsDeneb{
+					Block:     denebBlock,
+					KzgProofs: b.GetDeneb().KzgProofs,
+					Blobs:     b.GetDeneb().Blobs,
 				},
-			}
-		} else {
-			signedBlindBlobs, err := v.signBlindedDenebBlobs(ctx, b.GetBlindedDeneb().Blobs, pubKey)
-			if err != nil {
-				log.WithError(err).Error("Failed to sign blinded blob sidecar")
-				return
-			}
-			blindedDenebBlock, err := blk.PbBlindedDenebBlock()
-			if err != nil {
-				log.WithError(err).Error("Failed to get blinded deneb block")
-				return
-			}
-			genericSignedBlock = &ethpb.GenericSignedBeaconBlock{
-				Block: &ethpb.GenericSignedBeaconBlock_BlindedDeneb{
-					BlindedDeneb: &ethpb.SignedBlindedBeaconBlockAndBlobsDeneb{
-						SignedBlindedBlock:        blindedDenebBlock,
-						SignedBlindedBlobSidecars: signedBlindBlobs,
-					},
-				},
-			}
+			},
 		}
 	} else {
 		genericSignedBlock, err = blk.PbGenericBlock()

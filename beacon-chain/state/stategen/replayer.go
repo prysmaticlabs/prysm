@@ -93,6 +93,10 @@ func (rs *stateReplayer) ReplayBlocks(ctx context.Context) (state.BeaconState, e
 		msg := fmt.Sprintf("error subtracting state.slot %d from replay target slot %d", s.Slot(), rs.target)
 		return nil, errors.Wrap(err, msg)
 	}
+	if diff == 0 {
+		return s, nil
+	}
+
 	log.WithFields(logrus.Fields{
 		"startSlot": s.Slot(),
 		"endSlot":   rs.target,

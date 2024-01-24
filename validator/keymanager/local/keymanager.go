@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -176,7 +177,7 @@ func (km *Keymanager) initializeKeysCachesFromKeystore() error {
 
 // FetchValidatingPublicKeys fetches the list of active public keys from the local account keystores.
 func (_ *Keymanager) FetchValidatingPublicKeys(ctx context.Context) ([][fieldparams.BLSPubkeyLength]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
+	_, span := trace.StartSpan(ctx, "keymanager.FetchValidatingPublicKeys")
 	defer span.End()
 
 	lock.RLock()
@@ -282,18 +283,29 @@ func (km *Keymanager) SaveStoreAndReInitialize(ctx context.Context, store *accou
 	if err != nil {
 		return err
 	}
-	if err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts); err != nil {
+
+	existedPreviously, err := km.wallet.WriteFileAtPath(ctx, AccountsPath, AccountsKeystoreFileName, encodedAccounts)
+	if err != nil {
 		return err
 	}
 
-	// Reinitialize account store and cache
-	// This will update the in-memory information instead of reading from the file itself for safety concerns
-	km.accountsStore = store
-	err = km.initializeKeysCachesFromKeystore()
-	if err != nil {
-		return errors.Wrap(err, "failed to initialize keys caches")
+	if existedPreviously {
+		// Reinitialize account store and cache
+		// This will update the in-memory information instead of reading from the file itself for safety concerns
+		km.accountsStore = store
+		err = km.initializeKeysCachesFromKeystore()
+		if err != nil {
+			return errors.Wrap(err, "failed to initialize keys caches")
+		}
+
+		return nil
 	}
-	return err
+
+	// manually reload the account from the keystore the first time
+	km.reloadAccountsFromKeystoreFile(filepath.Join(km.wallet.AccountsDir(), AccountsPath, AccountsKeystoreFileName))
+	// listen to account changes of the new file
+	go km.listenForAccountChanges(ctx)
+	return nil
 }
 
 // CreateAccountsKeystoreRepresentation is a pure function that takes an accountStore and wallet password and returns the encrypted formatted json version for local writing.
@@ -321,6 +333,13 @@ func CreateAccountsKeystoreRepresentation(
 		Version: encryptor.Version(),
 		Name:    encryptor.Name(),
 	}, nil
+}
+
+// CreateEmptyKeyStoreRepresentationForNewWallet creates a placeholder accounts keystore for a new Prysm Local Wallet.
+func CreateEmptyKeyStoreRepresentationForNewWallet(ctx context.Context, walletPassword string) (*AccountsKeystoreRepresentation, error) {
+	// make sure everything is clean when creating this.
+	ResetCaches()
+	return CreateAccountsKeystoreRepresentation(ctx, &accountStore{}, walletPassword)
 }
 
 // CreateOrUpdateInMemoryAccountsStore will set or update the local accounts store and update the local cache.
@@ -425,13 +444,10 @@ func (km *Keymanager) ListKeymanagerAccounts(ctx context.Context, cfg keymanager
 func CreatePrintoutOfKeys(keys [][]byte) string {
 	var keysStr string
 	for i, k := range keys {
-		if i == 0 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else if i == len(keys)-1 {
-			keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
-		} else {
-			keysStr += fmt.Sprintf(",%#x", bytesutil.Trunc(k))
+		if i != 0 {
+			keysStr += "," // Add a comma before each key except the first one
 		}
+		keysStr += fmt.Sprintf("%#x", bytesutil.Trunc(k))
 	}
 	return keysStr
 }

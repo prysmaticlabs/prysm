@@ -25,12 +25,12 @@ import (
 func ProcessAttestationsNoVerifySignature(
 	ctx context.Context,
 	beaconState state.BeaconState,
-	b interfaces.ReadOnlySignedBeaconBlock,
+	b interfaces.ReadOnlyBeaconBlock,
 ) (state.BeaconState, error) {
-	if err := blocks.BeaconBlockIsNil(b); err != nil {
-		return nil, err
+	if b == nil || b.IsNil() {
+		return nil, blocks.ErrNilBeaconBlock
 	}
-	body := b.Block().Body()
+	body := b.Body()
 	var err error
 	for idx, att := range body.Attestations() {
 		beaconState, err = ProcessAttestationNoVerifySignature(ctx, beaconState, att)

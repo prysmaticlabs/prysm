@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/cmd/validator/flags"
+	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -19,7 +19,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// time to wait before trying to reconnect with beacon node.
+// Time to wait before trying to reconnect with beacon node.
 var backOffPeriod = 10 * time.Second
 
 // Run the main validator routine. This routine exits if the context is
@@ -42,7 +42,7 @@ func run(ctx context.Context, v iface.Validator) {
 	}
 
 	connectionErrorChannel := make(chan error, 1)
-	go v.ReceiveBlocks(ctx, connectionErrorChannel)
+	go v.ReceiveSlots(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
@@ -55,25 +55,20 @@ func run(ctx context.Context, v iface.Validator) {
 	sub := km.SubscribeAccountChanges(accountsChangedChan)
 	// check if proposer settings is still nil
 	// Set properties on the beacon node like the fee recipient for validators that are being used & active.
-	if v.ProposerSettings() != nil {
-		log.Infof("Validator client started with provided proposer settings that sets options such as fee recipient"+
-			" and will periodically update the beacon node and custom builder (if --%s)", flags.EnableBuilderFlag.Name)
-		deadline := time.Now().Add(5 * time.Minute)
-		if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
-			if errors.Is(err, ErrBuilderValidatorRegistration) {
-				log.WithError(err).Warn("Push proposer settings error")
-			} else {
-				log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
-			}
-		}
-	} else {
+	if v.ProposerSettings() == nil {
 		log.Warn("Validator client started without proposer settings such as fee recipient" +
 			" and will continue to use settings provided in the beacon node.")
 	}
-
+	deadline := time.Now().Add(5 * time.Minute)
+	if err := v.PushProposerSettings(ctx, km, headSlot, deadline); err != nil {
+		if errors.Is(err, ErrBuilderValidatorRegistration) {
+			log.WithError(err).Warn("Push proposer settings error")
+		} else {
+			log.WithError(err).Fatal("Failed to update proposer settings") // allow fatal. skipcq
+		}
+	}
 	for {
 		ctx, span := trace.StartSpan(ctx, "validator.processSlot")
-
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping validator")
@@ -81,10 +76,10 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
-		case blocksError := <-connectionErrorChannel:
-			if blocksError != nil {
-				log.WithError(blocksError).Warn("block stream interrupted")
-				go v.ReceiveBlocks(ctx, connectionErrorChannel)
+		case slotsError := <-connectionErrorChannel:
+			if slotsError != nil {
+				log.WithError(slotsError).Warn("slots stream interrupted")
+				go v.ReceiveSlots(ctx, connectionErrorChannel)
 				continue
 			}
 		case currentKeys := <-accountsChangedChan:
@@ -108,7 +103,7 @@ func run(ctx context.Context, v iface.Validator) {
 
 			// call push proposer setting at the start of each epoch to account for the following edge case:
 			// proposer is activated at the start of epoch and tries to propose immediately
-			if slots.IsEpochStart(slot) && v.ProposerSettings() != nil {
+			if slots.IsEpochStart(slot) {
 				go func() {
 					// deadline set for 1 epoch from call to not overlap.
 					epochDeadline := v.SlotDeadline(slot + params.BeaconConfig().SlotsPerEpoch - 1)
@@ -155,8 +150,13 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 	ticker := time.NewTicker(backOffPeriod)
 	defer ticker.Stop()
 
-	var headSlot primitives.Slot
 	firstTime := true
+
+	var (
+		headSlot primitives.Slot
+		err      error
+	)
+
 	for {
 		if !firstTime {
 			if ctx.Err() != nil {
@@ -164,36 +164,43 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 				return headSlot, errors.New("context canceled")
 			}
 			<-ticker.C
-		} else {
-			firstTime = false
 		}
-		err := v.WaitForChainStart(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not determine if beacon chain started")
-			continue
-		}
-		if err != nil {
+
+		firstTime = false
+
+		if err := v.WaitForChainStart(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not determine if beacon chain started")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not determine if beacon chain started")
 		}
 
-		err = v.WaitForKeymanagerInitialization(ctx)
-		if err != nil {
+		if err := v.WaitForKeymanagerInitialization(ctx); err != nil {
 			// log.Fatal will prevent defer from being called
 			v.Done()
 			log.WithError(err).Fatal("Wallet is not ready")
 		}
 
-		err = v.WaitForSync(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not determine if beacon chain started")
-			continue
-		}
-		if err != nil {
+		if err := v.WaitForSync(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not determine if beacon chain started")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not determine if beacon node synced")
 		}
-		err = v.WaitForActivation(ctx, nil /* accountsChangedChan */)
-		if err != nil {
+
+		if err := v.WaitForActivation(ctx, nil /* accountsChangedChan */); err != nil {
 			log.WithError(err).Fatal("Could not wait for validator activation")
+		}
+
+		if features.Get().EnableBeaconRESTApi {
+			if err = v.StartEventStream(ctx); err != nil {
+				log.WithError(err).Fatal("Could not start API event stream")
+			}
+			runHealthCheckRoutine(ctx, v)
 		}
 
 		headSlot, err = v.CanonicalHeadSlot(ctx)
@@ -201,15 +208,17 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Warn("Could not get current canonical head slot")
 			continue
 		}
+
 		if err != nil {
 			log.WithError(err).Fatal("Could not get current canonical head slot")
 		}
-		err = v.CheckDoppelGanger(ctx)
-		if isConnectionError(err) {
-			log.WithError(err).Warn("Could not wait for checking doppelganger")
-			continue
-		}
-		if err != nil {
+
+		if err := v.CheckDoppelGanger(ctx); err != nil {
+			if isConnectionError(err) {
+				log.WithError(err).Warn("Could not wait for checking doppelganger")
+				continue
+			}
+
 			log.WithError(err).Fatal("Could not succeed with doppelganger check")
 		}
 		break
@@ -277,4 +286,26 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	} else {
 		log.WithField("error", err).Error("Failed to update assignments")
 	}
+}
+
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	go func() {
+		for {
+			select {
+			case <-healthCheckTicker.C:
+				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
+					if err := v.StartEventStream(ctx); err != nil {
+						log.WithError(err).Error("Could not start API event stream")
+					}
+				}
+			case <-ctx.Done():
+				if ctx.Err() != nil {
+					log.WithError(ctx.Err()).Error("Context cancelled")
+				}
+				log.Error("Context cancelled")
+				return
+			}
+		}
+	}()
 }

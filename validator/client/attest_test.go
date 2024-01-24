@@ -16,7 +16,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -32,7 +31,7 @@ import (
 func TestRequestAttestation_ValidatorDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -48,7 +47,7 @@ func TestAttestToBlockHead_SubmitAttestation_EmptyCommittee(t *testing.T) {
 	defer finish()
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 0,
@@ -64,7 +63,7 @@ func TestAttestToBlockHead_SubmitAttestation_RequestFailure(t *testing.T) {
 
 	validator, m, validatorKey, finish := setup(t)
 	defer finish()
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -102,7 +101,7 @@ func TestAttestToBlockHead_AttestsCorrectly(t *testing.T) {
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -175,7 +174,7 @@ func TestAttestToBlockHead_BlocksDoubleAtt(t *testing.T) {
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -227,7 +226,7 @@ func TestAttestToBlockHead_BlocksSurroundAtt(t *testing.T) {
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -279,7 +278,7 @@ func TestAttestToBlockHead_BlocksSurroundedAtt(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -366,7 +365,7 @@ func TestAttestToBlockHead_DoesAttestAfterDelay(t *testing.T) {
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -405,7 +404,7 @@ func TestAttestToBlockHead_CorrectBitfieldLength(t *testing.T) {
 	committee := []primitives.ValidatorIndex{0, 3, 4, 2, validatorIndex, 6, 8, 9, 10}
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 		{
 			PublicKey:      validatorKey.PublicKey().Marshal(),
 			CommitteeIndex: 5,
@@ -482,7 +481,7 @@ func TestServer_WaitToSlotOneThird_CanWait(t *testing.T) {
 
 	v := &validator{
 		genesisTime: genesisTime,
-		blockFeed:   new(event.Feed),
+		slotFeed:    new(event.Feed),
 	}
 
 	timeToSleep := params.BeaconConfig().SecondsPerSlot / 3
@@ -501,7 +500,7 @@ func TestServer_WaitToSlotOneThird_SameReqSlot(t *testing.T) {
 
 	v := &validator{
 		genesisTime:      genesisTime,
-		blockFeed:        new(event.Feed),
+		slotFeed:         new(event.Feed),
 		highestValidSlot: currentSlot,
 	}
 
@@ -522,19 +521,14 @@ func TestServer_WaitToSlotOneThird_ReceiveBlockSlot(t *testing.T) {
 
 	v := &validator{
 		genesisTime: genesisTime,
-		blockFeed:   new(event.Feed),
+		slotFeed:    new(event.Feed),
 	}
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		wsb, err := blocks.NewSignedBeaconBlock(
-			&ethpb.SignedBeaconBlock{
-				Block: &ethpb.BeaconBlock{Slot: currentSlot, Body: &ethpb.BeaconBlockBody{}},
-			})
-		require.NoError(t, err)
-		v.blockFeed.Send(wsb)
+		v.slotFeed.Send(currentSlot)
 		wg.Done()
 	}()
 

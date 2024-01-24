@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/rpc"
-	"github.com/prysmaticlabs/prysm/v4/validator/rpc/apimiddleware"
 )
 
 const (
@@ -42,14 +41,14 @@ func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if len(jsonlocal.Keystores) == 0 && len(jsonremote.Data) == 0 {
+	if len(jsonlocal.Data) == 0 && len(jsonremote.Data) == 0 {
 		return nil, errors.New("there are no local keys or remote keys on the validator")
 	}
 
 	hexKeys := make(map[string]bool)
 
-	for index := range jsonlocal.Keystores {
-		hexKeys[jsonlocal.Keystores[index].ValidatingPubkey] = true
+	for index := range jsonlocal.Data {
+		hexKeys[jsonlocal.Data[index].ValidatingPubkey] = true
 	}
 	for index := range jsonremote.Data {
 		hexKeys[jsonremote.Data[index].Pubkey] = true
@@ -62,12 +61,12 @@ func (c *Client) GetValidatorPubKeys(ctx context.Context) ([]string, error) {
 }
 
 // GetLocalValidatorKeys calls the keymanager APIs for local validator keys
-func (c *Client) GetLocalValidatorKeys(ctx context.Context) (*apimiddleware.ListKeystoresResponseJson, error) {
+func (c *Client) GetLocalValidatorKeys(ctx context.Context) (*rpc.ListKeystoresResponse, error) {
 	localBytes, err := c.Get(ctx, localKeysPath, client.WithAuthorizationToken(c.Token()))
 	if err != nil {
 		return nil, err
 	}
-	jsonlocal := &apimiddleware.ListKeystoresResponseJson{}
+	jsonlocal := &rpc.ListKeystoresResponse{}
 	if err := json.Unmarshal(localBytes, jsonlocal); err != nil {
 		return nil, errors.Wrap(err, "failed to parse local keystore list")
 	}

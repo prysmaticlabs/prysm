@@ -126,7 +126,6 @@ func (s *Service) processPendingBlocks(ctx context.Context) error {
 			// Request parent block if not in the pending queue and not in the database.
 			isParentBlockInDB := s.cfg.beaconDB.HasBlock(ctx, parentRoot)
 			if !inPendingQueue && !isParentBlockInDB && s.hasPeer() {
-				log.WithFields(logrus.Fields{"currentSlot": b.Block().Slot(), "parentRoot": hex.EncodeToString(parentRoot[:])}).Debug("Requesting parent block")
 				parentRoots = append(parentRoots, parentRoot)
 				continue
 			}
@@ -211,7 +210,7 @@ func (s *Service) processAndBroadcastBlock(ctx context.Context, b interfaces.Rea
 		}
 	}
 
-	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot); err != nil {
+	if err := s.cfg.chain.ReceiveBlock(ctx, b, blkRoot, nil); err != nil {
 		return err
 	}
 
@@ -283,6 +282,8 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 		r := roots[i]
 		if s.seenPendingBlocks[r] || s.cfg.chain.BlockBeingSynced(r) {
 			roots = append(roots[:i], roots[i+1:]...)
+		} else {
+			log.WithField("blockRoot", fmt.Sprintf("%#x", r)).Debug("Requesting block by root")
 		}
 	}
 	s.pendingQueueLock.RUnlock()
@@ -299,8 +300,10 @@ func (s *Service) sendBatchRootRequest(ctx context.Context, roots [][32]byte, ra
 	pid := bestPeers[randGen.Int()%len(bestPeers)]
 	for i := 0; i < numOfTries; i++ {
 		req := p2ptypes.BeaconBlockByRootsReq(roots)
-		if len(roots) > int(params.BeaconNetworkConfig().MaxRequestBlocks) {
-			req = roots[:params.BeaconNetworkConfig().MaxRequestBlocks]
+		currentEpoch := slots.ToEpoch(s.cfg.clock.CurrentSlot())
+		maxReqBlock := params.MaxRequestBlock(currentEpoch)
+		if uint64(len(roots)) > maxReqBlock {
+			req = roots[:maxReqBlock]
 		}
 		if err := s.sendRecentBeaconBlocksRequest(ctx, &req, pid); err != nil {
 			tracing.AnnotateError(span, err)

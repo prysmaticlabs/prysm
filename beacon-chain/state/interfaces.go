@@ -22,6 +22,7 @@ type BeaconState interface {
 	WriteOnlyBeaconState
 	Copy() BeaconState
 	CopyAllTries()
+	Defragment()
 	HashTreeRoot(ctx context.Context) ([32]byte, error)
 	Prover
 	json.Marshaler
@@ -66,6 +67,7 @@ type ReadOnlyBeaconState interface {
 	HistoricalSummaries() ([]*ethpb.HistoricalSummary, error)
 	Slashings() []uint64
 	FieldReferencesCount() map[string]uint64
+	RecordStateMetrics()
 	MarshalSSZ() ([]byte, error)
 	IsNil() bool
 	Version() int
@@ -119,6 +121,7 @@ type ReadOnlyValidators interface {
 	ValidatorAtIndex(idx primitives.ValidatorIndex) (*ethpb.Validator, error)
 	ValidatorAtIndexReadOnly(idx primitives.ValidatorIndex) (ReadOnlyValidator, error)
 	ValidatorIndexByPubkey(key [fieldparams.BLSPubkeyLength]byte) (primitives.ValidatorIndex, bool)
+	PublicKeys() ([][fieldparams.BLSPubkeyLength]byte, error)
 	PubkeyAtIndex(idx primitives.ValidatorIndex) [fieldparams.BLSPubkeyLength]byte
 	NumValidators() int
 	ReadFromEveryValidator(f func(idx int, val ReadOnlyValidator) error) error

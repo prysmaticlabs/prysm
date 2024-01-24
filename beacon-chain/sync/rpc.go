@@ -4,6 +4,8 @@ import (
 	"context"
 	"reflect"
 	"runtime/debug"
+	"strings"
+	"time"
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -13,7 +15,6 @@ import (
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
-	"github.com/prysmaticlabs/prysm/v4/time"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
@@ -21,10 +22,10 @@ import (
 // Time to first byte timeout. The maximum time to wait for first byte of
 // request response (time-to-first-byte). The client is expected to give up if
 // they don't receive the first byte within 5 seconds.
-var ttfbTimeout = params.BeaconNetworkConfig().TtfbTimeout
+var ttfbTimeout = params.BeaconConfig().TtfbTimeoutDuration()
 
 // respTimeout is the maximum time for complete response transfer.
-var respTimeout = params.BeaconNetworkConfig().RespTimeout
+var respTimeout = params.BeaconConfig().RespTimeoutDuration()
 
 // rpcHandler is responsible for handling and responding to any incoming message.
 // This method may return an error to internal monitoring, but the error will
@@ -149,8 +150,8 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 		ctx, span := trace.StartSpan(ctx, "sync.rpc")
 		defer span.End()
 		span.AddAttributes(trace.StringAttribute("topic", topic))
-		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().Pretty()))
-		log := log.WithField("peer", stream.Conn().RemotePeer().Pretty()).WithField("topic", string(stream.Protocol()))
+		span.AddAttributes(trace.StringAttribute("peer", stream.Conn().RemotePeer().String()))
+		log := log.WithField("peer", stream.Conn().RemotePeer().String()).WithField("topic", string(stream.Protocol()))
 
 		// Check before hand that peer is valid.
 		if s.cfg.p2p.Peers().IsBad(stream.Conn().RemotePeer()) {
@@ -206,7 +207,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				logStreamErrors(err, topic)
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -226,7 +227,7 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 				return
 			}
 			if err := s.cfg.p2p.Encoding().DecodeWithMaxLength(stream, msg); err != nil {
-				log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
+				logStreamErrors(err, topic)
 				tracing.AnnotateError(span, err)
 				s.cfg.p2p.Peers().Scorers().BadResponsesScorer().Increment(stream.Conn().RemotePeer())
 				return
@@ -240,4 +241,12 @@ func (s *Service) registerRPC(baseTopic string, handle rpcHandler) {
 			}
 		}
 	})
+}
+
+func logStreamErrors(err error, topic string) {
+	if strings.Contains(topic, p2p.RPCGoodByeTopicV1) {
+		log.WithError(err).WithField("topic", topic).Trace("Could not decode goodbye stream message")
+		return
+	}
+	log.WithError(err).WithField("topic", topic).Debug("Could not decode stream message")
 }

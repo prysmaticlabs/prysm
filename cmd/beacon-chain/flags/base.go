@@ -12,7 +12,7 @@ var (
 	// MevRelayEndpoint provides an HTTP access endpoint to a MEV builder network.
 	MevRelayEndpoint = &cli.StringFlag{
 		Name:  "http-mev-relay",
-		Usage: "A MEV builder relay string http endpoint, this wil be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
+		Usage: "A MEV builder relay string http endpoint, this will be used to interact MEV builder network using API defined in: https://ethereum.github.io/builder-specs/#/Builder",
 		Value: "",
 	}
 	MaxBuilderConsecutiveMissedSlots = &cli.IntFlag{
@@ -23,7 +23,6 @@ var (
 	MaxBuilderEpochMissedSlots = &cli.IntFlag{
 		Name:  "max-builder-epoch-missed-slots",
 		Usage: "Number of total skip slot to fallback from using relay/builder to local execution engine for block construction in last epoch rolling window",
-		Value: 8,
 	}
 	// LocalBlockValueBoost sets a percentage boost for local block construction while using a custom builder.
 	LocalBlockValueBoost = &cli.Uint64Flag{
@@ -55,6 +54,11 @@ var (
 			"This is not required if using an IPC connection.",
 		Value: "",
 	}
+	// JwtId is the id field of the JWT claims. The consensus layer client MAY use this to communicate a unique identifier for the individual consensus layer client
+	JwtId = &cli.StringFlag{
+		Name:  "jwt-id",
+		Usage: "JWT claims id. Could be used to identify the client",
+	}
 	// DepositContractFlag defines a flag for the deposit contract address.
 	DepositContractFlag = &cli.StringFlag{
 		Name:  "deposit-contract",
@@ -76,7 +80,7 @@ var (
 	// MonitoringPortFlag defines the http port used to serve prometheus metrics.
 	MonitoringPortFlag = &cli.IntFlag{
 		Name:  "monitoring-port",
-		Usage: "Port used to listening and respond metrics for prometheus.",
+		Usage: "Port used to listening and respond metrics for Prometheus.",
 		Value: 8080,
 	}
 	// CertFlag defines a flag for the node's TLS certificate.
@@ -260,11 +264,5 @@ var (
 		Name:  "slasher-datadir",
 		Usage: "Directory for the slasher database",
 		Value: cmd.DefaultDataDir(),
-	}
-	BlobRetentionEpoch = &cli.Uint64Flag{
-		Name:    "blob-retention-epochs",
-		Usage:   "Override the default blob retention period (measured in epochs). The node will exit with an error at startup if the value is less than the default of 4096 epochs.",
-		Value:   uint64(params.BeaconNetworkConfig().MinEpochsForBlobsSidecarsRequest),
-		Aliases: []string{"extend-blob-retention-epoch"},
 	}
 )
