@@ -16,8 +16,8 @@ func (a *data) PrevRandao() []byte {
 	return a.prevRandao
 }
 
-// Timestamps returns the timestamp of the payload attribute.
-func (a *data) Timestamps() uint64 {
+// Timestamp returns the timestamp of the payload attribute.
+func (a *data) Timestamp() uint64 {
 	return a.timeStamp
 }
 
@@ -100,7 +100,7 @@ func (a *data) IsEmpty() bool {
 	if len(a.PrevRandao()) != 0 {
 		return false
 	}
-	if a.Timestamps() != 0 {
+	if a.Timestamp() != 0 {
 		return false
 	}
 	if len(a.SuggestedFeeRecipient()) != 0 {
