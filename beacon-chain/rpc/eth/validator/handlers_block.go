@@ -223,7 +223,7 @@ func (s *Server) produceBlockV3(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	w.Header().Set(api.ExecutionPayloadBlindedHeader, fmt.Sprintf("%v", v1alpha1resp.IsBlinded))
-	w.Header().Set(api.ExecutionPayloadValueHeader, fmt.Sprintf("%d", v1alpha1resp.PayloadValue))
+	w.Header().Set(api.ExecutionPayloadValueHeader, v1alpha1resp.PayloadValue)
 	w.Header().Set(api.ConsensusBlockValueHeader, consensusBlockValue)
 
 	phase0Block, ok := v1alpha1resp.Block.(*eth.GenericBeaconBlock_Phase0)
@@ -310,7 +310,7 @@ func handleProducePhase0V3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Phase0,
-	payloadValue uint64,
+	payloadValue string,
 ) {
 	if isSSZ {
 		sszResp, err := blk.Phase0.MarshalSSZ()
@@ -329,8 +329,8 @@ func handleProducePhase0V3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Phase0),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", payloadValue), // mev not available at this point
-		ConsensusBlockValue:     "",                              // rewards not applicable before altair
+		ExecutionPayloadValue:   payloadValue, // mev not available at this point
+		ConsensusBlockValue:     "",           // rewards not applicable before altair
 		Data:                    jsonBytes,
 	})
 }
@@ -339,7 +339,7 @@ func handleProduceAltairV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Altair,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -359,7 +359,7 @@ func handleProduceAltairV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Altair),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -369,7 +369,7 @@ func handleProduceBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Bellatrix,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -394,7 +394,7 @@ func handleProduceBellatrixV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -404,7 +404,7 @@ func handleProduceBlindedBellatrixV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedBellatrix,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -429,7 +429,7 @@ func handleProduceBlindedBellatrixV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -439,7 +439,7 @@ func handleProduceBlindedCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedCapella,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -464,7 +464,7 @@ func handleProduceBlindedCapellaV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -474,7 +474,7 @@ func handleProduceCapellaV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Capella,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -499,7 +499,7 @@ func handleProduceCapellaV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -509,7 +509,7 @@ func handleProduceBlindedDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_BlindedDeneb,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusPayloadValue string,
 ) {
 	if isSSZ {
@@ -534,7 +534,7 @@ func handleProduceBlindedDenebV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: true,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue),
+		ExecutionPayloadValue:   executionPayloadValue,
 		ConsensusBlockValue:     consensusPayloadValue,
 		Data:                    jsonBytes,
 	})
@@ -544,7 +544,7 @@ func handleProduceDenebV3(
 	w http.ResponseWriter,
 	isSSZ bool,
 	blk *eth.GenericBeaconBlock_Deneb,
-	executionPayloadValue uint64,
+	executionPayloadValue string,
 	consensusBlockValue string,
 ) {
 	if isSSZ {
@@ -570,7 +570,7 @@ func handleProduceDenebV3(
 	httputil.WriteJson(w, &ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: false,
-		ExecutionPayloadValue:   fmt.Sprintf("%d", executionPayloadValue), // mev not available at this point
+		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
 		ConsensusBlockValue:     consensusBlockValue,
 		Data:                    jsonBytes,
 	})

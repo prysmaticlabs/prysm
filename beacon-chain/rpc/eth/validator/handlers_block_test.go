@@ -64,7 +64,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "phase0", writer.Header().Get(api.VersionHeader))
@@ -84,7 +84,6 @@ func TestProduceBlockV2(t *testing.T) {
 			SkipMevBoost: true,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-
 				return block.Message.ToGeneric()
 			}())
 		server := &Server{
@@ -98,7 +97,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
@@ -118,7 +117,10 @@ func TestProduceBlockV2(t *testing.T) {
 			SkipMevBoost: true,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -132,7 +134,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
@@ -184,7 +186,10 @@ func TestProduceBlockV2(t *testing.T) {
 			SkipMevBoost: true,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -198,7 +203,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
@@ -216,10 +221,7 @@ func TestProduceBlockV2(t *testing.T) {
 			SkipMevBoost: true,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				g, err := block.Message.ToGeneric()
-				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
-				return g, err
+				return block.Message.ToGeneric()
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -253,7 +255,10 @@ func TestProduceBlockV2(t *testing.T) {
 			SkipMevBoost: true,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				b, err := block.ToUnsigned().ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -267,7 +272,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
@@ -566,7 +571,7 @@ func TestProduceBlockV2SSZ(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -780,7 +785,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -794,7 +802,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
@@ -848,7 +856,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -915,7 +923,10 @@ func TestProduceBlindedBlock(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -929,7 +940,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
@@ -1027,11 +1038,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"phase0","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "phase0", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1063,11 +1074,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1085,7 +1096,10 @@ func TestProduceBlockV3(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1098,11 +1112,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1120,7 +1134,10 @@ func TestProduceBlockV3(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1133,11 +1150,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1155,7 +1172,10 @@ func TestProduceBlockV3(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1168,11 +1188,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1192,7 +1212,7 @@ func TestProduceBlockV3(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -1228,7 +1248,10 @@ func TestProduceBlockV3(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				b, err := block.ToUnsigned().ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1241,11 +1264,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1263,7 +1286,10 @@ func TestProduceBlockV3(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1276,11 +1302,11 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"0","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1383,7 +1409,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "phase0", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1421,7 +1447,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1437,7 +1463,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		mockChainService := &blockchainTesting.ChainService{}
 		server := &Server{
@@ -1460,7 +1489,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1476,7 +1505,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1498,7 +1530,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1514,7 +1546,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1536,7 +1571,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1554,7 +1589,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			func() (*eth.GenericBeaconBlock, error) {
 				g, err := block.Message.ToGeneric()
 				require.NoError(t, err)
-				g.PayloadValue = 2000 //some fake value
+				g.PayloadValue = "2000"
 				return g, err
 			}())
 		server := &Server{
@@ -1593,7 +1628,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.ToUnsigned().ToGeneric()
+				b, err := block.ToUnsigned().ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1615,7 +1653,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
@@ -1631,7 +1669,10 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 			SkipMevBoost: false,
 		}).Return(
 			func() (*eth.GenericBeaconBlock, error) {
-				return block.Message.ToGeneric()
+				b, err := block.Message.ToGeneric()
+				require.NoError(t, err)
+				b.PayloadValue = "2000"
+				return b, nil
 			}())
 		server := &Server{
 			V1Alpha1Server:        v1alpha1Server,
@@ -1653,7 +1694,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, string(ssz), writer.Body.String())
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
-		require.Equal(t, "0", writer.Header().Get(api.ExecutionPayloadValueHeader))
+		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
 		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})

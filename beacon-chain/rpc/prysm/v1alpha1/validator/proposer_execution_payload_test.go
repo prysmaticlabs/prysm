@@ -3,6 +3,7 @@ package validator
 import (
 	"context"
 	"errors"
+	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -60,7 +61,7 @@ func TestServer_getExecutionPayload(t *testing.T) {
 	}))
 
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
-	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}, 0)
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&pb.ExecutionPayloadHeaderCapella{BlockNumber: 1}, big.NewInt(0))
 	require.NoError(t, err)
 	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
 	b2pbCapella := util.NewBeaconBlockCapella()

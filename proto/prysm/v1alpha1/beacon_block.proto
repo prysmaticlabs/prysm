@@ -53,7 +53,7 @@ message GenericSignedBeaconBlock {
         SignedBlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
-    uint64 payload_value = 101;
+    uint64 payload_value = 101 [deprecated = true];
 }
 
 message GenericBeaconBlock {
@@ -82,7 +82,7 @@ message GenericBeaconBlock {
         BlindedBeaconBlockDeneb blinded_deneb  = 8;
     }
     bool is_blinded = 100;
-    uint64 payload_value = 101;
+    string payload_value = 101;
 }
 
 // The Ethereum consensus beacon block. The message does not contain a validator signature.
