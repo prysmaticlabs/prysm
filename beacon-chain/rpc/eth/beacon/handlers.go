@@ -2076,13 +2076,21 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "beacon.GetDepositSnapshot")
 	defer span.End()
 
+	if s.BeaconDB == nil {
+		httputil.HandleError(w, "Could not retrieve beaconDB", http.StatusInternalServerError)
+		return
+	}
 	eth1data, err := s.BeaconDB.ExecutionChainData(ctx)
 	if err != nil {
 		httputil.HandleError(w, "Could not retrieve execution chain data: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if eth1data == nil {
+		httputil.HandleError(w, "Could not retrieve execution chain data: empty Eth1Data", http.StatusInternalServerError)
+		return
+	}
 	snapshot := eth1data.DepositSnapshot
-	if snapshot == nil {
+	if snapshot == nil || len(snapshot.Finalized) == 0 {
 		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
 		return
 	}
