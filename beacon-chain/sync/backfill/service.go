@@ -227,6 +227,10 @@ func (s *Service) Start() {
 	}
 	s.ms.setClock(clock)
 
+	if !s.store.statusExists() {
+		log.Info("Exiting backfill service as the node has been initialized with a genesis state or the backfill status is missing")
+		return
+	}
 	status := s.store.status()
 	// Exit early if there aren't going to be any batches to backfill.
 	if primitives.Slot(status.LowSlot) <= s.ms.minimumSlot() {
