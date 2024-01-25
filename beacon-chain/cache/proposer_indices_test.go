@@ -37,70 +37,69 @@ func TestProposerCache_Set(t *testing.T) {
 func TestProposerCache_CheckpointAndPrune(t *testing.T) {
 	cache := NewProposerIndicesCache()
 	indices := [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}
-	root := [32]byte{'a'}
-	cpRoot := [32]byte{'b'}
 	copy(indices[3:], []primitives.ValidatorIndex{1, 2, 3, 4, 5, 6})
 	for i := 1; i < 10; i++ {
+		root := [32]byte{byte(i)}
 		cache.Set(primitives.Epoch(i), root, indices)
+		cpRoot := [32]byte{byte(i - 1)}
 		cache.SetCheckpoint(forkchoicetypes.Checkpoint{Epoch: primitives.Epoch(i - 1), Root: cpRoot}, root)
 	}
-	received, ok := cache.ProposerIndices(1, root)
+	received, ok := cache.ProposerIndices(1, [32]byte{1})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.ProposerIndices(4, root)
+	received, ok = cache.ProposerIndices(4, [32]byte{4})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.ProposerIndices(9, root)
+	received, ok = cache.ProposerIndices(9, [32]byte{9})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 0, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 3, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{3}})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 4, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 4, Root: [32]byte{4}})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 8, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 8, Root: [32]byte{8}})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
 	cache.Prune(5)
 
 	emptyIndices := [fieldparams.SlotsPerEpoch]primitives.ValidatorIndex{}
-	received, ok = cache.ProposerIndices(1, root)
+	received, ok = cache.ProposerIndices(1, [32]byte{1})
 	require.Equal(t, false, ok)
 	require.Equal(t, emptyIndices, received)
 
-	received, ok = cache.ProposerIndices(4, root)
+	received, ok = cache.ProposerIndices(4, [32]byte{4})
 	require.Equal(t, false, ok)
 	require.Equal(t, emptyIndices, received)
 
-	received, ok = cache.ProposerIndices(9, root)
+	received, ok = cache.ProposerIndices(9, [32]byte{9})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 0, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 0, Root: [32]byte{0}})
 	require.Equal(t, false, ok)
 	require.Equal(t, emptyIndices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 3, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 3, Root: [32]byte{3}})
 	require.Equal(t, false, ok)
 	require.Equal(t, emptyIndices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 4, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 4, Root: [32]byte{4}})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
 
-	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 8, Root: cpRoot})
+	received, ok = cache.IndicesFromCheckpoint(forkchoicetypes.Checkpoint{Epoch: 8, Root: [32]byte{8}})
 	require.Equal(t, true, ok)
 	require.Equal(t, indices, received)
-
 }
