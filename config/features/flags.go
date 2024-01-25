@@ -3,7 +3,7 @@ package features
 import (
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill"
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 

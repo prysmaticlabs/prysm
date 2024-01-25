@@ -20,7 +20,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	jwtcommands "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/jwt"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/storage"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill"
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill"
+	bflags "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -139,9 +140,9 @@ var appFlags = []cli.Flag{
 	flags.JwtId,
 	storage.BlobStoragePathFlag,
 	storage.BlobRetentionEpochFlag,
-	backfill.EnableExperimentalBackfill,
-	backfill.BackfillBatchSize,
-	backfill.BackfillWorkerCount,
+	bflags.EnableExperimentalBackfill,
+	bflags.BackfillBatchSize,
+	bflags.BackfillWorkerCount,
 }
 
 func init() {
