@@ -52,7 +52,7 @@ func DeepEqual(loggerFn assertionLoggerFn, expected, actual interface{}, msg ...
 	if !isDeepEqual(expected, actual) {
 		errMsg := parseMsg("Values are not equal", msg...)
 		_, file, line, _ := runtime.Caller(2)
-		diff := ""
+		var diff string
 		if _, isProto := expected.(proto.Message); isProto {
 			diff = ProtobufPrettyDiff(expected, actual)
 		} else {
