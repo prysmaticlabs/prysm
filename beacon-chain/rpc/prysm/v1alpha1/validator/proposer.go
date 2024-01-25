@@ -340,6 +340,9 @@ func (vs *Server) PrepareBeaconProposer(
 ) (*emptypb.Empty, error) {
 	var validatorIndices []primitives.ValidatorIndex
 
+	// Prune the tracked validators
+	vs.TrackedValidatorsCache.Prune()
+
 	for _, r := range request.Recipients {
 		recipient := hexutil.Encode(r.FeeRecipient)
 		if !common.IsHexAddress(recipient) {

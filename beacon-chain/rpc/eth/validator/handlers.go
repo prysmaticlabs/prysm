@@ -547,6 +547,8 @@ func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "Could not decode request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
+	// Prune the tracked validators
+	s.TrackedValidatorsCache.Prune()
 	var validatorIndices []primitives.ValidatorIndex
 	// filter for found fee recipients
 	for _, r := range jsonFeeRecipients {
