@@ -46,7 +46,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 	beaconDB := dbTest.SetupDB(t)
 	capellaTransitionState, _ := util.DeterministicGenesisStateCapella(t, 1)
-	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, 0)
+	wrappedHeaderCapella, err := blocks.WrappedExecutionPayloadHeaderCapella(&v1.ExecutionPayloadHeaderCapella{BlockNumber: 1}, big.NewInt(0))
 	require.NoError(t, err)
 	require.NoError(t, capellaTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderCapella))
 	b2pbCapella := util.NewBeaconBlockCapella()
@@ -59,7 +59,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	require.NoError(t, beaconDB.SaveFeeRecipientsByValidatorIDs(context.Background(), []primitives.ValidatorIndex{0}, []common.Address{{}}))
 
 	denebTransitionState, _ := util.DeterministicGenesisStateDeneb(t, 1)
-	wrappedHeaderDeneb, err := blocks.WrappedExecutionPayloadHeaderDeneb(&v1.ExecutionPayloadHeaderDeneb{BlockNumber: 2}, 0)
+	wrappedHeaderDeneb, err := blocks.WrappedExecutionPayloadHeaderDeneb(&v1.ExecutionPayloadHeaderDeneb{BlockNumber: 2}, big.NewInt(0))
 	require.NoError(t, err)
 	require.NoError(t, denebTransitionState.SetLatestExecutionPayloadHeader(wrappedHeaderDeneb))
 	b2pbDeneb := util.NewBeaconBlockDeneb()
@@ -356,7 +356,7 @@ func TestServer_setExecutionData(t *testing.T) {
 	t.Run("Builder configured. Local block has higher value", func(t *testing.T) {
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 2 * 1e9}
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
@@ -377,7 +377,7 @@ func TestServer_setExecutionData(t *testing.T) {
 
 		blk, err := blocks.NewSignedBeaconBlock(util.NewBeaconBlockCapella())
 		require.NoError(t, err)
-		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1}
+		vs.ExecutionEngineCaller = &powtesting.EngineClient{PayloadIDBytes: id, ExecutionPayloadCapella: &v1.ExecutionPayloadCapella{BlockNumber: 3}, BlockValue: 1 * 1e9}
 		b := blk.Block()
 		localPayload, _, err := vs.getLocalPayload(ctx, b, capellaTransitionState)
 		require.NoError(t, err)
@@ -748,7 +748,7 @@ func TestServer_getPayloadHeader(t *testing.T) {
 					require.DeepEqual(t, want, h)
 				}
 				if tc.returnedHeaderCapella != nil {
-					want, err := blocks.WrappedExecutionPayloadHeaderCapella(tc.returnedHeaderCapella, 0) // value is a mock
+					want, err := blocks.WrappedExecutionPayloadHeaderCapella(tc.returnedHeaderCapella, big.NewInt(197121)) // value is a mock
 					require.NoError(t, err)
 					require.DeepEqual(t, want, h)
 				}
@@ -805,7 +805,7 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 	})
 	t.Run("could not get builder withdrawals root", func(t *testing.T) {
 		local := &v1.ExecutionPayloadCapella{}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeader{}
 		h, err := blocks.WrappedExecutionPayloadHeader(header)
@@ -815,10 +815,10 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 	})
 	t.Run("withdrawals mismatch", func(t *testing.T) {
 		local := &v1.ExecutionPayloadCapella{}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
-		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
 		require.NoError(t, err)
 		matched, err := matchingWithdrawalsRoot(p, h)
 		require.NoError(t, err)
@@ -832,13 +832,13 @@ func Test_matchingWithdrawalsRoot(t *testing.T) {
 			Amount:         3,
 		}}
 		local := &v1.ExecutionPayloadCapella{Withdrawals: wds}
-		p, err := blocks.WrappedExecutionPayloadCapella(local, 0)
+		p, err := blocks.WrappedExecutionPayloadCapella(local, big.NewInt(0))
 		require.NoError(t, err)
 		header := &v1.ExecutionPayloadHeaderCapella{}
 		wr, err := ssz.WithdrawalSliceRoot(wds, fieldparams.MaxWithdrawalsPerPayload)
 		require.NoError(t, err)
 		header.WithdrawalsRoot = wr[:]
-		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, 0)
+		h, err := blocks.WrappedExecutionPayloadHeaderCapella(header, big.NewInt(0))
 		require.NoError(t, err)
 		matched, err := matchingWithdrawalsRoot(p, h)
 		require.NoError(t, err)

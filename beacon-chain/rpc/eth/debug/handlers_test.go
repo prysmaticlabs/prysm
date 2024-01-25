@@ -471,7 +471,7 @@ func TestGetForkChoice(t *testing.T) {
 	require.NoError(t, store.UpdateFinalizedCheckpoint(fc))
 	s := &Server{ForkchoiceFetcher: &blockchainmock.ChainService{ForkChoiceStore: store}}
 
-	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v2/debug/fork_choice", nil)
+	request := httptest.NewRequest(http.MethodGet, "http://example.com/eth/v1/debug/fork_choice", nil)
 	writer := httptest.NewRecorder()
 	writer.Body = &bytes.Buffer{}
 
