@@ -227,6 +227,10 @@ func (s *Service) Start() {
 	}
 	s.ms.setClock(clock)
 
+	if s.store.isGenesisSync() {
+		log.Info("Exiting backfill service as the node has been initialized with a genesis state or the backfill status is missing")
+		return
+	}
 	status := s.store.status()
 	// Exit early if there aren't going to be any batches to backfill.
 	if primitives.Slot(status.LowSlot) <= s.ms.minimumSlot() {
@@ -293,8 +297,10 @@ func minimumBackfillSlot(current primitives.Slot) primitives.Slot {
 		oe = slots.MaxSafeEpoch()
 	}
 	offset := slots.UnsafeEpochStart(oe)
-	if offset > current {
-		return 0
+	if offset >= current {
+		// Slot 0 is the genesis block, therefore the signature in it is invalid.
+		// To prevent us from rejecting a batch, we restrict the minimum backfill batch till only slot 1
+		return 1
 	}
 	return current - offset
 }
