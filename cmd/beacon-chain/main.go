@@ -72,8 +72,10 @@ var appFlags = []cli.Flag{
 	flags.Eth1HeaderReqLimit,
 	flags.MinPeersPerSubnet,
 	flags.SuggestedFeeRecipient,
-	flags.TerminalTotalDifficultyOverride,
-	flags.TerminalBlockHashOverride,
+	flags.ProposerSettingsFlag,
+	flags.ProposerSettingsURLFlag,
+	flags.TerminalTotalDifficultyOverride, logs.
+		flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
 	flags.MevRelayEndpoint,
 	flags.MaxBuilderEpochMissedSlots,
