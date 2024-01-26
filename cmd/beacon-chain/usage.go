@@ -8,7 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/storage"
-	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill"
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
