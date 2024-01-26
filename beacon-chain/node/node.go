@@ -229,14 +229,6 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 	if err != nil {
 		return nil, errors.Wrap(err, "backfill status initialization error")
 	}
-	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
-	bf, err := backfill.NewService(ctx, bfs, beacon.clockWaiter, beacon.fetchP2P(), pa, beacon.BackfillOpts...)
-	if err != nil {
-		return nil, errors.Wrap(err, "error initializing backfill service")
-	}
-	if err := beacon.services.RegisterService(bf); err != nil {
-		return nil, errors.Wrap(err, "error registering backfill service")
-	}
 
 	log.Debugln("Starting State Gen")
 	if err := beacon.startStateGen(ctx, bfs, beacon.forkChoicer); err != nil {
@@ -250,6 +242,16 @@ func New(cliCtx *cli.Context, cancel context.CancelFunc, opts ...Option) (*Beaco
 
 	beacon.verifyInitWaiter = verification.NewInitializerWaiter(
 		beacon.clockWaiter, forkchoice.NewROForkChoice(beacon.forkChoicer), beacon.stateGen)
+
+	pa := peers.NewAssigner(beacon.fetchP2P().Peers(), beacon.forkChoicer)
+	beacon.BackfillOpts = append(beacon.BackfillOpts, backfill.WithVerifierWaiter(beacon.verifyInitWaiter))
+	bf, err := backfill.NewService(ctx, bfs, beacon.BlobStorage, beacon.clockWaiter, beacon.fetchP2P(), pa, beacon.BackfillOpts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "error initializing backfill service")
+	}
+	if err := beacon.services.RegisterService(bf); err != nil {
+		return nil, errors.Wrap(err, "error registering backfill service")
+	}
 
 	log.Debugln("Registering POW Chain Service")
 	if err := beacon.registerPOWChainService(); err != nil {

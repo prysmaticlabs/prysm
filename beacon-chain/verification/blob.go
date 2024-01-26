@@ -63,6 +63,9 @@ var InitsyncSidecarRequirements = []Requirement{
 	RequireSidecarInclusionProven,
 }
 
+// BackfillSidecarRequirements is the same as InitsyncSidecarRequirements
+var BackfillSidecarRequirements = InitsyncSidecarRequirements
+
 var (
 	ErrBlobInvalid = errors.New("blob failed verification")
 	// ErrBlobIndexInvalid means RequireBlobIndexInBounds failed.

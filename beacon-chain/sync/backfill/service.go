@@ -6,8 +6,12 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
@@ -17,19 +21,24 @@ import (
 )
 
 type Service struct {
-	ctx           context.Context
-	store         *Store
-	ms            minimumSlotter
-	cw            startup.ClockWaiter
-	enabled       bool // service is disabled by default while feature is experimental
-	nWorkers      int
-	batchSeq      *batchSequencer
-	batchSize     uint64
-	pool          batchWorkerPool
-	verifier      *verifier
-	p2p           p2p.P2P
-	pa            PeerAssigner
-	batchImporter batchImporter
+	ctx             context.Context
+	enabled         bool // service is disabled by default while feature is experimental
+	clock           *startup.Clock
+	store           *Store
+	ms              minimumSlotter
+	cw              startup.ClockWaiter
+	verifierWaiter  InitializerWaiter
+	newBlobVerifier verification.NewBlobVerifier
+	nWorkers        int
+	batchSeq        *batchSequencer
+	batchSize       uint64
+	pool            batchWorkerPool
+	verifier        *verifier
+	ctxMap          sync.ContextByteVersions
+	p2p             p2p.P2P
+	pa              PeerAssigner
+	batchImporter   batchImporter
+	blobStore       *filesystem.BlobStorage
 }
 
 var _ runtime.Service = (*Service)(nil)
@@ -53,6 +62,22 @@ func WithWorkerCount(n int) ServiceOption {
 func WithBatchSize(n uint64) ServiceOption {
 	return func(s *Service) error {
 		s.batchSize = n
+		return nil
+	}
+}
+
+// InitializerWaiter is an interface that is satisfied by verification.InitializerWaiter.
+// Using this interface enables node init to satisfy this requirement for the backfill service
+// while also allowing backfill to mock it in tests.
+type InitializerWaiter interface {
+	WaitForInitializer(ctx context.Context) (*verification.Initializer, error)
+}
+
+// WithVerifierWaiter sets the verification.InitializerWaiter
+// for the backfill Service.
+func WithVerifierWaiter(viw InitializerWaiter) ServiceOption {
+	return func(s *Service) error {
+		s.verifierWaiter = viw
 		return nil
 	}
 }
@@ -86,9 +111,9 @@ func (d defaultMinimumSlotter) setClock(c *startup.Clock) {
 
 var _ minimumSlotter = &defaultMinimumSlotter{}
 
-type batchImporter func(ctx context.Context, b batch, su *Store) (*dbval.BackfillStatus, error)
+type batchImporter func(ctx context.Context, current primitives.Slot, b batch, su *Store) (*dbval.BackfillStatus, error)
 
-func defaultBatchImporter(ctx context.Context, b batch, su *Store) (*dbval.BackfillStatus, error) {
+func defaultBatchImporter(ctx context.Context, current primitives.Slot, b batch, su *Store) (*dbval.BackfillStatus, error) {
 	status := su.status()
 	if err := b.ensureParent(bytesutil.ToBytes32(status.LowParentRoot)); err != nil {
 		return status, err
@@ -96,7 +121,7 @@ func defaultBatchImporter(ctx context.Context, b batch, su *Store) (*dbval.Backf
 	// Import blocks to db and update db state to reflect the newly imported blocks.
 	// Other parts of the beacon node may use the same StatusUpdater instance
 	// via the coverage.AvailableBlocker interface to safely determine if a given slot has been backfilled.
-	status, err := su.fillBack(ctx, b.results)
+	status, err := su.fillBack(ctx, current, b.results, b.availabilityStore())
 	if err != nil {
 		log.WithError(err).Fatal("Non-recoverable db error in backfill service, quitting.")
 	}
@@ -104,7 +129,7 @@ func defaultBatchImporter(ctx context.Context, b batch, su *Store) (*dbval.Backf
 }
 
 // PeerAssigner describes a type that provides an Assign method, which can assign the best peer
-// to service an RPC request. The Assign method takes a map of peers that should be excluded,
+// to service an RPC blockRequest. The Assign method takes a map of peers that should be excluded,
 // allowing the caller to avoid making multiple concurrent requests to the same peer.
 type PeerAssigner interface {
 	Assign(busy map[peer.ID]bool, n int) ([]peer.ID, error)
@@ -112,10 +137,11 @@ type PeerAssigner interface {
 
 // NewService initializes the backfill Service. Like all implementations of the Service interface,
 // the service won't begin its runloop until Start() is called.
-func NewService(ctx context.Context, su *Store, cw startup.ClockWaiter, p p2p.P2P, pa PeerAssigner, opts ...ServiceOption) (*Service, error) {
+func NewService(ctx context.Context, su *Store, bStore *filesystem.BlobStorage, cw startup.ClockWaiter, p p2p.P2P, pa PeerAssigner, opts ...ServiceOption) (*Service, error) {
 	s := &Service{
 		ctx:           ctx,
 		store:         su,
+		blobStore:     bStore,
 		cw:            cw,
 		ms:            &defaultMinimumSlotter{cw: cw, ctx: ctx},
 		p2p:           p,
@@ -132,16 +158,22 @@ func NewService(ctx context.Context, su *Store, cw startup.ClockWaiter, p p2p.P2
 	return s, nil
 }
 
-func (s *Service) initVerifier(ctx context.Context) (*verifier, error) {
+func (s *Service) initVerifier(ctx context.Context) (*verifier, sync.ContextByteVersions, error) {
 	cps, err := s.store.originState(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	keys, err := cps.PublicKeys()
 	if err != nil {
-		return nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
+		return nil, nil, errors.Wrap(err, "Unable to retrieve public keys for all validators in the origin state")
 	}
-	return newBackfillVerifier(cps.GenesisValidatorsRoot(), keys)
+	vr := cps.GenesisValidatorsRoot()
+	ctxMap, err := sync.ContextByteVersionsForValRoot(bytesutil.ToBytes32(vr))
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "unable to initialize context version map using genesis validator root = %#x", vr)
+	}
+	v, err := newBackfillVerifier(vr, keys)
+	return v, ctxMap, err
 }
 
 func (s *Service) updateComplete() bool {
@@ -166,12 +198,13 @@ func (s *Service) importBatches(ctx context.Context) {
 		}
 		backfillBatchesImported.Add(float64(imported))
 	}()
+	current := s.clock.CurrentSlot()
 	for i := range importable {
 		ib := importable[i]
 		if len(ib.results) == 0 {
 			log.WithFields(ib.logFields()).Error("Batch with no results, skipping importer.")
 		}
-		_, err := s.batchImporter(ctx, ib, s.store)
+		_, err := s.batchImporter(ctx, current, ib, s.store)
 		if err != nil {
 			log.WithError(err).WithFields(ib.logFields()).Debug("Backfill batch failed to import.")
 			s.downscore(ib)
@@ -225,7 +258,14 @@ func (s *Service) Start() {
 	if err != nil {
 		log.WithError(err).Fatal("Backfill service failed to start while waiting for genesis data.")
 	}
+	s.clock = clock
 	s.ms.setClock(clock)
+	v, err := s.verifierWaiter.WaitForInitializer(ctx)
+	s.newBlobVerifier = newBlobVerifierFromInitializer(v)
+
+	if err != nil {
+		log.WithError(err).Fatal("could not initialize blob verifier in backfill service")
+	}
 
 	if s.store.isGenesisSync() {
 		log.Info("Exiting backfill service as the node has been initialized with a genesis state or the backfill status is missing")
@@ -239,11 +279,11 @@ func (s *Service) Start() {
 			Info("Exiting backfill service; minimum block retention slot > lowest backfilled block.")
 		return
 	}
-	s.verifier, err = s.initVerifier(ctx)
+	s.verifier, s.ctxMap, err = s.initVerifier(ctx)
 	if err != nil {
 		log.WithError(err).Fatal("Unable to initialize backfill verifier, quitting.")
 	}
-	s.pool.spawn(ctx, s.nWorkers, clock, s.pa, s.verifier)
+	s.pool.spawn(ctx, s.nWorkers, clock, s.pa, s.verifier, s.ctxMap, s.newBlobVerifier, s.blobStore)
 
 	s.batchSeq = newBatchSequencer(s.nWorkers, s.ms.minimumSlot(), primitives.Slot(status.LowSlot), primitives.Slot(s.batchSize))
 	if err = s.initBatches(); err != nil {
@@ -278,7 +318,7 @@ func (s *Service) initBatches() error {
 }
 
 func (s *Service) downscore(b batch) {
-	s.p2p.Peers().Scorers().BadResponsesScorer().Increment(b.pid)
+	s.p2p.Peers().Scorers().BadResponsesScorer().Increment(b.blockPid)
 }
 
 func (s *Service) Stop() error {
@@ -303,4 +343,10 @@ func minimumBackfillSlot(current primitives.Slot) primitives.Slot {
 		return 1
 	}
 	return current - offset
+}
+
+func newBlobVerifierFromInitializer(ini *verification.Initializer) verification.NewBlobVerifier {
+	return func(b blocks.ROBlob, reqs []verification.Requirement) verification.BlobVerifier {
+		return ini.NewBlobVerifier(b, reqs)
+	}
 }

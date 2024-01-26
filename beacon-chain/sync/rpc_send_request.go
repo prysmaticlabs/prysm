@@ -155,7 +155,7 @@ func SendBeaconBlocksByRootRequest(
 	return blocks, nil
 }
 
-func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest) ([]blocks.ROBlob, error) {
+func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle, p2pApi p2p.SenderEncoder, pid peer.ID, ctxMap ContextByteVersions, req *pb.BlobSidecarsByRangeRequest, bvs ...BlobResponseValidation) ([]blocks.ROBlob, error) {
 	topic, err := p2p.TopicFromMessage(p2p.BlobSidecarsByRangeName, slots.ToEpoch(tor.CurrentSlot()))
 	if err != nil {
 		return nil, err
@@ -175,8 +175,11 @@ func SendBlobsByRangeRequest(ctx context.Context, tor blockchain.TemporalOracle,
 	if max > req.Count*fieldparams.MaxBlobsPerBlock {
 		max = req.Count * fieldparams.MaxBlobsPerBlock
 	}
-	blobVal := composeBlobValidations(blobValidatorFromRangeReq(req), newSequentialBlobValidator())
-	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobVal, max)
+	vfuncs := []BlobResponseValidation{blobValidatorFromRangeReq(req), newSequentialBlobValidator()}
+	if len(bvs) > 0 {
+		vfuncs = append(vfuncs, bvs...)
+	}
+	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, composeBlobValidations(vfuncs...), max)
 }
 
 func SendBlobSidecarByRoot(
@@ -205,9 +208,11 @@ func SendBlobSidecarByRoot(
 	return readChunkEncodedBlobs(stream, p2pApi.Encoding(), ctxMap, blobValidatorFromRootReq(req), max)
 }
 
-type blobResponseValidation func(blocks.ROBlob) error
+// BlobResponseValidation represents a function that can validate aspects of a single unmarshaled blob
+// that was received from a peer in response to an rpc request.
+type BlobResponseValidation func(blocks.ROBlob) error
 
-func composeBlobValidations(vf ...blobResponseValidation) blobResponseValidation {
+func composeBlobValidations(vf ...BlobResponseValidation) BlobResponseValidation {
 	return func(blob blocks.ROBlob) error {
 		for i := range vf {
 			if err := vf[i](blob); err != nil {
@@ -264,14 +269,14 @@ func (sbv *seqBlobValid) nextValid(blob blocks.ROBlob) error {
 	return nil
 }
 
-func newSequentialBlobValidator() blobResponseValidation {
+func newSequentialBlobValidator() BlobResponseValidation {
 	sbv := &seqBlobValid{}
 	return func(blob blocks.ROBlob) error {
 		return sbv.nextValid(blob)
 	}
 }
 
-func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseValidation {
+func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) BlobResponseValidation {
 	blobIds := make(map[[32]byte]map[uint64]bool)
 	for _, sc := range *req {
 		blockRoot := bytesutil.ToBytes32(sc.BlockRoot)
@@ -293,7 +298,7 @@ func blobValidatorFromRootReq(req *p2ptypes.BlobSidecarsByRootReq) blobResponseV
 	}
 }
 
-func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) blobResponseValidation {
+func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) BlobResponseValidation {
 	end := req.StartSlot + primitives.Slot(req.Count)
 	return func(sc blocks.ROBlob) error {
 		if sc.Slot() < req.StartSlot || sc.Slot() >= end {
@@ -303,7 +308,7 @@ func blobValidatorFromRangeReq(req *pb.BlobSidecarsByRangeRequest) blobResponseV
 	}
 }
 
-func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation, max uint64) ([]blocks.ROBlob, error) {
+func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf BlobResponseValidation, max uint64) ([]blocks.ROBlob, error) {
 	sidecars := make([]blocks.ROBlob, 0)
 	// Attempt an extra read beyond max to check if the peer is violating the spec by
 	// sending more than MAX_REQUEST_BLOB_SIDECARS, or more blobs than requested.
@@ -327,7 +332,7 @@ func readChunkEncodedBlobs(stream network.Stream, encoding encoder.NetworkEncodi
 	return sidecars, nil
 }
 
-func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf blobResponseValidation) (blocks.ROBlob, error) {
+func readChunkedBlobSidecar(stream network.Stream, encoding encoder.NetworkEncoding, ctxMap ContextByteVersions, vf BlobResponseValidation) (blocks.ROBlob, error) {
 	var b blocks.ROBlob
 	pb := &ethpb.BlobSidecar{}
 	decode := encoding.DecodeWithMaxLength

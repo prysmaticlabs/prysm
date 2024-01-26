@@ -2,10 +2,13 @@ package backfill
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/das"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
@@ -33,6 +36,8 @@ func (s batchState) String() string {
 		return "import_complete"
 	case batchEndSequence:
 		return "end_sequence"
+	case batchBlobSync:
+		return "blob_sync"
 	default:
 		return "unknown"
 	}
@@ -43,6 +48,7 @@ const (
 	batchInit
 	batchSequenced
 	batchErrRetryable
+	batchBlobSync
 	batchImportable
 	batchImportComplete
 	batchEndSequence
@@ -57,10 +63,13 @@ type batch struct {
 	retries        int
 	begin          primitives.Slot
 	end            primitives.Slot // half-open interval, [begin, end), ie >= start, < end.
-	results        VerifiedROBlocks
+	results        verifiedROBlocks
 	err            error
 	state          batchState
-	pid            peer.ID
+	busy           peer.ID
+	blockPid       peer.ID
+	blobPid        peer.ID
+	bs             *blobSync
 }
 
 func (b batch) logFields() log.Fields {
@@ -72,7 +81,9 @@ func (b batch) logFields() log.Fields {
 		"retries":   b.retries,
 		"begin":     b.begin,
 		"end":       b.end,
-		"pid":       b.pid,
+		"busyPid":   b.busy,
+		"blockPid":  b.blockPid,
+		"blobPid":   b.blobPid,
 	}
 }
 
@@ -101,11 +112,18 @@ func (b batch) ensureParent(expected [32]byte) error {
 	return nil
 }
 
-func (b batch) request() *eth.BeaconBlocksByRangeRequest {
+func (b batch) blockRequest() *eth.BeaconBlocksByRangeRequest {
 	return &eth.BeaconBlocksByRangeRequest{
 		StartSlot: b.begin,
 		Count:     uint64(b.end - b.begin),
 		Step:      1,
+	}
+}
+
+func (b batch) blobRequest() *eth.BlobSidecarsByRangeRequest {
+	return &eth.BlobSidecarsByRangeRequest{
+		StartSlot: b.begin,
+		Count:     uint64(b.end - b.begin),
 	}
 }
 
@@ -130,7 +148,7 @@ func (b batch) withState(s batchState) batch {
 }
 
 func (b batch) withPeer(p peer.ID) batch {
-	b.pid = p
+	b.blockPid = p
 	backfillBatchTimeWaiting.Observe(float64(time.Since(b.scheduled).Milliseconds()))
 	return b
 }
@@ -138,4 +156,22 @@ func (b batch) withPeer(p peer.ID) batch {
 func (b batch) withRetryableError(err error) batch {
 	b.err = err
 	return b.withState(batchErrRetryable)
+}
+
+func (b batch) blobsNeeded() int {
+	return b.bs.blobsNeeded()
+}
+
+func (b batch) blobResponseValidator() sync.BlobResponseValidation {
+	return b.bs.validateNext
+}
+
+func (b batch) availabilityStore() das.AvailabilityStore {
+	return b.bs.store
+}
+
+func sortBatchDesc(todo []batch) {
+	sort.Slice(todo, func(i, j int) bool {
+		return todo[j].end < todo[i].end
+	})
 }
