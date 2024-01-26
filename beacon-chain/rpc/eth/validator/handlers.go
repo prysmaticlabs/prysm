@@ -38,7 +38,7 @@ import (
 
 // GetAggregateAttestation aggregates all attestations matching the given attestation data root and slot, returning the aggregated result.
 func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request) {
-	ctx, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
+	_, span := trace.StartSpan(r.Context(), "validator.GetAggregateAttestation")
 	defer span.End()
 
 	_, attDataRoot, ok := shared.HexFromQuery(w, r, "attestation_data_root", fieldparams.RootLength, true)
@@ -51,51 +51,65 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := s.AttestationsPool.AggregateUnaggregatedAttestations(ctx); err != nil {
-		httputil.HandleError(w, "Could not aggregate unaggregated attestations: "+err.Error(), http.StatusBadRequest)
+	var match *ethpbalpha.Attestation
+	var err error
+
+	match, err = matchingAtt(s.AttestationsPool.AggregatedAttestations(), primitives.Slot(slot), attDataRoot)
+	if err != nil {
+		httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	allAtts := s.AttestationsPool.AggregatedAttestations()
-	var bestMatchingAtt *ethpbalpha.Attestation
-	for _, att := range allAtts {
-		if att.Data.Slot == primitives.Slot(slot) {
-			root, err := att.Data.HashTreeRoot()
-			if err != nil {
-				httputil.HandleError(w, "Could not get attestation data root: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			if bytes.Equal(root[:], attDataRoot) {
-				if bestMatchingAtt == nil || len(att.AggregationBits) > len(bestMatchingAtt.AggregationBits) {
-					bestMatchingAtt = att
-				}
-			}
+	if match == nil {
+		atts, err := s.AttestationsPool.UnaggregatedAttestations()
+		if err != nil {
+			httputil.HandleError(w, "Could not get unaggregated attestations: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		match, err = matchingAtt(atts, primitives.Slot(slot), attDataRoot)
+		if err != nil {
+			httputil.HandleError(w, "Could not get matching attestation: "+err.Error(), http.StatusInternalServerError)
+			return
 		}
 	}
-	if bestMatchingAtt == nil {
+	if match == nil {
 		httputil.HandleError(w, "No matching attestation found", http.StatusNotFound)
 		return
 	}
 
 	response := &AggregateAttestationResponse{
 		Data: &shared.Attestation{
-			AggregationBits: hexutil.Encode(bestMatchingAtt.AggregationBits),
+			AggregationBits: hexutil.Encode(match.AggregationBits),
 			Data: &shared.AttestationData{
-				Slot:            strconv.FormatUint(uint64(bestMatchingAtt.Data.Slot), 10),
-				CommitteeIndex:  strconv.FormatUint(uint64(bestMatchingAtt.Data.CommitteeIndex), 10),
-				BeaconBlockRoot: hexutil.Encode(bestMatchingAtt.Data.BeaconBlockRoot),
+				Slot:            strconv.FormatUint(uint64(match.Data.Slot), 10),
+				CommitteeIndex:  strconv.FormatUint(uint64(match.Data.CommitteeIndex), 10),
+				BeaconBlockRoot: hexutil.Encode(match.Data.BeaconBlockRoot),
 				Source: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Source.Epoch), 10),
-					Root:  hexutil.Encode(bestMatchingAtt.Data.Source.Root),
+					Epoch: strconv.FormatUint(uint64(match.Data.Source.Epoch), 10),
+					Root:  hexutil.Encode(match.Data.Source.Root),
 				},
 				Target: &shared.Checkpoint{
-					Epoch: strconv.FormatUint(uint64(bestMatchingAtt.Data.Target.Epoch), 10),
-					Root:  hexutil.Encode(bestMatchingAtt.Data.Target.Root),
+					Epoch: strconv.FormatUint(uint64(match.Data.Target.Epoch), 10),
+					Root:  hexutil.Encode(match.Data.Target.Root),
 				},
 			},
-			Signature: hexutil.Encode(bestMatchingAtt.Signature),
+			Signature: hexutil.Encode(match.Signature),
 		}}
 	httputil.WriteJson(w, response)
+}
+
+func matchingAtt(atts []*ethpbalpha.Attestation, slot primitives.Slot, attDataRoot []byte) (*ethpbalpha.Attestation, error) {
+	for _, att := range atts {
+		if att.Data.Slot == slot {
+			root, err := att.Data.HashTreeRoot()
+			if err != nil {
+				return nil, errors.Wrap(err, "could not get attestation data root")
+			}
+			if bytes.Equal(root[:], attDataRoot) {
+				return att, nil
+			}
+		}
+	}
+	return nil, nil
 }
 
 // SubmitContributionAndProofs publishes multiple signed sync committee contribution and proofs.
