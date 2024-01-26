@@ -122,7 +122,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 		}
 	}
 	daWaitedTime := time.Since(daStartTime)
-	timeSpendWaitingDa.Observe(float64(daWaitedTime.Milliseconds()))
+	dataAvailWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
 
 	// Defragment the state before continuing block processing.
 	s.defragmentState(postState)
