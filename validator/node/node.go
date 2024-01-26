@@ -42,8 +42,8 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/monitoring/backup"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
 	tracing2 "github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	pb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v4/runtime/prereqs"
@@ -552,7 +552,7 @@ func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error
 }
 
 func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.ProposerSettings, error) {
-	var fileConfig *validatorpb.ProposerSettingsPayload
+	var fileConfig *proposersettings.ProposerSettingsPayload
 
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) && cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		return nil, errors.New("cannot specify both " + flags.ProposerSettingsFlag.Name + " and " + flags.ProposerSettingsURLFlag.Name)
@@ -566,9 +566,9 @@ func proposerSettings(cliCtx *cli.Context, db iface.ValidatorDB) (*proposer.Prop
 		!cliCtx.IsSet(flags.ProposerSettingsFlag.Name) &&
 		!cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
 		suggestedFee := cliCtx.String(flags.SuggestedFeeRecipientFlag.Name)
-		fileConfig = &validatorpb.ProposerSettingsPayload{
+		fileConfig = &proposersettings.ProposerSettingsPayload{
 			ProposerConfig: nil,
-			DefaultConfig: &validatorpb.ProposerOptionPayload{
+			DefaultConfig: &proposersettings.ProposerOptionPayload{
 				FeeRecipient: suggestedFee,
 				Builder:      builderConfigFromFlag.ToPayload(),
 			},

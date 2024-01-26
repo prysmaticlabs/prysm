@@ -21,7 +21,7 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
 	"github.com/prysmaticlabs/prysm/v4/testing/endtoend/helpers"
 	e2e "github.com/prysmaticlabs/prysm/v4/testing/endtoend/params"
@@ -340,16 +340,16 @@ func createProposerSettingsPath(pubkeys []string, nodeIdx int) (string, error) {
 	if len(pubkeys) == 0 {
 		return "", errors.New("number of validators must be greater than 0")
 	}
-	config := make(map[string]*validatorpb.ProposerOptionPayload)
+	config := make(map[string]*proposersettings.ProposerOptionPayload)
 
 	for i, pubkey := range pubkeys {
-		config[pubkeys[i]] = &validatorpb.ProposerOptionPayload{
+		config[pubkeys[i]] = &proposersettings.ProposerOptionPayload{
 			FeeRecipient: FeeRecipientFromPubkey(pubkey),
 		}
 	}
-	proposerSettingsPayload := &validatorpb.ProposerSettingsPayload{
+	proposerSettingsPayload := &proposersettings.ProposerSettingsPayload{
 		ProposerConfig: config,
-		DefaultConfig: &validatorpb.ProposerOptionPayload{
+		DefaultConfig: &proposersettings.ProposerOptionPayload{
 			FeeRecipient: DefaultFeeRecipientAddress,
 		},
 	}

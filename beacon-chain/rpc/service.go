@@ -27,7 +27,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -142,7 +142,7 @@ type Config struct {
 	BlobStorage                   *filesystem.BlobStorage
 	TrackedValidatorsCache        *cache.TrackedValidatorsCache
 	PayloadIDCache                *cache.PayloadIDCache
-	ProposerSettings              *validatorpb.ProposerSettingsPayload
+	ProposerSettings              *proposersettings.ProposerSettingsPayload
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -611,7 +611,7 @@ func (s *Service) Start() {
 	}()
 }
 
-func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain blockchain.ChainInfoFetcher, settings *validatorpb.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache) error {
+func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain blockchain.ChainInfoFetcher, settings *proposersettings.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache) error {
 	if settings != nil && settings.ProposerConfig != nil {
 		st, err := chain.HeadState(ctx)
 		if err != nil {

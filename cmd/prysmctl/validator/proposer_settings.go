@@ -14,7 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/io/file"
 	"github.com/prysmaticlabs/prysm/v4/io/prompt"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 	"go.opencensus.io/trace"
@@ -68,25 +68,25 @@ func getProposerSettings(c *cli.Context, r io.Reader) error {
 
 	if c.IsSet(ProposerSettingsOutputFlag.Name) {
 		log.Infof("The default fee recipient is set to %s", defaultFeeRecipient)
-		var builderSettings *validatorpb.BuilderConfig
+		var builderSettings *proposersettings.BuilderConfig
 		if c.Bool(WithBuilderFlag.Name) {
-			builderSettings = &validatorpb.BuilderConfig{
+			builderSettings = &proposersettings.BuilderConfig{
 				Enabled:  true,
 				GasLimit: validatorType.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 			}
 		} else {
 			log.Infof("Default builder settings can be included with the `--%s` flag", WithBuilderFlag.Name)
 		}
-		proposerConfig := make(map[string]*validatorpb.ProposerOptionPayload)
+		proposerConfig := make(map[string]*proposersettings.ProposerOptionPayload)
 		for index, val := range validators {
-			proposerConfig[val] = &validatorpb.ProposerOptionPayload{
+			proposerConfig[val] = &proposersettings.ProposerOptionPayload{
 				FeeRecipient: feeRecipients[index],
 				Builder:      builderSettings,
 			}
 		}
-		fileConfig := &validatorpb.ProposerSettingsPayload{
+		fileConfig := &proposersettings.ProposerSettingsPayload{
 			ProposerConfig: proposerConfig,
-			DefaultConfig: &validatorpb.ProposerOptionPayload{
+			DefaultConfig: &proposersettings.ProposerOptionPayload{
 				FeeRecipient: defaultFeeRecipient,
 				Builder:      builderSettings,
 			},

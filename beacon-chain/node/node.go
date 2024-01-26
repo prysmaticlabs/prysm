@@ -64,7 +64,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v4/runtime/prereqs"
@@ -814,8 +814,8 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
-func proposerSettings(cliCtx *cli.Context) (*validatorpb.ProposerSettingsPayload, error) {
-	var fileConfig *validatorpb.ProposerSettingsPayload
+func proposerSettings(cliCtx *cli.Context) (*proposersettings.ProposerSettingsPayload, error) {
+	var fileConfig *proposersettings.ProposerSettingsPayload
 	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
 		if err := config.UnmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &fileConfig); err != nil {
 			return nil, err

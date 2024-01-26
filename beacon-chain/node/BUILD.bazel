@@ -63,7 +63,7 @@ go_library(
         "//encoding/bytesutil:go_default_library",
         "//monitoring/prometheus:go_default_library",
         "//monitoring/tracing:go_default_library",
-        "//proto/prysm/v1alpha1/validator-client:go_default_library",
+        "//proto/prysm/config:go_default_library",
         "//runtime:go_default_library",
         "//runtime/debug:go_default_library",
         "//runtime/prereqs:go_default_library",

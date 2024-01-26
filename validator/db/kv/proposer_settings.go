@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/proposer"
-	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	proposersettings "github.com/prysmaticlabs/prysm/v4/proto/prysm/config"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
 	"google.golang.org/protobuf/proto"
@@ -26,7 +26,7 @@ func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fie
 		if len(b) == 0 {
 			return fmt.Errorf("no proposer settings found in bucket")
 		}
-		to := &validatorpb.ProposerSettingsPayload{}
+		to := &proposersettings.ProposerSettingsPayload{}
 		if err := proto.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
@@ -63,7 +63,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *prop
 		if len(b) == 0 {
 			return ErrNoProposerSettingsFound
 		}
-		to := &validatorpb.ProposerSettingsPayload{}
+		to := &proposersettings.ProposerSettingsPayload{}
 		if err := proto.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
@@ -85,7 +85,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *prop
 func (s *Store) ProposerSettings(ctx context.Context) (*proposer.ProposerSettings, error) {
 	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
 	defer span.End()
-	to := &validatorpb.ProposerSettingsPayload{}
+	to := &proposersettings.ProposerSettingsPayload{}
 	if err := s.db.View(func(tx *bolt.Tx) error {
 		bkt := tx.Bucket(proposerSettingsBucket)
 		b := bkt.Get(proposerSettingsKey)
