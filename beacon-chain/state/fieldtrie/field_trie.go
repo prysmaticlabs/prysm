@@ -60,7 +60,7 @@ func NewFieldTrie(field types.FieldIndex, fieldInfo types.DataType, elements int
 	if err := validateElements(field, fieldInfo, elements, length); err != nil {
 		return nil, err
 	}
-	numOfElems := 0
+	var numOfElems int
 	if val, ok := elements.(sliceAccessor); ok {
 		numOfElems = val.Len(val.State())
 	} else {

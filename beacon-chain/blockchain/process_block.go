@@ -325,7 +325,10 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	}
 	// The proposer indices cache takes the target root for the previous
 	// epoch as key
-	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
+	if e > 0 {
+		e = e - 1
+	}
+	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e)
 	if err != nil {
 		log.WithError(err).Error("could not update proposer index state-root map")
 		return nil

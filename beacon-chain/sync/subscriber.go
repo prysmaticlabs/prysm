@@ -257,7 +257,8 @@ func (s *Service) subscribeWithBase(topic string, validator wrappedVal, handle s
 func (s *Service) wrapAndReportValidation(topic string, v wrappedVal) (string, pubsub.ValidatorEx) {
 	return topic, func(ctx context.Context, pid peer.ID, msg *pubsub.Message) (res pubsub.ValidationResult) {
 		defer messagehandler.HandlePanic(ctx, msg)
-		res = pubsub.ValidationIgnore // Default: ignore any message that panics.
+		// Default: ignore any message that panics.
+		res = pubsub.ValidationIgnore // nolint:wastedassign
 		ctx, cancel := context.WithTimeout(ctx, pubsubMessageTimeout)
 		defer cancel()
 		messageReceivedCounter.WithLabelValues(topic).Inc()
@@ -781,10 +782,8 @@ func isDigestValid(digest [4]byte, genesis time.Time, genValRoot [32]byte) (bool
 }
 
 func agentString(pid peer.ID, hst host.Host) string {
-	agString := ""
-	ok := false
 	rawVersion, storeErr := hst.Peerstore().Get(pid, "AgentVersion")
-	agString, ok = rawVersion.(string)
+	agString, ok := rawVersion.(string)
 	if storeErr != nil || !ok {
 		agString = ""
 	}

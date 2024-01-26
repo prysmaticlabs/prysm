@@ -40,11 +40,13 @@ func (w *p2pWorker) handle(ctx context.Context, b batch) batch {
 	dlt := time.Now()
 	backfillBatchTimeDownloading.Observe(float64(dlt.Sub(start).Milliseconds()))
 	if err != nil {
+		log.WithError(err).WithFields(b.logFields()).Debug("Batch requesting failed")
 		return b.withRetryableError(err)
 	}
 	vb, err := w.v.verify(results)
 	backfillBatchTimeVerifying.Observe(float64(time.Since(dlt).Milliseconds()))
 	if err != nil {
+		log.WithError(err).WithFields(b.logFields()).Debug("Batch validation failed")
 		return b.withRetryableError(err)
 	}
 	// This is a hack to get the rough size of the batch. This helps us approximate the amount of memory needed
