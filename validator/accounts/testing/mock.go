@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/iface"
@@ -89,7 +89,7 @@ func (_ *Wallet) InitializeKeymanager(_ context.Context, _ iface.InitKeymanagerC
 
 type Validator struct {
 	Km               keymanager.IKeymanager
-	proposerSettings *validatorserviceconfig.ProposerSettings
+	proposerSettings *proposer.ProposerSettings
 }
 
 func (_ *Validator) LogSyncCommitteeMessagesSubmitted() {}
@@ -203,12 +203,12 @@ func (_ *Validator) SignValidatorRegistrationRequest(_ context.Context, _ iface2
 }
 
 // ProposerSettings for mocking
-func (m *Validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (m *Validator) ProposerSettings() *proposer.ProposerSettings {
 	return m.proposerSettings
 }
 
 // SetProposerSettings for mocking
-func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (m *Validator) SetProposerSettings(_ context.Context, settings *proposer.ProposerSettings) error {
 	m.proposerSettings = settings
 	return nil
 }

@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -21,6 +23,11 @@ import (
 	beaconprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon"
 	nodeprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/node"
 	validatorprysm "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
+	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
+	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
@@ -135,6 +142,7 @@ type Config struct {
 	BlobStorage                   *filesystem.BlobStorage
 	TrackedValidatorsCache        *cache.TrackedValidatorsCache
 	PayloadIDCache                *cache.PayloadIDCache
+	ProposerSettings              *validatorpb.ProposerSettingsPayload
 }
 
 // NewService instantiates a new RPC service instance that will
@@ -372,6 +380,11 @@ func (s *Service) Start() {
 		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 	}
 
+	// update the tracked validator cache before starting servers
+	if err := updateTrackValidatorCacheWithProposerSettings(s.ctx, s.cfg.ChainInfoFetcher, s.cfg.ProposerSettings, s.cfg.TrackedValidatorsCache); err != nil {
+		log.WithError(err).Errorf("Could NOT update tracked validator cache with proposer settings")
+	}
+
 	validatorServer := &validatorv1alpha1.Server{
 		Ctx:                    s.ctx,
 		AttPool:                s.cfg.AttestationsPool,
@@ -596,6 +609,49 @@ func (s *Service) Start() {
 			}
 		}
 	}()
+}
+
+func updateTrackValidatorCacheWithProposerSettings(ctx context.Context, chain blockchain.ChainInfoFetcher, settings *validatorpb.ProposerSettingsPayload, tackedValidatorCache *cache.TrackedValidatorsCache) error {
+	if settings != nil && settings.ProposerConfig != nil {
+		st, err := chain.HeadState(ctx)
+		if err != nil {
+			return err
+		}
+		for key, option := range settings.ProposerConfig {
+			decodedKey, err := hexutil.Decode(key)
+			if err != nil {
+				return errors.Wrapf(err, "could not decode public key %s", key)
+			}
+			if len(decodedKey) != fieldparams.BLSPubkeyLength {
+				return fmt.Errorf("%v  is not a bls public key", key)
+			}
+			if err := proposer.VerifyOption(key, option); err != nil {
+				return err
+			}
+			validatorIndex, ok := st.ValidatorIndexByPubkey(bytesutil.ToBytes48(decodedKey))
+			if !ok {
+				continue
+			}
+			tackedValidatorCache.Set(cache.TrackedValidator{
+				Active:       true, // TODO: either check or add the field in the request
+				Index:        validatorIndex,
+				FeeRecipient: primitives.ExecutionAddress(common.HexToAddress(option.FeeRecipient).Bytes()),
+			})
+		}
+	}
+	if settings != nil && settings.ProposerConfig == nil && settings.DefaultConfig != nil {
+		if settings.DefaultConfig.FeeRecipient == "" {
+			return errors.New("default fee recipient cannot be empty")
+		}
+		if !common.IsHexAddress(settings.DefaultConfig.FeeRecipient) {
+			return errors.New("fee recipient is not a valid eth1 address")
+		}
+		if err := proposer.WarnNonChecksummedAddress(settings.DefaultConfig.FeeRecipient); err != nil {
+			return err
+		}
+		params.BeaconConfig().DefaultFeeRecipient = common.HexToAddress(settings.DefaultConfig.FeeRecipient)
+	}
+	return nil
 }
 
 // Stop the service.

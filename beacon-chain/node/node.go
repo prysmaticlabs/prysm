@@ -57,12 +57,14 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
+	"github.com/prysmaticlabs/prysm/v4/config"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/prometheus"
+	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/runtime"
 	"github.com/prysmaticlabs/prysm/v4/runtime/debug"
 	"github.com/prysmaticlabs/prysm/v4/runtime/prereqs"
@@ -812,6 +814,21 @@ func (b *BeaconNode) registerSlasherService() error {
 	return b.services.RegisterService(slasherSrv)
 }
 
+func proposerSettings(cliCtx *cli.Context) (*validatorpb.ProposerSettingsPayload, error) {
+	var fileConfig *validatorpb.ProposerSettingsPayload
+	if cliCtx.IsSet(flags.ProposerSettingsFlag.Name) {
+		if err := config.UnmarshalFromFile(cliCtx.Context, cliCtx.String(flags.ProposerSettingsFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	if cliCtx.IsSet(flags.ProposerSettingsURLFlag.Name) {
+		if err := config.UnmarshalFromURL(cliCtx.Context, cliCtx.String(flags.ProposerSettingsURLFlag.Name), &fileConfig); err != nil {
+			return nil, err
+		}
+	}
+	return fileConfig, nil
+}
+
 func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 	var chainService *blockchain.Service
 	if err := b.services.FetchService(&chainService); err != nil {
@@ -860,6 +877,11 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 
 	maxMsgSize := b.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
 	enableDebugRPCEndpoints := b.cliCtx.Bool(flags.EnableDebugRPCEndpoints.Name)
+
+	psettings, err := proposerSettings(b.cliCtx)
+	if err != nil {
+		return err
+	}
 
 	p2pService := b.fetchP2P()
 	rpcService := rpc.NewService(b.ctx, &rpc.Config{
@@ -913,8 +935,8 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		BlobStorage:                   b.BlobStorage,
 		TrackedValidatorsCache:        b.trackedValidatorsCache,
 		PayloadIDCache:                b.payloadIDCache,
+		ProposerSettings:              psettings,
 	})
-
 	return b.services.RegisterService(rpcService)
 }
 
@@ -1043,7 +1065,7 @@ func (b *BeaconNode) registerBuilderService(cliCtx *cli.Context) error {
 	if err := b.services.FetchService(&chainService); err != nil {
 		return err
 	}
-
+	// update here based on proposer settings
 	opts := append(b.serviceFlagOpts.builderOpts,
 		builder.WithHeadFetcher(chainService),
 		builder.WithDatabase(b.db))

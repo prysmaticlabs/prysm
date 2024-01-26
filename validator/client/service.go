@@ -17,7 +17,7 @@ import (
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
@@ -74,7 +74,7 @@ type ValidatorService struct {
 	grpcHeaders            []string
 	graffiti               []byte
 	Web3SignerConfig       *remoteweb3signer.SetupConfig
-	proposerSettings       *validatorserviceconfig.ProposerSettings
+	proposerSettings       *proposer.ProposerSettings
 	validatorsRegBatchSize int
 }
 
@@ -98,7 +98,7 @@ type Config struct {
 	GraffitiFlag               string
 	Endpoint                   string
 	Web3SignerConfig           *remoteweb3signer.SetupConfig
-	ProposerSettings           *validatorserviceconfig.ProposerSettings
+	ProposerSettings           *proposer.ProposerSettings
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
 	ValidatorsRegBatchSize     int
@@ -265,7 +265,7 @@ func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 }
 
 // ProposerSettings returns a deep copy of the underlying proposer settings in the validator
-func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *ValidatorService) ProposerSettings() *proposer.ProposerSettings {
 	settings := v.validator.ProposerSettings()
 	if settings != nil {
 		return settings.Clone()
@@ -274,7 +274,7 @@ func (v *ValidatorService) ProposerSettings() *validatorserviceconfig.ProposerSe
 }
 
 // SetProposerSettings sets the proposer settings on the validator service as well as the underlying validator
-func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *ValidatorService) SetProposerSettings(ctx context.Context, settings *proposer.ProposerSettings) error {
 	// validator service proposer settings is only used for pass through from node -> validator service -> validator.
 	// in memory use of proposer settings happens on validator.
 	v.proposerSettings = settings

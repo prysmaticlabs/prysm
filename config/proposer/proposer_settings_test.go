@@ -1,4 +1,4 @@
-package validator_service_config
+package proposer
 
 import (
 	"testing"

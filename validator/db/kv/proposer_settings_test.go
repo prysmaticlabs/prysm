@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -20,23 +20,23 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 		key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 		require.NoError(t, err)
-		settings := &validatorServiceConfig.ProposerSettings{
-			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption{
+		settings := &proposer.ProposerSettings{
+			ProposeConfig: map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption{
 				bytesutil.ToBytes48(key1): {
-					FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+					FeeRecipientConfig: &proposer.FeeRecipientConfig{
 						FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 					},
-					BuilderConfig: &validatorServiceConfig.BuilderConfig{
+					BuilderConfig: &proposer.BuilderConfig{
 						Enabled:  true,
 						GasLimit: validator.Uint64(40000000),
 					},
 				},
 			},
-			DefaultConfig: &validatorServiceConfig.ProposerOption{
-				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 				},
-				BuilderConfig: &validatorServiceConfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  false,
 					GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 				},
@@ -54,12 +54,12 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 		db := setupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 		key1, err := hexutil.Decode("0xa057816155ad77931185101128655c0191bd0214c201ca48ed887f6c4c6adf334070efcd75140eada5ac83a92506dd7a")
 		require.NoError(t, err)
-		settings := &validatorServiceConfig.ProposerSettings{
-			DefaultConfig: &validatorServiceConfig.ProposerOption{
-				FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+		settings := &proposer.ProposerSettings{
+			DefaultConfig: &proposer.ProposerOption{
+				FeeRecipientConfig: &proposer.FeeRecipientConfig{
 					FeeRecipient: common.HexToAddress("0x6e35733c5af9B61374A128e6F85f553aF09ff89A"),
 				},
-				BuilderConfig: &validatorServiceConfig.BuilderConfig{
+				BuilderConfig: &proposer.BuilderConfig{
 					Enabled:  false,
 					GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 				},
@@ -67,11 +67,11 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 		}
 		err = db.SaveProposerSettings(ctx, settings)
 		require.NoError(t, err)
-		upatedDefault := &validatorServiceConfig.ProposerOption{
-			FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+		upatedDefault := &proposer.ProposerOption{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x9995733c5af9B61374A128e6F85f553aF09ff89B"),
 			},
-			BuilderConfig: &validatorServiceConfig.BuilderConfig{
+			BuilderConfig: &proposer.BuilderConfig{
 				Enabled:  true,
 				GasLimit: validator.Uint64(params.BeaconConfig().DefaultBuilderGasLimit),
 			},
@@ -83,11 +83,11 @@ func TestStore_ProposerSettings_ReadAndWrite(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, dbSettings)
 		require.DeepEqual(t, dbSettings.DefaultConfig, upatedDefault)
-		option := &validatorServiceConfig.ProposerOption{
-			FeeRecipientConfig: &validatorServiceConfig.FeeRecipientConfig{
+		option := &proposer.ProposerOption{
+			FeeRecipientConfig: &proposer.FeeRecipientConfig{
 				FeeRecipient: common.HexToAddress("0x50155530FCE8a85ec7055A5F8b2bE214B3DaeFd3"),
 			},
-			BuilderConfig: &validatorServiceConfig.BuilderConfig{
+			BuilderConfig: &proposer.BuilderConfig{
 				Enabled:  true,
 				GasLimit: validator.Uint64(40000000),
 			},

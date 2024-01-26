@@ -26,7 +26,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
-	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -102,7 +102,7 @@ type validator struct {
 	voteStats                          voteStats
 	syncCommitteeStats                 syncCommitteeStats
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
-	proposerSettings                   *validatorserviceconfig.ProposerSettings
+	proposerSettings                   *proposer.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
 	validatorsRegBatchSize             int
 }
@@ -978,12 +978,12 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 }
 
 // ProposerSettings gets the current proposer settings saved in memory validator
-func (v *validator) ProposerSettings() *validatorserviceconfig.ProposerSettings {
+func (v *validator) ProposerSettings() *proposer.ProposerSettings {
 	return v.proposerSettings
 }
 
 // SetProposerSettings sets and saves the passed in proposer settings overriding the in memory one
-func (v *validator) SetProposerSettings(ctx context.Context, settings *validatorserviceconfig.ProposerSettings) error {
+func (v *validator) SetProposerSettings(ctx context.Context, settings *proposer.ProposerSettings) error {
 	if v.db == nil {
 		return errors.New("db is not set")
 	}

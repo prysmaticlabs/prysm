@@ -1,4 +1,4 @@
-package validator_service_config
+package proposer
 
 import (
 	"fmt"
@@ -10,6 +10,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
+	log "github.com/sirupsen/logrus"
 )
 
 // ToSettings converts struct to ProposerSettings
@@ -212,4 +213,31 @@ func (po *ProposerOption) Clone() *ProposerOption {
 		p.BuilderConfig = po.BuilderConfig.Clone()
 	}
 	return p
+}
+
+func VerifyOption(key string, option *validatorpb.ProposerOptionPayload) error {
+	if option == nil {
+		return fmt.Errorf("fee recipient is required for proposer %s", key)
+	}
+	if !common.IsHexAddress(option.FeeRecipient) {
+		return errors.New("fee recipient is not a valid eth1 address")
+	}
+	if err := WarnNonChecksummedAddress(option.FeeRecipient); err != nil {
+		return err
+	}
+	return nil
+}
+
+func WarnNonChecksummedAddress(feeRecipient string) error {
+	mixedcaseAddress, err := common.NewMixedcaseAddressFromString(feeRecipient)
+	if err != nil {
+		return errors.Wrapf(err, "could not decode fee recipient %s", feeRecipient)
+	}
+	if !mixedcaseAddress.ValidChecksum() {
+		log.Warnf("Fee recipient %s is not a checksum Ethereum address. "+
+			"The checksummed address is %s and will be used as the fee recipient. "+
+			"We recommend using a mixed-case address (checksum) "+
+			"to prevent spelling mistakes in your fee recipient Ethereum address", feeRecipient, mixedcaseAddress.Address().Hex())
+	}
+	return nil
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
-	validatorServiceConfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
+	"github.com/prysmaticlabs/prysm/v4/config/proposer"
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	bolt "go.etcd.io/bbolt"
 	"go.opencensus.io/trace"
@@ -17,7 +17,7 @@ import (
 var ErrNoProposerSettingsFound = errors.New("no proposer settings found in bucket")
 
 // UpdateProposerSettingsForPubkey updates the existing settings for an internal representation of the proposers settings file at a particular public key
-func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *validatorServiceConfig.ProposerOption) error {
+func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fieldparams.BLSPubkeyLength]byte, options *proposer.ProposerOption) error {
 	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsForPubkey")
 	defer span.End()
 	err := s.db.Update(func(tx *bolt.Tx) error {
@@ -30,12 +30,12 @@ func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fie
 		if err := proto.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		settings, err := validatorServiceConfig.ToSettings(to)
+		settings, err := proposer.ToSettings(to)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert payload to proposer settings")
 		}
 		if settings.ProposeConfig == nil {
-			settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*validatorServiceConfig.ProposerOption)
+			settings.ProposeConfig = make(map[[fieldparams.BLSPubkeyLength]byte]*proposer.ProposerOption)
 		}
 		settings.ProposeConfig[pubkey] = options
 		m, err := proto.Marshal(settings.ToPayload())
@@ -48,7 +48,7 @@ func (s *Store) UpdateProposerSettingsForPubkey(ctx context.Context, pubkey [fie
 }
 
 // UpdateProposerSettingsDefault updates the existing default settings for proposer settings
-func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *validatorServiceConfig.ProposerOption) error {
+func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *proposer.ProposerOption) error {
 	_, span := trace.StartSpan(ctx, "validator.db.UpdateProposerSettingsDefault")
 	defer span.End()
 	if options == nil {
@@ -67,7 +67,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 		if err := proto.Unmarshal(b, to); err != nil {
 			return errors.Wrap(err, "failed to unmarshal proposer settings")
 		}
-		settings, err := validatorServiceConfig.ToSettings(to)
+		settings, err := proposer.ToSettings(to)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert payload to proposer settings")
 		}
@@ -82,7 +82,7 @@ func (s *Store) UpdateProposerSettingsDefault(ctx context.Context, options *vali
 }
 
 // ProposerSettings gets the current proposer settings
-func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.ProposerSettings, error) {
+func (s *Store) ProposerSettings(ctx context.Context) (*proposer.ProposerSettings, error) {
 	_, span := trace.StartSpan(ctx, "validator.db.ProposerSettings")
 	defer span.End()
 	to := &validatorpb.ProposerSettingsPayload{}
@@ -99,7 +99,7 @@ func (s *Store) ProposerSettings(ctx context.Context) (*validatorServiceConfig.P
 	}); err != nil {
 		return nil, err
 	}
-	return validatorServiceConfig.ToSettings(to)
+	return proposer.ToSettings(to)
 }
 
 // ProposerSettingsExists returns true or false if the settings exist or not
@@ -118,7 +118,7 @@ func (s *Store) ProposerSettingsExists(ctx context.Context) (bool, error) {
 }
 
 // SaveProposerSettings saves the entire proposer setting overriding the existing settings
-func (s *Store) SaveProposerSettings(ctx context.Context, settings *validatorServiceConfig.ProposerSettings) error {
+func (s *Store) SaveProposerSettings(ctx context.Context, settings *proposer.ProposerSettings) error {
 	_, span := trace.StartSpan(ctx, "validator.db.SaveProposerSettings")
 	defer span.End()
 	// nothing to save
