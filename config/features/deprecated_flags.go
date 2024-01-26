@@ -28,11 +28,6 @@ var (
 		Usage:  deprecatedUsage,
 		Hidden: true,
 	}
-	deprecatedAggregateParallel = &cli.BoolFlag{
-		Name:   "aggregate-parallel",
-		Usage:  deprecatedUsage,
-		Hidden: true,
-	}
 	deprecatedEnableOptionalEngineMethods = &cli.BoolFlag{
 		Name:   "enable-optional-engine-methods",
 		Usage:  deprecatedUsage,
@@ -76,7 +71,6 @@ var deprecatedFlags = []cli.Flag{
 	deprecatedDisableGossipBatchAggregation,
 	deprecatedBuildBlockParallel,
 	deprecatedEnableRegistrationCache,
-	deprecatedAggregateParallel,
 	deprecatedEnableOptionalEngineMethods,
 	deprecatedDisableBuildBlockParallel,
 	deprecatedDisableReorgLateBlocks,
