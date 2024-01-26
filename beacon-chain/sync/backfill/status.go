@@ -149,10 +149,10 @@ func (s *Store) swapStatus(bs *dbval.BackfillStatus) {
 	s.bs = bs
 }
 
-func (s *Store) statusExists() bool {
+func (s *Store) isGenesisSync() bool {
 	s.RLock()
 	defer s.RUnlock()
-	return s.bs != nil
+	return s.genesisSync
 }
 
 // originState looks up the state for the checkpoint sync origin. This is a hack, because StatusUpdater is the only

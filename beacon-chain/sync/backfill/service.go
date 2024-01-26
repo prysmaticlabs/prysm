@@ -227,7 +227,7 @@ func (s *Service) Start() {
 	}
 	s.ms.setClock(clock)
 
-	if !s.store.statusExists() {
+	if s.store.isGenesisSync() {
 		log.Info("Exiting backfill service as the node has been initialized with a genesis state or the backfill status is missing")
 		return
 	}
