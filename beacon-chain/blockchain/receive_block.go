@@ -209,6 +209,7 @@ func (s *Service) ReceiveBlock(ctx context.Context, block interfaces.ReadOnlySig
 
 	timeWithoutDaWait := time.Since(receivedTime) - daWaitedTime
 	chainServiceProcessingTime.Observe(float64(timeWithoutDaWait.Milliseconds()))
+	dataAvabilityWaitedTime.Observe(float64(daWaitedTime.Milliseconds()))
 
 	return nil
 }

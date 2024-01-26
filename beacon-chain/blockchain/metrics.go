@@ -182,6 +182,10 @@ var (
 		Name: "chain_service_processing_milliseconds",
 		Help: "Total time to call a chain service in ReceiveBlock()",
 	})
+	dataAvabilityWaitedTime = promauto.NewSummary(prometheus.SummaryOpts{
+		Name: "da_waited_time_milliseconds",
+		Help: "Total time to wait for a data availability check in ReceiveBlock(), a node is blocked during this time",
+	})
 	processAttsElapsedTime = promauto.NewHistogram(
 		prometheus.HistogramOpts{
 			Name:    "process_attestations_milliseconds",
