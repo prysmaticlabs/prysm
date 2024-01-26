@@ -23,8 +23,20 @@ def prysm_image_upload(
         tars = [
             "//tools:passwd_tar",
         ] + select({
-          "@platforms//cpu:x86_64": ["@amd64_debian11_coreutils"],
-          "@platforms//cpu:arm64": ["@arm64_debian11_coreutils"],
+          "@platforms//cpu:x86_64": [
+            "@amd64_debian11_coreutils",
+            "@amd64_debian11_libacl1",
+            "@amd64_debian11_libattr1",
+            "@amd64_debian11_libselinux",
+            "@amd64_debian11_libpcre2",
+          ],
+          "@platforms//cpu:arm64": [
+            "@arm64_debian11_coreutils",
+            "@arm64_debian11_libacl1",
+            "@arm64_debian11_libattr1",
+            "@arm64_debian11_libselinux",
+            "@arm64_debian11_libpcre2",
+          ],
         }) + [
             "//tools:libtinfo6_tar",
             "//tools:bash_tar",
