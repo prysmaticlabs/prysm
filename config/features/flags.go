@@ -3,6 +3,7 @@ package features
 import (
 	"time"
 
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -161,6 +162,7 @@ var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
 	EnableEIP4881,
 	enableExperimentalState,
+	backfill.EnableExperimentalBackfill,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
