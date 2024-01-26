@@ -74,8 +74,8 @@ var appFlags = []cli.Flag{
 	flags.SuggestedFeeRecipient,
 	flags.ProposerSettingsFlag,
 	flags.ProposerSettingsURLFlag,
-	flags.TerminalTotalDifficultyOverride, logs.
-		flags.TerminalBlockHashOverride,
+	flags.TerminalTotalDifficultyOverride,
+	flags.TerminalBlockHashOverride,
 	flags.TerminalBlockHashActivationEpochOverride,
 	flags.MevRelayEndpoint,
 	flags.MaxBuilderEpochMissedSlots,
