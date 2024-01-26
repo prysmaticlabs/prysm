@@ -149,6 +149,12 @@ func (s *Store) swapStatus(bs *dbval.BackfillStatus) {
 	s.bs = bs
 }
 
+func (s *Store) isGenesisSync() bool {
+	s.RLock()
+	defer s.RUnlock()
+	return s.genesisSync
+}
+
 // originState looks up the state for the checkpoint sync origin. This is a hack, because StatusUpdater is the only
 // thing that needs db access and it has the origin root handy, so it's convenient to look it up here. The state is
 // needed by the verifier.

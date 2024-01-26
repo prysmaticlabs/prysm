@@ -54,6 +54,7 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
+        "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
         "//beacon-chain/db:go_default_library",
         "//beacon-chain/p2p/testing:go_default_library",
