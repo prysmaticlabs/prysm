@@ -58,7 +58,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 	// Sort the identifiers so that requests for the same blob root will be adjacent, minimizing db lookups.
 	sort.Sort(blobIdents)
 
-	batchSize := flags.Get().BlobBatchLimit
+	batchSize := flags.Get().BlobServingBatchLimit
 	var ticker *time.Ticker
 	if len(blobIdents) > batchSize {
 		ticker = time.NewTicker(time.Second)

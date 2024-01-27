@@ -167,11 +167,16 @@ var (
 		Usage: "The factor by which block batch limit may increase on burst.",
 		Value: 2,
 	}
+	BlobServingBatchLimit = &cli.IntFlag{
+		Name:  "blob-batch-limit",
+		Usage: "Maximum number of blob slots for the server to allow in a batch.",
+		Value: 64,
+	}
 	// BlobBatchLimit specifies the requested blob batch size.
 	BlobBatchLimit = &cli.IntFlag{
 		Name:  "blob-batch-limit",
-		Usage: "The amount of blobs the local peer is bounded to request and respond to in a batch.",
-		Value: 64,
+		Usage: "Max number of blob slots to request in a batch.",
+		Value: 16,
 	}
 	// BlobBatchLimitBurstFactor specifies the factor by which blob batch size may increase.
 	BlobBatchLimitBurstFactor = &cli.IntFlag{

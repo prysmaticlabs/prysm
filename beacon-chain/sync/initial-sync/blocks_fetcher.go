@@ -93,6 +93,7 @@ type blocksFetcher struct {
 	db              db.ReadOnlyDatabase
 	blocksPerPeriod uint64
 	rateLimiter     *leakybucket.Collector
+	blobRateLimiter *leakybucket.Collector
 	peerLocks       map[peer.ID]*peerLock
 	fetchRequests   chan *fetchRequestParams
 	fetchResponses  chan *fetchRequestResponse
@@ -127,11 +128,16 @@ type fetchRequestResponse struct {
 // newBlocksFetcher creates ready to use fetcher.
 func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetcher {
 	blocksPerPeriod := flags.Get().BlockBatchLimit
+	blobsPerPeriod := flags.Get().BlobBatchLimit
 	allowedBlocksBurst := flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit
+	allowedBlobsBurst := flags.Get().BlobBatchLimitBurstFactor * flags.Get().BlobBatchLimit
 	// Allow fetcher to go almost to the full burst capacity (less a single batch).
 	rateLimiter := leakybucket.NewCollector(
 		float64(blocksPerPeriod), int64(allowedBlocksBurst-blocksPerPeriod),
 		blockLimiterPeriod, false /* deleteEmptyBuckets */)
+	blobRateLimiter := leakybucket.NewCollector(
+		float64(blobsPerPeriod), int64(allowedBlobsBurst-blobsPerPeriod),
+		blockLimiterPeriod, false)
 
 	capacityWeight := cfg.peerFilterCapacityWeight
 	if capacityWeight >= 1 {
@@ -150,6 +156,7 @@ func newBlocksFetcher(ctx context.Context, cfg *blocksFetcherConfig) *blocksFetc
 		db:              cfg.db,
 		blocksPerPeriod: uint64(blocksPerPeriod),
 		rateLimiter:     rateLimiter,
+		blobRateLimiter: blobRateLimiter,
 		peerLocks:       make(map[peer.ID]*peerLock),
 		fetchRequests:   make(chan *fetchRequestParams, maxPendingRequests),
 		fetchResponses:  make(chan *fetchRequestResponse, maxPendingRequests),
@@ -493,13 +500,13 @@ func (f *blocksFetcher) requestBlocks(
 		"capacity": f.rateLimiter.Remaining(pid.String()),
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks")
-	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		if err := f.waitForBandwidth(pid, req.Count); err != nil {
+	if f.blobRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		if err := f.waitForBandwidth(pid, req.Count, f.blobRateLimiter); err != nil {
 			l.Unlock()
 			return nil, err
 		}
 	}
-	f.rateLimiter.Add(pid.String(), int64(req.Count))
+	f.blobRateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 	return prysmsync.SendBeaconBlocksByRangeRequest(ctx, f.chain, f.p2p, pid, req, nil)
 }
@@ -514,19 +521,19 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecar
 		"peer":     pid,
 		"start":    req.StartSlot,
 		"count":    req.Count,
-		"capacity": f.rateLimiter.Remaining(pid.String()),
+		"capacity": f.blobRateLimiter.Remaining(pid.String()),
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blobs")
 	// We're intentionally abusing the block rate limit here, treating blob requests as if they were block requests.
 	// Since blob requests take more bandwidth than blocks, we should improve how we account for the different kinds
 	// of requests, more in proportion to the cost of serving them.
-	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {
-		if err := f.waitForBandwidth(pid, req.Count); err != nil {
+	if f.blobRateLimiter.Remaining(pid.String()) < int64(req.Count) {
+		if err := f.waitForBandwidth(pid, req.Count, f.blobRateLimiter); err != nil {
 			l.Unlock()
 			return nil, err
 		}
 	}
-	f.rateLimiter.Add(pid.String(), int64(req.Count))
+	f.blobRateLimiter.Add(pid.String(), int64(req.Count))
 	l.Unlock()
 	return prysmsync.SendBlobsByRangeRequest(ctx, f.clock, f.p2p, pid, f.ctxMap, req)
 }
@@ -549,7 +556,7 @@ func (f *blocksFetcher) requestBlocksByRoot(
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blocks (by roots)")
 	if f.rateLimiter.Remaining(pid.String()) < int64(len(*req)) {
-		if err := f.waitForBandwidth(pid, uint64(len(*req))); err != nil {
+		if err := f.waitForBandwidth(pid, uint64(len(*req)), f.rateLimiter); err != nil {
 			l.Unlock()
 			return nil, err
 		}
@@ -561,9 +568,9 @@ func (f *blocksFetcher) requestBlocksByRoot(
 }
 
 // waitForBandwidth blocks up until peer's bandwidth is restored.
-func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
+func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64, collector *leakybucket.Collector) error {
 	log.WithField("peer", pid).Debug("Slowing down for rate limit")
-	rem := f.rateLimiter.Remaining(pid.String())
+	rem := collector.Remaining(pid.String())
 	if uint64(rem) >= count {
 		// Exit early if we have sufficient capacity
 		return nil
@@ -572,7 +579,7 @@ func (f *blocksFetcher) waitForBandwidth(pid peer.ID, count uint64) error {
 	if err != nil {
 		return err
 	}
-	toWait := timeToWait(int64(intCount), rem, f.rateLimiter.Capacity(), f.rateLimiter.TillEmpty(pid.String()))
+	toWait := timeToWait(int64(intCount), rem, collector.Capacity(), f.rateLimiter.TillEmpty(pid.String()))
 	timer := time.NewTimer(toWait)
 	defer timer.Stop()
 	select {

@@ -626,12 +626,12 @@ func TestBlocksFetcher_WaitForBandwidth(t *testing.T) {
 	vr := [32]byte{}
 	fetcher.chain = &mock.ChainService{Genesis: gt, ValidatorsRoot: vr}
 	start := time.Now()
-	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10))
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), 10, fetcher.rateLimiter))
 	dur := time.Since(start)
 	assert.Equal(t, true, dur < time.Millisecond, "waited excessively for bandwidth")
 	fetcher.rateLimiter.Add(p2.PeerID().String(), int64(req.Count*burstFactor))
 	start = time.Now()
-	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), req.Count))
+	assert.NoError(t, fetcher.waitForBandwidth(p2.PeerID(), req.Count, fetcher.rateLimiter))
 	dur = time.Since(start)
 	assert.Equal(t, float64(5), dur.Truncate(1*time.Second).Seconds(), "waited excessively for bandwidth")
 }

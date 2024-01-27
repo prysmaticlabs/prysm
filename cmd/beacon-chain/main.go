@@ -57,7 +57,7 @@ var appFlags = []cli.Flag{
 	flags.SetGCPercent,
 	flags.BlockBatchLimit,
 	flags.BlockBatchLimitBurstFactor,
-	flags.BlobBatchLimit,
+	flags.BlobServingBatchLimit,
 	flags.BlobBatchLimitBurstFactor,
 	flags.InteropMockEth1DataVotesFlag,
 	flags.InteropNumValidatorsFlag,

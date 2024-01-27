@@ -14,6 +14,7 @@ type GlobalFlags struct {
 	BlockBatchLimit            int
 	BlockBatchLimitBurstFactor int
 	BlobBatchLimit             int
+	BlobServingBatchLimit      int
 	BlobBatchLimitBurstFactor  int
 }
 
@@ -43,6 +44,7 @@ func ConfigureGlobalFlags(ctx *cli.Context) {
 	cfg.BlockBatchLimit = ctx.Int(BlockBatchLimit.Name)
 	cfg.BlockBatchLimitBurstFactor = ctx.Int(BlockBatchLimitBurstFactor.Name)
 	cfg.BlobBatchLimit = ctx.Int(BlobBatchLimit.Name)
+	cfg.BlobServingBatchLimit = ctx.Int(BlobServingBatchLimit.Name)
 	cfg.BlobBatchLimitBurstFactor = ctx.Int(BlobBatchLimitBurstFactor.Name)
 	cfg.MinimumPeersPerSubnet = ctx.Int(MinPeersPerSubnet.Name)
 	configureMinimumPeers(ctx, cfg)

@@ -43,8 +43,8 @@ func newRateLimiter(p2pProvider p2p.P2P) *limiter {
 	allowedBlocksBurst := int64(flags.Get().BlockBatchLimitBurstFactor * flags.Get().BlockBatchLimit)
 
 	// Initialize blob limits.
-	allowedBlobsPerSecond := float64(flags.Get().BlobBatchLimit)
-	allowedBlobsBurst := int64(flags.Get().BlobBatchLimitBurstFactor * flags.Get().BlobBatchLimit)
+	allowedBlobsPerSecond := float64(flags.Get().BlobServingBatchLimit)
+	allowedBlobsBurst := int64(flags.Get().BlobBatchLimitBurstFactor * flags.Get().BlobServingBatchLimit)
 
 	// Set topic map for all rpc topics.
 	topicMap := make(map[string]*leakybucket.Collector, len(p2p.RPCTopicMappings))
