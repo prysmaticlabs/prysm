@@ -394,7 +394,7 @@ func (s *Store) CheckDoubleBlockProposals(
 				continue
 			}
 
-			// Compare the existing in DB proposal signing root with the incoming proposal signing root.
+			// Compare the proposal signing root in the DB with the incoming proposal signing root.
 			// If they differ, we have a double proposal.
 			existingSigningRoot := bytesutil.ToBytes32(encExistingProposalWrapper[:signingRootSize])
 			if existingSigningRoot != incomingProposal.SigningRoot {
