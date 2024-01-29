@@ -20,6 +20,7 @@ func (s *Service) checkSlashableAttestations(
 ) ([]*ethpb.AttesterSlashing, error) {
 	slashings := make([]*ethpb.AttesterSlashing, 0)
 
+	// Double votes
 	log.Debug("Checking for double votes")
 	start := time.Now()
 	doubleVoteSlashings, err := s.checkDoubleVotes(ctx, atts)
@@ -29,42 +30,53 @@ func (s *Service) checkSlashableAttestations(
 	log.WithField("elapsed", time.Since(start)).Debug("Done checking double votes")
 	slashings = append(slashings, doubleVoteSlashings...)
 
+	// Surrounding / surrounded votes
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
 	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
 	start = time.Now()
 	batchTimes := make([]time.Duration, 0, len(groupedAtts))
+
 	for validatorChunkIdx, batch := range groupedAtts {
 		innerStart := time.Now()
-		attSlashings, err := s.detectAllAttesterSlashings(ctx, &chunkUpdateArgs{
+
+		attSlashings, err := s.checkSurrounds(ctx, &chunkUpdateArgs{
 			validatorChunkIndex: validatorChunkIdx,
 			currentEpoch:        currentEpoch,
 		}, batch)
 		if err != nil {
 			return nil, err
 		}
+
 		slashings = append(slashings, attSlashings...)
+
 		indices := s.params.validatorIndicesInChunk(validatorChunkIdx)
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
+
 		batchTimes = append(batchTimes, time.Since(innerStart))
 	}
-	var avgProcessingTimePerBatch time.Duration
+
+	avgProcessingTimePerBatch := time.Duration(0)
 	for _, dur := range batchTimes {
 		avgProcessingTimePerBatch += dur
 	}
+
 	if avgProcessingTimePerBatch != time.Duration(0) {
 		avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
 	}
+
 	log.WithFields(logrus.Fields{
 		"numAttestations":                 len(atts),
 		"numBatchesByValidatorChunkIndex": len(groupedAtts),
 		"elapsed":                         time.Since(start),
 		"avgBatchProcessingTime":          avgProcessingTimePerBatch,
 	}).Info("Done checking slashable attestations")
+
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
 	}
+
 	return slashings, nil
 }
 
@@ -72,14 +84,13 @@ func (s *Service) checkSlashableAttestations(
 // as the current epoch in time, we perform slashing detection.
 // The process is as follows given a list of attestations:
 //
-//  1. Check for attester double votes using the list of attestations.
-//  2. Group the attestations by chunk index.
-//  3. Update the min and max spans for those grouped attestations, check if any slashings are
+//  1. Group the attestations by chunk index.
+//  2. Update the min and max spans for those grouped attestations, check if any slashings are
 //     found in the process
-//  4. Update the latest written epoch for all validators involved to the current epoch.
+//  3. Update the latest written epoch for all validators involved to the current epoch.
 //
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
-func (s *Service) detectAllAttesterSlashings(
+func (s *Service) checkSurrounds(
 	ctx context.Context,
 	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
