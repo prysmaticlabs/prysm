@@ -83,7 +83,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 }
 
 func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
-	headSlot := uint64(0)
+	var headSlot uint64
 	var err error
 	switch resp.Version {
 	case version.String(version.Phase0):

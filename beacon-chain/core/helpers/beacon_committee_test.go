@@ -21,6 +21,8 @@ import (
 )
 
 func TestComputeCommittee_WithoutCache(t *testing.T) {
+	ClearCache()
+
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
@@ -71,6 +73,8 @@ func TestComputeCommittee_WithoutCache(t *testing.T) {
 }
 
 func TestComputeCommittee_RegressionTest(t *testing.T) {
+	ClearCache()
+
 	indices := []primitives.ValidatorIndex{1, 3, 8, 16, 18, 19, 20, 23, 30, 35, 43, 46, 47, 54, 56, 58, 69, 70, 71, 83, 84, 85, 91, 96, 100, 103, 105, 106, 112, 121, 127, 128, 129, 140, 142, 144, 146, 147, 149, 152, 153, 154, 157, 160, 173, 175, 180, 182, 188, 189, 191, 194, 201, 204, 217, 221, 226, 228, 230, 231, 239, 241, 249, 250, 255}
 	seed := [32]byte{68, 110, 161, 250, 98, 230, 161, 172, 227, 226, 99, 11, 138, 124, 201, 134, 38, 197, 0, 120, 6, 165, 122, 34, 19, 216, 43, 226, 210, 114, 165, 183}
 	index := uint64(215)
@@ -80,6 +84,8 @@ func TestComputeCommittee_RegressionTest(t *testing.T) {
 }
 
 func TestVerifyBitfieldLength_OK(t *testing.T) {
+	ClearCache()
+
 	bf := bitfield.Bitlist{0xFF, 0x01}
 	committeeSize := uint64(8)
 	assert.NoError(t, VerifyBitfieldLength(bf, committeeSize), "Bitfield is not validated when it was supposed to be")
@@ -91,7 +97,7 @@ func TestVerifyBitfieldLength_OK(t *testing.T) {
 
 func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 	ClearCache()
-	defer ClearCache()
+
 	epoch := primitives.Epoch(1)
 	state, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
 		Slot: 0, // Epoch 0.
@@ -103,7 +109,7 @@ func TestCommitteeAssignments_CannotRetrieveFutureEpoch(t *testing.T) {
 
 func TestCommitteeAssignments_NoProposerForSlot0(t *testing.T) {
 	ClearCache()
-	defer ClearCache()
+
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
 		var activationEpoch primitives.Epoch
@@ -190,10 +196,10 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 		},
 	}
 
-	defer ClearCache()
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
 			ClearCache()
+
 			validatorIndexToCommittee, proposerIndexToSlots, err := CommitteeAssignments(context.Background(), state, slots.ToEpoch(tt.slot))
 			require.NoError(t, err, "Failed to determine CommitteeAssignments")
 			cac := validatorIndexToCommittee[tt.index]
@@ -209,6 +215,8 @@ func TestCommitteeAssignments_CanRetrieve(t *testing.T) {
 }
 
 func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
+	ClearCache()
+
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -239,6 +247,8 @@ func TestCommitteeAssignments_CannotRetrieveFuture(t *testing.T) {
 }
 
 func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *testing.T) {
+	ClearCache()
+
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -259,7 +269,7 @@ func TestCommitteeAssignments_CannotRetrieveOlderThanSlotsPerHistoricalRoot(t *t
 
 func TestCommitteeAssignments_EverySlotHasMin1Proposer(t *testing.T) {
 	ClearCache()
-	defer ClearCache()
+
 	// Initialize test with 256 validators, each slot and each index gets 4 validators.
 	validators := make([]*ethpb.Validator, 4*params.BeaconConfig().SlotsPerEpoch)
 	for i := 0; i < len(validators); i++ {
@@ -380,9 +390,9 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 		},
 	}
 
-	defer ClearCache()
 	for i, tt := range tests {
 		ClearCache()
+
 		require.NoError(t, state.SetSlot(tt.stateSlot))
 		err := VerifyAttestationBitfieldLengths(context.Background(), state, tt.attestation)
 		if tt.verificationFailure {
@@ -395,7 +405,7 @@ func TestVerifyAttestationBitfieldLengths_OK(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 	ClearCache()
-	defer ClearCache()
+
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]primitives.ValidatorIndex, validatorCount)
@@ -425,7 +435,7 @@ func TestUpdateCommitteeCache_CanUpdate(t *testing.T) {
 
 func TestUpdateCommitteeCache_CanUpdateAcrossEpochs(t *testing.T) {
 	ClearCache()
-	defer ClearCache()
+
 	validatorCount := params.BeaconConfig().MinGenesisActiveValidatorCount
 	validators := make([]*ethpb.Validator, validatorCount)
 	indices := make([]primitives.ValidatorIndex, validatorCount)

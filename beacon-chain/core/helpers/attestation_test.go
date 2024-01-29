@@ -20,6 +20,8 @@ import (
 
 func TestAttestation_IsAggregator(t *testing.T) {
 	t.Run("aggregator", func(t *testing.T) {
+		helpers.ClearCache()
+
 		beaconState, privKeys := util.DeterministicGenesisState(t, 100)
 		committee, err := helpers.BeaconCommitteeFromState(context.Background(), beaconState, 0, 0)
 		require.NoError(t, err)
@@ -30,6 +32,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 	})
 
 	t.Run("not aggregator", func(t *testing.T) {
+		helpers.ClearCache()
+
 		params.SetupTestConfigCleanup(t)
 		params.OverrideBeaconConfig(params.MinimalSpecConfig())
 		beaconState, privKeys := util.DeterministicGenesisState(t, 2048)
@@ -44,6 +48,8 @@ func TestAttestation_IsAggregator(t *testing.T) {
 }
 
 func TestAttestation_ComputeSubnetForAttestation(t *testing.T) {
+	helpers.ClearCache()
+
 	// Create 10 committees
 	committeeCount := uint64(10)
 	validatorCount := committeeCount * params.BeaconConfig().TargetCommitteeSize
@@ -204,6 +210,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			err := helpers.ValidateAttestationTime(tt.args.attSlot, tt.args.genesisTime,
 				params.BeaconConfig().MaximumGossipClockDisparityDuration())
 			if tt.wantedErr != "" {
@@ -216,6 +224,8 @@ func Test_ValidateAttestationTime(t *testing.T) {
 }
 
 func TestVerifyCheckpointEpoch_Ok(t *testing.T) {
+	helpers.ClearCache()
+
 	// Genesis was 6 epochs ago exactly.
 	offset := params.BeaconConfig().SlotsPerEpoch.Mul(params.BeaconConfig().SecondsPerSlot * 6)
 	genesis := time.Now().Add(-1 * time.Second * time.Duration(offset))
@@ -285,6 +295,8 @@ func TestValidateNilAttestation(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, helpers.ValidateNilAttestation(tt.attestation))
 			} else {
@@ -326,6 +338,8 @@ func TestValidateSlotTargetEpoch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			if tt.errString != "" {
 				require.ErrorContains(t, tt.errString, helpers.ValidateSlotTargetEpoch(tt.attestation.Data))
 			} else {
