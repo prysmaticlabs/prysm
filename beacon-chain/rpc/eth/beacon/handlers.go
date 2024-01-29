@@ -2095,27 +2095,29 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
 		return
 	}
-	finalized := make([][]string, 0, len(snapshot.Finalized))
-	for _, f := range snapshot.Finalized {
-		finalized = append(finalized, []string{hexutil.Encode(f)})
-	}
-	response := &GetDepositSnapshotResponse{
-		Data: &DepositSnapshot{
-			Finalized:            finalized,
-			DepositRoot:          hexutil.Encode(snapshot.DepositRoot),
-			DepositCount:         strconv.FormatUint(snapshot.DepositCount, 10),
-			ExecutionBlockHash:   hexutil.Encode(snapshot.ExecutionHash),
-			ExecutionBlockHeight: strconv.FormatUint(snapshot.ExecutionDepth, 10),
-		},
-	}
+
 	if httputil.RespondWithSsz(r) {
-		sszData, err := response.MarshalSSZ()
+		sszData := snapshot.MarshalSSZ()
 		if err != nil {
 			httputil.HandleError(w, "Could not marshal deposit snapshot into SSZ", http.StatusInternalServerError)
 			return
 		}
 		httputil.WriteSsz(w, sszData, "deposit_snapshot.ssz")
 	} else {
-		httputil.WriteJson(w, response)
+		httputil.WriteJson(w, DepositSnapshotFromConsensus(snapshot))
+	}
+}
+
+func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
+	finalized := make([][]string, 0, len(ds.Finalized))
+	for _, f := range ds.Finalized {
+		finalized = append(finalized, []string{hexutil.Encode(f)})
+	}
+	return &DepositSnapshot{
+		Finalized:            finalized,
+		DepositRoot:          hexutil.Encode(ds.DepositRoot),
+		DepositCount:         fmt.Sprintf("%d", ds.DepositCount),
+		ExecutionBlockHash:   hexutil.Encode(ds.ExecutionHash),
+		ExecutionBlockHeight: fmt.Sprintf("%d", ds.ExecutionDepth),
 	}
 }

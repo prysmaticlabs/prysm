@@ -3,7 +3,6 @@ package beacon
 import (
 	"encoding/json"
 
-	ssz "github.com/prysmaticlabs/fastssz"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
@@ -192,8 +191,6 @@ type GetProposerSlashingsResponse struct {
 
 type GetDepositSnapshotResponse struct {
 	Data *DepositSnapshot `json:"data"`
-	ssz.Marshaler
-	ssz.Unmarshaler
 }
 
 type DepositSnapshot struct {
