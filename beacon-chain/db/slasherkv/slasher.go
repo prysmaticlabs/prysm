@@ -147,7 +147,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 		// See https://golang.org/doc/faq#closures_and_goroutines for more details.
 		attToProcess := attestation
 
-		// Process every attestation parallelly.
+		// Process each attestation in parallel.
 		eg.Go(func() error {
 			err := s.db.View(func(tx *bolt.Tx) error {
 				signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
