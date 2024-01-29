@@ -24,7 +24,6 @@ func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, s
 	if err != nil {
 		return nil, errors.Wrap(err, "error calling post endpoint")
 	}
-
 	if len(resp.Data) == 0 {
 		return nil, errors.New("no aggregated selection returned")
 	}
