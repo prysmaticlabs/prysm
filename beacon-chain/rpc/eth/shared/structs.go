@@ -241,7 +241,7 @@ func (b *BeaconCommitteeSelection) UnmarshalJSON(input []byte) error {
 	var bjson beaconCommitteeSelectionJson
 	err := json.Unmarshal(input, &bjson)
 	if err != nil {
-		return errors.Wrap(err, "unmarshal beacon committee selection")
+		return errors.Wrap(err, "failed to unmarshal beacon committee selection")
 	}
 
 	slot, err := strconv.ParseUint(bjson.Slot, 10, 64)
