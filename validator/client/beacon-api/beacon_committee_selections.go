@@ -16,7 +16,7 @@ type aggregatedSelectionResponse struct {
 func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, selections []shared.BeaconCommitteeSelection) ([]shared.BeaconCommitteeSelection, error) {
 	body, err := json.Marshal(selections)
 	if err != nil {
-		return nil, errors.Wrap(err, "marshal request body selections")
+		return nil, errors.Wrap(err, "failed to marshal selections")
 	}
 
 	var resp aggregatedSelectionResponse
