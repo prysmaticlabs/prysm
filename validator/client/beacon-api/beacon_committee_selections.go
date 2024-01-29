@@ -28,7 +28,6 @@ func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, s
 	if len(resp.Data) == 0 {
 		return nil, errors.New("no aggregated selection returned")
 	}
-
 	if len(selections) != len(resp.Data) {
 		return nil, errors.New("mismatching number of selections")
 	}
