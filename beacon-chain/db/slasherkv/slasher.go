@@ -178,22 +178,25 @@ func (s *Store) CheckAttesterDoubleVotes(
 					}
 
 					existingSigningRoot := bytesutil.ToBytes32(attRecordsKey[:signingRootSize])
-					if existingSigningRoot != attToProcess.SigningRoot {
-						existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
-						if err != nil {
-							return err
-						}
-
-						// Build the proof of double vote.
-						slashAtt := &slashertypes.AttesterDoubleVote{
-							ValidatorIndex:         primitives.ValidatorIndex(valIdx),
-							Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
-							PrevAttestationWrapper: existingAttRecord,
-							AttestationWrapper:     attToProcess,
-						}
-
-						localDoubleVotes = append(localDoubleVotes, slashAtt)
+					if existingSigningRoot == attToProcess.SigningRoot {
+						continue
 					}
+
+					// There is a double vote.
+					existingAttRecord, err := decodeAttestationRecord(encExistingAttRecord)
+					if err != nil {
+						return err
+					}
+
+					// Build the proof of double vote.
+					slashAtt := &slashertypes.AttesterDoubleVote{
+						ValidatorIndex:         primitives.ValidatorIndex(valIdx),
+						Target:                 attToProcess.IndexedAttestation.Data.Target.Epoch,
+						PrevAttestationWrapper: existingAttRecord,
+						AttestationWrapper:     attToProcess,
+					}
+
+					localDoubleVotes = append(localDoubleVotes, slashAtt)
 				}
 
 				// If any routine is cancelled, then cancel this routine too.
@@ -216,6 +219,7 @@ func (s *Store) CheckAttesterDoubleVotes(
 			return err
 		})
 	}
+
 	return doubleVotes, eg.Wait()
 }
 
