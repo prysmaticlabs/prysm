@@ -879,6 +879,7 @@ func TestForkChoiceSafeHead(t *testing.T) {
 	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
 	require.Equal(t, primitives.Slot(32), slotsPerEpoch)
 
+	driftGenesisTime(f, primitives.Slot(11), 0)
 	st, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
@@ -916,7 +917,7 @@ func TestForkChoiceSafeHead(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			driftGenesisTime(f, tc.currentSlot, 0)
+			driftGenesisTime(f, tc.currentSlot, 11)
 			require.Equal(t, tc.currentSlot, slots.CurrentSlot(f.store.genesisTime))
 
 			s := f.store
@@ -925,6 +926,8 @@ func TestForkChoiceSafeHead(t *testing.T) {
 				s.nodeByRoot[indexToHash(uint64(i))].balance = tc.nodeBalances[i]
 			}
 
+			_, err = f.Head(ctx)
+			require.NoError(t, err)
 			safeHead, err := f.SafeHead(ctx)
 			require.NoError(t, err)
 			require.Equal(t, tc.wantRoot, safeHead)
