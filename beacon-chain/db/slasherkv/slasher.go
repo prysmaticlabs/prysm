@@ -257,7 +257,7 @@ func (s *Store) AttestationRecordForValidator(
 
 // SaveAttestationRecordsForValidators saves attestation records for the specified indices.
 // If multiple attestations are provided for the same validator index + target epoch combination,
-// then only the last one is (arbitrarily) saved in the `attestationDataRootsBucket` bucket.
+// then only the first one is (arbitrarily) saved in the `attestationDataRootsBucket` bucket.
 func (s *Store) SaveAttestationRecordsForValidators(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
@@ -283,7 +283,9 @@ func (s *Store) SaveAttestationRecordsForValidators(
 		attRecordsBkt := tx.Bucket(attestationRecordsBucket)
 		signingRootsBkt := tx.Bucket(attestationDataRootsBucket)
 
-		for i, attestation := range attestations {
+		for i := len(attestations) - 1; i >= 0; i-- {
+			attestation := attestations[i]
+
 			if err := attRecordsBkt.Put(attestation.SigningRoot[:], encodedRecords[i]); err != nil {
 				return err
 			}
