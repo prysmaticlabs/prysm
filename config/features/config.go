@@ -235,9 +235,10 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 		logEnabled(disableResourceManager)
 		cfg.DisableResourceManager = true
 	}
-	if ctx.IsSet(EnableEIP4881.Name) {
-		logEnabled(EnableEIP4881)
-		cfg.EnableEIP4881 = true
+	cfg.EnableEIP4881 = true
+	if ctx.IsSet(DisableEIP4881.Name) {
+		logEnabled(DisableEIP4881)
+		cfg.EnableEIP4881 = false
 	}
 	if ctx.IsSet(EnableLightClient.Name) {
 		logEnabled(EnableLightClient)
