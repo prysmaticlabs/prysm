@@ -107,12 +107,12 @@ func (s *Store) SaveLastEpochsWrittenForValidators(
 
 			bkt := tx.Bucket(attestedEpochsByValidator)
 
-			min := i + batchSize
-			if min > len(encodedIndexes) {
-				min = len(encodedIndexes)
+			minimum := i + batchSize
+			if minimum > len(encodedIndexes) {
+				minimum = len(encodedIndexes)
 			}
 
-			for j, encodedIndex := range encodedIndexes[i:min] {
+			for j, encodedIndex := range encodedIndexes[i:minimum] {
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
