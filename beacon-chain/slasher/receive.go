@@ -14,7 +14,7 @@ import (
 
 const (
 	couldNotSaveAttRecord            = "Could not save attestation records to DB"
-	couldNotSaveSlashableAtt         = "Could not check slashable attestations"
+	couldNotCheckSlashableAtt        = "Could not check slashable attestations"
 	couldNotProcessAttesterSlashings = "Could not process attester slashings"
 )
 
@@ -125,7 +125,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 			// Check for slashings.
 			slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAtts)
 			if err != nil {
-				log.WithError(err).Error(couldNotSaveSlashableAtt)
+				log.WithError(err).Error(couldNotCheckSlashableAtt)
 				continue
 			}
 

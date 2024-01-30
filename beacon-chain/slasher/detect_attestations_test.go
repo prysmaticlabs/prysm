@@ -288,7 +288,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			}
 
 			require.LogsDoNotContain(t, hook, couldNotSaveAttRecord)
-			require.LogsDoNotContain(t, hook, couldNotSaveSlashableAtt)
+			require.LogsDoNotContain(t, hook, couldNotCheckSlashableAtt)
 			require.LogsDoNotContain(t, hook, couldNotProcessAttesterSlashings)
 		})
 	}
