@@ -876,16 +876,17 @@ func TestForkChoiceSafeHead(t *testing.T) {
 	require.DeepEqual(t, balances, f.justifiedBalances)
 	proposerScoreBoost := params.BeaconConfig().ProposerScoreBoost
 	require.Equal(t, uint64(40), proposerScoreBoost)
+	slotsPerEpoch := params.BeaconConfig().SlotsPerEpoch
+	require.Equal(t, primitives.Slot(32), slotsPerEpoch)
 
 	st, blkRoot, err := prepareForkchoiceState(ctx, 1, indexToHash(1), params.BeaconConfig().ZeroHash, params.BeaconConfig().ZeroHash, 0, 0)
 	require.NoError(t, err)
 	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 2, indexToHash(2), indexToHash(1), params.BeaconConfig().ZeroHash, 0, 0)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
-	st, blkRoot, err = prepareForkchoiceState(ctx, 3, indexToHash(3), indexToHash(2), params.BeaconConfig().ZeroHash, 0, 0)
-	require.NoError(t, err)
-	require.NoError(t, f.InsertNode(ctx, st, blkRoot))
+	for i := 2; i < 10; i++ {
+		st, blkRoot, err = prepareForkchoiceState(ctx, primitives.Slot(i), indexToHash(uint64(i)), indexToHash(uint64(i-1)), params.BeaconConfig().ZeroHash, 0, 0)
+		require.NoError(t, err)
+		require.NoError(t, f.InsertNode(ctx, st, blkRoot))
+	}
 
 	tests := []struct {
 		name         string
@@ -894,27 +895,21 @@ func TestForkChoiceSafeHead(t *testing.T) {
 		wantRoot     [32]byte
 	}{
 		{
-			name:         "safeHead is head",
-			currentSlot:  primitives.Slot(3),
-			nodeBalances: []uint64{5, 5, 5, 8},
-			wantRoot:     indexToHash(3),
+			name:         "safeHead is head-2",
+			currentSlot:  primitives.Slot(10),
+			nodeBalances: []uint64{10, 10, 10, 10, 10, 10, 10, 10, 10, 14},
+			wantRoot:     indexToHash(7),
 		},
 		{
-			name:         "safeHead is parent of head",
-			currentSlot:  primitives.Slot(3),
-			nodeBalances: []uint64{5, 5, 6, 7},
-			wantRoot:     indexToHash(2),
-		},
-		{
-			name:         "safeHead is deeper ancestor of head",
-			currentSlot:  primitives.Slot(3),
-			nodeBalances: []uint64{5, 6, 5, 7},
-			wantRoot:     indexToHash(1),
+			name:         "safeHead is head-3",
+			currentSlot:  primitives.Slot(10),
+			nodeBalances: []uint64{10, 10, 10, 10, 10, 10, 10, 10, 10, 0},
+			wantRoot:     indexToHash(6),
 		},
 		{
 			name:         "safeHead is justified",
-			currentSlot:  primitives.Slot(3),
-			nodeBalances: []uint64{5, 0, 0, 0},
+			currentSlot:  primitives.Slot(10),
+			nodeBalances: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 			wantRoot:     params.BeaconConfig().ZeroHash,
 		},
 	}
@@ -926,9 +921,9 @@ func TestForkChoiceSafeHead(t *testing.T) {
 
 			s := f.store
 			s.nodeByRoot[params.BeaconConfig().ZeroHash].balance = tc.nodeBalances[0]
-			s.nodeByRoot[indexToHash(1)].balance = tc.nodeBalances[1]
-			s.nodeByRoot[indexToHash(2)].balance = tc.nodeBalances[2]
-			s.nodeByRoot[indexToHash(3)].balance = tc.nodeBalances[3]
+			for i := 1; i < 10; i++ {
+				s.nodeByRoot[indexToHash(uint64(i))].balance = tc.nodeBalances[i]
+			}
 
 			safeHead, err := f.SafeHead(ctx)
 			require.NoError(t, err)
