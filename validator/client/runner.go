@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -40,6 +41,9 @@ func run(ctx context.Context, v iface.Validator) {
 	if err != nil {
 		return // Exit if context is canceled.
 	}
+
+	eventsChannel := make(chan *event.Event, 1)
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 
 	connectionErrorChannel := make(chan error, 1)
 	go v.ReceiveSlots(ctx, connectionErrorChannel)
@@ -76,6 +80,19 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
+		case e := <-eventsChannel:
+			if e == nil {
+				continue
+			}
+			switch e.EventType {
+			case event.EventError:
+				log.Error(string(e.Data))
+				// wait some period before trying again
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+				continue
+			default:
+
+			}
 		case slotsError := <-connectionErrorChannel:
 			if slotsError != nil {
 				log.WithError(slotsError).Warn("slots stream interrupted")
@@ -197,9 +214,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 		}
 
 		if features.Get().EnableBeaconRESTApi {
-			if err = v.StartEventStream(ctx); err != nil {
-				log.WithError(err).Fatal("Could not start API event stream")
-			}
 			runHealthCheckRoutine(ctx, v)
 		}
 

@@ -7,28 +7,24 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"go.opencensus.io/trace"
 )
 
 type ValidatorClientOpt func(*beaconApiValidatorClient)
-
-func WithEventHandler(h *EventHandler) ValidatorClientOpt {
-	return func(c *beaconApiValidatorClient) {
-		c.eventHandler = h
-	}
-}
 
 type beaconApiValidatorClient struct {
 	genesisProvider         GenesisProvider
 	dutiesProvider          dutiesProvider
 	stateValidatorsProvider StateValidatorsProvider
 	jsonRestHandler         JsonRestHandler
-	eventHandler            *EventHandler
 	beaconBlockConverter    BeaconBlockConverter
 	prysmBeaconChainCLient  iface.PrysmBeaconChainClient
+	isEventStreamRunning    bool
 }
 
 func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...ValidatorClientOpt) iface.ValidatorClient {
@@ -42,6 +38,7 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 			nodeClient:      &beaconApiNodeClient{jsonRestHandler: jsonRestHandler},
 			jsonRestHandler: jsonRestHandler,
 		},
+		isEventStreamRunning: false,
 	}
 	for _, o := range opts {
 		o(c)
@@ -163,15 +160,38 @@ func (c *beaconApiValidatorClient) WaitForChainStart(ctx context.Context, _ *emp
 	return c.waitForChainStart(ctx)
 }
 
-func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context) error {
-	if c.eventHandler != nil {
-		if err := c.eventHandler.get(ctx, []string{"head"}); err != nil {
-			return errors.Wrapf(err, "could not invoke event handler")
+func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event) {
+	ctx, span := trace.StartSpan(ctx, "validator.jsonClient.StartEventStream")
+	defer span.End()
+	eventStream, err := event.NewEventStream(ctx, c.jsonRestHandler.GetHttpClient(), c.jsonRestHandler.GetHost(), topics)
+	if err != nil {
+		eventsChannel <- &event.Event{
+			EventType: event.EventError,
+			Data:      []byte(errors.Wrap(err, "failed to start event stream").Error()),
 		}
+		return
 	}
-	return nil
+	eventStream.Subscribe(eventsChannel)
 }
 
 func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
-	return c.eventHandler.running
+	return c.isEventStreamRunning
+}
+
+// Preferred way to use context keys is with a non built-in type. See: RVV-B0003
+type eventStreamContextKey string
+
+const eventStreamAttemptsContextKey = eventStreamContextKey("eventStream-attempts")
+
+func streamAttempts(ctx context.Context) int {
+	attempts, ok := ctx.Value(eventStreamAttemptsContextKey).(int)
+	if !ok {
+		return 1
+	}
+	return attempts
+}
+
+func incrementRetries(ctx context.Context) context.Context {
+	attempts := streamAttempts(ctx)
+	return context.WithValue(ctx, eventStreamAttemptsContextKey, attempts+1)
 }

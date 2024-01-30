@@ -16,11 +16,23 @@ import (
 type JsonRestHandler interface {
 	Get(ctx context.Context, endpoint string, resp interface{}) error
 	Post(ctx context.Context, endpoint string, headers map[string]string, data *bytes.Buffer, resp interface{}) error
+	GetHttpClient() *http.Client
+	GetHost() string
 }
 
 type BeaconApiJsonRestHandler struct {
 	HttpClient http.Client
 	Host       string
+}
+
+// GetHttpClient returns the underlying HTTP client of the handler
+func (c BeaconApiJsonRestHandler) GetHttpClient() *http.Client {
+	return &c.HttpClient
+}
+
+// GetHost returns the underlying HTTP Host
+func (c BeaconApiJsonRestHandler) GetHost() string {
+	return c.Host
 }
 
 // Get sends a GET request and decodes the response body as a JSON object into the passed in object.

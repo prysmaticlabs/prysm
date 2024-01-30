@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -64,7 +65,7 @@ type Validator interface {
 	SignValidatorRegistrationRequest(ctx context.Context, signer SigningFunc, newValidatorRegistration *ethpb.ValidatorRegistrationV1) (*ethpb.SignedValidatorRegistrationV1, error)
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
-	StartEventStream(ctx context.Context) error
+	StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event)
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
 }

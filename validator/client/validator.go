@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
@@ -327,35 +328,6 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-ctx.Done():
 			return errors.New("context has been canceled, exiting goroutine")
 		}
-	}
-}
-
-// ReceiveSlots starts a stream listener to obtain
-// slots from the beacon node when it imports a block. Upon receiving a slot, the service
-// broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
-		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-		return
-	}
-
-	for {
-		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
-			return
-		}
-		res, err := stream.Recv()
-		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
-			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-			return
-		}
-		if res == nil {
-			continue
-		}
-		v.setHighestSlot(res.Slot)
 	}
 }
 
@@ -1042,8 +1014,37 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 	return nil
 }
 
-func (v *validator) StartEventStream(ctx context.Context) error {
-	return v.validatorClient.StartEventStream(ctx)
+func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
+	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
+}
+
+// ReceiveSlots starts a stream listener to obtain
+// slots from the beacon node when it imports a block. Upon receiving a slot, the service
+// broadcasts it to a feed for other usages to subscribe to.
+func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
+	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
+	if err != nil {
+		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
+		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
+		return
+	}
+
+	for {
+		if ctx.Err() == context.Canceled {
+			log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
+			return
+		}
+		res, err := stream.Recv()
+		if err != nil {
+			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
+			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
+			return
+		}
+		if res == nil {
+			continue
+		}
+		v.setHighestSlot(res.Slot)
+	}
 }
 
 func (v *validator) EventStreamIsRunning() bool {

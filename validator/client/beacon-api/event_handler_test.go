@@ -28,14 +28,14 @@ func TestEventHandler(t *testing.T) {
 	defer server.Close()
 
 	handler := NewEventHandler(http.DefaultClient, server.URL)
-	ch1 := make(chan event, 1)
+	ch1 := make(chan Event, 1)
 	sub1 := eventSub{ch: ch1}
-	ch2 := make(chan event, 1)
+	ch2 := make(chan Event, 1)
 	sub2 := eventSub{ch: ch2}
-	ch3 := make(chan event, 1)
+	ch3 := make(chan Event, 1)
 	sub3 := eventSub{name: "sub3", ch: ch3}
 	// fill up the channel so that it can't receive more events
-	ch3 <- event{}
+	ch3 <- Event{}
 	handler.subscribe(sub1)
 	handler.subscribe(sub2)
 	handler.subscribe(sub3)

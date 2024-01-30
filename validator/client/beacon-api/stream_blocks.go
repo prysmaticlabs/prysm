@@ -9,6 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -29,7 +30,7 @@ type streamSlotsClient struct {
 	beaconApiClient    beaconApiValidatorClient
 	streamSlotsRequest *ethpb.StreamSlotsRequest
 	pingDelay          time.Duration
-	ch                 chan event
+	ch                 chan api.Event
 }
 
 type streamBlocksAltairClient struct {
@@ -48,8 +49,8 @@ type headSignedBeaconBlockResult struct {
 }
 
 func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
-	ch := make(chan event, 1)
-	c.eventHandler.subscribe(eventSub{name: "stream slots", ch: ch})
+	ch := make(chan api.Event, 1)
+	c.eventStream.subscribe(eventSub{name: "stream slots", ch: ch})
 	return &streamSlotsClient{
 		ctx:                ctx,
 		beaconApiClient:    c,
@@ -72,12 +73,12 @@ func (c *streamSlotsClient) Recv() (*ethpb.StreamSlotsResponse, error) {
 	for {
 		select {
 		case rawEvent := <-c.ch:
-			if rawEvent.eventType != events.HeadTopic {
+			if rawEvent.EventType != events.HeadTopic {
 				continue
 			}
 			e := &events.HeadEvent{}
-			if err := json.Unmarshal([]byte(rawEvent.data), e); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal head event into JSON")
+			if err := json.Unmarshal(rawEvent.Data, e); err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal head Event into JSON")
 			}
 			uintSlot, err := strconv.ParseUint(e.Slot, 10, 64)
 			if err != nil {
