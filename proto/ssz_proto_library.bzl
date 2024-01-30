@@ -47,7 +47,7 @@ minimal = {
     "extra_data.size": "32",
     "max_blobs_per_block.size": "6",
     "max_blob_commitments.size": "16",
-    "kzg_commitment_inclusion_proof_depth.size": "9",
+    "kzg_commitment_inclusion_proof_depth.size": "17",
 }
 
 ###### Rules definitions #######
