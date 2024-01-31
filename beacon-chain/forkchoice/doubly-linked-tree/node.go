@@ -140,7 +140,7 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch primitiv
 			n.bestDescendant = bestChild.bestDescendant
 		}
 
-		if bestChild.slot < currentSlot-2 && bestChild.isOneConfirmed(currentSlot-1, committeeWeight) {
+		if bestChild.slot < currentSlot && bestChild.isOneConfirmed(currentSlot-1, committeeWeight) {
 			// The best child is confirmed.
 			if bestChild.bestConfirmedDescendant == nil {
 				// The best child does not have confirmed descendants.
