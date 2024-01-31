@@ -896,9 +896,15 @@ func TestForkChoiceSafeHead(t *testing.T) {
 		wantRoot     [32]byte
 	}{
 		{
-			name:         "safeHead is head-2",
+			name:         "safeHead is head-1",
 			currentSlot:  primitives.Slot(11),
 			nodeBalances: []uint64{10, 10, 10, 10, 10, 10, 10, 10, 10, 14},
+			wantRoot:     indexToHash(9),
+		},
+		{
+			name:         "safeHead is head-2",
+			currentSlot:  primitives.Slot(11),
+			nodeBalances: []uint64{10, 10, 10, 10, 10, 10, 10, 10, 10, 10},
 			wantRoot:     indexToHash(8),
 		},
 		{
