@@ -146,22 +146,6 @@ func (f *ForkChoice) UpdateSafeHead(
 	return nil
 }
 
-// SafeHead returns the safe head from the fork choice store.
-// It first calls on Head() for the necessary balance and block tree recomputations.
-func (f *ForkChoice) SafeHead(
-	ctx context.Context,
-) ([32]byte, error) {
-	ctx, span := trace.StartSpan(ctx, "doublyLinkedForkchoice.SafeHead")
-	defer span.End()
-
-	// Call Head() for balance and block tree recomputations.
-	_, err := f.Head(ctx)
-	if err != nil {
-		return [32]byte{0}, err
-	}
-	return f.store.safeHead(ctx)
-}
-
 // ProcessAttestation processes attestation for vote accounting, it iterates around validator indices
 // and update their votes accordingly.
 func (f *ForkChoice) ProcessAttestation(ctx context.Context, validatorIndices []uint64, blockRoot [32]byte, targetEpoch primitives.Epoch) {
