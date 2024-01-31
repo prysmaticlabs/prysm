@@ -1034,10 +1034,12 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		head := &events.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
+			return nil
 		}
 		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
 		if err != nil {
 			log.Error(errors.Wrap(err, "failed to parse slot"))
+			return nil
 		}
 		v.setHighestSlot(primitives.Slot(uintSlot))
 	default:
