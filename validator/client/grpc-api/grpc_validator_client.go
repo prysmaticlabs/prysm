@@ -19,6 +19,7 @@ import (
 
 type grpcValidatorClient struct {
 	beaconNodeValidatorClient ethpb.BeaconNodeValidatorClient
+	isEventStreamRunning      bool
 }
 
 func (c *grpcValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
@@ -75,10 +76,6 @@ func (c *grpcValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.
 
 func (c *grpcValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
 	return c.beaconNodeValidatorClient.ProposeExit(ctx, in)
-}
-
-func (c *grpcValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
-	return c.beaconNodeValidatorClient.StreamSlots(ctx, in)
 }
 
 func (c *grpcValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
@@ -145,7 +142,7 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 }
 
 func NewGrpcValidatorClient(cc grpc.ClientConnInterface) iface.ValidatorClient {
-	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc)}
+	return &grpcValidatorClient{ethpb.NewBeaconNodeValidatorClient(cc), false}
 }
 
 func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
@@ -159,6 +156,16 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		return
 	}
 	// TODO: ONLY WORKS WITH HEAD TOPIC RIGHT NOW/ONLY PROVIDES THE SLOT
+	containsHead := false
+	for i := range topics {
+		if topics[i] == eventClient.EventHead {
+			containsHead = true
+		}
+	}
+	if !containsHead {
+		log.Errorf("topics")
+	}
+
 	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
@@ -168,15 +175,18 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 		return
 	}
+	c.isEventStreamRunning = true
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Context canceled, stopping event stream")
 			close(eventsChannel)
+			c.isEventStreamRunning = false
 			return
 		default:
 			if ctx.Err() == context.Canceled {
 				log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
+				c.isEventStreamRunning = false
 				return
 			}
 			res, err := stream.Recv()
@@ -186,7 +196,6 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 					EventType: eventClient.EventError,
 					Data:      []byte(errors.Wrap(iface.ErrConnectionIssue, err.Error()).Error()),
 				}
-				return
 			}
 			if res == nil {
 				continue
@@ -199,7 +208,6 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 					EventType: eventClient.EventError,
 					Data:      []byte(errors.Wrap(err, "failed to marshal Head Event").Error()),
 				}
-				return
 			}
 			eventsChannel <- &eventClient.Event{
 				EventType: eventClient.EventHead,
@@ -210,5 +218,5 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 }
 
 func (c *grpcValidatorClient) EventStreamIsRunning() bool {
-	panic("function not supported for gRPC client")
+	return c.isEventStreamRunning
 }

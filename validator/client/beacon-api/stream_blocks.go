@@ -4,13 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/api"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -22,15 +19,6 @@ type abstractSignedBlockResponseJson struct {
 	ExecutionOptimistic bool            `json:"execution_optimistic"`
 	Finalized           bool            `json:"finalized"`
 	Data                json.RawMessage `json:"data"`
-}
-
-type streamSlotsClient struct {
-	grpc.ClientStream
-	ctx                context.Context
-	beaconApiClient    beaconApiValidatorClient
-	streamSlotsRequest *ethpb.StreamSlotsRequest
-	pingDelay          time.Duration
-	ch                 chan api.Event
 }
 
 type streamBlocksAltairClient struct {
@@ -48,48 +36,12 @@ type headSignedBeaconBlockResult struct {
 	slot                 primitives.Slot
 }
 
-func (c beaconApiValidatorClient) streamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamSlotsClient {
-	ch := make(chan api.Event, 1)
-	c.eventStream.subscribe(eventSub{name: "stream slots", ch: ch})
-	return &streamSlotsClient{
-		ctx:                ctx,
-		beaconApiClient:    c,
-		streamSlotsRequest: in,
-		pingDelay:          pingDelay,
-		ch:                 ch,
-	}
-}
-
 func (c beaconApiValidatorClient) streamBlocks(ctx context.Context, in *ethpb.StreamBlocksRequest, pingDelay time.Duration) ethpb.BeaconNodeValidator_StreamBlocksAltairClient {
 	return &streamBlocksAltairClient{
 		ctx:                 ctx,
 		beaconApiClient:     c,
 		streamBlocksRequest: in,
 		pingDelay:           pingDelay,
-	}
-}
-
-func (c *streamSlotsClient) Recv() (*ethpb.StreamSlotsResponse, error) {
-	for {
-		select {
-		case rawEvent := <-c.ch:
-			if rawEvent.EventType != events.HeadTopic {
-				continue
-			}
-			e := &events.HeadEvent{}
-			if err := json.Unmarshal(rawEvent.Data, e); err != nil {
-				return nil, errors.Wrap(err, "failed to unmarshal head Event into JSON")
-			}
-			uintSlot, err := strconv.ParseUint(e.Slot, 10, 64)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse slot")
-			}
-			return &ethpb.StreamSlotsResponse{
-				Slot: primitives.Slot(uintSlot),
-			}, nil
-		case <-c.ctx.Done():
-			return nil, errors.New("context canceled")
-		}
 	}
 }
 

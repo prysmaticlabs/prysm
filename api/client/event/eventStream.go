@@ -92,6 +92,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
 			log.WithError(closeErr).Error("Failed to close events response body")
+			close(eventsChannel)
 		}
 	}()
 	// Create a new scanner to read lines from the response body
@@ -108,7 +109,6 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 			return
 		default:
 			line := scanner.Text()
-
 			// Handle the event based on your specific format
 			if line == "" {
 				// Empty line indicates the end of an event

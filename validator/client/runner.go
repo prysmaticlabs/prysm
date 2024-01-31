@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/event"
-	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -42,11 +41,8 @@ func run(ctx context.Context, v iface.Validator) {
 		return // Exit if context is canceled.
 	}
 
-	eventsChannel := make(chan *event.Event, 1)
+	eventsChannel := make(chan *event.Event, 1) // double check why is it 1 here?
 	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
-
-	connectionErrorChannel := make(chan error, 1)
-	go v.ReceiveSlots(ctx, connectionErrorChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
@@ -81,26 +77,11 @@ func run(ctx context.Context, v iface.Validator) {
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
 		case e := <-eventsChannel:
-			if e == nil {
-				continue
-			}
-			switch e.EventType {
-			case event.EventError:
-				log.Error(string(e.Data))
-				// wait some period before trying again
+			if eventErr := v.ProcessEvent(e); eventErr != nil {
+				// maybe have a delay before trying again
+				log.WithError(eventErr).Warn("event stream interrupted. reconnecting...")
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
-				continue
-			default:
-
 			}
-		case slotsError := <-connectionErrorChannel:
-			if slotsError != nil {
-				log.WithError(slotsError).Warn("slots stream interrupted")
-				go v.ReceiveSlots(ctx, connectionErrorChannel)
-				continue
-			}
-		case currentKeys := <-accountsChangedChan:
-			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
@@ -145,7 +126,10 @@ func run(ctx context.Context, v iface.Validator) {
 				continue
 			}
 			performRoles(slotCtx, allRoles, v, slot, &wg, span)
+		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
+			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		}
+
 	}
 }
 
@@ -213,9 +197,9 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
-		if features.Get().EnableBeaconRESTApi {
-			runHealthCheckRoutine(ctx, v)
-		}
+		//if features.Get().EnableBeaconRESTApi {
+		//	runHealthCheckRoutine(ctx, v)
+		//}
 
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
@@ -302,24 +286,24 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
-	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-	go func() {
-		for {
-			select {
-			case <-healthCheckTicker.C:
-				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
-					if err := v.StartEventStream(ctx); err != nil {
-						log.WithError(err).Error("Could not start API event stream")
-					}
-				}
-			case <-ctx.Done():
-				if ctx.Err() != nil {
-					log.WithError(ctx.Err()).Error("Context cancelled")
-				}
-				log.Error("Context cancelled")
-				return
-			}
-		}
-	}()
-}
+//func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+//	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+//	go func() {
+//		for {
+//			select {
+//			case <-healthCheckTicker.C:
+//				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
+//					if err := v.StartEventStream(ctx); err != nil {
+//						log.WithError(err).Error("Could not start API event stream")
+//					}
+//				}
+//			case <-ctx.Done():
+//				if ctx.Err() != nil {
+//					log.WithError(ctx.Err()).Error("Context cancelled")
+//				}
+//				log.Error("Context cancelled")
+//				return
+//			}
+//		}
+//	}()
+//}

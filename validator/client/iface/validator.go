@@ -58,7 +58,6 @@ type Validator interface {
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
 	WaitForKeymanagerInitialization(ctx context.Context) error
 	Keymanager() (keymanager.IKeymanager, error)
-	ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)
 	CheckDoppelGanger(ctx context.Context) error
 	PushProposerSettings(ctx context.Context, km keymanager.IKeymanager, slot primitives.Slot, deadline time.Time) error
@@ -66,6 +65,7 @@ type Validator interface {
 	ProposerSettings() *validatorserviceconfig.ProposerSettings
 	SetProposerSettings(context.Context, *validatorserviceconfig.ProposerSettings) error
 	StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *event.Event)
+	ProcessEvent(event *event.Event) error
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -23,6 +24,7 @@ import (
 	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -1018,33 +1020,31 @@ func (v *validator) StartEventStream(ctx context.Context, topics []string, event
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
-// ReceiveSlots starts a stream listener to obtain
-// slots from the beacon node when it imports a block. Upon receiving a slot, the service
-// broadcasts it to a feed for other usages to subscribe to.
-func (v *validator) ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error) {
-	stream, err := v.validatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
-		connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-		return
+func (v *validator) ProcessEvent(event *eventClient.Event) error {
+	if event == nil || event.Data == nil {
+		log.Warn("received empty event")
+		return nil
 	}
-
-	for {
-		if ctx.Err() == context.Canceled {
-			log.WithError(ctx.Err()).Error("Context canceled - shutting down slots receiver")
-			return
+	switch event.EventType {
+	case eventClient.EventError:
+		log.Error(string(event.Data))
+		// wait some period before trying again
+		return errors.New(string(event.Data))
+	case eventClient.EventHead:
+		head := &events.HeadEvent{}
+		if err := json.Unmarshal(event.Data, head); err != nil {
+			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
 		}
-		res, err := stream.Recv()
+		uintSlot, err := strconv.ParseUint(head.Slot, 10, 64)
 		if err != nil {
-			log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
-			connectionErrorChannel <- errors.Wrap(iface.ErrConnectionIssue, err.Error())
-			return
+			log.Error(errors.Wrap(err, "failed to parse slot"))
 		}
-		if res == nil {
-			continue
-		}
-		v.setHighestSlot(res.Slot)
+		v.setHighestSlot(primitives.Slot(uintSlot))
+	default:
+		log.Warn("received an unknown event type of %s with contents %s", event.EventType, string(event.Data))
+		// just keep going and log the error
 	}
+	return nil
 }
 
 func (v *validator) EventStreamIsRunning() bool {

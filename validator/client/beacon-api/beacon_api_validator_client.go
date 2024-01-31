@@ -111,10 +111,6 @@ func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.Si
 	return c.proposeExit(ctx, in)
 }
 
-func (c *beaconApiValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
-	return c.streamSlots(ctx, in, time.Second), nil
-}
-
 func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *ethpb.StreamBlocksRequest) (ethpb.BeaconNodeValidator_StreamBlocksAltairClient, error) {
 	return c.streamBlocks(ctx, in, time.Second), nil
 }
@@ -171,27 +167,11 @@ func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics 
 		}
 		return
 	}
+	c.isEventStreamRunning = true
 	eventStream.Subscribe(eventsChannel)
+	c.isEventStreamRunning = false
 }
 
 func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
-}
-
-// Preferred way to use context keys is with a non built-in type. See: RVV-B0003
-type eventStreamContextKey string
-
-const eventStreamAttemptsContextKey = eventStreamContextKey("eventStream-attempts")
-
-func streamAttempts(ctx context.Context) int {
-	attempts, ok := ctx.Value(eventStreamAttemptsContextKey).(int)
-	if !ok {
-		return 1
-	}
-	return attempts
-}
-
-func incrementRetries(ctx context.Context) context.Context {
-	attempts := streamAttempts(ctx)
-	return context.WithValue(ctx, eventStreamAttemptsContextKey, attempts+1)
 }
