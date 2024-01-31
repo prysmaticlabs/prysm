@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	time2 "time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/operation"
@@ -15,8 +17,10 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/eth/v1"
+	ethpbv2 "github.com/prysmaticlabs/prysm/v4/proto/eth/v2"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	log "github.com/sirupsen/logrus"
@@ -48,6 +52,10 @@ const (
 	ProposerSlashingTopic = "proposer_slashing"
 	// AttesterSlashingTopic represents a new attester slashing event topic
 	AttesterSlashingTopic = "attester_slashing"
+	// LightClientFinalityUpdateTopic represents a new light client finality update event topic.
+	LightClientFinalityUpdateTopic = "light_client_finality_update"
+	// LightClientOptimisticUpdateTopic represents a new light client optimistic update event topic.
+	LightClientOptimisticUpdateTopic = "light_client_optimistic_update"
 )
 
 const topicDataMismatch = "Event data type %T does not correspond to event topic %s"
@@ -55,18 +63,20 @@ const topicDataMismatch = "Event data type %T does not correspond to event topic
 const chanBuffer = 1000
 
 var casesHandled = map[string]bool{
-	HeadTopic:                      true,
-	BlockTopic:                     true,
-	AttestationTopic:               true,
-	VoluntaryExitTopic:             true,
-	FinalizedCheckpointTopic:       true,
-	ChainReorgTopic:                true,
-	SyncCommitteeContributionTopic: true,
-	BLSToExecutionChangeTopic:      true,
-	PayloadAttributesTopic:         true,
-	BlobSidecarTopic:               true,
-	ProposerSlashingTopic:          true,
-	AttesterSlashingTopic:          true,
+	HeadTopic:                        true,
+	BlockTopic:                       true,
+	AttestationTopic:                 true,
+	VoluntaryExitTopic:               true,
+	FinalizedCheckpointTopic:         true,
+	ChainReorgTopic:                  true,
+	SyncCommitteeContributionTopic:   true,
+	BLSToExecutionChangeTopic:        true,
+	PayloadAttributesTopic:           true,
+	BlobSidecarTopic:                 true,
+	ProposerSlashingTopic:            true,
+	AttesterSlashingTopic:            true,
+	LightClientFinalityUpdateTopic:   true,
+	LightClientOptimisticUpdateTopic: true,
 }
 
 // StreamEvents provides an endpoint to subscribe to the beacon node Server-Sent-Events stream.
@@ -106,16 +116,24 @@ func (s *Server) StreamEvents(w http.ResponseWriter, r *http.Request) {
 	defer stateSub.Unsubscribe()
 
 	// Set up SSE response headers
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Content-Type", api.EventStreamMediaType)
+	w.Header().Set("Connection", api.KeepAlive)
 
 	// Handle each event received and context cancellation.
+	// We send a keepalive dummy message immediately to prevent clients
+	// stalling while waiting for the first response chunk.
+	// After that we send a keepalive dummy message every SECONDS_PER_SLOT
+	// to prevent anyone (e.g. proxy servers) from closing connections.
+	sendKeepalive(w, flusher)
+	keepaliveTicker := time2.NewTicker(time2.Duration(params.BeaconConfig().SecondsPerSlot) * time2.Second)
 	for {
 		select {
 		case event := <-opsChan:
 			handleBlockOperationEvents(w, flusher, topicsMap, event)
 		case event := <-stateChan:
 			s.handleStateEvents(ctx, w, flusher, topicsMap, event)
+		case <-keepaliveTicker.C:
+			sendKeepalive(w, flusher)
 		case <-ctx.Done():
 			return
 		}
@@ -262,6 +280,72 @@ func (s *Server) handleStateEvents(ctx context.Context, w http.ResponseWriter, f
 			ExecutionOptimistic: checkpointData.ExecutionOptimistic,
 		}
 		send(w, flusher, FinalizedCheckpointTopic, checkpoint)
+	case statefeed.LightClientFinalityUpdate:
+		if _, ok := requestedTopics[LightClientFinalityUpdateTopic]; !ok {
+			return
+		}
+		updateData, ok := event.Data.(*ethpbv2.LightClientFinalityUpdateWithVersion)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, LightClientFinalityUpdateTopic)
+			return
+		}
+
+		var finalityBranch []string
+		for _, b := range updateData.Data.FinalityBranch {
+			finalityBranch = append(finalityBranch, hexutil.Encode(b))
+		}
+		update := &LightClientFinalityUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &LightClientFinalityUpdate{
+				AttestedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				FinalizedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.FinalizedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.FinalizedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.FinalizedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.FinalizedHeader.StateRoot),
+				},
+				FinalityBranch: finalityBranch,
+				SyncAggregate: &shared.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
+		}
+		send(w, flusher, LightClientFinalityUpdateTopic, update)
+	case statefeed.LightClientOptimisticUpdate:
+		if _, ok := requestedTopics[LightClientOptimisticUpdateTopic]; !ok {
+			return
+		}
+		updateData, ok := event.Data.(*ethpbv2.LightClientOptimisticUpdateWithVersion)
+		if !ok {
+			write(w, flusher, topicDataMismatch, event.Data, LightClientOptimisticUpdateTopic)
+			return
+		}
+		update := &LightClientOptimisticUpdateEvent{
+			Version: version.String(int(updateData.Version)),
+			Data: &LightClientOptimisticUpdate{
+				AttestedHeader: &shared.BeaconBlockHeader{
+					Slot:          fmt.Sprintf("%d", updateData.Data.AttestedHeader.Slot),
+					ProposerIndex: fmt.Sprintf("%d", updateData.Data.AttestedHeader.ProposerIndex),
+					ParentRoot:    hexutil.Encode(updateData.Data.AttestedHeader.ParentRoot),
+					StateRoot:     hexutil.Encode(updateData.Data.AttestedHeader.StateRoot),
+					BodyRoot:      hexutil.Encode(updateData.Data.AttestedHeader.BodyRoot),
+				},
+				SyncAggregate: &shared.SyncAggregate{
+					SyncCommitteeBits:      hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeBits),
+					SyncCommitteeSignature: hexutil.Encode(updateData.Data.SyncAggregate.SyncCommitteeSignature),
+				},
+				SignatureSlot: fmt.Sprintf("%d", updateData.Data.SignatureSlot),
+			},
+		}
+		send(w, flusher, LightClientOptimisticUpdateTopic, update)
 	case statefeed.Reorg:
 		if _, ok := requestedTopics[ChainReorgTopic]; !ok {
 			return
@@ -429,6 +513,10 @@ func send(w http.ResponseWriter, flusher http.Flusher, name string, data interfa
 		return
 	}
 	write(w, flusher, "event: %s\ndata: %s\n\n", name, string(j))
+}
+
+func sendKeepalive(w http.ResponseWriter, flusher http.Flusher) {
+	write(w, flusher, ":\n\n")
 }
 
 func write(w http.ResponseWriter, flusher http.Flusher, format string, a ...any) {

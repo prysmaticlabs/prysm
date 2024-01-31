@@ -210,7 +210,7 @@ func (s *Service) statusRPCHandler(ctx context.Context, msg interface{}, stream 
 			"error": err,
 		}).Debug("Invalid status message from peer")
 
-		respCode := byte(0)
+		var respCode byte
 		switch err {
 		case p2ptypes.ErrGeneric:
 			respCode = responseCodeServerError

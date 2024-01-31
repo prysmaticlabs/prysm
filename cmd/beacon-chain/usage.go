@@ -8,6 +8,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/storage"
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/checkpoint"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/genesis"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
@@ -62,7 +63,6 @@ var appHelpFlagGroups = []flagGroup{
 			cmd.TracingEndpointFlag,
 			cmd.TraceSampleFractionFlag,
 			cmd.MonitoringHostFlag,
-			cmd.BackupWebhookOutputDir,
 			flags.MonitoringPortFlag,
 			cmd.DisableMonitoringFlag,
 			cmd.MaxGoroutines,
@@ -137,6 +137,9 @@ var appHelpFlagGroups = []flagGroup{
 			genesis.BeaconAPIURL,
 			storage.BlobStoragePathFlag,
 			storage.BlobRetentionEpochFlag,
+			backfill.EnableExperimentalBackfill,
+			backfill.BackfillWorkerCount,
+			backfill.BackfillBatchSize,
 		},
 	},
 	{
@@ -183,6 +186,12 @@ var appHelpFlagGroups = []flagGroup{
 			genesis.StatePath,
 			flags.InteropGenesisTimeFlag,
 			flags.InteropNumValidatorsFlag,
+		},
+	},
+	{
+		Name: "deprecated",
+		Flags: []cli.Flag{
+			cmd.BackupWebhookOutputDir,
 		},
 	},
 }

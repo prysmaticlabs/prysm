@@ -49,6 +49,23 @@ func FromState(marshaled []byte) (*VersionedUnmarshaler, error) {
 	return FromForkVersion(cv)
 }
 
+// FromBlock uses the known size of an offset and signature to determine the slot of a block without unmarshalling it.
+// The slot is used to determine the version along with the respective config.
+func FromBlock(marshaled []byte) (*VersionedUnmarshaler, error) {
+	slot, err := slotFromBlock(marshaled)
+	if err != nil {
+		return nil, err
+	}
+	copiedCfg := params.BeaconConfig().Copy()
+	epoch := slots.ToEpoch(slot)
+	fs := forks.NewOrderedSchedule(copiedCfg)
+	ver, err := fs.VersionForEpoch(epoch)
+	if err != nil {
+		return nil, err
+	}
+	return FromForkVersion(ver)
+}
+
 var ErrForkNotFound = errors.New("version found in fork schedule but can't be matched to a named fork")
 
 // FromForkVersion uses a lookup table to resolve a Version (from a beacon node api for instance, or obtained by peeking at
@@ -162,7 +179,7 @@ var errBlockForkMismatch = errors.New("fork or config detected in unmarshaler is
 
 // UnmarshalBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete ReadOnlySignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.ReadOnlySignedBeaconBlock if successful.
-func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
 	slot, err := slotFromBlock(marshaled)
 	if err != nil {
 		return nil, err
@@ -197,7 +214,7 @@ func (cf *VersionedUnmarshaler) UnmarshalBeaconBlock(marshaled []byte) (interfac
 // UnmarshalBlindedBeaconBlock uses internal knowledge in the VersionedUnmarshaler to pick the right concrete blinded ReadOnlySignedBeaconBlock type,
 // then Unmarshal()s the type and returns an instance of block.ReadOnlySignedBeaconBlock if successful.
 // For Phase0 and Altair it works exactly line UnmarshalBeaconBlock.
-func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.ReadOnlySignedBeaconBlock, error) {
+func (cf *VersionedUnmarshaler) UnmarshalBlindedBeaconBlock(marshaled []byte) (interfaces.SignedBeaconBlock, error) {
 	slot, err := slotFromBlock(marshaled)
 	if err != nil {
 		return nil, err

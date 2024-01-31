@@ -73,6 +73,21 @@ func TestBlobStorage_SaveBlobData(t *testing.T) {
 		require.NoError(t, err)
 		require.DeepSSZEqual(t, expected, actual)
 	})
+
+	t.Run("round trip write, read and delete", func(t *testing.T) {
+		bs := NewEphemeralBlobStorage(t)
+		err := bs.Save(testSidecars[0])
+		require.NoError(t, err)
+
+		expected := testSidecars[0]
+		actual, err := bs.Get(expected.BlockRoot(), expected.Index)
+		require.NoError(t, err)
+		require.DeepSSZEqual(t, expected, actual)
+
+		require.NoError(t, bs.Remove(expected.BlockRoot()))
+		_, err = bs.Get(expected.BlockRoot(), expected.Index)
+		require.ErrorContains(t, "file does not exist", err)
+	})
 }
 
 // pollUntil polls a condition function until it returns true or a timeout is reached.

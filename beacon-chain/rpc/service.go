@@ -296,7 +296,7 @@ func (s *Service) initializeDebugServerRoutes(debugServer *debug.Server) {
 	s.cfg.Router.HandleFunc("/eth/v1/debug/beacon/states/{state_id}", debugServer.GetBeaconStateSSZ).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/states/{state_id}", debugServer.GetBeaconStateV2).Methods(http.MethodGet)
 	s.cfg.Router.HandleFunc("/eth/v2/debug/beacon/heads", debugServer.GetForkChoiceHeadsV2).Methods(http.MethodGet)
-	s.cfg.Router.HandleFunc("/eth/v2/debug/fork_choice", debugServer.GetForkChoice).Methods(http.MethodGet)
+	s.cfg.Router.HandleFunc("/eth/v1/debug/fork_choice", debugServer.GetForkChoice).Methods(http.MethodGet)
 }
 
 // prysm internal routes
@@ -359,16 +359,17 @@ func (s *Service) Start() {
 	})
 
 	coreService := &core.Service{
-		HeadFetcher:        s.cfg.HeadFetcher,
-		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
-		SyncChecker:        s.cfg.SyncService,
-		Broadcaster:        s.cfg.Broadcaster,
-		SyncCommitteePool:  s.cfg.SyncCommitteeObjectPool,
-		OperationNotifier:  s.cfg.OperationNotifier,
-		AttestationCache:   cache.NewAttestationCache(),
-		StateGen:           s.cfg.StateGen,
-		P2P:                s.cfg.Broadcaster,
-		FinalizedFetcher:   s.cfg.FinalizationFetcher,
+		HeadFetcher:           s.cfg.HeadFetcher,
+		GenesisTimeFetcher:    s.cfg.GenesisTimeFetcher,
+		SyncChecker:           s.cfg.SyncService,
+		Broadcaster:           s.cfg.Broadcaster,
+		SyncCommitteePool:     s.cfg.SyncCommitteeObjectPool,
+		OperationNotifier:     s.cfg.OperationNotifier,
+		AttestationCache:      cache.NewAttestationCache(),
+		StateGen:              s.cfg.StateGen,
+		P2P:                   s.cfg.Broadcaster,
+		FinalizedFetcher:      s.cfg.FinalizationFetcher,
+		OptimisticModeFetcher: s.cfg.OptimisticModeFetcher,
 	}
 
 	validatorServer := &validatorv1alpha1.Server{

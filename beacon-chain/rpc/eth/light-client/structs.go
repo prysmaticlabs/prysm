@@ -17,11 +17,11 @@ type LightClientBootstrap struct {
 
 type LightClientUpdate struct {
 	AttestedHeader          *shared.BeaconBlockHeader `json:"attested_header"`
-	NextSyncCommittee       *shared.SyncCommittee     `json:"next_sync_committee"`
-	FinalizedHeader         *shared.BeaconBlockHeader `json:"finalized_header"`
+	NextSyncCommittee       *shared.SyncCommittee     `json:"next_sync_committee,omitempty"`
+	FinalizedHeader         *shared.BeaconBlockHeader `json:"finalized_header,omitempty"`
 	SyncAggregate           *shared.SyncAggregate     `json:"sync_aggregate"`
-	NextSyncCommitteeBranch []string                  `json:"next_sync_committee_branch"`
-	FinalityBranch          []string                  `json:"finality_branch"`
+	NextSyncCommitteeBranch []string                  `json:"next_sync_committee_branch,omitempty"`
+	FinalityBranch          []string                  `json:"finality_branch,omitempty"`
 	SignatureSlot           string                    `json:"signature_slot"`
 }
 

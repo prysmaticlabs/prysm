@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed"
 	statefeed "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/feed/state"
@@ -29,7 +31,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
-	"go.opencensus.io/trace"
 )
 
 // A custom slot deadline for processing state slots in our cache.
@@ -66,7 +67,10 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	startTime := time.Now()
 	fcuArgs := &fcuConfig{}
 
-	defer s.handleSecondFCUCall(cfg, fcuArgs)
+	if s.inRegularSync() {
+		defer s.handleSecondFCUCall(cfg, fcuArgs)
+	}
+	defer s.sendLightClientFeeds(cfg)
 	defer s.sendStateFeedOnBlock(cfg)
 	defer reportProcessingTime(startTime)
 	defer reportAttestationInclusion(cfg.signed.Block())
@@ -102,6 +106,7 @@ func (s *Service) postBlockProcess(cfg *postBlockProcessConfig) error {
 	if err := s.sendFCU(cfg, fcuArgs); err != nil {
 		return errors.Wrap(err, "could not send FCU to engine")
 	}
+
 	return nil
 }
 
@@ -320,7 +325,10 @@ func (s *Service) updateEpochBoundaryCaches(ctx context.Context, st state.Beacon
 	}
 	// The proposer indices cache takes the target root for the previous
 	// epoch as key
-	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e-1)
+	if e > 0 {
+		e = e - 1
+	}
+	target, err := s.cfg.ForkChoiceStore.TargetRootForEpoch(r, e)
 	if err != nil {
 		log.WithError(err).Error("could not update proposer index state-root map")
 		return nil
@@ -577,10 +585,15 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if s.CurrentSlot() == s.HeadSlot() {
 		return
 	}
+	s.cfg.ForkChoiceStore.RLock()
+	defer s.cfg.ForkChoiceStore.RUnlock()
+	// return early if we are in init sync
+	if !s.inRegularSync() {
+		return
+	}
 	s.cfg.StateNotifier.StateFeed().Send(&feed.Event{
 		Type: statefeed.MissedSlot,
 	})
-
 	s.headLock.RLock()
 	headRoot := s.headRoot()
 	headState := s.headState(ctx)
@@ -595,18 +608,22 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	if err := transition.UpdateNextSlotCache(ctx, lastRoot, lastState); err != nil {
 		log.WithError(err).Debug("could not update next slot state cache")
 	}
-	// handleEpochBoundary requires a forkchoice lock to obtain the target root.
-	s.cfg.ForkChoiceStore.RLock()
 	if err := s.handleEpochBoundary(ctx, currentSlot, headState, headRoot[:]); err != nil {
 		log.WithError(err).Error("lateBlockTasks: could not update epoch boundary caches")
 	}
-	s.cfg.ForkChoiceStore.RUnlock()
 	// return early if we already started building a block for the current
 	// head root
 	_, has := s.cfg.PayloadIDCache.PayloadID(s.CurrentSlot()+1, headRoot)
 	if has {
 		return
 	}
+
+	attribute := s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
+	// return early if we are not proposing next slot
+	if attribute.IsEmpty() {
+		return
+	}
+
 	s.headLock.RLock()
 	headBlock, err := s.headBlock()
 	if err != nil {
@@ -617,18 +634,12 @@ func (s *Service) lateBlockTasks(ctx context.Context) {
 	s.headLock.RUnlock()
 
 	fcuArgs := &fcuConfig{
-		headState: headState,
-		headRoot:  headRoot,
-		headBlock: headBlock,
+		headState:  headState,
+		headRoot:   headRoot,
+		headBlock:  headBlock,
+		attributes: attribute,
 	}
-	fcuArgs.attributes = s.getPayloadAttribute(ctx, headState, s.CurrentSlot()+1, headRoot[:])
-	// return early if we are not proposing next slot
-	if fcuArgs.attributes.IsEmpty() {
-		return
-	}
-	s.cfg.ForkChoiceStore.RLock()
 	_, err = s.notifyForkchoiceUpdate(ctx, fcuArgs)
-	s.cfg.ForkChoiceStore.RUnlock()
 	if err != nil {
 		log.WithError(err).Debug("could not perform late block tasks: failed to update forkchoice with engine")
 	}

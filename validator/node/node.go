@@ -26,6 +26,7 @@ import (
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	fastssz "github.com/prysmaticlabs/fastssz"
+	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/gateway"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -218,7 +219,7 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	dataFile string,
 	walletDir string,
 ) (string, string) {
-	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) {
+	if isInteropNumValidatorsSet || dataDir != cmd.DefaultDataDir() || file.Exists(dataFile) || c.wallet == nil {
 		return dataDir, dataFile
 	}
 
@@ -232,8 +233,15 @@ func (c *ValidatorClient) getLegacyDatabaseLocation(
 	legacyDataFile := filepath.Join(legacyDataDir, kv.ProtectionDbFileName)
 
 	if file.Exists(legacyDataFile) {
-		log.Warningf("Database not found in `--datadir` (%s) but found in `--wallet-dir` (%s).", dataFile, legacyDataFile)
-		log.Warningf("Please move the database from (%s) to (%s).", legacyDataFile, dataFile)
+		log.Infof(`Database not found in the --datadir directory (%s)
+		but found in the --wallet-dir directory (%s),
+		which was the legacy default.
+		The next time you run the validator client without a database,
+		it will be created into the --datadir directory (%s).
+		To silence this message, you can move the database from (%s)
+		to (%s).`,
+			dataDir, legacyDataDir, dataDir, legacyDataFile, dataFile)
+
 		dataDir = legacyDataDir
 		dataFile = legacyDataFile
 	}
@@ -423,16 +431,22 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 }
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
-	endpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	dataDir := c.cliCtx.String(cmd.DataDirFlag.Name)
-	logValidatorBalances := !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-	emitAccountMetrics := !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-	cert := c.cliCtx.String(flags.CertFlag.Name)
-	graffiti := c.cliCtx.String(flags.GraffitiFlag.Name)
-	maxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	var interopKeysConfig *local.InteropKeymanagerConfig
+	var (
+		endpoint             string        = c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+		dataDir              string        = c.cliCtx.String(cmd.DataDirFlag.Name)
+		logValidatorBalances bool          = !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+		emitAccountMetrics   bool          = !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
+		cert                 string        = c.cliCtx.String(flags.CertFlag.Name)
+		graffiti             string        = c.cliCtx.String(flags.GraffitiFlag.Name)
+		maxCallRecvMsgSize   int           = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+		grpcRetries          uint          = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+		grpcRetryDelay       time.Duration = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+
+		interopKeysConfig *local.InteropKeymanagerConfig
+		err               error
+	)
+
+	// Configure interop.
 	if c.cliCtx.IsSet(flags.InteropNumValidators.Name) {
 		interopKeysConfig = &local.InteropKeymanagerConfig{
 			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
@@ -440,27 +454,28 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		}
 	}
 
-	gStruct := &g.Graffiti{}
-	var err error
+	// Configure graffiti.
+	graffitiStruct := &g.Graffiti{}
 	if c.cliCtx.IsSet(flags.GraffitiFileFlag.Name) {
-		n := c.cliCtx.String(flags.GraffitiFileFlag.Name)
-		gStruct, err = g.ParseGraffitiFile(n)
+		graffitiFilePath := c.cliCtx.String(flags.GraffitiFileFlag.Name)
+
+		graffitiStruct, err = g.ParseGraffitiFile(graffitiFilePath)
 		if err != nil {
 			log.WithError(err).Warn("Could not parse graffiti file")
 		}
 	}
 
-	wsc, err := Web3SignerConfig(c.cliCtx)
+	web3signerConfig, err := Web3SignerConfig(c.cliCtx)
 	if err != nil {
 		return err
 	}
 
-	bpc, err := proposerSettings(c.cliCtx, c.db)
+	proposerSettings, err := proposerSettings(c.cliCtx, c.db)
 	if err != nil {
 		return err
 	}
 
-	v, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
+	validatorService, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
 		Endpoint:                   endpoint,
 		DataDir:                    dataDir,
 		LogValidatorBalances:       logValidatorBalances,
@@ -476,9 +491,9 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		InteropKeysConfig:          interopKeysConfig,
 		Wallet:                     c.wallet,
 		WalletInitializedFeed:      c.walletInitialized,
-		GraffitiStruct:             gStruct,
-		Web3SignerConfig:           wsc,
-		ProposerSettings:           bpc,
+		GraffitiStruct:             graffitiStruct,
+		Web3SignerConfig:           web3signerConfig,
+		ProposerSettings:           proposerSettings,
 		BeaconApiTimeout:           time.Second * 30,
 		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		ValidatorsRegBatchSize:     c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
@@ -487,7 +502,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		return errors.Wrap(err, "could not initialize validator service")
 	}
 
-	return c.services.RegisterService(v)
+	return c.services.RegisterService(validatorService)
 }
 
 func Web3SignerConfig(cliCtx *cli.Context) (*remoteweb3signer.SetupConfig, error) {
@@ -851,7 +866,7 @@ func (c *ValidatorClient) registerRPCGatewayService(router *mux.Router) error {
 			},
 		}),
 		gwruntime.WithMarshalerOption(
-			"text/event-stream", &gwruntime.EventSourceJSONPb{}, // TODO: remove this
+			api.EventStreamMediaType, &gwruntime.EventSourceJSONPb{}, // TODO: remove this
 		),
 		gwruntime.WithForwardResponseOption(gateway.HttpResponseModifier),
 	)

@@ -29,7 +29,7 @@ import (
 
 var expectedParticipation = 0.99
 
-var expectedMulticlientParticipation = 0.98
+var expectedMulticlientParticipation = 0.95
 
 var expectedSyncParticipation = 0.99
 

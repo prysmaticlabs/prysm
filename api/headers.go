@@ -7,4 +7,6 @@ const (
 	ConsensusBlockValueHeader     = "Eth-Consensus-Block-Value"
 	JsonMediaType                 = "application/json"
 	OctetStreamMediaType          = "application/octet-stream"
+	EventStreamMediaType          = "text/event-stream"
+	KeepAlive                     = "keep-alive"
 )

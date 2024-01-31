@@ -3,6 +3,7 @@ package features
 import (
 	"time"
 
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -140,6 +141,10 @@ var (
 		Name:  "enable-eip-4881",
 		Usage: "Enables the deposit tree specified in EIP-4881.",
 	}
+	EnableLightClient = &cli.BoolFlag{
+		Name:  "enable-lightclient",
+		Usage: "Enables the light client support in the beacon node",
+	}
 	disableResourceManager = &cli.BoolFlag{
 		Name:  "disable-resource-manager",
 		Usage: "Disables running the libp2p resource manager.",
@@ -157,6 +162,7 @@ var devModeFlags = []cli.Flag{
 	enableVerboseSigVerification,
 	EnableEIP4881,
 	enableExperimentalState,
+	backfill.EnableExperimentalBackfill,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -204,6 +210,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	EnableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
+	EnableLightClient,
 }...)...)
 
 // E2EBeaconChainFlags contains a list of the beacon chain feature flags to be tested in E2E.

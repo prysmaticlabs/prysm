@@ -94,7 +94,6 @@ func (l *List[T]) Remove(n *Node[T]) {
 			n.next.prev = n.prev
 		}
 	}
-	n = nil
 	l.len--
 }
 

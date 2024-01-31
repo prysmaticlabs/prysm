@@ -23,7 +23,7 @@ import (
 func TestSubmitAggregateAndProof_GetDutiesRequestFailure(t *testing.T) {
 	hook := logTest.NewGlobal()
 	validator, _, validatorKey, finish := setup(t)
-	validator.duties = &ethpb.DutiesResponse{Duties: []*ethpb.DutiesResponse_Duty{}}
+	validator.duties = &ethpb.DutiesResponse{CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{}}
 	defer finish()
 
 	var pubKey [fieldparams.BLSPubkeyLength]byte
@@ -39,7 +39,7 @@ func TestSubmitAggregateAndProof_SignFails(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey: validatorKey.PublicKey().Marshal(),
 			},
@@ -78,7 +78,7 @@ func TestSubmitAggregateAndProof_Ok(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey: validatorKey.PublicKey().Marshal(),
 			},

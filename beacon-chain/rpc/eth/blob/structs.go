@@ -12,5 +12,5 @@ type Sidecar struct {
 	SignedBeaconBlockHeader  *shared.SignedBeaconBlockHeader `json:"signed_block_header"`
 	KzgCommitment            string                          `json:"kzg_commitment"`
 	KzgProof                 string                          `json:"kzg_proof"`
-	CommitmentInclusionProof []string                        `json:"commitment_inclusion_proof"`
+	CommitmentInclusionProof []string                        `json:"kzg_commitment_inclusion_proof"`
 }

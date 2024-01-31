@@ -517,7 +517,7 @@ func (f *blocksFetcher) requestBlobs(ctx context.Context, req *p2ppb.BlobSidecar
 		"capacity": f.rateLimiter.Remaining(pid.String()),
 		"score":    f.p2p.Peers().Scorers().BlockProviderScorer().FormatScorePretty(pid),
 	}).Debug("Requesting blobs")
-	// We're intentionally abusing the block rate limit here, treating blob requests as if they were blob requests.
+	// We're intentionally abusing the block rate limit here, treating blob requests as if they were block requests.
 	// Since blob requests take more bandwidth than blocks, we should improve how we account for the different kinds
 	// of requests, more in proportion to the cost of serving them.
 	if f.rateLimiter.Remaining(pid.String()) < int64(req.Count) {

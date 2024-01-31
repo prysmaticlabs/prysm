@@ -831,10 +831,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
-				AttestationCache:   cache.NewAttestationCache(),
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				FinalizedFetcher:      chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				OptimisticModeFetcher: chain,
 			},
 		}
 
@@ -914,10 +915,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				GenesisTimeFetcher: chain,
-				HeadFetcher:        chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				GenesisTimeFetcher:    chain,
+				HeadFetcher:           chain,
+				FinalizedFetcher:      chain,
+				OptimisticModeFetcher: chain,
 			},
 		}
 
@@ -959,8 +961,9 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				GenesisTimeFetcher:    chain,
+				OptimisticModeFetcher: chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1017,10 +1020,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				StateGen:           stategen.New(db, doublylinkedtree.New()),
-				FinalizedFetcher:   chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				OptimisticModeFetcher: chain,
+				StateGen:              stategen.New(db, doublylinkedtree.New()),
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1065,10 +1069,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				OptimisticModeFetcher: chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1151,10 +1156,11 @@ func TestGetAttestationData(t *testing.T) {
 			TimeFetcher:           chain,
 			OptimisticModeFetcher: chain,
 			CoreService: &core.Service{
-				AttestationCache:   cache.NewAttestationCache(),
-				HeadFetcher:        chain,
-				GenesisTimeFetcher: chain,
-				FinalizedFetcher:   chain,
+				AttestationCache:      cache.NewAttestationCache(),
+				OptimisticModeFetcher: chain,
+				HeadFetcher:           chain,
+				GenesisTimeFetcher:    chain,
+				FinalizedFetcher:      chain,
 			},
 		}
 
@@ -1192,14 +1198,14 @@ func TestGetAttestationData(t *testing.T) {
 func TestProduceSyncCommitteeContribution(t *testing.T) {
 	root := bytesutil.PadTo([]byte("0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"), 32)
 	sig := bls.NewAggregateSignature().Marshal()
-	messsage := &ethpbalpha.SyncCommitteeMessage{
+	message := &ethpbalpha.SyncCommitteeMessage{
 		Slot:           1,
 		BlockRoot:      root,
 		ValidatorIndex: 0,
 		Signature:      sig,
 	}
 	syncCommitteePool := synccommittee.NewStore()
-	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(messsage))
+	require.NoError(t, syncCommitteePool.SaveSyncCommitteeMessage(message))
 	server := Server{
 		CoreService: &core.Service{
 			HeadFetcher: &mockChain.ChainService{
