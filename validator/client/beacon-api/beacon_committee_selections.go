@@ -5,15 +5,16 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
 type aggregatedSelectionResponse struct {
-	Data []shared.BeaconCommitteeSelection `json:"data"`
+	Data []validator.BeaconCommitteeSelection `json:"data"`
 }
 
-func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, selections []shared.BeaconCommitteeSelection) ([]shared.BeaconCommitteeSelection, error) {
+func (c *beaconApiValidatorClient) getAggregatedSelection(ctx context.Context, selections []validator.BeaconCommitteeSelection) ([]validator.BeaconCommitteeSelection, error) {
 	body, err := json.Marshal(selections)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal selections")

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -178,6 +178,6 @@ func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 	return c.eventHandler.running
 }
 
-func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []shared.BeaconCommitteeSelection) ([]shared.BeaconCommitteeSelection, error) {
+func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []validator.BeaconCommitteeSelection) ([]validator.BeaconCommitteeSelection, error) {
 	return c.getAggregatedSelection(ctx, selections)
 }
