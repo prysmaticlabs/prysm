@@ -46,6 +46,7 @@ func (n *Node) applyWeightChanges(ctx context.Context, proposerBoostRoot [32]byt
 	return nil
 }
 
+// getMaxPossibleSupport computes the maximum possible voting weight for this node
 func (n *Node) getMaxPossibleSupport(currentSlot primitives.Slot, committeeWeight uint64) uint64 {
 	startSlot := n.slot
 	if n.parent != nil {
@@ -77,6 +78,7 @@ func (n *Node) getMaxPossibleSupport(currentSlot primitives.Slot, committeeWeigh
 	return weightFromCurrentEpoch + weightFromStartEpoch
 }
 
+// isOneConfirmed computes whether this node individually satisfies the LMD safety rule.
 func (n *Node) isOneConfirmed(currentSlot primitives.Slot, committeeWeight uint64) bool {
 	proposerBoostWeight := (committeeWeight * params.BeaconConfig().ProposerScoreBoost) / 100
 	maxPossibleSupport := n.getMaxPossibleSupport(currentSlot, committeeWeight)
@@ -139,7 +141,8 @@ func (n *Node) updateBestDescendant(ctx context.Context, justifiedEpoch primitiv
 			// The best descendant is more than 1 hop away.
 			n.bestDescendant = bestChild.bestDescendant
 		}
-
+		// Do safe head computations for blocks that are lower than the current slot.
+		// Attestations from the current slot are not accounted for in the fork choice - so compute safe head on the basis of the previous slot
 		if bestChild.slot < currentSlot && bestChild.isOneConfirmed(currentSlot-1, committeeWeight) {
 			// The best child is confirmed.
 			if bestChild.bestConfirmedDescendant == nil {
