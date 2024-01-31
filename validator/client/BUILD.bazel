@@ -31,7 +31,7 @@ go_library(
         "//beacon-chain/builder:go_default_library",
         "//beacon-chain/core/altair:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
-        "//beacon-chain/rpc/eth/shared:go_default_library",
+        "//beacon-chain/rpc/eth/validator:go_default_library",
         "//cache/lru:go_default_library",
         "//cmd:go_default_library",
         "//config/features:go_default_library",
@@ -123,6 +123,7 @@ go_test(
     deps = [
         "//async/event:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
+        "//beacon-chain/rpc/eth/validator:go_default_library",
         "//cache/lru:go_default_library",
         "//config/features:go_default_library",
         "//config/fieldparams:go_default_library",
