@@ -934,8 +934,7 @@ func TestForkChoiceSafeHead(t *testing.T) {
 
 			_, err = f.Head(ctx)
 			require.NoError(t, err)
-			safeHead, err := f.SafeHead(ctx)
-			require.NoError(t, err)
+			safeHead := f.store.safeHeadRoot
 			require.Equal(t, tc.wantRoot, safeHead)
 		})
 	}
