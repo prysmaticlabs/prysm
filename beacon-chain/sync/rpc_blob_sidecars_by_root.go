@@ -80,7 +80,7 @@ func (s *Service) blobSidecarByRootRPCHandler(ctx context.Context, msg interface
 		sc, err := s.cfg.blobStorage.Get(root, idx)
 		if err != nil {
 			if db.IsNotFound(err) {
-				log.WithError(err).Debugf("BlobSidecar not found in db, root=%x, index=%d", root, idx)
+				log.WithError(err).Debugf("Peer requested blob sidecar by root which was not found in db, root=%x, index=%d", root, idx)
 				continue
 			}
 			log.WithError(err).Errorf("unexpected db error retrieving BlobSidecar, root=%x, index=%d", root, idx)
