@@ -107,7 +107,6 @@ func TestGetAggregatedSelections(t *testing.T) {
 				4,
 				aggregatedSelectionResponse{Data: test.res},
 			).Return(
-				nil,
 				test.endpointError,
 			).Times(1)
 
