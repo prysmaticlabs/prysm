@@ -79,6 +79,7 @@ def prysm_image_deps():
         sha256 = "339f5ede10500c16dd7192d73169c31c4b27ab12130347275f23044ec8c7d897",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/libs/libselinux/libselinux1_3.1-3_amd64.deb",
+            "https://prysmaticlabs.com/uploads/libselinux1_3.1-3_amd64.deb",
         ],
     )
 
@@ -88,6 +89,7 @@ def prysm_image_deps():
         sha256 = "da98279a47dabaa46a83514142f5c691c6a71fa7e582661a3a3db6887ad3e9d1",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/libs/libselinux/libselinux1_3.1-3_arm64.deb",
+            "https://prysmaticlabs.com/uploads/libselinux1_3.1-3_arm64.deb",
         ],
     )
 
@@ -97,6 +99,7 @@ def prysm_image_deps():
         sha256 = "ee192c8d22624eb9d0a2ae95056bad7fb371e5abc17e23e16b1de3ddb17a1064",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/p/pcre2/libpcre2-8-0_10.36-2+deb11u1_amd64.deb",
+            "https://prysmaticlabs.com/uploads/libpcre2-8-0_10.36-2+deb11u1_amd64.deb",
         ],
     )
 
@@ -106,6 +109,7 @@ def prysm_image_deps():
         sha256 = "27a4362a4793cb67a8ae571bd8c3f7e8654dc2e56d99088391b87af1793cca9c",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/p/pcre2/libpcre2-8-0_10.36-2+deb11u1_arm64.deb",
+            "https://prysmaticlabs.com/uploads/libpcre2-8-0_10.36-2+deb11u1_arm64.deb",
         ],
     )
 
@@ -115,6 +119,7 @@ def prysm_image_deps():
         sha256 = "af3c3562eb2802481a2b9558df1b389f3c6d9b1bf3b4219e000e05131372ebaf",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/a/attr/libattr1_2.4.48-6_amd64.deb",
+            "https://prysmaticlabs.com/uploads/libattr1_2.4.48-6_amd64.deb",
         ],
     )
 
@@ -124,6 +129,7 @@ def prysm_image_deps():
         sha256 = "cb9b59be719a6fdbaabaa60e22aa6158b2de7a68c88ccd7c3fb7f41a25fb43d0",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/a/attr/libattr1_2.4.48-6_arm64.deb",
+            "https://prysmaticlabs.com/uploads/libattr1_2.4.48-6_arm64.deb",
         ],
     )
 
@@ -133,6 +139,7 @@ def prysm_image_deps():
         sha256 = "aa18d721be8aea50fbdb32cd9a319cb18a3f111ea6ad17399aa4ba9324c8e26a",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/a/acl/libacl1_2.2.53-10_amd64.deb",
+            "https://prysmaticlabs.com/uploads/libacl1_2.2.53-10_amd64.deb",
         ],
     )
 
@@ -142,5 +149,6 @@ def prysm_image_deps():
         sha256 = "f164c48192cb47746101de6c59afa3f97777c8fc821e5a30bb890df1f4cb4cfd",
         urls = [
             "https://snapshot.debian.org/archive/debian/20231214T085654Z/pool/main/a/acl/libacl1_2.2.53-10_arm64.deb",
+            "https://prysmaticlabs.com/uploads/libacl1_2.2.53-10_arm64.deb",
         ],
     )
