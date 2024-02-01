@@ -46,7 +46,13 @@ func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 				http.Error(w, "unauthorized: no Authorization header passed. Please use an Authorization header with the jwt created in the prysm wallet", http.StatusUnauthorized)
 				return
 			}
-			token := strings.Split(reqToken, "Bearer ")[1]
+			tokenParts := strings.Split(reqToken, "Bearer ")
+			if len(tokenParts) != 2 {
+				http.Error(w, "Invalid token format", http.StatusBadRequest)
+				return
+			}
+
+			token := tokenParts[1]
 			_, err := jwt.Parse(token, s.validateJWT)
 			if err != nil {
 				http.Error(w, fmt.Errorf("forbidden: could not parse JWT token: %v", err).Error(), http.StatusForbidden)
