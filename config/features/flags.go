@@ -196,6 +196,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	PraterTestnet,
 	SepoliaTestnet,
 	Mainnet,
+	safeHeadFCU,
 	disablePeerScorer,
 	disableBroadcastSlashingFlag,
 	enableSlasherFlag,
