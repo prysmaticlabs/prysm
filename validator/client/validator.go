@@ -75,7 +75,7 @@ type validator struct {
 	slashableKeysLock                  sync.RWMutex
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 	walletInitializedFeed              *event.Feed
-	attLogs                            map[[32]byte]*attSubmitted
+	submittedAtts                      map[[32]byte]*submittedAtt
 	startBalances                      map[[fieldparams.BLSPubkeyLength]byte]uint64
 	dutiesLock                         sync.RWMutex
 	duties                             *ethpb.DutiesResponse

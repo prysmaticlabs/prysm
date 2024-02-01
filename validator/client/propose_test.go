@@ -88,7 +88,7 @@ func setupWithKey(t *testing.T, validatorKey bls.SecretKey) (*validator, *mocks,
 		keyManager:                     newMockKeymanager(t, keypair{pub: pubKey, pri: validatorKey}),
 		validatorClient:                m.validatorClient,
 		graffiti:                       []byte{},
-		attLogs:                        make(map[[32]byte]*attSubmitted),
+		submittedAtts:                  make(map[[32]byte]*submittedAtt),
 		aggregatedSlotCommitteeIDCache: aggregatedSlotCommitteeIDCache,
 	}
 

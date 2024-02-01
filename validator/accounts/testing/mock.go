@@ -92,7 +92,7 @@ type Validator struct {
 	proposerSettings *validatorserviceconfig.ProposerSettings
 }
 
-func (_ *Validator) LogSyncCommitteeMessagesSubmitted() {}
+func (_ *Validator) LogSubmittedSyncCommitteeMessages() {}
 
 func (_ *Validator) Done() {
 	panic("implement me")
@@ -154,7 +154,7 @@ func (_ *Validator) SubmitSignedContributionAndProof(_ context.Context, _ primit
 	panic("implement me")
 }
 
-func (_ *Validator) LogAttestationsSubmitted() {
+func (_ *Validator) LogSubmittedAtts(_ primitives.Slot) {
 	panic("implement me")
 }
 

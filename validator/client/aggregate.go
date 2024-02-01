@@ -209,9 +209,9 @@ func (v *validator) addIndicesToLog(duty *ethpb.DutiesResponse_Duty) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
-	for _, log := range v.attLogs {
-		if duty.CommitteeIndex == log.data.CommitteeIndex {
-			log.aggregatorIndices = append(log.aggregatorIndices, duty.ValidatorIndex)
+	for _, l := range v.submittedAtts {
+		if duty.CommitteeIndex == l.data.CommitteeIndex {
+			l.aggregatorPubkeys = append(l.aggregatorPubkeys, duty.PublicKey)
 		}
 	}
 

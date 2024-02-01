@@ -15,7 +15,6 @@ import (
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
-	"github.com/prysmaticlabs/prysm/v4/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/monitoring/tracing"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -144,6 +143,11 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		tracing.AnnotateError(span, err)
 		return
 	}
+	r, err := data.HashTreeRoot()
+	if err != nil {
+		return
+	}
+	logrus.Infof("Submitting attestation %#x", r)
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
@@ -154,7 +158,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		return
 	}
 
-	if err := v.saveAttesterIndexToData(data, duty.ValidatorIndex); err != nil {
+	if err := v.saveSubmittedAtt(data, duty.PublicKey); err != nil {
 		log.WithError(err).Error("Could not save validator index for logging")
 		if v.emitAccountMetrics {
 			ValidatorAttestFailVec.WithLabelValues(fmtKey).Inc()
@@ -228,21 +232,21 @@ func (v *validator) getDomainAndSigningRoot(ctx context.Context, data *ethpb.Att
 	return domain, root, nil
 }
 
-// For logging, this saves the last submitted attester index to its attestation data. The purpose of this
-// is to enhance attesting logs to be readable when multiple validator keys ran in a single client.
-func (v *validator) saveAttesterIndexToData(data *ethpb.AttestationData, index primitives.ValidatorIndex) error {
+// saveSubmittedAtt saves the submitted attestation data along with the attester's pubkey.
+// The purpose of this is to display combined attesting logs for all keys managed by the validator client.
+func (v *validator) saveSubmittedAtt(data *ethpb.AttestationData, pubkey []byte) error {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
-	h, err := hash.Proto(data)
+	r, err := data.HashTreeRoot()
 	if err != nil {
 		return err
 	}
 
-	if v.attLogs[h] == nil {
-		v.attLogs[h] = &attSubmitted{data, []primitives.ValidatorIndex{}, []primitives.ValidatorIndex{}}
+	if v.submittedAtts[r] == nil {
+		v.submittedAtts[r] = &submittedAtt{data, [][]byte{}, [][]byte{}}
 	}
-	v.attLogs[h] = &attSubmitted{data, append(v.attLogs[h].attesterIndices, index), []primitives.ValidatorIndex{}}
+	v.submittedAtts[r] = &submittedAtt{data, append(v.submittedAtts[r].attesterPubkeys, pubkey), [][]byte{}}
 
 	return nil
 }
