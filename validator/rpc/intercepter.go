@@ -39,8 +39,8 @@ func (s *Server) JWTInterceptor() grpc.UnaryServerInterceptor {
 func (s *Server) JwtHttpInterceptor(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// if it's not initialize or has a web prefix
-		if !strings.Contains(r.URL.Path, api.WebUrlPrefix+"initialize") && // ignore some routes
-			!strings.Contains(r.URL.Path, api.WebUrlPrefix+"health/logs") {
+		if strings.Contains(r.URL.Path, api.WebApiUrlPrefix) || strings.Contains(r.URL.Path, api.KeymanagerApiPrefix) {
+			// ignore some routes
 			reqToken := r.Header.Get("Authorization")
 			if reqToken == "" {
 				http.Error(w, "unauthorized: no Authorization header passed. Please use an Authorization header with the jwt created in the prysm wallet", http.StatusUnauthorized)
