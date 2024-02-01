@@ -24,6 +24,8 @@ def prysm_image_upload(
             "//tools:passwd_tar",
         ] + select({
           "@platforms//cpu:x86_64": [
+            "@amd64_debian11_bash",
+            "@amd64_debian11_libtinfo6",
             "@amd64_debian11_coreutils",
             "@amd64_debian11_libacl1",
             "@amd64_debian11_libattr1",
@@ -31,6 +33,8 @@ def prysm_image_upload(
             "@amd64_debian11_libpcre2",
           ],
           "@platforms//cpu:arm64": [
+            "@arm64_debian11_bash",
+            "@arm64_debian11_libtinfo6",
             "@arm64_debian11_coreutils",
             "@arm64_debian11_libacl1",
             "@arm64_debian11_libattr1",
@@ -38,8 +42,6 @@ def prysm_image_upload(
             "@arm64_debian11_libpcre2",
           ],
         }) + [
-            "//tools:libtinfo6_tar",
-            "//tools:bash_tar",
             ":binary_tar",
         ],
         labels = {
