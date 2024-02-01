@@ -107,6 +107,43 @@ func TestServer_JwtHttpInterceptor(t *testing.T) {
 		testHandler.ServeHTTP(rr, req)
 		require.Equal(t, http.StatusOK, rr.Code)
 	})
+	t.Run("wrong jwt format was sent", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		require.NoError(t, err)
+		token, err := createTokenString(jwtKey)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer"+token) // no space was added // Replace with a valid JWT token
+		testHandler.ServeHTTP(rr, req)
+		require.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+	t.Run("wrong jwt no bearer format was sent", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		require.NoError(t, err)
+		token, err := createTokenString(jwtKey)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", token) // Replace with a valid JWT token
+		testHandler.ServeHTTP(rr, req)
+		require.Equal(t, http.StatusBadRequest, rr.Code)
+	})
+	t.Run("broken jwt token format was sent", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/eth/v1/keystores", nil)
+		require.NoError(t, err)
+		token, err := createTokenString(jwtKey)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+token[0:2]+" "+token[2:]) // Replace with a valid JWT token
+		testHandler.ServeHTTP(rr, req)
+		require.Equal(t, http.StatusForbidden, rr.Code)
+	})
+	t.Run("web endpoint needs jwt token", func(t *testing.T) {
+		rr := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodGet, "/api/v2/validator/beacon/status", nil)
+		require.NoError(t, err)
+		testHandler.ServeHTTP(rr, req)
+		require.Equal(t, http.StatusUnauthorized, rr.Code)
+	})
 	t.Run("initialize does not need jwt", func(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, api.WebUrlPrefix+"initialize", nil)
