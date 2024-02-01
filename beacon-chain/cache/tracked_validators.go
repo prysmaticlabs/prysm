@@ -41,3 +41,9 @@ func (t *TrackedValidatorsCache) Prune() {
 	defer t.Unlock()
 	t.trackedValidators = make(map[primitives.ValidatorIndex]TrackedValidator)
 }
+
+func (t *TrackedValidatorsCache) Validating() bool {
+	t.Lock()
+	defer t.Unlock()
+	return len(t.trackedValidators) > 0
+}

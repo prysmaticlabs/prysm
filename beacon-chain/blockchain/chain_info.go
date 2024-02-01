@@ -571,3 +571,9 @@ func (s *Service) inRegularSync() bool {
 	}
 	return fc.HighestReceivedBlockDelay() < params.BeaconConfig().SlotsPerEpoch
 }
+
+// validating returns true if the beacon is tracking some validators that have
+// registered for proposing.
+func (s *Service) validating() bool {
+	return s.cfg.TrackedValidatorsCache.Validating()
+}
