@@ -42,10 +42,14 @@ func selectAccounts(selectionPrompt string, pubKeys [][fieldparams.BLSPubkeyLeng
 	exit := "Done selecting"
 	results := make([]int, 0)
 	au := aurora.NewAurora(true)
+	if len(pubKeyStrings) > 5 {
+		log.Warnf("there are more than %d potential public keys to exit, please consider using the --%s or --%s flags", 5, flags.VoluntaryExitPublicKeysFlag.Name, flags.ExitAllFlag.Name)
+	}
 	for result != exit {
 		p := promptui.Select{
 			Label:        selectionPrompt,
 			HideSelected: true,
+			Size:         len(pubKeyStrings),
 			Items:        append([]string{exit, allAccountsText}, pubKeyStrings...),
 			Templates:    templates,
 		}

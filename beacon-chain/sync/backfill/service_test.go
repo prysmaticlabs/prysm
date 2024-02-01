@@ -5,9 +5,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -73,6 +75,20 @@ func TestServiceInit(t *testing.T) {
 	for i := remaining; i < remaining+nWorkers; i++ {
 		require.Equal(t, batchEndSequence, todo[i].state)
 	}
+}
+
+func TestMinimumBackfillSlot(t *testing.T) {
+	oe := helpers.MinEpochsForBlockRequests()
+
+	currSlot := (oe + 100).Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
+	minSlot := minimumBackfillSlot(primitives.Slot(currSlot))
+	require.Equal(t, 100*params.BeaconConfig().SlotsPerEpoch, minSlot)
+
+	oe = helpers.MinEpochsForBlockRequests()
+
+	currSlot = oe.Mul(uint64(params.BeaconConfig().SlotsPerEpoch))
+	minSlot = minimumBackfillSlot(primitives.Slot(currSlot))
+	require.Equal(t, primitives.Slot(1), minSlot)
 }
 
 func testReadN(t *testing.T, ctx context.Context, c chan batch, n int, into []batch) []batch {

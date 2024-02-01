@@ -48,6 +48,7 @@ func TestWeakSubjectivity_ComputeWeakSubjectivityPeriod(t *testing.T) {
 		t.Run(fmt.Sprintf("valCount: %d, avgBalance: %d", tt.valCount, tt.avgBalance), func(t *testing.T) {
 			// Reset committee cache - as we need to recalculate active validator set for each test.
 			helpers.ClearCache()
+
 			got, err := helpers.ComputeWeakSubjectivityPeriod(context.Background(), genState(t, tt.valCount, tt.avgBalance), params.BeaconConfig())
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got, "valCount: %v, avgBalance: %v", tt.valCount, tt.avgBalance)
@@ -177,6 +178,8 @@ func TestWeakSubjectivity_IsWithinWeakSubjectivityPeriod(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			sr, _, e := tt.genWsCheckpoint()
 			got, err := helpers.IsWithinWeakSubjectivityPeriod(context.Background(), tt.epoch, tt.genWsState(), sr, e, params.BeaconConfig())
 			if tt.wantedErr != "" {
@@ -247,6 +250,8 @@ func TestWeakSubjectivity_ParseWeakSubjectivityInputString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			helpers.ClearCache()
+
 			wsCheckpt, err := helpers.ParseWeakSubjectivityInputString(tt.input)
 			if tt.wantedErr != "" {
 				require.ErrorContains(t, tt.wantedErr, err)
@@ -283,6 +288,8 @@ func genState(t *testing.T, valCount, avgBalance uint64) state.BeaconState {
 }
 
 func TestMinEpochsForBlockRequests(t *testing.T) {
+	helpers.ClearCache()
+
 	params.SetActiveTestCleanup(t, params.MainnetConfig())
 	var expected primitives.Epoch = 33024
 	// expected value of 33024 via spec commentary:

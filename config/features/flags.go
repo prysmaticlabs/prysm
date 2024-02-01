@@ -3,6 +3,7 @@ package features
 import (
 	"time"
 
+	backfill "github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/sync/backfill/flags"
 	"github.com/urfave/cli/v2"
 )
 
@@ -128,17 +129,17 @@ var (
 		Name:  "enable-beacon-rest-api",
 		Usage: "(Experimental): Enables of the beacon REST API when querying a beacon node.",
 	}
-	enableVerboseSigVerification = &cli.BoolFlag{
-		Name:  "enable-verbose-sig-verification",
-		Usage: "Enables identifying invalid signatures if batch verification fails when processing block.",
+	disableVerboseSigVerification = &cli.BoolFlag{
+		Name:  "disable-verbose-sig-verification",
+		Usage: "Disables identifying invalid signatures if batch verification fails when processing block.",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
 		Usage: "Informs the engine to prepare all local payloads. Useful for relayers and builders.",
 	}
-	EnableEIP4881 = &cli.BoolFlag{
-		Name:  "enable-eip-4881",
-		Usage: "Enables the deposit tree specified in EIP-4881.",
+	DisableEIP4881 = &cli.BoolFlag{
+		Name:  "disable-eip-4881",
+		Usage: "Disables the deposit tree specified in EIP-4881.",
 	}
 	EnableLightClient = &cli.BoolFlag{
 		Name:  "enable-lightclient",
@@ -158,9 +159,8 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableVerboseSigVerification,
-	EnableEIP4881,
 	enableExperimentalState,
+	backfill.EnableExperimentalBackfill,
 }
 
 // ValidatorFlags contains a list of all the feature flags that apply to the validator client.
@@ -200,12 +200,12 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
-	enableVerboseSigVerification,
+	disableVerboseSigVerification,
 	prepareAllPayloads,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
 	aggregateThirdInterval,
-	EnableEIP4881,
+	DisableEIP4881,
 	disableResourceManager,
 	DisableRegistrationCache,
 	EnableLightClient,
