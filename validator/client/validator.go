@@ -1017,6 +1017,7 @@ func (v *validator) PushProposerSettings(ctx context.Context, km keymanager.IKey
 }
 
 func (v *validator) StartEventStream(ctx context.Context, topics []string, eventsChannel chan<- *eventClient.Event) {
+	log.Infof("starting event stream for topics %v...", topics)
 	v.validatorClient.StartEventStream(ctx, topics, eventsChannel)
 }
 
@@ -1031,6 +1032,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		// wait some period before trying again
 		return errors.New(string(event.Data))
 	case eventClient.EventHead:
+		log.Debug("new head event")
 		head := &events.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())

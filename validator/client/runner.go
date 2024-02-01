@@ -41,7 +41,7 @@ func run(ctx context.Context, v iface.Validator) {
 		return // Exit if context is canceled.
 	}
 
-	eventsChannel := make(chan *event.Event, 1) // double check why is it 1 here?
+	eventsChannel := make(chan *event.Event, 0) // double check why is it 1 here?
 	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
@@ -82,6 +82,7 @@ func run(ctx context.Context, v iface.Validator) {
 				log.WithError(eventErr).Warn("event stream interrupted. reconnecting...")
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 			}
+
 		case slot := <-v.NextSlot():
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
