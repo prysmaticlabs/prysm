@@ -198,7 +198,7 @@ func ConfigureBeaconChain(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool(safeHeadFCU.Name) {
-		logEnabled(safeHeadFCU)
+		log.WithField(safeHeadFCU.Name, safeHeadFCU.Usage).Warn(enabledFeatureFlag)
 		cfg.SafeHeadFCU = true
 	}
 	cfg.EnablePeerScorer = true
