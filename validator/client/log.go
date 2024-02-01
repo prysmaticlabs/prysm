@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/sirupsen/logrus"
@@ -19,15 +18,10 @@ type submittedAtt struct {
 }
 
 // LogSubmittedAtts logs info about submitted attestations.
-func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
+func (v *validator) LogSubmittedAtts() {
 	v.attLogsLock.Lock()
 	defer v.attLogsLock.Unlock()
 
-	if len(v.submittedAtts) == 0 {
-		return
-	}
-
-	log.Infof("Submitted new attestations for slot %d", slot)
 	for _, attLog := range v.submittedAtts {
 		attesterPubkeys := make([]string, len(attLog.attesterPubkeys))
 		for i, p := range attLog.attesterPubkeys {
@@ -38,6 +32,7 @@ func (v *validator) LogSubmittedAtts(slot primitives.Slot) {
 			aggregatorPubkeys[i] = fmt.Sprintf("%#x", bytesutil.Trunc(p))
 		}
 		log.WithFields(logrus.Fields{
+			"slot":              attLog.data.Slot,
 			"committeeIndex":    attLog.data.CommitteeIndex,
 			"beaconBlockRoot":   fmt.Sprintf("%#x", bytesutil.Trunc(attLog.data.BeaconBlockRoot)),
 			"sourceEpoch":       attLog.data.Source.Epoch,

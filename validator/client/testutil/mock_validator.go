@@ -181,8 +181,8 @@ func (*FakeValidator) SubmitAggregateAndProof(_ context.Context, _ primitives.Sl
 func (*FakeValidator) SubmitSyncCommitteeMessage(_ context.Context, _ primitives.Slot, _ [fieldparams.BLSPubkeyLength]byte) {
 }
 
-// LogAttestationsSubmitted for mocking.
-func (*FakeValidator) LogSubmittedAtts(_ primitives.Slot) {}
+// LogSubmittedAtts for mocking.
+func (*FakeValidator) LogSubmittedAtts() {}
 
 // UpdateDomainDataCaches for mocking.
 func (*FakeValidator) UpdateDomainDataCaches(context.Context, primitives.Slot) {}

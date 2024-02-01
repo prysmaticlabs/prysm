@@ -967,11 +967,13 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		}
 		if len(attesterKeys[i]) > 0 {
 			slotLog = slotLog.WithFields(logrus.Fields{
+				"slot":            epochStartSlot + i,
+				"slotInEpoch":     (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
 				"attesterCount":   len(attesterKeys[i]),
 				"attesterPubkeys": attesterKeys[i],
 			})
 		}
-		slotLog.Infof("Schedule for slot %d (slot %d in epoch)", epochStartSlot+i, (epochStartSlot+i)%params.BeaconConfig().SlotsPerEpoch)
+		slotLog.Infof("Duties schedule")
 	}
 }
 
