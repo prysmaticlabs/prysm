@@ -14,6 +14,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/time"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state"
+	"github.com/prysmaticlabs/prysm/v5/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v5/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v5/config/params"
 	consensusblocks "github.com/prysmaticlabs/prysm/v5/consensus-types/blocks"
@@ -110,7 +111,11 @@ func (vs *Server) getLocalPayload(ctx context.Context, blk interfaces.ReadOnlyBe
 	// Blocks before Bellatrix don't have execution payloads. Use zeros as the hash.
 	if st.Version() >= version.Bellatrix {
 		finalizedBlockHash = vs.FinalizationFetcher.FinalizedBlockHash()
-		safeBlockHash = vs.ForkchoiceFetcher.GetSafeHeadPayloadBlockHash()
+		if features.Get().SafeHeadFCU {
+			safeBlockHash = vs.ForkchoiceFetcher.GetSafeHeadPayloadBlockHash()
+		} else {
+			safeBlockHash = vs.FinalizationFetcher.UnrealizedJustifiedPayloadBlockHash()
+		}
 	}
 
 	f := &enginev1.ForkchoiceState{
