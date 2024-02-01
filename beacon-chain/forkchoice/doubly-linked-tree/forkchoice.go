@@ -129,7 +129,7 @@ func (f *ForkChoice) UpdateSafeHead(
 			commonRoot = params.BeaconConfig().ZeroHash
 		}
 
-		if commonRoot != oldSafeHeadRoot {
+		if oldSafeHeadRoot != [32]byte{} && commonRoot != oldSafeHeadRoot {
 			// The safe head has reorged.
 			// Calculate reorg metrics.
 			oldSafeHeadNode, ok := f.store.nodeByRoot[oldSafeHeadRoot]
