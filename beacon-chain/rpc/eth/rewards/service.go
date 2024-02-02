@@ -26,7 +26,8 @@ type BlockRewardService struct {
 	Replayer stategen.ReplayerBuilder
 }
 
-// GetBlockRewardsData returns the BlockRewards Object which is used for the BlockRewardsResponse and ProduceBlockV3
+// GetBlockRewardsData returns the BlockRewards object which is used for the BlockRewardsResponse and ProduceBlockV3.
+// Rewards are denominated in Gwei.
 func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultJsonError) {
 	if blk == nil || blk.IsNil() {
 		return nil, &httputil.DefaultJsonError{
