@@ -108,7 +108,7 @@ func (s *Service) checkSurrounds(
 
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndexes {
-		if err := s.epochUpdateForValidator(ctx, args, updatedChunks, validatorIndex); err != nil {
+		if err := s.epochUpdateForValidator(ctx, args.validatorChunkIndex, args.kind, args.currentEpoch, updatedChunks, validatorIndex); err != nil {
 			return nil, errors.Wrapf(err, "could not update validator index chunks %d", validatorIndex)
 		}
 	}
@@ -179,7 +179,9 @@ func (s *Service) checkDoubleVotes(
 // map used as a cache for further processing and minimizing database reads later on.
 func (s *Service) epochUpdateForValidator(
 	ctx context.Context,
-	args *chunkUpdateArgs,
+	validatorChunkIndex uint64,
+	chunkKind slashertypes.ChunkKind,
+	currentEpoch primitives.Epoch,
 	updatedChunks map[uint64]Chunker,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
@@ -188,15 +190,15 @@ func (s *Service) epochUpdateForValidator(
 		return nil
 	}
 
-	for epoch <= args.currentEpoch {
-		chunkIdx := s.params.chunkIndex(epoch)
+	for epoch <= currentEpoch {
+		chunkIndex := s.params.chunkIndex(epoch)
 
-		currentChunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, updatedChunks, chunkIdx)
+		currentChunk, err := s.getChunk(ctx, validatorChunkIndex, chunkKind, updatedChunks, chunkIndex)
 		if err != nil {
 			return err
 		}
 
-		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= args.currentEpoch {
+		for s.params.chunkIndex(epoch) == chunkIndex && epoch <= currentEpoch {
 			if err := setChunkRawDistance(
 				s.params,
 				currentChunk.Chunk(),
@@ -206,7 +208,7 @@ func (s *Service) epochUpdateForValidator(
 			); err != nil {
 				return err
 			}
-			updatedChunks[chunkIdx] = currentChunk
+			updatedChunks[chunkIndex] = currentChunk
 			epoch++
 		}
 	}
