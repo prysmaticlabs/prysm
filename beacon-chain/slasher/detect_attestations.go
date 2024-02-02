@@ -171,6 +171,8 @@ func (s *Service) epochUpdateForValidator(
 	currentEpoch primitives.Epoch,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
+	var err error
+
 	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
 	if !ok {
 		return nil
@@ -179,9 +181,12 @@ func (s *Service) epochUpdateForValidator(
 	for latestEpochWritten <= currentEpoch {
 		chunkIndex := s.params.chunkIndex(latestEpochWritten)
 
-		currentChunk, err := s.getChunk(ctx, updatedChunks, chunkKind, validatorChunkIndex, chunkIndex)
-		if err != nil {
-			return err
+		currentChunk, ok := updatedChunks[chunkIndex]
+		if !ok {
+			currentChunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+			if err != nil {
+				return errors.Wrap(err, "could not get chunk")
+			}
 		}
 
 		for s.params.chunkIndex(latestEpochWritten) == chunkIndex && latestEpochWritten <= currentEpoch {
@@ -281,15 +286,20 @@ func (s *Service) applyAttestationForValidator(
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
 
+	var err error
+
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
-
 	chunkIndex := s.params.chunkIndex(sourceEpoch)
-	chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIndex)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+
+	chunk, ok := chunksByChunkIdx[chunkIndex]
+	if !ok {
+		chunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+		}
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -325,10 +335,15 @@ func (s *Service) applyAttestationForValidator(
 	// keep updating chunks.
 	for {
 		chunkIndex = s.params.chunkIndex(startEpoch)
-		chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIndex)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+
+		chunk, ok := chunksByChunkIdx[chunkIndex]
+		if !ok {
+			chunk, err = s.getChunk(ctx, chunkKind, validatorChunkIndex, chunkIndex)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
+			}
 		}
+
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
 				chunkIndex:   chunkIndex,
@@ -338,6 +353,7 @@ func (s *Service) applyAttestationForValidator(
 			startEpoch,
 			targetEpoch,
 		)
+
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
@@ -347,33 +363,27 @@ func (s *Service) applyAttestationForValidator(
 				currentEpoch,
 			)
 		}
+
 		// We update the chunksByChunkIdx map with the chunk we just updated.
 		chunksByChunkIdx[chunkIndex] = chunk
 		if !keepGoing {
 			break
 		}
+
 		// Move to first epoch of next chunk if needed.
 		startEpoch = chunk.NextChunkStartEpoch(startEpoch)
 	}
+
 	return nil, nil
 }
 
-// Retrieves a chunk from `chunksByChunkIndex` using a chunk index.
-// If such chunk does not exist, which should be rare
-// (occurring when we receive an attestation with source and target epochs
-// that span multiple chunk indices), then fallbacks to fetching from database.
+// Retrieve a chunk from database from database.
 func (s *Service) getChunk(
 	ctx context.Context,
-	chunksByChunkIndex map[uint64]Chunker,
 	chunkKind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
 	chunkIndex uint64,
 ) (Chunker, error) {
-	// If the chunk exists in the map, we return it.
-	if chunk, ok := chunksByChunkIndex[chunkIndex]; ok {
-		return chunk, nil
-	}
-
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
 	diskChunks, err := s.loadChunks(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIndex})
 	if err != nil {
