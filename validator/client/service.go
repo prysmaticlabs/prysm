@@ -56,6 +56,7 @@ type ValidatorService struct {
 	useWeb                 bool
 	emitAccountMetrics     bool
 	logValidatorBalances   bool
+	distributed            bool
 	interopKeysConfig      *local.InteropKeymanagerConfig
 	conn                   validatorHelpers.NodeConnection
 	grpcRetryDelay         time.Duration
@@ -76,7 +77,6 @@ type ValidatorService struct {
 	Web3SignerConfig       *remoteweb3signer.SetupConfig
 	proposerSettings       *validatorserviceconfig.ProposerSettings
 	validatorsRegBatchSize int
-	distributed            bool
 }
 
 // Config for the validator service.
@@ -84,6 +84,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	Distributed                bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -103,7 +104,6 @@ type Config struct {
 	BeaconApiEndpoint          string
 	BeaconApiTimeout           time.Duration
 	ValidatorsRegBatchSize     int
-	Distributed                bool
 }
 
 // NewValidatorService creates a new validator service for the service
