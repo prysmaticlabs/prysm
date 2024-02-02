@@ -103,7 +103,7 @@ func (s *Service) checkSurrounds(
 ) ([]*ethpb.AttesterSlashing, error) {
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
-	groupedAtts := s.groupByChunkIndex(attestations)
+	groupedByChunkIndexAtts := s.groupByChunkIndex(attestations)
 	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
 
 	// Update the min/max span chunks for the change of current epoch.
@@ -115,12 +115,12 @@ func (s *Service) checkSurrounds(
 	}
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
+	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedByChunkIndexAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
 
-	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
+	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedByChunkIndexAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
