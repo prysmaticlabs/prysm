@@ -98,16 +98,12 @@ func (s *Service) checkSurrounds(
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)
-	validatorIndices := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
+	validatorIndexes := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
 
 	// Update the min/max span chunks for the change of current epoch.
-	for _, validatorIndex := range validatorIndices {
+	for _, validatorIndex := range validatorIndexes {
 		if err := s.epochUpdateForValidator(ctx, args, updatedChunks, validatorIndex); err != nil {
-			return nil, errors.Wrapf(
-				err,
-				"could not update validator index chunks %d",
-				validatorIndex,
-			)
+			return nil, errors.Wrapf(err, "could not update validator index chunks %d", validatorIndex)
 		}
 	}
 
@@ -185,6 +181,7 @@ func (s *Service) epochUpdateForValidator(
 	if epoch == 0 {
 		return nil
 	}
+
 	for epoch <= args.currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
 		currentChunk, err := s.getChunk(ctx, args, updatedChunks, chunkIdx)
@@ -370,18 +367,21 @@ func (s *Service) getChunk(
 	chunksByChunkIdx map[uint64]Chunker,
 	chunkIdx uint64,
 ) (Chunker, error) {
-	chunk, ok := chunksByChunkIdx[chunkIdx]
-	if ok {
+	// If the chunk exists in the map, we return it.
+	if chunk, ok := chunksByChunkIdx[chunkIdx]; ok {
 		return chunk, nil
 	}
+
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
 	diskChunks, err := s.loadChunks(ctx, args, []uint64{chunkIdx})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIdx)
 	}
+
 	if chunk, ok := diskChunks[chunkIdx]; ok {
 		return chunk, nil
 	}
+
 	return nil, fmt.Errorf("could not retrieve chunk at chunk index %d from disk", chunkIdx)
 }
 
@@ -395,41 +395,51 @@ func (s *Service) loadChunks(
 ) (map[uint64]Chunker, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
 	defer span.End()
+
 	chunkKeys := make([][]byte, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
 		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
 	}
+
 	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, args.kind, chunkKeys)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"could not load slasher chunk index",
-		)
+		return nil, errors.Wrapf(err, "could not load slasher chunk index")
 	}
+
 	chunksByChunkIdx := make(map[uint64]Chunker, len(rawChunks))
 	for i := 0; i < len(rawChunks); i++ {
 		// If the chunk exists in the database, we initialize it from the raw bytes data.
 		// If it does not exist, we initialize an empty chunk.
-		var chunk Chunker
+		var (
+			chunk Chunker
+			err   error
+		)
+
+		chunkExists := chunksExist[i]
+
 		switch args.kind {
 		case slashertypes.MinSpan:
-			if chunksExist[i] {
+			if chunkExists {
 				chunk, err = MinChunkSpansSliceFrom(s.params, rawChunks[i])
-			} else {
-				chunk = EmptyMinSpanChunksSlice(s.params)
+				break
 			}
+			chunk = EmptyMinSpanChunksSlice(s.params)
+
 		case slashertypes.MaxSpan:
-			if chunksExist[i] {
+			if chunkExists {
 				chunk, err = MaxChunkSpansSliceFrom(s.params, rawChunks[i])
-			} else {
-				chunk = EmptyMaxSpanChunksSlice(s.params)
+				break
 			}
+			chunk = EmptyMaxSpanChunksSlice(s.params)
 		}
+
 		if err != nil {
 			return nil, errors.Wrap(err, "could not initialize chunk")
 		}
+
 		chunksByChunkIdx[chunkIndices[i]] = chunk
 	}
+
 	return chunksByChunkIdx, nil
 }
 
