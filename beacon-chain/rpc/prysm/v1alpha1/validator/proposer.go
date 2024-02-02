@@ -62,20 +62,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
-	// process attestations and update head in forkchoice
-	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
-	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
-	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
-	if parentRoot != headRoot {
-		blockchain.LateBlockAttemptedReorgCount.Inc()
-		log.WithFields(logrus.Fields{
-			"slot":       req.Slot,
-			"parentRoot": fmt.Sprintf("%#x", parentRoot),
-			"headRoot":   fmt.Sprintf("%#x", headRoot),
-		}).Warn("late block attempted reorg failed")
-	}
-
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		if err := vs.optimisticStatus(ctx); err != nil {
@@ -83,19 +69,47 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
+	// process attestations and update head in forkchoice
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
+	var head state.BeaconState
+	if parentRoot != headRoot {
+		blockchain.LateBlockAttemptedReorgCount.Inc()
+		log.WithFields(logrus.Fields{
+			"slot":       req.Slot,
+			"parentRoot": fmt.Sprintf("%#x", parentRoot),
+			"headRoot":   fmt.Sprintf("%#x", headRoot),
+		}).Warn("late block attempted reorg failed")
+		// Try to get the state from the NSC
+		head = transition.NextSlotState(parentRoot[:], req.Slot)
+		if head == nil {
+			// cache miss
+			head, err = vs.StateGen.StateByRoot(ctx, parentRoot)
+			if err != nil {
+				return nil, status.Error(codes.Unavailable, "could not obtain head state")
+			}
+		}
+	} else {
+		// Try to get the state from the NSC
+		head = transition.NextSlotState(parentRoot[:], req.Slot)
+		if head == nil {
+			head, err = vs.HeadFetcher.HeadState(ctx)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+			}
+		}
+	}
+	if head.Slot() < req.Slot {
+		head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
+		}
+	}
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	}
-
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
