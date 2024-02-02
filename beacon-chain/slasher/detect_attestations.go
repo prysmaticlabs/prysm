@@ -243,25 +243,20 @@ func (s *Service) updateSpans(
 				if validatorChunkIndex != computedValidatorChunkIdx {
 					continue
 				}
+
 				slashing, err := s.applyAttestationForValidator(
-					ctx,
-					updatedChunks,
-					attestation,
-					kind,
-					validatorChunkIndex,
-					validatorIndex,
-					currentEpoch,
+					ctx, updatedChunks, attestation, kind, validatorChunkIndex, validatorIndex, currentEpoch,
 				)
+
 				if err != nil {
-					return nil, errors.Wrapf(
-						err,
-						"could not apply attestation for validator index %d",
-						validatorIndex,
-					)
+					return nil, errors.Wrapf(err, "could not apply attestation for validator index %d", validatorIndex)
 				}
-				if slashing != nil {
-					slashings = append(slashings, slashing)
+
+				if slashing == nil {
+					continue
 				}
+
+				slashings = append(slashings, slashing)
 			}
 		}
 	}
