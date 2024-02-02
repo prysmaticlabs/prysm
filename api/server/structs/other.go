@@ -1,7 +1,7 @@
-package shared
+package structs
 
 type Validator struct {
-	PublicKey                  string `json:"pubkey"`
+	Pubkey                     string `json:"pubkey"`
 	WithdrawalCredentials      string `json:"withdrawal_credentials"`
 	EffectiveBalance           string `json:"effective_balance"`
 	Slashed                    bool   `json:"slashed"`

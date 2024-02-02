@@ -1,4 +1,4 @@
-package shared
+package structs
 
 type BeaconState struct {
 	GenesisTime                 string                `json:"genesis_time"`

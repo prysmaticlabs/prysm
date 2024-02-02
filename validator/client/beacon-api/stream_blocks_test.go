@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -122,7 +122,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			expectedErrorMessage: "failed to get signed %s block",
 			conversionError:      errors.New("foo"),
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(shared.SignedBeaconBlock{Signature: "0x01"})
+				blockBytes, err := json.Marshal(structs.SignedBeaconBlock{Signature: "0x01"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -131,7 +131,7 @@ func TestStreamBlocks_Error(t *testing.T) {
 			name:                 "signature decoding failed",
 			expectedErrorMessage: "failed to decode %s block signature `foo`",
 			generateData: func(consensusVersion string) []byte {
-				blockBytes, err := json.Marshal(shared.SignedBeaconBlock{Signature: "foo"})
+				blockBytes, err := json.Marshal(structs.SignedBeaconBlock{Signature: "foo"})
 				require.NoError(t, err)
 				return blockBytes
 			},
@@ -205,7 +205,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			phase0BeaconBlock1 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := shared.SignedBeaconBlock{
+			signedBeaconBlockContainer1 := structs.SignedBeaconBlock{
 				Message:   phase0BeaconBlock1,
 				Signature: "0x01",
 			}
@@ -242,7 +242,7 @@ func TestStreamBlocks_Phase0Valid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			phase0BeaconBlock2 := test_helpers.GenerateJsonPhase0BeaconBlock()
 			phase0BeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := shared.SignedBeaconBlock{
+			signedBeaconBlockContainer2 := structs.SignedBeaconBlock{
 				Message:   phase0BeaconBlock2,
 				Signature: "0x02",
 			}
@@ -366,7 +366,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			altairBeaconBlock1 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := shared.SignedBeaconBlockAltair{
+			signedBeaconBlockContainer1 := structs.SignedBeaconBlockAltair{
 				Message:   altairBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -403,7 +403,7 @@ func TestStreamBlocks_AltairValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			altairBeaconBlock2 := test_helpers.GenerateJsonAltairBeaconBlock()
 			altairBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := shared.SignedBeaconBlockAltair{
+			signedBeaconBlockContainer2 := structs.SignedBeaconBlockAltair{
 				Message:   altairBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -527,7 +527,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			bellatrixBeaconBlock1 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := shared.SignedBeaconBlockBellatrix{
+			signedBeaconBlockContainer1 := structs.SignedBeaconBlockBellatrix{
 				Message:   bellatrixBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -564,7 +564,7 @@ func TestStreamBlocks_BellatrixValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			bellatrixBeaconBlock2 := test_helpers.GenerateJsonBellatrixBeaconBlock()
 			bellatrixBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := shared.SignedBeaconBlockBellatrix{
+			signedBeaconBlockContainer2 := structs.SignedBeaconBlockBellatrix{
 				Message:   bellatrixBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -688,7 +688,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
 			capellaBeaconBlock1 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock1.Slot = "1"
-			signedBeaconBlockContainer1 := shared.SignedBeaconBlockCapella{
+			signedBeaconBlockContainer1 := structs.SignedBeaconBlockCapella{
 				Message:   capellaBeaconBlock1,
 				Signature: "0x01",
 			}
@@ -725,7 +725,7 @@ func TestStreamBlocks_CapellaValid(t *testing.T) {
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 			capellaBeaconBlock2 := test_helpers.GenerateJsonCapellaBeaconBlock()
 			capellaBeaconBlock2.Slot = "2"
-			signedBeaconBlockContainer2 := shared.SignedBeaconBlockCapella{
+			signedBeaconBlockContainer2 := structs.SignedBeaconBlockCapella{
 				Message:   capellaBeaconBlock2,
 				Signature: "0x02",
 			}
@@ -847,7 +847,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 
 			// For the first call, return a block that satisfies the verifiedOnly condition. This block should be returned by the first Recv().
 			// For the second call, return the same block as the previous one. This block shouldn't be returned by the second Recv().
-			var blockContents shared.SignedBeaconBlockContentsDeneb
+			var blockContents structs.SignedBeaconBlockContentsDeneb
 			err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents)
 			require.NoError(t, err)
 			sig := "0x1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"
@@ -875,7 +875,7 @@ func TestStreamBlocks_DenebValid(t *testing.T) {
 			// For the third call, return a block with a different slot than the previous one, but with the verifiedOnly condition not satisfied.
 			// If verifiedOnly == false, this block will be returned by the second Recv(); otherwise, another block will be requested.
 
-			var blockContents2 shared.SignedBeaconBlockContentsDeneb
+			var blockContents2 structs.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents2)
 			require.NoError(t, err)
 			sig2 := "0x2b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505cc411d61252fb6cb3fa0017b679f8bb2305b26a285fa2737f175668d0dff91cc1b66ac1fb663c9bc59509846d6ec05345bd908eda73e670af888da41af171505"

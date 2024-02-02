@@ -10,7 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -100,14 +100,14 @@ func TestActivation_Nominal(t *testing.T) {
 		},
 	}
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 
 	// Instantiate a cancellable context.
 	ctx, cancel := context.WithCancel(context.Background())
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	req := &beacon.GetValidatorsRequest{
+	req := &structs.GetValidatorsRequest{
 		Ids:      stringPubKeys,
 		Statuses: []string{},
 	}
@@ -125,26 +125,26 @@ func TestActivation_Nominal(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[0],
 					},
 				},
 				{
 					Index:  "11877",
 					Status: "active_exiting",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[1],
 					},
 				},
 				{
 					Index:  "210439",
 					Status: "exited_slashed",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKeys[3],
 					},
 				},
@@ -186,16 +186,16 @@ func TestActivation_Nominal(t *testing.T) {
 func TestActivation_InvalidData(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		data                 []*beacon.ValidatorContainer
+		data                 []*structs.ValidatorContainer
 		expectedErrorMessage string
 	}{
 		{
 			name: "bad validator public key",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: "NotAPubKey",
 					},
 				},
@@ -204,11 +204,11 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "bad validator index",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "NotAnIndex",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -217,11 +217,11 @@ func TestActivation_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid validator status",
-			data: []*beacon.ValidatorContainer{
+			data: []*structs.ValidatorContainer{
 				{
 					Index:  "12345",
 					Status: "NotAStatus",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -249,7 +249,7 @@ func TestActivation_InvalidData(t *testing.T) {
 					nil,
 				).SetArg(
 					4,
-					beacon.GetValidatorsResponse{
+					structs.GetValidatorsResponse{
 						Data: testCase.data,
 					},
 				).Times(1)

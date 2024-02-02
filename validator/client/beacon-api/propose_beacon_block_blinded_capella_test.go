@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -28,14 +28,14 @@ func TestProposeBeaconBlock_BlindedCapella(t *testing.T) {
 	genericSignedBlock := &ethpb.GenericSignedBeaconBlock{}
 	genericSignedBlock.Block = blindedCapellaBlock
 
-	jsonBlindedCapellaBlock := &shared.SignedBlindedBeaconBlockCapella{
+	jsonBlindedCapellaBlock := &structs.SignedBlindedBeaconBlockCapella{
 		Signature: hexutil.Encode(blindedCapellaBlock.BlindedCapella.Signature),
-		Message: &shared.BlindedBeaconBlockCapella{
+		Message: &structs.BlindedBeaconBlockCapella{
 			ParentRoot:    hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.ParentRoot),
 			ProposerIndex: uint64ToString(blindedCapellaBlock.BlindedCapella.Block.ProposerIndex),
 			Slot:          uint64ToString(blindedCapellaBlock.BlindedCapella.Block.Slot),
 			StateRoot:     hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.StateRoot),
-			Body: &shared.BlindedBeaconBlockBodyCapella{
+			Body: &structs.BlindedBeaconBlockBodyCapella{
 				Attestations:      jsonifyAttestations(blindedCapellaBlock.BlindedCapella.Block.Body.Attestations),
 				AttesterSlashings: jsonifyAttesterSlashings(blindedCapellaBlock.BlindedCapella.Block.Body.AttesterSlashings),
 				Deposits:          jsonifyDeposits(blindedCapellaBlock.BlindedCapella.Block.Body.Deposits),
@@ -44,11 +44,11 @@ func TestProposeBeaconBlock_BlindedCapella(t *testing.T) {
 				ProposerSlashings: jsonifyProposerSlashings(blindedCapellaBlock.BlindedCapella.Block.Body.ProposerSlashings),
 				RandaoReveal:      hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.RandaoReveal),
 				VoluntaryExits:    JsonifySignedVoluntaryExits(blindedCapellaBlock.BlindedCapella.Block.Body.VoluntaryExits),
-				SyncAggregate: &shared.SyncAggregate{
+				SyncAggregate: &structs.SyncAggregate{
 					SyncCommitteeBits:      hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.SyncAggregate.SyncCommitteeBits),
 					SyncCommitteeSignature: hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.SyncAggregate.SyncCommitteeSignature),
 				},
-				ExecutionPayloadHeader: &shared.ExecutionPayloadHeaderCapella{
+				ExecutionPayloadHeader: &structs.ExecutionPayloadHeaderCapella{
 					BaseFeePerGas:    bytesutil.LittleEndianBytesToBigInt(blindedCapellaBlock.BlindedCapella.Block.Body.ExecutionPayloadHeader.BaseFeePerGas).String(),
 					BlockHash:        hexutil.Encode(blindedCapellaBlock.BlindedCapella.Block.Body.ExecutionPayloadHeader.BlockHash),
 					BlockNumber:      uint64ToString(blindedCapellaBlock.BlindedCapella.Block.Body.ExecutionPayloadHeader.BlockNumber),

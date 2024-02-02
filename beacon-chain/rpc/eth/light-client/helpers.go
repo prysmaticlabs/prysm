@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -35,7 +35,7 @@ import (
 //	    current_sync_committee=state.current_sync_committee,
 //	    current_sync_committee_branch=compute_merkle_proof_for_state(state, CURRENT_SYNC_COMMITTEE_INDEX)
 //	)
-func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*LightClientBootstrap, error) {
+func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*structs.LightClientBootstrap, error) {
 	// assert compute_epoch_at_slot(state.slot) >= ALTAIR_FORK_EPOCH
 	if slots.ToEpoch(state.Slot()) < params.BeaconConfig().AltairForkEpoch {
 		return nil, fmt.Errorf("light client bootstrap is not supported before Altair, invalid slot %d", state.Slot())
@@ -53,7 +53,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		return nil, fmt.Errorf("could not get current sync committee: %s", err.Error())
 	}
 
-	committee := shared.SyncCommitteeFromConsensus(currentSyncCommittee)
+	committee := structs.SyncCommitteeFromConsensus(currentSyncCommittee)
 
 	currentSyncCommitteeProof, err := state.CurrentSyncCommitteeProof(ctx)
 	if err != nil {
@@ -65,7 +65,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 		branch[i] = hexutil.Encode(proof)
 	}
 
-	header := shared.BeaconBlockHeaderFromConsensus(latestBlockHeader)
+	header := structs.BeaconBlockHeaderFromConsensus(latestBlockHeader)
 	if header == nil {
 		return nil, fmt.Errorf("could not get beacon block header")
 	}
@@ -78,7 +78,7 @@ func createLightClientBootstrap(ctx context.Context, state state.BeaconState) (*
 	header.StateRoot = hexutil.Encode(stateRoot[:])
 
 	// Return result
-	result := &LightClientBootstrap{
+	result := &structs.LightClientBootstrap{
 		Header:                     header,
 		CurrentSyncCommittee:       committee,
 		CurrentSyncCommitteeBranch: branch,
@@ -150,7 +150,7 @@ func createLightClientUpdate(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
-	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*LightClientUpdate, error) {
+	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
 	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
@@ -208,7 +208,7 @@ func newLightClientFinalityUpdateFromBeaconState(
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
 	attestedState state.BeaconState,
-	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*LightClientUpdate, error) {
+	finalizedBlock interfaces.ReadOnlySignedBeaconBlock) (*structs.LightClientUpdate, error) {
 	result, err := blockchain.NewLightClientFinalityUpdateFromBeaconState(ctx, state, block, attestedState, finalizedBlock)
 	if err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	ctx context.Context,
 	state state.BeaconState,
 	block interfaces.ReadOnlySignedBeaconBlock,
-	attestedState state.BeaconState) (*LightClientUpdate, error) {
+	attestedState state.BeaconState) (*structs.LightClientUpdate, error) {
 	result, err := blockchain.NewLightClientOptimisticUpdateFromBeaconState(ctx, state, block, attestedState)
 	if err != nil {
 		return nil, err
@@ -230,7 +230,7 @@ func newLightClientOptimisticUpdateFromBeaconState(
 	return newLightClientUpdateToJSON(result), nil
 }
 
-func NewLightClientBootstrapFromJSON(bootstrapJSON *LightClientBootstrap) (*v2.LightClientBootstrap, error) {
+func NewLightClientBootstrapFromJSON(bootstrapJSON *structs.LightClientBootstrap) (*v2.LightClientBootstrap, error) {
 	bootstrap := &v2.LightClientBootstrap{}
 
 	var err error
@@ -276,33 +276,33 @@ func branchToJSON(branchBytes [][]byte) []string {
 	return branch
 }
 
-func syncAggregateToJSON(input *v1.SyncAggregate) *shared.SyncAggregate {
+func syncAggregateToJSON(input *v1.SyncAggregate) *structs.SyncAggregate {
 	if input == nil {
 		return nil
 	}
-	return &shared.SyncAggregate{
+	return &structs.SyncAggregate{
 		SyncCommitteeBits:      hexutil.Encode(input.SyncCommitteeBits),
 		SyncCommitteeSignature: hexutil.Encode(input.SyncCommitteeSignature),
 	}
 }
 
-func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *LightClientUpdate {
+func newLightClientUpdateToJSON(input *v2.LightClientUpdate) *structs.LightClientUpdate {
 	if input == nil {
 		return nil
 	}
 
-	var nextSyncCommittee *shared.SyncCommittee
+	var nextSyncCommittee *structs.SyncCommittee
 	if input.NextSyncCommittee != nil {
-		nextSyncCommittee = shared.SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(input.NextSyncCommittee))
+		nextSyncCommittee = structs.SyncCommitteeFromConsensus(migration.V2SyncCommitteeToV1Alpha1(input.NextSyncCommittee))
 	}
 
-	var finalizedHeader *shared.BeaconBlockHeader
+	var finalizedHeader *structs.BeaconBlockHeader
 	if input.FinalizedHeader != nil {
-		finalizedHeader = shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader))
+		finalizedHeader = structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.FinalizedHeader))
 	}
 
-	return &LightClientUpdate{
-		AttestedHeader:          shared.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
+	return &structs.LightClientUpdate{
+		AttestedHeader:          structs.BeaconBlockHeaderFromConsensus(migration.V1HeaderToV1Alpha1(input.AttestedHeader)),
 		NextSyncCommittee:       nextSyncCommittee,
 		NextSyncCommitteeBranch: branchToJSON(input.NextSyncCommitteeBranch),
 		FinalizedHeader:         finalizedHeader,

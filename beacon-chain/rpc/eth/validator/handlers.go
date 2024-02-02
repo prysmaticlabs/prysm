@@ -13,6 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/builder"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -76,18 +77,18 @@ func (s *Server) GetAggregateAttestation(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	response := &AggregateAttestationResponse{
-		Data: &shared.Attestation{
+	response := &structs.AggregateAttestationResponse{
+		Data: &structs.Attestation{
 			AggregationBits: hexutil.Encode(match.AggregationBits),
-			Data: &shared.AttestationData{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(uint64(match.Data.Slot), 10),
 				CommitteeIndex:  strconv.FormatUint(uint64(match.Data.CommitteeIndex), 10),
 				BeaconBlockRoot: hexutil.Encode(match.Data.BeaconBlockRoot),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(match.Data.Source.Epoch), 10),
 					Root:  hexutil.Encode(match.Data.Source.Root),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(match.Data.Target.Epoch), 10),
 					Root:  hexutil.Encode(match.Data.Target.Root),
 				},
@@ -117,7 +118,7 @@ func (s *Server) SubmitContributionAndProofs(w http.ResponseWriter, r *http.Requ
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitContributionAndProofs")
 	defer span.End()
 
-	var req SubmitContributionAndProofsRequest
+	var req structs.SubmitContributionAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -150,7 +151,7 @@ func (s *Server) SubmitAggregateAndProofs(w http.ResponseWriter, r *http.Request
 	ctx, span := trace.StartSpan(r.Context(), "validator.SubmitAggregateAndProofs")
 	defer span.End()
 
-	var req SubmitAggregateAndProofsRequest
+	var req structs.SubmitAggregateAndProofsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -205,7 +206,7 @@ func (s *Server) SubmitSyncCommitteeSubscription(w http.ResponseWriter, r *http.
 		return
 	}
 
-	var req SubmitSyncCommitteeSubscriptionsRequest
+	var req structs.SubmitSyncCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -315,7 +316,7 @@ func (s *Server) SubmitBeaconCommitteeSubscription(w http.ResponseWriter, r *htt
 		return
 	}
 
-	var req SubmitBeaconCommitteeSubscriptionsRequest
+	var req structs.SubmitBeaconCommitteeSubscriptionsRequest
 	err := json.NewDecoder(r.Body).Decode(&req.Data)
 	switch {
 	case err == io.EOF:
@@ -421,16 +422,16 @@ func (s *Server) GetAttestationData(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := &GetAttestationDataResponse{
-		Data: &shared.AttestationData{
+	response := &structs.GetAttestationDataResponse{
+		Data: &structs.AttestationData{
 			Slot:            strconv.FormatUint(uint64(attestationData.Slot), 10),
 			CommitteeIndex:  strconv.FormatUint(uint64(attestationData.CommitteeIndex), 10),
 			BeaconBlockRoot: hexutil.Encode(attestationData.BeaconBlockRoot),
-			Source: &shared.Checkpoint{
+			Source: &structs.Checkpoint{
 				Epoch: strconv.FormatUint(uint64(attestationData.Source.Epoch), 10),
 				Root:  hexutil.Encode(attestationData.Source.Root),
 			},
-			Target: &shared.Checkpoint{
+			Target: &structs.Checkpoint{
 				Epoch: strconv.FormatUint(uint64(attestationData.Target.Epoch), 10),
 				Root:  hexutil.Encode(attestationData.Target.Root),
 			},
@@ -462,7 +463,7 @@ func (s *Server) ProduceSyncCommitteeContribution(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	response := &ProduceSyncCommitteeContributionResponse{
+	response := &structs.ProduceSyncCommitteeContributionResponse{
 		Data: contribution,
 	}
 	httputil.WriteJson(w, response)
@@ -475,7 +476,7 @@ func (s *Server) produceSyncCommitteeContribution(
 	slot primitives.Slot,
 	index uint64,
 	blockRoot []byte,
-) (*shared.SyncCommitteeContribution, bool) {
+) (*structs.SyncCommitteeContribution, bool) {
 	msgs, err := s.SyncCommitteePool.SyncCommitteeMessages(slot)
 	if err != nil {
 		httputil.HandleError(w, "Could not get sync subcommittee messages: "+err.Error(), http.StatusInternalServerError)
@@ -499,7 +500,7 @@ func (s *Server) produceSyncCommitteeContribution(
 		return nil, false
 	}
 
-	return &shared.SyncCommitteeContribution{
+	return &structs.SyncCommitteeContribution{
 		Slot:              strconv.FormatUint(uint64(slot), 10),
 		BeaconBlockRoot:   hexutil.Encode(blockRoot),
 		SubcommitteeIndex: strconv.FormatUint(index, 10),
@@ -518,7 +519,7 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var jsonRegistrations []*shared.SignedValidatorRegistration
+	var jsonRegistrations []*structs.SignedValidatorRegistration
 	err := json.NewDecoder(r.Body).Decode(&jsonRegistrations)
 	switch {
 	case err == io.EOF:
@@ -551,7 +552,7 @@ func (s *Server) RegisterValidator(w http.ResponseWriter, r *http.Request) {
 
 // PrepareBeaconProposer endpoint saves the fee recipient given a validator index, this is used when proposing a block.
 func (s *Server) PrepareBeaconProposer(w http.ResponseWriter, r *http.Request) {
-	var jsonFeeRecipients []*shared.FeeRecipient
+	var jsonFeeRecipients []*structs.FeeRecipient
 	err := json.NewDecoder(r.Body).Decode(&jsonFeeRecipients)
 	switch {
 	case err == io.EOF:
@@ -675,7 +676,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 	}
 	committeesAtSlot := helpers.SlotCommitteeCount(activeValidatorCount)
 
-	duties := make([]*AttesterDuty, 0, len(requestedValIndices))
+	duties := make([]*structs.AttesterDuty, 0, len(requestedValIndices))
 	for _, index := range requestedValIndices {
 		pubkey := st.PubkeyAtIndex(index)
 		var zeroPubkey [fieldparams.BLSPubkeyLength]byte
@@ -696,7 +697,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 				break
 			}
 		}
-		duties = append(duties, &AttesterDuty{
+		duties = append(duties, &structs.AttesterDuty{
 			Pubkey:                  hexutil.Encode(pubkey[:]),
 			ValidatorIndex:          strconv.FormatUint(uint64(index), 10),
 			CommitteeIndex:          strconv.FormatUint(uint64(committee.CommitteeIndex), 10),
@@ -718,7 +719,7 @@ func (s *Server) GetAttesterDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := &GetAttesterDutiesResponse{
+	response := &structs.GetAttesterDutiesResponse{
 		DependentRoot:       hexutil.Encode(dependentRoot),
 		Data:                duties,
 		ExecutionOptimistic: isOptimistic,
@@ -803,7 +804,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	duties := make([]*ProposerDuty, 0)
+	duties := make([]*structs.ProposerDuty, 0)
 	for index, proposalSlots := range proposals {
 		val, err := st.ValidatorAtIndexReadOnly(index)
 		if err != nil {
@@ -813,7 +814,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		pubkey48 := val.PublicKey()
 		pubkey := pubkey48[:]
 		for _, slot := range proposalSlots {
-			duties = append(duties, &ProposerDuty{
+			duties = append(duties, &structs.ProposerDuty{
 				Pubkey:         hexutil.Encode(pubkey),
 				ValidatorIndex: strconv.FormatUint(uint64(index), 10),
 				Slot:           strconv.FormatUint(uint64(slot), 10),
@@ -835,7 +836,7 @@ func (s *Server) GetProposerDuties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &GetProposerDutiesResponse{
+	resp := &structs.GetProposerDutiesResponse{
 		DependentRoot:       hexutil.Encode(dependentRoot),
 		Data:                duties,
 		ExecutionOptimistic: isOptimistic,
@@ -973,7 +974,7 @@ func (s *Server) GetSyncCommitteeDuties(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	resp := &GetSyncCommitteeDutiesResponse{
+	resp := &structs.GetSyncCommitteeDutiesResponse{
 		Data:                duties,
 		ExecutionOptimistic: isOptimistic,
 	}
@@ -1068,15 +1069,15 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := &GetLivenessResponse{
-		Data: make([]*Liveness, len(requestedValIndices)),
+	resp := &structs.GetLivenessResponse{
+		Data: make([]*structs.Liveness, len(requestedValIndices)),
 	}
 	for i, vi := range requestedValIndices {
 		if vi >= primitives.ValidatorIndex(len(participation)) {
 			httputil.HandleError(w, fmt.Sprintf("Validator index %d is invalid", vi), http.StatusBadRequest)
 			return
 		}
-		resp.Data[i] = &Liveness{
+		resp.Data[i] = &structs.Liveness{
 			Index:  strconv.FormatUint(uint64(vi), 10),
 			IsLive: participation[vi] != 0,
 		}
@@ -1139,11 +1140,11 @@ func syncCommitteeDutiesAndVals(
 	st state.BeaconState,
 	requestedValIndices []primitives.ValidatorIndex,
 	committeePubkeys map[[fieldparams.BLSPubkeyLength]byte][]string,
-) ([]*SyncCommitteeDuty, []state.ReadOnlyValidator, error) {
-	duties := make([]*SyncCommitteeDuty, 0)
+) ([]*structs.SyncCommitteeDuty, []state.ReadOnlyValidator, error) {
+	duties := make([]*structs.SyncCommitteeDuty, 0)
 	vals := make([]state.ReadOnlyValidator, 0)
 	for _, index := range requestedValIndices {
-		duty := &SyncCommitteeDuty{
+		duty := &structs.SyncCommitteeDuty{
 			ValidatorIndex: strconv.FormatUint(uint64(index), 10),
 		}
 		valPubkey := st.PubkeyAtIndex(index)
@@ -1166,7 +1167,7 @@ func syncCommitteeDutiesAndVals(
 	return duties, vals, nil
 }
 
-func sortProposerDuties(w http.ResponseWriter, duties []*ProposerDuty) bool {
+func sortProposerDuties(w http.ResponseWriter, duties []*structs.ProposerDuty) bool {
 	ok := true
 	sort.Slice(duties, func(i, j int) bool {
 		si, err := strconv.ParseUint(duties[i].Slot, 10, 64)

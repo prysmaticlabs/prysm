@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -22,7 +22,7 @@ const stringPubKey = "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200
 func getPubKeyAndReqBuffer(t *testing.T) ([]byte, *bytes.Buffer) {
 	pubKey, err := hexutil.Decode(stringPubKey)
 	require.NoError(t, err)
-	req := beacon.GetValidatorsRequest{
+	req := structs.GetValidatorsRequest{
 		Ids:      []string{stringPubKey},
 		Statuses: []string{},
 	}
@@ -38,7 +38,7 @@ func TestIndex_Nominal(t *testing.T) {
 	pubKey, reqBuffer := getPubKeyAndReqBuffer(t)
 	ctx := context.Background()
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
@@ -51,12 +51,12 @@ func TestIndex_Nominal(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index:  "55293",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -88,7 +88,7 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 	pubKey, reqBuffer := getPubKeyAndReqBuffer(t)
 	ctx := context.Background()
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
@@ -101,8 +101,8 @@ func TestIndex_UnexistingValidator(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{},
+		structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{},
 		},
 	).Times(1)
 
@@ -130,7 +130,7 @@ func TestIndex_BadIndexError(t *testing.T) {
 	pubKey, reqBuffer := getPubKeyAndReqBuffer(t)
 	ctx := context.Background()
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
@@ -143,12 +143,12 @@ func TestIndex_BadIndexError(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index:  "This is not an index",
 					Status: "active_ongoing",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -179,7 +179,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 	pubKey, reqBuffer := getPubKeyAndReqBuffer(t)
 	ctx := context.Background()
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(

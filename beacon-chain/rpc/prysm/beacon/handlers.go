@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -57,9 +58,9 @@ func (s *Server) GetWeakSubjectivity(w http.ResponseWriter, r *http.Request) {
 	stateRoot := cb.Block().StateRoot()
 	log.Printf("Weak subjectivity checkpoint reported as epoch=%d, block root=%#x, state root=%#x", wsEpoch, cbr, stateRoot)
 
-	resp := &GetWeakSubjectivityResponse{
-		Data: &WeakSubjectivityData{
-			WsCheckpoint: &shared.Checkpoint{
+	resp := &structs.GetWeakSubjectivityResponse{
+		Data: &structs.WeakSubjectivityData{
+			WsCheckpoint: &structs.Checkpoint{
 				Epoch: strconv.FormatUint(uint64(wsEpoch), 10),
 				Root:  hexutil.Encode(cbr[:]),
 			},

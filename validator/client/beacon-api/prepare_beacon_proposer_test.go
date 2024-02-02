@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -28,7 +28,7 @@ func TestPrepareBeaconProposer_Valid(t *testing.T) {
 
 	ctx := context.Background()
 
-	jsonRecipients := []*shared.FeeRecipient{
+	jsonRecipients := []*structs.FeeRecipient{
 		{
 			ValidatorIndex: "1",
 			FeeRecipient:   feeRecipient1,
