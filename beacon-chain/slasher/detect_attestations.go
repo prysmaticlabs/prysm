@@ -190,10 +190,12 @@ func (s *Service) epochUpdateForValidator(
 
 	for epoch <= args.currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
+
 		currentChunk, err := s.getChunk(ctx, args, updatedChunks, chunkIdx)
 		if err != nil {
 			return err
 		}
+
 		for s.params.chunkIndex(epoch) == chunkIdx && epoch <= args.currentEpoch {
 			if err := setChunkRawDistance(
 				s.params,
@@ -208,6 +210,7 @@ func (s *Service) epochUpdateForValidator(
 			epoch++
 		}
 	}
+
 	return nil
 }
 
@@ -379,7 +382,7 @@ func (s *Service) getChunk(
 	}
 
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
-	diskChunks, err := s.loadChunks(ctx, args, []uint64{chunkIdx})
+	diskChunks, err := s.loadChunks(ctx, args.validatorChunkIndex, args.kind, []uint64{chunkIdx})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIdx)
 	}
@@ -396,7 +399,8 @@ func (s *Service) getChunk(
 // an empty chunk, add it to our map, and then return it to the caller.
 func (s *Service) loadChunks(
 	ctx context.Context,
-	args *chunkUpdateArgs,
+	validatorChunkIndex uint64,
+	chunkKind slashertypes.ChunkKind,
 	chunkIndices []uint64,
 ) (map[uint64]Chunker, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.loadChunks")
@@ -404,10 +408,10 @@ func (s *Service) loadChunks(
 
 	chunkKeys := make([][]byte, 0, len(chunkIndices))
 	for _, chunkIdx := range chunkIndices {
-		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
+		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIdx))
 	}
 
-	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, args.kind, chunkKeys)
+	rawChunks, chunksExist, err := s.serviceCfg.Database.LoadSlasherChunks(ctx, chunkKind, chunkKeys)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load slasher chunk index")
 	}
@@ -423,7 +427,7 @@ func (s *Service) loadChunks(
 
 		chunkExists := chunksExist[i]
 
-		switch args.kind {
+		switch chunkKind {
 		case slashertypes.MinSpan:
 			if chunkExists {
 				chunk, err = MinChunkSpansSliceFrom(s.params, rawChunks[i])
