@@ -961,6 +961,9 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		"attesterCount": totalAttestingKeys,
 	}).Infof("Schedule for epoch %d", slots.ToEpoch(slot))
 	for i := primitives.Slot(0); i < params.BeaconConfig().SlotsPerEpoch; i++ {
+		startTime := slots.StartTime(v.genesisTime, epochStartSlot+i)
+		durationTillDuty := (time.Until(startTime) + time.Second).Truncate(time.Second) // Round up to next second.
+
 		slotLog := log.WithFields(logrus.Fields{})
 		if proposerKeys[i] != "" {
 			slotLog = slotLog.WithField("proposerPubkey", proposerKeys[i])
@@ -972,6 +975,9 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 				"attesterCount":   len(attesterKeys[i]),
 				"attesterPubkeys": attesterKeys[i],
 			})
+		}
+		if durationTillDuty > 0 {
+			slotLog = slotLog.WithField("timeTillDuty", durationTillDuty)
 		}
 		slotLog.Infof("Duties schedule")
 	}
