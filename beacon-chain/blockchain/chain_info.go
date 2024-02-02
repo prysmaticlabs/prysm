@@ -559,15 +559,20 @@ func (s *Service) RecentBlockSlot(root [32]byte) (primitives.Slot, error) {
 
 // inRegularSync applies the following heuristics to decide if the node is in
 // regular sync mode vs init sync mode using only forkchoice.
-// It checks that the highest received block is behind the current time by at least 2 epochs
-// and that it was imported at least one epoch late if both of these
-// tests pass then the node is in init sync. The caller of this function MUST
-// have a lock on forkchoice
+// The caller of this function MUST  have a lock on forkchoice
 func (s *Service) inRegularSync() bool {
 	currentSlot := s.CurrentSlot()
 	fc := s.cfg.ForkChoiceStore
-	if currentSlot-fc.HighestReceivedBlockSlot() < 2*params.BeaconConfig().SlotsPerEpoch {
+	highestSlot := fc.HighestReceivedBlockSlot()
+	// if the highest received slot is from the same epoch, we are in regular sync
+	if slots.ToEpoch(currentSlot) == slots.ToEpoch(highestSlot) {
 		return true
 	}
-	return fc.HighestReceivedBlockDelay() < params.BeaconConfig().SlotsPerEpoch
+	// If the highest received block is less than 2 blocks away we are in regular sync
+	if currentSlot-fc.HighestReceivedBlockSlot() < primitives.Slot(2) {
+		return true
+	}
+	// At this stage the last block received is from the previous epoch and more than 2 blocks ago.
+	// If the highest slot was received during its slot or the next one then we are in regular sync
+	return fc.HighestReceivedBlockDelay() < primitives.Slot(2)
 }

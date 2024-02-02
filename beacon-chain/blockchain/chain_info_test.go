@@ -609,7 +609,7 @@ func TestService_inRegularSync(t *testing.T) {
 	require.NoError(t, c.cfg.ForkChoiceStore.InsertNode(ctx, st, blkRoot))
 	require.Equal(t, false, c.inRegularSync())
 
-	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-5*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
+	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-4*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
 	require.Equal(t, true, c.inRegularSync())
 
 	c.SetGenesisTime(time.Now().Add(time.Second * time.Duration(-1*int64(params.BeaconConfig().SlotsPerEpoch)*int64(params.BeaconConfig().SecondsPerSlot))))
