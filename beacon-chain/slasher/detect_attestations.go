@@ -52,7 +52,7 @@ func (s *Service) checkSlashableAttestations(
 
 		slashings = append(slashings, attSlashings...)
 
-		indices := s.params.validatorIndicesInChunk(validatorChunkIdx)
+		indices := s.params.validatorIndexesInChunk(validatorChunkIdx)
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
@@ -104,7 +104,7 @@ func (s *Service) checkSurrounds(
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)
-	validatorIndexes := s.params.validatorIndicesInChunk(args.validatorChunkIndex)
+	validatorIndexes := s.params.validatorIndexesInChunk(args.validatorChunkIndex)
 
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndexes {
