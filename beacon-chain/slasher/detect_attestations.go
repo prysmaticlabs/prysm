@@ -114,30 +114,14 @@ func (s *Service) checkSurrounds(
 	}
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, &chunkUpdateArgs{
-		kind:                slashertypes.MinSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
+	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MinSpan, args.validatorChunkIndex, args.currentEpoch)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"could not update min attestation spans for validator chunk index %d",
-			args.validatorChunkIndex,
-		)
+		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", args.validatorChunkIndex)
 	}
 
-	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, &chunkUpdateArgs{
-		kind:                slashertypes.MaxSpan,
-		validatorChunkIndex: args.validatorChunkIndex,
-		currentEpoch:        args.currentEpoch,
-	}, groupedAtts)
+	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MaxSpan, args.validatorChunkIndex, args.currentEpoch)
 	if err != nil {
-		return nil, errors.Wrapf(
-			err,
-			"could not update max attestation spans for validator chunk index %d",
-			args.validatorChunkIndex,
-		)
+		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", args.validatorChunkIndex)
 	}
 
 	slashings := make([]*ethpb.AttesterSlashing, 0, len(surroundingSlashings)+len(surroundedSlashings))
@@ -227,8 +211,10 @@ func (s *Service) epochUpdateForValidator(
 func (s *Service) updateSpans(
 	ctx context.Context,
 	updatedChunks map[uint64]Chunker,
-	args *chunkUpdateArgs,
 	attestationsByChunkIdx map[uint64][]*slashertypes.IndexedAttestationWrapper,
+	kind slashertypes.ChunkKind,
+	validatorChunkIndex uint64,
+	currentEpoch primitives.Epoch,
 ) ([]*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.updateSpans")
 	defer span.End()
@@ -251,17 +237,17 @@ func (s *Service) updateSpans(
 				// If we see an attestation with attesting indices [3, 4, 5] and we are updating
 				// chunks for validator chunk index 0, only validator index 3 should make
 				// it past this line.
-				if args.validatorChunkIndex != computedValidatorChunkIdx {
+				if validatorChunkIndex != computedValidatorChunkIdx {
 					continue
 				}
 				slashing, err := s.applyAttestationForValidator(
 					ctx,
 					att,
 					updatedChunks,
-					args.kind,
-					args.validatorChunkIndex,
+					kind,
+					validatorChunkIndex,
 					validatorIndex,
-					args.currentEpoch,
+					currentEpoch,
 				)
 				if err != nil {
 					return nil, errors.Wrapf(
