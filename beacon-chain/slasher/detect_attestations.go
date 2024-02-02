@@ -27,14 +27,17 @@ func (s *Service) checkSlashableAttestations(
 	if err != nil {
 		return nil, errors.Wrap(err, "could not check slashable double votes")
 	}
+
 	log.WithField("elapsed", time.Since(start)).Debug("Done checking double votes")
+
 	slashings = append(slashings, doubleVoteSlashings...)
 
 	// Surrounding / surrounded votes
 	groupedAtts := s.groupByValidatorChunkIndex(atts)
 	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
-	start = time.Now()
-	batchTimes := make([]time.Duration, 0, len(groupedAtts))
+	grouppedAttsCount := len(groupedAtts)
+
+	batchDurations := make([]time.Duration, 0, len(groupedAtts))
 
 	for validatorChunkIdx, batch := range groupedAtts {
 		innerStart := time.Now()
@@ -54,24 +57,27 @@ func (s *Service) checkSlashableAttestations(
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
 
-		batchTimes = append(batchTimes, time.Since(innerStart))
+		batchDurations = append(batchDurations, time.Since(innerStart))
 	}
 
-	avgProcessingTimePerBatch := time.Duration(0)
-	for _, dur := range batchTimes {
-		avgProcessingTimePerBatch += dur
+	// Elapsed time computation
+	totalBatchDuration := time.Duration(0)
+	for _, batchDuration := range batchDurations {
+		totalBatchDuration += batchDuration
 	}
 
-	if avgProcessingTimePerBatch != time.Duration(0) {
-		avgProcessingTimePerBatch = avgProcessingTimePerBatch / time.Duration(len(batchTimes))
-	}
-
-	log.WithFields(logrus.Fields{
+	fields := logrus.Fields{
 		"numAttestations":                 len(atts),
-		"numBatchesByValidatorChunkIndex": len(groupedAtts),
-		"elapsed":                         time.Since(start),
-		"avgBatchProcessingTime":          avgProcessingTimePerBatch,
-	}).Info("Done checking slashable attestations")
+		"numBatchesByValidatorChunkIndex": grouppedAttsCount,
+		"elapsed":                         totalBatchDuration,
+	}
+
+	if grouppedAttsCount > 0 {
+		avgProcessingTimePerBatch := totalBatchDuration / time.Duration(grouppedAttsCount)
+		fields["avgBatchProcessingTime"] = avgProcessingTimePerBatch
+	}
+
+	log.WithFields(fields).Info("Done checking slashable attestations")
 
 	if len(slashings) > 0 {
 		log.WithField("numSlashings", len(slashings)).Warn("Slashable attestation offenses found")
