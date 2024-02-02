@@ -185,8 +185,8 @@ func (s *Service) epochUpdateForValidator(
 	updatedChunks map[uint64]Chunker,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
-	latestEpochWritten := s.latestEpochWrittenForValidator[validatorIndex]
-	if latestEpochWritten == 0 {
+	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
+	if !ok {
 		return nil
 	}
 
