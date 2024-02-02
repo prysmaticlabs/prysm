@@ -195,11 +195,6 @@ func recheckKeys(ctx context.Context, valDB vdb.Database, keyManager keymanager.
 		log.WithError(err).Debug("Could not update public keys buckets")
 	}
 	go recheckValidatingKeysBucket(ctx, valDB, keyManager)
-	for _, key := range validatingKeys {
-		log.WithField(
-			"publicKey", fmt.Sprintf("%#x", bytesutil.Trunc(key[:])),
-		).Info("Validating for public key")
-	}
 }
 
 // to accounts changes in the keymanager, then updates those keys'
@@ -965,10 +960,12 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		durationTillDuty := (time.Until(startTime) + time.Second).Truncate(time.Second) // Round up to next second.
 
 		slotLog := log.WithFields(logrus.Fields{})
-		if proposerKeys[i] != "" {
+		isProposer := proposerKeys[i] != ""
+		if isProposer {
 			slotLog = slotLog.WithField("proposerPubkey", proposerKeys[i])
 		}
-		if len(attesterKeys[i]) > 0 {
+		isAttester := len(attesterKeys[i]) > 0
+		if isAttester {
 			slotLog = slotLog.WithFields(logrus.Fields{
 				"slot":            epochStartSlot + i,
 				"slotInEpoch":     (epochStartSlot + i) % params.BeaconConfig().SlotsPerEpoch,
@@ -979,7 +976,9 @@ func (v *validator) logDuties(slot primitives.Slot, currentEpochDuties []*ethpb.
 		if durationTillDuty > 0 {
 			slotLog = slotLog.WithField("timeTillDuty", durationTillDuty)
 		}
-		slotLog.Infof("Duties schedule")
+		if isProposer || isAttester {
+			slotLog.Infof("Duties schedule")
+		}
 	}
 }
 

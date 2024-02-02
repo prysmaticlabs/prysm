@@ -147,7 +147,6 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 	if err != nil {
 		return
 	}
-	logrus.Infof("Submitting attestation %#x", r)
 	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")

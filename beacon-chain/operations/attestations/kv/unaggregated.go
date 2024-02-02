@@ -7,6 +7,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/trace"
 )
 
@@ -19,11 +20,17 @@ func (c *AttCaches) SaveUnaggregatedAttestation(att *ethpb.Attestation) error {
 		return errors.New("attestation is aggregated")
 	}
 
+	root, err := att.Data.HashTreeRoot()
+	if err != nil {
+		return err
+	}
+
 	seen, err := c.hasSeenBit(att)
 	if err != nil {
 		return err
 	}
 	if seen {
+		log.Infof("Bit seen for attestation %#x", root)
 		return nil
 	}
 
