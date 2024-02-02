@@ -185,31 +185,31 @@ func (s *Service) epochUpdateForValidator(
 	updatedChunks map[uint64]Chunker,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
-	epoch := s.latestEpochWrittenForValidator[validatorIndex]
-	if epoch == 0 {
+	latestEpochWritten := s.latestEpochWrittenForValidator[validatorIndex]
+	if latestEpochWritten == 0 {
 		return nil
 	}
 
-	for epoch <= currentEpoch {
-		chunkIndex := s.params.chunkIndex(epoch)
+	for latestEpochWritten <= currentEpoch {
+		chunkIndex := s.params.chunkIndex(latestEpochWritten)
 
-		currentChunk, err := s.getChunk(ctx, validatorChunkIndex, chunkKind, updatedChunks, chunkIndex)
+		currentChunk, err := s.getChunk(ctx, updatedChunks, chunkKind, validatorChunkIndex, chunkIndex)
 		if err != nil {
 			return err
 		}
 
-		for s.params.chunkIndex(epoch) == chunkIndex && epoch <= currentEpoch {
+		for s.params.chunkIndex(latestEpochWritten) == chunkIndex && latestEpochWritten <= currentEpoch {
 			if err := setChunkRawDistance(
 				s.params,
 				currentChunk.Chunk(),
 				validatorIndex,
-				epoch,
+				latestEpochWritten,
 				currentChunk.NeutralElement(),
 			); err != nil {
 				return err
 			}
 			updatedChunks[chunkIndex] = currentChunk
-			epoch++
+			latestEpochWritten++
 		}
 	}
 
@@ -298,7 +298,7 @@ func (s *Service) applyAttestationForValidator(
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
-	chunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, chunksByChunkIdx, chunkIdx)
+	chunk, err := s.getChunk(ctx, chunksByChunkIdx, args.kind, args.validatorChunkIndex, chunkIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 	}
@@ -336,7 +336,7 @@ func (s *Service) applyAttestationForValidator(
 	// keep updating chunks.
 	for {
 		chunkIdx = s.params.chunkIndex(startEpoch)
-		chunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, chunksByChunkIdx, chunkIdx)
+		chunk, err := s.getChunk(ctx, chunksByChunkIdx, args.kind, args.validatorChunkIndex, chunkIdx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 		}
@@ -369,32 +369,33 @@ func (s *Service) applyAttestationForValidator(
 	return nil, nil
 }
 
-// Retrieves a chunk at a chunk index from a map. If such chunk does not exist, which
-// should be rare (occurring when we receive an attestation with source and target epochs
-// that span multiple chunk indices), then we fallback to fetching from disk.
+// Retrieves a chunk from `chunksByChunkIndex` using a chunk index.
+// If such chunk does not exist, which should be rare
+// (occurring when we receive an attestation with source and target epochs
+// that span multiple chunk indices), then fallbacks to fetching from database.
 func (s *Service) getChunk(
 	ctx context.Context,
-	validatorChunkIndex uint64,
+	chunksByChunkIndex map[uint64]Chunker,
 	chunkKind slashertypes.ChunkKind,
-	chunksByChunkIdx map[uint64]Chunker,
-	chunkIdx uint64,
+	validatorChunkIndex uint64,
+	chunkIndex uint64,
 ) (Chunker, error) {
 	// If the chunk exists in the map, we return it.
-	if chunk, ok := chunksByChunkIdx[chunkIdx]; ok {
+	if chunk, ok := chunksByChunkIndex[chunkIndex]; ok {
 		return chunk, nil
 	}
 
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
-	diskChunks, err := s.loadChunks(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIdx})
+	diskChunks, err := s.loadChunks(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIndex})
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIdx)
+		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIndex)
 	}
 
-	if chunk, ok := diskChunks[chunkIdx]; ok {
+	if chunk, ok := diskChunks[chunkIndex]; ok {
 		return chunk, nil
 	}
 
-	return nil, fmt.Errorf("could not retrieve chunk at chunk index %d from disk", chunkIdx)
+	return nil, fmt.Errorf("could not retrieve chunk at chunk index %d from disk", chunkIndex)
 }
 
 // Load chunks for a specified list of chunk indices. We attempt to load it from the database.
