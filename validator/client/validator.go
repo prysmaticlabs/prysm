@@ -15,8 +15,6 @@ import (
 	"sync"
 	"time"
 
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-
 	"github.com/dgraph-io/ristretto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -109,7 +107,7 @@ type validator struct {
 	validatorsRegBatchSize             int
 	distributed                        bool
 	attSelectionLock                   sync.Mutex
-	attSelections                      map[attSelectionKey]validator2.BeaconCommitteeSelection
+	attSelections                      map[attSelectionKey]iface.BeaconCommitteeSelection
 }
 
 type validatorStatus struct {
@@ -1262,7 +1260,7 @@ func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *et
 	// Create new instance of attestation selections map.
 	v.newAttSelections()
 
-	var req []validator2.BeaconCommitteeSelection
+	var req []iface.BeaconCommitteeSelection
 	for _, duty := range duties.CurrentEpochDuties {
 		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
 			continue
@@ -1274,7 +1272,7 @@ func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *et
 			return err
 		}
 
-		req = append(req, validator2.BeaconCommitteeSelection{
+		req = append(req, iface.BeaconCommitteeSelection{
 			SelectionProof: slotSig,
 			Slot:           duty.AttesterSlot,
 			ValidatorIndex: duty.ValidatorIndex,
@@ -1292,7 +1290,7 @@ func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *et
 			return err
 		}
 
-		req = append(req, validator2.BeaconCommitteeSelection{
+		req = append(req, iface.BeaconCommitteeSelection{
 			SelectionProof: slotSig,
 			Slot:           duty.AttesterSlot,
 			ValidatorIndex: duty.ValidatorIndex,
@@ -1310,7 +1308,7 @@ func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *et
 	return nil
 }
 
-func (v *validator) addAttSelections(selections []validator2.BeaconCommitteeSelection) {
+func (v *validator) addAttSelections(selections []iface.BeaconCommitteeSelection) {
 	v.attSelectionLock.Lock()
 	defer v.attSelectionLock.Unlock()
 
@@ -1326,7 +1324,7 @@ func (v *validator) newAttSelections() {
 	v.attSelectionLock.Lock()
 	defer v.attSelectionLock.Unlock()
 
-	v.attSelections = make(map[attSelectionKey]validator2.BeaconCommitteeSelection)
+	v.attSelections = make(map[attSelectionKey]iface.BeaconCommitteeSelection)
 }
 
 func (v *validator) getAttSelection(key attSelectionKey) ([]byte, error) {

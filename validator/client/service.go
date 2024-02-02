@@ -6,8 +6,6 @@ import (
 	"strings"
 	"time"
 
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-
 	"github.com/dgraph-io/ristretto"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -236,7 +234,7 @@ func (v *ValidatorService) Start() {
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 		distributed:                    v.distributed,
-		attSelections:                  make(map[attSelectionKey]validator2.BeaconCommitteeSelection),
+		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
 	}
 
 	v.validator = valStruct

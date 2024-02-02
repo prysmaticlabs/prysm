@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
@@ -18,21 +18,21 @@ import (
 func TestGetAggregatedSelections(t *testing.T) {
 	testcases := []struct {
 		name                 string
-		req                  []validator.BeaconCommitteeSelection
-		res                  []validator.BeaconCommitteeSelection
+		req                  []iface.BeaconCommitteeSelection
+		res                  []iface.BeaconCommitteeSelection
 		endpointError        error
 		expectedErrorMessage string
 	}{
 		{
 			name: "valid",
-			req: []validator.BeaconCommitteeSelection{
+			req: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 82),
 					Slot:           75,
 					ValidatorIndex: 76,
 				},
 			},
-			res: []validator.BeaconCommitteeSelection{
+			res: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 100),
 					Slot:           75,
@@ -42,7 +42,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 		},
 		{
 			name: "endpoint error",
-			req: []validator.BeaconCommitteeSelection{
+			req: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 82),
 					Slot:           75,
@@ -54,7 +54,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 		},
 		{
 			name: "no response error",
-			req: []validator.BeaconCommitteeSelection{
+			req: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 82),
 					Slot:           75,
@@ -65,7 +65,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 		},
 		{
 			name: "mismatch response",
-			req: []validator.BeaconCommitteeSelection{
+			req: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 82),
 					Slot:           75,
@@ -77,7 +77,7 @@ func TestGetAggregatedSelections(t *testing.T) {
 					ValidatorIndex: 79,
 				},
 			},
-			res: []validator.BeaconCommitteeSelection{
+			res: []iface.BeaconCommitteeSelection{
 				{
 					SelectionProof: test_helpers.FillByteSlice(96, 100),
 					Slot:           75,

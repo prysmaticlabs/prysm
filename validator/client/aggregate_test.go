@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 
 	"github.com/golang/mock/gomock"
 	"github.com/prysmaticlabs/go-bitfield"
@@ -139,11 +139,11 @@ func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
 	}
 
 	validator.distributed = true
-	validator.attSelections = make(map[attSelectionKey]validator2.BeaconCommitteeSelection)
+	validator.attSelections = make(map[attSelectionKey]iface.BeaconCommitteeSelection)
 	validator.attSelections[attSelectionKey{
 		slot:  slot,
 		index: 123,
-	}] = validator2.BeaconCommitteeSelection{
+	}] = iface.BeaconCommitteeSelection{
 		SelectionProof: make([]byte, 96),
 		Slot:           slot,
 		ValidatorIndex: validatorIdx,

@@ -11,8 +11,6 @@ import (
 	"testing"
 	"time"
 
-	validator2 "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
@@ -695,7 +693,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 		gomock.Any(),
 		gomock.Any(), // fill this properly
 	).Return(
-		[]validator2.BeaconCommitteeSelection{
+		[]iface.BeaconCommitteeSelection{
 			{
 				SelectionProof: make([]byte, 32),
 				Slot:           slot,

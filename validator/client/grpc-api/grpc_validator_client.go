@@ -3,8 +3,6 @@ package grpc_api
 import (
 	"context"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
-
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -140,7 +138,7 @@ func (c *grpcValidatorClient) AggregatedSigAndAggregationBits(
 	return c.beaconNodeValidatorClient.AggregatedSigAndAggregationBits(ctx, in)
 }
 
-func (grpcValidatorClient) GetAggregatedSelections(context.Context, []validator.BeaconCommitteeSelection) ([]validator.BeaconCommitteeSelection, error) {
+func (grpcValidatorClient) GetAggregatedSelections(context.Context, []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
 	return nil, iface.ErrNotSupported
 }
 
