@@ -285,15 +285,16 @@ func (s *Service) applyAttestationForValidator(
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
+
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
 
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 
-	chunkIdx := s.params.chunkIndex(sourceEpoch)
-	chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIdx)
+	chunkIndex := s.params.chunkIndex(sourceEpoch)
+	chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIndex)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
+		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
 	}
 
 	// Check slashable, if so, return the slashing.
@@ -328,14 +329,14 @@ func (s *Service) applyAttestationForValidator(
 	// the start epoch of the next chunk. We exit once no longer need to
 	// keep updating chunks.
 	for {
-		chunkIdx = s.params.chunkIndex(startEpoch)
-		chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIdx)
+		chunkIndex = s.params.chunkIndex(startEpoch)
+		chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIndex)
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
+			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIndex)
 		}
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
-				chunkIndex:   chunkIdx,
+				chunkIndex:   chunkIndex,
 				currentEpoch: currentEpoch,
 			},
 			validatorIndex,
@@ -346,13 +347,13 @@ func (s *Service) applyAttestationForValidator(
 			return nil, errors.Wrapf(
 				err,
 				"could not update chunk at chunk index %d for validator index %d and current epoch %d",
-				chunkIdx,
+				chunkIndex,
 				validatorIndex,
 				currentEpoch,
 			)
 		}
 		// We update the chunksByChunkIdx map with the chunk we just updated.
-		chunksByChunkIdx[chunkIdx] = chunk
+		chunksByChunkIdx[chunkIndex] = chunk
 		if !keepGoing {
 			break
 		}
