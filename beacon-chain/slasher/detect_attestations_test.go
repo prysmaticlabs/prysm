@@ -126,14 +126,8 @@ func Test_processQueuedAttestations(t *testing.T) {
 			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
+					createAttestationWrapper(t, 1, 2, []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, nil),
 					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
-					createAttestationWrapper(
-						t,
-						1,
-						2,
-						[]uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1},
-						nil,
-					),
 				},
 				currentEpoch: 4,
 			},
@@ -144,13 +138,7 @@ func Test_processQueuedAttestations(t *testing.T) {
 			args: args{
 				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
 					createAttestationWrapper(t, 0, 3, []uint64{0}, nil),
-					createAttestationWrapper(
-						t,
-						1,
-						2,
-						[]uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1},
-						nil,
-					),
+					createAttestationWrapper(t, 1, 2, []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, nil),
 				},
 				currentEpoch: 4,
 			},
