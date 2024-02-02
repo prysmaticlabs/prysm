@@ -103,6 +103,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 
 			// We add back those attestations that are valid in the future to the queue.
 			s.attsQueue.extend(validInFuture)
+			attsQueueSize := s.attsQueue.size()
 
 			log.WithFields(logrus.Fields{
 				"currentSlot":     currentSlot,
@@ -110,6 +111,7 @@ func (s *Service) processQueuedAttestations(ctx context.Context, slotTicker <-ch
 				"numValidAtts":    len(validAtts),
 				"numDeferredAtts": len(validInFuture),
 				"numDroppedAtts":  numDropped,
+				"attsQueueSize":   attsQueueSize,
 			}).Info("Processing queued attestations for slashing detection")
 
 			// Save the attestation records to our database.
