@@ -191,7 +191,7 @@ func (s *Service) epochUpdateForValidator(
 	for epoch <= args.currentEpoch {
 		chunkIdx := s.params.chunkIndex(epoch)
 
-		currentChunk, err := s.getChunk(ctx, args, updatedChunks, chunkIdx)
+		currentChunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, updatedChunks, chunkIdx)
 		if err != nil {
 			return err
 		}
@@ -296,7 +296,7 @@ func (s *Service) applyAttestationForValidator(
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
-	chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
+	chunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, chunksByChunkIdx, chunkIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 	}
@@ -334,7 +334,7 @@ func (s *Service) applyAttestationForValidator(
 	// keep updating chunks.
 	for {
 		chunkIdx = s.params.chunkIndex(startEpoch)
-		chunk, err := s.getChunk(ctx, args, chunksByChunkIdx, chunkIdx)
+		chunk, err := s.getChunk(ctx, args.validatorChunkIndex, args.kind, chunksByChunkIdx, chunkIdx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 		}
@@ -372,7 +372,8 @@ func (s *Service) applyAttestationForValidator(
 // that span multiple chunk indices), then we fallback to fetching from disk.
 func (s *Service) getChunk(
 	ctx context.Context,
-	args *chunkUpdateArgs,
+	validatorChunkIndex uint64,
+	chunkKind slashertypes.ChunkKind,
 	chunksByChunkIdx map[uint64]Chunker,
 	chunkIdx uint64,
 ) (Chunker, error) {
@@ -382,7 +383,7 @@ func (s *Service) getChunk(
 	}
 
 	// We can ensure we load the appropriate chunk we need by fetching from the DB.
-	diskChunks, err := s.loadChunks(ctx, args.validatorChunkIndex, args.kind, []uint64{chunkIdx})
+	diskChunks, err := s.loadChunks(ctx, validatorChunkIndex, chunkKind, []uint64{chunkIdx})
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not load chunk at index %d", chunkIdx)
 	}
