@@ -147,6 +147,48 @@ func TestValidateProposerSlashing_ValidSlashing(t *testing.T) {
 	assert.NotNil(t, m.ValidatorData, "Decoded message was not set on the message validator data")
 }
 
+func TestValidateProposerSlashing_ValidOldSlashing(t *testing.T) {
+	p := p2ptest.NewTestP2P(t)
+	ctx := context.Background()
+
+	slashing, s := setupValidProposerSlashing(t)
+	val, err := s.ValidatorAtIndex(slashing.Header_2.Header.ProposerIndex)
+	require.NoError(t, err)
+	val.Slashed = true
+	assert.NoError(t, s.UpdateValidatorAtIndex(slashing.Header_2.Header.ProposerIndex, val))
+
+	chain := &mock.ChainService{State: s, Genesis: time.Now()}
+	r := &Service{
+		cfg: &config{
+			p2p:               p,
+			chain:             chain,
+			clock:             startup.NewClock(chain.Genesis, chain.ValidatorsRoot),
+			initialSync:       &mockSync.Sync{IsSyncing: false},
+			operationNotifier: chain.OperationNotifier(),
+		},
+		seenProposerSlashingCache: lruwrpr.New(10),
+	}
+
+	buf := new(bytes.Buffer)
+	_, err = p.Encoding().EncodeGossip(buf, slashing)
+	require.NoError(t, err)
+	topic := p2p.GossipTypeMapping[reflect.TypeOf(slashing)]
+	d, err := r.currentForkDigest()
+	assert.NoError(t, err)
+	topic = r.addDigestToTopic(topic, d)
+	m := &pubsub.Message{
+		Message: &pubsubpb.Message{
+			Data:  buf.Bytes(),
+			Topic: &topic,
+		},
+	}
+
+	res, err := r.validateProposerSlashing(ctx, "", m)
+	assert.ErrorContains(t, "proposer is already slashed", err)
+	valid := res == pubsub.ValidationIgnore
+	assert.Equal(t, true, valid, "Failed validation")
+}
+
 func TestValidateProposerSlashing_ContextTimeout(t *testing.T) {
 	p := p2ptest.NewTestP2P(t)
 
