@@ -569,7 +569,7 @@ func (s *Service) inRegularSync() bool {
 		return true
 	}
 	// If the highest received block is less than 2 blocks away we are in regular sync
-	if currentSlot-fc.HighestReceivedBlockSlot() < primitives.Slot(2) {
+	if currentSlot-highestSlot < primitives.Slot(2) {
 		return true
 	}
 	// At this stage the last block received is from the previous epoch and more than 2 blocks ago.
