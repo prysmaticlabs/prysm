@@ -33,25 +33,24 @@ func (s *Service) checkSlashableAttestations(
 	slashings = append(slashings, doubleVoteSlashings...)
 
 	// Surrounding / surrounded votes
-	groupedAtts := s.groupByValidatorChunkIndex(atts)
-	log.WithField("numBatches", len(groupedAtts)).Debug("Batching attestations by validator chunk index")
-	grouppedAttsCount := len(groupedAtts)
+	groupedByValidatorChunkIndexAtts := s.groupByValidatorChunkIndex(atts)
+	log.WithField("numBatches", len(groupedByValidatorChunkIndexAtts)).Debug("Batching attestations by validator chunk index")
+	groupsCount := len(groupedByValidatorChunkIndexAtts)
+	batchDurations := make([]time.Duration, 0, len(groupedByValidatorChunkIndexAtts))
 
-	batchDurations := make([]time.Duration, 0, len(groupedAtts))
-
-	for validatorChunkIdx, batch := range groupedAtts {
+	for validatorChunkIndex, attestations := range groupedByValidatorChunkIndexAtts {
 		innerStart := time.Now()
 
 		// The fact that we use always slashertypes.MinSpan is probably the root cause of
 		// https://github.com/prysmaticlabs/prysm/issues/13591
-		attSlashings, err := s.checkSurrounds(ctx, batch, slashertypes.MinSpan, currentEpoch, validatorChunkIdx)
+		attSlashings, err := s.checkSurrounds(ctx, attestations, slashertypes.MinSpan, currentEpoch, validatorChunkIndex)
 		if err != nil {
 			return nil, err
 		}
 
 		slashings = append(slashings, attSlashings...)
 
-		indices := s.params.validatorIndexesInChunk(validatorChunkIdx)
+		indices := s.params.validatorIndexesInChunk(validatorChunkIndex)
 		for _, idx := range indices {
 			s.latestEpochWrittenForValidator[idx] = currentEpoch
 		}
@@ -67,12 +66,12 @@ func (s *Service) checkSlashableAttestations(
 
 	fields := logrus.Fields{
 		"numAttestations":                 len(atts),
-		"numBatchesByValidatorChunkIndex": grouppedAttsCount,
+		"numBatchesByValidatorChunkIndex": groupsCount,
 		"elapsed":                         totalBatchDuration,
 	}
 
-	if grouppedAttsCount > 0 {
-		avgProcessingTimePerBatch := totalBatchDuration / time.Duration(grouppedAttsCount)
+	if groupsCount > 0 {
+		avgProcessingTimePerBatch := totalBatchDuration / time.Duration(groupsCount)
 		fields["avgBatchProcessingTime"] = avgProcessingTimePerBatch
 	}
 
@@ -226,9 +225,9 @@ func (s *Service) updateSpans(
 	// Apply the attestations to the related chunks and find any
 	// slashings along the way.
 	slashings := make([]*ethpb.AttesterSlashing, 0)
-	for _, attestationBatch := range attestationsByChunkIdx {
-		for _, att := range attestationBatch {
-			for _, validatorIdx := range att.IndexedAttestation.AttestingIndices {
+	for _, attestations := range attestationsByChunkIdx {
+		for _, attestation := range attestations {
+			for _, validatorIdx := range attestation.IndexedAttestation.AttestingIndices {
 				validatorIndex := primitives.ValidatorIndex(validatorIdx)
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
@@ -246,8 +245,8 @@ func (s *Service) updateSpans(
 				}
 				slashing, err := s.applyAttestationForValidator(
 					ctx,
-					att,
 					updatedChunks,
+					attestation,
 					kind,
 					validatorChunkIndex,
 					validatorIndex,
@@ -277,8 +276,8 @@ func (s *Service) updateSpans(
 // source epoch up to its target.
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
-	attestation *slashertypes.IndexedAttestationWrapper,
 	chunksByChunkIdx map[uint64]Chunker,
+	attestation *slashertypes.IndexedAttestationWrapper,
 	chunkKind slashertypes.ChunkKind,
 	validatorChunkIndex uint64,
 	validatorIndex primitives.ValidatorIndex,

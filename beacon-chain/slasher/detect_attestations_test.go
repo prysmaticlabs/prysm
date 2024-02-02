@@ -529,8 +529,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		att,
 		chunksByChunkIdx,
+		att,
 		args.kind,
 		args.validatorChunkIndex,
 		validatorIdx,
@@ -552,8 +552,8 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		slashableAtt,
 		chunksByChunkIdx,
+		slashableAtt,
 		args.kind,
 		args.validatorChunkIndex,
 		validatorIdx,
@@ -594,8 +594,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		att,
 		chunksByChunkIdx,
+		att,
 		args.kind,
 		args.validatorChunkIndex,
 		validatorIdx,
@@ -617,8 +617,8 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		slashableAtt,
 		chunksByChunkIdx,
+		slashableAtt,
 		args.kind,
 		args.validatorChunkIndex,
 		validatorIdx,
