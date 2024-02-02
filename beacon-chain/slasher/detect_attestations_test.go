@@ -453,10 +453,10 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		for _, valIdx := range validators {
 			err := s.epochUpdateForValidator(
 				ctx,
+				updatedChunks,
 				0, // validatorChunkIndex
 				slashertypes.MinSpan,
 				currentEpoch,
-				updatedChunks,
 				valIdx,
 			)
 			require.NoError(t, err)
@@ -484,10 +484,10 @@ func Test_epochUpdateForValidators(t *testing.T) {
 		for _, valIdx := range validators {
 			err := s.epochUpdateForValidator(
 				ctx,
+				updatedChunks,
 				0, // validatorChunkIndex,
 				slashertypes.MinSpan,
 				currentEpoch,
-				updatedChunks,
 				valIdx,
 			)
 			require.NoError(t, err)

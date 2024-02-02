@@ -109,7 +109,8 @@ func (s *Service) checkSurrounds(
 
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndexes {
-		if err := s.epochUpdateForValidator(ctx, validatorChunkIndex, chunkKind, currentEpoch, updatedChunks, validatorIndex); err != nil {
+		// This function modifies `updatedChunks` in place.
+		if err := s.epochUpdateForValidator(ctx, updatedChunks, validatorChunkIndex, chunkKind, currentEpoch, validatorIndex); err != nil {
 			return nil, errors.Wrapf(err, "could not update validator index chunks %d", validatorIndex)
 		}
 	}
@@ -157,17 +158,18 @@ func (s *Service) checkDoubleVotes(
 	return doubleVoteSlashings, nil
 }
 
-// This function updates the slashing spans for a given validator for a change in epoch
-// since the last epoch we have recorded for the validator. For example, if the last epoch a validator
-// has written is N, and the current epoch is N+5, we update entries in the slashing spans
-// with their neutral element for epochs N+1 to N+4. This also puts any loaded chunks in a
-// map used as a cache for further processing and minimizing database reads later on.
+// This function updates `updatedChunks`, representing the slashing spans for a given validator for
+// a change in epoch since the last epoch we have recorded for the validator.
+// For example, if the last epoch a validator has written is N, and the current epoch is N+5,
+// we update entries in the slashing spans with their neutral element for epochs N+1 to N+4.
+// This also puts any loaded chunks in a map used as a cache for further processing and minimizing
+// database reads later on.
 func (s *Service) epochUpdateForValidator(
 	ctx context.Context,
+	updatedChunks map[uint64]Chunker,
 	validatorChunkIndex uint64,
 	chunkKind slashertypes.ChunkKind,
 	currentEpoch primitives.Epoch,
-	updatedChunks map[uint64]Chunker,
 	validatorIndex primitives.ValidatorIndex,
 ) error {
 	latestEpochWritten, ok := s.latestEpochWrittenForValidator[validatorIndex]
@@ -193,6 +195,7 @@ func (s *Service) epochUpdateForValidator(
 			); err != nil {
 				return err
 			}
+
 			updatedChunks[chunkIndex] = currentChunk
 			latestEpochWritten++
 		}
@@ -230,7 +233,7 @@ func (s *Service) updateSpans(
 				computedValidatorChunkIdx := s.params.validatorChunkIndex(validatorIndex)
 
 				// Every validator chunk index represents a range of validators.
-				// If it possible that the validator index in this loop iteration is
+				// It is possible that the validator index in this loop iteration is
 				// not part of the validator chunk index we are updating chunks for.
 				//
 				// For example, if there are 4 validators per validator chunk index,
