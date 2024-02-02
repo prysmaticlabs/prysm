@@ -127,7 +127,7 @@ func (s *Service) checkSurrounds(
 	slashings := make([]*ethpb.AttesterSlashing, 0, len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
-	if err := s.saveUpdatedChunks(ctx, args, updatedChunks); err != nil {
+	if err := s.saveUpdatedChunks(ctx, updatedChunks, args.kind, args.validatorChunkIndex); err != nil {
 		return nil, err
 	}
 	return slashings, nil
@@ -450,17 +450,18 @@ func (s *Service) loadChunks(
 // Saves updated chunks to disk given the required database schema.
 func (s *Service) saveUpdatedChunks(
 	ctx context.Context,
-	args *chunkUpdateArgs,
 	updatedChunksByChunkIdx map[uint64]Chunker,
+	chunkKind slashertypes.ChunkKind,
+	validatorChunkIndex uint64,
 ) error {
 	ctx, span := trace.StartSpan(ctx, "Slasher.saveUpdatedChunks")
 	defer span.End()
 	chunkKeys := make([][]byte, 0, len(updatedChunksByChunkIdx))
 	chunks := make([][]uint16, 0, len(updatedChunksByChunkIdx))
 	for chunkIdx, chunk := range updatedChunksByChunkIdx {
-		chunkKeys = append(chunkKeys, s.params.flatSliceID(args.validatorChunkIndex, chunkIdx))
+		chunkKeys = append(chunkKeys, s.params.flatSliceID(validatorChunkIndex, chunkIdx))
 		chunks = append(chunks, chunk.Chunk())
 	}
 	chunksSavedTotal.Add(float64(len(chunks)))
-	return s.serviceCfg.Database.SaveSlasherChunks(ctx, args.kind, chunkKeys, chunks)
+	return s.serviceCfg.Database.SaveSlasherChunks(ctx, chunkKind, chunkKeys, chunks)
 }

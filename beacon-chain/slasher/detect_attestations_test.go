@@ -737,11 +737,9 @@ func testLoadChunks(t *testing.T, kind slashertypes.ChunkKind) {
 	}
 	err = s.saveUpdatedChunks(
 		ctx,
-		&chunkUpdateArgs{
-			validatorChunkIndex: 0,
-			kind:                kind,
-		},
 		updatedChunks,
+		kind,
+		0, // validatorChunkIndex
 	)
 	require.NoError(t, err)
 	// Check if the retrieved chunks match what we just saved to disk.
