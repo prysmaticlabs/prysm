@@ -42,10 +42,9 @@ func (s *Service) checkSlashableAttestations(
 	for validatorChunkIdx, batch := range groupedAtts {
 		innerStart := time.Now()
 
-		attSlashings, err := s.checkSurrounds(ctx, &chunkUpdateArgs{
-			validatorChunkIndex: validatorChunkIdx,
-			currentEpoch:        currentEpoch,
-		}, batch)
+		// The fact that we use always slashertypes.MinSpan is probably the root cause of
+		// https://github.com/prysmaticlabs/prysm/issues/13591
+		attSlashings, err := s.checkSurrounds(ctx, batch, slashertypes.MinSpan, currentEpoch, validatorChunkIdx)
 		if err != nil {
 			return nil, err
 		}
@@ -98,36 +97,38 @@ func (s *Service) checkSlashableAttestations(
 // This function performs a lot of critical actions and is split into smaller helpers for cleanliness.
 func (s *Service) checkSurrounds(
 	ctx context.Context,
-	args *chunkUpdateArgs,
 	attestations []*slashertypes.IndexedAttestationWrapper,
+	chunkKind slashertypes.ChunkKind,
+	currentEpoch primitives.Epoch,
+	validatorChunkIndex uint64,
 ) ([]*ethpb.AttesterSlashing, error) {
 	// Map of updated chunks by chunk index, which will be saved at the end.
 	updatedChunks := make(map[uint64]Chunker)
 	groupedAtts := s.groupByChunkIndex(attestations)
-	validatorIndexes := s.params.validatorIndexesInChunk(args.validatorChunkIndex)
+	validatorIndexes := s.params.validatorIndexesInChunk(validatorChunkIndex)
 
 	// Update the min/max span chunks for the change of current epoch.
 	for _, validatorIndex := range validatorIndexes {
-		if err := s.epochUpdateForValidator(ctx, args.validatorChunkIndex, args.kind, args.currentEpoch, updatedChunks, validatorIndex); err != nil {
+		if err := s.epochUpdateForValidator(ctx, validatorChunkIndex, chunkKind, currentEpoch, updatedChunks, validatorIndex); err != nil {
 			return nil, errors.Wrapf(err, "could not update validator index chunks %d", validatorIndex)
 		}
 	}
 
 	// Update min and max spans and retrieve any detected slashable offenses.
-	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MinSpan, args.validatorChunkIndex, args.currentEpoch)
+	surroundingSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MinSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", args.validatorChunkIndex)
+		return nil, errors.Wrapf(err, "could not update min attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
 
-	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MaxSpan, args.validatorChunkIndex, args.currentEpoch)
+	surroundedSlashings, err := s.updateSpans(ctx, updatedChunks, groupedAtts, slashertypes.MaxSpan, validatorChunkIndex, currentEpoch)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", args.validatorChunkIndex)
+		return nil, errors.Wrapf(err, "could not update max attestation spans for validator chunk index %d", validatorChunkIndex)
 	}
 
 	slashings := make([]*ethpb.AttesterSlashing, 0, len(surroundingSlashings)+len(surroundedSlashings))
 	slashings = append(slashings, surroundingSlashings...)
 	slashings = append(slashings, surroundedSlashings...)
-	if err := s.saveUpdatedChunks(ctx, updatedChunks, args.kind, args.validatorChunkIndex); err != nil {
+	if err := s.saveUpdatedChunks(ctx, updatedChunks, chunkKind, validatorChunkIndex); err != nil {
 		return nil, err
 	}
 	return slashings, nil
