@@ -529,10 +529,12 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		args,
-		validatorIdx,
-		chunksByChunkIdx,
 		att,
+		chunksByChunkIdx,
+		args.kind,
+		args.validatorChunkIndex,
+		validatorIdx,
+		args.currentEpoch,
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
@@ -550,10 +552,12 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		args,
-		validatorIdx,
-		chunksByChunkIdx,
 		slashableAtt,
+		chunksByChunkIdx,
+		args.kind,
+		args.validatorChunkIndex,
+		validatorIdx,
+		args.currentEpoch,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
@@ -590,10 +594,12 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	att := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err := srv.applyAttestationForValidator(
 		ctx,
-		args,
-		validatorIdx,
-		chunksByChunkIdx,
 		att,
+		chunksByChunkIdx,
+		args.kind,
+		args.validatorChunkIndex,
+		validatorIdx,
+		args.currentEpoch,
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
@@ -611,10 +617,12 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	slashableAtt := createAttestationWrapper(t, source, target, nil, nil)
 	slashing, err = srv.applyAttestationForValidator(
 		ctx,
-		args,
-		validatorIdx,
-		chunksByChunkIdx,
 		slashableAtt,
+		chunksByChunkIdx,
+		args.kind,
+		args.validatorChunkIndex,
+		validatorIdx,
+		args.currentEpoch,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)

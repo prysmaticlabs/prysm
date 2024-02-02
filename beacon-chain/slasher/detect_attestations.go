@@ -256,10 +256,12 @@ func (s *Service) updateSpans(
 				}
 				slashing, err := s.applyAttestationForValidator(
 					ctx,
-					args,
-					validatorIndex,
-					updatedChunks,
 					att,
+					updatedChunks,
+					args.kind,
+					args.validatorChunkIndex,
+					validatorIndex,
+					args.currentEpoch,
 				)
 				if err != nil {
 					return nil, errors.Wrapf(
@@ -285,10 +287,12 @@ func (s *Service) updateSpans(
 // source epoch up to its target.
 func (s *Service) applyAttestationForValidator(
 	ctx context.Context,
-	args *chunkUpdateArgs,
-	validatorIndex primitives.ValidatorIndex,
-	chunksByChunkIdx map[uint64]Chunker,
 	attestation *slashertypes.IndexedAttestationWrapper,
+	chunksByChunkIdx map[uint64]Chunker,
+	chunkKind slashertypes.ChunkKind,
+	validatorChunkIndex uint64,
+	validatorIndex primitives.ValidatorIndex,
+	currentEpoch primitives.Epoch,
 ) (*ethpb.AttesterSlashing, error) {
 	ctx, span := trace.StartSpan(ctx, "Slasher.applyAttestationForValidator")
 	defer span.End()
@@ -298,7 +302,7 @@ func (s *Service) applyAttestationForValidator(
 	attestationDistance.Observe(float64(targetEpoch) - float64(sourceEpoch))
 
 	chunkIdx := s.params.chunkIndex(sourceEpoch)
-	chunk, err := s.getChunk(ctx, chunksByChunkIdx, args.kind, args.validatorChunkIndex, chunkIdx)
+	chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIdx)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 	}
@@ -323,7 +327,7 @@ func (s *Service) applyAttestationForValidator(
 
 	// Get the first start epoch for the chunk. If it does not exist or
 	// is not possible based on the input arguments, do not continue with the update.
-	startEpoch, exists := chunk.StartEpoch(sourceEpoch, args.currentEpoch)
+	startEpoch, exists := chunk.StartEpoch(sourceEpoch, currentEpoch)
 	if !exists {
 		return nil, nil
 	}
@@ -336,14 +340,14 @@ func (s *Service) applyAttestationForValidator(
 	// keep updating chunks.
 	for {
 		chunkIdx = s.params.chunkIndex(startEpoch)
-		chunk, err := s.getChunk(ctx, chunksByChunkIdx, args.kind, args.validatorChunkIndex, chunkIdx)
+		chunk, err := s.getChunk(ctx, chunksByChunkIdx, chunkKind, validatorChunkIndex, chunkIdx)
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get chunk at index %d", chunkIdx)
 		}
 		keepGoing, err := chunk.Update(
 			&chunkUpdateArgs{
 				chunkIndex:   chunkIdx,
-				currentEpoch: args.currentEpoch,
+				currentEpoch: currentEpoch,
 			},
 			validatorIndex,
 			startEpoch,
@@ -355,7 +359,7 @@ func (s *Service) applyAttestationForValidator(
 				"could not update chunk at chunk index %d for validator index %d and current epoch %d",
 				chunkIdx,
 				validatorIndex,
-				args.currentEpoch,
+				currentEpoch,
 			)
 		}
 		// We update the chunksByChunkIdx map with the chunk we just updated.
