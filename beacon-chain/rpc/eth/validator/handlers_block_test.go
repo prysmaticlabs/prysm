@@ -97,7 +97,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
@@ -134,7 +134,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
@@ -203,7 +203,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
@@ -272,7 +272,7 @@ func TestProduceBlockV2(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV2(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
@@ -802,7 +802,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
@@ -871,7 +871,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
@@ -940,7 +940,7 @@ func TestProduceBlindedBlock(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlindedBlock(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
@@ -1074,13 +1074,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"altair","execution_payload_blinded":false,"execution_payload_value":"","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -1112,13 +1112,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -1150,13 +1150,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"bellatrix","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -1188,13 +1188,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -1226,13 +1226,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"capella","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -1264,13 +1264,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":false,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockDeneb
@@ -1302,13 +1302,13 @@ func TestProduceBlockV3(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		server.ProduceBlockV3(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10","data":%s}`, string(jsonBytes))
+		want := fmt.Sprintf(`{"version":"deneb","execution_payload_blinded":true,"execution_payload_value":"2000","consensus_block_value":"10000000000","data":%s}`, string(jsonBytes))
 		body := strings.ReplaceAll(writer.Body.String(), "\n", "")
 		require.Equal(t, want, body)
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("invalid query parameter slot empty", func(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
@@ -1449,7 +1449,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "altair", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Bellatrix", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockBellatrix
@@ -1491,7 +1491,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("BlindedBellatrix", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockBellatrix
@@ -1532,7 +1532,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "bellatrix", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Capella", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockCapella
@@ -1573,7 +1573,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Capella", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockCapella
@@ -1614,7 +1614,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "capella", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Deneb", func(t *testing.T) {
 		var block *shared.SignedBeaconBlockContentsDeneb
@@ -1655,7 +1655,7 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "false", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 	t.Run("Blinded Deneb", func(t *testing.T) {
 		var block *shared.SignedBlindedBeaconBlockDeneb
@@ -1696,6 +1696,6 @@ func TestProduceBlockV3SSZ(t *testing.T) {
 		require.Equal(t, "true", writer.Header().Get(api.ExecutionPayloadBlindedHeader))
 		require.Equal(t, "2000", writer.Header().Get(api.ExecutionPayloadValueHeader))
 		require.Equal(t, "deneb", writer.Header().Get(api.VersionHeader))
-		require.Equal(t, "10", writer.Header().Get(api.ConsensusBlockValueHeader))
+		require.Equal(t, "10000000000", writer.Header().Get(api.ConsensusBlockValueHeader))
 	})
 }
