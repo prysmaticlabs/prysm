@@ -23,7 +23,7 @@ type chunkUpdateArgs struct {
 }
 
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
-// min spans used for surround vote detection in slasher. The interface defines methods used to check
+// min/max spans used for surround vote detection in slasher. The interface defines methods used to check
 // if an attestation is slashable for a validator index based on the contents of
 // the chunk as well as the ability to update the data in the chunk with incoming information.
 type Chunker interface {
@@ -153,12 +153,12 @@ func MaxChunkSpansSliceFrom(params *Parameters, chunk []uint16) (*MaxSpanChunksS
 
 // NeutralElement for a min span chunks slice is undefined, in this case
 // using MaxUint16 as a sane value given it is impossible we reach it.
-func (_ *MinSpanChunksSlice) NeutralElement() uint16 {
+func (*MinSpanChunksSlice) NeutralElement() uint16 {
 	return math.MaxUint16
 }
 
 // NeutralElement for a max span chunks slice is 0.
-func (_ *MaxSpanChunksSlice) NeutralElement() uint16 {
+func (*MaxSpanChunksSlice) NeutralElement() uint16 {
 	return 0
 }
 
@@ -191,12 +191,14 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 ) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+
 	minTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "could not get min target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
+
 	if targetEpoch > minTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
 			ctx, validatorIdx, minTarget,
@@ -206,16 +208,20 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 				err, "could not get existing attestation record at target %d", minTarget,
 			)
 		}
-		if existingAttRecord != nil {
-			if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
-				surroundingVotesTotal.Inc()
-				return &ethpb.AttesterSlashing{
-					Attestation_1: attestation.IndexedAttestation,
-					Attestation_2: existingAttRecord.IndexedAttestation,
-				}, nil
-			}
+
+		if existingAttRecord == nil {
+			return nil, nil
+		}
+
+		if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
+			surroundingVotesTotal.Inc()
+			return &ethpb.AttesterSlashing{
+				Attestation_1: attestation.IndexedAttestation,
+				Attestation_2: existingAttRecord.IndexedAttestation,
+			}, nil
 		}
 	}
+
 	return nil, nil
 }
 
@@ -224,7 +230,7 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 // within the max span chunks slice. Recall that for an incoming attestation, B, and an
 // existing attestation, A:
 //
-//	B surrounds A if and only if B.target < max_spans[B.source]
+//	B is surrounded by A if and only if B.target < max_spans[B.source]
 //
 // That is, this condition is sufficient to check if an incoming attestation
 // is surrounded by a previous one. We also check if we indeed have an existing
@@ -238,12 +244,14 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 ) (*ethpb.AttesterSlashing, error) {
 	sourceEpoch := attestation.IndexedAttestation.Data.Source.Epoch
 	targetEpoch := attestation.IndexedAttestation.Data.Target.Epoch
+
 	maxTarget, err := chunkDataAtEpoch(m.params, m.data, validatorIdx, sourceEpoch)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "could not get max target for validator %d at epoch %d", validatorIdx, sourceEpoch,
 		)
 	}
+
 	if targetEpoch < maxTarget {
 		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
 			ctx, validatorIdx, maxTarget,
@@ -253,14 +261,17 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 				err, "could not get existing attestation record at target %d", maxTarget,
 			)
 		}
-		if existingAttRecord != nil {
-			if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
-				surroundedVotesTotal.Inc()
-				return &ethpb.AttesterSlashing{
-					Attestation_1: existingAttRecord.IndexedAttestation,
-					Attestation_2: attestation.IndexedAttestation,
-				}, nil
-			}
+
+		if existingAttRecord == nil {
+			return nil, nil
+		}
+
+		if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
+			surroundedVotesTotal.Inc()
+			return &ethpb.AttesterSlashing{
+				Attestation_1: existingAttRecord.IndexedAttestation,
+				Attestation_2: attestation.IndexedAttestation,
+			}, nil
 		}
 	}
 	return nil, nil
@@ -331,8 +342,8 @@ func (m *MinSpanChunksSlice) Update(
 		minEpoch = args.currentEpoch - (m.params.historyLength - 1)
 	}
 	epochInChunk := startEpoch
-	// We go down the chunk for the validator, updating every value starting at start_epoch down to min_epoch.
-	// As long as the epoch, e, in the same chunk index and e >= min_epoch, we proceed with
+	// We go down the chunk for the validator, updating every value starting at startEpoch down to minEpoch.
+	// As long as the epoch, e, in the same chunk index and e >= minEpoch, we proceed with
 	// a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk >= minEpoch {
 		var chunkTarget primitives.Epoch
@@ -375,7 +386,7 @@ func (m *MaxSpanChunksSlice) Update(
 	newTargetEpoch primitives.Epoch,
 ) (keepGoing bool, err error) {
 	epochInChunk := startEpoch
-	// We go down the chunk for the validator, updating every value starting at start_epoch up to
+	// We go down the chunk for the validator, updating every value starting at startEpoch up to
 	// and including the current epoch. As long as the epoch, e, is in the same chunk index and e <= currentEpoch,
 	// we proceed with a for loop.
 	for m.params.chunkIndex(epochInChunk) == args.chunkIndex && epochInChunk <= args.currentEpoch {
@@ -436,7 +447,7 @@ func (m *MinSpanChunksSlice) StartEpoch(
 
 // StartEpoch given a source epoch and current epoch, determines the start epoch of
 // a max span chunk for use in chunk updates. The source epoch cannot be >= the current epoch.
-func (_ *MaxSpanChunksSlice) StartEpoch(
+func (*MaxSpanChunksSlice) StartEpoch(
 	sourceEpoch, currentEpoch primitives.Epoch,
 ) (epoch primitives.Epoch, exists bool) {
 	if sourceEpoch >= currentEpoch {

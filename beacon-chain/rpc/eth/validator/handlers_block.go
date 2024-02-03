@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -298,12 +299,21 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 		// ignore for phase 0
 		return "", nil
 	}
-	//get consensus payload value which is the same as the total from the block rewards api
+	// Get consensus payload value which is the same as the total from the block rewards api.
+	// The value is in Gwei, but Wei should be returned from the endpoint.
 	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
 		return "", httpError
 	}
-	return blockRewards.Total, nil
+	gwei, ok := big.NewInt(0).SetString(blockRewards.Total, 10)
+	if !ok {
+		return "", &httputil.DefaultJsonError{
+			Message: "Could not parse consensus block value",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	wei := gwei.Mul(gwei, big.NewInt(1e9))
+	return wei.String(), nil
 }
 
 func handleProducePhase0V3(

@@ -129,9 +129,9 @@ var (
 		Name:  "enable-beacon-rest-api",
 		Usage: "(Experimental): Enables of the beacon REST API when querying a beacon node.",
 	}
-	enableVerboseSigVerification = &cli.BoolFlag{
-		Name:  "enable-verbose-sig-verification",
-		Usage: "Enables identifying invalid signatures if batch verification fails when processing block.",
+	disableVerboseSigVerification = &cli.BoolFlag{
+		Name:  "disable-verbose-sig-verification",
+		Usage: "Disables identifying invalid signatures if batch verification fails when processing block.",
 	}
 	prepareAllPayloads = &cli.BoolFlag{
 		Name:  "prepare-all-payloads",
@@ -159,7 +159,6 @@ var (
 
 // devModeFlags holds list of flags that are set when development mode is on.
 var devModeFlags = []cli.Flag{
-	enableVerboseSigVerification,
 	enableExperimentalState,
 	backfill.EnableExperimentalBackfill,
 }
@@ -201,7 +200,7 @@ var BeaconChainFlags = append(deprecatedBeaconFlags, append(deprecatedFlags, []c
 	SaveFullExecutionPayloads,
 	enableStartupOptimistic,
 	enableFullSSZDataLogging,
-	enableVerboseSigVerification,
+	disableVerboseSigVerification,
 	prepareAllPayloads,
 	aggregateFirstInterval,
 	aggregateSecondInterval,
