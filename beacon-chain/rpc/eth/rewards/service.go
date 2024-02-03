@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	coreblocks "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/blocks"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/validators"
@@ -17,7 +18,7 @@ import (
 
 // BlockRewardsFetcher is a interface that provides access to reward related responses
 type BlockRewardsFetcher interface {
-	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultJsonError)
+	GetBlockRewardsData(context.Context, interfaces.ReadOnlyBeaconBlock) (*structs.BlockRewards, *httputil.DefaultJsonError)
 	GetStateForRewards(context.Context, interfaces.ReadOnlyBeaconBlock) (state.BeaconState, *httputil.DefaultJsonError)
 }
 
@@ -28,7 +29,7 @@ type BlockRewardService struct {
 
 // GetBlockRewardsData returns the BlockRewards object which is used for the BlockRewardsResponse and ProduceBlockV3.
 // Rewards are denominated in Gwei.
-func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*BlockRewards, *httputil.DefaultJsonError) {
+func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk interfaces.ReadOnlyBeaconBlock) (*structs.BlockRewards, *httputil.DefaultJsonError) {
 	if blk == nil || blk.IsNil() {
 		return nil, &httputil.DefaultJsonError{
 			Message: consensusblocks.ErrNilBeaconBlock.Error(),
@@ -107,7 +108,7 @@ func (rs *BlockRewardService) GetBlockRewardsData(ctx context.Context, blk inter
 		}
 	}
 
-	return &BlockRewards{
+	return &structs.BlockRewards{
 		ProposerIndex:     strconv.FormatUint(uint64(proposerIndex), 10),
 		Total:             strconv.FormatUint(proposerSlashingsBalance-initBalance+syncCommitteeReward, 10),
 		Attestations:      strconv.FormatUint(attBalance-initBalance, 10),

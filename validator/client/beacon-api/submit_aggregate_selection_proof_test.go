@@ -10,9 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -36,7 +34,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		committeeIndex               = primitives.CommitteeIndex(1)
 	)
 
-	attesterDuties := []*validator.AttesterDuty{
+	attesterDuties := []*structs.AttesterDuty{
 		{
 			Pubkey:          pubkeyStr,
 			ValidatorIndex:  validatorIndex,
@@ -69,7 +67,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		dutiesErr                  error
 		attestationDataErr         error
 		aggregateAttestationErr    error
-		duties                     []*validator.AttesterDuty
+		duties                     []*structs.AttesterDuty
 		validatorsCalled           int
 		attesterDutiesCalled       int
 		attestationDataCalled      int
@@ -129,7 +127,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name: "validator is not an aggregator",
-			duties: []*validator.AttesterDuty{
+			duties: []*structs.AttesterDuty{
 				{
 					Pubkey:          pubkeyStr,
 					ValidatorIndex:  validatorIndex,
@@ -144,7 +142,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 		},
 		{
 			name:                 "no attester duties",
-			duties:               []*validator.AttesterDuty{},
+			duties:               []*structs.AttesterDuty{},
 			validatorsCalled:     1,
 			attesterDutiesCalled: 1,
 			expectedErrorMsg:     fmt.Sprintf("no attester duty for the given slot %d", slot),
@@ -160,11 +158,11 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				syncingEndpoint,
-				&node.SyncStatusResponse{},
+				&structs.SyncStatusResponse{},
 			).SetArg(
 				2,
-				node.SyncStatusResponse{
-					Data: &node.SyncStatusResponseData{
+				structs.SyncStatusResponse{
+					Data: &structs.SyncStatusResponseData{
 						IsOptimistic: test.isOptimistic,
 					},
 				},
@@ -172,7 +170,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				test.syncingErr,
 			).Times(1)
 
-			valsReq := &beacon.GetValidatorsRequest{
+			valsReq := &structs.GetValidatorsRequest{
 				Ids:      []string{stringPubKey},
 				Statuses: []string{},
 			}
@@ -185,15 +183,15 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				validatorsEndpoint,
 				nil,
 				bytes.NewBuffer(valReqBytes),
-				&beacon.GetValidatorsResponse{},
+				&structs.GetValidatorsResponse{},
 			).SetArg(
 				4,
-				beacon.GetValidatorsResponse{
-					Data: []*beacon.ValidatorContainer{
+				structs.GetValidatorsResponse{
+					Data: []*structs.ValidatorContainer{
 						{
 							Index:  validatorIndex,
 							Status: "active_ongoing",
-							Validator: &beacon.Validator{
+							Validator: &structs.Validator{
 								Pubkey: pubkeyStr,
 							},
 						},
@@ -211,10 +209,10 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				fmt.Sprintf("%s/%d", attesterDutiesEndpoint, slots.ToEpoch(slot)),
 				nil,
 				bytes.NewBuffer(validatorIndicesBytes),
-				&validator.GetAttesterDutiesResponse{},
+				&structs.GetAttesterDutiesResponse{},
 			).SetArg(
 				4,
-				validator.GetAttesterDutiesResponse{
+				structs.GetAttesterDutiesResponse{
 					Data: test.duties,
 				},
 			).Return(
@@ -225,7 +223,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("%s?committee_index=%d&slot=%d", attestationDataEndpoint, committeeIndex, slot),
-				&validator.GetAttestationDataResponse{},
+				&structs.GetAttestationDataResponse{},
 			).SetArg(
 				2,
 				attestationDataResponse,
@@ -237,10 +235,10 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				fmt.Sprintf("%s?attestation_data_root=%s&slot=%d", aggregateAttestationEndpoint, hexutil.Encode(attestationDataRootBytes[:]), slot),
-				&validator.AggregateAttestationResponse{},
+				&structs.AggregateAttestationResponse{},
 			).SetArg(
 				2,
-				validator.AggregateAttestationResponse{
+				structs.AggregateAttestationResponse{
 					Data: jsonifyAttestation(aggregateAttestation),
 				},
 			).Return(

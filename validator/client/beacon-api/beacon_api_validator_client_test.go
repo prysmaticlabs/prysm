@@ -7,11 +7,10 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -31,7 +30,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataValid(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
@@ -71,7 +70,7 @@ func TestBeaconApiValidatorClient_GetAttestationDataError(t *testing.T) {
 	ctx := context.Background()
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
@@ -117,7 +116,7 @@ func TestBeaconApiValidatorClient_DomainDataValid(t *testing.T) {
 
 	genesisProvider := mock.NewMockGenesisProvider(ctrl)
 	genesisProvider.EXPECT().GetGenesis(ctx).Return(
-		&beacon.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
+		&structs.Genesis{GenesisValidatorsRoot: genesisValidatorRoot},
 		nil,
 	).Times(2)
 

@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	builderTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/builder/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache"
@@ -26,7 +27,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/synccommittee"
 	p2pmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/core"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
@@ -163,7 +163,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AggregateAttestationResponse{}
+		resp := &structs.AggregateAttestationResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -190,7 +190,7 @@ func TestGetAggregateAttestation(t *testing.T) {
 
 		s.GetAggregateAttestation(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AggregateAttestationResponse{}
+		resp := &structs.AggregateAttestationResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -329,7 +329,7 @@ func TestGetAggregateAttestation_SameSlotAndRoot_ReturnMostAggregationBits(t *te
 
 	s.GetAggregateAttestation(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &AggregateAttestationResponse{}
+	resp := &structs.AggregateAttestationResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	assert.DeepEqual(t, "0x03000001", resp.Data.AggregationBits)
@@ -872,16 +872,16 @@ func TestGetAttestationData(t *testing.T) {
 
 		s.GetAttestationData(writer, request)
 
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
+		expectedResponse := &structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(uint64(slot), 10),
 				BeaconBlockRoot: hexutil.Encode(blockRoot[:]),
 				CommitteeIndex:  strconv.FormatUint(0, 10),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(2, 10),
 					Root:  hexutil.Encode(justifiedRoot[:]),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(3, 10),
 					Root:  hexutil.Encode(blockRoot[:]),
 				},
@@ -889,7 +889,7 @@ func TestGetAttestationData(t *testing.T) {
 		}
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttestationDataResponse{}
+		resp := &structs.GetAttestationDataResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		assert.DeepEqual(t, expectedResponse, resp)
@@ -1110,16 +1110,16 @@ func TestGetAttestationData(t *testing.T) {
 
 		s.GetAttestationData(writer, request)
 
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
+		expectedResponse := &structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(uint64(slot), 10),
 				BeaconBlockRoot: hexutil.Encode(blockRoot[:]),
 				CommitteeIndex:  strconv.FormatUint(0, 10),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(0, 10),
 					Root:  hexutil.Encode(justifiedRoot[:]),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(0, 10),
 					Root:  hexutil.Encode(blockRoot[:]),
 				},
@@ -1127,7 +1127,7 @@ func TestGetAttestationData(t *testing.T) {
 		}
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttestationDataResponse{}
+		resp := &structs.GetAttestationDataResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		assert.DeepEqual(t, expectedResponse, resp)
@@ -1197,16 +1197,16 @@ func TestGetAttestationData(t *testing.T) {
 
 		s.GetAttestationData(writer, request)
 
-		expectedResponse := &GetAttestationDataResponse{
-			Data: &shared.AttestationData{
+		expectedResponse := &structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(uint64(slot), 10),
 				BeaconBlockRoot: hexutil.Encode(blockRoot[:]),
 				CommitteeIndex:  strconv.FormatUint(0, 10),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(uint64(slots.ToEpoch(1500)), 10),
 					Root:  hexutil.Encode(justifiedBlockRoot[:]),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(312, 10),
 					Root:  hexutil.Encode(blockRoot[:]),
 				},
@@ -1214,7 +1214,7 @@ func TestGetAttestationData(t *testing.T) {
 		}
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttestationDataResponse{}
+		resp := &structs.GetAttestationDataResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		assert.DeepEqual(t, expectedResponse, resp)
@@ -1248,7 +1248,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 		require.Equal(t, resp.Data.Slot, "1")
@@ -1263,7 +1263,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "slot is required", errors.New(writer.Body.String()))
 	})
@@ -1275,7 +1275,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "subcommittee_index is required", errors.New(writer.Body.String()))
 	})
@@ -1287,7 +1287,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "Invalid Beacon Block Root: empty hex string", errors.New(writer.Body.String()))
 	})
@@ -1299,7 +1299,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusBadRequest, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.ErrorContains(t, "Invalid Beacon Block Root: hex string without 0x prefix", errors.New(writer.Body.String()))
 	})
@@ -1311,7 +1311,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &ProduceSyncCommitteeContributionResponse{}
+		resp := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp)
 		require.NotNil(t, resp.Data)
@@ -1330,7 +1330,7 @@ func TestProduceSyncCommitteeContribution(t *testing.T) {
 		}
 		server.ProduceSyncCommitteeContribution(writer, request)
 		assert.Equal(t, http.StatusNotFound, writer.Code)
-		resp2 := &ProduceSyncCommitteeContributionResponse{}
+		resp2 := &structs.ProduceSyncCommitteeContributionResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp2))
 		require.ErrorContains(t, "No subcommittee messages found", errors.New(writer.Body.String()))
 	})
@@ -1449,7 +1449,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttesterDutiesResponse{}
+		resp := &structs.GetAttesterDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
@@ -1473,7 +1473,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttesterDutiesResponse{}
+		resp := &structs.GetAttesterDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 	})
@@ -1532,7 +1532,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttesterDutiesResponse{}
+		resp := &structs.GetAttesterDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		require.Equal(t, 1, len(resp.Data))
@@ -1589,7 +1589,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttesterDutiesResponse{}
+		resp := &structs.GetAttesterDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 0, len(resp.Data))
 	})
@@ -1627,7 +1627,7 @@ func TestGetAttesterDuties(t *testing.T) {
 
 		s.GetAttesterDuties(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetAttesterDutiesResponse{}
+		resp := &structs.GetAttesterDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -1702,12 +1702,12 @@ func TestGetProposerDuties(t *testing.T) {
 
 		s.GetProposerDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetProposerDutiesResponse{}
+		resp := &structs.GetProposerDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		assert.Equal(t, 31, len(resp.Data))
 		// We expect a proposer duty for slot 11.
-		var expectedDuty *ProposerDuty
+		var expectedDuty *structs.ProposerDuty
 		for _, duty := range resp.Data {
 			if duty.Slot == "11" {
 				expectedDuty = duty
@@ -1742,12 +1742,12 @@ func TestGetProposerDuties(t *testing.T) {
 
 		s.GetProposerDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetProposerDutiesResponse{}
+		resp := &structs.GetProposerDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, hexutil.Encode(genesisRoot[:]), resp.DependentRoot)
 		assert.Equal(t, 32, len(resp.Data))
 		// We expect a proposer duty for slot 43.
-		var expectedDuty *ProposerDuty
+		var expectedDuty *structs.ProposerDuty
 		for _, duty := range resp.Data {
 			if duty.Slot == "43" {
 				expectedDuty = duty
@@ -1828,7 +1828,7 @@ func TestGetProposerDuties(t *testing.T) {
 
 		s.GetProposerDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetProposerDutiesResponse{}
+		resp := &structs.GetProposerDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -1906,7 +1906,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
@@ -1929,7 +1929,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 	})
@@ -1988,7 +1988,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "1", resp.Data[0].ValidatorIndex)
@@ -2004,7 +2004,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		duty := resp.Data[0]
 		require.Equal(t, 2, len(duty.ValidatorSyncCommitteeIndices))
@@ -2037,7 +2037,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
@@ -2094,7 +2094,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
@@ -2114,7 +2114,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		duty := resp.Data[0]
@@ -2190,7 +2190,7 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 
 		s.GetSyncCommitteeDuties(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetSyncCommitteeDutiesResponse{}
+		resp := &structs.GetSyncCommitteeDutiesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -2221,13 +2221,13 @@ func TestGetSyncCommitteeDuties(t *testing.T) {
 func TestPrepareBeaconProposer(t *testing.T) {
 	tests := []struct {
 		name    string
-		request []*shared.FeeRecipient
+		request []*structs.FeeRecipient
 		code    int
 		wantErr string
 	}{
 		{
 			name: "Happy Path",
-			request: []*shared.FeeRecipient{{
+			request: []*structs.FeeRecipient{{
 				FeeRecipient:   "0xb698D697092822185bF0311052215d5B5e1F3934",
 				ValidatorIndex: "1",
 			},
@@ -2237,7 +2237,7 @@ func TestPrepareBeaconProposer(t *testing.T) {
 		},
 		{
 			name: "invalid fee recipient length",
-			request: []*shared.FeeRecipient{{
+			request: []*structs.FeeRecipient{{
 				FeeRecipient:   "0xb698D697092822185bF0311052",
 				ValidatorIndex: "1",
 			},
@@ -2290,7 +2290,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 		TrackedValidatorsCache: cache.NewTrackedValidatorsCache(),
 		PayloadIDCache:         cache.NewPayloadIDCache(),
 	}
-	req := []*shared.FeeRecipient{{
+	req := []*structs.FeeRecipient{{
 		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
 		ValidatorIndex: "1",
 	}}
@@ -2319,7 +2319,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 
 	// Same validator with different fee recipient
 	hook.Reset()
-	req = []*shared.FeeRecipient{{
+	req = []*structs.FeeRecipient{{
 		FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
 		ValidatorIndex: "1",
 	}}
@@ -2335,7 +2335,7 @@ func TestProposer_PrepareBeaconProposerOverlapping(t *testing.T) {
 
 	// More than one validator
 	hook.Reset()
-	req = []*shared.FeeRecipient{
+	req = []*structs.FeeRecipient{
 		{
 			FeeRecipient:   hexutil.Encode(bytesutil.PadTo([]byte{0x01, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)),
 			ValidatorIndex: "1",
@@ -2376,9 +2376,9 @@ func BenchmarkServer_PrepareBeaconProposer(b *testing.B) {
 		PayloadIDCache:         cache.NewPayloadIDCache(),
 	}
 	f := bytesutil.PadTo([]byte{0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF, 0x01, 0xFF}, fieldparams.FeeRecipientLength)
-	recipients := make([]*shared.FeeRecipient, 0)
+	recipients := make([]*structs.FeeRecipient, 0)
 	for i := 0; i < 10000; i++ {
-		recipients = append(recipients, &shared.FeeRecipient{FeeRecipient: hexutil.Encode(f), ValidatorIndex: fmt.Sprint(i)})
+		recipients = append(recipients, &structs.FeeRecipient{FeeRecipient: hexutil.Encode(f), ValidatorIndex: fmt.Sprint(i)})
 	}
 	byt, err := json.Marshal(recipients)
 	require.NoError(b, err)
@@ -2436,7 +2436,7 @@ func TestGetLiveness(t *testing.T) {
 
 		s.GetLiveness(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetLivenessResponse{}
+		resp := &structs.GetLivenessResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 		data0 := resp.Data[0]
@@ -2455,7 +2455,7 @@ func TestGetLiveness(t *testing.T) {
 
 		s.GetLiveness(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetLivenessResponse{}
+		resp := &structs.GetLivenessResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 		data0 := resp.Data[0]
@@ -2474,7 +2474,7 @@ func TestGetLiveness(t *testing.T) {
 
 		s.GetLiveness(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetLivenessResponse{}
+		resp := &structs.GetLivenessResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 		data0 := resp.Data[0]

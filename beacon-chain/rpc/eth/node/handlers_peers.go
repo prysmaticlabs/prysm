@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/peers/peerdata"
@@ -75,8 +76,8 @@ func (s *Server) GetPeer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &GetPeerResponse{
-		Data: &Peer{
+	resp := &structs.GetPeerResponse{
+		Data: &structs.Peer{
 			PeerId:             rawId,
 			Enr:                "enr:" + serializedEnr,
 			LastSeenP2PAddress: p2pAddress.String(),
@@ -100,7 +101,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 
 	if emptyStateFilter && emptyDirectionFilter {
 		allIds := peerStatus.All()
-		allPeers := make([]*Peer, 0, len(allIds))
+		allPeers := make([]*structs.Peer, 0, len(allIds))
 		for _, id := range allIds {
 			p, err := peerInfo(peerStatus, id)
 			if err != nil {
@@ -112,7 +113,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 			}
 			allPeers = append(allPeers, p)
 		}
-		resp := &GetPeersResponse{Data: allPeers}
+		resp := &structs.GetPeersResponse{Data: allPeers}
 		httputil.WriteJson(w, resp)
 		return
 	}
@@ -164,7 +165,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	filteredPeers := make([]*Peer, 0, len(filteredIds))
+	filteredPeers := make([]*structs.Peer, 0, len(filteredIds))
 	for _, id := range filteredIds {
 		p, err := peerInfo(peerStatus, id)
 		if err != nil {
@@ -177,7 +178,7 @@ func (s *Server) GetPeers(w http.ResponseWriter, r *http.Request) {
 		filteredPeers = append(filteredPeers, p)
 	}
 
-	resp := &GetPeersResponse{Data: filteredPeers}
+	resp := &structs.GetPeersResponse{Data: filteredPeers}
 	httputil.WriteJson(w, resp)
 }
 
@@ -188,8 +189,8 @@ func (s *Server) GetPeerCount(w http.ResponseWriter, r *http.Request) {
 
 	peerStatus := s.PeersFetcher.Peers()
 
-	resp := &GetPeerCountResponse{
-		Data: &PeerCount{
+	resp := &structs.GetPeerCountResponse{
+		Data: &structs.PeerCount{
 			Disconnected:  strconv.FormatInt(int64(len(peerStatus.Disconnected())), 10),
 			Connecting:    strconv.FormatInt(int64(len(peerStatus.Connecting())), 10),
 			Connected:     strconv.FormatInt(int64(len(peerStatus.Connected())), 10),
@@ -224,7 +225,7 @@ func handleEmptyFilters(states []string, directions []string) (emptyState, empty
 	return emptyState, emptyDirection
 }
 
-func peerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
+func peerInfo(peerStatus *peers.Status, id peer.ID) (*structs.Peer, error) {
 	enr, err := peerStatus.ENR(id)
 	if err != nil {
 		if errors.Is(err, peerdata.ErrPeerUnknown) {
@@ -263,7 +264,7 @@ func peerInfo(peerStatus *peers.Status, id peer.ID) (*Peer, error) {
 	if eth.PeerDirection(direction) == eth.PeerDirection_UNKNOWN {
 		return nil, nil
 	}
-	p := &Peer{
+	p := &structs.Peer{
 		PeerId:    id.String(),
 		State:     strings.ToLower(eth.ConnectionState(connectionState).String()),
 		Direction: strings.ToLower(eth.PeerDirection(direction).String()),

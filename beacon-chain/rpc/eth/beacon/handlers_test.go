@@ -18,12 +18,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	dbTest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
@@ -97,9 +97,9 @@ func TestGetBlock(t *testing.T) {
 
 	s.GetBlock(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetBlockResponse{}
+	resp := &structs.GetBlockResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-	sbb := &shared.SignedBeaconBlock{Message: &shared.BeaconBlock{}}
+	sbb := &structs.SignedBeaconBlock{Message: &structs.BeaconBlock{}}
 	require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 	sbb.Signature = resp.Data.Signature
 	genericBlk, err := sbb.ToGeneric()
@@ -153,10 +153,10 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Phase0), resp.Version)
-		sbb := &shared.SignedBeaconBlock{Message: &shared.BeaconBlock{}}
+		sbb := &structs.SignedBeaconBlock{Message: &structs.BeaconBlock{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -186,10 +186,10 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Altair), resp.Version)
-		sbb := &shared.SignedBeaconBlockAltair{Message: &shared.BeaconBlockAltair{}}
+		sbb := &structs.SignedBeaconBlockAltair{Message: &structs.BeaconBlockAltair{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -220,10 +220,10 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Bellatrix), resp.Version)
-		sbb := &shared.SignedBeaconBlockBellatrix{Message: &shared.BeaconBlockBellatrix{}}
+		sbb := &structs.SignedBeaconBlockBellatrix{Message: &structs.BeaconBlockBellatrix{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -254,10 +254,10 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Capella), resp.Version)
-		sbb := &shared.SignedBeaconBlockCapella{Message: &shared.BeaconBlockCapella{}}
+		sbb := &structs.SignedBeaconBlockCapella{Message: &structs.BeaconBlockCapella{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -288,10 +288,10 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
-		sbb := &shared.SignedBeaconBlockDeneb{Message: &shared.BeaconBlockDeneb{}}
+		sbb := &structs.SignedBeaconBlockDeneb{Message: &structs.BeaconBlockDeneb{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		blk, err := sbb.ToConsensus()
@@ -322,7 +322,7 @@ func TestGetBlockV2(t *testing.T) {
 
 		s.GetBlockV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -349,7 +349,7 @@ func TestGetBlockV2(t *testing.T) {
 
 			s.GetBlockV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockV2Response{}
+			resp := &structs.GetBlockV2Response{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
 		})
@@ -368,7 +368,7 @@ func TestGetBlockV2(t *testing.T) {
 
 			s.GetBlockV2(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockV2Response{}
+			resp := &structs.GetBlockV2Response{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
@@ -552,7 +552,7 @@ func TestGetBlockAttestations(t *testing.T) {
 
 		s.GetBlockAttestations(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockAttestationsResponse{}
+		resp := &structs.GetBlockAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, len(b.Block.Body.Attestations), len(resp.Data))
 		atts := make([]*eth.Attestation, len(b.Block.Body.Attestations))
@@ -586,7 +586,7 @@ func TestGetBlockAttestations(t *testing.T) {
 
 		s.GetBlockAttestations(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockAttestationsResponse{}
+		resp := &structs.GetBlockAttestationsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -613,7 +613,7 @@ func TestGetBlockAttestations(t *testing.T) {
 
 			s.GetBlockAttestations(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockAttestationsResponse{}
+			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
 		})
@@ -632,7 +632,7 @@ func TestGetBlockAttestations(t *testing.T) {
 
 			s.GetBlockAttestations(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockAttestationsResponse{}
+			resp := &structs.GetBlockAttestationsResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.ExecutionOptimistic)
 		})
@@ -657,10 +657,10 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Phase0), resp.Version)
-		sbb := &shared.SignedBeaconBlock{Message: &shared.BeaconBlock{}}
+		sbb := &structs.SignedBeaconBlock{Message: &structs.BeaconBlock{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -686,10 +686,10 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Altair), resp.Version)
-		sbb := &shared.SignedBeaconBlockAltair{Message: &shared.BeaconBlockAltair{}}
+		sbb := &structs.SignedBeaconBlockAltair{Message: &structs.BeaconBlockAltair{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -717,10 +717,10 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Bellatrix), resp.Version)
-		sbb := &shared.SignedBlindedBeaconBlockBellatrix{Message: &shared.BlindedBeaconBlockBellatrix{}}
+		sbb := &structs.SignedBlindedBeaconBlockBellatrix{Message: &structs.BlindedBeaconBlockBellatrix{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -748,10 +748,10 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Capella), resp.Version)
-		sbb := &shared.SignedBlindedBeaconBlockCapella{Message: &shared.BlindedBeaconBlockCapella{}}
+		sbb := &structs.SignedBlindedBeaconBlockCapella{Message: &structs.BlindedBeaconBlockCapella{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		genericBlk, err := sbb.ToGeneric()
@@ -779,10 +779,10 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
-		sbb := &shared.SignedBlindedBeaconBlockDeneb{Message: &shared.BlindedBeaconBlockDeneb{}}
+		sbb := &structs.SignedBlindedBeaconBlockDeneb{Message: &structs.BlindedBeaconBlockDeneb{}}
 		require.NoError(t, json.Unmarshal(resp.Data.Message, sbb.Message))
 		sbb.Signature = resp.Data.Signature
 		blk, err := sbb.ToConsensus()
@@ -812,7 +812,7 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -838,7 +838,7 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -864,7 +864,7 @@ func TestGetBlindedBlock(t *testing.T) {
 
 		s.GetBlindedBlock(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockV2Response{}
+		resp := &structs.GetBlockV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, false, resp.Finalized)
 	})
@@ -989,10 +989,10 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1011,10 +1011,10 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1033,9 +1033,9 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
-			converted, err := shared.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
+			converted, err := structs.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockBellatrix
+			var signedblock *structs.SignedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1057,9 +1057,9 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
-			converted, err := shared.BeaconBlockCapellaFromConsensus(block.Capella.Block)
+			converted, err := structs.BeaconBlockCapellaFromConsensus(block.Capella.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockCapella
+			var signedblock *structs.SignedBeaconBlockCapella
 			err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1081,9 +1081,9 @@ func TestPublishBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-			converted, err := shared.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
+			converted, err := structs.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockContentsDeneb
+			var signedblock *structs.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock)
@@ -1150,10 +1150,10 @@ func TestPublishBlockSSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1161,7 +1161,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlock
+		var blk structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1180,10 +1180,10 @@ func TestPublishBlockSSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1191,7 +1191,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockAltair
+		var blk structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1216,7 +1216,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var blk shared.SignedBeaconBlockBellatrix
+		var blk structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1242,7 +1242,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockCapella
+		var blk structs.SignedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1268,7 +1268,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockContentsDeneb
+		var blk structs.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1288,7 +1288,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1309,7 +1309,7 @@ func TestPublishBlockSSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockBellatrix
+		var blk structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1350,10 +1350,10 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1372,10 +1372,10 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1394,9 +1394,9 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
-			converted, err := shared.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
+			converted, err := structs.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockBellatrix
+			var signedblock *structs.SignedBlindedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1418,9 +1418,9 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
-			converted, err := shared.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
+			converted, err := structs.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockCapella
+			var signedblock *structs.SignedBlindedBeaconBlockCapella
 			err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1442,9 +1442,9 @@ func TestPublishBlindedBlock(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
+			converted, err := structs.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockDeneb
+			var signedblock *structs.SignedBlindedBeaconBlockDeneb
 			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1512,10 +1512,10 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1523,7 +1523,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlock
+		var blk structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1542,10 +1542,10 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1553,7 +1553,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockAltair
+		var blk structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1579,7 +1579,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1605,7 +1605,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockCapella
+		var blk structs.SignedBlindedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1631,7 +1631,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockDeneb
+		var blk structs.SignedBlindedBeaconBlockDeneb
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1664,7 +1664,7 @@ func TestPublishBlindedBlockSSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1705,10 +1705,10 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1727,10 +1727,10 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1749,9 +1749,9 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Bellatrix)
-			converted, err := shared.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
+			converted, err := structs.BeaconBlockBellatrixFromConsensus(block.Bellatrix.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockBellatrix
+			var signedblock *structs.SignedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(rpctesting.BellatrixBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1773,9 +1773,9 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Capella)
-			converted, err := shared.BeaconBlockCapellaFromConsensus(block.Capella.Block)
+			converted, err := structs.BeaconBlockCapellaFromConsensus(block.Capella.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockCapella
+			var signedblock *structs.SignedBeaconBlockCapella
 			err = json.Unmarshal([]byte(rpctesting.CapellaBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -1797,9 +1797,9 @@ func TestPublishBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Deneb)
-			converted, err := shared.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
+			converted, err := structs.SignedBeaconBlockContentsDenebFromConsensus(block.Deneb)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBeaconBlockContentsDeneb
+			var signedblock *structs.SignedBeaconBlockContentsDeneb
 			err = json.Unmarshal([]byte(rpctesting.DenebBlockContents), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock)
@@ -1880,10 +1880,10 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1891,7 +1891,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlock
+		var blk structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1910,10 +1910,10 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -1921,7 +1921,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockAltair
+		var blk structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1946,7 +1946,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			V1Alpha1ValidatorServer: v1alpha1Server,
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
-		var blk shared.SignedBeaconBlockBellatrix
+		var blk structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1972,7 +1972,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockCapella
+		var blk structs.SignedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.CapellaBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -1998,7 +1998,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockContentsDeneb
+		var blk structs.SignedBeaconBlockContentsDeneb
 		err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2018,7 +2018,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2039,7 +2039,7 @@ func TestPublishBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockBellatrix
+		var blk structs.SignedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2093,10 +2093,10 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -2115,10 +2115,10 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -2137,9 +2137,9 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedBellatrix)
-			converted, err := shared.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
+			converted, err := structs.BlindedBeaconBlockBellatrixFromConsensus(block.BlindedBellatrix.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockBellatrix
+			var signedblock *structs.SignedBlindedBeaconBlockBellatrix
 			err = json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -2161,9 +2161,9 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedCapella)
-			converted, err := shared.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
+			converted, err := structs.BlindedBeaconBlockCapellaFromConsensus(block.BlindedCapella.Block)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockCapella
+			var signedblock *structs.SignedBlindedBeaconBlockCapella
 			err = json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -2185,9 +2185,9 @@ func TestPublishBlindedBlockV2(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_BlindedDeneb)
-			converted, err := shared.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
+			converted, err := structs.BlindedBeaconBlockDenebFromConsensus(block.BlindedDeneb.Message)
 			require.NoError(t, err)
-			var signedblock *shared.SignedBlindedBeaconBlockDeneb
+			var signedblock *structs.SignedBlindedBeaconBlockDeneb
 			err = json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &signedblock)
 			require.NoError(t, err)
 			require.DeepEqual(t, converted, signedblock.Message)
@@ -2267,10 +2267,10 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Phase0)
-			var signedblock *shared.SignedBeaconBlock
+			var signedblock *structs.SignedBeaconBlock
 			err := json.Unmarshal([]byte(rpctesting.Phase0Block), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockFromConsensus(block.Phase0.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -2278,7 +2278,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlock
+		var blk structs.SignedBeaconBlock
 		err := json.Unmarshal([]byte(rpctesting.Phase0Block), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2297,10 +2297,10 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 		v1alpha1Server := mock2.NewMockBeaconNodeValidatorServer(ctrl)
 		v1alpha1Server.EXPECT().ProposeBeaconBlock(gomock.Any(), mock.MatchedBy(func(req *eth.GenericSignedBeaconBlock) bool {
 			block, ok := req.Block.(*eth.GenericSignedBeaconBlock_Altair)
-			var signedblock *shared.SignedBeaconBlockAltair
+			var signedblock *structs.SignedBeaconBlockAltair
 			err := json.Unmarshal([]byte(rpctesting.AltairBlock), &signedblock)
 			require.NoError(t, err)
-			require.DeepEqual(t, shared.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
+			require.DeepEqual(t, structs.BeaconBlockAltairFromConsensus(block.Altair.Block), signedblock.Message)
 			return ok
 		}))
 		server := &Server{
@@ -2308,7 +2308,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBeaconBlockAltair
+		var blk structs.SignedBeaconBlockAltair
 		err := json.Unmarshal([]byte(rpctesting.AltairBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2334,7 +2334,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2360,7 +2360,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockCapella
+		var blk structs.SignedBlindedBeaconBlockCapella
 		err := json.Unmarshal([]byte(rpctesting.BlindedCapellaBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2386,7 +2386,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker:             &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockDeneb
+		var blk structs.SignedBlindedBeaconBlockDeneb
 		err := json.Unmarshal([]byte(rpctesting.BlindedDenebBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2419,7 +2419,7 @@ func TestPublishBlindedBlockV2SSZ(t *testing.T) {
 			SyncChecker: &mockSync.Sync{IsSyncing: false},
 		}
 
-		var blk shared.SignedBlindedBeaconBlockBellatrix
+		var blk structs.SignedBlindedBeaconBlockBellatrix
 		err := json.Unmarshal([]byte(rpctesting.BlindedBellatrixBlock), &blk)
 		require.NoError(t, err)
 		genericBlock, err := blk.ToGeneric()
@@ -2639,7 +2639,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 				bs.GetBlockRoot(writer, request)
 				assert.Equal(t, tt.wantCode, writer.Code)
-				resp := &BlockRootResponse{}
+				resp := &structs.BlockRootResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 				if tt.wantErr != "" {
 					require.ErrorContains(t, tt.wantErr, errors.New(writer.Body.String()))
@@ -2681,7 +2681,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 		bs.GetBlockRoot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRootResponse{}
+		resp := &structs.BlockRootResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.DeepEqual(t, resp.ExecutionOptimistic, true)
 	})
@@ -2716,7 +2716,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 			bs.GetBlockRoot(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
-			resp := &BlockRootResponse{}
+			resp := &structs.BlockRootResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			require.DeepEqual(t, resp.Finalized, true)
 		})
@@ -2728,7 +2728,7 @@ func TestServer_GetBlockRoot(t *testing.T) {
 
 			bs.GetBlockRoot(writer, request)
 			assert.Equal(t, http.StatusOK, writer.Code)
-			resp := &BlockRootResponse{}
+			resp := &structs.BlockRootResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			require.DeepEqual(t, resp.Finalized, false)
 		})
@@ -2768,7 +2768,7 @@ func TestGetStateFork(t *testing.T) {
 
 	server.GetStateFork(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	var stateForkReponse *GetStateForkResponse
+	var stateForkReponse *structs.GetStateForkResponse
 	err = json.Unmarshal(writer.Body.Bytes(), &stateForkReponse)
 	require.NoError(t, err)
 	expectedFork := fakeState.Fork()
@@ -2872,7 +2872,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch)*2, len(resp.Data))
 		for _, datum := range resp.Data {
@@ -2893,7 +2893,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		for _, datum := range resp.Data {
 			slot, err := strconv.ParseUint(datum.Slot, 10, 32)
@@ -2910,7 +2910,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 
@@ -2936,7 +2936,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, int(params.BeaconConfig().SlotsPerEpoch), len(resp.Data))
 
@@ -2962,7 +2962,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 1, len(resp.Data))
 
@@ -3005,7 +3005,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -3042,7 +3042,7 @@ func TestGetCommittees(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		s.GetCommittees(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetCommitteesResponse{}
+		resp := &structs.GetCommitteesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NoError(t, err)
 		assert.Equal(t, true, resp.Finalized)
@@ -3141,7 +3141,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 				bs.GetBlockHeaders(writer, request)
 				require.Equal(t, http.StatusOK, writer.Code)
-				resp := &GetBlockHeadersResponse{}
+				resp := &structs.GetBlockHeadersResponse{}
 				require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 
 				require.Equal(t, len(tt.want), len(resp.Data))
@@ -3158,7 +3158,7 @@ func TestGetBlockHeaders(t *testing.T) {
 					expectedHeaderRoot, err := expectedHeader.HashTreeRoot()
 					require.NoError(t, err)
 					assert.DeepEqual(t, hexutil.Encode(expectedHeaderRoot[:]), resp.Data[i].Root)
-					assert.DeepEqual(t, shared.BeaconBlockHeaderFromConsensus(expectedHeader), resp.Data[i].Header.Message)
+					assert.DeepEqual(t, structs.BeaconBlockHeaderFromConsensus(expectedHeader), resp.Data[i].Header.Message)
 				}
 			})
 		}
@@ -3193,7 +3193,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 		bs.GetBlockHeaders(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockHeadersResponse{}
+		resp := &structs.GetBlockHeadersResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -3237,7 +3237,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 			bs.GetBlockHeaders(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockHeadersResponse{}
+			resp := &structs.GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
 		})
@@ -3251,7 +3251,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 			bs.GetBlockHeaders(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockHeadersResponse{}
+			resp := &structs.GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
@@ -3264,7 +3264,7 @@ func TestGetBlockHeaders(t *testing.T) {
 
 			bs.GetBlockHeaders(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockHeadersResponse{}
+			resp := &structs.GetBlockHeadersResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
@@ -3315,7 +3315,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 		s.GetBlockHeader(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockHeaderResponse{}
+		resp := &structs.GetBlockHeaderResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Data.Canonical)
 		assert.Equal(t, "0xd7d92f6206707f2c9c4e7e82320617d5abac2b6461a65ea5bb1a154b5b5ea2fa", resp.Data.Root)
@@ -3359,7 +3359,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 		s.GetBlockHeader(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBlockHeaderResponse{}
+		resp := &structs.GetBlockHeaderResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -3383,7 +3383,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 			s.GetBlockHeader(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockHeaderResponse{}
+			resp := &structs.GetBlockHeaderResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, true, resp.Finalized)
 		})
@@ -3403,7 +3403,7 @@ func TestServer_GetBlockHeader(t *testing.T) {
 
 			s.GetBlockHeader(writer, request)
 			require.Equal(t, http.StatusOK, writer.Code)
-			resp := &GetBlockHeaderResponse{}
+			resp := &structs.GetBlockHeaderResponse{}
 			require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 			assert.Equal(t, false, resp.Finalized)
 		})
@@ -3455,7 +3455,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		s.GetFinalityCheckpoints(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetFinalityCheckpointsResponse{}
+		resp := &structs.GetFinalityCheckpointsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 		assert.Equal(t, strconv.FormatUint(uint64(fakeState.FinalizedCheckpoint().Epoch), 10), resp.Data.Finalized.Epoch)
@@ -3508,7 +3508,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		s.GetFinalityCheckpoints(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetFinalityCheckpointsResponse{}
+		resp := &structs.GetFinalityCheckpointsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -3536,7 +3536,7 @@ func TestGetFinalityCheckpoints(t *testing.T) {
 
 		s.GetFinalityCheckpoints(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetFinalityCheckpointsResponse{}
+		resp := &structs.GetFinalityCheckpointsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -3566,7 +3566,7 @@ func TestGetGenesis(t *testing.T) {
 
 		s.GetGenesis(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetGenesisResponse{}
+		resp := &structs.GetGenesisResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 

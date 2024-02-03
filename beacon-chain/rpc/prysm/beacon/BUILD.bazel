@@ -5,11 +5,11 @@ go_library(
     srcs = [
         "handlers.go",
         "server.go",
-        "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/beacon",
     visibility = ["//visibility:public"],
     deps = [
+        "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/db:go_default_library",
