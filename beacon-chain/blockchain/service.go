@@ -93,6 +93,13 @@ type config struct {
 	BlockFetcher            execution.POWBlockFetcher
 	FinalizedStateAtStartUp state.BeaconState
 	ExecutionEngineCaller   execution.EngineCaller
+	SyncChecker             Checker
+}
+
+// Checker is an interface used to determine if a node is in initial sync
+// or regular sync.
+type Checker interface {
+	Synced() bool
 }
 
 var ErrMissingClockSetter = errors.New("blockchain Service initialized without a startup.ClockSetter")

@@ -198,3 +198,10 @@ func WithBlobStorage(b *filesystem.BlobStorage) Option {
 		return nil
 	}
 }
+
+func WithSyncChecker(checker Checker) Option {
+	return func(s *Service) error {
+		s.cfg.SyncChecker = checker
+		return nil
+	}
+}
