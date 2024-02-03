@@ -199,30 +199,35 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		)
 	}
 
-	if targetEpoch > minTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, minTarget,
-		)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "could not get existing attestation record at target %d", minTarget,
-			)
-		}
-
-		if existingAttRecord == nil {
-			return nil, nil
-		}
-
-		if sourceEpoch < existingAttRecord.IndexedAttestation.Data.Source.Epoch {
-			surroundingVotesTotal.Inc()
-			return &ethpb.AttesterSlashing{
-				Attestation_1: attestation.IndexedAttestation,
-				Attestation_2: existingAttRecord.IndexedAttestation,
-			}, nil
-		}
+	if targetEpoch <= minTarget {
+		// The incoming attestation does not surround any existing ones.
+		return nil, nil
 	}
 
-	return nil, nil
+	// The incoming attestation surrounds an existing one.
+	existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, minTarget)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get existing attestation record at target %d", minTarget)
+	}
+
+	if existingAttRecord == nil {
+		return nil, nil
+	}
+
+	if existingAttRecord.IndexedAttestation.Data.Source.Epoch <= sourceEpoch {
+		// This case should normally not happen, since if we have targetEpoch > minTarget,
+		// then there is at least one attestation we surround.
+		// However, it can happens if we have multiple attestation with the same target
+		// but with a different source. In this case, we have both a double vote AND a surround vote.
+		// The validator will be slashed for the double vote, and the surround vote will be ignored.
+		return nil, nil
+	}
+
+	surroundingVotesTotal.Inc()
+	return &ethpb.AttesterSlashing{
+		Attestation_1: attestation.IndexedAttestation,
+		Attestation_2: existingAttRecord.IndexedAttestation,
+	}, nil
 }
 
 // CheckSlashable takes in a validator index and an incoming attestation
@@ -252,29 +257,35 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		)
 	}
 
-	if targetEpoch < maxTarget {
-		existingAttRecord, err := slasherDB.AttestationRecordForValidator(
-			ctx, validatorIdx, maxTarget,
-		)
-		if err != nil {
-			return nil, errors.Wrapf(
-				err, "could not get existing attestation record at target %d", maxTarget,
-			)
-		}
-
-		if existingAttRecord == nil {
-			return nil, nil
-		}
-
-		if existingAttRecord.IndexedAttestation.Data.Source.Epoch < sourceEpoch {
-			surroundedVotesTotal.Inc()
-			return &ethpb.AttesterSlashing{
-				Attestation_1: existingAttRecord.IndexedAttestation,
-				Attestation_2: attestation.IndexedAttestation,
-			}, nil
-		}
+	if targetEpoch >= maxTarget {
+		// The incoming attestation is not surrounded by any existing ones.
+		return nil, nil
 	}
-	return nil, nil
+
+	// The incoming attestation is surrounded by an existing one.
+	existingAttRecord, err := slasherDB.AttestationRecordForValidator(ctx, validatorIdx, maxTarget)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get existing attestation record at target %d", maxTarget)
+	}
+
+	if existingAttRecord == nil {
+		return nil, errors.Wrap(err, "no existing attestation record found")
+	}
+
+	if existingAttRecord.IndexedAttestation.Data.Source.Epoch >= sourceEpoch {
+		// This case should normally not happen, since if we have targetEpoch < maxTarget,
+		// then there is at least one attestation that surrounds us.
+		// However, it can happens if we have multiple attestation with the same target
+		// but with a different source. In this case, we have both a double vote AND a surround vote.
+		// The validator will be slashed for the double vote, and the surround vote will be ignored.
+		return nil, nil
+	}
+
+	surroundedVotesTotal.Inc()
+	return &ethpb.AttesterSlashing{
+		Attestation_1: existingAttRecord.IndexedAttestation,
+		Attestation_2: attestation.IndexedAttestation,
+	}, nil
 }
 
 // Update a min span chunk for a validator index starting at the current epoch, e_c, then updating

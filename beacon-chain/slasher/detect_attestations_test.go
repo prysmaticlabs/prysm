@@ -525,7 +525,7 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		args.currentEpoch,
 	)
 	require.NoError(t, err)
-	require.Equal(t, true, slashing == nil)
+	require.IsNil(t, slashing)
 	att.IndexedAttestation.AttestingIndices = []uint64{uint64(validatorIdx)}
 	err = slasherDB.SaveAttestationRecordsForValidators(
 		ctx,
@@ -878,10 +878,12 @@ func createAttestationWrapper(t testing.TB, source, target primitives.Epoch, ind
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 	}
+
 	signRoot, err := data.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
 			AttestingIndices: indices,
