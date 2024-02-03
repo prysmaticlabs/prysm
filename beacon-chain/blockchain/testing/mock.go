@@ -180,6 +180,14 @@ func (mon *MockOperationNotifier) OperationFeed() *event.Feed {
 	return mon.feed
 }
 
+// MockChecker is a mock sync checker.
+type MockChecker struct{}
+
+// Synced returns true.
+func (_ MockChecker) Synced() bool {
+	return true
+}
+
 // ReceiveBlockInitialSync mocks ReceiveBlockInitialSync method in chain service.
 func (s *ChainService) ReceiveBlockInitialSync(ctx context.Context, block interfaces.ReadOnlySignedBeaconBlock, _ [32]byte) error {
 	if s.State == nil {

@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
@@ -596,7 +597,7 @@ func TestService_IsFinalized(t *testing.T) {
 
 func TestService_inRegularSync(t *testing.T) {
 	ctx := context.Background()
-	c := &Service{cfg: &config{ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
+	c := &Service{cfg: &config{SyncChecker: mock.MockChecker{}, ForkChoiceStore: doublylinkedtree.New()}, head: &head{root: [32]byte{'b'}}}
 	ojc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	ofc := &ethpb.Checkpoint{Root: params.BeaconConfig().ZeroHash[:]}
 	st, blkRoot, err := prepareForkchoiceState(ctx, 100, [32]byte{'a'}, [32]byte{}, params.BeaconConfig().ZeroHash, ojc, ofc)
