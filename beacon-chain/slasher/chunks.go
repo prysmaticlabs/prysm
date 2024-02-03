@@ -16,10 +16,8 @@ import (
 // functions used for attester slashing detection and
 // loading, saving, and updating min/max span chunks.
 type chunkUpdateArgs struct {
-	kind                slashertypes.ChunkKind
-	chunkIndex          uint64
-	validatorChunkIndex uint64
-	currentEpoch        primitives.Epoch
+	chunkIndex   uint64
+	currentEpoch primitives.Epoch
 }
 
 // Chunker defines a struct which represents a slice containing a chunk for K different validator's
@@ -503,12 +501,12 @@ func (m *MinSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) pr
 //	max_spans_val_i = [[-, -, -], [-, -, -], [-, -, -]]
 //
 // If C = chunkSize is 3 epochs per chunk, and we input start epoch of chunk 1 which is 3. The next start
-// epoch is the start epoch of chunk 2, which is epoch 4. This is computed as:
+// epoch is the start epoch of chunk 2, which is epoch 6. This is computed as:
 //
 //	first_epoch(chunkIndex(startEpoch)+1)
 //	first_epoch(chunkIndex(3)+1)
 //	first_epoch(1 + 1)
-//	first_epoch(2)
+//	first_epoch(6)
 //	4
 func (m *MaxSpanChunksSlice) NextChunkStartEpoch(startEpoch primitives.Epoch) primitives.Epoch {
 	return m.params.firstEpoch(m.params.chunkIndex(startEpoch) + 1)

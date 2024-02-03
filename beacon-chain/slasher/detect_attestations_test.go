@@ -489,7 +489,6 @@ func Test_epochUpdateForValidators(t *testing.T) {
 func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	defaultParams := DefaultParams()
 	srv, err := New(context.Background(),
 		&ServiceConfig{
 			Database:      slasherDB,
@@ -499,17 +498,10 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 	require.NoError(t, err)
 
 	// We initialize an empty chunks slice.
-	chunk := EmptyMinSpanChunksSlice(defaultParams)
-	chunkIdx := uint64(0)
 	currentEpoch := primitives.Epoch(3)
+	validatorChunkIndex := uint64(0)
 	validatorIdx := primitives.ValidatorIndex(0)
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	chunksByChunkIdx := map[uint64]Chunker{
-		chunkIdx: chunk,
-	}
+	chunksByChunkIdx := map[uint64]Chunker{}
 
 	// We apply attestation with (source 1, target 2) for our validator.
 	source := primitives.Epoch(1)
@@ -519,10 +511,10 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		ctx,
 		chunksByChunkIdx,
 		att,
-		args.kind,
-		args.validatorChunkIndex,
+		slashertypes.MinSpan,
+		validatorChunkIndex,
 		validatorIdx,
-		args.currentEpoch,
+		currentEpoch,
 	)
 	require.NoError(t, err)
 	require.IsNil(t, slashing)
@@ -542,10 +534,10 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 		ctx,
 		chunksByChunkIdx,
 		slashableAtt,
-		args.kind,
-		args.validatorChunkIndex,
+		slashertypes.MinSpan,
+		validatorChunkIndex,
 		validatorIdx,
-		args.currentEpoch,
+		currentEpoch,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
@@ -554,7 +546,6 @@ func Test_applyAttestationForValidator_MinSpanChunk(t *testing.T) {
 func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	ctx := context.Background()
 	slasherDB := dbtest.SetupSlasherDB(t)
-	defaultParams := DefaultParams()
 	srv, err := New(context.Background(),
 		&ServiceConfig{
 			Database:      slasherDB,
@@ -564,17 +555,10 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 	require.NoError(t, err)
 
 	// We initialize an empty chunks slice.
-	chunk := EmptyMaxSpanChunksSlice(defaultParams)
-	chunkIdx := uint64(0)
 	currentEpoch := primitives.Epoch(3)
+	validatorChunkIndex := uint64(0)
 	validatorIdx := primitives.ValidatorIndex(0)
-	args := &chunkUpdateArgs{
-		chunkIndex:   chunkIdx,
-		currentEpoch: currentEpoch,
-	}
-	chunksByChunkIdx := map[uint64]Chunker{
-		chunkIdx: chunk,
-	}
+	chunksByChunkIdx := map[uint64]Chunker{}
 
 	// We apply attestation with (source 0, target 3) for our validator.
 	source := primitives.Epoch(0)
@@ -584,10 +568,10 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		ctx,
 		chunksByChunkIdx,
 		att,
-		args.kind,
-		args.validatorChunkIndex,
+		slashertypes.MaxSpan,
+		validatorChunkIndex,
 		validatorIdx,
-		args.currentEpoch,
+		currentEpoch,
 	)
 	require.NoError(t, err)
 	require.Equal(t, true, slashing == nil)
@@ -607,10 +591,10 @@ func Test_applyAttestationForValidator_MaxSpanChunk(t *testing.T) {
 		ctx,
 		chunksByChunkIdx,
 		slashableAtt,
-		args.kind,
-		args.validatorChunkIndex,
+		slashertypes.MaxSpan,
+		validatorChunkIndex,
 		validatorIdx,
-		args.currentEpoch,
+		currentEpoch,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, slashing)
