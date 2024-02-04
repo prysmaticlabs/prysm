@@ -7,6 +7,7 @@ import (
 
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v4/runtime/interop"
+	"github.com/prysmaticlabs/prysm/v4/runtime/version"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
 )
@@ -47,4 +48,13 @@ func createGenesisDepositData(t *testing.T, numKeys int) []*depositDataJSON {
 		}
 	}
 	return jsonData
+}
+
+func Test_theOrderOfVersionNamesOutPutIsFixed(t *testing.T) {
+	versionsOld, versionMapOld := version.CreateVersions()
+	for i := 0; i < 100; i++ {
+		versionsNew, versionMapNew := version.CreateVersions()
+		assert.DeepEqual(t, versionsNew, versionsOld)
+		assert.DeepEqual(t, versionMapNew, versionMapOld)
+	}
 }

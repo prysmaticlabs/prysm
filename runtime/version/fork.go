@@ -1,6 +1,10 @@
 package version
 
-import "github.com/pkg/errors"
+import (
+	"sort"
+
+	"github.com/pkg/errors"
+)
 
 const (
 	Phase0 = iota
@@ -49,12 +53,28 @@ func All() []int {
 	return allVersions
 }
 
-func init() {
-	allVersions = make([]int, len(versionToString))
+func CreateVersions() ([]int, map[string]int) {
+	versions := make([]int, len(versionToString))
+	versionMap := map[string]int{}
+
+	// range map is random, so we need to sort the keys
+	var keys []int
+	for k := range versionToString {
+		keys = append(keys, k)
+	}
+
+	sort.Ints(keys)
+
 	i := 0
-	for v, s := range versionToString {
-		allVersions[i] = v
-		stringToVersion[s] = v
+	for _, k := range keys {
+		versions[i] = k
+		versionMap[versionToString[k]] = k
 		i++
 	}
+
+	return versions, versionMap
+}
+
+func init() {
+	allVersions, stringToVersion = CreateVersions()
 }
