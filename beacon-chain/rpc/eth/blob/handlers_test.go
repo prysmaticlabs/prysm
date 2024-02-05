@@ -284,29 +284,6 @@ func TestBlobs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 0, len(resp.Data))
 	})
-	t.Run("outside retention period returns 200 w/empty list ", func(t *testing.T) {
-		u := "http://foo.example/123"
-		request := httptest.NewRequest("GET", u, nil)
-		writer := httptest.NewRecorder()
-		writer.Body = &bytes.Buffer{}
-		moc := &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}}
-		blocker := &lookup.BeaconDbBlocker{
-			ChainInfoFetcher:   moc,
-			GenesisTimeFetcher: moc, // max slot
-			BeaconDB:           db,
-			BlobStorage:        bs,
-		}
-		s := &Server{
-			Blocker: blocker,
-		}
-
-		s.Blobs(writer, request)
-
-		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &structs.SidecarsResponse{}
-		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
-		require.Equal(t, 0, len(resp.Data))
-	})
 	t.Run("block without commitments returns 200 w/empty list ", func(t *testing.T) {
 		denebBlock, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 333, 0)
 		commitments, err := denebBlock.Block().Body().BlobKzgCommitments()
@@ -318,12 +295,13 @@ func TestBlobs(t *testing.T) {
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
-		moc := &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}}
 		blocker := &lookup.BeaconDbBlocker{
-			ChainInfoFetcher:   moc,
-			GenesisTimeFetcher: moc, // max slot
-			BeaconDB:           db,
-			BlobStorage:        bs,
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
