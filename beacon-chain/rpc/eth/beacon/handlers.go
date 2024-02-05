@@ -2104,12 +2104,12 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		httputil.WriteSsz(w, sszData, "deposit_snapshot.ssz")
-	} else {
-		httputil.WriteJson(
-			w,
-			&structs.GetDepositSnapshotResponse{
-				Data: structs.DepositSnapshotFromConsensus(snapshot),
-			},
-		)
 	}
+	httputil.WriteJson(
+		w,
+		&structs.GetDepositSnapshotResponse{
+			Data: structs.DepositSnapshotFromConsensus(snapshot),
+		},
+	)
+
 }

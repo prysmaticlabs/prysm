@@ -3652,8 +3652,8 @@ func TestGetDepositSnapshot(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodGet, "/eth/v1/beacon/deposit_snapshot", nil)
 	writer := httptest.NewRecorder()
-	writer.Body = &bytes.Buffer{}
 	t.Run("JSON response", func(t *testing.T) {
+		writer.Body = &bytes.Buffer{}
 		s.GetDepositSnapshot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
 		resp := &structs.GetDepositSnapshotResponse{}
@@ -3666,6 +3666,7 @@ func TestGetDepositSnapshot(t *testing.T) {
 		assert.Equal(t, finalized, len(resp.Data.Finalized))
 	})
 	t.Run("SSZ response", func(t *testing.T) {
+		writer.Body = &bytes.Buffer{}
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		s.GetDepositSnapshot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
