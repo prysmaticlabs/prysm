@@ -209,6 +209,14 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 	}
 
 	if existingAttRecord == nil {
+		// This case should normally not happen. If this happen, it means we previously
+		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// recording the attestation itself. As a consequence, we say there is no surrounding vote,
+		// but we log an error.
+		log.Errorf("No existing attestation record found for validator %d at target %d, while a surrounding vote was detected.",
+			validatorIdx, minTarget,
+		)
+
 		return nil, nil
 	}
 
@@ -267,7 +275,14 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 	}
 
 	if existingAttRecord == nil {
-		return nil, errors.Wrap(err, "no existing attestation record found")
+		// This case should normally not happen. If this happen, it means we previously
+		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
+		// recording the attestation itself. As a consequence, we say there is no surrounded vote,
+		// but we log an error.
+		log.Errorf("No existing attestation record found for validator %d at target %d, while a surrounded vote was detected.",
+			validatorIdx, maxTarget,
+		)
+		return nil, nil
 	}
 
 	if existingAttRecord.IndexedAttestation.Data.Source.Epoch >= sourceEpoch {
