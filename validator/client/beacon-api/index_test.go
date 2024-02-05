@@ -194,7 +194,7 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
-	req := beacon.GetValidatorsRequest{
+	req := structs.GetValidatorsRequest{
 		Ids:      []string{stringPubKey},
 		Statuses: []string{},
 	}
