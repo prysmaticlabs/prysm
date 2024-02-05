@@ -27,7 +27,7 @@ message ETH1ChainData {
 
 // DepositSnapshot represents an EIP-4881 deposit snapshot
 message DepositSnapshot {
-    repeated bytes finalized = 1 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "1048576,1073741824"];
+    repeated bytes finalized = 1 [(ethereum.eth.ext.ssz_size) = "?,32", (ethereum.eth.ext.ssz_max)  = "32"];
     bytes deposit_root = 2 [(ethereum.eth.ext.ssz_size) = "32"];
     uint64 deposit_count = 3;
     bytes execution_hash = 4 [(ethereum.eth.ext.ssz_size) = "32"];
