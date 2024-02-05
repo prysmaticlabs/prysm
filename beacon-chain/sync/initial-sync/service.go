@@ -75,22 +75,22 @@ func WithVerifierWaiter(viw *verification.InitializerWaiter) Option {
 // in the checker.
 func WithSyncChecker(checker *SyncChecker) Option {
 	return func(service *Service) {
-		checker.svc = service
+		checker.Svc = service
 	}
 }
 
 // SyncChecker allows other services to check the current status of
 // initial-sync and use that internally in their service.
 type SyncChecker struct {
-	svc *Service
+	Svc *Service
 }
 
 // Synced returns the status of the service.
 func (s *SyncChecker) Synced() bool {
-	if s.svc == nil {
+	if s.Svc == nil {
 		return false
 	}
-	return s.svc.Synced()
+	return s.Svc.Synced()
 }
 
 // NewService configures the initial sync service responsible for bringing the node up to the
