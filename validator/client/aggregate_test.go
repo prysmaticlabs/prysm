@@ -129,7 +129,7 @@ func TestSubmitAggregateAndProof_Distributed(t *testing.T) {
 	var pubKey [fieldparams.BLSPubkeyLength]byte
 	copy(pubKey[:], validatorKey.PublicKey().Marshal())
 	validator.duties = &ethpb.DutiesResponse{
-		Duties: []*ethpb.DutiesResponse_Duty{
+		CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 			{
 				PublicKey:      validatorKey.PublicKey().Marshal(),
 				ValidatorIndex: validatorIdx,
