@@ -11,6 +11,7 @@ import (
 	gomock "github.com/golang/mock/gomock"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -79,6 +80,21 @@ func (m *MockValidatorClient) EventStreamIsRunning() bool {
 func (mr *MockValidatorClientMockRecorder) EventStreamIsRunning() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EventStreamIsRunning", reflect.TypeOf((*MockValidatorClient)(nil).EventStreamIsRunning))
+}
+
+// GetAggregatedSelections mocks base method.
+func (m *MockValidatorClient) GetAggregatedSelections(arg0 context.Context, arg1 []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAggregatedSelections", arg0, arg1)
+	ret0, _ := ret[0].([]iface.BeaconCommitteeSelection)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAggregatedSelections indicates an expected call of GetAggregatedSelections.
+func (mr *MockValidatorClientMockRecorder) GetAggregatedSelections(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAggregatedSelections", reflect.TypeOf((*MockValidatorClient)(nil).GetAggregatedSelections), arg0, arg1)
 }
 
 // GetAttestationData mocks base method.

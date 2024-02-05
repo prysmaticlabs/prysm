@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -84,31 +85,31 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 
 	switch st.Version() {
 	case version.Phase0:
-		respSt, err = shared.BeaconStateFromConsensus(st)
+		respSt, err = structs.BeaconStateFromConsensus(st)
 		if err != nil {
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Altair:
-		respSt, err = shared.BeaconStateAltairFromConsensus(st)
+		respSt, err = structs.BeaconStateAltairFromConsensus(st)
 		if err != nil {
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Bellatrix:
-		respSt, err = shared.BeaconStateBellatrixFromConsensus(st)
+		respSt, err = structs.BeaconStateBellatrixFromConsensus(st)
 		if err != nil {
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Capella:
-		respSt, err = shared.BeaconStateCapellaFromConsensus(st)
+		respSt, err = structs.BeaconStateCapellaFromConsensus(st)
 		if err != nil {
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case version.Deneb:
-		respSt, err = shared.BeaconStateDenebFromConsensus(st)
+		respSt, err = structs.BeaconStateDenebFromConsensus(st)
 		if err != nil {
 			httputil.HandleError(w, errMsgStateFromConsensus+": "+err.Error(), http.StatusInternalServerError)
 			return
@@ -124,7 +125,7 @@ func (s *Server) getBeaconStateV2(ctx context.Context, w http.ResponseWriter, id
 		return
 	}
 	ver := version.String(st.Version())
-	resp := &GetBeaconStateV2Response{
+	resp := &structs.GetBeaconStateV2Response{
 		Version:             ver,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
@@ -156,8 +157,8 @@ func (s *Server) GetForkChoiceHeadsV2(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	headRoots, headSlots := s.HeadFetcher.ChainHeads()
-	resp := &GetForkChoiceHeadsV2Response{
-		Data: make([]*ForkChoiceHead, len(headRoots)),
+	resp := &structs.GetForkChoiceHeadsV2Response{
+		Data: make([]*structs.ForkChoiceHead, len(headRoots)),
 	}
 	for i := range headRoots {
 		isOptimistic, err := s.OptimisticModeFetcher.IsOptimisticForRoot(ctx, headRoots[i])
@@ -165,7 +166,7 @@ func (s *Server) GetForkChoiceHeadsV2(w http.ResponseWriter, r *http.Request) {
 			httputil.HandleError(w, "Could not check if head is optimistic: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		resp.Data[i] = &ForkChoiceHead{
+		resp.Data[i] = &structs.ForkChoiceHead{
 			Root:                hexutil.Encode(headRoots[i][:]),
 			Slot:                fmt.Sprintf("%d", headSlots[i]),
 			ExecutionOptimistic: isOptimistic,
@@ -186,9 +187,9 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nodes := make([]*ForkChoiceNode, len(dump.ForkChoiceNodes))
+	nodes := make([]*structs.ForkChoiceNode, len(dump.ForkChoiceNodes))
 	for i, n := range dump.ForkChoiceNodes {
-		nodes[i] = &ForkChoiceNode{
+		nodes[i] = &structs.ForkChoiceNode{
 			Slot:               fmt.Sprintf("%d", n.Slot),
 			BlockRoot:          hexutil.Encode(n.BlockRoot),
 			ParentRoot:         hexutil.Encode(n.ParentRoot),
@@ -197,7 +198,7 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 			Weight:             fmt.Sprintf("%d", n.Weight),
 			ExecutionBlockHash: hexutil.Encode(n.ExecutionBlockHash),
 			Validity:           n.Validity.String(),
-			ExtraData: &ForkChoiceNodeExtraData{
+			ExtraData: &structs.ForkChoiceNodeExtraData{
 				UnrealizedJustifiedEpoch: fmt.Sprintf("%d", n.UnrealizedJustifiedEpoch),
 				UnrealizedFinalizedEpoch: fmt.Sprintf("%d", n.UnrealizedFinalizedEpoch),
 				Balance:                  fmt.Sprintf("%d", n.Balance),
@@ -206,13 +207,13 @@ func (s *Server) GetForkChoice(w http.ResponseWriter, r *http.Request) {
 			},
 		}
 	}
-	resp := &GetForkChoiceDumpResponse{
-		JustifiedCheckpoint: shared.CheckpointFromConsensus(dump.JustifiedCheckpoint),
-		FinalizedCheckpoint: shared.CheckpointFromConsensus(dump.FinalizedCheckpoint),
+	resp := &structs.GetForkChoiceDumpResponse{
+		JustifiedCheckpoint: structs.CheckpointFromConsensus(dump.JustifiedCheckpoint),
+		FinalizedCheckpoint: structs.CheckpointFromConsensus(dump.FinalizedCheckpoint),
 		ForkChoiceNodes:     nodes,
-		ExtraData: &ForkChoiceDumpExtraData{
-			UnrealizedJustifiedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
-			UnrealizedFinalizedCheckpoint: shared.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
+		ExtraData: &structs.ForkChoiceDumpExtraData{
+			UnrealizedJustifiedCheckpoint: structs.CheckpointFromConsensus(dump.UnrealizedJustifiedCheckpoint),
+			UnrealizedFinalizedCheckpoint: structs.CheckpointFromConsensus(dump.UnrealizedFinalizedCheckpoint),
 			ProposerBoostRoot:             hexutil.Encode(dump.ProposerBoostRoot),
 			PreviousProposerBoostRoot:     hexutil.Encode(dump.PreviousProposerBoostRoot),
 			HeadRoot:                      hexutil.Encode(dump.HeadRoot),

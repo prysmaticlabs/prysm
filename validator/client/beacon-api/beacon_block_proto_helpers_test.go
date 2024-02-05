@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -14,15 +14,15 @@ import (
 func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.ProposerSlashing
+		generateInput        func() []*structs.ProposerSlashing
 		expectedResult       []*ethpb.ProposerSlashing
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil proposer slashing",
 			expectedErrorMessage: "proposer slashing at index `0` is nil",
-			generateInput: func() []*shared.ProposerSlashing {
-				return []*shared.ProposerSlashing{
+			generateInput: func() []*structs.ProposerSlashing {
+				return []*structs.ProposerSlashing{
 					nil,
 				}
 			},
@@ -30,7 +30,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 		{
 			name:                 "bad header 1",
 			expectedErrorMessage: "failed to get proposer header 1",
-			generateInput: func() []*shared.ProposerSlashing {
+			generateInput: func() []*structs.ProposerSlashing {
 				input := generateProposerSlashings()
 				input[0].SignedHeader1 = nil
 				return input
@@ -39,7 +39,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 		{
 			name:                 "bad header 2",
 			expectedErrorMessage: "failed to get proposer header 2",
-			generateInput: func() []*shared.ProposerSlashing {
+			generateInput: func() []*structs.ProposerSlashing {
 				input := generateProposerSlashings()
 				input[0].SignedHeader2 = nil
 				return input
@@ -114,19 +114,19 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() *shared.SignedBeaconBlockHeader
+		generateInput        func() *structs.SignedBeaconBlockHeader
 		expectedResult       *ethpb.SignedBeaconBlockHeader
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil signed header",
 			expectedErrorMessage: "signed header is nil",
-			generateInput:        func() *shared.SignedBeaconBlockHeader { return nil },
+			generateInput:        func() *structs.SignedBeaconBlockHeader { return nil },
 		},
 		{
 			name:                 "nil header",
 			expectedErrorMessage: "header is nil",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message = nil
 				return input
@@ -135,7 +135,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad slot",
 			expectedErrorMessage: "failed to parse header slot `foo`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message.Slot = "foo"
 				return input
@@ -144,7 +144,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad proposer index",
 			expectedErrorMessage: "failed to parse header proposer index `bar`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message.ProposerIndex = "bar"
 				return input
@@ -153,7 +153,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad parent root",
 			expectedErrorMessage: "failed to decode header parent root `foo`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message.ParentRoot = "foo"
 				return input
@@ -162,7 +162,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad state root",
 			expectedErrorMessage: "failed to decode header state root `bar`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message.StateRoot = "bar"
 				return input
@@ -171,7 +171,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad body root",
 			expectedErrorMessage: "failed to decode header body root `foo`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Message.BodyRoot = "foo"
 				return input
@@ -180,7 +180,7 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 		{
 			name:                 "bad parent root",
 			expectedErrorMessage: "failed to decode signature `bar`",
-			generateInput: func() *shared.SignedBeaconBlockHeader {
+			generateInput: func() *structs.SignedBeaconBlockHeader {
 				input := generateSignedBeaconBlockHeader()
 				input.Signature = "bar"
 				return input
@@ -219,15 +219,15 @@ func TestBeaconBlockProtoHelpers_ConvertProposerSlashingSignedHeaderToProto(t *t
 func TestBeaconBlockProtoHelpers_ConvertAttesterSlashingsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.AttesterSlashing
+		generateInput        func() []*structs.AttesterSlashing
 		expectedResult       []*ethpb.AttesterSlashing
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil attester slashing",
 			expectedErrorMessage: "attester slashing at index `0` is nil",
-			generateInput: func() []*shared.AttesterSlashing {
-				return []*shared.AttesterSlashing{
+			generateInput: func() []*structs.AttesterSlashing {
+				return []*structs.AttesterSlashing{
 					nil,
 				}
 			},
@@ -235,8 +235,8 @@ func TestBeaconBlockProtoHelpers_ConvertAttesterSlashingsToProto(t *testing.T) {
 		{
 			name:                 "bad attestation 1",
 			expectedErrorMessage: "failed to get attestation 1",
-			generateInput: func() []*shared.AttesterSlashing {
-				return []*shared.AttesterSlashing{
+			generateInput: func() []*structs.AttesterSlashing {
+				return []*structs.AttesterSlashing{
 					{
 						Attestation1: nil,
 						Attestation2: nil,
@@ -247,7 +247,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttesterSlashingsToProto(t *testing.T) {
 		{
 			name:                 "bad attestation 2",
 			expectedErrorMessage: "failed to get attestation 2",
-			generateInput: func() []*shared.AttesterSlashing {
+			generateInput: func() []*structs.AttesterSlashing {
 				input := generateAttesterSlashings()
 				input[0].Attestation2 = nil
 				return input
@@ -350,19 +350,19 @@ func TestBeaconBlockProtoHelpers_ConvertAttesterSlashingsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertAttestationToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() *shared.IndexedAttestation
+		generateInput        func() *structs.IndexedAttestation
 		expectedResult       *ethpb.IndexedAttestation
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil indexed attestation",
 			expectedErrorMessage: "indexed attestation is nil",
-			generateInput:        func() *shared.IndexedAttestation { return nil },
+			generateInput:        func() *structs.IndexedAttestation { return nil },
 		},
 		{
 			name:                 "bad attesting index",
 			expectedErrorMessage: "failed to parse attesting index `foo`",
-			generateInput: func() *shared.IndexedAttestation {
+			generateInput: func() *structs.IndexedAttestation {
 				input := generateIndexedAttestation()
 				input.AttestingIndices[0] = "foo"
 				return input
@@ -371,7 +371,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationToProto(t *testing.T) {
 		{
 			name:                 "bad signature",
 			expectedErrorMessage: "failed to decode attestation signature `bar`",
-			generateInput: func() *shared.IndexedAttestation {
+			generateInput: func() *structs.IndexedAttestation {
 				input := generateIndexedAttestation()
 				input.Signature = "bar"
 				return input
@@ -380,7 +380,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationToProto(t *testing.T) {
 		{
 			name:                 "bad data",
 			expectedErrorMessage: "failed to get attestation data",
-			generateInput: func() *shared.IndexedAttestation {
+			generateInput: func() *structs.IndexedAttestation {
 				input := generateIndexedAttestation()
 				input.Data = nil
 				return input
@@ -426,19 +426,19 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertCheckpointToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() *shared.Checkpoint
+		generateInput        func() *structs.Checkpoint
 		expectedResult       *ethpb.Checkpoint
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil checkpoint",
 			expectedErrorMessage: "checkpoint is nil",
-			generateInput:        func() *shared.Checkpoint { return nil },
+			generateInput:        func() *structs.Checkpoint { return nil },
 		},
 		{
 			name:                 "bad epoch",
 			expectedErrorMessage: "failed to parse checkpoint epoch `foo`",
-			generateInput: func() *shared.Checkpoint {
+			generateInput: func() *structs.Checkpoint {
 				input := generateCheckpoint()
 				input.Epoch = "foo"
 				return input
@@ -447,7 +447,7 @@ func TestBeaconBlockProtoHelpers_ConvertCheckpointToProto(t *testing.T) {
 		{
 			name:                 "bad root",
 			expectedErrorMessage: "failed to decode checkpoint root `bar`",
-			generateInput: func() *shared.Checkpoint {
+			generateInput: func() *structs.Checkpoint {
 				input := generateCheckpoint()
 				input.Root = "bar"
 				return input
@@ -480,15 +480,15 @@ func TestBeaconBlockProtoHelpers_ConvertCheckpointToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.Attestation
+		generateInput        func() []*structs.Attestation
 		expectedResult       []*ethpb.Attestation
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil attestation",
 			expectedErrorMessage: "attestation at index `0` is nil",
-			generateInput: func() []*shared.Attestation {
-				return []*shared.Attestation{
+			generateInput: func() []*structs.Attestation {
+				return []*structs.Attestation{
 					nil,
 				}
 			},
@@ -496,7 +496,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 		{
 			name:                 "bad aggregation bits",
 			expectedErrorMessage: "failed to decode aggregation bits `foo`",
-			generateInput: func() []*shared.Attestation {
+			generateInput: func() []*structs.Attestation {
 				input := generateAttestations()
 				input[0].AggregationBits = "foo"
 				return input
@@ -505,7 +505,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 		{
 			name:                 "bad data",
 			expectedErrorMessage: "failed to get attestation data",
-			generateInput: func() []*shared.Attestation {
+			generateInput: func() []*structs.Attestation {
 				input := generateAttestations()
 				input[0].Data = nil
 				return input
@@ -514,7 +514,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 		{
 			name:                 "bad signature",
 			expectedErrorMessage: "failed to decode attestation signature `bar`",
-			generateInput: func() []*shared.Attestation {
+			generateInput: func() []*structs.Attestation {
 				input := generateAttestations()
 				input[0].Signature = "bar"
 				return input
@@ -579,19 +579,19 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() *shared.AttestationData
+		generateInput        func() *structs.AttestationData
 		expectedResult       *ethpb.AttestationData
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil attestation data",
 			expectedErrorMessage: "attestation data is nil",
-			generateInput:        func() *shared.AttestationData { return nil },
+			generateInput:        func() *structs.AttestationData { return nil },
 		},
 		{
 			name:                 "bad slot",
 			expectedErrorMessage: "failed to parse attestation slot `foo`",
-			generateInput: func() *shared.AttestationData {
+			generateInput: func() *structs.AttestationData {
 				input := generateAttestationData()
 				input.Slot = "foo"
 				return input
@@ -600,7 +600,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 		{
 			name:                 "bad committee index",
 			expectedErrorMessage: "failed to parse attestation committee index `bar`",
-			generateInput: func() *shared.AttestationData {
+			generateInput: func() *structs.AttestationData {
 				input := generateAttestationData()
 				input.CommitteeIndex = "bar"
 				return input
@@ -609,7 +609,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 		{
 			name:                 "bad beacon block root",
 			expectedErrorMessage: "failed to decode attestation beacon block root `foo`",
-			generateInput: func() *shared.AttestationData {
+			generateInput: func() *structs.AttestationData {
 				input := generateAttestationData()
 				input.BeaconBlockRoot = "foo"
 				return input
@@ -618,7 +618,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 		{
 			name:                 "bad source checkpoint",
 			expectedErrorMessage: "failed to get attestation source checkpoint",
-			generateInput: func() *shared.AttestationData {
+			generateInput: func() *structs.AttestationData {
 				input := generateAttestationData()
 				input.Source = nil
 				return input
@@ -627,7 +627,7 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 		{
 			name:                 "bad target checkpoint",
 			expectedErrorMessage: "failed to get attestation target checkpoint",
-			generateInput: func() *shared.AttestationData {
+			generateInput: func() *structs.AttestationData {
 				input := generateAttestationData()
 				input.Target = nil
 				return input
@@ -669,15 +669,15 @@ func TestBeaconBlockProtoHelpers_ConvertAttestationDataToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.Deposit
+		generateInput        func() []*structs.Deposit
 		expectedResult       []*ethpb.Deposit
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil deposit",
 			expectedErrorMessage: "deposit at index `0` is nil",
-			generateInput: func() []*shared.Deposit {
-				return []*shared.Deposit{
+			generateInput: func() []*structs.Deposit {
+				return []*structs.Deposit{
 					nil,
 				}
 			},
@@ -685,7 +685,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "bad proof",
 			expectedErrorMessage: "failed to decode deposit proof `foo`",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Proof[0] = "foo"
 				return input
@@ -694,7 +694,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "nil data",
 			expectedErrorMessage: "deposit data at index `0` is nil",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Data = nil
 				return input
@@ -703,7 +703,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "bad public key",
 			expectedErrorMessage: "failed to decode deposit public key `bar`",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Data.Pubkey = "bar"
 				return input
@@ -712,7 +712,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "bad withdrawal credentials",
 			expectedErrorMessage: "failed to decode deposit withdrawal credentials `foo`",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Data.WithdrawalCredentials = "foo"
 				return input
@@ -721,7 +721,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "bad amount",
 			expectedErrorMessage: "failed to parse deposit amount `bar`",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Data.Amount = "bar"
 				return input
@@ -730,7 +730,7 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 		{
 			name:                 "bad signature",
 			expectedErrorMessage: "failed to decode signature `foo`",
-			generateInput: func() []*shared.Deposit {
+			generateInput: func() []*structs.Deposit {
 				input := generateDeposits()
 				input[0].Data.Signature = "foo"
 				return input
@@ -785,15 +785,15 @@ func TestBeaconBlockProtoHelpers_ConvertDepositsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertVoluntaryExitsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.SignedVoluntaryExit
+		generateInput        func() []*structs.SignedVoluntaryExit
 		expectedResult       []*ethpb.SignedVoluntaryExit
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil voluntary exit",
 			expectedErrorMessage: "signed voluntary exit at index `0` is nil",
-			generateInput: func() []*shared.SignedVoluntaryExit {
-				return []*shared.SignedVoluntaryExit{
+			generateInput: func() []*structs.SignedVoluntaryExit {
+				return []*structs.SignedVoluntaryExit{
 					nil,
 				}
 			},
@@ -801,7 +801,7 @@ func TestBeaconBlockProtoHelpers_ConvertVoluntaryExitsToProto(t *testing.T) {
 		{
 			name:                 "nil data",
 			expectedErrorMessage: "voluntary exit at index `0` is nil",
-			generateInput: func() []*shared.SignedVoluntaryExit {
+			generateInput: func() []*structs.SignedVoluntaryExit {
 				input := generateSignedVoluntaryExits()
 				input[0].Message = nil
 				return input
@@ -810,7 +810,7 @@ func TestBeaconBlockProtoHelpers_ConvertVoluntaryExitsToProto(t *testing.T) {
 		{
 			name:                 "bad epoch",
 			expectedErrorMessage: "failed to parse voluntary exit epoch `foo`",
-			generateInput: func() []*shared.SignedVoluntaryExit {
+			generateInput: func() []*structs.SignedVoluntaryExit {
 				input := generateSignedVoluntaryExits()
 				input[0].Message.Epoch = "foo"
 				return input
@@ -819,7 +819,7 @@ func TestBeaconBlockProtoHelpers_ConvertVoluntaryExitsToProto(t *testing.T) {
 		{
 			name:                 "bad validator index",
 			expectedErrorMessage: "failed to parse voluntary exit validator index `bar`",
-			generateInput: func() []*shared.SignedVoluntaryExit {
+			generateInput: func() []*structs.SignedVoluntaryExit {
 				input := generateSignedVoluntaryExits()
 				input[0].Message.ValidatorIndex = "bar"
 				return input
@@ -828,7 +828,7 @@ func TestBeaconBlockProtoHelpers_ConvertVoluntaryExitsToProto(t *testing.T) {
 		{
 			name:                 "bad signature",
 			expectedErrorMessage: "failed to decode signature `foo`",
-			generateInput: func() []*shared.SignedVoluntaryExit {
+			generateInput: func() []*structs.SignedVoluntaryExit {
 				input := generateSignedVoluntaryExits()
 				input[0].Signature = "foo"
 				return input
@@ -918,14 +918,14 @@ func TestBeaconBlockProtoHelpers_ConvertTransactionsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.Withdrawal
+		generateInput        func() []*structs.Withdrawal
 		expectedResult       []*enginev1.Withdrawal
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil withdrawal",
 			expectedErrorMessage: "withdrawal at index `0` is nil",
-			generateInput: func() []*shared.Withdrawal {
+			generateInput: func() []*structs.Withdrawal {
 				input := generateWithdrawals()
 				input[0] = nil
 				return input
@@ -934,7 +934,7 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 		{
 			name:                 "bad withdrawal index",
 			expectedErrorMessage: "failed to parse withdrawal index `foo`",
-			generateInput: func() []*shared.Withdrawal {
+			generateInput: func() []*structs.Withdrawal {
 				input := generateWithdrawals()
 				input[0].WithdrawalIndex = "foo"
 				return input
@@ -943,7 +943,7 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 		{
 			name:                 "bad validator index",
 			expectedErrorMessage: "failed to parse validator index `bar`",
-			generateInput: func() []*shared.Withdrawal {
+			generateInput: func() []*structs.Withdrawal {
 				input := generateWithdrawals()
 				input[0].ValidatorIndex = "bar"
 				return input
@@ -952,7 +952,7 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 		{
 			name:                 "bad execution address",
 			expectedErrorMessage: "failed to decode execution address `foo`",
-			generateInput: func() []*shared.Withdrawal {
+			generateInput: func() []*structs.Withdrawal {
 				input := generateWithdrawals()
 				input[0].ExecutionAddress = "foo"
 				return input
@@ -961,7 +961,7 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 		{
 			name:                 "bad amount",
 			expectedErrorMessage: "failed to parse withdrawal amount `bar`",
-			generateInput: func() []*shared.Withdrawal {
+			generateInput: func() []*structs.Withdrawal {
 				input := generateWithdrawals()
 				input[0].Amount = "bar"
 				return input
@@ -1004,14 +1004,14 @@ func TestBeaconBlockProtoHelpers_ConvertWithdrawalsToProto(t *testing.T) {
 func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.T) {
 	testCases := []struct {
 		name                 string
-		generateInput        func() []*shared.SignedBLSToExecutionChange
+		generateInput        func() []*structs.SignedBLSToExecutionChange
 		expectedResult       []*ethpb.SignedBLSToExecutionChange
 		expectedErrorMessage string
 	}{
 		{
 			name:                 "nil bls to execution change",
 			expectedErrorMessage: "bls to execution change at index `0` is nil",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0] = nil
 				return input
@@ -1020,7 +1020,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		{
 			name:                 "nil bls to execution change message",
 			expectedErrorMessage: "bls to execution change message at index `0` is nil",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0].Message = nil
 				return input
@@ -1029,7 +1029,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		{
 			name:                 "bad validator index",
 			expectedErrorMessage: "failed to decode validator index `foo`",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0].Message.ValidatorIndex = "foo"
 				return input
@@ -1038,7 +1038,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		{
 			name:                 "bad from bls pubkey",
 			expectedErrorMessage: "failed to decode bls pubkey `bar`",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0].Message.FromBLSPubkey = "bar"
 				return input
@@ -1047,7 +1047,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		{
 			name:                 "bad to execution address",
 			expectedErrorMessage: "failed to decode execution address `foo`",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0].Message.ToExecutionAddress = "foo"
 				return input
@@ -1056,7 +1056,7 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 		{
 			name:                 "bad signature",
 			expectedErrorMessage: "failed to decode signature `bar`",
-			generateInput: func() []*shared.SignedBLSToExecutionChange {
+			generateInput: func() []*structs.SignedBLSToExecutionChange {
 				input := generateBlsToExecutionChanges()
 				input[0].Signature = "bar"
 				return input
@@ -1078,11 +1078,11 @@ func TestBeaconBlockProtoHelpers_ConvertBlsToExecutionChangesToProto(t *testing.
 	}
 }
 
-func generateProposerSlashings() []*shared.ProposerSlashing {
-	return []*shared.ProposerSlashing{
+func generateProposerSlashings() []*structs.ProposerSlashing {
+	return []*structs.ProposerSlashing{
 		{
-			SignedHeader1: &shared.SignedBeaconBlockHeader{
-				Message: &shared.BeaconBlockHeader{
+			SignedHeader1: &structs.SignedBeaconBlockHeader{
+				Message: &structs.BeaconBlockHeader{
 					Slot:          "1",
 					ProposerIndex: "2",
 					ParentRoot:    hexutil.Encode([]byte{3}),
@@ -1091,8 +1091,8 @@ func generateProposerSlashings() []*shared.ProposerSlashing {
 				},
 				Signature: hexutil.Encode([]byte{6}),
 			},
-			SignedHeader2: &shared.SignedBeaconBlockHeader{
-				Message: &shared.BeaconBlockHeader{
+			SignedHeader2: &structs.SignedBeaconBlockHeader{
+				Message: &structs.BeaconBlockHeader{
 					Slot:          "7",
 					ProposerIndex: "8",
 					ParentRoot:    hexutil.Encode([]byte{9}),
@@ -1103,8 +1103,8 @@ func generateProposerSlashings() []*shared.ProposerSlashing {
 			},
 		},
 		{
-			SignedHeader1: &shared.SignedBeaconBlockHeader{
-				Message: &shared.BeaconBlockHeader{
+			SignedHeader1: &structs.SignedBeaconBlockHeader{
+				Message: &structs.BeaconBlockHeader{
 					Slot:          "13",
 					ProposerIndex: "14",
 					ParentRoot:    hexutil.Encode([]byte{15}),
@@ -1113,8 +1113,8 @@ func generateProposerSlashings() []*shared.ProposerSlashing {
 				},
 				Signature: hexutil.Encode([]byte{18}),
 			},
-			SignedHeader2: &shared.SignedBeaconBlockHeader{
-				Message: &shared.BeaconBlockHeader{
+			SignedHeader2: &structs.SignedBeaconBlockHeader{
+				Message: &structs.BeaconBlockHeader{
 					Slot:          "19",
 					ProposerIndex: "20",
 					ParentRoot:    hexutil.Encode([]byte{21}),
@@ -1127,9 +1127,9 @@ func generateProposerSlashings() []*shared.ProposerSlashing {
 	}
 }
 
-func generateSignedBeaconBlockHeader() *shared.SignedBeaconBlockHeader {
-	return &shared.SignedBeaconBlockHeader{
-		Message: &shared.BeaconBlockHeader{
+func generateSignedBeaconBlockHeader() *structs.SignedBeaconBlockHeader {
+	return &structs.SignedBeaconBlockHeader{
+		Message: &structs.BeaconBlockHeader{
 			Slot:          "1",
 			ProposerIndex: "2",
 			ParentRoot:    hexutil.Encode([]byte{3}),
@@ -1140,37 +1140,37 @@ func generateSignedBeaconBlockHeader() *shared.SignedBeaconBlockHeader {
 	}
 }
 
-func generateAttesterSlashings() []*shared.AttesterSlashing {
-	return []*shared.AttesterSlashing{
+func generateAttesterSlashings() []*structs.AttesterSlashing {
+	return []*structs.AttesterSlashing{
 		{
-			Attestation1: &shared.IndexedAttestation{
+			Attestation1: &structs.IndexedAttestation{
 				AttestingIndices: []string{"1", "2"},
-				Data: &shared.AttestationData{
+				Data: &structs.AttestationData{
 					Slot:            "3",
 					CommitteeIndex:  "4",
 					BeaconBlockRoot: hexutil.Encode([]byte{5}),
-					Source: &shared.Checkpoint{
+					Source: &structs.Checkpoint{
 						Epoch: "6",
 						Root:  hexutil.Encode([]byte{7}),
 					},
-					Target: &shared.Checkpoint{
+					Target: &structs.Checkpoint{
 						Epoch: "8",
 						Root:  hexutil.Encode([]byte{9}),
 					},
 				},
 				Signature: hexutil.Encode([]byte{10}),
 			},
-			Attestation2: &shared.IndexedAttestation{
+			Attestation2: &structs.IndexedAttestation{
 				AttestingIndices: []string{"11", "12"},
-				Data: &shared.AttestationData{
+				Data: &structs.AttestationData{
 					Slot:            "13",
 					CommitteeIndex:  "14",
 					BeaconBlockRoot: hexutil.Encode([]byte{15}),
-					Source: &shared.Checkpoint{
+					Source: &structs.Checkpoint{
 						Epoch: "16",
 						Root:  hexutil.Encode([]byte{17}),
 					},
-					Target: &shared.Checkpoint{
+					Target: &structs.Checkpoint{
 						Epoch: "18",
 						Root:  hexutil.Encode([]byte{19}),
 					},
@@ -1179,34 +1179,34 @@ func generateAttesterSlashings() []*shared.AttesterSlashing {
 			},
 		},
 		{
-			Attestation1: &shared.IndexedAttestation{
+			Attestation1: &structs.IndexedAttestation{
 				AttestingIndices: []string{"21", "22"},
-				Data: &shared.AttestationData{
+				Data: &structs.AttestationData{
 					Slot:            "23",
 					CommitteeIndex:  "24",
 					BeaconBlockRoot: hexutil.Encode([]byte{25}),
-					Source: &shared.Checkpoint{
+					Source: &structs.Checkpoint{
 						Epoch: "26",
 						Root:  hexutil.Encode([]byte{27}),
 					},
-					Target: &shared.Checkpoint{
+					Target: &structs.Checkpoint{
 						Epoch: "28",
 						Root:  hexutil.Encode([]byte{29}),
 					},
 				},
 				Signature: hexutil.Encode([]byte{30}),
 			},
-			Attestation2: &shared.IndexedAttestation{
+			Attestation2: &structs.IndexedAttestation{
 				AttestingIndices: []string{"31", "32"},
-				Data: &shared.AttestationData{
+				Data: &structs.AttestationData{
 					Slot:            "33",
 					CommitteeIndex:  "34",
 					BeaconBlockRoot: hexutil.Encode([]byte{35}),
-					Source: &shared.Checkpoint{
+					Source: &structs.Checkpoint{
 						Epoch: "36",
 						Root:  hexutil.Encode([]byte{37}),
 					},
-					Target: &shared.Checkpoint{
+					Target: &structs.Checkpoint{
 						Epoch: "38",
 						Root:  hexutil.Encode([]byte{39}),
 					},
@@ -1217,18 +1217,18 @@ func generateAttesterSlashings() []*shared.AttesterSlashing {
 	}
 }
 
-func generateIndexedAttestation() *shared.IndexedAttestation {
-	return &shared.IndexedAttestation{
+func generateIndexedAttestation() *structs.IndexedAttestation {
+	return &structs.IndexedAttestation{
 		AttestingIndices: []string{"1", "2"},
-		Data: &shared.AttestationData{
+		Data: &structs.AttestationData{
 			Slot:            "3",
 			CommitteeIndex:  "4",
 			BeaconBlockRoot: hexutil.Encode([]byte{5}),
-			Source: &shared.Checkpoint{
+			Source: &structs.Checkpoint{
 				Epoch: "6",
 				Root:  hexutil.Encode([]byte{7}),
 			},
-			Target: &shared.Checkpoint{
+			Target: &structs.Checkpoint{
 				Epoch: "8",
 				Root:  hexutil.Encode([]byte{9}),
 			},
@@ -1237,26 +1237,26 @@ func generateIndexedAttestation() *shared.IndexedAttestation {
 	}
 }
 
-func generateCheckpoint() *shared.Checkpoint {
-	return &shared.Checkpoint{
+func generateCheckpoint() *structs.Checkpoint {
+	return &structs.Checkpoint{
 		Epoch: "1",
 		Root:  hexutil.Encode([]byte{2}),
 	}
 }
 
-func generateAttestations() []*shared.Attestation {
-	return []*shared.Attestation{
+func generateAttestations() []*structs.Attestation {
+	return []*structs.Attestation{
 		{
 			AggregationBits: hexutil.Encode([]byte{1}),
-			Data: &shared.AttestationData{
+			Data: &structs.AttestationData{
 				Slot:            "2",
 				CommitteeIndex:  "3",
 				BeaconBlockRoot: hexutil.Encode([]byte{4}),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: "5",
 					Root:  hexutil.Encode([]byte{6}),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: "7",
 					Root:  hexutil.Encode([]byte{8}),
 				},
@@ -1265,15 +1265,15 @@ func generateAttestations() []*shared.Attestation {
 		},
 		{
 			AggregationBits: hexutil.Encode([]byte{10}),
-			Data: &shared.AttestationData{
+			Data: &structs.AttestationData{
 				Slot:            "11",
 				CommitteeIndex:  "12",
 				BeaconBlockRoot: hexutil.Encode([]byte{13}),
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: "14",
 					Root:  hexutil.Encode([]byte{15}),
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: "16",
 					Root:  hexutil.Encode([]byte{17}),
 				},
@@ -1283,30 +1283,30 @@ func generateAttestations() []*shared.Attestation {
 	}
 }
 
-func generateAttestationData() *shared.AttestationData {
-	return &shared.AttestationData{
+func generateAttestationData() *structs.AttestationData {
+	return &structs.AttestationData{
 		Slot:            "1",
 		CommitteeIndex:  "2",
 		BeaconBlockRoot: hexutil.Encode([]byte{3}),
-		Source: &shared.Checkpoint{
+		Source: &structs.Checkpoint{
 			Epoch: "4",
 			Root:  hexutil.Encode([]byte{5}),
 		},
-		Target: &shared.Checkpoint{
+		Target: &structs.Checkpoint{
 			Epoch: "6",
 			Root:  hexutil.Encode([]byte{7}),
 		},
 	}
 }
 
-func generateDeposits() []*shared.Deposit {
-	return []*shared.Deposit{
+func generateDeposits() []*structs.Deposit {
+	return []*structs.Deposit{
 		{
 			Proof: []string{
 				hexutil.Encode([]byte{1}),
 				hexutil.Encode([]byte{2}),
 			},
-			Data: &shared.DepositData{
+			Data: &structs.DepositData{
 				Pubkey:                hexutil.Encode([]byte{3}),
 				WithdrawalCredentials: hexutil.Encode([]byte{4}),
 				Amount:                "5",
@@ -1318,7 +1318,7 @@ func generateDeposits() []*shared.Deposit {
 				hexutil.Encode([]byte{7}),
 				hexutil.Encode([]byte{8}),
 			},
-			Data: &shared.DepositData{
+			Data: &structs.DepositData{
 				Pubkey:                hexutil.Encode([]byte{9}),
 				WithdrawalCredentials: hexutil.Encode([]byte{10}),
 				Amount:                "11",
@@ -1328,17 +1328,17 @@ func generateDeposits() []*shared.Deposit {
 	}
 }
 
-func generateSignedVoluntaryExits() []*shared.SignedVoluntaryExit {
-	return []*shared.SignedVoluntaryExit{
+func generateSignedVoluntaryExits() []*structs.SignedVoluntaryExit {
+	return []*structs.SignedVoluntaryExit{
 		{
-			Message: &shared.VoluntaryExit{
+			Message: &structs.VoluntaryExit{
 				Epoch:          "1",
 				ValidatorIndex: "2",
 			},
 			Signature: hexutil.Encode([]byte{3}),
 		},
 		{
-			Message: &shared.VoluntaryExit{
+			Message: &structs.VoluntaryExit{
 				Epoch:          "4",
 				ValidatorIndex: "5",
 			},
@@ -1347,8 +1347,8 @@ func generateSignedVoluntaryExits() []*shared.SignedVoluntaryExit {
 	}
 }
 
-func generateWithdrawals() []*shared.Withdrawal {
-	return []*shared.Withdrawal{
+func generateWithdrawals() []*structs.Withdrawal {
+	return []*structs.Withdrawal{
 		{
 			WithdrawalIndex:  "1",
 			ValidatorIndex:   "2",
@@ -1364,10 +1364,10 @@ func generateWithdrawals() []*shared.Withdrawal {
 	}
 }
 
-func generateBlsToExecutionChanges() []*shared.SignedBLSToExecutionChange {
-	return []*shared.SignedBLSToExecutionChange{
+func generateBlsToExecutionChanges() []*structs.SignedBLSToExecutionChange {
+	return []*structs.SignedBLSToExecutionChange{
 		{
-			Message: &shared.BLSToExecutionChange{
+			Message: &structs.BLSToExecutionChange{
 				ValidatorIndex:     "1",
 				FromBLSPubkey:      hexutil.Encode([]byte{2}),
 				ToExecutionAddress: hexutil.Encode([]byte{3}),
@@ -1375,7 +1375,7 @@ func generateBlsToExecutionChanges() []*shared.SignedBLSToExecutionChange {
 			Signature: hexutil.Encode([]byte{4}),
 		},
 		{
-			Message: &shared.BLSToExecutionChange{
+			Message: &structs.BLSToExecutionChange{
 				ValidatorIndex:     "5",
 				FromBLSPubkey:      hexutil.Encode([]byte{6}),
 				ToExecutionAddress: hexutil.Encode([]byte{7}),

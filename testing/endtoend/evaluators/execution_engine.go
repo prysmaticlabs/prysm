@@ -7,8 +7,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -29,7 +28,7 @@ var OptimisticSyncEnabled = types.Evaluator{
 func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn) error {
 	for nodeIndex := range conns {
 		path := fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/head", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex)
-		resp := beacon.GetBlockV2Response{}
+		resp := structs.GetBlockV2Response{}
 		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param and node index
 		if err != nil {
 			return err
@@ -55,7 +54,7 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 		}
 		for i := startSlot; i <= primitives.Slot(headSlot); i++ {
 			path = fmt.Sprintf("http://localhost:%d/eth/v1/beacon/blinded_blocks/%d", params.TestParams.Ports.PrysmBeaconNodeGatewayPort+nodeIndex, i)
-			resp = beacon.GetBlockV2Response{}
+			resp = structs.GetBlockV2Response{}
 			httpResp, err = http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param and node index
 			if err != nil {
 				return err
@@ -82,12 +81,12 @@ func optimisticSyncEnabled(_ *types.EvaluationContext, conns ...*grpc.ClientConn
 	return nil
 }
 
-func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
+func retrieveHeadSlot(resp *structs.GetBlockV2Response) (uint64, error) {
 	var headSlot uint64
 	var err error
 	switch resp.Version {
 	case version.String(version.Phase0):
-		b := &shared.BeaconBlock{}
+		b := &structs.BeaconBlock{}
 		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
 			return 0, err
 		}
@@ -96,7 +95,7 @@ func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
 			return 0, err
 		}
 	case version.String(version.Altair):
-		b := &shared.BeaconBlockAltair{}
+		b := &structs.BeaconBlockAltair{}
 		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
 			return 0, err
 		}
@@ -105,7 +104,7 @@ func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
 			return 0, err
 		}
 	case version.String(version.Bellatrix):
-		b := &shared.BeaconBlockBellatrix{}
+		b := &structs.BeaconBlockBellatrix{}
 		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
 			return 0, err
 		}
@@ -114,7 +113,7 @@ func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
 			return 0, err
 		}
 	case version.String(version.Capella):
-		b := &shared.BeaconBlockCapella{}
+		b := &structs.BeaconBlockCapella{}
 		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
 			return 0, err
 		}
@@ -123,7 +122,7 @@ func retrieveHeadSlot(resp *beacon.GetBlockV2Response) (uint64, error) {
 			return 0, err
 		}
 	case version.String(version.Deneb):
-		b := &shared.BeaconBlockDeneb{}
+		b := &structs.BeaconBlockDeneb{}
 		if err := json.Unmarshal(resp.Data.Message, b); err != nil {
 			return 0, err
 		}

@@ -14,6 +14,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	mockp2p "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
@@ -59,7 +60,7 @@ func TestSyncStatus(t *testing.T) {
 
 	s.GetSyncStatus(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &SyncStatusResponse{}
+	resp := &structs.SyncStatusResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.NotNil(t, resp)
 	assert.Equal(t, "100", resp.Data.HeadSlot)
@@ -81,7 +82,7 @@ func TestGetVersion(t *testing.T) {
 	s := &Server{}
 	s.GetVersion(writer, request)
 	assert.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetVersionResponse{}
+	resp := &structs.GetVersionResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.StringContains(t, semVer, resp.Data.Version)
 	assert.StringContains(t, os, resp.Data.Version)
@@ -156,7 +157,7 @@ func TestGetIdentity(t *testing.T) {
 
 		s.GetIdentity(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetIdentityResponse{}
+		resp := &structs.GetIdentityResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		expectedID := peer.ID("foo").String()
 		assert.Equal(t, expectedID, resp.Data.PeerId)

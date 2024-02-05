@@ -2859,3 +2859,51 @@ func TestProposer_GetFeeRecipientByPubKey(t *testing.T) {
 
 	require.Equal(t, common.HexToAddress("0x055Fb65722E7b2455012BFEBf6177F1D2e9728D8").Hex(), common.BytesToAddress(resp.FeeRecipient).Hex())
 }
+
+func TestProposer_GetParentHeadState(t *testing.T) {
+	db := dbutil.SetupDB(t)
+	ctx := context.Background()
+
+	parentState, parentRoot, _ := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 100)
+	headState, headRoot, _ := util.DeterministicGenesisStateWithGenesisBlock(t, ctx, db, 50)
+	require.NoError(t, transition.UpdateNextSlotCache(ctx, parentRoot[:], parentState))
+
+	proposerServer := &Server{
+		ChainStartFetcher: &mockExecution.Chain{},
+		Eth1InfoFetcher:   &mockExecution.Chain{},
+		Eth1BlockFetcher:  &mockExecution.Chain{},
+		StateGen:          stategen.New(db, doublylinkedtree.New()),
+	}
+	t.Run("failed reorg", func(tt *testing.T) {
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot)
+		require.NoError(t, err)
+		st := parentState.Copy()
+		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
+		require.NoError(t, err)
+		str, err := st.StateRootAtIndex(0)
+		require.NoError(t, err)
+		headStr, err := head.StateRootAtIndex(0)
+		require.NoError(t, err)
+		genesisStr, err := headState.StateRootAtIndex(0)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte(str), [32]byte(headStr))
+		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+	})
+
+	t.Run("no reorg", func(tt *testing.T) {
+		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot)
+		require.NoError(t, err)
+		st := headState.Copy()
+		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
+		require.NoError(t, err)
+		str, err := st.StateRootAtIndex(0)
+		require.NoError(t, err)
+		headStr, err := head.StateRootAtIndex(0)
+		require.NoError(t, err)
+		genesisStr, err := parentState.StateRootAtIndex(0)
+		require.NoError(t, err)
+		require.Equal(t, [32]byte(str), [32]byte(headStr))
+		require.NotEqual(t, [32]byte(str), [32]byte(genesisStr))
+	})
+}

@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
@@ -45,7 +45,7 @@ type DeleteKeystoresResponse struct {
 
 // voluntary exit keymanager api
 type SetVoluntaryExitResponse struct {
-	Data *shared.SignedVoluntaryExit `json:"data"`
+	Data *structs.SignedVoluntaryExit `json:"data"`
 }
 
 // gas limit keymanager api

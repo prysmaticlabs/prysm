@@ -13,11 +13,7 @@ go_library(
     visibility = ["//testing/endtoend:__subpackages__"],
     deps = [
         "//api:go_default_library",
-        "//beacon-chain/rpc/eth/beacon:go_default_library",
-        "//beacon-chain/rpc/eth/config:go_default_library",
-        "//beacon-chain/rpc/eth/debug:go_default_library",
-        "//beacon-chain/rpc/eth/node:go_default_library",
-        "//beacon-chain/rpc/eth/validator:go_default_library",
+        "//api/server/structs:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/primitives:go_default_library",
         "//proto/prysm/v1alpha1:go_default_library",

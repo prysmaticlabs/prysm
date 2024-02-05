@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	statenative "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
@@ -19,17 +20,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
 	"go.opencensus.io/trace"
 )
-
-type CountResponse struct {
-	ExecutionOptimistic string   `json:"execution_optimistic"`
-	Finalized           string   `json:"finalized"`
-	Data                []*Count `json:"data"`
-}
-
-type Count struct {
-	Status string `json:"status"`
-	Count  string `json:"count"`
-}
 
 // GetValidatorCount is a HTTP handler that serves the GET /eth/v1/beacon/states/{state_id}/validator_count endpoint.
 // It returns the total validator count according to the given statuses provided as a query parameter.
@@ -126,7 +116,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valCountResponse := &CountResponse{
+	valCountResponse := &structs.GetValidatorCountResponse{
 		ExecutionOptimistic: strconv.FormatBool(isOptimistic),
 		Finalized:           strconv.FormatBool(isFinalized),
 		Data:                valCount,
@@ -136,7 +126,7 @@ func (s *Server) GetValidatorCount(w http.ResponseWriter, r *http.Request) {
 }
 
 // validatorCountByStatus returns a slice of validator count for each status in the given epoch.
-func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]*Count, error) {
+func validatorCountByStatus(validators []*eth.Validator, statuses []validator.Status, epoch primitives.Epoch) ([]*structs.ValidatorCount, error) {
 	countByStatus := make(map[validator.Status]uint64)
 	for _, val := range validators {
 		readOnlyVal, err := statenative.NewValidator(val)
@@ -159,9 +149,9 @@ func validatorCountByStatus(validators []*eth.Validator, statuses []validator.St
 		}
 	}
 
-	var resp []*Count
+	var resp []*structs.ValidatorCount
 	for status, count := range countByStatus {
-		resp = append(resp, &Count{
+		resp = append(resp, &structs.ValidatorCount{
 			Status: status.String(),
 			Count:  strconv.FormatUint(count, 10),
 		})

@@ -61,10 +61,15 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		return pubsub.ValidationReject, err
 	}
 	isSlashable := false
+	previouslySlashed := false
 	for _, v := range slashedVals {
 		val, err := headState.ValidatorAtIndexReadOnly(primitives.ValidatorIndex(v))
 		if err != nil {
 			return pubsub.ValidationIgnore, err
+		}
+		if val.Slashed() {
+			previouslySlashed = true
+			continue
 		}
 		if helpers.IsSlashableValidator(val.ActivationEpoch(), val.WithdrawableEpoch(), val.Slashed(), slots.ToEpoch(headState.Slot())) {
 			isSlashable = true
@@ -72,6 +77,9 @@ func (s *Service) validateAttesterSlashing(ctx context.Context, pid peer.ID, msg
 		}
 	}
 	if !isSlashable {
+		if previouslySlashed {
+			return pubsub.ValidationIgnore, errors.Errorf("validators were previously slashed: %v", slashedVals)
+		}
 		return pubsub.ValidationReject, errors.Errorf("none of the validators are slashable: %v", slashedVals)
 	}
 	s.cfg.chain.ReceiveAttesterSlashing(ctx, slashing)

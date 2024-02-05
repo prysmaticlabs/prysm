@@ -12,9 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/prysm/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -138,19 +136,19 @@ func TestListValidators(t *testing.T) {
 		testCases := []struct {
 			name                string
 			expectedError       string
-			blockHeaderResponse beacon.GetBlockHeaderResponse
+			blockHeaderResponse structs.GetBlockHeaderResponse
 		}{
 			{
 				name: "nil data",
-				blockHeaderResponse: beacon.GetBlockHeaderResponse{
+				blockHeaderResponse: structs.GetBlockHeaderResponse{
 					Data: nil,
 				},
 				expectedError: "block header data is nil",
 			},
 			{
 				name: "nil data header",
-				blockHeaderResponse: beacon.GetBlockHeaderResponse{
-					Data: &shared.SignedBeaconBlockHeaderContainer{
+				blockHeaderResponse: structs.GetBlockHeaderResponse{
+					Data: &structs.SignedBeaconBlockHeaderContainer{
 						Header: nil,
 					},
 				},
@@ -158,9 +156,9 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "nil message",
-				blockHeaderResponse: beacon.GetBlockHeaderResponse{
-					Data: &shared.SignedBeaconBlockHeaderContainer{
-						Header: &shared.SignedBeaconBlockHeader{
+				blockHeaderResponse: structs.GetBlockHeaderResponse{
+					Data: &structs.SignedBeaconBlockHeaderContainer{
+						Header: &structs.SignedBeaconBlockHeader{
 							Message: nil,
 						},
 					},
@@ -169,10 +167,10 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid header slot",
-				blockHeaderResponse: beacon.GetBlockHeaderResponse{
-					Data: &shared.SignedBeaconBlockHeaderContainer{
-						Header: &shared.SignedBeaconBlockHeader{
-							Message: &shared.BeaconBlockHeader{
+				blockHeaderResponse: structs.GetBlockHeaderResponse{
+					Data: &structs.SignedBeaconBlockHeaderContainer{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "foo",
 							},
 						},
@@ -215,12 +213,12 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("fails to get validators for genesis filter", func(t *testing.T) {
-		generateValidStateValidatorsResponse := func() *beacon.GetValidatorsResponse {
-			return &beacon.GetValidatorsResponse{
-				Data: []*beacon.ValidatorContainer{
+		generateValidStateValidatorsResponse := func() *structs.GetValidatorsResponse {
+			return &structs.GetValidatorsResponse{
+				Data: []*structs.ValidatorContainer{
 					{
 						Index: "1",
-						Validator: &beacon.Validator{
+						Validator: &structs.Validator{
 							Pubkey:                     hexutil.Encode([]byte{3}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{4}),
 							EffectiveBalance:           "5",
@@ -237,12 +235,12 @@ func TestListValidators(t *testing.T) {
 
 		testCases := []struct {
 			name                            string
-			generateStateValidatorsResponse func() *beacon.GetValidatorsResponse
+			generateStateValidatorsResponse func() *structs.GetValidatorsResponse
 			expectedError                   string
 		}{
 			{
 				name: "nil validator",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator = nil
 					return validatorsResponse
@@ -251,7 +249,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid pubkey",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.Pubkey = "foo"
 					return validatorsResponse
@@ -260,7 +258,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid withdrawal credentials",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.WithdrawalCredentials = "bar"
 					return validatorsResponse
@@ -269,7 +267,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid effective balance",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.EffectiveBalance = "foo"
 					return validatorsResponse
@@ -278,7 +276,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid validator index",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Index = "bar"
 					return validatorsResponse
@@ -287,7 +285,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid activation eligibility epoch",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ActivationEligibilityEpoch = "foo"
 					return validatorsResponse
@@ -296,7 +294,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid activation epoch",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ActivationEpoch = "bar"
 					return validatorsResponse
@@ -305,7 +303,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid exit epoch",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.ExitEpoch = "foo"
 					return validatorsResponse
@@ -314,7 +312,7 @@ func TestListValidators(t *testing.T) {
 			},
 			{
 				name: "invalid withdrawable epoch",
-				generateStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validatorsResponse := generateValidStateValidatorsResponse()
 					validatorsResponse.Data[0].Validator.WithdrawableEpoch = "bar"
 					return validatorsResponse
@@ -345,12 +343,12 @@ func TestListValidators(t *testing.T) {
 	})
 
 	t.Run("correctly returns the expected validators", func(t *testing.T) {
-		generateValidStateValidatorsResponse := func() *beacon.GetValidatorsResponse {
-			return &beacon.GetValidatorsResponse{
-				Data: []*beacon.ValidatorContainer{
+		generateValidStateValidatorsResponse := func() *structs.GetValidatorsResponse {
+			return &structs.GetValidatorsResponse{
+				Data: []*structs.ValidatorContainer{
 					{
 						Index: "1",
-						Validator: &beacon.Validator{
+						Validator: &structs.Validator{
 							Pubkey:                     hexutil.Encode([]byte{2}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{3}),
 							EffectiveBalance:           "4",
@@ -363,7 +361,7 @@ func TestListValidators(t *testing.T) {
 					},
 					{
 						Index: "9",
-						Validator: &beacon.Validator{
+						Validator: &structs.Validator{
 							Pubkey:                     hexutil.Encode([]byte{10}),
 							WithdrawalCredentials:      hexutil.Encode([]byte{11}),
 							EffectiveBalance:           "12",
@@ -380,7 +378,7 @@ func TestListValidators(t *testing.T) {
 
 		testCases := []struct {
 			name                                string
-			generateJsonStateValidatorsResponse func() *beacon.GetValidatorsResponse
+			generateJsonStateValidatorsResponse func() *structs.GetValidatorsResponse
 			generateProtoValidatorsResponse     func() *ethpb.Validators
 			pubkeys                             [][]byte
 			pubkeyStrings                       []string
@@ -391,16 +389,16 @@ func TestListValidators(t *testing.T) {
 		}{
 			{
 				name: "page size 0",
-				generateJsonStateValidatorsResponse: func() *beacon.GetValidatorsResponse {
+				generateJsonStateValidatorsResponse: func() *structs.GetValidatorsResponse {
 					validValidatorsResponse := generateValidStateValidatorsResponse()
 
 					// Generate more than 250 validators, but expect only 250 to be returned
-					validators := make([]*beacon.ValidatorContainer, 267)
+					validators := make([]*structs.ValidatorContainer, 267)
 					for idx := 0; idx < len(validators); idx++ {
 						validators[idx] = validValidatorsResponse.Data[0]
 					}
 
-					validatorsResponse := &beacon.GetValidatorsResponse{
+					validatorsResponse := &structs.GetValidatorsResponse{
 						Data: validators,
 					}
 
@@ -586,18 +584,18 @@ func TestGetChainHead(t *testing.T) {
 	const finalityCheckpointsEndpoint = "/eth/v1/beacon/states/head/finality_checkpoints"
 	const headBlockHeadersEndpoint = "/eth/v1/beacon/headers/head"
 
-	generateValidFinalityCheckpointsResponse := func() beacon.GetFinalityCheckpointsResponse {
-		return beacon.GetFinalityCheckpointsResponse{
-			Data: &beacon.FinalityCheckpoints{
-				PreviousJustified: &shared.Checkpoint{
+	generateValidFinalityCheckpointsResponse := func() structs.GetFinalityCheckpointsResponse {
+		return structs.GetFinalityCheckpointsResponse{
+			Data: &structs.FinalityCheckpoints{
+				PreviousJustified: &structs.Checkpoint{
 					Epoch: "1",
 					Root:  hexutil.Encode([]byte{2}),
 				},
-				CurrentJustified: &shared.Checkpoint{
+				CurrentJustified: &structs.Checkpoint{
 					Epoch: "3",
 					Root:  hexutil.Encode([]byte{4}),
 				},
-				Finalized: &shared.Checkpoint{
+				Finalized: &structs.Checkpoint{
 					Epoch: "5",
 					Root:  hexutil.Encode([]byte{6}),
 				},
@@ -608,7 +606,7 @@ func TestGetChainHead(t *testing.T) {
 	t.Run("fails to get finality checkpoints", func(t *testing.T) {
 		testCases := []struct {
 			name                                string
-			generateFinalityCheckpointsResponse func() beacon.GetFinalityCheckpointsResponse
+			generateFinalityCheckpointsResponse func() structs.GetFinalityCheckpointsResponse
 			finalityCheckpointsError            error
 			expectedError                       string
 		}{
@@ -616,14 +614,14 @@ func TestGetChainHead(t *testing.T) {
 				name:                     "query failed",
 				finalityCheckpointsError: errors.New("foo error"),
 				expectedError:            "foo error",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
-					return beacon.GetFinalityCheckpointsResponse{}
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
+					return structs.GetFinalityCheckpointsResponse{}
 				},
 			},
 			{
 				name:          "nil finality checkpoints data",
 				expectedError: "finality checkpoints data is nil",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data = nil
 					return validResponse
@@ -632,7 +630,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil finalized checkpoint",
 				expectedError: "finalized checkpoint is nil",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.Finalized = nil
 					return validResponse
@@ -641,7 +639,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid finalized epoch",
 				expectedError: "failed to parse finalized epoch `foo`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.Finalized.Epoch = "foo"
 					return validResponse
@@ -650,7 +648,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "failed to get first slot of finalized epoch",
 				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.Finalized.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
 					return validResponse
@@ -659,7 +657,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid finalized root",
 				expectedError: "failed to decode finalized checkpoint root `bar`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.Finalized.Root = "bar"
 					return validResponse
@@ -668,7 +666,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil current justified checkpoint",
 				expectedError: "current justified checkpoint is nil",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.CurrentJustified = nil
 					return validResponse
@@ -677,7 +675,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil current justified epoch",
 				expectedError: "failed to parse current justified checkpoint epoch `foo`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.CurrentJustified.Epoch = "foo"
 					return validResponse
@@ -686,7 +684,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "failed to get first slot of current justified epoch",
 				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.CurrentJustified.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
 					return validResponse
@@ -695,7 +693,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid current justified root",
 				expectedError: "failed to decode current justified checkpoint root `bar`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.CurrentJustified.Root = "bar"
 					return validResponse
@@ -704,7 +702,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil previous justified checkpoint",
 				expectedError: "previous justified checkpoint is nil",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.PreviousJustified = nil
 					return validResponse
@@ -713,7 +711,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil previous justified epoch",
 				expectedError: "failed to parse previous justified checkpoint epoch `foo`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.PreviousJustified.Epoch = "foo"
 					return validResponse
@@ -722,7 +720,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "failed to get first slot of previous justified epoch",
 				expectedError: fmt.Sprintf("failed to get first slot for epoch `%d`", uint64(math.MaxUint64)),
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.PreviousJustified.Epoch = strconv.FormatUint(uint64(math.MaxUint64), 10)
 					return validResponse
@@ -731,7 +729,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid previous justified root",
 				expectedError: "failed to decode previous justified checkpoint root `bar`",
-				generateFinalityCheckpointsResponse: func() beacon.GetFinalityCheckpointsResponse {
+				generateFinalityCheckpointsResponse: func() structs.GetFinalityCheckpointsResponse {
 					validResponse := generateValidFinalityCheckpointsResponse()
 					validResponse.Data.PreviousJustified.Root = "bar"
 					return validResponse
@@ -745,7 +743,7 @@ func TestGetChainHead(t *testing.T) {
 				defer ctrl.Finish()
 				ctx := context.Background()
 
-				finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
+				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					testCase.finalityCheckpointsError,
@@ -761,12 +759,12 @@ func TestGetChainHead(t *testing.T) {
 		}
 	})
 
-	generateValidBlockHeadersResponse := func() beacon.GetBlockHeaderResponse {
-		return beacon.GetBlockHeaderResponse{
-			Data: &shared.SignedBeaconBlockHeaderContainer{
+	generateValidBlockHeadersResponse := func() structs.GetBlockHeaderResponse {
+		return structs.GetBlockHeaderResponse{
+			Data: &structs.SignedBeaconBlockHeaderContainer{
 				Root: hexutil.Encode([]byte{7}),
-				Header: &shared.SignedBeaconBlockHeader{
-					Message: &shared.BeaconBlockHeader{
+				Header: &structs.SignedBeaconBlockHeader{
+					Message: &structs.BeaconBlockHeader{
 						Slot: "8",
 					},
 				},
@@ -777,7 +775,7 @@ func TestGetChainHead(t *testing.T) {
 	t.Run("fails to get head block headers", func(t *testing.T) {
 		testCases := []struct {
 			name                             string
-			generateHeadBlockHeadersResponse func() beacon.GetBlockHeaderResponse
+			generateHeadBlockHeadersResponse func() structs.GetBlockHeaderResponse
 			headBlockHeadersError            error
 			expectedError                    string
 		}{
@@ -785,14 +783,14 @@ func TestGetChainHead(t *testing.T) {
 				name:                  "query failed",
 				headBlockHeadersError: errors.New("foo error"),
 				expectedError:         "failed to get head block header",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
-					return beacon.GetBlockHeaderResponse{}
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
+					return structs.GetBlockHeaderResponse{}
 				},
 			},
 			{
 				name:          "nil block header data",
 				expectedError: "block header data is nil",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data = nil
 					return validResponse
@@ -801,7 +799,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil block header data header",
 				expectedError: "block header data is nil",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header = nil
 					return validResponse
@@ -810,7 +808,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "nil block header message",
 				expectedError: "block header message is nil",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header.Message = nil
 					return validResponse
@@ -819,7 +817,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid message slot",
 				expectedError: "failed to parse head block slot `foo`",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Header.Message.Slot = "foo"
 					return validResponse
@@ -829,7 +827,7 @@ func TestGetChainHead(t *testing.T) {
 			{
 				name:          "invalid root",
 				expectedError: "failed to decode head block root `bar`",
-				generateHeadBlockHeadersResponse: func() beacon.GetBlockHeaderResponse {
+				generateHeadBlockHeadersResponse: func() structs.GetBlockHeaderResponse {
 					validResponse := generateValidBlockHeadersResponse()
 					validResponse.Data.Root = "bar"
 					return validResponse
@@ -845,7 +843,7 @@ func TestGetChainHead(t *testing.T) {
 
 				jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-				finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
+				finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 				jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 					nil,
 				).SetArg(
@@ -853,7 +851,7 @@ func TestGetChainHead(t *testing.T) {
 					generateValidFinalityCheckpointsResponse(),
 				)
 
-				headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
+				headBlockHeadersResponse := structs.GetBlockHeaderResponse{}
 				jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 					testCase.headBlockHeadersError,
 				).SetArg(
@@ -875,7 +873,7 @@ func TestGetChainHead(t *testing.T) {
 
 		jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-		finalityCheckpointsResponse := beacon.GetFinalityCheckpointsResponse{}
+		finalityCheckpointsResponse := structs.GetFinalityCheckpointsResponse{}
 		jsonRestHandler.EXPECT().Get(ctx, finalityCheckpointsEndpoint, &finalityCheckpointsResponse).Return(
 			nil,
 		).SetArg(
@@ -883,7 +881,7 @@ func TestGetChainHead(t *testing.T) {
 			generateValidFinalityCheckpointsResponse(),
 		)
 
-		headBlockHeadersResponse := beacon.GetBlockHeaderResponse{}
+		headBlockHeadersResponse := structs.GetBlockHeaderResponse{}
 		jsonRestHandler.EXPECT().Get(ctx, headBlockHeadersEndpoint, &headBlockHeadersResponse).Return(
 			nil,
 		).SetArg(
@@ -933,12 +931,12 @@ func Test_beaconApiBeaconChainClient_GetValidatorPerformance(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	request, err := json.Marshal(validator.PerformanceRequest{
+	request, err := json.Marshal(structs.GetValidatorPerformanceRequest{
 		PublicKeys: [][]byte{publicKeys[0][:], publicKeys[2][:], publicKeys[1][:]},
 	})
 	require.NoError(t, err)
 
-	wantResponse := &validator.PerformanceResponse{}
+	wantResponse := &structs.GetValidatorPerformanceResponse{}
 	want := &ethpb.ValidatorPerformanceResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Post(

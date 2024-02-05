@@ -377,6 +377,13 @@ var (
 		Usage: "Sets the maximum size for one batch of validator registrations. Use a non-positive value to disable batching.",
 		Value: 0,
 	}
+
+	// EnableDistributed enables the usage of prysm validator client in a Distributed Validator Cluster.
+	EnableDistributed = &cli.BoolFlag{
+		Name:  "distributed",
+		Usage: "To enable the use of prysm validator client in Distributed Validator Cluster",
+		Value: false,
+	}
 )
 
 // DefaultValidatorDir returns OS-specific default validator directory.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"go.opencensus.io/trace"
 
 	"github.com/wealdtech/go-bytesutil"
@@ -53,7 +54,7 @@ func (s *Server) GetLightClientBootstrap(w http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	response := &LightClientBootstrapResponse{
+	response := &structs.LightClientBootstrapResponse{
 		Version: version.String(blk.Version()),
 		Data:    bootstrap,
 	}
@@ -118,7 +119,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 	}
 
 	// Populate updates
-	var updates []*LightClientUpdateWithVersion
+	var updates []*structs.LightClientUpdateWithVersion
 	for period := startPeriod; period <= endPeriod; period++ {
 		// Get the last known state of the period,
 		//    1. We wish the block has a parent in the same period if possible
@@ -208,7 +209,7 @@ func (s *Server) GetLightClientUpdatesByRange(w http.ResponseWriter, req *http.R
 		)
 
 		if err == nil {
-			updates = append(updates, &LightClientUpdateWithVersion{
+			updates = append(updates, &structs.LightClientUpdateWithVersion{
 				Version: version.String(attestedState.Version()),
 				Data:    update,
 			})
@@ -282,7 +283,7 @@ func (s *Server) GetLightClientFinalityUpdate(w http.ResponseWriter, req *http.R
 		return
 	}
 
-	response := &LightClientUpdateWithVersion{
+	response := &structs.LightClientUpdateWithVersion{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
@@ -339,7 +340,7 @@ func (s *Server) GetLightClientOptimisticUpdate(w http.ResponseWriter, req *http
 		return
 	}
 
-	response := &LightClientUpdateWithVersion{
+	response := &structs.LightClientUpdateWithVersion{
 		Version: version.String(attestedState.Version()),
 		Data:    update,
 	}
