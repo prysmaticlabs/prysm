@@ -2104,6 +2104,7 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		httputil.WriteSsz(w, sszData, "deposit_snapshot.ssz")
+		return
 	}
 	httputil.WriteJson(
 		w,
