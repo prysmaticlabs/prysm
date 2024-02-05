@@ -217,7 +217,7 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 				jsonRestHandler.EXPECT().Get(
 					ctx,
 					query,
-					&beacon.GetValidatorsResponse{},
+					&structs.GetValidatorsResponse{},
 				).Return(
 					test.validatorsErr,
 				).Times(1)
