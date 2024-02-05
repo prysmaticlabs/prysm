@@ -1,37 +1,37 @@
-package validator
+package structs
 
 import (
 	"encoding/json"
 
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 type AggregateAttestationResponse struct {
-	Data *shared.Attestation `json:"data"`
+	Data *Attestation `json:"data"`
 }
 
 type SubmitContributionAndProofsRequest struct {
-	Data []*shared.SignedContributionAndProof `json:"data"`
+	Data []*SignedContributionAndProof `json:"data"`
 }
 
 type SubmitAggregateAndProofsRequest struct {
-	Data []*shared.SignedAggregateAttestationAndProof `json:"data"`
+	Data []*SignedAggregateAttestationAndProof `json:"data"`
 }
 
 type SubmitSyncCommitteeSubscriptionsRequest struct {
-	Data []*shared.SyncCommitteeSubscription `json:"data"`
+	Data []*SyncCommitteeSubscription `json:"data"`
 }
 
 type SubmitBeaconCommitteeSubscriptionsRequest struct {
-	Data []*shared.BeaconCommitteeSubscription `json:"data"`
+	Data []*BeaconCommitteeSubscription `json:"data"`
 }
 
 type GetAttestationDataResponse struct {
-	Data *shared.AttestationData `json:"data"`
+	Data *AttestationData `json:"data"`
 }
 
 type ProduceSyncCommitteeContributionResponse struct {
-	Data *shared.SyncCommitteeContribution `json:"data"`
+	Data *SyncCommitteeContribution `json:"data"`
 }
 
 type GetAttesterDutiesResponse struct {
@@ -89,4 +89,32 @@ type GetLivenessResponse struct {
 type Liveness struct {
 	Index  string `json:"index"`
 	IsLive bool   `json:"is_live"`
+}
+
+type GetValidatorCountResponse struct {
+	ExecutionOptimistic string            `json:"execution_optimistic"`
+	Finalized           string            `json:"finalized"`
+	Data                []*ValidatorCount `json:"data"`
+}
+
+type ValidatorCount struct {
+	Status string `json:"status"`
+	Count  string `json:"count"`
+}
+
+type GetValidatorPerformanceRequest struct {
+	PublicKeys [][]byte                    `json:"public_keys,omitempty"`
+	Indices    []primitives.ValidatorIndex `json:"indices,omitempty"`
+}
+
+type GetValidatorPerformanceResponse struct {
+	PublicKeys                    [][]byte `json:"public_keys,omitempty"`
+	CorrectlyVotedSource          []bool   `json:"correctly_voted_source,omitempty"`
+	CorrectlyVotedTarget          []bool   `json:"correctly_voted_target,omitempty"`
+	CorrectlyVotedHead            []bool   `json:"correctly_voted_head,omitempty"`
+	CurrentEffectiveBalances      []uint64 `json:"current_effective_balances,omitempty"`
+	BalancesBeforeEpochTransition []uint64 `json:"balances_before_epoch_transition,omitempty"`
+	BalancesAfterEpochTransition  []uint64 `json:"balances_after_epoch_transition,omitempty"`
+	MissingValidators             [][]byte `json:"missing_validators,omitempty"`
+	InactivityScores              []uint64 `json:"inactivity_scores,omitempty"`
 }

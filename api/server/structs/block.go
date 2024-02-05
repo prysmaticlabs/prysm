@@ -1,4 +1,4 @@
-package shared
+package structs
 
 type SignedBeaconBlock struct {
 	Message   *BeaconBlock `json:"message"`

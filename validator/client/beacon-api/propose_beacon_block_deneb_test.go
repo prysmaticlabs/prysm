@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	rpctesting "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared/testing"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,7 +21,7 @@ func TestProposeBeaconBlock_Deneb(t *testing.T) {
 	defer ctrl.Finish()
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	var blockContents shared.SignedBeaconBlockContentsDeneb
+	var blockContents structs.SignedBeaconBlockContentsDeneb
 	err := json.Unmarshal([]byte(rpctesting.DenebBlockContents), &blockContents)
 	require.NoError(t, err)
 	genericSignedBlock, err := blockContents.ToGeneric()

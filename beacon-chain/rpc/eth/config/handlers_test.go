@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -33,7 +34,7 @@ func TestGetDepositContract(t *testing.T) {
 
 	GetDepositContract(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	response := GetDepositContractResponse{}
+	response := structs.GetDepositContractResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &response))
 	assert.Equal(t, "10", response.Data.ChainId)
 	assert.Equal(t, "0x4242424242424242424242424242424242424242", response.Data.Address)
@@ -167,7 +168,7 @@ func TestGetSpec(t *testing.T) {
 
 	GetSpec(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := GetSpecResponse{}
+	resp := structs.GetSpecResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), &resp))
 	data, ok := resp.Data.(map[string]interface{})
 	require.Equal(t, true, ok)
@@ -486,7 +487,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 		GetForkSchedule(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetForkScheduleResponse{}
+		resp := &structs.GetForkScheduleResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 3, len(resp.Data))
 		fork := resp.Data[0]
@@ -509,7 +510,7 @@ func TestForkSchedule_Ok(t *testing.T) {
 
 		GetForkSchedule(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetForkScheduleResponse{}
+		resp := &structs.GetForkScheduleResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		os := forks.NewOrderedSchedule(params.BeaconConfig())
 		assert.Equal(t, os.Len(), len(resp.Data))

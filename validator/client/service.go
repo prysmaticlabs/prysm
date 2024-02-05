@@ -57,6 +57,7 @@ type ValidatorService struct {
 	useWeb                 bool
 	emitAccountMetrics     bool
 	logValidatorBalances   bool
+	distributed            bool
 	interopKeysConfig      *local.InteropKeymanagerConfig
 	conn                   validatorHelpers.NodeConnection
 	grpcRetryDelay         time.Duration
@@ -84,6 +85,7 @@ type Config struct {
 	UseWeb                     bool
 	LogValidatorBalances       bool
 	EmitAccountMetrics         bool
+	Distributed                bool
 	InteropKeysConfig          *local.InteropKeymanagerConfig
 	Wallet                     *wallet.Wallet
 	WalletInitializedFeed      *event.Feed
@@ -132,6 +134,7 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		Web3SignerConfig:       cfg.Web3SignerConfig,
 		proposerSettings:       cfg.ProposerSettings,
 		validatorsRegBatchSize: cfg.ValidatorsRegBatchSize,
+		distributed:            cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
@@ -235,6 +238,8 @@ func (v *ValidatorService) Start() {
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
 		beaconNodeHealth:               nodeHealth,
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
+		distributed:                    v.distributed,
+		attSelections:                  make(map[attSelectionKey]iface.BeaconCommitteeSelection),
 	}
 
 	v.validator = valStruct

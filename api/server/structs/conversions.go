@@ -1,4 +1,4 @@
-package shared
+package structs
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ var errNilValue = errors.New("nil value")
 
 func ValidatorFromConsensus(v *eth.Validator) *Validator {
 	return &Validator{
-		PublicKey:                  hexutil.Encode(v.PublicKey),
+		Pubkey:                     hexutil.Encode(v.PublicKey),
 		WithdrawalCredentials:      hexutil.Encode(v.WithdrawalCredentials),
 		EffectiveBalance:           fmt.Sprintf("%d", v.EffectiveBalance),
 		Slashed:                    v.Slashed,

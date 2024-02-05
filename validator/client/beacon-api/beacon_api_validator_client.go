@@ -175,3 +175,7 @@ func (c *beaconApiValidatorClient) StartEventStream(ctx context.Context, topics 
 func (c *beaconApiValidatorClient) EventStreamIsRunning() bool {
 	return c.isEventStreamRunning
 }
+
+func (c *beaconApiValidatorClient) GetAggregatedSelections(ctx context.Context, selections []iface.BeaconCommitteeSelection) ([]iface.BeaconCommitteeSelection, error) {
+	return c.getAggregatedSelection(ctx, selections)
+}
