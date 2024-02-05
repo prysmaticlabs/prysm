@@ -2875,7 +2875,7 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 		StateGen:          stategen.New(db, doublylinkedtree.New()),
 	}
 	t.Run("failed reorg", func(tt *testing.T) {
-		head, err := proposerServer.getParentHeadState(ctx, 1, parentRoot, headRoot)
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, parentRoot, headRoot)
 		require.NoError(t, err)
 		st := parentState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)
@@ -2892,7 +2892,7 @@ func TestProposer_GetParentHeadState(t *testing.T) {
 
 	t.Run("no reorg", func(tt *testing.T) {
 		require.NoError(t, transition.UpdateNextSlotCache(ctx, headRoot[:], headState))
-		head, err := proposerServer.getParentHeadState(ctx, 1, headRoot, headRoot)
+		head, err := proposerServer.getParentStateFromReorgData(ctx, 1, headRoot, headRoot)
 		require.NoError(t, err)
 		st := headState.Copy()
 		st, err = transition.ProcessSlots(ctx, st, st.Slot()+1)

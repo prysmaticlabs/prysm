@@ -69,11 +69,7 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
-	// process attestations and update head in forkchoice
-	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
-	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
-	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
-	head, err := vs.getParentHeadState(ctx, req.Slot, parentRoot, headRoot)
+	head, parentRoot, err := vs.getParentState(ctx, req.Slot)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +148,7 @@ func (vs *Server) getHeadNoFailedReorg(ctx context.Context, slot primitives.Slot
 	return head, nil
 }
 
-func (vs *Server) getParentHeadState(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
+func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
 	if parentRoot != headRoot {
 		head, err = vs.handleFailedReorgAttempt(ctx, slot, parentRoot, headRoot)
 	} else {
@@ -169,6 +165,15 @@ func (vs *Server) getParentHeadState(ctx context.Context, slot primitives.Slot, 
 		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", slot, err)
 	}
 	return head, nil
+}
+
+func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, error) {
+	// process attestations and update head in forkchoice
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
+	head, err := vs.getParentStateFromReorgData(ctx, slot, parentRoot, headRoot)
+	return head, parentRoot, err
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {
