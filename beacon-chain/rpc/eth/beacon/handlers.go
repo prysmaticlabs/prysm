@@ -2105,20 +2105,11 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 		}
 		httputil.WriteSsz(w, sszData, "deposit_snapshot.ssz")
 	} else {
-		httputil.WriteJson(w, DepositSnapshotFromConsensus(snapshot))
-	}
-}
-
-func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
-	finalized := make([][]string, 0, len(ds.Finalized))
-	for _, f := range ds.Finalized {
-		finalized = append(finalized, []string{hexutil.Encode(f)})
-	}
-	return &DepositSnapshot{
-		Finalized:            finalized,
-		DepositRoot:          hexutil.Encode(ds.DepositRoot),
-		DepositCount:         fmt.Sprintf("%d", ds.DepositCount),
-		ExecutionBlockHash:   hexutil.Encode(ds.ExecutionHash),
-		ExecutionBlockHeight: fmt.Sprintf("%d", ds.ExecutionDepth),
+		httputil.WriteJson(
+			w,
+			&structs.GetDepositSnapshotResponse{
+				Data: structs.DepositSnapshotFromConsensus(snapshot),
+			},
+		)
 	}
 }

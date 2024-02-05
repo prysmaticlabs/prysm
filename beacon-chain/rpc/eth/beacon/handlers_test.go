@@ -3656,7 +3656,7 @@ func TestGetDepositSnapshot(t *testing.T) {
 	t.Run("JSON response", func(t *testing.T) {
 		s.GetDepositSnapshot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetDepositSnapshotResponse{}
+		resp := &structs.GetDepositSnapshotResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.NotNil(t, resp.Data)
 
