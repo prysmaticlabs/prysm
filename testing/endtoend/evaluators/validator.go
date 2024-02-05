@@ -8,9 +8,8 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/debug"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
@@ -135,7 +134,7 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 	}
 	if partRate < expected {
 		path := fmt.Sprintf("http://localhost:%d/eth/v2/debug/beacon/states/head", e2eparams.TestParams.Ports.PrysmBeaconNodeGatewayPort)
-		resp := debug.GetBeaconStateV2Response{}
+		resp := structs.GetBeaconStateV2Response{}
 		httpResp, err := http.Get(path) // #nosec G107 -- path can't be constant because it depends on port param
 		if err != nil {
 			return err
@@ -156,19 +155,19 @@ func validatorsParticipating(_ *types.EvaluationContext, conns ...*grpc.ClientCo
 		case version.String(version.Phase0):
 		// Do Nothing
 		case version.String(version.Altair):
-			st := &shared.BeaconStateAltair{}
+			st := &structs.BeaconStateAltair{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Bellatrix):
-			st := &shared.BeaconStateBellatrix{}
+			st := &structs.BeaconStateBellatrix{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}
 			respPrevEpochParticipation = st.PreviousEpochParticipation
 		case version.String(version.Capella):
-			st := &shared.BeaconStateCapella{}
+			st := &structs.BeaconStateCapella{}
 			if err = json.Unmarshal(resp.Data, st); err != nil {
 				return err
 			}

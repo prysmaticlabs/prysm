@@ -8,14 +8,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 func (c *beaconApiValidatorClient) prepareBeaconProposer(ctx context.Context, recipients []*ethpb.PrepareBeaconProposerRequest_FeeRecipientContainer) error {
-	jsonRecipients := make([]*shared.FeeRecipient, len(recipients))
+	jsonRecipients := make([]*structs.FeeRecipient, len(recipients))
 	for index, recipient := range recipients {
-		jsonRecipients[index] = &shared.FeeRecipient{
+		jsonRecipients[index] = &structs.FeeRecipient{
 			FeeRecipient:   hexutil.Encode(recipient.FeeRecipient),
 			ValidatorIndex: strconv.FormatUint(uint64(recipient.ValidatorIndex), 10),
 		}

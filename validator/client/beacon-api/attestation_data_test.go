@@ -9,8 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -31,7 +30,7 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 	defer ctrl.Finish()
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -41,16 +40,16 @@ func TestGetAttestationData_ValidAttestation(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		validator.GetAttestationDataResponse{
-			Data: &shared.AttestationData{
+		structs.GetAttestationDataResponse{
+			Data: &structs.AttestationData{
 				Slot:            strconv.FormatUint(expectedSlot, 10),
 				CommitteeIndex:  strconv.FormatUint(expectedCommitteeIndex, 10),
 				BeaconBlockRoot: expectedBeaconBlockRoot,
-				Source: &shared.Checkpoint{
+				Source: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(expectedSourceEpoch, 10),
 					Root:  expectedSourceRoot,
 				},
-				Target: &shared.Checkpoint{
+				Target: &structs.Checkpoint{
 					Epoch: strconv.FormatUint(expectedTargetEpoch, 10),
 					Root:  expectedTargetRoot,
 				},
@@ -81,13 +80,13 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 
 	testCases := []struct {
 		name                 string
-		generateData         func() validator.GetAttestationDataResponse
+		generateData         func() structs.GetAttestationDataResponse
 		expectedErrorMessage string
 	}{
 		{
 			name: "nil attestation data",
-			generateData: func() validator.GetAttestationDataResponse {
-				return validator.GetAttestationDataResponse{
+			generateData: func() structs.GetAttestationDataResponse {
+				return structs.GetAttestationDataResponse{
 					Data: nil,
 				}
 			},
@@ -95,7 +94,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid committee index",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.CommitteeIndex = "foo"
 				return attestation
@@ -104,7 +103,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid block root",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.BeaconBlockRoot = "foo"
 				return attestation
@@ -113,7 +112,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid slot",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Slot = "foo"
 				return attestation
@@ -122,7 +121,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil source",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source = nil
 				return attestation
@@ -131,7 +130,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source epoch",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Epoch = "foo"
 				return attestation
@@ -140,7 +139,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid source root",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Source.Root = "foo"
 				return attestation
@@ -149,7 +148,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "nil target",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target = nil
 				return attestation
@@ -158,7 +157,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target epoch",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Epoch = "foo"
 				return attestation
@@ -167,7 +166,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 		},
 		{
 			name: "invalid target root",
-			generateData: func() validator.GetAttestationDataResponse {
+			generateData: func() structs.GetAttestationDataResponse {
 				attestation := generateValidAttestation(1, 2)
 				attestation.Data.Target.Root = "foo"
 				return attestation
@@ -181,7 +180,7 @@ func TestGetAttestationData_InvalidData(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+			produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				ctx,
@@ -211,7 +210,7 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
-	produceAttestationDataResponseJson := validator.GetAttestationDataResponse{}
+	produceAttestationDataResponseJson := structs.GetAttestationDataResponse{}
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v1/validator/attestation_data?committee_index=%d&slot=%d", committeeIndex, slot),
@@ -225,17 +224,17 @@ func TestGetAttestationData_JsonResponseError(t *testing.T) {
 	assert.ErrorContains(t, "some specific json response error", err)
 }
 
-func generateValidAttestation(slot uint64, committeeIndex uint64) validator.GetAttestationDataResponse {
-	return validator.GetAttestationDataResponse{
-		Data: &shared.AttestationData{
+func generateValidAttestation(slot uint64, committeeIndex uint64) structs.GetAttestationDataResponse {
+	return structs.GetAttestationDataResponse{
+		Data: &structs.AttestationData{
 			Slot:            strconv.FormatUint(slot, 10),
 			CommitteeIndex:  strconv.FormatUint(committeeIndex, 10),
 			BeaconBlockRoot: "0x5ecf3bff35e39d5f75476d42950d549f81fa93038c46b6652ae89ae1f7ad834f",
-			Source: &shared.Checkpoint{
+			Source: &structs.Checkpoint{
 				Epoch: "3",
 				Root:  "0x9023c9e64f23c1d451d5073c641f5f69597c2ad7d82f6f16e67d703e0ce5db8b",
 			},
-			Target: &shared.Checkpoint{
+			Target: &structs.Checkpoint{
 				Epoch: "4",
 				Root:  "0xb154d46803b15b458ca822466547b054bc124338c6ee1d9c433dcde8c4457cca",
 			},

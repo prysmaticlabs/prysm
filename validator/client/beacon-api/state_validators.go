@@ -9,14 +9,14 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
 type StateValidatorsProvider interface {
-	GetStateValidators(context.Context, []string, []primitives.ValidatorIndex, []string) (*beacon.GetValidatorsResponse, error)
-	GetStateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*beacon.GetValidatorsResponse, error)
-	GetStateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*beacon.GetValidatorsResponse, error)
+	GetStateValidators(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
+	GetStateValidatorsForSlot(context.Context, primitives.Slot, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
+	GetStateValidatorsForHead(context.Context, []string, []primitives.ValidatorIndex, []string) (*structs.GetValidatorsResponse, error)
 }
 
 type beaconApiStateValidatorsProvider struct {
@@ -28,7 +28,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidators(
 	stringPubkeys []string,
 	indexes []primitives.ValidatorIndex,
 	statuses []string,
-) (*beacon.GetValidatorsResponse, error) {
+) (*structs.GetValidatorsResponse, error) {
 	stringIndices := convertValidatorIndicesToStrings(indexes)
 	return c.getStateValidatorsHelper(ctx, "/eth/v1/beacon/states/head/validators", append(stringIndices, stringPubkeys...), statuses)
 }
@@ -39,7 +39,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForSlot(
 	stringPubkeys []string,
 	indices []primitives.ValidatorIndex,
 	statuses []string,
-) (*beacon.GetValidatorsResponse, error) {
+) (*structs.GetValidatorsResponse, error) {
 	stringIndices := convertValidatorIndicesToStrings(indices)
 	url := fmt.Sprintf("/eth/v1/beacon/states/%d/validators", slot)
 	return c.getStateValidatorsHelper(ctx, url, append(stringIndices, stringPubkeys...), statuses)
@@ -50,7 +50,7 @@ func (c beaconApiStateValidatorsProvider) GetStateValidatorsForHead(
 	stringPubkeys []string,
 	indices []primitives.ValidatorIndex,
 	statuses []string,
-) (*beacon.GetValidatorsResponse, error) {
+) (*structs.GetValidatorsResponse, error) {
 	stringIndices := convertValidatorIndicesToStrings(indices)
 	return c.getStateValidatorsHelper(ctx, "/eth/v1/beacon/states/head/validators", append(stringIndices, stringPubkeys...), statuses)
 }
@@ -72,8 +72,8 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	endpoint string,
 	vals []string,
 	statuses []string,
-) (*beacon.GetValidatorsResponse, error) {
-	req := beacon.GetValidatorsRequest{
+) (*structs.GetValidatorsResponse, error) {
+	req := structs.GetValidatorsRequest{
 		Ids:      []string{},
 		Statuses: []string{},
 	}
@@ -91,8 +91,7 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to marshal request into JSON")
 	}
-
-	stateValidatorsJson := &beacon.GetValidatorsResponse{}
+	stateValidatorsJson := &structs.GetValidatorsResponse{}
 	// First try POST endpoint to check whether it is supported by the beacon node.
 	if err = c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson); err == nil {
 		if stateValidatorsJson.Data == nil {
@@ -103,7 +102,7 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 	}
 
 	// Re-initialise the response just in case.
-	stateValidatorsJson = &beacon.GetValidatorsResponse{}
+	stateValidatorsJson = &structs.GetValidatorsResponse{}
 
 	// Seems like POST isn't supported by the beacon node, let's try the GET one.
 	queryParams := url.Values{}

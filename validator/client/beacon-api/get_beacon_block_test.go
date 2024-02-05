@@ -10,7 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -127,10 +127,10 @@ func TestGetBeaconBlock_Error(t *testing.T) {
 			jsonRestHandler.EXPECT().Get(
 				ctx,
 				gomock.Any(),
-				&validator.ProduceBlockV3Response{},
+				&structs.ProduceBlockV3Response{},
 			).SetArg(
 				2,
-				validator.ProduceBlockV3Response{
+				structs.ProduceBlockV3Response{
 					Version: testCase.consensusVersion,
 					Data:    testCase.data,
 				},
@@ -163,10 +163,10 @@ func TestGetBeaconBlock_Phase0Valid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version: "phase0",
 			Data:    bytes,
 		},
@@ -206,10 +206,10 @@ func TestGetBeaconBlock_AltairValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version: "altair",
 			Data:    bytes,
 		},
@@ -249,10 +249,10 @@ func TestGetBeaconBlock_BellatrixValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "bellatrix",
 			ExecutionPayloadBlinded: false,
 			Data:                    bytes,
@@ -294,10 +294,10 @@ func TestGetBeaconBlock_BlindedBellatrixValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "bellatrix",
 			ExecutionPayloadBlinded: true,
 			Data:                    bytes,
@@ -339,10 +339,10 @@ func TestGetBeaconBlock_CapellaValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "capella",
 			ExecutionPayloadBlinded: false,
 			Data:                    bytes,
@@ -384,10 +384,10 @@ func TestGetBeaconBlock_BlindedCapellaValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "capella",
 			ExecutionPayloadBlinded: true,
 			Data:                    bytes,
@@ -429,10 +429,10 @@ func TestGetBeaconBlock_DenebValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "deneb",
 			ExecutionPayloadBlinded: false,
 			Data:                    bytes,
@@ -474,10 +474,10 @@ func TestGetBeaconBlock_BlindedDenebValid(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).SetArg(
 		2,
-		validator.ProduceBlockV3Response{
+		structs.ProduceBlockV3Response{
 			Version:                 "deneb",
 			ExecutionPayloadBlinded: true,
 			Data:                    bytes,
@@ -519,7 +519,7 @@ func TestGetBeaconBlock_FallbackToBlindedBlock(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
 	).Times(1)
@@ -570,7 +570,7 @@ func TestGetBeaconBlock_FallbackToFullBlock(t *testing.T) {
 	jsonRestHandler.EXPECT().Get(
 		ctx,
 		fmt.Sprintf("/eth/v3/validator/blocks/%d?graffiti=%s&randao_reveal=%s", slot, hexutil.Encode(graffiti), hexutil.Encode(randaoReveal)),
-		&validator.ProduceBlockV3Response{},
+		&structs.ProduceBlockV3Response{},
 	).Return(
 		&httputil.DefaultJsonError{Code: http.StatusNotFound},
 	).Times(1)

@@ -14,7 +14,7 @@ import (
 	"text/template"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/interfaces"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -267,9 +267,9 @@ func (c *Client) RegisterValidator(ctx context.Context, svr []*ethpb.SignedValid
 		tracing.AnnotateError(span, err)
 		return err
 	}
-	vs := make([]*shared.SignedValidatorRegistration, len(svr))
+	vs := make([]*structs.SignedValidatorRegistration, len(svr))
 	for i := 0; i < len(svr); i++ {
-		vs[i] = shared.SignedValidatorRegistrationFromConsensus(svr[i])
+		vs[i] = structs.SignedValidatorRegistrationFromConsensus(svr[i])
 	}
 	body, err := json.Marshal(vs)
 	if err != nil {
@@ -294,7 +294,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b, err := shared.SignedBlindedBeaconBlockBellatrixFromConsensus(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		b, err := structs.SignedBlindedBeaconBlockBellatrixFromConsensus(&ethpb.SignedBlindedBeaconBlockBellatrix{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockBellatrix to json marshalable type")
 		}
@@ -331,7 +331,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b, err := shared.SignedBlindedBeaconBlockCapellaFromConsensus(&ethpb.SignedBlindedBeaconBlockCapella{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		b, err := structs.SignedBlindedBeaconBlockCapellaFromConsensus(&ethpb.SignedBlindedBeaconBlockCapella{Block: psb.Block, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockCapella to json marshalable type")
 		}
@@ -368,7 +368,7 @@ func (c *Client) SubmitBlindedBlock(ctx context.Context, sb interfaces.ReadOnlyS
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not get protobuf block")
 		}
-		b, err := shared.SignedBlindedBeaconBlockDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockDeneb{Message: psb.Message, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
+		b, err := structs.SignedBlindedBeaconBlockDenebFromConsensus(&ethpb.SignedBlindedBeaconBlockDeneb{Message: psb.Message, Signature: bytesutil.SafeCopyBytes(psb.Signature)})
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "could not convert SignedBlindedBeaconBlockDeneb to json marshalable type")
 		}

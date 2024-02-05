@@ -479,10 +479,10 @@ func (s *Service) handleETH1FollowDistance() {
 
 	// If the last requested block has not changed,
 	// we do not request batched logs as this means there are no new
-	// logs for the powchain service to process. Also it is a potential
+	// logs for the execution service to process. Also it is a potential
 	// failure condition as would mean we have not respected the protocol threshold.
 	if s.latestEth1Data.LastRequestedBlock == s.latestEth1Data.BlockHeight {
-		log.Error("Beacon node is not respecting the follow distance")
+		log.WithField("lastBlockNumber", s.latestEth1Data.LastRequestedBlock).Error("Beacon node is not respecting the follow distance. EL client is syncing.")
 		return
 	}
 	if err := s.requestBatchedHeadersAndLogs(ctx); err != nil {

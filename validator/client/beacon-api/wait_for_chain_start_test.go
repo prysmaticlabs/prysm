@@ -8,7 +8,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -21,7 +21,7 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	genesisResponseJson := beacon.GetGenesisResponse{}
+	genesisResponseJson := structs.GetGenesisResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -31,8 +31,8 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		beacon.GetGenesisResponse{
-			Data: &beacon.Genesis{
+		structs.GetGenesisResponse{
+			Data: &structs.Genesis{
 				GenesisTime:           "1234",
 				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 			},
@@ -56,7 +56,7 @@ func TestWaitForChainStart_ValidGenesis(t *testing.T) {
 func TestWaitForChainStart_BadGenesis(t *testing.T) {
 	testCases := []struct {
 		name         string
-		data         *beacon.Genesis
+		data         *structs.Genesis
 		errorMessage string
 	}{
 		{
@@ -66,7 +66,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 		},
 		{
 			name: "invalid time",
-			data: &beacon.Genesis{
+			data: &structs.Genesis{
 				GenesisTime:           "foo",
 				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 			},
@@ -74,7 +74,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 		},
 		{
 			name: "invalid root",
-			data: &beacon.Genesis{
+			data: &structs.Genesis{
 				GenesisTime:           "1234",
 				GenesisValidatorsRoot: "0xzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
 			},
@@ -88,7 +88,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 			defer ctrl.Finish()
 
 			ctx := context.Background()
-			genesisResponseJson := beacon.GetGenesisResponse{}
+			genesisResponseJson := structs.GetGenesisResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 			jsonRestHandler.EXPECT().Get(
 				ctx,
@@ -98,7 +98,7 @@ func TestWaitForChainStart_BadGenesis(t *testing.T) {
 				nil,
 			).SetArg(
 				2,
-				beacon.GetGenesisResponse{
+				structs.GetGenesisResponse{
 					Data: testCase.data,
 				},
 			).Times(1)
@@ -116,7 +116,7 @@ func TestWaitForChainStart_JsonResponseError(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	genesisResponseJson := beacon.GetGenesisResponse{}
+	genesisResponseJson := structs.GetGenesisResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 	jsonRestHandler.EXPECT().Get(
 		ctx,
@@ -139,7 +139,7 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	genesisResponseJson := beacon.GetGenesisResponse{}
+	genesisResponseJson := structs.GetGenesisResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	// First, mock a request that receives a 404 error (which means that the genesis data is not available yet)
@@ -163,8 +163,8 @@ func TestWaitForChainStart_JsonResponseError404(t *testing.T) {
 		nil,
 	).SetArg(
 		2,
-		beacon.GetGenesisResponse{
-			Data: &beacon.Genesis{
+		structs.GetGenesisResponse{
+			Data: &structs.Genesis{
 				GenesisTime:           "1234",
 				GenesisValidatorsRoot: "0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2",
 			},

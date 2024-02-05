@@ -8,11 +8,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
-
 	gomock "github.com/golang/mock/gomock"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 

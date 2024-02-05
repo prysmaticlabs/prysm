@@ -10,9 +10,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/signing"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/blocks"
@@ -586,7 +586,7 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 	if err != nil {
 		return err
 	}
-	changes := make([]*shared.SignedBLSToExecutionChange, 0)
+	changes := make([]*structs.SignedBLSToExecutionChange, 0)
 	// Only send half the number of changes each time, to allow us to test
 	// at the fork boundary.
 	wantedChanges := numOfExits / 2
@@ -620,8 +620,8 @@ func submitWithdrawal(ec *e2etypes.EvaluationContext, conns ...*grpc.ClientConn)
 		}
 		signature := privKeys[idx].Sign(sigRoot[:]).Marshal()
 
-		changes = append(changes, &shared.SignedBLSToExecutionChange{
-			Message:   shared.BLSChangeFromConsensus(message),
+		changes = append(changes, &structs.SignedBLSToExecutionChange{
+			Message:   structs.BLSChangeFromConsensus(message),
 			Signature: hexutil.Encode(signature),
 		})
 	}

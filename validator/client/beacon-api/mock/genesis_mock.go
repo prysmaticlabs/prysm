@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	beacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	structs "github.com/prysmaticlabs/prysm/v4/api/server/structs"
 )
 
 // MockGenesisProvider is a mock of GenesisProvider interface.
@@ -36,10 +36,10 @@ func (m *MockGenesisProvider) EXPECT() *MockGenesisProviderMockRecorder {
 }
 
 // GetGenesis mocks base method.
-func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*beacon.Genesis, error) {
+func (m *MockGenesisProvider) GetGenesis(ctx context.Context) (*structs.Genesis, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetGenesis", ctx)
-	ret0, _ := ret[0].(*beacon.Genesis)
+	ret0, _ := ret[0].(*structs.Genesis)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
