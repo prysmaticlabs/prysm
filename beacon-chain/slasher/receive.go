@@ -155,7 +155,7 @@ func (s *Service) processAttestations(
 
 	// Process attester slashings by verifying their signatures, submitting
 	// to the beacon node's operations pool, and logging them.
-	if err := s.processAttesterSlashings(ctx, slashings); err != nil {
+	if _, err := s.processAttesterSlashings(ctx, slashings); err != nil {
 		log.WithError(err).Error(couldNotProcessAttesterSlashings)
 		return
 	}

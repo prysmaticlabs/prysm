@@ -11,10 +11,12 @@ import (
 
 // Verifies attester slashings, logs them, and submits them to the slashing operations pool
 // in the beacon node if they pass validation.
-func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) error {
+func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*ethpb.AttesterSlashing) ([]*ethpb.AttesterSlashing, error) {
+	processedSlashings := make([]*ethpb.AttesterSlashing, 0, len(slashings))
+
 	// If no slashings, return early.
 	if len(slashings) == 0 {
-		return nil
+		return processedSlashings, nil
 	}
 
 	// Get the head state.
@@ -47,9 +49,11 @@ func (s *Service) processAttesterSlashings(ctx context.Context, slashings []*eth
 		if err := s.serviceCfg.SlashingPoolInserter.InsertAttesterSlashing(ctx, beaconState, slashing); err != nil {
 			log.WithError(err).Error("Could not insert attester slashing into operations pool")
 		}
+
+		processedSlashings = append(processedSlashings, slashing)
 	}
 
-	return nil
+	return processedSlashings, nil
 }
 
 // Verifies proposer slashings, logs them, and submits them to the slashing operations pool
