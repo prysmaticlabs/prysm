@@ -91,7 +91,7 @@ func scrapeProm(url string, tripper http.RoundTripper) (map[string]*dto.MetricFa
 	for {
 		select {
 		case fam, chanOpen := <-mfChan:
-			// FetchMetricFamiles will close the channel when done
+			// FetchMetricFamilies will close the channel when done
 			// at which point we want to stop the goroutine
 			if fam == nil && !chanOpen {
 				return result, nil
