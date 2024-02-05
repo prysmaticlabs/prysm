@@ -53,13 +53,25 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	v.aggregatedSlotCommitteeIDCache.Add(k, true)
 	v.aggregatedSlotCommitteeIDCacheLock.Unlock()
 
-	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
-	if err != nil {
-		log.WithError(err).Error("Could not sign slot")
-		if v.emitAccountMetrics {
-			ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+	var slotSig []byte
+	if v.distributed {
+		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: duty.ValidatorIndex})
+		if err != nil {
+			log.WithError(err).Error("Could not find aggregated selection proof")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
 		}
-		return
+	} else {
+		slotSig, err = v.signSlotWithSelectionProof(ctx, pubKey, slot)
+		if err != nil {
+			log.WithError(err).Error("Could not sign slot")
+			if v.emitAccountMetrics {
+				ValidatorAggFailVec.WithLabelValues(fmtKey).Inc()
+			}
+			return
+		}
 	}
 
 	// As specified in spec, an aggregator should wait until two thirds of the way through slot
