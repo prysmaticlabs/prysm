@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -26,6 +27,7 @@ func getPubKeyAndReqBuffer(t *testing.T) ([]byte, *bytes.Buffer) {
 		Ids:      []string{stringPubKey},
 		Statuses: []string{},
 	}
+
 	reqBytes, err := json.Marshal(req)
 	require.NoError(t, err)
 	return pubKey, bytes.NewBuffer(reqBytes)
@@ -187,6 +189,27 @@ func TestIndex_JsonResponseError(t *testing.T) {
 		"/eth/v1/beacon/states/head/validators",
 		nil,
 		reqBuffer,
+		&stateValidatorsResponseJson,
+	).Return(
+		errors.New("some specific json error"),
+	).Times(1)
+
+	req := structs.GetValidatorsRequest{
+		Ids:      []string{stringPubKey},
+		Statuses: []string{},
+	}
+
+	queryParams := url.Values{}
+	for _, id := range req.Ids {
+		queryParams.Add("id", id)
+	}
+	for _, st := range req.Statuses {
+		queryParams.Add("status", st)
+	}
+
+	jsonRestHandler.EXPECT().Get(
+		ctx,
+		buildURL("/eth/v1/beacon/states/head/validators", queryParams),
 		&stateValidatorsResponseJson,
 	).Return(
 		errors.New("some specific json error"),

@@ -67,12 +67,14 @@ type validator struct {
 	logValidatorBalances               bool
 	useWeb                             bool
 	emitAccountMetrics                 bool
+	distributed                        bool
 	domainDataLock                     sync.RWMutex
 	attLogsLock                        sync.Mutex
 	aggregatedSlotCommitteeIDCacheLock sync.Mutex
 	highestValidSlotLock               sync.Mutex
 	prevBalanceLock                    sync.RWMutex
 	slashableKeysLock                  sync.RWMutex
+	attSelectionLock                   sync.Mutex
 	eipImportBlacklistedPublicKeys     map[[fieldparams.BLSPubkeyLength]byte]bool
 	walletInitializedFeed              *event.Feed
 	attLogs                            map[[32]byte]*attSubmitted
@@ -82,6 +84,7 @@ type validator struct {
 	prevBalance                        map[[fieldparams.BLSPubkeyLength]byte]uint64
 	pubkeyToValidatorIndex             map[[fieldparams.BLSPubkeyLength]byte]primitives.ValidatorIndex
 	signedValidatorRegistrations       map[[fieldparams.BLSPubkeyLength]byte]*ethpb.SignedValidatorRegistrationV1
+	attSelections                      map[attSelectionKey]iface.BeaconCommitteeSelection
 	graffitiOrderedIndex               uint64
 	aggregatedSlotCommitteeIDCache     *lru.Cache
 	domainDataCache                    *ristretto.Cache
@@ -111,6 +114,11 @@ type validatorStatus struct {
 	publicKey []byte
 	status    *ethpb.ValidatorStatusResponse
 	index     primitives.ValidatorIndex
+}
+
+type attSelectionKey struct {
+	slot  primitives.Slot
+	index primitives.ValidatorIndex
 }
 
 // Done cleans up the validator.
@@ -629,6 +637,13 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 	subscribeValidatorIndices := make([]primitives.ValidatorIndex, 0, len(res.CurrentEpochDuties)+len(res.NextEpochDuties))
 	alreadySubscribed := make(map[[64]byte]bool)
 
+	if v.distributed {
+		// Get aggregated selection proofs to calculate isAggregator.
+		if err := v.getAggregatedSelectionProofs(ctx, res); err != nil {
+			return errors.Wrap(err, "could not get aggregated selection proofs")
+		}
+	}
+
 	for _, duty := range res.CurrentEpochDuties {
 		pk := bytesutil.ToBytes48(duty.PublicKey)
 		if duty.Status == ethpb.ValidatorStatus_ACTIVE || duty.Status == ethpb.ValidatorStatus_EXITING {
@@ -641,7 +656,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk)
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, pk, validatorIndex)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -667,7 +682,7 @@ func (v *validator) subscribeToSubnets(ctx context.Context, res *ethpb.DutiesRes
 				continue
 			}
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, attesterSlot, bytesutil.ToBytes48(duty.PublicKey), validatorIndex)
 			if err != nil {
 				return errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -718,7 +733,7 @@ func (v *validator) RolesAt(ctx context.Context, slot primitives.Slot) (map[[fie
 		if duty.AttesterSlot == slot {
 			roles = append(roles, iface.RoleAttester)
 
-			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey))
+			aggregator, err := v.isAggregator(ctx, duty.Committee, slot, bytesutil.ToBytes48(duty.PublicKey), duty.ValidatorIndex)
 			if err != nil {
 				return nil, errors.Wrap(err, "could not check if a validator is an aggregator")
 			}
@@ -773,15 +788,26 @@ func (v *validator) Keymanager() (keymanager.IKeymanager, error) {
 
 // isAggregator checks if a validator is an aggregator of a given slot and committee,
 // it uses a modulo calculated by validator count in committee and samples randomness around it.
-func (v *validator) isAggregator(ctx context.Context, committee []primitives.ValidatorIndex, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte) (bool, error) {
+func (v *validator) isAggregator(ctx context.Context, committee []primitives.ValidatorIndex, slot primitives.Slot, pubKey [fieldparams.BLSPubkeyLength]byte, validatorIndex primitives.ValidatorIndex) (bool, error) {
 	modulo := uint64(1)
 	if len(committee)/int(params.BeaconConfig().TargetAggregatorsPerCommittee) > 1 {
 		modulo = uint64(len(committee)) / params.BeaconConfig().TargetAggregatorsPerCommittee
 	}
 
-	slotSig, err := v.signSlotWithSelectionProof(ctx, pubKey, slot)
-	if err != nil {
-		return false, err
+	var (
+		slotSig []byte
+		err     error
+	)
+	if v.distributed {
+		slotSig, err = v.getAttSelection(attSelectionKey{slot: slot, index: validatorIndex})
+		if err != nil {
+			return false, err
+		}
+	} else {
+		slotSig, err = v.signSlotWithSelectionProof(ctx, pubKey, slot)
+		if err != nil {
+			return false, err
+		}
 	}
 
 	b := hash.Hash(slotSig)
@@ -1228,6 +1254,89 @@ func (v *validator) validatorIndex(ctx context.Context, pubkey [fieldparams.BLSP
 		return 0, false, err
 	}
 	return resp.Index, true, nil
+}
+
+func (v *validator) getAggregatedSelectionProofs(ctx context.Context, duties *ethpb.DutiesResponse) error {
+	// Create new instance of attestation selections map.
+	v.newAttSelections()
+
+	var req []iface.BeaconCommitteeSelection
+	for _, duty := range duties.CurrentEpochDuties {
+		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
+			continue
+		}
+
+		pk := bytesutil.ToBytes48(duty.PublicKey)
+		slotSig, err := v.signSlotWithSelectionProof(ctx, pk, duty.AttesterSlot)
+		if err != nil {
+			return err
+		}
+
+		req = append(req, iface.BeaconCommitteeSelection{
+			SelectionProof: slotSig,
+			Slot:           duty.AttesterSlot,
+			ValidatorIndex: duty.ValidatorIndex,
+		})
+	}
+
+	for _, duty := range duties.NextEpochDuties {
+		if duty.Status != ethpb.ValidatorStatus_ACTIVE && duty.Status != ethpb.ValidatorStatus_EXITING {
+			continue
+		}
+
+		pk := bytesutil.ToBytes48(duty.PublicKey)
+		slotSig, err := v.signSlotWithSelectionProof(ctx, pk, duty.AttesterSlot)
+		if err != nil {
+			return err
+		}
+
+		req = append(req, iface.BeaconCommitteeSelection{
+			SelectionProof: slotSig,
+			Slot:           duty.AttesterSlot,
+			ValidatorIndex: duty.ValidatorIndex,
+		})
+	}
+
+	resp, err := v.validatorClient.GetAggregatedSelections(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	// Store aggregated selection proofs in state.
+	v.addAttSelections(resp)
+
+	return nil
+}
+
+func (v *validator) addAttSelections(selections []iface.BeaconCommitteeSelection) {
+	v.attSelectionLock.Lock()
+	defer v.attSelectionLock.Unlock()
+
+	for _, s := range selections {
+		v.attSelections[attSelectionKey{
+			slot:  s.Slot,
+			index: s.ValidatorIndex,
+		}] = s
+	}
+}
+
+func (v *validator) newAttSelections() {
+	v.attSelectionLock.Lock()
+	defer v.attSelectionLock.Unlock()
+
+	v.attSelections = make(map[attSelectionKey]iface.BeaconCommitteeSelection)
+}
+
+func (v *validator) getAttSelection(key attSelectionKey) ([]byte, error) {
+	v.attSelectionLock.Lock()
+	defer v.attSelectionLock.Unlock()
+
+	s, ok := v.attSelections[key]
+	if !ok {
+		return nil, errors.Errorf("selection proof not found for the given slot=%d and validator_index=%d", key.slot, key.index)
+	}
+
+	return s.SelectionProof, nil
 }
 
 // This constructs a validator subscribed key, it's used to track

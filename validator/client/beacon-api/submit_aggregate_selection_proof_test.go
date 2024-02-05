@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -200,6 +201,27 @@ func TestSubmitAggregateSelectionProof(t *testing.T) {
 			).Return(
 				test.validatorsErr,
 			).Times(test.validatorsCalled)
+
+			if test.validatorsErr != nil {
+				// Then try the GET call which will also return error.
+				queryParams := url.Values{}
+				for _, id := range valsReq.Ids {
+					queryParams.Add("id", id)
+				}
+				for _, st := range valsReq.Statuses {
+					queryParams.Add("status", st)
+				}
+
+				query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
+
+				jsonRestHandler.EXPECT().Get(
+					ctx,
+					query,
+					&structs.GetValidatorsResponse{},
+				).Return(
+					test.validatorsErr,
+				).Times(1)
+			}
 
 			// Call attester duties endpoint to get attester duties.
 			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})
