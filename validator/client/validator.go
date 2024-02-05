@@ -21,6 +21,8 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
@@ -107,6 +109,7 @@ type validator struct {
 	Web3SignerConfig                   *remoteweb3signer.SetupConfig
 	proposerSettings                   *validatorserviceconfig.ProposerSettings
 	walletInitializedChannel           chan *wallet.Wallet
+	beaconNodeHealth                   *beacon.NodeHealth
 	validatorsRegBatchSize             int
 }
 
@@ -247,7 +250,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	chainStartRes, err := v.validatorClient.WaitForChainStart(ctx, &emptypb.Empty{})
 	if err == io.EOF {
-		return iface.ErrConnectionIssue
+		return client.ErrConnectionIssue
 	}
 
 	if ctx.Err() == context.Canceled {
@@ -256,7 +259,7 @@ func (v *validator) WaitForChainStart(ctx context.Context) error {
 
 	if err != nil {
 		return errors.Wrap(
-			iface.ErrConnectionIssue,
+			client.ErrConnectionIssue,
 			errors.Wrap(err, "could not receive ChainStart from stream").Error(),
 		)
 	}
@@ -309,7 +312,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 
 	s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 	if err != nil {
-		return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+		return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 	}
 	if !s.Syncing {
 		return nil
@@ -321,7 +324,7 @@ func (v *validator) WaitForSync(ctx context.Context) error {
 		case <-time.After(slots.DivideSlotBy(2 /* twice per slot */)):
 			s, err := v.nodeClient.GetSyncStatus(ctx, &emptypb.Empty{})
 			if err != nil {
-				return errors.Wrap(iface.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
+				return errors.Wrap(client.ErrConnectionIssue, errors.Wrap(err, "could not get sync status").Error())
 			}
 			if !s.Syncing {
 				return nil
@@ -400,7 +403,7 @@ func (v *validator) CanonicalHeadSlot(ctx context.Context) (primitives.Slot, err
 	defer span.End()
 	head, err := v.beaconClient.GetChainHead(ctx, &emptypb.Empty{})
 	if err != nil {
-		return 0, errors.Wrap(iface.ErrConnectionIssue, err.Error())
+		return 0, errors.Wrap(client.ErrConnectionIssue, err.Error())
 	}
 	return head.HeadSlot, nil
 }
@@ -1027,12 +1030,13 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		return nil
 	}
 	switch event.EventType {
+	case eventClient.EventConnectionError:
+		return errors.New(string(event.Data))
 	case eventClient.EventError:
 		log.Error(string(event.Data))
-		// wait some period before trying again
-		return errors.New(string(event.Data))
+		return nil // skip restart if it's not a connection error
 	case eventClient.EventHead:
-		log.Debug("new head event")
+		log.Info("new head event")
 		head := &events.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
@@ -1057,6 +1061,10 @@ func (v *validator) EventStreamIsRunning() bool {
 
 func (v *validator) NodeIsHealthy(ctx context.Context) bool {
 	return v.nodeClient.IsHealthy(ctx)
+}
+
+func (v *validator) NodeHealthTracker() *beacon.NodeHealth {
+	return v.beaconNodeHealth
 }
 
 func (v *validator) filterAndCacheActiveKeys(ctx context.Context, pubkeys [][fieldparams.BLSPubkeyLength]byte, slot primitives.Slot) ([][fieldparams.BLSPubkeyLength]byte, error) {

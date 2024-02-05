@@ -7,6 +7,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
@@ -123,7 +124,7 @@ func (c *grpcValidatorClient) WaitForChainStart(ctx context.Context, in *empty.E
 	stream, err := c.beaconNodeValidatorClient.WaitForChainStart(ctx, in)
 	if err != nil {
 		return nil, errors.Wrap(
-			iface.ErrConnectionIssue,
+			client.ErrConnectionIssue,
 			errors.Wrap(err, "could not setup beacon chain ChainStart streaming client").Error(),
 		)
 	}
@@ -165,15 +166,24 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 	if !containsHead {
 		log.Errorf("topics")
 	}
-
-	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
-	if err != nil {
-		log.WithError(err).Error("Failed to retrieve slots stream, " + iface.ErrConnectionIssue.Error())
-		eventsChannel <- &eventClient.Event{
-			EventType: eventClient.EventError,
-			Data:      []byte(errors.Wrap(iface.ErrConnectionIssue, err.Error()).Error()),
+	attempts := 0
+	var stream ethpb.BeaconNodeValidator_StreamSlotsClient
+	for stream == nil {
+		str, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
+		if err != nil {
+			log.WithError(err).Errorf("unable to create stream, attempting  again ")
+			attempts++
+			continue
 		}
-		return
+		if attempts > eventClient.MaxRetryAttempts {
+			log.WithError(err).Error("Failed to retrieve slots stream, " + client.ErrConnectionIssue.Error())
+			eventsChannel <- &eventClient.Event{
+				EventType: eventClient.EventConnectionError,
+				Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
+			}
+			return
+		}
+		stream = str
 	}
 	c.isEventStreamRunning = true
 	for {
@@ -191,11 +201,12 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 			}
 			res, err := stream.Recv()
 			if err != nil {
-				log.WithError(err).Error("Could not receive slots from beacon node: " + iface.ErrConnectionIssue.Error())
+				log.WithError(err).Error("Could not receive slots from beacon node: " + client.ErrConnectionIssue.Error())
 				eventsChannel <- &eventClient.Event{
-					EventType: eventClient.EventError,
-					Data:      []byte(errors.Wrap(iface.ErrConnectionIssue, err.Error()).Error()),
+					EventType: eventClient.EventConnectionError,
+					Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
 				}
+				return
 			}
 			if res == nil {
 				continue

@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,6 +29,8 @@ const (
 	EventPayloadAttributes           = "payload_attributes"
 	EventBlobSidecar                 = "blob_sidecar"
 	EventError                       = "error"
+	EventConnectionError             = "connection_error"
+	MaxRetryAttempts                 = 3
 )
 
 var DefaultEventTopics = []string{EventHead}
@@ -75,7 +78,7 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	req, err := http.NewRequestWithContext(h.ctx, http.MethodGet, fullUrl, nil)
 	if err != nil {
 		eventsChannel <- &Event{
-			EventType: EventError,
+			EventType: EventConnectionError,
 			Data:      []byte(errors.Wrap(err, "Failed to create HTTP request").Error()),
 		}
 	}
@@ -84,8 +87,8 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		eventsChannel <- &Event{
-			EventType: EventError,
-			Data:      []byte(errors.Wrap(err, "Failed to perform HTTP request").Error()),
+			EventType: EventConnectionError,
+			Data:      []byte(errors.Wrap(err, client.ErrConnectionIssue.Error()).Error()),
 		}
 	}
 
@@ -134,8 +137,8 @@ func (h *EventStream) Subscribe(eventsChannel chan<- *Event) {
 
 	if err := scanner.Err(); err != nil {
 		eventsChannel <- &Event{
-			EventType: EventError,
-			Data:      []byte(errors.Wrap(err, "Error reading response body").Error()),
+			EventType: EventConnectionError,
+			Data:      []byte(errors.Wrap(err, errors.Wrap(client.ErrConnectionIssue, "scanner failed").Error()).Error()),
 		}
 	}
 }

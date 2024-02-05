@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/prysmaticlabs/prysm/v4/validator/client/iface",
     visibility = ["//visibility:public"],
     deps = [
+        "//api/client/beacon:go_default_library",
         "//api/client/event:go_default_library",
         "//config/fieldparams:go_default_library",
         "//config/validator/service:go_default_library",

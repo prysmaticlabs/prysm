@@ -2,9 +2,9 @@ package iface
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
@@ -14,9 +14,6 @@ import (
 	validatorpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/validator-client"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 )
-
-// ErrConnectionIssue represents a connection problem.
-var ErrConnectionIssue = errors.New("could not connect")
 
 // ValidatorRole defines the validator role.
 type ValidatorRole int8
@@ -68,6 +65,7 @@ type Validator interface {
 	ProcessEvent(event *event.Event) error
 	EventStreamIsRunning() bool
 	NodeIsHealthy(ctx context.Context) bool
+	NodeHealthTracker() *beacon.NodeHealth
 }
 
 // SigningFunc interface defines a type for the a function that signs a message

@@ -34,7 +34,7 @@ option php_namespace = "Ethereum\\Eth\\v1alpha1";
 // it supports, chain information and node version.
 service Node {
     // Retrieve the current network sync status of the node.
-	rpc GetSyncStatus(google.protobuf.Empty) returns (SyncStatus) {
+	  rpc GetSyncStatus(google.protobuf.Empty) returns (SyncStatus) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/syncing"
         };
@@ -51,6 +51,13 @@ service Node {
     rpc GetVersion(google.protobuf.Empty) returns (Version) {
         option (google.api.http) = {
             get: "/eth/v1alpha1/node/version"
+        };
+    }
+
+    // Retrieve the current health of the node.
+    rpc GetHealth(HealthRequest) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            get: "/eth/v1alpha1/node/health"
         };
     }
 
@@ -92,6 +99,10 @@ service Node {
             get: "/eth/v1alpha1/node/eth1/connections"
         };
     }
+}
+
+message HealthRequest {
+    uint64 syncing_status = 2;
 }
 
 // Information about the current network sync status of the node.

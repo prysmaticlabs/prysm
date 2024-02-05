@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/ptypes/empty"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -29,8 +30,13 @@ func (c *grpcNodeClient) ListPeers(ctx context.Context, in *empty.Empty) (*ethpb
 	return c.nodeClient.ListPeers(ctx, in)
 }
 
-func (c *grpcNodeClient) IsHealthy(context.Context) bool {
-	panic("function not supported for gRPC client")
+func (c *grpcNodeClient) IsHealthy(ctx context.Context) bool {
+	_, err := c.nodeClient.GetHealth(ctx, &ethpb.HealthRequest{})
+	if err != nil {
+		log.WithError(err).Error("failed to get health of node")
+		return false
+	}
+	return true
 }
 
 func NewNodeClient(cc grpc.ClientConnInterface) iface.NodeClient {

@@ -5,11 +5,13 @@ import (
 	"context"
 	"time"
 
+	api "github.com/prysmaticlabs/prysm/v4/api/client"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
+	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	log "github.com/sirupsen/logrus"
@@ -75,7 +77,7 @@ func (fv *FakeValidator) LogSyncCommitteeMessagesSubmitted() {}
 func (fv *FakeValidator) WaitForChainStart(_ context.Context) error {
 	fv.WaitForChainStartCalled++
 	if fv.RetryTillSuccess >= fv.WaitForChainStartCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -87,7 +89,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 		return nil
 	}
 	if fv.RetryTillSuccess >= fv.WaitForActivationCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -96,7 +98,7 @@ func (fv *FakeValidator) WaitForActivation(_ context.Context, accountChan chan [
 func (fv *FakeValidator) WaitForSync(_ context.Context) error {
 	fv.WaitForSyncCalled++
 	if fv.RetryTillSuccess >= fv.WaitForSyncCalled {
-		return iface.ErrConnectionIssue
+		return api.ErrConnectionIssue
 	}
 	return nil
 }
@@ -111,7 +113,7 @@ func (fv *FakeValidator) SlasherReady(_ context.Context) error {
 func (fv *FakeValidator) CanonicalHeadSlot(_ context.Context) (primitives.Slot, error) {
 	fv.CanonicalHeadSlotCalled++
 	if fv.RetryTillSuccess > fv.CanonicalHeadSlotCalled {
-		return 0, iface.ErrConnectionIssue
+		return 0, api.ErrConnectionIssue
 	}
 	return 0, nil
 }
@@ -221,7 +223,7 @@ func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 func (fv *FakeValidator) ReceiveSlots(_ context.Context, connectionErrorChannel chan<- error) {
 	fv.ReceiveBlocksCalled++
 	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- iface.ErrConnectionIssue
+		connectionErrorChannel <- api.ErrConnectionIssue
 	}
 }
 
@@ -296,4 +298,8 @@ func (fv *FakeValidator) EventStreamIsRunning() bool {
 
 func (fv *FakeValidator) NodeIsHealthy(context.Context) bool {
 	return true
+}
+
+func (fv *FakeValidator) NodeHealthTracker() *client.BeaconNodeHealth {
+	return nil
 }

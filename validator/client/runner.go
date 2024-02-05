@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -40,12 +41,15 @@ func run(ctx context.Context, v iface.Validator) {
 	if err != nil {
 		return // Exit if context is canceled.
 	}
-
-	eventsChannel := make(chan *event.Event, 0) // double check why is it 1 here?
-	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
+
+	eventsChannel := make(chan *event.Event, 1)
+	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+
+	beaconHealthTracker := v.NodeHealthTracker()
+	runHealthCheckRoutine(ctx, v)
 
 	accountsChangedChan := make(chan [][fieldparams.BLSPubkeyLength]byte, 1)
 	km, err := v.Keymanager()
@@ -76,14 +80,32 @@ func run(ctx context.Context, v iface.Validator) {
 			sub.Unsubscribe()
 			close(accountsChangedChan)
 			return // Exit if context is canceled.
+		case isHealthyAgain := <-beaconHealthTracker.HealthCh:
+			if isHealthyAgain {
+				log.Info("event stream reconnecting...")
+				headSlot, err = initializeValidatorAndGetHeadSlot(ctx, v)
+				if err != nil {
+					log.WithError(err).Error("failed to re initialize validator and get head slot")
+					beaconHealthTracker.HealthCh <- false
+					continue
+				}
+				if err := v.UpdateDuties(ctx, headSlot); err != nil {
+					handleAssignmentError(err, headSlot)
+					beaconHealthTracker.HealthCh <- false
+					continue
+				}
+				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+			}
+			// should stop services until it's healthy again...
 		case e := <-eventsChannel:
 			if eventErr := v.ProcessEvent(e); eventErr != nil {
 				// maybe have a delay before trying again
-				log.WithError(eventErr).Warn("event stream interrupted. reconnecting...")
-				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
+				log.WithError(eventErr).Warn("event stream interrupted...")
 			}
-
 		case slot := <-v.NextSlot():
+			if !beaconHealthTracker.IsHealthy {
+				continue
+			}
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
 
 			deadline := v.SlotDeadline(slot)
@@ -198,10 +220,6 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not wait for validator activation")
 		}
 
-		//if features.Get().EnableBeaconRESTApi {
-		//	runHealthCheckRoutine(ctx, v)
-		//}
-
 		headSlot, err = v.CanonicalHeadSlot(ctx)
 		if isConnectionError(err) {
 			log.WithError(err).Warn("Could not get current canonical head slot")
@@ -272,7 +290,7 @@ func performRoles(slotCtx context.Context, allRoles map[[48]byte][]iface.Validat
 }
 
 func isConnectionError(err error) bool {
-	return err != nil && errors.Is(err, iface.ErrConnectionIssue)
+	return err != nil && errors.Is(err, client.ErrConnectionIssue)
 }
 
 func handleAssignmentError(err error, slot primitives.Slot) {
@@ -287,24 +305,26 @@ func handleAssignmentError(err error, slot primitives.Slot) {
 	}
 }
 
-//func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
-//	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
-//	go func() {
-//		for {
-//			select {
-//			case <-healthCheckTicker.C:
-//				if v.NodeIsHealthy(ctx) && !v.EventStreamIsRunning() {
-//					if err := v.StartEventStream(ctx); err != nil {
-//						log.WithError(err).Error("Could not start API event stream")
-//					}
-//				}
-//			case <-ctx.Done():
-//				if ctx.Err() != nil {
-//					log.WithError(ctx.Err()).Error("Context cancelled")
-//				}
-//				log.Error("Context cancelled")
-//				return
-//			}
-//		}
-//	}()
-//}
+func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
+	healthCheckTicker := time.NewTicker(time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Second)
+	tracker := v.NodeHealthTracker()
+	go func() {
+		for {
+			select {
+			case <-healthCheckTicker.C:
+				currentStatus := tracker.IsHealthy
+				newStatus := v.NodeIsHealthy(ctx)
+				if newStatus != currentStatus {
+					tracker.IsHealthy = newStatus
+					tracker.HealthCh <- newStatus
+				}
+			case <-ctx.Done():
+				if ctx.Err() != nil {
+					log.WithError(ctx.Err()).Error("Context cancelled")
+				}
+				log.Error("Context cancelled")
+				return
+			}
+		}
+	}()
+}

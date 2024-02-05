@@ -12,6 +12,7 @@ import (
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	grpcutil "github.com/prysmaticlabs/prysm/v4/api/grpc"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	lruwrpr "github.com/prysmaticlabs/prysm/v4/cache/lru"
@@ -198,6 +199,11 @@ func (v *ValidatorService) Start() {
 
 	validatorClient := validatorClientFactory.NewValidatorClient(v.conn, restHandler)
 
+	nodeHealth := &beacon.NodeHealth{
+		IsHealthy: true,
+		HealthCh:  make(chan bool, 1),
+	}
+
 	valStruct := &validator{
 		validatorClient:                validatorClient,
 		beaconClient:                   beaconChainClientFactory.NewBeaconChainClient(v.conn, restHandler),
@@ -227,6 +233,7 @@ func (v *ValidatorService) Start() {
 		Web3SignerConfig:               v.Web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChannel:       make(chan *wallet.Wallet, 1),
+		beaconNodeHealth:               nodeHealth,
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
 	}
 
