@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/client"
 	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
@@ -215,7 +215,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 			if res == nil {
 				continue
 			}
-			b, err := json.Marshal(events.HeadEvent{
+			b, err := json.Marshal(structs.HeadEvent{
 				Slot: strconv.FormatUint(uint64(res.Slot), 10),
 			})
 			if err != nil {

@@ -7,6 +7,7 @@ package mock
 import (
 	bytes "bytes"
 	context "context"
+	"net/http"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -28,6 +29,14 @@ func NewMockJsonRestHandler(ctrl *gomock.Controller) *MockJsonRestHandler {
 	mock := &MockJsonRestHandler{ctrl: ctrl}
 	mock.recorder = &MockJsonRestHandlerMockRecorder{mock}
 	return mock
+}
+
+func (mr *MockJsonRestHandler) GetHttpClient() *http.Client {
+	return nil
+}
+
+func (mr *MockJsonRestHandler) GetHost() string {
+	return ""
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
@@ -62,3 +71,4 @@ func (mr *MockJsonRestHandlerMockRecorder) Post(ctx, endpoint, headers, data, re
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Post", reflect.TypeOf((*MockJsonRestHandler)(nil).Post), ctx, endpoint, headers, data, resp)
 }
+

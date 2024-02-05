@@ -44,7 +44,6 @@ func run(ctx context.Context, v iface.Validator) {
 	if err := v.UpdateDuties(ctx, headSlot); err != nil {
 		handleAssignmentError(err, headSlot)
 	}
-
 	eventsChannel := make(chan *event.Event, 1)
 	go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 
