@@ -2097,7 +2097,7 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if httputil.RespondWithSsz(r) {
-		sszData := snapshot.MarshalSSZ()
+		sszData, err := snapshot.MarshalSSZ()
 		if err != nil {
 			httputil.HandleError(w, "Could not marshal deposit snapshot into SSZ", http.StatusInternalServerError)
 			return

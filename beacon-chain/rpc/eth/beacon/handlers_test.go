@@ -3669,13 +3669,12 @@ func TestGetDepositSnapshot(t *testing.T) {
 		request.Header.Set("Accept", api.OctetStreamMediaType)
 		s.GetDepositSnapshot(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetDepositSnapshotResponse{}
+		resp := &eth.DepositSnapshot{}
 		require.NoError(t, resp.UnmarshalSSZ(writer.Body.Bytes()))
-		require.NotNil(t, resp.Data)
 
-		assert.Equal(t, hexutil.Encode(root[:]), resp.Data.DepositRoot)
-		assert.Equal(t, hexutil.Encode(deposits[2][:]), resp.Data.ExecutionBlockHash)
-		assert.Equal(t, strconv.Itoa(mockTrie.NumOfItems()), resp.Data.DepositCount)
-		assert.Equal(t, finalized, len(resp.Data.Finalized))
+		assert.Equal(t, hexutil.Encode(root[:]), hexutil.Encode(resp.DepositRoot))
+		assert.Equal(t, hexutil.Encode(deposits[2][:]), hexutil.Encode(resp.ExecutionHash))
+		assert.Equal(t, uint64(mockTrie.NumOfItems()), resp.DepositCount)
+		assert.Equal(t, finalized, len(resp.Finalized))
 	})
 }
