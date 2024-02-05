@@ -24,9 +24,9 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/api/client"
 	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
 	eventClient "github.com/prysmaticlabs/prysm/v4/api/client/event"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/async/event"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events"
 	"github.com/prysmaticlabs/prysm/v4/cmd"
 	"github.com/prysmaticlabs/prysm/v4/config/features"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -1063,7 +1063,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		return nil // skip restart if it's not a connection error
 	case eventClient.EventHead:
 		log.Info("new head event")
-		head := &events.HeadEvent{}
+		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
 			return nil

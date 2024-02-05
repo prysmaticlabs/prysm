@@ -96,14 +96,13 @@ func run(ctx context.Context, v iface.Validator) {
 				}
 				go v.StartEventStream(ctx, event.DefaultEventTopics, eventsChannel)
 			}
-			// should stop services until it's healthy again...
 		case e := <-eventsChannel:
 			if eventErr := v.ProcessEvent(e); eventErr != nil {
 				// maybe have a delay before trying again
 				log.WithError(eventErr).Warn("event stream interrupted...")
 			}
 		case slot := <-v.NextSlot():
-			if !beaconHealthTracker.IsHealthy {
+			if !beaconHealthTracker.IsHealthy() {
 				continue
 			}
 			span.AddAttributes(trace.Int64Attribute("slot", int64(slot))) // lint:ignore uintcast -- This conversion is OK for tracing.
@@ -312,12 +311,8 @@ func runHealthCheckRoutine(ctx context.Context, v iface.Validator) {
 		for {
 			select {
 			case <-healthCheckTicker.C:
-				currentStatus := tracker.IsHealthy
 				newStatus := v.NodeIsHealthy(ctx)
-				if newStatus != currentStatus {
-					tracker.IsHealthy = newStatus
-					tracker.HealthCh <- newStatus
-				}
+				tracker.UpdateNodeHealth(newStatus)
 			case <-ctx.Done():
 				if ctx.Err() != nil {
 					log.WithError(ctx.Err()).Error("Context cancelled")
