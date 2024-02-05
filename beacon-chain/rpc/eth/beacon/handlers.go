@@ -2111,5 +2111,4 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 			Data: structs.DepositSnapshotFromConsensus(snapshot),
 		},
 	)
-
 }
