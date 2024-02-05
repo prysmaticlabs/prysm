@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -19,7 +19,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	req := &beacon.GetValidatorsRequest{
+	req := &structs.GetValidatorsRequest{
 		Ids: []string{
 			"12345",
 			"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
@@ -32,35 +32,35 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 	reqBytes, err := json.Marshal(req)
 	require.NoError(t, err)
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	wanted := []*beacon.ValidatorContainer{
+	wanted := []*structs.ValidatorContainer{
 		{
 			Index:  "12345",
 			Status: "active_ongoing",
-			Validator: &beacon.Validator{
+			Validator: &structs.Validator{
 				Pubkey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be19",
 			},
 		},
 		{
 			Index:  "55293",
 			Status: "active_ongoing",
-			Validator: &beacon.Validator{
+			Validator: &structs.Validator{
 				Pubkey: "0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13",
 			},
 		},
 		{
 			Index:  "55294",
 			Status: "active_exiting",
-			Validator: &beacon.Validator{
+			Validator: &structs.Validator{
 				Pubkey: "0x80000e851c0f53c3246ff726d7ff7766661ca5e12a07c45c114d208d54f0f8233d4380b2e9aff759d69795d1df905526",
 			},
 		},
 		{
 			Index:  "55295",
 			Status: "exited_slashed",
-			Validator: &beacon.Validator{
+			Validator: &structs.Validator{
 				Pubkey: "0x800015473bdc3a7f45ef8eb8abc598bc20021e55ad6e6ad1d745aaef9730dd2c28ec08bf42df18451de94dd4a6d24ec5",
 			},
 		},
@@ -78,7 +78,7 @@ func TestGetStateValidators_Nominal(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
+		structs.GetValidatorsResponse{
 			Data: wanted,
 		},
 	).Times(1)
@@ -105,14 +105,14 @@ func TestGetStateValidators_GetRestJsonResponseOnError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	req := &beacon.GetValidatorsRequest{
+	req := &structs.GetValidatorsRequest{
 		Ids:      []string{"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"},
 		Statuses: []string{},
 	}
 	reqBytes, err := json.Marshal(req)
 	require.NoError(t, err)
 
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()
@@ -141,7 +141,7 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	req := &beacon.GetValidatorsRequest{
+	req := &structs.GetValidatorsRequest{
 		Ids:      []string{"0x8000091c2ae64ee414a54c1cc1fc67dec663408bc636cb86756e0200e41a75c8f86603f104f02c856983d2783116be13"},
 		Statuses: []string{},
 	}
@@ -149,7 +149,7 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-	stateValidatorsResponseJson := beacon.GetValidatorsResponse{}
+	stateValidatorsResponseJson := structs.GetValidatorsResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	jsonRestHandler.EXPECT().Post(
@@ -161,7 +161,7 @@ func TestGetStateValidators_DataIsNil(t *testing.T) {
 		nil,
 	).SetArg(
 		4,
-		beacon.GetValidatorsResponse{
+		structs.GetValidatorsResponse{
 			Data: nil,
 		},
 	).Times(1)

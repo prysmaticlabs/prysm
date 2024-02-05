@@ -9,10 +9,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -98,11 +95,11 @@ func TestGetFork_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stateForkResponseJson := beacon.GetStateForkResponse{}
+	stateForkResponseJson := structs.GetStateForkResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	expected := beacon.GetStateForkResponse{
-		Data: &shared.Fork{
+	expected := structs.GetStateForkResponse{
+		Data: &structs.Fork{
 			PreviousVersion: "0x1",
 			CurrentVersion:  "0x2",
 			Epoch:           "3",
@@ -161,14 +158,14 @@ func TestGetHeaders_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
+	blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-	expected := beacon.GetBlockHeadersResponse{
-		Data: []*shared.SignedBeaconBlockHeaderContainer{
+	expected := structs.GetBlockHeadersResponse{
+		Data: []*structs.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &shared.SignedBeaconBlockHeader{
-					Message: &shared.BeaconBlockHeader{
+				Header: &structs.SignedBeaconBlockHeader{
+					Message: &structs.BeaconBlockHeader{
 						Slot: "42",
 					},
 				},
@@ -228,14 +225,14 @@ func TestGetLiveness_Nominal(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	livenessResponseJson := validator.GetLivenessResponse{}
+	livenessResponseJson := structs.GetLivenessResponse{}
 
 	indexes := []string{"1", "2"}
 	marshalledIndexes, err := json.Marshal(indexes)
 	require.NoError(t, err)
 
-	expected := validator.GetLivenessResponse{
-		Data: []*validator.Liveness{
+	expected := structs.GetLivenessResponse{
+		Data: []*structs.Liveness{
 			{
 				Index:  "1",
 				IsLive: true,
@@ -315,11 +312,11 @@ func TestGetIsSyncing_Nominal(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			syncingResponseJson := node.SyncStatusResponse{}
+			syncingResponseJson := structs.SyncStatusResponse{}
 			jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
-			expected := node.SyncStatusResponse{
-				Data: &node.SyncStatusResponseData{
+			expected := structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: testCase.isSyncing,
 				},
 			}
@@ -352,7 +349,7 @@ func TestGetIsSyncing_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	syncingResponseJson := node.SyncStatusResponse{}
+	syncingResponseJson := structs.SyncStatusResponse{}
 	jsonRestHandler := mock.NewMockJsonRestHandler(ctrl)
 
 	ctx := context.Background()

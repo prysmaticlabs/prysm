@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state"
@@ -51,7 +52,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	var req GetValidatorsRequest
+	var req structs.GetValidatorsRequest
 	if r.Method == http.MethodPost {
 		err = json.NewDecoder(r.Body).Decode(&req)
 		switch {
@@ -83,8 +84,8 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 	}
 	// return no data if all IDs are ignored
 	if len(rawIds) > 0 && len(ids) == 0 {
-		resp := &GetValidatorsResponse{
-			Data:                []*ValidatorContainer{},
+		resp := &structs.GetValidatorsResponse{
+			Data:                []*structs.ValidatorContainer{},
 			ExecutionOptimistic: isOptimistic,
 			Finalized:           isFinalized,
 		}
@@ -100,7 +101,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 
 	// Exit early if no matching validators were found or we don't want to further filter validators by status.
 	if len(readOnlyVals) == 0 || len(statuses) == 0 {
-		containers := make([]*ValidatorContainer, len(readOnlyVals))
+		containers := make([]*structs.ValidatorContainer, len(readOnlyVals))
 		for i, val := range readOnlyVals {
 			valStatus, err := helpers.ValidatorSubStatus(val, epoch)
 			if err != nil {
@@ -118,7 +119,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			}
 			containers[i] = valContainerFromReadOnlyVal(val, id, balance, valStatus)
 		}
-		resp := &GetValidatorsResponse{
+		resp := &structs.GetValidatorsResponse{
 			Data:                containers,
 			ExecutionOptimistic: isOptimistic,
 			Finalized:           isFinalized,
@@ -136,7 +137,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		}
 		filteredStatuses[vs] = true
 	}
-	valContainers := make([]*ValidatorContainer, 0, len(readOnlyVals))
+	valContainers := make([]*structs.ValidatorContainer, 0, len(readOnlyVals))
 	for i, val := range readOnlyVals {
 		valStatus, err := helpers.ValidatorStatus(val, epoch)
 		if err != nil {
@@ -149,7 +150,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if filteredStatuses[valStatus] || filteredStatuses[valSubStatus] {
-			var container *ValidatorContainer
+			var container *structs.ValidatorContainer
 			id := primitives.ValidatorIndex(i)
 			if len(ids) > 0 {
 				id = ids[i]
@@ -164,7 +165,7 @@ func (s *Server) GetValidators(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resp := &GetValidatorsResponse{
+	resp := &structs.GetValidatorsResponse{
 		Data:                valContainers,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
@@ -229,7 +230,7 @@ func (s *Server) GetValidator(w http.ResponseWriter, r *http.Request) {
 	}
 	isFinalized := s.FinalizationFetcher.IsFinalized(ctx, blockRoot)
 
-	resp := &GetValidatorResponse{
+	resp := &structs.GetValidatorResponse{
 		Data:                container,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
@@ -286,8 +287,8 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	}
 	// return no data if all IDs are ignored
 	if len(rawIds) > 0 && len(ids) == 0 {
-		resp := &GetValidatorBalancesResponse{
-			Data:                []*ValidatorBalance{},
+		resp := &structs.GetValidatorBalancesResponse{
+			Data:                []*structs.ValidatorBalance{},
 			ExecutionOptimistic: isOptimistic,
 			Finalized:           isFinalized,
 		}
@@ -296,26 +297,26 @@ func (s *Server) GetValidatorBalances(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bals := st.Balances()
-	var valBalances []*ValidatorBalance
+	var valBalances []*structs.ValidatorBalance
 	if len(ids) == 0 {
-		valBalances = make([]*ValidatorBalance, len(bals))
+		valBalances = make([]*structs.ValidatorBalance, len(bals))
 		for i, b := range bals {
-			valBalances[i] = &ValidatorBalance{
+			valBalances[i] = &structs.ValidatorBalance{
 				Index:   strconv.FormatUint(uint64(i), 10),
 				Balance: strconv.FormatUint(b, 10),
 			}
 		}
 	} else {
-		valBalances = make([]*ValidatorBalance, len(ids))
+		valBalances = make([]*structs.ValidatorBalance, len(ids))
 		for i, id := range ids {
-			valBalances[i] = &ValidatorBalance{
+			valBalances[i] = &structs.ValidatorBalance{
 				Index:   strconv.FormatUint(uint64(id), 10),
 				Balance: strconv.FormatUint(bals[id], 10),
 			}
 		}
 	}
 
-	resp := &GetValidatorBalancesResponse{
+	resp := &structs.GetValidatorBalancesResponse{
 		Data:                valBalances,
 		ExecutionOptimistic: isOptimistic,
 		Finalized:           isFinalized,
@@ -404,13 +405,13 @@ func valContainerFromReadOnlyVal(
 	id primitives.ValidatorIndex,
 	bal uint64,
 	valStatus validator.Status,
-) *ValidatorContainer {
+) *structs.ValidatorContainer {
 	pubkey := val.PublicKey()
-	return &ValidatorContainer{
+	return &structs.ValidatorContainer{
 		Index:   strconv.FormatUint(uint64(id), 10),
 		Balance: strconv.FormatUint(bal, 10),
 		Status:  valStatus.String(),
-		Validator: &Validator{
+		Validator: &structs.Validator{
 			Pubkey:                     hexutil.Encode(pubkey[:]),
 			WithdrawalCredentials:      hexutil.Encode(val.WithdrawalCredentials()),
 			EffectiveBalance:           strconv.FormatUint(val.EffectiveBalance(), 10),

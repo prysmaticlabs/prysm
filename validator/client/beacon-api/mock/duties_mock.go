@@ -9,8 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	shared "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	validator "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
@@ -38,10 +37,10 @@ func (m *MockdutiesProvider) EXPECT() *MockdutiesProviderMockRecorder {
 }
 
 // GetAttesterDuties mocks base method.
-func (m *MockdutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.AttesterDuty, error) {
+func (m *MockdutiesProvider) GetAttesterDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.AttesterDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAttesterDuties", ctx, epoch, validatorIndices)
-	ret0, _ := ret[0].([]*validator.AttesterDuty)
+	ret0, _ := ret[0].([]*structs.AttesterDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -53,10 +52,10 @@ func (mr *MockdutiesProviderMockRecorder) GetAttesterDuties(ctx, epoch, validato
 }
 
 // GetCommittees mocks base method.
-func (m *MockdutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*shared.Committee, error) {
+func (m *MockdutiesProvider) GetCommittees(ctx context.Context, epoch primitives.Epoch) ([]*structs.Committee, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCommittees", ctx, epoch)
-	ret0, _ := ret[0].([]*shared.Committee)
+	ret0, _ := ret[0].([]*structs.Committee)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -68,10 +67,10 @@ func (mr *MockdutiesProviderMockRecorder) GetCommittees(ctx, epoch interface{}) 
 }
 
 // GetProposerDuties mocks base method.
-func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*validator.ProposerDuty, error) {
+func (m *MockdutiesProvider) GetProposerDuties(ctx context.Context, epoch primitives.Epoch) ([]*structs.ProposerDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProposerDuties", ctx, epoch)
-	ret0, _ := ret[0].([]*validator.ProposerDuty)
+	ret0, _ := ret[0].([]*structs.ProposerDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -83,10 +82,10 @@ func (mr *MockdutiesProviderMockRecorder) GetProposerDuties(ctx, epoch interface
 }
 
 // GetSyncDuties mocks base method.
-func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*validator.SyncCommitteeDuty, error) {
+func (m *MockdutiesProvider) GetSyncDuties(ctx context.Context, epoch primitives.Epoch, validatorIndices []primitives.ValidatorIndex) ([]*structs.SyncCommitteeDuty, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSyncDuties", ctx, epoch, validatorIndices)
-	ret0, _ := ret[0].([]*validator.SyncCommitteeDuty)
+	ret0, _ := ret[0].([]*structs.SyncCommitteeDuty)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

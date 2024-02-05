@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	beacon "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 
@@ -37,10 +37,10 @@ func (m *MockStateValidatorsProvider) EXPECT() *MockStateValidatorsProviderMockR
 }
 
 // GetStateValidators mocks base method.
-func (m *MockStateValidatorsProvider) GetStateValidators(arg0 context.Context, arg1 []string, arg2 []primitives.ValidatorIndex, arg3 []string) (*beacon.GetValidatorsResponse, error) {
+func (m *MockStateValidatorsProvider) GetStateValidators(arg0 context.Context, arg1 []string, arg2 []primitives.ValidatorIndex, arg3 []string) (*structs.GetValidatorsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStateValidators", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*beacon.GetValidatorsResponse)
+	ret0, _ := ret[0].(*structs.GetValidatorsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -52,10 +52,10 @@ func (mr *MockStateValidatorsProviderMockRecorder) GetStateValidators(arg0, arg1
 }
 
 // GetStateValidatorsForHead mocks base method.
-func (m *MockStateValidatorsProvider) GetStateValidatorsForHead(arg0 context.Context, arg1 []string, arg2 []primitives.ValidatorIndex, arg3 []string) (*beacon.GetValidatorsResponse, error) {
+func (m *MockStateValidatorsProvider) GetStateValidatorsForHead(arg0 context.Context, arg1 []string, arg2 []primitives.ValidatorIndex, arg3 []string) (*structs.GetValidatorsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStateValidatorsForHead", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*beacon.GetValidatorsResponse)
+	ret0, _ := ret[0].(*structs.GetValidatorsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -67,10 +67,10 @@ func (mr *MockStateValidatorsProviderMockRecorder) GetStateValidatorsForHead(arg
 }
 
 // GetStateValidatorsForSlot mocks base method.
-func (m *MockStateValidatorsProvider) GetStateValidatorsForSlot(arg0 context.Context, arg1 primitives.Slot, arg2 []string, arg3 []primitives.ValidatorIndex, arg4 []string) (*beacon.GetValidatorsResponse, error) {
+func (m *MockStateValidatorsProvider) GetStateValidatorsForSlot(arg0 context.Context, arg1 primitives.Slot, arg2 []string, arg3 []primitives.ValidatorIndex, arg4 []string) (*structs.GetValidatorsResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetStateValidatorsForSlot", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(*beacon.GetValidatorsResponse)
+	ret0, _ := ret[0].(*structs.GetValidatorsResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

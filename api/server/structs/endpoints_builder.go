@@ -1,4 +1,4 @@
-package builder
+package structs
 
 type ExpectedWithdrawalsResponse struct {
 	Data                []*ExpectedWithdrawal `json:"data"`

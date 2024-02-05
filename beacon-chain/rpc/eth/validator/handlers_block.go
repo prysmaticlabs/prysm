@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/rewards"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
@@ -298,12 +300,21 @@ func getConsensusBlockValue(ctx context.Context, blockRewardsFetcher rewards.Blo
 		// ignore for phase 0
 		return "", nil
 	}
-	//get consensus payload value which is the same as the total from the block rewards api
+	// Get consensus payload value which is the same as the total from the block rewards api.
+	// The value is in Gwei, but Wei should be returned from the endpoint.
 	blockRewards, httpError := blockRewardsFetcher.GetBlockRewardsData(ctx, bb)
 	if httpError != nil {
 		return "", httpError
 	}
-	return blockRewards.Total, nil
+	gwei, ok := big.NewInt(0).SetString(blockRewards.Total, 10)
+	if !ok {
+		return "", &httputil.DefaultJsonError{
+			Message: "Could not parse consensus block value",
+			Code:    http.StatusInternalServerError,
+		}
+	}
+	wei := gwei.Mul(gwei, big.NewInt(1e9))
+	return wei.String(), nil
 }
 
 func handleProducePhase0V3(
@@ -321,12 +332,12 @@ func handleProducePhase0V3(
 		httputil.WriteSsz(w, sszResp, "phase0Block.ssz")
 		return
 	}
-	jsonBytes, err := json.Marshal(shared.BeaconBlockFromConsensus(blk.Phase0))
+	jsonBytes, err := json.Marshal(structs.BeaconBlockFromConsensus(blk.Phase0))
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Phase0),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   payloadValue, // mev not available at this point
@@ -351,12 +362,12 @@ func handleProduceAltairV3(
 		httputil.WriteSsz(w, sszResp, "altairBlock.ssz")
 		return
 	}
-	jsonBytes, err := json.Marshal(shared.BeaconBlockAltairFromConsensus(blk.Altair))
+	jsonBytes, err := json.Marshal(structs.BeaconBlockAltairFromConsensus(blk.Altair))
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Altair),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
@@ -381,7 +392,7 @@ func handleProduceBellatrixV3(
 		httputil.WriteSsz(w, sszResp, "bellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockBellatrixFromConsensus(blk.Bellatrix)
+	block, err := structs.BeaconBlockBellatrixFromConsensus(blk.Bellatrix)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -391,7 +402,7 @@ func handleProduceBellatrixV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
@@ -416,7 +427,7 @@ func handleProduceBlindedBellatrixV3(
 		httputil.WriteSsz(w, sszResp, "blindedBellatrixBlock.ssz")
 		return
 	}
-	block, err := shared.BlindedBeaconBlockBellatrixFromConsensus(blk.BlindedBellatrix)
+	block, err := structs.BlindedBeaconBlockBellatrixFromConsensus(blk.BlindedBellatrix)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -426,7 +437,7 @@ func handleProduceBlindedBellatrixV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Bellatrix),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   executionPayloadValue,
@@ -451,7 +462,7 @@ func handleProduceBlindedCapellaV3(
 		httputil.WriteSsz(w, sszResp, "blindedCapellaBlock.ssz")
 		return
 	}
-	block, err := shared.BlindedBeaconBlockCapellaFromConsensus(blk.BlindedCapella)
+	block, err := structs.BlindedBeaconBlockCapellaFromConsensus(blk.BlindedCapella)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -461,7 +472,7 @@ func handleProduceBlindedCapellaV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   executionPayloadValue,
@@ -486,7 +497,7 @@ func handleProduceCapellaV3(
 		httputil.WriteSsz(w, sszResp, "capellaBlock.ssz")
 		return
 	}
-	block, err := shared.BeaconBlockCapellaFromConsensus(blk.Capella)
+	block, err := structs.BeaconBlockCapellaFromConsensus(blk.Capella)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -496,7 +507,7 @@ func handleProduceCapellaV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Capella),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point
@@ -521,7 +532,7 @@ func handleProduceBlindedDenebV3(
 		httputil.WriteSsz(w, sszResp, "blindedDenebBlockContents.ssz")
 		return
 	}
-	blindedBlock, err := shared.BlindedBeaconBlockDenebFromConsensus(blk.BlindedDeneb)
+	blindedBlock, err := structs.BlindedBeaconBlockDenebFromConsensus(blk.BlindedDeneb)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -531,7 +542,7 @@ func handleProduceBlindedDenebV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: true,
 		ExecutionPayloadValue:   executionPayloadValue,
@@ -557,7 +568,7 @@ func handleProduceDenebV3(
 		return
 	}
 
-	blockContents, err := shared.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
+	blockContents, err := structs.BeaconBlockContentsDenebFromConsensus(blk.Deneb)
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -567,7 +578,7 @@ func handleProduceDenebV3(
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httputil.WriteJson(w, &ProduceBlockV3Response{
+	httputil.WriteJson(w, &structs.ProduceBlockV3Response{
 		Version:                 version.String(version.Deneb),
 		ExecutionPayloadBlinded: false,
 		ExecutionPayloadValue:   executionPayloadValue, // mev not available at this point

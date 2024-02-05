@@ -1,4 +1,4 @@
-package node
+package structs
 
 type SyncStatusResponse struct {
 	Data *SyncStatusResponseData `json:"data"`
@@ -62,4 +62,12 @@ type GetVersionResponse struct {
 
 type Version struct {
 	Version string `json:"version"`
+}
+
+type AddrRequest struct {
+	Addr string `json:"addr"`
+}
+
+type PeersResponse struct {
+	Peers []*Peer `json:"peers"`
 }

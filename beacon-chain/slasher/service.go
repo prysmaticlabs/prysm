@@ -6,6 +6,7 @@ package slasher
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/prysmaticlabs/prysm/v4/async/event"
@@ -15,7 +16,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/operations/slashings"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/state/stategen"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
+	beaconChainSync "github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -38,7 +39,7 @@ type ServiceConfig struct {
 	StateGen                stategen.StateManager
 	SlashingPoolInserter    slashings.PoolInserter
 	HeadStateFetcher        blockchain.HeadFetcher
-	SyncChecker             sync.Checker
+	SyncChecker             beaconChainSync.Checker
 	ClockWaiter             startup.ClockWaiter
 }
 
@@ -67,6 +68,7 @@ type Service struct {
 	blocksSlotTicker               *slots.SlotTicker
 	pruningSlotTicker              *slots.SlotTicker
 	latestEpochWrittenForValidator map[primitives.ValidatorIndex]primitives.Epoch
+	wg                             sync.WaitGroup
 }
 
 // New instantiates a new slasher from configuration values.
@@ -126,21 +128,33 @@ func (s *Service) run() {
 
 	indexedAttsChan := make(chan *ethpb.IndexedAttestation, 1)
 	beaconBlockHeadersChan := make(chan *ethpb.SignedBeaconBlockHeader, 1)
+
+	s.wg.Add(1)
 	go s.receiveAttestations(s.ctx, indexedAttsChan)
+
+	s.wg.Add(1)
 	go s.receiveBlocks(s.ctx, beaconBlockHeadersChan)
 
 	secondsPerSlot := params.BeaconConfig().SecondsPerSlot
 	s.attsSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
 	s.blocksSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
 	s.pruningSlotTicker = slots.NewSlotTicker(s.genesisTime, secondsPerSlot)
+
+	s.wg.Add(1)
 	go s.processQueuedAttestations(s.ctx, s.attsSlotTicker.C())
+
+	s.wg.Add(1)
 	go s.processQueuedBlocks(s.ctx, s.blocksSlotTicker.C())
+
+	s.wg.Add(1)
 	go s.pruneSlasherData(s.ctx, s.pruningSlotTicker.C())
 }
 
 // Stop the slasher service.
 func (s *Service) Stop() error {
 	s.cancel()
+	s.wg.Wait()
+
 	if s.attsSlotTicker != nil {
 		s.attsSlotTicker.Done()
 	}

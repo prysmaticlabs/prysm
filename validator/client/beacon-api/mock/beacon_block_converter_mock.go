@@ -8,7 +8,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	shared "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	eth "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -36,7 +36,7 @@ func (m *MockBeaconBlockConverter) EXPECT() *MockBeaconBlockConverterMockRecorde
 }
 
 // ConvertRESTAltairBlockToProto mocks base method.
-func (m *MockBeaconBlockConverter) ConvertRESTAltairBlockToProto(block *shared.BeaconBlockAltair) (*eth.BeaconBlockAltair, error) {
+func (m *MockBeaconBlockConverter) ConvertRESTAltairBlockToProto(block *structs.BeaconBlockAltair) (*eth.BeaconBlockAltair, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConvertRESTAltairBlockToProto", block)
 	ret0, _ := ret[0].(*eth.BeaconBlockAltair)
@@ -51,7 +51,7 @@ func (mr *MockBeaconBlockConverterMockRecorder) ConvertRESTAltairBlockToProto(bl
 }
 
 // ConvertRESTBellatrixBlockToProto mocks base method.
-func (m *MockBeaconBlockConverter) ConvertRESTBellatrixBlockToProto(block *shared.BeaconBlockBellatrix) (*eth.BeaconBlockBellatrix, error) {
+func (m *MockBeaconBlockConverter) ConvertRESTBellatrixBlockToProto(block *structs.BeaconBlockBellatrix) (*eth.BeaconBlockBellatrix, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConvertRESTBellatrixBlockToProto", block)
 	ret0, _ := ret[0].(*eth.BeaconBlockBellatrix)
@@ -66,7 +66,7 @@ func (mr *MockBeaconBlockConverterMockRecorder) ConvertRESTBellatrixBlockToProto
 }
 
 // ConvertRESTCapellaBlockToProto mocks base method.
-func (m *MockBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *shared.BeaconBlockCapella) (*eth.BeaconBlockCapella, error) {
+func (m *MockBeaconBlockConverter) ConvertRESTCapellaBlockToProto(block *structs.BeaconBlockCapella) (*eth.BeaconBlockCapella, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConvertRESTCapellaBlockToProto", block)
 	ret0, _ := ret[0].(*eth.BeaconBlockCapella)
@@ -81,7 +81,7 @@ func (mr *MockBeaconBlockConverterMockRecorder) ConvertRESTCapellaBlockToProto(b
 }
 
 // ConvertRESTPhase0BlockToProto mocks base method.
-func (m *MockBeaconBlockConverter) ConvertRESTPhase0BlockToProto(block *shared.BeaconBlock) (*eth.BeaconBlock, error) {
+func (m *MockBeaconBlockConverter) ConvertRESTPhase0BlockToProto(block *structs.BeaconBlock) (*eth.BeaconBlock, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ConvertRESTPhase0BlockToProto", block)
 	ret0, _ := ret[0].(*eth.BeaconBlock)

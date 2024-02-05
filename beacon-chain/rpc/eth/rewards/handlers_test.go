@@ -13,6 +13,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/go-bitfield"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	mock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/altair"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
@@ -236,7 +237,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -269,7 +270,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -302,7 +303,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -335,7 +336,7 @@ func TestBlockRewards(t *testing.T) {
 
 		s.BlockRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &BlockRewardsResponse{}
+		resp := &structs.BlockRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "12", resp.Data.ProposerIndex)
 		assert.Equal(t, "125089490", resp.Data.Total)
@@ -404,7 +405,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 16, len(resp.Data.IdealRewards))
 		sum := uint64(0)
@@ -433,7 +434,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data.TotalRewards))
 		sum := uint64(0)
@@ -456,7 +457,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 64, len(resp.Data.TotalRewards))
 		sum := uint64(0)
@@ -498,7 +499,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.TotalRewards[0].Head)
 		assert.Equal(t, "-439299", resp.Data.TotalRewards[0].Source)
@@ -536,7 +537,7 @@ func TestAttestationRewards(t *testing.T) {
 
 		s.AttestationRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &AttestationRewardsResponse{}
+		resp := &structs.AttestationRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "-4768", resp.Data.TotalRewards[0].Inactivity)
 	})
@@ -737,7 +738,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		sum := uint64(0)
@@ -764,7 +765,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 512, len(resp.Data))
 		sum := 0
@@ -795,7 +796,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		sum := 0
@@ -826,7 +827,7 @@ func TestSyncCommiteeRewards(t *testing.T) {
 
 		s.SyncCommitteeRewards(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SyncCommitteeRewardsResponse{}
+		resp := &structs.SyncCommitteeRewardsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 3, len(resp.Data))
 		sum := 0

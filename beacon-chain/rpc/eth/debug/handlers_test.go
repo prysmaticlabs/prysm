@@ -11,11 +11,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
 	"github.com/prysmaticlabs/prysm/v4/api"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	blockchainmock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	dbtest "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	doublylinkedtree "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/doubly-linked-tree"
 	forkchoicetypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/forkchoice/types"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	"github.com/prysmaticlabs/prysm/v4/runtime/version"
@@ -71,10 +71,10 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Phase0), resp.Version)
-		st := &shared.BeaconState{}
+		st := &structs.BeaconState{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -99,10 +99,10 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Altair), resp.Version)
-		st := &shared.BeaconStateAltair{}
+		st := &structs.BeaconStateAltair{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -127,10 +127,10 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Bellatrix), resp.Version)
-		st := &shared.BeaconStateBellatrix{}
+		st := &structs.BeaconStateBellatrix{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -155,10 +155,10 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Capella), resp.Version)
-		st := &shared.BeaconStateCapella{}
+		st := &structs.BeaconStateCapella{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -183,10 +183,10 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, version.String(version.Deneb), resp.Version)
-		st := &shared.BeaconStateDeneb{}
+		st := &structs.BeaconStateDeneb{}
 		require.NoError(t, json.Unmarshal(resp.Data, st))
 		assert.Equal(t, "123", st.Slot)
 	})
@@ -219,7 +219,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -258,7 +258,7 @@ func TestGetBeaconStateV2(t *testing.T) {
 
 		s.GetBeaconStateV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetBeaconStateV2Response{}
+		resp := &structs.GetBeaconStateV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -411,7 +411,7 @@ func TestGetForkChoiceHeadsV2(t *testing.T) {
 
 	s.GetForkChoiceHeadsV2(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetForkChoiceHeadsV2Response{}
+	resp := &structs.GetForkChoiceHeadsV2Response{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	assert.Equal(t, 2, len(resp.Data))
 	for _, sr := range expectedSlotsAndRoots {
@@ -447,7 +447,7 @@ func TestGetForkChoiceHeadsV2(t *testing.T) {
 
 		s.GetForkChoiceHeadsV2(writer, request)
 		require.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetForkChoiceHeadsV2Response{}
+		resp := &structs.GetForkChoiceHeadsV2Response{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 		for _, sr := range expectedSlotsAndRoots {
@@ -477,7 +477,7 @@ func TestGetForkChoice(t *testing.T) {
 
 	s.GetForkChoice(writer, request)
 	require.Equal(t, http.StatusOK, writer.Code)
-	resp := &GetForkChoiceDumpResponse{}
+	resp := &structs.GetForkChoiceDumpResponse{}
 	require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 	require.Equal(t, "2", resp.FinalizedCheckpoint.Epoch)
 }

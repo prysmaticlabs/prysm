@@ -10,9 +10,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -50,10 +48,10 @@ func buildURL(path string, queryParams ...neturl.Values) string {
 	return fmt.Sprintf("%s?%s", path, queryParams[0].Encode())
 }
 
-func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStateForkResponse, error) {
+func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*structs.GetStateForkResponse, error) {
 	const endpoint = "/eth/v1/beacon/states/head/fork"
 
-	stateForkResponseJson := &beacon.GetStateForkResponse{}
+	stateForkResponseJson := &structs.GetStateForkResponse{}
 
 	if err := c.jsonRestHandler.Get(ctx, endpoint, stateForkResponseJson); err != nil {
 		return nil, err
@@ -62,10 +60,10 @@ func (c *beaconApiValidatorClient) getFork(ctx context.Context) (*beacon.GetStat
 	return stateForkResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetBlockHeadersResponse, error) {
+func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*structs.GetBlockHeadersResponse, error) {
 	const endpoint = "/eth/v1/beacon/headers"
 
-	blockHeadersResponseJson := &beacon.GetBlockHeadersResponse{}
+	blockHeadersResponseJson := &structs.GetBlockHeadersResponse{}
 
 	if err := c.jsonRestHandler.Get(ctx, endpoint, blockHeadersResponseJson); err != nil {
 		return nil, err
@@ -74,11 +72,11 @@ func (c *beaconApiValidatorClient) getHeaders(ctx context.Context) (*beacon.GetB
 	return blockHeadersResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*validator.GetLivenessResponse, error) {
+func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primitives.Epoch, validatorIndexes []string) (*structs.GetLivenessResponse, error) {
 	const endpoint = "/eth/v1/validator/liveness/"
 	url := endpoint + strconv.FormatUint(uint64(epoch), 10)
 
-	livenessResponseJson := &validator.GetLivenessResponse{}
+	livenessResponseJson := &structs.GetLivenessResponse{}
 
 	marshalledJsonValidatorIndexes, err := json.Marshal(validatorIndexes)
 	if err != nil {
@@ -92,10 +90,10 @@ func (c *beaconApiValidatorClient) getLiveness(ctx context.Context, epoch primit
 	return livenessResponseJson, nil
 }
 
-func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*node.SyncStatusResponse, error) {
+func (c *beaconApiValidatorClient) getSyncing(ctx context.Context) (*structs.SyncStatusResponse, error) {
 	const endpoint = "/eth/v1/node/syncing"
 
-	syncingResponseJson := &node.SyncStatusResponse{}
+	syncingResponseJson := &structs.SyncStatusResponse{}
 
 	if err := c.jsonRestHandler.Get(ctx, endpoint, syncingResponseJson); err != nil {
 		return nil, err

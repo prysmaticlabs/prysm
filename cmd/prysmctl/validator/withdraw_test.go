@@ -13,9 +13,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/config"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -32,16 +30,16 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 			if r.RequestURI == "/eth/v1/beacon/pool/bls_to_execution_changes" {
 				b, err := os.ReadFile(filepath.Clean(file))
 				require.NoError(t, err)
-				var to []*shared.SignedBLSToExecutionChange
+				var to []*structs.SignedBLSToExecutionChange
 				err = json.Unmarshal(b, &to)
 				require.NoError(t, err)
-				err = json.NewEncoder(w).Encode(&beacon.BLSToExecutionChangesPoolResponse{
+				err = json.NewEncoder(w).Encode(&structs.BLSToExecutionChangesPoolResponse{
 					Data: to,
 				})
 				require.NoError(t, err)
 			} else if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
-				err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
-					Data: &shared.Fork{
+				err := json.NewEncoder(w).Encode(&structs.GetStateForkResponse{
+					Data: &structs.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						Epoch:           "1350",
@@ -53,7 +51,7 @@ func getHappyPathTestServer(file string, t *testing.T) *httptest.Server {
 			} else if r.RequestURI == "/eth/v1/config/spec" {
 				m := make(map[string]string)
 				m["CAPELLA_FORK_EPOCH"] = "1350"
-				err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
+				err := json.NewEncoder(w).Encode(&structs.GetSpecResponse{
 					Data: m,
 				})
 				require.NoError(t, err)
@@ -231,8 +229,8 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 			if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 				w.WriteHeader(200)
 				w.Header().Set("Content-Type", "application/json")
-				err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
-					Data: &shared.Fork{
+				err := json.NewEncoder(w).Encode(&structs.GetStateForkResponse{
+					Data: &structs.Fork{
 						PreviousVersion: hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						CurrentVersion:  hexutil.Encode(params.BeaconConfig().CapellaForkVersion),
 						Epoch:           fmt.Sprintf("%d", params.BeaconConfig().CapellaForkEpoch),
@@ -246,7 +244,7 @@ func TestCallWithdrawalEndpoint_Errors(t *testing.T) {
 				w.Header().Set("Content-Type", "application/json")
 				m := make(map[string]string)
 				m["CAPELLA_FORK_EPOCH"] = "1350"
-				err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
+				err := json.NewEncoder(w).Encode(&structs.GetSpecResponse{
 					Data: m,
 				})
 				require.NoError(t, err)
@@ -289,8 +287,8 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		if r.RequestURI == "/eth/v1/beacon/states/head/fork" {
 
-			err := json.NewEncoder(w).Encode(&beacon.GetStateForkResponse{
-				Data: &shared.Fork{
+			err := json.NewEncoder(w).Encode(&structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
 					CurrentVersion:  hexutil.Encode(params.BeaconConfig().BellatrixForkVersion),
 					Epoch:           "1000",
@@ -302,7 +300,7 @@ func TestCallWithdrawalEndpoint_ForkBeforeCapella(t *testing.T) {
 		} else if r.RequestURI == "/eth/v1/config/spec" {
 			m := make(map[string]string)
 			m["CAPELLA_FORK_EPOCH"] = "1350"
-			err := json.NewEncoder(w).Encode(&config.GetSpecResponse{
+			err := json.NewEncoder(w).Encode(&structs.GetSpecResponse{
 				Data: m,
 			})
 			require.NoError(t, err)
@@ -339,10 +337,10 @@ func TestVerifyWithdrawal_Multiple(t *testing.T) {
 		if r.Method == http.MethodGet {
 			b, err := os.ReadFile(filepath.Clean(file))
 			require.NoError(t, err)
-			var to []*shared.SignedBLSToExecutionChange
+			var to []*structs.SignedBLSToExecutionChange
 			err = json.Unmarshal(b, &to)
 			require.NoError(t, err)
-			err = json.NewEncoder(w).Encode(&beacon.BLSToExecutionChangesPoolResponse{
+			err = json.NewEncoder(w).Encode(&structs.BLSToExecutionChangesPoolResponse{
 				Data: to,
 			})
 			require.NoError(t, err)

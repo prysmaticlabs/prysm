@@ -1,4 +1,4 @@
-package rewards
+package structs
 
 type BlockRewardsResponse struct {
 	Data                *BlockRewards `json:"data"`

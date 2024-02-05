@@ -1,7 +1,7 @@
 package test_helpers
 
 import (
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
@@ -215,24 +215,24 @@ func GenerateProtoPhase0BeaconBlock() *ethpb.BeaconBlock {
 	}
 }
 
-func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
-	return &shared.BeaconBlock{
+func GenerateJsonPhase0BeaconBlock() *structs.BeaconBlock {
+	return &structs.BeaconBlock{
 		Slot:          "1",
 		ProposerIndex: "2",
 		ParentRoot:    FillEncodedByteSlice(32, 3),
 		StateRoot:     FillEncodedByteSlice(32, 4),
-		Body: &shared.BeaconBlockBody{
+		Body: &structs.BeaconBlockBody{
 			RandaoReveal: FillEncodedByteSlice(96, 5),
-			Eth1Data: &shared.Eth1Data{
+			Eth1Data: &structs.Eth1Data{
 				DepositRoot:  FillEncodedByteSlice(32, 6),
 				DepositCount: "7",
 				BlockHash:    FillEncodedByteSlice(32, 8),
 			},
 			Graffiti: FillEncodedByteSlice(32, 9),
-			ProposerSlashings: []*shared.ProposerSlashing{
+			ProposerSlashings: []*structs.ProposerSlashing{
 				{
-					SignedHeader1: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "10",
 							ProposerIndex: "11",
 							ParentRoot:    FillEncodedByteSlice(32, 12),
@@ -241,8 +241,8 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 						},
 						Signature: FillEncodedByteSlice(96, 15),
 					},
-					SignedHeader2: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "16",
 							ProposerIndex: "17",
 							ParentRoot:    FillEncodedByteSlice(32, 18),
@@ -253,8 +253,8 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					},
 				},
 				{
-					SignedHeader1: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader1: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "22",
 							ProposerIndex: "23",
 							ParentRoot:    FillEncodedByteSlice(32, 24),
@@ -263,8 +263,8 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 						},
 						Signature: FillEncodedByteSlice(96, 27),
 					},
-					SignedHeader2: &shared.SignedBeaconBlockHeader{
-						Message: &shared.BeaconBlockHeader{
+					SignedHeader2: &structs.SignedBeaconBlockHeader{
+						Message: &structs.BeaconBlockHeader{
 							Slot:          "28",
 							ProposerIndex: "29",
 							ParentRoot:    FillEncodedByteSlice(32, 30),
@@ -275,36 +275,36 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					},
 				},
 			},
-			AttesterSlashings: []*shared.AttesterSlashing{
+			AttesterSlashings: []*structs.AttesterSlashing{
 				{
-					Attestation1: &shared.IndexedAttestation{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"34", "35"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "36",
 							CommitteeIndex:  "37",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "39",
 								Root:  FillEncodedByteSlice(32, 40),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "41",
 								Root:  FillEncodedByteSlice(32, 42),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 43),
 					},
-					Attestation2: &shared.IndexedAttestation{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"44", "45"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "46",
 							CommitteeIndex:  "47",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 48),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "49",
 								Root:  FillEncodedByteSlice(32, 50),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "51",
 								Root:  FillEncodedByteSlice(32, 52),
 							},
@@ -313,34 +313,34 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					},
 				},
 				{
-					Attestation1: &shared.IndexedAttestation{
+					Attestation1: &structs.IndexedAttestation{
 						AttestingIndices: []string{"54", "55"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "56",
 							CommitteeIndex:  "57",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 58),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "59",
 								Root:  FillEncodedByteSlice(32, 60),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "61",
 								Root:  FillEncodedByteSlice(32, 62),
 							},
 						},
 						Signature: FillEncodedByteSlice(96, 63),
 					},
-					Attestation2: &shared.IndexedAttestation{
+					Attestation2: &structs.IndexedAttestation{
 						AttestingIndices: []string{"64", "65"},
-						Data: &shared.AttestationData{
+						Data: &structs.AttestationData{
 							Slot:            "66",
 							CommitteeIndex:  "67",
 							BeaconBlockRoot: FillEncodedByteSlice(32, 68),
-							Source: &shared.Checkpoint{
+							Source: &structs.Checkpoint{
 								Epoch: "69",
 								Root:  FillEncodedByteSlice(32, 70),
 							},
-							Target: &shared.Checkpoint{
+							Target: &structs.Checkpoint{
 								Epoch: "71",
 								Root:  FillEncodedByteSlice(32, 72),
 							},
@@ -349,18 +349,18 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					},
 				},
 			},
-			Attestations: []*shared.Attestation{
+			Attestations: []*structs.Attestation{
 				{
 					AggregationBits: FillEncodedByteSlice(32, 74),
-					Data: &shared.AttestationData{
+					Data: &structs.AttestationData{
 						Slot:            "75",
 						CommitteeIndex:  "76",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 77),
-						Source: &shared.Checkpoint{
+						Source: &structs.Checkpoint{
 							Epoch: "78",
 							Root:  FillEncodedByteSlice(32, 79),
 						},
-						Target: &shared.Checkpoint{
+						Target: &structs.Checkpoint{
 							Epoch: "80",
 							Root:  FillEncodedByteSlice(32, 81),
 						},
@@ -369,15 +369,15 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 				},
 				{
 					AggregationBits: FillEncodedByteSlice(4, 83),
-					Data: &shared.AttestationData{
+					Data: &structs.AttestationData{
 						Slot:            "84",
 						CommitteeIndex:  "85",
 						BeaconBlockRoot: FillEncodedByteSlice(32, 38),
-						Source: &shared.Checkpoint{
+						Source: &structs.Checkpoint{
 							Epoch: "87",
 							Root:  FillEncodedByteSlice(32, 88),
 						},
-						Target: &shared.Checkpoint{
+						Target: &structs.Checkpoint{
 							Epoch: "89",
 							Root:  FillEncodedByteSlice(32, 90),
 						},
@@ -385,10 +385,10 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					Signature: FillEncodedByteSlice(96, 91),
 				},
 			},
-			Deposits: []*shared.Deposit{
+			Deposits: []*structs.Deposit{
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 92)),
-					Data: &shared.DepositData{
+					Data: &structs.DepositData{
 						Pubkey:                FillEncodedByteSlice(48, 94),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 95),
 						Amount:                "96",
@@ -397,7 +397,7 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 				},
 				{
 					Proof: FillEncodedByteArraySlice(33, FillEncodedByteSlice(32, 98)),
-					Data: &shared.DepositData{
+					Data: &structs.DepositData{
 						Pubkey:                FillEncodedByteSlice(48, 100),
 						WithdrawalCredentials: FillEncodedByteSlice(32, 101),
 						Amount:                "102",
@@ -405,16 +405,16 @@ func GenerateJsonPhase0BeaconBlock() *shared.BeaconBlock {
 					},
 				},
 			},
-			VoluntaryExits: []*shared.SignedVoluntaryExit{
+			VoluntaryExits: []*structs.SignedVoluntaryExit{
 				{
-					Message: &shared.VoluntaryExit{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "104",
 						ValidatorIndex: "105",
 					},
 					Signature: FillEncodedByteSlice(96, 106),
 				},
 				{
-					Message: &shared.VoluntaryExit{
+					Message: &structs.VoluntaryExit{
 						Epoch:          "107",
 						ValidatorIndex: "108",
 					},
