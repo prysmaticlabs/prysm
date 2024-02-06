@@ -290,7 +290,6 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *valida
 }
 
 func (fv *FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
-	return
 }
 
 func (fv *FakeValidator) ProcessEvent(event *event.Event) error {
