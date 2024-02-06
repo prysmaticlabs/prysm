@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
@@ -213,7 +215,11 @@ func (m *Validator) SetProposerSettings(_ context.Context, settings *validatorse
 	return nil
 }
 
-func (_ *Validator) StartEventStream(_ context.Context) error {
+func (_ *Validator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+	panic("implement me")
+}
+
+func (_ *Validator) ProcessEvent(event *event.Event) error {
 	panic("implement me")
 }
 
@@ -221,6 +227,10 @@ func (_ *Validator) EventStreamIsRunning() bool {
 	panic("implement me")
 }
 
-func (_ *Validator) NodeIsHealthy(ctx context.Context) bool {
+func (_ *Validator) NodeIsHealthy(_ context.Context) bool {
+	panic("implement me")
+}
+
+func (_ *Validator) NodeHealthTracker() *beacon.NodeHealth {
 	panic("implement me")
 }
