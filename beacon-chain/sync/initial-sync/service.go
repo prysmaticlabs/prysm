@@ -88,6 +88,7 @@ type SyncChecker struct {
 // Synced returns the status of the service.
 func (s *SyncChecker) Synced() bool {
 	if s.Svc == nil {
+		log.Warn("Calling sync checker with a nil service initialized")
 		return false
 	}
 	return s.Svc.Synced()
