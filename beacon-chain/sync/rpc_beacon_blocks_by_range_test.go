@@ -21,6 +21,7 @@ import (
 	p2ptest "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/testing"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/startup"
+	state_native "github.com/prysmaticlabs/prysm/v4/beacon-chain/state/state-native"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -28,6 +29,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	leakybucket "github.com/prysmaticlabs/prysm/v4/container/leaky-bucket"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
+	"github.com/prysmaticlabs/prysm/v4/proto/dbval"
 	enginev1 "github.com/prysmaticlabs/prysm/v4/proto/engine/v1"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -1104,4 +1106,211 @@ func TestRPCBeaconBlocksByRange_FilterBlocks_PreviousRoot(t *testing.T) {
 
 	// pointer should reference a new root.
 	require.NotEqual(t, cf.prevRoot, [32]byte{})
+}
+
+func TestRPCBeaconBlocksByRange_ValidateRangeAvailibility(t *testing.T) {
+	tests := []struct {
+		name          string
+		rp            rangeParams
+		expectedError error
+		available     bool
+		svcCreator    func(t *testing.T) *Service
+	}{
+		{
+			name: "Single Block from genesis",
+			rp: rangeParams{
+				start: 1,
+				end:   1,
+				size:  1,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 3,
+				})
+				require.NoError(t, err)
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     true,
+		},
+		{
+			name: "Normal Range from genesis",
+			rp: rangeParams{
+				start: 100,
+				end:   130,
+				size:  31,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 150,
+				})
+				require.NoError(t, err)
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     true,
+		},
+		{
+			name: "Beyond head from genesis",
+			rp: rangeParams{
+				start: 100,
+				end:   130,
+				size:  31,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 100,
+				})
+				require.NoError(t, err)
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     true,
+		},
+		{
+			name: "Before our checkpoint block",
+			rp: rangeParams{
+				start: 100,
+				end:   130,
+				size:  31,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 200,
+				})
+				require.NoError(t, err)
+				nBlock := util.NewBeaconBlock()
+				nBlock.Block.Slot = 150
+				root, err := nBlock.Block.HashTreeRoot()
+				require.NoError(t, err)
+				roBlock, err := blocks.NewSignedBeaconBlock(nBlock)
+				require.NoError(t, err)
+				require.NoError(t, d.SaveOriginCheckpointBlockRoot(context.Background(), root))
+				require.NoError(t, d.SaveBlock(context.Background(), roBlock))
+
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     false,
+		},
+		{
+			name: "After our checkpoint block",
+			rp: rangeParams{
+				start: 190,
+				end:   200,
+				size:  11,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 200,
+				})
+				require.NoError(t, err)
+				nBlock := util.NewBeaconBlock()
+				nBlock.Block.Slot = 150
+				root, err := nBlock.Block.HashTreeRoot()
+				require.NoError(t, err)
+				roBlock, err := blocks.NewSignedBeaconBlock(nBlock)
+				require.NoError(t, err)
+				require.NoError(t, d.SaveOriginCheckpointBlockRoot(context.Background(), root))
+				require.NoError(t, d.SaveBlock(context.Background(), roBlock))
+
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     true,
+		},
+		{
+			name: "Before lowest in backfill status",
+			rp: rangeParams{
+				start: 90,
+				end:   130,
+				size:  41,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 200,
+				})
+				require.NoError(t, err)
+				nBlock := util.NewBeaconBlock()
+				nBlock.Block.Slot = 150
+				root, err := nBlock.Block.HashTreeRoot()
+				require.NoError(t, err)
+				roBlock, err := blocks.NewSignedBeaconBlock(nBlock)
+				require.NoError(t, err)
+				require.NoError(t, d.SaveOriginCheckpointBlockRoot(context.Background(), root))
+				require.NoError(t, d.SaveBlock(context.Background(), roBlock))
+				require.NoError(t, d.SaveBackfillStatus(context.Background(), &dbval.BackfillStatus{
+					LowSlot:       100,
+					LowRoot:       make([]byte, 32),
+					LowParentRoot: make([]byte, 32),
+					OriginSlot:    150,
+					OriginRoot:    root[:],
+				}))
+
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     false,
+		},
+		{
+			name: "After lowest in backfill status",
+			rp: rangeParams{
+				start: 110,
+				end:   130,
+				size:  21,
+			},
+			svcCreator: func(t *testing.T) *Service {
+				d := db.SetupDB(t)
+				clock := startup.NewClock(time.Now(), [32]byte{})
+				st, err := state_native.InitializeFromProtoPhase0(&ethpb.BeaconState{
+					Slot: 200,
+				})
+				require.NoError(t, err)
+				nBlock := util.NewBeaconBlock()
+				nBlock.Block.Slot = 150
+				root, err := nBlock.Block.HashTreeRoot()
+				require.NoError(t, err)
+				roBlock, err := blocks.NewSignedBeaconBlock(nBlock)
+				require.NoError(t, err)
+				require.NoError(t, d.SaveOriginCheckpointBlockRoot(context.Background(), root))
+				require.NoError(t, d.SaveBlock(context.Background(), roBlock))
+				require.NoError(t, d.SaveBackfillStatus(context.Background(), &dbval.BackfillStatus{
+					LowSlot:       100,
+					LowRoot:       make([]byte, 32),
+					LowParentRoot: make([]byte, 32),
+					OriginSlot:    150,
+					OriginRoot:    root[:],
+				}))
+
+				return &Service{cfg: &config{beaconDB: d, clock: clock, chain: &chainMock.ChainService{State: st}}}
+			},
+			expectedError: nil,
+			available:     true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := tt.svcCreator(t)
+			avail, err := s.validateRangeAvailibility(context.Background(), tt.rp)
+			if tt.expectedError != nil {
+				assert.ErrorContains(t, tt.expectedError.Error(), err, "got incorrect error")
+			} else {
+				assert.NoError(t, err, "wanted no error")
+			}
+			assert.Equal(t, tt.available, avail)
+		})
+	}
 }

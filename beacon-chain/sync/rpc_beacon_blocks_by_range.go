@@ -129,11 +129,6 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 
 func (s *Service) validateRangeAvailibility(ctx context.Context, rp rangeParams) (bool, error) {
 	startBlock := rp.start
-	hs := s.cfg.chain.HeadSlot()
-	// This is beyond our current head slot.
-	if startBlock > hs {
-		return false, nil
-	}
 	bs, err := s.cfg.beaconDB.BackfillStatus(ctx)
 	if err != nil {
 		// If this is a genesis or legacy node, we retrieve the checkpoint

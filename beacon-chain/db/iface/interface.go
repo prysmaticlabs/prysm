@@ -111,6 +111,7 @@ type HeadAccessDatabase interface {
 
 	// Support for checkpoint sync and backfill.
 	SaveOrigin(ctx context.Context, serState, serBlock []byte) error
+	SaveOriginCheckpointBlockRoot(ctx context.Context, blockRoot [32]byte) error
 	SaveBackfillStatus(context.Context, *dbval.BackfillStatus) error
 	BackfillFinalizedIndex(ctx context.Context, blocks []blocks.ROBlock, finalizedChildRoot [32]byte) error
 }
