@@ -40,7 +40,7 @@ func TestStore_AttestationRecordForValidator_SaveRetrieve(t *testing.T) {
 	require.NoError(t, err)
 	assert.DeepEqual(t, target, attRecord.IndexedAttestation.Data.Target.Epoch)
 	assert.DeepEqual(t, source, attRecord.IndexedAttestation.Data.Source.Epoch)
-	assert.DeepEqual(t, sr, attRecord.SigningRoot)
+	assert.DeepEqual(t, sr, attRecord.DataRoot)
 }
 
 func TestStore_LastEpochWrittenForValidators(t *testing.T) {
@@ -224,9 +224,9 @@ func TestStore_ExistingBlockProposals(t *testing.T) {
 
 	// Second time checking same proposals but all with different signing root should
 	// return all double proposals.
-	proposals[0].SigningRoot = bytesutil.ToBytes32([]byte{2})
-	proposals[1].SigningRoot = bytesutil.ToBytes32([]byte{2})
-	proposals[2].SigningRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[0].HeaderRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[1].HeaderRoot = bytesutil.ToBytes32([]byte{2})
+	proposals[2].HeaderRoot = bytesutil.ToBytes32([]byte{2})
 
 	doubleProposals, err = beaconDB.CheckDoubleBlockProposals(ctx, proposals)
 	require.NoError(t, err)
@@ -515,7 +515,7 @@ func createProposalWrapper(t *testing.T, slot primitives.Slot, proposerIndex pri
 		StateRoot:     bytesutil.PadTo(signingRoot, 32),
 		BodyRoot:      params.BeaconConfig().ZeroHash[:],
 	}
-	signRoot, err := header.HashTreeRoot()
+	headerRoot, err := header.HashTreeRoot()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,15 +524,16 @@ func createProposalWrapper(t *testing.T, slot primitives.Slot, proposerIndex pri
 			Header:    header,
 			Signature: params.BeaconConfig().EmptySignature[:],
 		},
-		SigningRoot: signRoot,
+		HeaderRoot: headerRoot,
 	}
 }
 
-func createAttestationWrapper(source, target primitives.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
-	signRoot := bytesutil.ToBytes32(signingRoot)
-	if signingRoot == nil {
-		signRoot = params.BeaconConfig().ZeroHash
+func createAttestationWrapper(source, target primitives.Epoch, indices []uint64, dataRootBytes []byte) *slashertypes.IndexedAttestationWrapper {
+	dataRoot := bytesutil.ToBytes32(dataRootBytes)
+	if dataRootBytes == nil {
+		dataRoot = params.BeaconConfig().ZeroHash
 	}
+
 	data := &ethpb.AttestationData{
 		BeaconBlockRoot: params.BeaconConfig().ZeroHash[:],
 		Source: &ethpb.Checkpoint{
@@ -544,13 +545,14 @@ func createAttestationWrapper(source, target primitives.Epoch, indices []uint64,
 			Root:  params.BeaconConfig().ZeroHash[:],
 		},
 	}
+
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
 			AttestingIndices: indices,
 			Data:             data,
 			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
-		SigningRoot: signRoot,
+		DataRoot: dataRoot,
 	}
 }
 

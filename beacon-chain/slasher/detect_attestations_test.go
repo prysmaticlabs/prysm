@@ -868,7 +868,7 @@ func createAttestationWrapper(
 		},
 	}
 
-	signingRoot, err := data.HashTreeRoot()
+	dataRoot, err := data.HashTreeRoot()
 	require.NoError(t, err)
 
 	return &slashertypes.IndexedAttestationWrapper{
@@ -877,6 +877,6 @@ func createAttestationWrapper(
 			Data:             data,
 			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
-		SigningRoot: signingRoot,
+		DataRoot: dataRoot,
 	}
 }

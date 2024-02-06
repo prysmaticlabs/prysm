@@ -32,14 +32,14 @@ func (s *Service) receiveAttestations(ctx context.Context, indexedAttsChan chan 
 			if !validateAttestationIntegrity(att) {
 				continue
 			}
-			signingRoot, err := att.Data.HashTreeRoot()
+			dataRoot, err := att.Data.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of attestation")
 				continue
 			}
 			attWrapper := &slashertypes.IndexedAttestationWrapper{
 				IndexedAttestation: att,
-				SigningRoot:        signingRoot,
+				DataRoot:           dataRoot,
 			}
 			s.attsQueue.push(attWrapper)
 		case err := <-sub.Err():
@@ -63,14 +63,14 @@ func (s *Service) receiveBlocks(ctx context.Context, beaconBlockHeadersChan chan
 			if !validateBlockHeaderIntegrity(blockHeader) {
 				continue
 			}
-			signingRoot, err := blockHeader.Header.HashTreeRoot()
+			headerRoot, err := blockHeader.Header.HashTreeRoot()
 			if err != nil {
 				log.WithError(err).Error("Could not get hash tree root of signed block header")
 				continue
 			}
 			wrappedProposal := &slashertypes.SignedBlockHeaderWrapper{
 				SignedBeaconBlockHeader: blockHeader,
-				SigningRoot:             signingRoot,
+				HeaderRoot:              headerRoot,
 			}
 			s.blksQueue.push(wrappedProposal)
 		case err := <-sub.Err():
