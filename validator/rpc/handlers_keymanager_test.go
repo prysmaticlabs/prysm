@@ -1055,7 +1055,7 @@ func TestServer_SetGasLimit(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 
@@ -1242,7 +1242,7 @@ func TestServer_DeleteGasLimit(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
@@ -1703,7 +1703,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			// save a default here
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{
@@ -1811,7 +1811,7 @@ func TestServer_DeleteFeeRecipientByPubkey(t *testing.T) {
 			validatorDB := dbtest.SetupDB(t, [][fieldparams.BLSPubkeyLength]byte{})
 			vs, err := client.NewValidatorService(ctx, &client.Config{
 				Validator: m,
-				ValDB:     validatorDB,
+				DB:        validatorDB,
 			})
 			require.NoError(t, err)
 			s := &Server{

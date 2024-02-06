@@ -162,7 +162,7 @@ func (_ *Validator) UpdateDomainDataCaches(_ context.Context, _ primitives.Slot)
 	panic("implement me")
 }
 
-func (_ *Validator) WaitForKeymanagerInitialization(_ context.Context) error {
+func (_ *Validator) WaitForKmInitialization(_ context.Context) error {
 	panic("implement me")
 }
 

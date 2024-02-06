@@ -234,13 +234,13 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 		// Do nothing unless we are at the end of the epoch, and not in the first epoch.
 		return nil
 	}
-	if !v.logValidatorBalances {
+	if !v.logValidatorPerformance {
 		return nil
 	}
 
 	var pks [][fieldparams.BLSPubkeyLength]byte
 	var err error
-	pks, err = v.keyManager.FetchValidatingPublicKeys(ctx)
+	pks, err = v.km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return err
 	}
@@ -284,7 +284,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 	truncatedKey := fmt.Sprintf("%#x", bytesutil.Trunc(pubKey))
 	pubKeyBytes := bytesutil.ToBytes48(pubKey)
 	if slot < params.BeaconConfig().SlotsPerEpoch {
-		v.prevBalance[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
+		v.prevEpochBalances[pubKeyBytes] = params.BeaconConfig().MaxEffectiveBalance
 	}
 
 	// Safely load data from response with slice out of bounds checks. The server should return
@@ -325,7 +325,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 
 	fmtKey := fmt.Sprintf("%#x", pubKey)
 	gweiPerEth := float64(params.BeaconConfig().GweiPerEth)
-	if v.prevBalance[pubKeyBytes] > 0 {
+	if v.prevEpochBalances[pubKeyBytes] > 0 {
 		newBalance := float64(balAfterEpoch) / gweiPerEth
 		prevBalance := float64(balBeforeEpoch) / gweiPerEth
 		startBalance := float64(v.startBalances[pubKeyBytes]) / gweiPerEth
@@ -380,7 +380,7 @@ func (v *validator) logForEachValidator(index int, pubKey []byte, resp *ethpb.Va
 			}
 		}
 	}
-	v.prevBalance[pubKeyBytes] = balBeforeEpoch
+	v.prevEpochBalances[pubKeyBytes] = balBeforeEpoch
 }
 
 // UpdateLogAggregateStats updates and logs the voteStats struct of a validator using the RPC response obtained from LogValidatorGainsAndLosses.
@@ -441,7 +441,7 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	v.prevBalanceLock.RLock()
 	for i, val := range v.startBalances {
 		totalStartBal += val
-		totalPrevBal += v.prevBalance[i]
+		totalPrevBal += v.prevEpochBalances[i]
 	}
 	v.prevBalanceLock.RUnlock()
 

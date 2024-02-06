@@ -50,7 +50,7 @@ func (v *validator) WaitForActivation(ctx context.Context, accountsChangedChan c
 func (v *validator) internalWaitForActivation(ctx context.Context, accountsChangedChan <-chan [][fieldparams.BLSPubkeyLength]byte) error {
 	ctx, span := trace.StartSpan(ctx, "validator.WaitForActivation")
 	defer span.End()
-	validatingKeys, err := v.keyManager.FetchValidatingPublicKeys(ctx)
+	validatingKeys, err := v.km.FetchValidatingPublicKeys(ctx)
 	if err != nil {
 		return errors.Wrap(err, msgCouldNotFetchKeys)
 	}

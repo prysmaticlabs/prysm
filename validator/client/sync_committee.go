@@ -55,7 +55,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		return
 	}
 
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     r[:],
 		SignatureDomain: d.SignatureDomain,
@@ -219,7 +219,7 @@ func (v *validator) signSyncSelectionData(ctx context.Context, pubKey [fieldpara
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -242,7 +242,7 @@ func (v *validator) signContributionAndProof(ctx context.Context, pubKey [fieldp
 	if err != nil {
 		return nil, err
 	}
-	sig, err := v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err := v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,

@@ -432,23 +432,23 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	var (
-		endpoint             string        = c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-		dataDir              string        = c.cliCtx.String(cmd.DataDirFlag.Name)
-		logValidatorBalances bool          = !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-		emitAccountMetrics   bool          = !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-		cert                 string        = c.cliCtx.String(flags.CertFlag.Name)
-		graffiti             string        = c.cliCtx.String(flags.GraffitiFlag.Name)
-		maxCallRecvMsgSize   int           = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-		grpcRetries          uint          = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-		grpcRetryDelay       time.Duration = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
+		beaconEndpoint          = c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
+		dataDir                 = c.cliCtx.String(cmd.DataDirFlag.Name)
+		logValidatorPerformance = !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
+		emitAccountMetrics      = !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
+		cert                    = c.cliCtx.String(flags.CertFlag.Name)
+		graffiti                = c.cliCtx.String(flags.GraffitiFlag.Name)
+		grpcMaxCallRecvMsgSize  = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
+		grpcRetries             = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
+		grpcRetryDelay          = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
 
-		interopKeysConfig *local.InteropKeymanagerConfig
-		err               error
+		interopKmConfig *local.InteropKeymanagerConfig
+		err             error
 	)
 
 	// Configure interop.
 	if c.cliCtx.IsSet(flags.InteropNumValidators.Name) {
-		interopKeysConfig = &local.InteropKeymanagerConfig{
+		interopKmConfig = &local.InteropKeymanagerConfig{
 			Offset:           cliCtx.Uint64(flags.InteropStartIndex.Name),
 			NumValidatorKeys: cliCtx.Uint64(flags.InteropNumValidators.Name),
 		}
@@ -476,28 +476,28 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	}
 
 	validatorService, err := client.NewValidatorService(c.cliCtx.Context, &client.Config{
-		Endpoint:                   endpoint,
-		DataDir:                    dataDir,
-		LogValidatorBalances:       logValidatorBalances,
-		EmitAccountMetrics:         emitAccountMetrics,
-		CertFlag:                   cert,
-		GraffitiFlag:               g.ParseHexGraffiti(graffiti),
-		GrpcMaxCallRecvMsgSizeFlag: maxCallRecvMsgSize,
-		GrpcRetriesFlag:            grpcRetries,
-		GrpcRetryDelay:             grpcRetryDelay,
-		GrpcHeadersFlag:            c.cliCtx.String(flags.GrpcHeadersFlag.Name),
-		ValDB:                      c.db,
-		UseWeb:                     c.cliCtx.Bool(flags.EnableWebFlag.Name),
-		InteropKeysConfig:          interopKeysConfig,
-		Wallet:                     c.wallet,
-		WalletInitializedFeed:      c.walletInitialized,
-		GraffitiStruct:             graffitiStruct,
-		Web3SignerConfig:           web3signerConfig,
-		ProposerSettings:           proposerSettings,
-		BeaconApiTimeout:           time.Second * 30,
-		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
-		ValidatorsRegBatchSize:     c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
-		Distributed:                c.cliCtx.Bool(flags.EnableDistributed.Name),
+		BeaconNodeGRPCEndpoint:  beaconEndpoint,
+		DataDir:                 dataDir,
+		LogValidatorPerformance: logValidatorPerformance,
+		EmitAccountMetrics:      emitAccountMetrics,
+		Cert:                    cert,
+		Graffiti:                g.ParseHexGraffiti(graffiti),
+		GRPCMaxCallRecvMsgSize:  grpcMaxCallRecvMsgSize,
+		GRPCRetries:             grpcRetries,
+		GRPCRetryDelay:          grpcRetryDelay,
+		GRPCHeaders:             c.cliCtx.String(flags.GrpcHeadersFlag.Name),
+		DB:                      c.db,
+		UseWeb:                  c.cliCtx.Bool(flags.EnableWebFlag.Name),
+		InteropKmConfig:         interopKmConfig,
+		Wallet:                  c.wallet,
+		WalletInitializedFeed:   c.walletInitialized,
+		GraffitiStruct:          graffitiStruct,
+		Web3SignerConfig:        web3signerConfig,
+		ProposerSettings:        proposerSettings,
+		BeaconApiTimeout:        time.Second * 30,
+		BeaconApiEndpoint:       c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
+		ValidatorsRegBatchSize:  c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
+		Distributed:             c.cliCtx.Bool(flags.EnableDistributed.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")
@@ -809,8 +809,6 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 		Port:                     fmt.Sprintf("%d", rpcPort),
 		WalletInitializedFeed:    c.walletInitialized,
 		ValidatorService:         vs,
-		SyncChecker:              vs,
-		GenesisFetcher:           vs,
 		NodeGatewayEndpoint:      nodeGatewayEndpoint,
 		WalletDir:                walletDir,
 		Wallet:                   c.wallet,

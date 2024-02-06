@@ -59,7 +59,7 @@ func TestStart_GrpcHeaders(t *testing.T) {
 			"Authorization", "this is a valid value",
 		},
 	} {
-		cfg := &Config{GrpcHeadersFlag: input}
+		cfg := &Config{GRPCHeaders: input}
 		validatorService, err := NewValidatorService(ctx, cfg)
 		require.NoError(t, err)
 		md, _ := metadata.FromOutgoingContext(validatorService.ctx)

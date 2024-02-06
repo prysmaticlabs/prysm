@@ -49,8 +49,6 @@ type Config struct {
 	ValDB                    db.Database
 	WalletDir                string
 	ValidatorService         *client.ValidatorService
-	SyncChecker              client.SyncChecker
-	GenesisFetcher           client.GenesisFetcher
 	WalletInitializedFeed    *event.Feed
 	NodeGatewayEndpoint      string
 	Router                   *mux.Router
@@ -83,8 +81,6 @@ type Server struct {
 	grpcServer                *grpc.Server
 	jwtSecret                 []byte
 	validatorService          *client.ValidatorService
-	syncChecker               client.SyncChecker
-	genesisFetcher            client.GenesisFetcher
 	walletDir                 string
 	wallet                    *wallet.Wallet
 	walletInitializedFeed     *event.Feed
@@ -119,8 +115,6 @@ func NewServer(ctx context.Context, cfg *Config) *Server {
 		clientWithCert:           cfg.ClientWithCert,
 		valDB:                    cfg.ValDB,
 		validatorService:         cfg.ValidatorService,
-		syncChecker:              cfg.SyncChecker,
-		genesisFetcher:           cfg.GenesisFetcher,
 		walletDir:                cfg.WalletDir,
 		walletInitializedFeed:    cfg.WalletInitializedFeed,
 		walletInitialized:        cfg.Wallet != nil,

@@ -177,7 +177,7 @@ func initializeValidatorAndGetHeadSlot(ctx context.Context, v iface.Validator) (
 			log.WithError(err).Fatal("Could not determine if beacon chain started")
 		}
 
-		if err := v.WaitForKeymanagerInitialization(ctx); err != nil {
+		if err := v.WaitForKmInitialization(ctx); err != nil {
 			// log.Fatal will prevent defer from being called
 			v.Done()
 			log.WithError(err).Fatal("Wallet is not ready")

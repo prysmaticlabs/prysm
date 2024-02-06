@@ -361,7 +361,7 @@ func TestWaitMultipleActivation_LogsActivationEpochOK(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}
@@ -480,7 +480,7 @@ func TestUpdateDuties_ReturnsError(t *testing.T) {
 
 	v := validator{
 		validatorClient: client,
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		duties: &ethpb.DutiesResponse{
 			CurrentEpochDuties: []*ethpb.DutiesResponse_Duty{
 				{
@@ -520,7 +520,7 @@ func TestUpdateDuties_OK(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -564,9 +564,9 @@ func TestUpdateDuties_OK_FilterBlacklistedPublicKeys(t *testing.T) {
 		blacklistedPublicKeys[k] = true
 	}
 	v := validator{
-		keyManager:                     km,
-		validatorClient:                client,
-		eipImportBlacklistedPublicKeys: blacklistedPublicKeys,
+		km:                 km,
+		validatorClient:    client,
+		blacklistedPubkeys: blacklistedPublicKeys,
 	}
 
 	resp := &ethpb.DutiesResponse{
@@ -626,7 +626,7 @@ func TestUpdateDuties_AllValidatorsExited(t *testing.T) {
 		},
 	}
 	v := validator{
-		keyManager:      newMockKeymanager(t, randKeypair(t)),
+		km:              newMockKeymanager(t, randKeypair(t)),
 		validatorClient: client,
 	}
 	client.EXPECT().GetDuties(
@@ -669,7 +669,7 @@ func TestUpdateDuties_Distributed(t *testing.T) {
 	}
 
 	v := validator{
-		keyManager:      newMockKeymanager(t, keys),
+		km:              newMockKeymanager(t, keys),
 		validatorClient: client,
 		distributed:     true,
 	}
@@ -1028,7 +1028,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				}
 				v := &validator{
 					validatorClient: client,
-					keyManager:      km,
+					km:              km,
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
@@ -1062,7 +1062,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				}
 				v := &validator{
 					validatorClient: client,
-					keyManager:      km,
+					km:              km,
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
@@ -1096,7 +1096,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				}
 				v := &validator{
 					validatorClient: client,
-					keyManager:      km,
+					km:              km,
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
@@ -1135,7 +1135,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				}
 				v := &validator{
 					validatorClient: client,
-					keyManager:      km,
+					km:              km,
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
@@ -1163,7 +1163,7 @@ func TestValidator_CheckDoppelGanger(t *testing.T) {
 				}
 				v := &validator{
 					validatorClient: client,
-					keyManager:      km,
+					km:              km,
 					db:              db,
 				}
 				client.EXPECT().CheckDoppelGanger(
@@ -1294,12 +1294,12 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 		db:     db,
 		useWeb: false,
 		wallet: w,
-		Web3SignerConfig: &remoteweb3signer.SetupConfig{
+		web3SignerConfig: &remoteweb3signer.SetupConfig{
 			BaseEndpoint:       "http://localhost:8545",
 			ProvidedPublicKeys: keys,
 		},
 	}
-	err = v.WaitForKeymanagerInitialization(context.Background())
+	err = v.WaitForKmInitialization(context.Background())
 	require.NoError(t, err)
 	km, err := v.Keymanager()
 	require.NoError(t, err)
@@ -1315,15 +1315,15 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	require.NoError(t, err)
 	walletChan := make(chan *wallet.Wallet, 1)
 	v := validator{
-		db:                       db,
-		useWeb:                   true,
-		walletInitializedFeed:    &event.Feed{},
-		walletInitializedChannel: walletChan,
+		db:                    db,
+		useWeb:                true,
+		walletInitializedFeed: &event.Feed{},
+		walletInitializedChan: walletChan,
 	}
 	wait := make(chan struct{})
 	go func() {
 		defer close(wait)
-		err = v.WaitForKeymanagerInitialization(ctx)
+		err = v.WaitForKmInitialization(ctx)
 		require.NoError(t, err)
 		km, err := v.Keymanager()
 		require.NoError(t, err)
@@ -1351,7 +1351,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 			Offset:           1,
 		},
 	}
-	err = v.WaitForKeymanagerInitialization(ctx)
+	err = v.WaitForKmInitialization(ctx)
 	require.NoError(t, err)
 	km, err := v.Keymanager()
 	require.NoError(t, err)
@@ -1400,7 +1400,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1482,7 +1482,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1560,7 +1560,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1624,7 +1624,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				// set bellatrix as current epoch
 				params.BeaconConfig().BellatrixForkEpoch = 0
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
@@ -1689,7 +1689,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
@@ -1753,7 +1753,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1805,7 +1805,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1848,7 +1848,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKeymanagerInitialization(ctx)
+				err := v.WaitForKmInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()

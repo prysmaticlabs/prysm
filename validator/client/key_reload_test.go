@@ -33,7 +33,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient:   client,
-			keyManager:        newMockKeymanager(t, inactive),
+			km:                newMockKeymanager(t, inactive),
 			genesisTime:       1,
 			beaconClient:      beaconClient,
 			prysmBeaconClient: prysmBeaconClient,
@@ -70,7 +70,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		kp := randKeypair(t)
 		v := validator{
 			validatorClient:   client,
-			keyManager:        newMockKeymanager(t, kp),
+			km:                newMockKeymanager(t, kp),
 			genesisTime:       1,
 			beaconClient:      beaconClient,
 			prysmBeaconClient: prysmBeaconClient,
@@ -102,7 +102,7 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		client := validatormock.NewMockValidatorClient(ctrl)
 		v := validator{
 			validatorClient: client,
-			keyManager:      newMockKeymanager(t, kp),
+			km:              newMockKeymanager(t, kp),
 			genesisTime:     1,
 		}
 

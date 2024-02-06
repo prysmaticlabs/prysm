@@ -55,7 +55,7 @@ type Validator interface {
 	LogAttestationsSubmitted()
 	LogSyncCommitteeMessagesSubmitted()
 	UpdateDomainDataCaches(ctx context.Context, slot primitives.Slot)
-	WaitForKeymanagerInitialization(ctx context.Context) error
+	WaitForKmInitialization(ctx context.Context) error
 	Keymanager() (keymanager.IKeymanager, error)
 	ReceiveSlots(ctx context.Context, connectionErrorChannel chan<- error)
 	HandleKeyReload(ctx context.Context, currentKeys [][fieldparams.BLSPubkeyLength]byte) (bool, error)

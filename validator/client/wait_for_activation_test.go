@@ -36,7 +36,7 @@ func TestWaitActivation_ContextCanceled(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient: validatorClient,
-		keyManager:      newMockKeymanager(t, kp),
+		km:              newMockKeymanager(t, kp),
 		beaconClient:    beaconClient,
 	}
 	clientStream := mock.NewMockBeaconNodeValidator_WaitForActivationClient(ctrl)
@@ -63,7 +63,7 @@ func TestWaitActivation_StreamSetupFails_AttemptsToReconnect(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}
@@ -94,7 +94,7 @@ func TestWaitForActivation_ReceiveErrorFromStream_AttemptsReconnection(t *testin
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}
@@ -130,7 +130,7 @@ func TestWaitActivation_LogsActivationEpochOK(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		genesisTime:       1,
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
@@ -166,7 +166,7 @@ func TestWaitForActivation_Exiting(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}
@@ -209,7 +209,7 @@ func TestWaitForActivation_RefetchKeys(t *testing.T) {
 
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        km,
+		km:                km,
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}
@@ -262,7 +262,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient:   validatorClient,
-			keyManager:        km,
+			km:                km,
 			beaconClient:      beaconClient,
 			prysmBeaconClient: prysmBeaconClient,
 		}
@@ -352,7 +352,7 @@ func TestWaitForActivation_AccountsChanged(t *testing.T) {
 		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
 		v := validator{
 			validatorClient:   validatorClient,
-			keyManager:        km,
+			km:                km,
 			genesisTime:       1,
 			beaconClient:      beaconClient,
 			prysmBeaconClient: prysmBeaconClient,
@@ -421,7 +421,7 @@ func TestWaitActivation_NotAllValidatorsActivatedOK(t *testing.T) {
 	kp := randKeypair(t)
 	v := validator{
 		validatorClient:   validatorClient,
-		keyManager:        newMockKeymanager(t, kp),
+		km:                newMockKeymanager(t, kp),
 		beaconClient:      beaconClient,
 		prysmBeaconClient: prysmBeaconClient,
 	}

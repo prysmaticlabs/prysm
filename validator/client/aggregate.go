@@ -44,7 +44,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	}
 
 	// Avoid sending beacon node duplicated aggregation requests.
-	k := validatorSubscribeKey(slot, duty.CommitteeIndex)
+	k := validatorSubnetSubscriptionKey(slot, duty.CommitteeIndex)
 	v.aggregatedSlotCommitteeIDCacheLock.Lock()
 	if v.aggregatedSlotCommitteeIDCache.Contains(k) {
 		v.aggregatedSlotCommitteeIDCacheLock.Unlock()
@@ -149,7 +149,7 @@ func (v *validator) signSlotWithSelectionProof(ctx context.Context, pubKey [fiel
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: domain.SignatureDomain,
@@ -203,7 +203,7 @@ func (v *validator) aggregateAndProofSig(ctx context.Context, pubKey [fieldparam
 	if err != nil {
 		return nil, err
 	}
-	sig, err = v.keyManager.Sign(ctx, &validatorpb.SignRequest{
+	sig, err = v.km.Sign(ctx, &validatorpb.SignRequest{
 		PublicKey:       pubKey[:],
 		SigningRoot:     root[:],
 		SignatureDomain: d.SignatureDomain,

@@ -63,7 +63,7 @@ func (fv *FakeValidator) Done() {
 }
 
 // WaitForKeymanagerInitialization for mocking.
-func (fv *FakeValidator) WaitForKeymanagerInitialization(_ context.Context) error {
+func (fv *FakeValidator) WaitForKmInitialization(_ context.Context) error {
 	fv.WaitForWalletInitializationCalled = true
 	return nil
 }
