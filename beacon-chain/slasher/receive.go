@@ -107,7 +107,7 @@ func (s *Service) processAttestations(
 	ctx context.Context,
 	attestations []*slashertypes.IndexedAttestationWrapper,
 	currentSlot primitives.Slot,
-) {
+) []*ethpb.AttesterSlashing {
 	// Get the current epoch from the current slot.
 	currentEpoch := slots.ToEpoch(currentSlot)
 
@@ -143,22 +143,25 @@ func (s *Service) processAttestations(
 	// then the first (validator index + target epoch) => signing root) link is kept into the database.
 	if err := s.serviceCfg.Database.SaveAttestationRecordsForValidators(ctx, validAttestations); err != nil {
 		log.WithError(err).Error(couldNotSaveAttRecord)
-		return
+		return nil
 	}
 
 	// Check for attestatinos slashings (double, sourrounding, surrounded votes).
 	slashings, err := s.checkSlashableAttestations(ctx, currentEpoch, validAttestations)
 	if err != nil {
 		log.WithError(err).Error(couldNotCheckSlashableAtt)
-		return
+		return nil
 	}
 
 	// Process attester slashings by verifying their signatures, submitting
 	// to the beacon node's operations pool, and logging them.
-	if _, err := s.processAttesterSlashings(ctx, slashings); err != nil {
+	processedAttesterSlashings, err := s.processAttesterSlashings(ctx, slashings)
+	if err != nil {
 		log.WithError(err).Error(couldNotProcessAttesterSlashings)
-		return
+		return nil
 	}
+
+	return processedAttesterSlashings
 }
 
 // Process queued blocks every time an epoch ticker fires. We retrieve
