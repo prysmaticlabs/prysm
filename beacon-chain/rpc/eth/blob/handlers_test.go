@@ -269,7 +269,7 @@ func TestBlobs(t *testing.T) {
 		moc := &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher:   moc,
-			GenesisTimeFetcher: moc, // max slot
+			GenesisTimeFetcher: moc, // genesis time is set to 0 here, so it results in current epoch being extremely large
 			BeaconDB:           db,
 			BlobStorage:        bs,
 		}
