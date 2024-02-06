@@ -168,26 +168,15 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 	}
 	if !containsHead {
-		log.Errorf("topics")
+		log.Errorf("gRPC only supports the head topic, topics provided are %v.. continuing stream with head topic", topics)
 	}
-	attempts := 0
-	var stream ethpb.BeaconNodeValidator_StreamSlotsClient
-	for stream == nil {
-		str, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
-		if err != nil {
-			log.WithError(err).Errorf("unable to create stream, attempting  again ")
-			attempts++
-			continue
+	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
+	if err != nil {
+		eventsChannel <- &eventClient.Event{
+			EventType: eventClient.EventConnectionError,
+			Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
 		}
-		if attempts > eventClient.MaxRetryAttempts {
-			log.WithError(err).Error("Failed to retrieve slots stream, " + client.ErrConnectionIssue.Error())
-			eventsChannel <- &eventClient.Event{
-				EventType: eventClient.EventConnectionError,
-				Data:      []byte(errors.Wrap(client.ErrConnectionIssue, err.Error()).Error()),
-			}
-			return
-		}
-		stream = str
+		return
 	}
 	c.isEventStreamRunning = true
 	for {
