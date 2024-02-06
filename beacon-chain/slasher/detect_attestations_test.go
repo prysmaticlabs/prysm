@@ -38,210 +38,275 @@ func Test_processAttestations(t *testing.T) {
 			attestationInfo_1 *attestationInfo
 			attestationInfo_2 *attestationInfo
 		}
+
+		step struct {
+			currentEpoch          primitives.Epoch
+			attestationsInfo      []*attestationInfo
+			expectedSlashingsInfo []*slashingInfo
+		}
 	)
 
 	tests := []struct {
-		name                  string
-		currentEpoch          primitives.Epoch
-		attestationsInfo      []*attestationInfo
-		expectedSlashingsInfo []*slashingInfo
+		name  string
+		steps []*step
 	}{
 		{
-			name:         "Same target with different signing roots",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
+			name: "Same target with different signing roots - single step",
+			steps: []*step{
 				{
-					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
-				},
-			},
-		},
-		{
-			name:         "Same target with same signing roots",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
-			},
-			expectedSlashingsInfo: nil,
-		},
-		{
-			name:         "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+						},
+					},
 				},
 			},
 		},
 		{
-			name:         "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
-			currentEpoch: 1000,
-			attestationsInfo: []*attestationInfo{
-				{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
-				{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
+			name: "Same target with same signing roots - single step",
+			steps: []*step{
 				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+					},
+					expectedSlashingsInfo: nil,
 				},
 			},
 		},
 		{
-			name:         "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
+			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3) - single step",
+			steps: []*step{
 				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-			},
-		},
-		{
-			name:         "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				},
-				{
-					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+					},
 				},
 			},
 		},
 		{
-			name:         "Detects double vote, (source 1, target 2), (source 0, target 2)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-			},
-			expectedSlashingsInfo: []*slashingInfo{
+			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000) - single step",
+			steps: []*step{
 				{
-					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+
+					currentEpoch: 1000,
+					attestationsInfo: []*attestationInfo{
+						{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+						{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+						},
+					},
 				},
+			},
+		},
+		{
+			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - single step",
+			steps: []*step{
 				{
-					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+					},
 				},
 			},
 		},
 		{
-			name:         "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0}, beaconBlockRoot: nil},
-				{source: 0, target: 3, indices: []uint64{1}, beaconBlockRoot: nil},
+			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+					},
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 1, target: 2, indices: []uint64{2, 3}, beaconBlockRoot: nil},
+			name: "Detects double vote, (source 1, target 2), (source 0, target 2) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: []*slashingInfo{
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+						{
+							attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+							attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						},
+					},
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
-				{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
+			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0}, beaconBlockRoot: nil},
+						{source: 0, target: 3, indices: []uint64{1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
-				{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
+			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 1, target: 2, indices: []uint64{2, 3}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, (source 1, target 2), (source 2, target 3)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 2, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
+						{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, (source 0, target 3), (source 2, target 4)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 2, target: 4, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
+						{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, (source 0, target 2), (source 0, target 3)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+			name: "Not slashable, (source 1, target 2), (source 2, target 3) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 2, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
 		},
 		{
-			name:         "Not slashable, (source 0, target 3), (source 0, target 2)",
-			currentEpoch: 4,
-			attestationsInfo: []*attestationInfo{
-				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
-				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+			name: "Not slashable, (source 0, target 3), (source 2, target 4) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 2, target: 4, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
 			},
-			expectedSlashingsInfo: nil,
+		},
+		{
+			name: "Not slashable, (source 0, target 2), (source 0, target 3) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
+			},
+		},
+		{
+			name: "Not slashable, (source 0, target 3), (source 0, target 2) - single step",
+			steps: []*step{
+				{
+					currentEpoch: 4,
+					attestationsInfo: []*attestationInfo{
+						{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+						{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					},
+					expectedSlashingsInfo: nil,
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -258,10 +323,6 @@ func Test_processAttestations(t *testing.T) {
 
 			// Configure the beacon state.
 			beaconState, err := util.NewBeaconState()
-			require.NoError(t, err)
-
-			// Get the currentSlot for the current epoch.
-			currentSlot, err := slots.EpochStart(tt.currentEpoch)
 			require.NoError(t, err)
 
 			// Create the mock chain service.
@@ -318,64 +379,70 @@ func Test_processAttestations(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			// Build attestation wrappers.
-			attestationsCount := len(tt.attestationsInfo)
-			attestationWrappers := make([]*slashertypes.IndexedAttestationWrapper, 0, attestationsCount)
-			for _, attestationInfo := range tt.attestationsInfo {
-				// Create a wrapped attestation.
-				attestationWrapper := createAttestationWrapper(
-					t,
-					domain,
-					privateKeys,
-					attestationInfo.source,
-					attestationInfo.target,
-					attestationInfo.indices,
-					attestationInfo.beaconBlockRoot,
-				)
+			for _, step := range tt.steps {
+				// Build attestation wrappers.
+				attestationsCount := len(step.attestationsInfo)
+				attestationWrappers := make([]*slashertypes.IndexedAttestationWrapper, 0, attestationsCount)
+				for _, attestationInfo := range step.attestationsInfo {
+					// Create a wrapped attestation.
+					attestationWrapper := createAttestationWrapper(
+						t,
+						domain,
+						privateKeys,
+						attestationInfo.source,
+						attestationInfo.target,
+						attestationInfo.indices,
+						attestationInfo.beaconBlockRoot,
+					)
 
-				// Add the wrapped attestation to the list.
-				attestationWrappers = append(attestationWrappers, attestationWrapper)
-			}
-
-			// Build expected attester slashings.
-			expectedSlashings := make([]*ethpb.AttesterSlashing, 0, len(tt.expectedSlashingsInfo))
-			for _, slashingInfo := range tt.expectedSlashingsInfo {
-				// Create attestations.
-				attestation_1 := createAttestationWrapper(
-					t,
-					domain,
-					privateKeys,
-					slashingInfo.attestationInfo_1.source,
-					slashingInfo.attestationInfo_1.target,
-					slashingInfo.attestationInfo_1.indices,
-					slashingInfo.attestationInfo_1.beaconBlockRoot,
-				)
-
-				attestation_2 := createAttestationWrapper(
-					t,
-					domain,
-					privateKeys,
-					slashingInfo.attestationInfo_2.source,
-					slashingInfo.attestationInfo_2.target,
-					slashingInfo.attestationInfo_2.indices,
-					slashingInfo.attestationInfo_2.beaconBlockRoot,
-				)
-
-				// Create the attester slashing.
-				attesterSlashing := &ethpb.AttesterSlashing{
-					Attestation_1: attestation_1.IndexedAttestation,
-					Attestation_2: attestation_2.IndexedAttestation,
+					// Add the wrapped attestation to the list.
+					attestationWrappers = append(attestationWrappers, attestationWrapper)
 				}
 
-				// Add the attester slashing to the list.
-				expectedSlashings = append(expectedSlashings, attesterSlashing)
+				// Build expected attester slashings.
+				expectedSlashings := make([]*ethpb.AttesterSlashing, 0, len(step.expectedSlashingsInfo))
+				for _, slashingInfo := range step.expectedSlashingsInfo {
+					// Create attestations.
+					attestation_1 := createAttestationWrapper(
+						t,
+						domain,
+						privateKeys,
+						slashingInfo.attestationInfo_1.source,
+						slashingInfo.attestationInfo_1.target,
+						slashingInfo.attestationInfo_1.indices,
+						slashingInfo.attestationInfo_1.beaconBlockRoot,
+					)
+
+					attestation_2 := createAttestationWrapper(
+						t,
+						domain,
+						privateKeys,
+						slashingInfo.attestationInfo_2.source,
+						slashingInfo.attestationInfo_2.target,
+						slashingInfo.attestationInfo_2.indices,
+						slashingInfo.attestationInfo_2.beaconBlockRoot,
+					)
+
+					// Create the attester slashing.
+					attesterSlashing := &ethpb.AttesterSlashing{
+						Attestation_1: attestation_1.IndexedAttestation,
+						Attestation_2: attestation_2.IndexedAttestation,
+					}
+
+					// Add the attester slashing to the list.
+					expectedSlashings = append(expectedSlashings, attesterSlashing)
+				}
+
+				// Get the currentSlot for the current epoch.
+				currentSlot, err := slots.EpochStart(step.currentEpoch)
+				require.NoError(t, err)
+
+				// Process the attestations.
+				processedSlashings := slasherService.processAttestations(ctx, attestationWrappers, currentSlot)
+
+				// Check the processed slashings correspond to the expected slashings.
+				assert.DeepSSZEqual(t, expectedSlashings, processedSlashings)
 			}
-
-			// Process the attestations.
-			processedSlashings := slasherService.processAttestations(ctx, attestationWrappers, currentSlot)
-
-			// Check the processed slashings correspond to the expected slashings.
-			assert.DeepSSZEqual(t, expectedSlashings, processedSlashings)
 		})
 	}
 }
