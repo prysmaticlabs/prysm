@@ -497,6 +497,7 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		BeaconApiTimeout:           time.Second * 30,
 		BeaconApiEndpoint:          c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		ValidatorsRegBatchSize:     c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
+		Distributed:                c.cliCtx.Bool(flags.EnableDistributed.Name),
 	})
 	if err != nil {
 		return errors.Wrap(err, "could not initialize validator service")

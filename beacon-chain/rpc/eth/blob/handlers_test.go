@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	mockChain "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
@@ -80,7 +81,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 		sidecar := resp.Data[0]
@@ -125,7 +126,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -146,7 +147,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -166,7 +167,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -186,7 +187,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -207,7 +208,7 @@ func TestBlobs(t *testing.T) {
 		s.Blobs(writer, request)
 
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		sidecar := resp.Data[0]
@@ -233,7 +234,7 @@ func TestBlobs(t *testing.T) {
 
 		s.Blobs(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &SidecarsResponse{}
+		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, len(resp.Data), 0)
 	})

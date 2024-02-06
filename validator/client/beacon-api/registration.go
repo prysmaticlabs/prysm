@@ -6,17 +6,17 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 )
 
 func (c *beaconApiValidatorClient) submitValidatorRegistrations(ctx context.Context, registrations []*ethpb.SignedValidatorRegistrationV1) error {
 	const endpoint = "/eth/v1/validator/register_validator"
 
-	jsonRegistration := make([]*shared.SignedValidatorRegistration, len(registrations))
+	jsonRegistration := make([]*structs.SignedValidatorRegistration, len(registrations))
 
 	for index, registration := range registrations {
-		jsonRegistration[index] = shared.SignedValidatorRegistrationFromConsensus(registration)
+		jsonRegistration[index] = structs.SignedValidatorRegistrationFromConsensus(registration)
 	}
 
 	marshalledJsonRegistration, err := json.Marshal(jsonRegistration)

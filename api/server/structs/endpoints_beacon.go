@@ -1,9 +1,7 @@
-package beacon
+package structs
 
 import (
 	"encoding/json"
-
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 )
 
 type BlockRootResponse struct {
@@ -17,31 +15,31 @@ type BlockRoot struct {
 }
 
 type GetCommitteesResponse struct {
-	Data                []*shared.Committee `json:"data"`
-	ExecutionOptimistic bool                `json:"execution_optimistic"`
-	Finalized           bool                `json:"finalized"`
+	Data                []*Committee `json:"data"`
+	ExecutionOptimistic bool         `json:"execution_optimistic"`
+	Finalized           bool         `json:"finalized"`
 }
 
 type ListAttestationsResponse struct {
-	Data []*shared.Attestation `json:"data"`
+	Data []*Attestation `json:"data"`
 }
 
 type SubmitAttestationsRequest struct {
-	Data []*shared.Attestation `json:"data"`
+	Data []*Attestation `json:"data"`
 }
 
 type ListVoluntaryExitsResponse struct {
-	Data []*shared.SignedVoluntaryExit `json:"data"`
+	Data []*SignedVoluntaryExit `json:"data"`
 }
 
 type SubmitSyncCommitteeSignaturesRequest struct {
-	Data []*shared.SyncCommitteeMessage `json:"data"`
+	Data []*SyncCommitteeMessage `json:"data"`
 }
 
 type GetStateForkResponse struct {
-	Data                *shared.Fork `json:"data"`
-	ExecutionOptimistic bool         `json:"execution_optimistic"`
-	Finalized           bool         `json:"finalized"`
+	Data                *Fork `json:"data"`
+	ExecutionOptimistic bool  `json:"execution_optimistic"`
+	Finalized           bool  `json:"finalized"`
 }
 
 type GetFinalityCheckpointsResponse struct {
@@ -51,9 +49,9 @@ type GetFinalityCheckpointsResponse struct {
 }
 
 type FinalityCheckpoints struct {
-	PreviousJustified *shared.Checkpoint `json:"previous_justified"`
-	CurrentJustified  *shared.Checkpoint `json:"current_justified"`
-	Finalized         *shared.Checkpoint `json:"finalized"`
+	PreviousJustified *Checkpoint `json:"previous_justified"`
+	CurrentJustified  *Checkpoint `json:"current_justified"`
+	Finalized         *Checkpoint `json:"finalized"`
 }
 
 type GetGenesisResponse struct {
@@ -67,15 +65,15 @@ type Genesis struct {
 }
 
 type GetBlockHeadersResponse struct {
-	Data                []*shared.SignedBeaconBlockHeaderContainer `json:"data"`
-	ExecutionOptimistic bool                                       `json:"execution_optimistic"`
-	Finalized           bool                                       `json:"finalized"`
+	Data                []*SignedBeaconBlockHeaderContainer `json:"data"`
+	ExecutionOptimistic bool                                `json:"execution_optimistic"`
+	Finalized           bool                                `json:"finalized"`
 }
 
 type GetBlockHeaderResponse struct {
-	ExecutionOptimistic bool                                     `json:"execution_optimistic"`
-	Finalized           bool                                     `json:"finalized"`
-	Data                *shared.SignedBeaconBlockHeaderContainer `json:"data"`
+	ExecutionOptimistic bool                              `json:"execution_optimistic"`
+	Finalized           bool                              `json:"finalized"`
+	Data                *SignedBeaconBlockHeaderContainer `json:"data"`
 }
 
 type GetValidatorsRequest struct {
@@ -108,17 +106,6 @@ type ValidatorContainer struct {
 	Validator *Validator `json:"validator"`
 }
 
-type Validator struct {
-	Pubkey                     string `json:"pubkey"`
-	WithdrawalCredentials      string `json:"withdrawal_credentials"`
-	EffectiveBalance           string `json:"effective_balance"`
-	Slashed                    bool   `json:"slashed"`
-	ActivationEligibilityEpoch string `json:"activation_eligibility_epoch"`
-	ActivationEpoch            string `json:"activation_epoch"`
-	ExitEpoch                  string `json:"exit_epoch"`
-	WithdrawableEpoch          string `json:"withdrawable_epoch"`
-}
-
 type ValidatorBalance struct {
 	Index   string `json:"index"`
 	Balance string `json:"balance"`
@@ -141,9 +128,9 @@ type SignedBlock struct {
 }
 
 type GetBlockAttestationsResponse struct {
-	ExecutionOptimistic bool                  `json:"execution_optimistic"`
-	Finalized           bool                  `json:"finalized"`
-	Data                []*shared.Attestation `json:"data"`
+	ExecutionOptimistic bool           `json:"execution_optimistic"`
+	Finalized           bool           `json:"finalized"`
+	Data                []*Attestation `json:"data"`
 }
 
 type GetStateRootResponse struct {
@@ -178,13 +165,22 @@ type SyncCommitteeValidators struct {
 }
 
 type BLSToExecutionChangesPoolResponse struct {
-	Data []*shared.SignedBLSToExecutionChange `json:"data"`
+	Data []*SignedBLSToExecutionChange `json:"data"`
 }
 
 type GetAttesterSlashingsResponse struct {
-	Data []*shared.AttesterSlashing `json:"data"`
+	Data []*AttesterSlashing `json:"data"`
 }
 
 type GetProposerSlashingsResponse struct {
-	Data []*shared.ProposerSlashing `json:"data"`
+	Data []*ProposerSlashing `json:"data"`
+}
+
+type GetWeakSubjectivityResponse struct {
+	Data *WeakSubjectivityData `json:"data"`
+}
+
+type WeakSubjectivityData struct {
+	WsCheckpoint *Checkpoint `json:"ws_checkpoint"`
+	StateRoot    string      `json:"state_root"`
 }

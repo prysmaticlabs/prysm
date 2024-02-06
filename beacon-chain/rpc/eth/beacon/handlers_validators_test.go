@@ -12,6 +12,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	chainMock "github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
@@ -52,7 +53,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 		val := resp.Data[0]
@@ -91,7 +92,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -123,7 +124,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -153,7 +154,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -202,7 +203,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "1", resp.Data[0].Index)
@@ -225,7 +226,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "1", resp.Data[0].Index)
@@ -248,7 +249,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -276,7 +277,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -292,7 +293,7 @@ func TestGetValidators(t *testing.T) {
 		}
 
 		var body bytes.Buffer
-		req := &GetValidatorsRequest{
+		req := &structs.GetValidatorsRequest{
 			Ids:      []string{"0", strconv.Itoa(exitedValIndex)},
 			Statuses: []string{"exited"},
 		}
@@ -311,7 +312,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "3", resp.Data[0].Index)
@@ -328,7 +329,7 @@ func TestGetValidators(t *testing.T) {
 		}
 
 		var body bytes.Buffer
-		req := &GetValidatorsRequest{
+		req := &structs.GetValidatorsRequest{
 			Ids:      nil,
 			Statuses: nil,
 		}
@@ -347,7 +348,7 @@ func TestGetValidators(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 	})
@@ -497,7 +498,7 @@ func TestGetValidators_FilterByStatus(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 3, len(resp.Data))
 		for _, vc := range resp.Data {
@@ -528,7 +529,7 @@ func TestGetValidators_FilterByStatus(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 		for _, vc := range resp.Data {
@@ -558,7 +559,7 @@ func TestGetValidators_FilterByStatus(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 4, len(resp.Data))
 		for _, vc := range resp.Data {
@@ -591,7 +592,7 @@ func TestGetValidators_FilterByStatus(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 4, len(resp.Data))
 		for _, vc := range resp.Data {
@@ -624,7 +625,7 @@ func TestGetValidators_FilterByStatus(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, 2, len(resp.Data))
 		for _, vc := range resp.Data {
@@ -659,7 +660,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorResponse{}
+		resp := &structs.GetValidatorResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.Index)
 		assert.Equal(t, "32000000000", resp.Data.Balance)
@@ -694,7 +695,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorResponse{}
+		resp := &structs.GetValidatorResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, "0", resp.Data.Index)
 	})
@@ -796,7 +797,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorResponse{}
+		resp := &structs.GetValidatorResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -824,7 +825,7 @@ func TestGetValidator(t *testing.T) {
 
 		s.GetValidator(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorResponse{}
+		resp := &structs.GetValidatorResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -858,7 +859,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 4, len(resp.Data))
 		val := resp.Data[3]
@@ -887,7 +888,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -919,7 +920,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -949,7 +950,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidators(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorsResponse{}
+		resp := &structs.GetValidatorsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)
@@ -979,7 +980,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "1", resp.Data[0].Index)
@@ -1002,7 +1003,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 1, len(resp.Data))
 		assert.Equal(t, "1", resp.Data[0].Index)
@@ -1048,7 +1049,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.ExecutionOptimistic)
 	})
@@ -1080,7 +1081,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		assert.Equal(t, true, resp.Finalized)
 	})
@@ -1113,7 +1114,7 @@ func TestGetValidatorBalances(t *testing.T) {
 
 		s.GetValidatorBalances(writer, request)
 		assert.Equal(t, http.StatusOK, writer.Code)
-		resp := &GetValidatorBalancesResponse{}
+		resp := &structs.GetValidatorBalancesResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, 2, len(resp.Data))
 		assert.Equal(t, "0", resp.Data[0].Index)

@@ -5,12 +5,12 @@ go_library(
     srcs = [
         "events.go",
         "server.go",
-        "structs.go",
     ],
     importpath = "github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/events",
     visibility = ["//visibility:public"],
     deps = [
         "//api:go_default_library",
+        "//api/server/structs:go_default_library",
         "//beacon-chain/blockchain:go_default_library",
         "//beacon-chain/core/feed:go_default_library",
         "//beacon-chain/core/feed/operation:go_default_library",
@@ -18,7 +18,6 @@ go_library(
         "//beacon-chain/core/helpers:go_default_library",
         "//beacon-chain/core/time:go_default_library",
         "//beacon-chain/core/transition:go_default_library",
-        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//config/params:go_default_library",
         "//network/httputil:go_default_library",
         "//proto/eth/v1:go_default_library",
