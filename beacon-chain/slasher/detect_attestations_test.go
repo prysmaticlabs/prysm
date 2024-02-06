@@ -850,9 +850,14 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 	}
 }
 
-func createAttestationWrapper(t testing.TB, source, target primitives.Epoch, indices []uint64, signingRoot []byte) *slashertypes.IndexedAttestationWrapper {
+func createAttestationWrapper(
+	t testing.TB,
+	source, target primitives.Epoch,
+	indices []uint64,
+	beaconBlockRoot []byte,
+) *slashertypes.IndexedAttestationWrapper {
 	data := &ethpb.AttestationData{
-		BeaconBlockRoot: bytesutil.PadTo(signingRoot, 32),
+		BeaconBlockRoot: bytesutil.PadTo(beaconBlockRoot, 32),
 		Source: &ethpb.Checkpoint{
 			Epoch: source,
 			Root:  params.BeaconConfig().ZeroHash[:],
@@ -863,10 +868,8 @@ func createAttestationWrapper(t testing.TB, source, target primitives.Epoch, ind
 		},
 	}
 
-	signRoot, err := data.HashTreeRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
+	signingRoot, err := data.HashTreeRoot()
+	require.NoError(t, err)
 
 	return &slashertypes.IndexedAttestationWrapper{
 		IndexedAttestation: &ethpb.IndexedAttestation{
@@ -874,6 +877,6 @@ func createAttestationWrapper(t testing.TB, source, target primitives.Epoch, ind
 			Data:             data,
 			Signature:        params.BeaconConfig().EmptySignature[:],
 		},
-		SigningRoot: signRoot,
+		SigningRoot: signingRoot,
 	}
 }
