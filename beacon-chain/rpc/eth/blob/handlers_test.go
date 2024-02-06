@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
@@ -16,6 +17,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filesystem"
 	testDB "github.com/prysmaticlabs/prysm/v4/beacon-chain/db/testing"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/lookup"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/testutil"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/verification"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -71,8 +73,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{Root: blockRoot[:]},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -116,8 +121,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -137,8 +145,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{CurrentJustifiedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -157,7 +168,10 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
-			BeaconDB:    db,
+			BeaconDB: db,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BlobStorage: bs,
 		}
 		s := &Server{
@@ -177,7 +191,10 @@ func TestBlobs(t *testing.T) {
 		writer := httptest.NewRecorder()
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
-			BeaconDB:    db,
+			BeaconDB: db,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
 			BlobStorage: bs,
 		}
 		s := &Server{
@@ -198,8 +215,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -225,8 +245,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      filesystem.NewEphemeralBlobStorage(t), // new ephemeral storage
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: filesystem.NewEphemeralBlobStorage(t), // new ephemeral storage
 		}
 		s := &Server{
 			Blocker: blocker,
@@ -237,6 +260,59 @@ func TestBlobs(t *testing.T) {
 		resp := &structs.SidecarsResponse{}
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, len(resp.Data), 0)
+	})
+	t.Run("outside retention period returns 200 w/ empty list ", func(t *testing.T) {
+		u := "http://foo.example/123"
+		request := httptest.NewRequest("GET", u, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		moc := &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher:   moc,
+			GenesisTimeFetcher: moc, // genesis time is set to 0 here, so it results in current epoch being extremely large
+			BeaconDB:           db,
+			BlobStorage:        bs,
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+
+		s.Blobs(writer, request)
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.SidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 0, len(resp.Data))
+	})
+	t.Run("block without commitments returns 200 w/empty list ", func(t *testing.T) {
+		denebBlock, _ := util.GenerateTestDenebBlockWithSidecar(t, [32]byte{}, 333, 0)
+		commitments, err := denebBlock.Block().Body().BlobKzgCommitments()
+		require.NoError(t, err)
+		require.Equal(t, len(commitments), 0)
+		require.NoError(t, db.SaveBlock(context.Background(), denebBlock))
+
+		u := "http://foo.example/333"
+		request := httptest.NewRequest("GET", u, nil)
+		writer := httptest.NewRecorder()
+		writer.Body = &bytes.Buffer{}
+		blocker := &lookup.BeaconDbBlocker{
+			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
+		}
+		s := &Server{
+			Blocker: blocker,
+		}
+
+		s.Blobs(writer, request)
+
+		assert.Equal(t, http.StatusOK, writer.Code)
+		resp := &structs.SidecarsResponse{}
+		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
+		require.Equal(t, 0, len(resp.Data))
 	})
 	t.Run("slot before Deneb fork", func(t *testing.T) {
 		u := "http://foo.example/31"
@@ -282,8 +358,11 @@ func TestBlobs(t *testing.T) {
 		writer.Body = &bytes.Buffer{}
 		blocker := &lookup.BeaconDbBlocker{
 			ChainInfoFetcher: &mockChain.ChainService{FinalizedCheckPoint: &eth.Checkpoint{Root: blockRoot[:]}},
-			BeaconDB:         db,
-			BlobStorage:      bs,
+			GenesisTimeFetcher: &testutil.MockGenesisTimeFetcher{
+				Genesis: time.Now(),
+			},
+			BeaconDB:    db,
+			BlobStorage: bs,
 		}
 		s := &Server{
 			Blocker: blocker,
