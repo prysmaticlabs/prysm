@@ -50,32 +50,74 @@ func NewBeaconApiValidatorClient(jsonRestHandler JsonRestHandler, opts ...Valida
 }
 
 func (c *beaconApiValidatorClient) GetDuties(ctx context.Context, in *ethpb.DutiesRequest) (*ethpb.DutiesResponse, error) {
-	return c.getDuties(ctx, in)
+	const action = "GetDuties"
+	now := time.Now()
+	resp, err := c.getDuties(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) CheckDoppelGanger(ctx context.Context, in *ethpb.DoppelGangerRequest) (*ethpb.DoppelGangerResponse, error) {
-	return c.checkDoppelGanger(ctx, in)
+	const action = "CheckDoppelGanger"
+	now := time.Now()
+	resp, err := c.checkDoppelGanger(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) DomainData(ctx context.Context, in *ethpb.DomainRequest) (*ethpb.DomainResponse, error) {
 	if len(in.Domain) != 4 {
 		return nil, errors.Errorf("invalid domain type: %s", hexutil.Encode(in.Domain))
 	}
-
 	domainType := bytesutil.ToBytes4(in.Domain)
-	return c.getDomainData(ctx, in.Epoch, domainType)
+
+	const action = "DomainData"
+	now := time.Now()
+	resp, err := c.getDomainData(ctx, in.Epoch, domainType)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) GetAttestationData(ctx context.Context, in *ethpb.AttestationDataRequest) (*ethpb.AttestationData, error) {
-	if in == nil {
-		return nil, errors.New("GetAttestationData received nil argument `in`")
+	const action = "GetAttestationData"
+	now := time.Now()
+	resp, err := c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		x := float64(time.Since(now).Milliseconds())
+		httpActionLatency.WithLabelValues(action).Observe(x)
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
 	}
-
-	return c.getAttestationData(ctx, in.Slot, in.CommitteeIndex)
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) GetBeaconBlock(ctx context.Context, in *ethpb.BlockRequest) (*ethpb.GenericBeaconBlock, error) {
-	return c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
+	const action = "GetBeaconBlock"
+	now := time.Now()
+	resp, err := c.getBeaconBlock(ctx, in.Slot, in.RandaoReveal, in.Graffiti)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(_ context.Context, _ *ethpb.FeeRecipientByPubKeyRequest) (*ethpb.FeeRecipientByPubKeyResponse, error) {
@@ -83,35 +125,107 @@ func (c *beaconApiValidatorClient) GetFeeRecipientByPubKey(_ context.Context, _ 
 }
 
 func (c *beaconApiValidatorClient) GetSyncCommitteeContribution(ctx context.Context, in *ethpb.SyncCommitteeContributionRequest) (*ethpb.SyncCommitteeContribution, error) {
-	return c.getSyncCommitteeContribution(ctx, in)
+	const action = "GetSyncCommitteeContribution"
+	now := time.Now()
+	resp, err := c.getSyncCommitteeContribution(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) GetSyncMessageBlockRoot(ctx context.Context, _ *empty.Empty) (*ethpb.SyncMessageBlockRootResponse, error) {
-	return c.getSyncMessageBlockRoot(ctx)
+	const action = "GetSyncMessageBlockRoot"
+	now := time.Now()
+	resp, err := c.getSyncMessageBlockRoot(ctx)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) GetSyncSubcommitteeIndex(ctx context.Context, in *ethpb.SyncSubcommitteeIndexRequest) (*ethpb.SyncSubcommitteeIndexResponse, error) {
-	return c.getSyncSubcommitteeIndex(ctx, in)
+	const action = "GetSyncSubcommitteeIndex"
+	now := time.Now()
+	resp, err := c.getSyncSubcommitteeIndex(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) MultipleValidatorStatus(ctx context.Context, in *ethpb.MultipleValidatorStatusRequest) (*ethpb.MultipleValidatorStatusResponse, error) {
-	return c.multipleValidatorStatus(ctx, in)
+	const action = "MultipleValidatorStatus"
+	now := time.Now()
+	resp, err := c.multipleValidatorStatus(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) PrepareBeaconProposer(ctx context.Context, in *ethpb.PrepareBeaconProposerRequest) (*empty.Empty, error) {
-	return new(empty.Empty), c.prepareBeaconProposer(ctx, in.Recipients)
+	const action = "PrepareBeaconProposer"
+	now := time.Now()
+	err := c.prepareBeaconProposer(ctx, in.Recipients)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return new(empty.Empty), err
 }
 
 func (c *beaconApiValidatorClient) ProposeAttestation(ctx context.Context, in *ethpb.Attestation) (*ethpb.AttestResponse, error) {
-	return c.proposeAttestation(ctx, in)
+	const action = "ProposeAttestation"
+	now := time.Now()
+	resp, err := c.proposeAttestation(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) ProposeBeaconBlock(ctx context.Context, in *ethpb.GenericSignedBeaconBlock) (*ethpb.ProposeResponse, error) {
-	return c.proposeBeaconBlock(ctx, in)
+	const action = "ProposeBeaconBlock"
+	now := time.Now()
+	resp, err := c.proposeBeaconBlock(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) ProposeExit(ctx context.Context, in *ethpb.SignedVoluntaryExit) (*ethpb.ProposeExitResponse, error) {
-	return c.proposeExit(ctx, in)
+	const action = "ProposeExit"
+	now := time.Now()
+	resp, err := c.proposeExit(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) StreamSlots(ctx context.Context, in *ethpb.StreamSlotsRequest) (ethpb.BeaconNodeValidator_StreamSlotsClient, error) {
@@ -123,35 +237,107 @@ func (c *beaconApiValidatorClient) StreamBlocksAltair(ctx context.Context, in *e
 }
 
 func (c *beaconApiValidatorClient) SubmitAggregateSelectionProof(ctx context.Context, in *ethpb.AggregateSelectionRequest) (*ethpb.AggregateSelectionResponse, error) {
-	return c.submitAggregateSelectionProof(ctx, in)
+	const action = "SubmitAggregateSelectionProof"
+	now := time.Now()
+	resp, err := c.submitAggregateSelectionProof(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedAggregateSelectionProof(ctx context.Context, in *ethpb.SignedAggregateSubmitRequest) (*ethpb.SignedAggregateSubmitResponse, error) {
-	return c.submitSignedAggregateSelectionProof(ctx, in)
+	const action = "SubmitSignedAggregateSelectionProof"
+	now := time.Now()
+	resp, err := c.submitSignedAggregateSelectionProof(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) SubmitSignedContributionAndProof(ctx context.Context, in *ethpb.SignedContributionAndProof) (*empty.Empty, error) {
-	return new(empty.Empty), c.submitSignedContributionAndProof(ctx, in)
+	const action = "SubmitSignedContributionAndProof"
+	now := time.Now()
+	err := c.submitSignedContributionAndProof(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return new(empty.Empty), err
 }
 
 func (c *beaconApiValidatorClient) SubmitSyncMessage(ctx context.Context, in *ethpb.SyncCommitteeMessage) (*empty.Empty, error) {
-	return new(empty.Empty), c.submitSyncMessage(ctx, in)
+	const action = "SubmitSyncMessage"
+	now := time.Now()
+	err := c.submitSyncMessage(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return new(empty.Empty), err
 }
 
 func (c *beaconApiValidatorClient) SubmitValidatorRegistrations(ctx context.Context, in *ethpb.SignedValidatorRegistrationsV1) (*empty.Empty, error) {
-	return new(empty.Empty), c.submitValidatorRegistrations(ctx, in.Messages)
+	const action = "SubmitValidatorRegistrations"
+	now := time.Now()
+	err := c.submitValidatorRegistrations(ctx, in.Messages)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return new(empty.Empty), err
 }
 
 func (c *beaconApiValidatorClient) SubscribeCommitteeSubnets(ctx context.Context, in *ethpb.CommitteeSubnetsSubscribeRequest, validatorIndices []primitives.ValidatorIndex) (*empty.Empty, error) {
-	return new(empty.Empty), c.subscribeCommitteeSubnets(ctx, in, validatorIndices)
+	const action = "SubscribeCommitteeSubnets"
+	now := time.Now()
+	err := c.subscribeCommitteeSubnets(ctx, in, validatorIndices)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return new(empty.Empty), err
 }
 
 func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb.ValidatorIndexRequest) (*ethpb.ValidatorIndexResponse, error) {
-	return c.validatorIndex(ctx, in)
+	const action = "ValidatorIndex"
+	now := time.Now()
+	resp, err := c.validatorIndex(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	return c.validatorStatus(ctx, in)
+	const action = "ValidatorStatus"
+	now := time.Now()
+	resp, err := c.validatorStatus(ctx, in)
+	httpActionCount.WithLabelValues(action).Inc()
+	if err == nil {
+		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
+	} else {
+		failedHTTPActionCount.WithLabelValues(action).Inc()
+	}
+	return resp, err
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
