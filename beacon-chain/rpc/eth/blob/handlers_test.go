@@ -261,7 +261,7 @@ func TestBlobs(t *testing.T) {
 		require.NoError(t, json.Unmarshal(writer.Body.Bytes(), resp))
 		require.Equal(t, len(resp.Data), 0)
 	})
-	t.Run("outside retention period returns 200 w/empty list ", func(t *testing.T) {
+	t.Run("outside retention period returns 200 w/ empty list ", func(t *testing.T) {
 		u := "http://foo.example/123"
 		request := httptest.NewRequest("GET", u, nil)
 		writer := httptest.NewRecorder()
