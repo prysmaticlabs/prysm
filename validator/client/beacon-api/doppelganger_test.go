@@ -9,10 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/mock/gomock"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/beacon"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/node"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/validator"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
 	"github.com/prysmaticlabs/prysm/v4/testing/require"
@@ -49,17 +46,17 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 		name                        string
 		doppelGangerInput           *ethpb.DoppelGangerRequest
 		doppelGangerExpectedOutput  *ethpb.DoppelGangerResponse
-		getSyncingOutput            *node.SyncStatusResponse
-		getForkOutput               *beacon.GetStateForkResponse
-		getHeadersOutput            *beacon.GetBlockHeadersResponse
+		getSyncingOutput            *structs.SyncStatusResponse
+		getForkOutput               *structs.GetStateForkResponse
+		getHeadersOutput            *structs.GetBlockHeadersResponse
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *beacon.GetValidatorsResponse
+			output *structs.GetValidatorsResponse
 		}
 		getLivelinessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *validator.GetLivenessResponse
+			output             *structs.GetLivenessResponse
 		}
 	}{
 		{
@@ -109,13 +106,13 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &node.SyncStatusResponse{
-				Data: &node.SyncStatusResponseData{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.GetStateForkResponse{
-				Data: &shared.Fork{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x00000000",
 					CurrentVersion:  "0x00000000",
 					Epoch:           "42",
@@ -144,23 +141,23 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false},
 				},
 			},
-			getSyncingOutput: &node.SyncStatusResponse{
-				Data: &node.SyncStatusResponseData{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.GetStateForkResponse{
-				Data: &shared.Fork{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &beacon.GetBlockHeadersResponse{
-				Data: []*shared.SignedBeaconBlockHeaderContainer{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &shared.SignedBeaconBlockHeader{
-							Message: &shared.BeaconBlockHeader{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "99",
 							},
 						},
@@ -190,23 +187,23 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					{PublicKey: pubKey6, DuplicateExists: false}, // not recent - not duplicate
 				},
 			},
-			getSyncingOutput: &node.SyncStatusResponse{
-				Data: &node.SyncStatusResponseData{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: false,
 				},
 			},
-			getForkOutput: &beacon.GetStateForkResponse{
-				Data: &shared.Fork{
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{
 					PreviousVersion: "0x01000000",
 					CurrentVersion:  "0x02000000",
 					Epoch:           "2",
 				},
 			},
-			getHeadersOutput: &beacon.GetBlockHeadersResponse{
-				Data: []*shared.SignedBeaconBlockHeaderContainer{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &shared.SignedBeaconBlockHeader{
-							Message: &shared.BeaconBlockHeader{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "3201",
 							},
 						},
@@ -215,7 +212,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			},
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *beacon.GetValidatorsResponse
+				output *structs.GetValidatorsResponse
 			}{
 				input: []string{
 					// no stringPubKey1 since recent
@@ -225,21 +222,21 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 					stringPubKey5, // non existing validator
 					stringPubKey6, // not recent - not duplicate
 				},
-				output: &beacon.GetValidatorsResponse{
-					Data: []*beacon.ValidatorContainer{
+				output: &structs.GetValidatorsResponse{
+					Data: []*structs.ValidatorContainer{
 						// No "11111" since corresponding validator is recent
-						{Index: "22222", Validator: &beacon.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
-						{Index: "33333", Validator: &beacon.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
-						{Index: "44444", Validator: &beacon.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
+						{Index: "22222", Validator: &structs.Validator{Pubkey: stringPubKey2}}, // not recent - duplicate on previous epoch
+						{Index: "33333", Validator: &structs.Validator{Pubkey: stringPubKey3}}, // not recent - duplicate on current epoch
+						{Index: "44444", Validator: &structs.Validator{Pubkey: stringPubKey4}}, // not recent - duplicate on both previous and current epoch
 						// No "55555" sicee corresponding validator does not exist
-						{Index: "66666", Validator: &beacon.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
+						{Index: "66666", Validator: &structs.Validator{Pubkey: stringPubKey6}}, // not recent - not duplicate
 					},
 				},
 			},
 			getLivelinessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 			}{
 				{
 					inputUrl: "/eth/v1/validator/liveness/99", // previous epoch
@@ -251,8 +248,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: true},  // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: false}, // not recent - duplicate on current epoch
@@ -272,8 +269,8 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 						// No "55555" since corresponding validator it does not exist
 						"66666", // not recent - not duplicate
 					},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							// No "11111" since corresponding validator is recent
 							{Index: "22222", IsLive: false}, // not recent - duplicate on previous epoch
 							{Index: "33333", IsLive: true},  // not recent - duplicate on current epoch
@@ -297,7 +294,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := node.SyncStatusResponse{}
+				syncingResponseJson := structs.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -312,7 +309,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := beacon.GetStateForkResponse{}
+				stateForkResponseJson := structs.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -327,7 +324,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
+				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -343,7 +340,7 @@ func TestCheckDoppelGanger_Nominal(t *testing.T) {
 
 			if testCase.getLivelinessInterfaces != nil {
 				for _, iface := range testCase.getLivelinessInterfaces {
-					livenessResponseJson := validator.GetLivenessResponse{}
+					livenessResponseJson := structs.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)
@@ -405,23 +402,23 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		},
 	}
 
-	standardGetSyncingOutput := &node.SyncStatusResponse{
-		Data: &node.SyncStatusResponseData{
+	standardGetSyncingOutput := &structs.SyncStatusResponse{
+		Data: &structs.SyncStatusResponseData{
 			IsSyncing: false,
 		},
 	}
 
-	standardGetForkOutput := &beacon.GetStateForkResponse{
-		Data: &shared.Fork{
+	standardGetForkOutput := &structs.GetStateForkResponse{
+		Data: &structs.Fork{
 			CurrentVersion: "0x02000000",
 		},
 	}
 
-	standardGetHeadersOutput := &beacon.GetBlockHeadersResponse{
-		Data: []*shared.SignedBeaconBlockHeaderContainer{
+	standardGetHeadersOutput := &structs.GetBlockHeadersResponse{
+		Data: []*structs.SignedBeaconBlockHeaderContainer{
 			{
-				Header: &shared.SignedBeaconBlockHeader{
-					Message: &shared.BeaconBlockHeader{
+				Header: &structs.SignedBeaconBlockHeader{
+					Message: &structs.BeaconBlockHeader{
 						Slot: "1000",
 					},
 				},
@@ -431,15 +428,15 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 	standardGetStateValidatorsInterface := &struct {
 		input  []string
-		output *beacon.GetValidatorsResponse
+		output *structs.GetValidatorsResponse
 		err    error
 	}{
 		input: []string{stringPubKey},
-		output: &beacon.GetValidatorsResponse{
-			Data: []*beacon.ValidatorContainer{
+		output: &structs.GetValidatorsResponse{
+			Data: []*structs.ValidatorContainer{
 				{
 					Index: "42",
-					Validator: &beacon.Validator{
+					Validator: &structs.Validator{
 						Pubkey: stringPubKey,
 					},
 				},
@@ -451,21 +448,21 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 		name                        string
 		expectedErrorMessage        string
 		inputValidatorRequests      []*ethpb.DoppelGangerRequest_ValidatorRequest
-		getSyncingOutput            *node.SyncStatusResponse
+		getSyncingOutput            *structs.SyncStatusResponse
 		getSyncingError             error
-		getForkOutput               *beacon.GetStateForkResponse
+		getForkOutput               *structs.GetStateForkResponse
 		getForkError                error
-		getHeadersOutput            *beacon.GetBlockHeadersResponse
+		getHeadersOutput            *structs.GetBlockHeadersResponse
 		getHeadersError             error
 		getStateValidatorsInterface *struct {
 			input  []string
-			output *beacon.GetValidatorsResponse
+			output *structs.GetValidatorsResponse
 			err    error
 		}
 		getLivenessInterfaces []struct {
 			inputUrl           string
 			inputStringIndexes []string
-			output             *validator.GetLivenessResponse
+			output             *structs.GetLivenessResponse
 			err                error
 		}
 	}{
@@ -485,8 +482,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			name:                   "beacon node not synced",
 			expectedErrorMessage:   "beacon node not synced",
 			inputValidatorRequests: standardInputValidatorRequests,
-			getSyncingOutput: &node.SyncStatusResponse{
-				Data: &node.SyncStatusResponseData{
+			getSyncingOutput: &structs.SyncStatusResponse{
+				Data: &structs.SyncStatusResponseData{
 					IsSyncing: true,
 				},
 			},
@@ -496,7 +493,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to get fork",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput:          &beacon.GetStateForkResponse{},
+			getForkOutput:          &structs.GetStateForkResponse{},
 			getForkError:           errors.New("custom error"),
 		},
 		{
@@ -504,8 +501,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			expectedErrorMessage:   "failed to decode fork version",
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
-			getForkOutput: &beacon.GetStateForkResponse{
-				Data: &shared.Fork{CurrentVersion: "not a version"},
+			getForkOutput: &structs.GetStateForkResponse{
+				Data: &structs.Fork{CurrentVersion: "not a version"},
 			},
 		},
 		{
@@ -514,7 +511,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput:       &beacon.GetBlockHeadersResponse{},
+			getHeadersOutput:       &structs.GetBlockHeadersResponse{},
 			getHeadersError:        errors.New("custom error"),
 		},
 		{
@@ -523,11 +520,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			inputValidatorRequests: standardInputValidatorRequests,
 			getSyncingOutput:       standardGetSyncingOutput,
 			getForkOutput:          standardGetForkOutput,
-			getHeadersOutput: &beacon.GetBlockHeadersResponse{
-				Data: []*shared.SignedBeaconBlockHeaderContainer{
+			getHeadersOutput: &structs.GetBlockHeadersResponse{
+				Data: []*structs.SignedBeaconBlockHeaderContainer{
 					{
-						Header: &shared.SignedBeaconBlockHeader{
-							Message: &shared.BeaconBlockHeader{
+						Header: &structs.SignedBeaconBlockHeader{
+							Message: &structs.BeaconBlockHeader{
 								Slot: "not a slot",
 							},
 						},
@@ -544,7 +541,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *beacon.GetValidatorsResponse
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input: []string{stringPubKey},
@@ -560,11 +557,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *beacon.GetValidatorsResponse
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{nil}},
+				output: &structs.GetValidatorsResponse{Data: []*structs.ValidatorContainer{nil}},
 			},
 		},
 		{
@@ -576,11 +573,11 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getHeadersOutput:       standardGetHeadersOutput,
 			getStateValidatorsInterface: &struct {
 				input  []string
-				output *beacon.GetValidatorsResponse
+				output *structs.GetValidatorsResponse
 				err    error
 			}{
 				input:  []string{stringPubKey},
-				output: &beacon.GetValidatorsResponse{Data: []*beacon.ValidatorContainer{{Validator: nil}}},
+				output: &structs.GetValidatorsResponse{Data: []*structs.ValidatorContainer{{Validator: nil}}},
 			},
 		},
 		{
@@ -594,13 +591,13 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output:             &validator.GetLivenessResponse{},
+					output:             &structs.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -616,14 +613,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{nil},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{nil},
 					},
 				},
 			},
@@ -639,20 +636,20 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output:             &validator.GetLivenessResponse{},
+					output:             &structs.GetLivenessResponse{},
 					err:                errors.New("custom error"),
 				},
 			},
@@ -668,21 +665,21 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 			},
@@ -698,14 +695,14 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			getLivenessInterfaces: []struct {
 				inputUrl           string
 				inputStringIndexes []string
-				output             *validator.GetLivenessResponse
+				output             *structs.GetLivenessResponse
 				err                error
 			}{
 				{
 					inputUrl:           "/eth/v1/validator/liveness/30",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{
 							{
 								Index: "42",
 							},
@@ -715,8 +712,8 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 				{
 					inputUrl:           "/eth/v1/validator/liveness/31",
 					inputStringIndexes: []string{"42"},
-					output: &validator.GetLivenessResponse{
-						Data: []*validator.Liveness{},
+					output: &structs.GetLivenessResponse{
+						Data: []*structs.Liveness{},
 					},
 				},
 			},
@@ -733,7 +730,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			ctx := context.Background()
 
 			if testCase.getSyncingOutput != nil {
-				syncingResponseJson := node.SyncStatusResponse{}
+				syncingResponseJson := structs.SyncStatusResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -748,7 +745,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getForkOutput != nil {
-				stateForkResponseJson := beacon.GetStateForkResponse{}
+				stateForkResponseJson := structs.GetStateForkResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -763,7 +760,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 			}
 
 			if testCase.getHeadersOutput != nil {
-				blockHeadersResponseJson := beacon.GetBlockHeadersResponse{}
+				blockHeadersResponseJson := structs.GetBlockHeadersResponse{}
 
 				jsonRestHandler.EXPECT().Get(
 					ctx,
@@ -793,7 +790,7 @@ func TestCheckDoppelGanger_Errors(t *testing.T) {
 
 			if testCase.getLivenessInterfaces != nil {
 				for _, iface := range testCase.getLivenessInterfaces {
-					livenessResponseJson := validator.GetLivenessResponse{}
+					livenessResponseJson := structs.GetLivenessResponse{}
 
 					marshalledIndexes, err := json.Marshal(iface.inputStringIndexes)
 					require.NoError(t, err)

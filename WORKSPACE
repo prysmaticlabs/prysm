@@ -106,6 +106,13 @@ load("@rules_distroless//distroless:dependencies.bzl", "rules_distroless_depende
 
 rules_distroless_dependencies()
 
+http_archive(
+    name = "distroless",
+    integrity = "sha256-Cf00kUp1NyXA3LzbdyYy4Kda27wbkB8+A9MliTxq4jE=",
+    strip_prefix = "distroless-9dc924b9fe812eec2fa0061824dcad39eb09d0d6",
+    url = "https://github.com/GoogleContainerTools/distroless/archive/9dc924b9fe812eec2fa0061824dcad39eb09d0d6.tar.gz",  # 2024-01-24
+)
+
 load("@aspect_bazel_lib//lib:repositories.bzl", "aspect_bazel_lib_dependencies", "aspect_bazel_lib_register_toolchains")
 
 aspect_bazel_lib_dependencies()
@@ -143,6 +150,10 @@ http_archive(
         "https://github.com/bazelbuild/rules_go/releases/download/v0.43.0/rules_go-v0.43.0.zip",
     ],
 )
+
+load("//:distroless_deps.bzl", "distroless_deps")
+
+distroless_deps()
 
 # Override default import in rules_go with special patch until
 # https://github.com/gogo/protobuf/pull/582 is merged.

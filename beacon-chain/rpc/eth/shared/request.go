@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/gorilla/mux"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/blockchain"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/sync"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -126,8 +127,8 @@ func IsSyncing(
 		httputil.WriteError(w, errJson)
 		return true
 	}
-	syncDetails := &SyncDetailsContainer{
-		Data: &SyncDetails{
+	syncDetails := &structs.SyncDetailsContainer{
+		Data: &structs.SyncDetails{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(timeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    true,

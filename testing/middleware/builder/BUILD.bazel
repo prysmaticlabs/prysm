@@ -10,8 +10,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//api/client/builder:go_default_library",
+        "//api/server/structs:go_default_library",
         "//beacon-chain/core/signing:go_default_library",
-        "//beacon-chain/rpc/eth/shared:go_default_library",
         "//config/params:go_default_library",
         "//consensus-types/blocks:go_default_library",
         "//consensus-types/interfaces:go_default_library",

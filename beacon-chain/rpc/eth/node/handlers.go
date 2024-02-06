@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
 	"github.com/prysmaticlabs/prysm/v4/network/httputil"
@@ -37,8 +38,8 @@ func (s *Server) GetSyncStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	headSlot := s.HeadFetcher.HeadSlot()
-	response := &SyncStatusResponse{
-		Data: &SyncStatusResponseData{
+	response := &structs.SyncStatusResponse{
+		Data: &structs.SyncStatusResponseData{
 			HeadSlot:     strconv.FormatUint(uint64(headSlot), 10),
 			SyncDistance: strconv.FormatUint(uint64(s.GenesisTimeFetcher.CurrentSlot()-headSlot), 10),
 			IsSyncing:    s.SyncChecker.Syncing(),
@@ -75,13 +76,13 @@ func (s *Server) GetIdentity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := &GetIdentityResponse{
-		Data: &Identity{
+	resp := &structs.GetIdentityResponse{
+		Data: &structs.Identity{
 			PeerId:             peerId,
 			Enr:                "enr:" + serializedEnr,
 			P2PAddresses:       p2pAddresses,
 			DiscoveryAddresses: discoveryAddresses,
-			Metadata: &Metadata{
+			Metadata: &structs.Metadata{
 				SeqNumber: strconv.FormatUint(s.MetadataProvider.MetadataSeq(), 10),
 				Attnets:   hexutil.Encode(s.MetadataProvider.Metadata().AttnetsBitfield()),
 			},
@@ -97,8 +98,8 @@ func (*Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 	defer span.End()
 
 	v := fmt.Sprintf("Prysm/%s (%s %s)", version.SemanticVersion(), runtime.GOOS, runtime.GOARCH)
-	resp := &GetVersionResponse{
-		Data: &Version{
+	resp := &structs.GetVersionResponse{
+		Data: &structs.Version{
 			Version: v,
 		},
 	}

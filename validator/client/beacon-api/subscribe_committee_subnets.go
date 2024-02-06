@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/prysm/v4/beacon-chain/rpc/eth/shared"
+	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/time/slots"
@@ -23,7 +23,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 	}
 
 	slotToCommitteesAtSlotMap := make(map[primitives.Slot]uint64)
-	jsonCommitteeSubscriptions := make([]*shared.BeaconCommitteeSubscription, len(in.CommitteeIds))
+	jsonCommitteeSubscriptions := make([]*structs.BeaconCommitteeSubscription, len(in.CommitteeIds))
 	for index := range in.CommitteeIds {
 		subscribeSlot := in.Slots[index]
 		subscribeCommitteeId := in.CommitteeIds[index]
@@ -59,7 +59,7 @@ func (c beaconApiValidatorClient) subscribeCommitteeSubnets(ctx context.Context,
 			}
 		}
 
-		jsonCommitteeSubscriptions[index] = &shared.BeaconCommitteeSubscription{
+		jsonCommitteeSubscriptions[index] = &structs.BeaconCommitteeSubscription{
 			CommitteeIndex:   strconv.FormatUint(uint64(subscribeCommitteeId), 10),
 			CommitteesAtSlot: strconv.FormatUint(committeesAtSlot, 10),
 			Slot:             strconv.FormatUint(uint64(subscribeSlot), 10),
