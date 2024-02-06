@@ -150,7 +150,6 @@ func run(ctx context.Context, v iface.Validator) {
 		case currentKeys := <-accountsChangedChan: // should be less of a priority than next slot
 			onAccountsChanged(ctx, v, currentKeys, accountsChangedChan)
 		}
-
 	}
 }
 
