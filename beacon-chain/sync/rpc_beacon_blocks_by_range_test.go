@@ -1304,7 +1304,7 @@ func TestRPCBeaconBlocksByRange_ValidateRangeAvailibility(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := tt.svcCreator(t)
-			avail, err := s.validateRangeAvailibility(context.Background(), tt.rp)
+			avail, err := s.validateRangeAvailability(context.Background(), tt.rp)
 			if tt.expectedError != nil {
 				assert.ErrorContains(t, tt.expectedError.Error(), err, "got incorrect error")
 			} else {

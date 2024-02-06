@@ -39,6 +39,19 @@ func (s *Service) beaconBlocksByRangeRPCHandler(ctx context.Context, msg interfa
 		tracing.AnnotateError(span, err)
 		return err
 	}
+	available, err := s.validateRangeAvailability(ctx, rp)
+	if err != nil {
+		log.WithError(err).Debug("error in validating range availability")
+		s.writeErrorResponseToStream(responseCodeServerError, p2ptypes.ErrGeneric.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return err
+	}
+	if !available {
+		log.Debug("error in validating range availability")
+		s.writeErrorResponseToStream(responseCodeResourceUnavailable, p2ptypes.ErrResourceUnavailable.Error(), stream)
+		tracing.AnnotateError(span, err)
+		return nil
+	}
 
 	blockLimiter, err := s.rateLimiter.topicCollector(string(stream.Protocol()))
 	if err != nil {
@@ -127,7 +140,7 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	return rp, nil
 }
 
-func (s *Service) validateRangeAvailibility(ctx context.Context, rp rangeParams) (bool, error) {
+func (s *Service) validateRangeAvailability(ctx context.Context, rp rangeParams) (bool, error) {
 	startBlock := rp.start
 	bs, err := s.cfg.beaconDB.BackfillStatus(ctx)
 	if err != nil {
