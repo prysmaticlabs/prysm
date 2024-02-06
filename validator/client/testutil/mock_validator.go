@@ -6,12 +6,13 @@ import (
 	"time"
 
 	api "github.com/prysmaticlabs/prysm/v4/api/client"
+	"github.com/prysmaticlabs/prysm/v4/api/client/beacon"
+	"github.com/prysmaticlabs/prysm/v4/api/client/event"
 	fieldparams "github.com/prysmaticlabs/prysm/v4/config/fieldparams"
 	validatorserviceconfig "github.com/prysmaticlabs/prysm/v4/config/validator/service"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	prysmTime "github.com/prysmaticlabs/prysm/v4/time"
-	"github.com/prysmaticlabs/prysm/v4/validator/client"
 	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/keymanager"
 	log "github.com/sirupsen/logrus"
@@ -288,7 +289,11 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *valida
 	return nil
 }
 
-func (fv *FakeValidator) StartEventStream(_ context.Context) error {
+func (fv *FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
+	return
+}
+
+func (fv *FakeValidator) ProcessEvent(event *event.Event) error {
 	return nil
 }
 
@@ -296,10 +301,10 @@ func (fv *FakeValidator) EventStreamIsRunning() bool {
 	return true
 }
 
-func (fv *FakeValidator) NodeIsHealthy(context.Context) bool {
+func (fv *FakeValidator) NodeIsHealthy(_ context.Context) bool {
 	return true
 }
 
-func (fv *FakeValidator) NodeHealthTracker() *client.BeaconNodeHealth {
+func (fv *FakeValidator) NodeHealthTracker() *beacon.NodeHealth {
 	return nil
 }
