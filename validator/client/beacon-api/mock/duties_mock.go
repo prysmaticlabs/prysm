@@ -9,7 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
-	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
+	structs "github.com/prysmaticlabs/prysm/v4/api/server/structs"
 	primitives "github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 )
 

@@ -62,20 +62,6 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 	if vs.SyncChecker.Syncing() {
 		return nil, status.Error(codes.Unavailable, "Syncing to latest head, not ready to respond")
 	}
-
-	// process attestations and update head in forkchoice
-	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
-	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
-	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
-	if parentRoot != headRoot {
-		blockchain.LateBlockAttemptedReorgCount.Inc()
-		log.WithFields(logrus.Fields{
-			"slot":       req.Slot,
-			"parentRoot": fmt.Sprintf("%#x", parentRoot),
-			"headRoot":   fmt.Sprintf("%#x", headRoot),
-		}).Warn("late block attempted reorg failed")
-	}
-
 	// An optimistic validator MUST NOT produce a block (i.e., sign across the DOMAIN_BEACON_PROPOSER domain).
 	if slots.ToEpoch(req.Slot) >= params.BeaconConfig().BellatrixForkEpoch {
 		if err := vs.optimisticStatus(ctx); err != nil {
@@ -83,19 +69,14 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 		}
 	}
 
+	head, parentRoot, err := vs.getParentState(ctx, req.Slot)
+	if err != nil {
+		return nil, err
+	}
 	sBlk, err := getEmptyBlock(req.Slot)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not prepare block: %v", err)
 	}
-	head, err := vs.HeadFetcher.HeadState(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
-	}
-	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], req.Slot)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", req.Slot, err)
-	}
-
 	// Set slot, graffiti, randao reveal, and parent root.
 	sBlk.SetSlot(req.Slot)
 	sBlk.SetGraffiti(req.Graffiti)
@@ -132,6 +113,67 @@ func (vs *Server) GetBeaconBlock(ctx context.Context, req *ethpb.BlockRequest) (
 
 	// Blob cache is updated after BuildBlockParallel
 	return vs.constructGenericBeaconBlock(sBlk, bundleCache.get(req.Slot))
+}
+
+func (vs *Server) handleFailedReorgAttempt(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (state.BeaconState, error) {
+	blockchain.LateBlockAttemptedReorgCount.Inc()
+	log.WithFields(logrus.Fields{
+		"slot":       slot,
+		"parentRoot": fmt.Sprintf("%#x", parentRoot),
+		"headRoot":   fmt.Sprintf("%#x", headRoot),
+	}).Warn("late block attempted reorg failed")
+	// Try to get the state from the NSC
+	head := transition.NextSlotState(parentRoot[:], slot)
+	if head != nil {
+		return head, nil
+	}
+	// cache miss
+	head, err := vs.StateGen.StateByRoot(ctx, parentRoot)
+	if err != nil {
+		return nil, status.Error(codes.Unavailable, "could not obtain head state")
+	}
+	return head, nil
+}
+
+func (vs *Server) getHeadNoFailedReorg(ctx context.Context, slot primitives.Slot, parentRoot [32]byte) (state.BeaconState, error) {
+	// Try to get the state from the NSC
+	head := transition.NextSlotState(parentRoot[:], slot)
+	if head != nil {
+		return head, nil
+	}
+	head, err := vs.HeadFetcher.HeadState(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not get head state: %v", err)
+	}
+	return head, nil
+}
+
+func (vs *Server) getParentStateFromReorgData(ctx context.Context, slot primitives.Slot, parentRoot, headRoot [32]byte) (head state.BeaconState, err error) {
+	if parentRoot != headRoot {
+		head, err = vs.handleFailedReorgAttempt(ctx, slot, parentRoot, headRoot)
+	} else {
+		head, err = vs.getHeadNoFailedReorg(ctx, slot, parentRoot)
+	}
+	if err != nil {
+		return nil, err
+	}
+	if head.Slot() >= slot {
+		return head, nil
+	}
+	head, err = transition.ProcessSlotsUsingNextSlotCache(ctx, head, parentRoot[:], slot)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not process slots up to %d: %v", slot, err)
+	}
+	return head, nil
+}
+
+func (vs *Server) getParentState(ctx context.Context, slot primitives.Slot) (state.BeaconState, [32]byte, error) {
+	// process attestations and update head in forkchoice
+	vs.ForkchoiceFetcher.UpdateHead(ctx, vs.TimeFetcher.CurrentSlot())
+	headRoot := vs.ForkchoiceFetcher.CachedHeadRoot()
+	parentRoot := vs.ForkchoiceFetcher.GetProposerHead()
+	head, err := vs.getParentStateFromReorgData(ctx, slot, parentRoot, headRoot)
+	return head, parentRoot, err
 }
 
 func (vs *Server) BuildBlockParallel(ctx context.Context, sBlk interfaces.SignedBeaconBlock, head state.BeaconState, skipMevBoost bool, builderBoostFactor uint64) error {

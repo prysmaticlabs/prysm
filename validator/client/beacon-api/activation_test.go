@@ -290,6 +290,14 @@ func TestActivation_JsonResponseError(t *testing.T) {
 		errors.New("some specific json error"),
 	).Times(1)
 
+	jsonRestHandler.EXPECT().Get(
+		ctx,
+		gomock.Any(),
+		gomock.Any(),
+	).Return(
+		errors.New("some specific json error"),
+	).Times(1)
+
 	validatorClient := beaconApiValidatorClient{
 		stateValidatorsProvider: beaconApiStateValidatorsProvider{
 			jsonRestHandler: jsonRestHandler,

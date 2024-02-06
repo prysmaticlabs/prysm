@@ -152,8 +152,8 @@ func TestServer_InitializeRoutes(t *testing.T) {
 		"/eth/v1/validator/aggregate_and_proofs":           {http.MethodPost},
 		"/eth/v1/validator/beacon_committee_subscriptions": {http.MethodPost},
 		"/eth/v1/validator/sync_committee_subscriptions":   {http.MethodPost},
-		//"/eth/v1/validator/beacon_committee_selections":   {http.MethodPost}, // not implemented
-		"/eth/v1/validator/sync_committee_contribution": {http.MethodGet},
+		"/eth/v1/validator/beacon_committee_selections":    {http.MethodPost},
+		"/eth/v1/validator/sync_committee_contribution":    {http.MethodGet},
 		//"/eth/v1/validator/sync_committee_selections":  {http.MethodPost}, // not implemented
 		"/eth/v1/validator/contribution_and_proofs": {http.MethodPost},
 		"/eth/v1/validator/prepare_beacon_proposer": {http.MethodPost},

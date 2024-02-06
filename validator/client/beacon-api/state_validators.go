@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -91,7 +92,31 @@ func (c beaconApiStateValidatorsProvider) getStateValidatorsHelper(
 		return nil, errors.Wrapf(err, "failed to marshal request into JSON")
 	}
 	stateValidatorsJson := &structs.GetValidatorsResponse{}
-	if err = c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson); err != nil {
+	// First try POST endpoint to check whether it is supported by the beacon node.
+	if err = c.jsonRestHandler.Post(ctx, endpoint, nil, bytes.NewBuffer(reqBytes), stateValidatorsJson); err == nil {
+		if stateValidatorsJson.Data == nil {
+			return nil, errors.New("stateValidatorsJson.Data is nil")
+		}
+
+		return stateValidatorsJson, nil
+	}
+
+	// Re-initialise the response just in case.
+	stateValidatorsJson = &structs.GetValidatorsResponse{}
+
+	// Seems like POST isn't supported by the beacon node, let's try the GET one.
+	queryParams := url.Values{}
+	for _, id := range req.Ids {
+		queryParams.Add("id", id)
+	}
+	for _, st := range req.Statuses {
+		queryParams.Add("status", st)
+	}
+
+	query := buildURL(endpoint, queryParams)
+
+	err = c.jsonRestHandler.Get(ctx, query, stateValidatorsJson)
+	if err != nil {
 		return nil, err
 	}
 

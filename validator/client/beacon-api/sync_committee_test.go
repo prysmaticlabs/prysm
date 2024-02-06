@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -336,6 +337,27 @@ func TestGetSyncSubCommitteeIndex(t *testing.T) {
 			).Return(
 				test.validatorsErr,
 			).Times(1)
+
+			if test.validatorsErr != nil {
+				// Then try the GET call which will also return error.
+				queryParams := url.Values{}
+				for _, id := range valsReq.Ids {
+					queryParams.Add("id", id)
+				}
+				for _, st := range valsReq.Statuses {
+					queryParams.Add("status", st)
+				}
+
+				query := buildURL("/eth/v1/beacon/states/head/validators", queryParams)
+
+				jsonRestHandler.EXPECT().Get(
+					ctx,
+					query,
+					&structs.GetValidatorsResponse{},
+				).Return(
+					test.validatorsErr,
+				).Times(1)
+			}
 
 			validatorIndicesBytes, err := json.Marshal([]string{validatorIndex})
 			require.NoError(t, err)

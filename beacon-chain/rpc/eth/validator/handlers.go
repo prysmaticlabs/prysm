@@ -1086,6 +1086,12 @@ func (s *Server) GetLiveness(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJson(w, resp)
 }
 
+// BeaconCommitteeSelections responds with appropriate message and status code according the spec:
+// https://ethereum.github.io/beacon-APIs/#/Validator/submitBeaconCommitteeSelections.
+func (s *Server) BeaconCommitteeSelections(w http.ResponseWriter, _ *http.Request) {
+	httputil.HandleError(w, "Endpoint not implemented", 501)
+}
+
 // attestationDependentRoot is get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
 // or the genesis block root in the case of underflow.
 func attestationDependentRoot(s state.BeaconState, epoch primitives.Epoch) ([]byte, error) {
