@@ -6,6 +6,7 @@ import (
 
 	libp2pcore "github.com/libp2p/go-libp2p/core"
 	"github.com/pkg/errors"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db"
 	p2ptypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/p2p/types"
 	"github.com/prysmaticlabs/prysm/v4/cmd/beacon-chain/flags"
 	"github.com/prysmaticlabs/prysm/v4/config/params"
@@ -124,6 +125,40 @@ func validateRangeRequest(r *pb.BeaconBlocksByRangeRequest, current primitives.S
 	}
 
 	return rp, nil
+}
+
+func (s *Service) validateRangeAvailibility(ctx context.Context, rp rangeParams) (bool, error) {
+	startBlock := rp.start
+	hs := s.cfg.chain.HeadSlot()
+	// This is beyond our current head slot.
+	if startBlock > hs {
+		return false, nil
+	}
+	bs, err := s.cfg.beaconDB.BackfillStatus(ctx)
+	if err != nil {
+		// If this is a genesis or legacy node, we retrieve the checkpoint
+		// sync block.
+		if !errors.Is(err, db.ErrNotFound) {
+			return false, err
+		}
+		cpr, err := s.cfg.beaconDB.OriginCheckpointBlockRoot(ctx)
+		if errors.Is(err, db.ErrNotFoundOriginBlockRoot) {
+			// This would be a genesis synced node and
+			// would be able to serve all the required blocks.
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		cBlk, err := s.cfg.beaconDB.Block(ctx, cpr)
+		if err != nil {
+			return false, err
+		}
+		// Mark range as unavailable if our checkpoint block has
+		// as slot less than or equal to the start of the request.
+		return cBlk.Block().Slot() <= startBlock, nil
+	}
+	return primitives.Slot(bs.LowSlot) <= startBlock, nil
 }
 
 func (s *Service) writeBlockBatchToStream(ctx context.Context, batch blockBatch, stream libp2pcore.Stream) error {
