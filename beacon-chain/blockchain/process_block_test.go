@@ -1256,6 +1256,7 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 		err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 		require.NoError(t, err)
 	}
+	lastValidRoot := service.cfg.ForkChoiceStore.CachedHeadRoot()
 	// Check that we haven't justified the second epoch yet
 	jc := service.cfg.ForkChoiceStore.JustifiedCheckpoint()
 	require.Equal(t, primitives.Epoch(0), jc.Epoch)
@@ -1287,7 +1288,8 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.Equal(t, firstInvalidRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
 
 	// import another block to find out that it was invalid
-	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus, ForkChoiceUpdatedResp: lvh}
+	mockEngine = &mockExecution.EngineClient{ErrNewPayload: execution.ErrAcceptedSyncingPayloadStatus, ErrForkchoiceUpdated: execution.ErrInvalidPayloadStatus,
+		ForkChoiceUpdatedResp: lvh, OverrideValidHash: [32]byte(lvh)}
 	service.cfg.ExecutionEngineCaller = mockEngine
 	driftGenesisTime(service, 19, 0)
 	st, err = service.HeadState(ctx)
@@ -1305,16 +1307,12 @@ func TestStore_NoViableHead_FCU(t *testing.T) {
 	require.NoError(t, service.savePostStateInfo(ctx, root, wsb, postState))
 	err = service.postBlockProcess(&postBlockProcessConfig{ctx, wsb, root, [32]byte{}, postState, false})
 	require.ErrorContains(t, "received an INVALID payload from execution engine", err)
-	// Check that forkchoice's head is the last invalid block imported. The
-	// store's headroot is the previous head (since the invalid block did
-	// not finish importing) one and that the node is optimistic
-	require.Equal(t, root, service.cfg.ForkChoiceStore.CachedHeadRoot())
-	headRoot, err := service.HeadRoot(ctx)
-	require.NoError(t, err)
-	require.Equal(t, firstInvalidRoot, bytesutil.ToBytes32(headRoot))
+	// The forkchoice will prune blocks 19 and 18, and the lvh block at slot 17 will become head
+	require.Equal(t, lastValidRoot, service.cfg.ForkChoiceStore.CachedHeadRoot())
+	// The mock returns non-syncing status for lvh, so we are not optimistic anymore
 	optimistic, err := service.IsOptimistic(ctx)
 	require.NoError(t, err)
-	require.Equal(t, true, optimistic)
+	require.Equal(t, false, optimistic)
 
 	// import another block based on the last valid head state
 	mockEngine = &mockExecution.EngineClient{}
