@@ -15,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v4/config/params"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	"github.com/prysmaticlabs/prysm/v4/crypto/bls"
+	"github.com/prysmaticlabs/prysm/v4/crypto/bls/common"
 	"github.com/prysmaticlabs/prysm/v4/encoding/bytesutil"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/testing/assert"
@@ -24,208 +25,291 @@ import (
 	logTest "github.com/sirupsen/logrus/hooks/test"
 )
 
-func Test_processQueuedAttestations(t *testing.T) {
-	type args struct {
-		attestationQueue []*slashertypes.IndexedAttestationWrapper
-		currentEpoch     primitives.Epoch
-	}
+func Test_processAttestations(t *testing.T) {
+	type (
+		attestationInfo struct {
+			source          primitives.Epoch
+			target          primitives.Epoch
+			indices         []uint64
+			beaconBlockRoot []byte
+		}
+
+		slashingInfo struct {
+			attestationInfo_1 *attestationInfo
+			attestationInfo_2 *attestationInfo
+		}
+	)
+
 	tests := []struct {
-		name              string
-		args              args
-		shouldBeSlashable bool
+		name                  string
+		currentEpoch          primitives.Epoch
+		attestationsInfo      []*attestationInfo
+		expectedSlashingsInfo []*slashingInfo
 	}{
 		{
-			name: "Same target with different signing roots",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, []byte{1}),
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, []byte{2}),
-				},
-				currentEpoch: 4,
+			name:         "Same target with different signing roots",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
 			},
-			shouldBeSlashable: true,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{2}},
+				},
+			},
 		},
 		{
-			name: "Same target with same signing roots",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, []byte{1}),
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, []byte{1}),
-				},
-				currentEpoch: 4,
+			name:         "Same target with same signing roots",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: []byte{1}},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Detects surrounding vote (source 1, target 2), (source 0, target 3)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: true,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+			},
 		},
 		{
-			name: "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 50, 51, []uint64{0}, nil),
-					createAttestationWrapperEmptySig(t, 0, 1000, []uint64{0}, nil),
-				},
-				currentEpoch: 1000,
+			name:         "Detects surrounding vote (source 50, target 51), (source 0, target 1000)",
+			currentEpoch: 1000,
+			attestationsInfo: []*attestationInfo{
+				{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+				{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: true,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 1000, indices: []uint64{0}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 50, target: 51, indices: []uint64{0}, beaconBlockRoot: nil},
+				},
+			},
 		},
 		{
-			name: "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: true,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+			},
 		},
 		{
-			name: "Detects double vote, (source 1, target 2), (source 0, target 2)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 0, 2, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Detects surrounded vote (source 0, target 3), (source 1, target 2)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: true,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+			},
 		},
 		{
-			name: "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0}, nil),
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Detects double vote, (source 1, target 2), (source 0, target 2)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: []*slashingInfo{
+				{
+					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+				{
+					attestationInfo_1: &attestationInfo{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+					attestationInfo_2: &attestationInfo{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				},
+			},
 		},
 		{
-			name: "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{2, 3}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, surrounding but non-overlapping attesting indices within same validator chunk index",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0}, beaconBlockRoot: nil},
+				{source: 0, target: 3, indices: []uint64{1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, nil),
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, surrounded but non-overlapping attesting indices within same validator chunk index",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 1, target: 2, indices: []uint64{2, 3}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0}, nil),
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, surrounding but non-overlapping attesting indices in different validator chunk index",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
+				{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, (source 1, target 2), (source 2, target 3)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 1, 2, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 2, 3, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, surrounded but non-overlapping attesting indices in different validator chunk index",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0}, beaconBlockRoot: nil},
+				{source: 1, target: 2, indices: []uint64{params.BeaconConfig().MinGenesisActiveValidatorCount - 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, (source 0, target 3), (source 2, target 4)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 2, 4, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, (source 1, target 2), (source 2, target 3)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 1, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 2, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, (source 0, target 2), (source 0, target 3)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 2, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, (source 0, target 3), (source 2, target 4)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 2, target: 4, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
 		},
 		{
-			name: "Not slashable, (source 0, target 3), (source 0, target 2)",
-			args: args{
-				attestationQueue: []*slashertypes.IndexedAttestationWrapper{
-					createAttestationWrapperEmptySig(t, 0, 3, []uint64{0, 1}, nil),
-					createAttestationWrapperEmptySig(t, 0, 2, []uint64{0, 1}, nil),
-				},
-				currentEpoch: 4,
+			name:         "Not slashable, (source 0, target 2), (source 0, target 3)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
 			},
-			shouldBeSlashable: false,
+			expectedSlashingsInfo: nil,
+		},
+		{
+			name:         "Not slashable, (source 0, target 3), (source 0, target 2)",
+			currentEpoch: 4,
+			attestationsInfo: []*attestationInfo{
+				{source: 0, target: 3, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+				{source: 0, target: 2, indices: []uint64{0, 1}, beaconBlockRoot: nil},
+			},
+			expectedSlashingsInfo: nil,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create context.
+			ctx := context.Background()
+
+			// Configure logging.
 			hook := logTest.NewGlobal()
 			defer hook.Reset()
+
+			// Configure the slasher database.
 			slasherDB := dbtest.SetupSlasherDB(t)
-			ctx, cancel := context.WithCancel(context.Background())
 
-			currentTime := time.Now()
-			totalSlots := uint64(tt.args.currentEpoch) * uint64(params.BeaconConfig().SlotsPerEpoch)
-			secondsSinceGenesis := time.Duration(totalSlots * params.BeaconConfig().SecondsPerSlot)
-			genesisTime := currentTime.Add(-secondsSinceGenesis * time.Second)
-
+			// Configure the beacon state.
 			beaconState, err := util.NewBeaconState()
 			require.NoError(t, err)
-			slot, err := slots.EpochStart(tt.args.currentEpoch)
+
+			// Get the currentSlot for the current epoch.
+			currentSlot, err := slots.EpochStart(tt.currentEpoch)
 			require.NoError(t, err)
-			require.NoError(t, beaconState.SetSlot(slot))
-			mockChain := &mock.ChainService{
-				State: beaconState,
-				Slot:  &slot,
+
+			// Create the mock chain service.
+			mockChain := &mock.ChainService{State: beaconState}
+
+			// Create the mock slashing pool inserter.
+			mockSlashingPoolInserter := &slashingsmock.PoolMock{}
+
+			// Create the service configuration.
+			serviceConfig := &ServiceConfig{
+				Database:                slasherDB,
+				HeadStateFetcher:        mockChain,
+				AttestationStateFetcher: mockChain,
+				SlashingPoolInserter:    mockSlashingPoolInserter,
 			}
+
+			// Create the slasher service.
+			slasherService, err := New(context.Background(), serviceConfig)
+			require.NoError(t, err)
 
 			// Initialize validators in the state.
 			numVals := params.BeaconConfig().MinGenesisActiveValidatorCount
 			validators := make([]*ethpb.Validator, numVals)
-			privKeys := make([]bls.SecretKey, numVals)
-			for i := range validators {
-				privKey, err := bls.RandKey()
+			privateKeys := make([]bls.SecretKey, numVals)
+
+			for i := uint64(0); i < numVals; i++ {
+				// Create a random private key.
+				privateKey, err := bls.RandKey()
 				require.NoError(t, err)
-				privKeys[i] = privKey
-				validators[i] = &ethpb.Validator{
-					PublicKey:             privKey.PublicKey().Marshal(),
-					WithdrawalCredentials: make([]byte, 32),
-				}
+
+				// Add the private key to the list.
+				privateKeys[i] = privateKey
+
+				// Derive the public key from the private key.
+				publicKey := privateKey.PublicKey().Marshal()
+
+				// Initialize the validator.
+				validator := &ethpb.Validator{PublicKey: publicKey}
+
+				// Add the validator to the list.
+				validators[i] = validator
 			}
+
+			// Set the validators into the state.
 			err = beaconState.SetValidators(validators)
 			require.NoError(t, err)
+
+			// Compute the signing domain.
 			domain, err := signing.Domain(
 				beaconState.Fork(),
 				0,
@@ -234,50 +318,64 @@ func Test_processQueuedAttestations(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			// Create valid signatures for all input attestations in the test.
-			for _, attestationWrapper := range tt.args.attestationQueue {
-				signingRoot, err := signing.ComputeSigningRoot(attestationWrapper.IndexedAttestation.Data, domain)
-				require.NoError(t, err)
-				attestingIndices := attestationWrapper.IndexedAttestation.AttestingIndices
-				sigs := make([]bls.Signature, len(attestingIndices))
-				for i, validatorIndex := range attestingIndices {
-					privKey := privKeys[validatorIndex]
-					sigs[i] = privKey.Sign(signingRoot[:])
+			// Build attestation wrappers.
+			attestationsCount := len(tt.attestationsInfo)
+			attestationWrappers := make([]*slashertypes.IndexedAttestationWrapper, 0, attestationsCount)
+			for _, attestationInfo := range tt.attestationsInfo {
+				// Create a wrapped attestation.
+				attestationWrapper := createAttestationWrapper(
+					t,
+					domain,
+					privateKeys,
+					attestationInfo.source,
+					attestationInfo.target,
+					attestationInfo.indices,
+					attestationInfo.beaconBlockRoot,
+				)
+
+				// Add the wrapped attestation to the list.
+				attestationWrappers = append(attestationWrappers, attestationWrapper)
+			}
+
+			// Build expected attester slashings.
+			expectedSlashings := make([]*ethpb.AttesterSlashing, 0, len(tt.expectedSlashingsInfo))
+			for _, slashingInfo := range tt.expectedSlashingsInfo {
+				// Create attestations.
+				attestation_1 := createAttestationWrapper(
+					t,
+					domain,
+					privateKeys,
+					slashingInfo.attestationInfo_1.source,
+					slashingInfo.attestationInfo_1.target,
+					slashingInfo.attestationInfo_1.indices,
+					slashingInfo.attestationInfo_1.beaconBlockRoot,
+				)
+
+				attestation_2 := createAttestationWrapper(
+					t,
+					domain,
+					privateKeys,
+					slashingInfo.attestationInfo_2.source,
+					slashingInfo.attestationInfo_2.target,
+					slashingInfo.attestationInfo_2.indices,
+					slashingInfo.attestationInfo_2.beaconBlockRoot,
+				)
+
+				// Create the attester slashing.
+				attesterSlashing := &ethpb.AttesterSlashing{
+					Attestation_1: attestation_1.IndexedAttestation,
+					Attestation_2: attestation_2.IndexedAttestation,
 				}
-				attestationWrapper.IndexedAttestation.Signature = bls.AggregateSignatures(sigs).Marshal()
+
+				// Add the attester slashing to the list.
+				expectedSlashings = append(expectedSlashings, attesterSlashing)
 			}
 
-			s, err := New(context.Background(),
-				&ServiceConfig{
-					Database:                slasherDB,
-					StateNotifier:           &mock.MockStateNotifier{},
-					HeadStateFetcher:        mockChain,
-					AttestationStateFetcher: mockChain,
-					SlashingPoolInserter:    &slashingsmock.PoolMock{},
-					ClockWaiter:             startup.NewClockSynchronizer(),
-				})
-			require.NoError(t, err)
-			s.genesisTime = genesisTime
+			// Process the attestations.
+			processedSlashings := slasherService.processAttestations(ctx, attestationWrappers, currentSlot)
 
-			currentSlotChan := make(chan primitives.Slot)
-			s.wg.Add(1)
-			go func() {
-				s.processQueuedAttestations(ctx, currentSlotChan)
-			}()
-			s.attsQueue.extend(tt.args.attestationQueue)
-			currentSlotChan <- slot
-			time.Sleep(time.Millisecond * 200)
-			cancel()
-			s.wg.Wait()
-			if tt.shouldBeSlashable {
-				require.LogsContain(t, hook, "Attester slashing detected")
-			} else {
-				require.LogsDoNotContain(t, hook, "Attester slashing detected")
-			}
-
-			require.LogsDoNotContain(t, hook, couldNotSaveAttRecord)
-			require.LogsDoNotContain(t, hook, couldNotCheckSlashableAtt)
-			require.LogsDoNotContain(t, hook, couldNotProcessAttesterSlashings)
+			// Check the processed slashings correspond to the expected slashings.
+			assert.DeepSSZEqual(t, expectedSlashings, processedSlashings)
 		})
 	}
 }
@@ -853,7 +951,7 @@ func runAttestationsBenchmark(b *testing.B, s *Service, numAtts, numValidators u
 // createAttestationWrapperEmptySig creates an attestation wrapper with source and target,
 // for validators with indices, and a beacon block root (corresponding to the head vote).
 // For source and target epochs, the corresponding root is null.
-// The signature of the attestation is empty.
+// The signature of the returned wrapped attestation is empty.
 func createAttestationWrapperEmptySig(
 	t testing.TB,
 	source, target primitives.Epoch,
