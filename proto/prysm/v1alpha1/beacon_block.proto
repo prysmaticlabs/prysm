@@ -842,7 +842,7 @@ message BeaconBlockBodyePBS {
     ethereum.engine.v1.SignedExecutionPayloadHeaderEnvelope signed_execution_payload_header_envelope = 11; 
 
     // Signed inclusion list summary. New in ePBS
-    ethereum.engine.v1.SignedInclusionListSummary inclusion_list_summary = 12;
+    repeated ethereum.engine.v1.InclusionListSummaryEntry inclusion_list_summary = 12 [(ethereum.eth.ext.ssz_max) = "max_inclusion_list.size"];
 
     // Payload attestations. New in ePBS
     repeated ethereum.engine.v1.PayloadAttestation payload_attestations = 13 [(ethereum.eth.ext.ssz_max) = "payload_attestation.size"];
