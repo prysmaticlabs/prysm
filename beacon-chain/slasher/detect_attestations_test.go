@@ -884,3 +884,66 @@ func createAttestationWrapperEmptySig(
 		DataRoot: dataRoot,
 	}
 }
+
+// createAttestationWrapper creates an attestation wrapper with source and target,
+// for validators with indices, and a beacon block root (corresponding to the head vote).
+// For source and target epochs, the corresponding root is null.
+// if validatorIndice = indices[i], then the corresponding private key is privateKeys[validatorIndice].
+func createAttestationWrapper(
+	t testing.TB,
+	domain []byte,
+	privateKeys []common.SecretKey,
+	source, target primitives.Epoch,
+	indices []uint64,
+	beaconBlockRoot []byte,
+) *slashertypes.IndexedAttestationWrapper {
+	// Create attestation data.
+	attestationData := &ethpb.AttestationData{
+		BeaconBlockRoot: bytesutil.PadTo(beaconBlockRoot, 32),
+		Source: &ethpb.Checkpoint{
+			Epoch: source,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+		Target: &ethpb.Checkpoint{
+			Epoch: target,
+			Root:  params.BeaconConfig().ZeroHash[:],
+		},
+	}
+
+	// Compute attestation data root.
+	attestationDataRoot, err := attestationData.HashTreeRoot()
+	require.NoError(t, err)
+
+	// Create valid signatures for all input attestations in the test.
+	signingRoot, err := signing.ComputeSigningRoot(attestationData, domain)
+	require.NoError(t, err)
+
+	// For each attesting indice in the indexed attestation, create a signature.
+	signatures := make([]bls.Signature, 0, len(indices))
+	for _, indice := range indices {
+		// Check that the indice is within the range of private keys.
+		require.Equal(t, true, indice < uint64(len(privateKeys)))
+
+		// Retrieve the corresponding private key.
+		privateKey := privateKeys[indice]
+
+		// Sign the signing root.
+		signature := privateKey.Sign(signingRoot[:])
+
+		// Append the signature to the signatures list.
+		signatures = append(signatures, signature)
+	}
+
+	// Compute the aggregated signature.
+	signature := bls.AggregateSignatures(signatures).Marshal()
+
+	// Create the attestation wrapper.
+	return &slashertypes.IndexedAttestationWrapper{
+		IndexedAttestation: &ethpb.IndexedAttestation{
+			AttestingIndices: indices,
+			Data:             attestationData,
+			Signature:        signature,
+		},
+		DataRoot: attestationDataRoot,
+	}
+}
