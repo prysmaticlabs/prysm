@@ -328,16 +328,7 @@ func (c *beaconApiValidatorClient) ValidatorIndex(ctx context.Context, in *ethpb
 }
 
 func (c *beaconApiValidatorClient) ValidatorStatus(ctx context.Context, in *ethpb.ValidatorStatusRequest) (*ethpb.ValidatorStatusResponse, error) {
-	const action = "ValidatorStatus"
-	now := time.Now()
-	resp, err := c.validatorStatus(ctx, in)
-	httpActionCount.WithLabelValues(action).Inc()
-	if err == nil {
-		httpActionLatency.WithLabelValues(action).Observe(float64(time.Since(now).Milliseconds()))
-	} else {
-		failedHTTPActionCount.WithLabelValues(action).Inc()
-	}
-	return resp, err
+	return c.validatorStatus(ctx, in)
 }
 
 func (c *beaconApiValidatorClient) WaitForActivation(ctx context.Context, in *ethpb.ValidatorActivationRequest) (ethpb.BeaconNodeValidator_WaitForActivationClient, error) {
