@@ -220,14 +220,6 @@ func (*FakeValidator) CheckDoppelGanger(_ context.Context) error {
 	return nil
 }
 
-// ReceiveSlots for mocking
-func (fv *FakeValidator) ReceiveSlots(_ context.Context, connectionErrorChannel chan<- error) {
-	fv.ReceiveBlocksCalled++
-	if fv.RetryTillSuccess > fv.ReceiveBlocksCalled {
-		connectionErrorChannel <- api.ErrConnectionIssue
-	}
-}
-
 // HandleKeyReload for mocking
 func (fv *FakeValidator) HandleKeyReload(_ context.Context, newKeys [][fieldparams.BLSPubkeyLength]byte) (anyActive bool, err error) {
 	fv.HandleKeyReloadCalled = true
@@ -292,7 +284,7 @@ func (fv *FakeValidator) SetProposerSettings(_ context.Context, settings *valida
 func (fv *FakeValidator) StartEventStream(_ context.Context, _ []string, _ chan<- *event.Event) {
 }
 
-func (fv *FakeValidator) ProcessEvent(event *event.Event) error {
+func (fv *FakeValidator) ProcessEvent(_ *event.Event) error {
 	return nil
 }
 
@@ -305,5 +297,5 @@ func (fv *FakeValidator) NodeIsHealthy(_ context.Context) bool {
 }
 
 func (fv *FakeValidator) NodeHealthTracker() *beacon.NodeHealth {
-	return nil
+	return beacon.NewNodeHealthTracker()
 }

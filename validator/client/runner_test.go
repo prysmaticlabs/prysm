@@ -55,8 +55,7 @@ func TestRetry_On_ConnectionError(t *testing.T) {
 	assert.Equal(t, retry*3, v.WaitForChainStartCalled, "Expected WaitForChainStart() to be called")
 	assert.Equal(t, retry*2, v.WaitForSyncCalled, "Expected WaitForSync() to be called")
 	assert.Equal(t, retry, v.WaitForActivationCalled, "Expected WaitForActivation() to be called")
-	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected WaitForActivation() to be called")
-	assert.Equal(t, retry, v.ReceiveBlocksCalled, "Expected WaitForActivation() to be called")
+	assert.Equal(t, retry, v.CanonicalHeadSlotCalled, "Expected CanonicalHeadSlotCalled() to be called")
 }
 
 func TestCancelledContext_WaitsForActivation(t *testing.T) {
