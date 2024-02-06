@@ -21,7 +21,7 @@ func TestWaitForChainStart_StreamSetupFails(t *testing.T) {
 		gomock.Any(),
 	).Return(nil, errors.New("failed stream"))
 
-	validatorClient := &grpcValidatorClient{beaconNodeValidatorClient}
+	validatorClient := &grpcValidatorClient{beaconNodeValidatorClient, true}
 	_, err := validatorClient.WaitForChainStart(context.Background(), &emptypb.Empty{})
 	want := "could not setup beacon chain ChainStart streaming client"
 	assert.ErrorContains(t, want, err)

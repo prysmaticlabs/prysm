@@ -8,6 +8,13 @@ type NodeHealth struct {
 	isHealthyLock sync.RWMutex
 }
 
+func NewNodeHealthTracker() *NodeHealth {
+	return &NodeHealth{
+		isHealthy: true, // just default it to true
+		HealthCh:  make(chan bool, 1),
+	}
+}
+
 func (n *NodeHealth) IsHealthy() bool {
 	n.isHealthyLock.RLock()
 	defer n.isHealthyLock.RUnlock()
