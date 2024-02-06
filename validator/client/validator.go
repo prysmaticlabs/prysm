@@ -1062,7 +1062,7 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		log.Error(string(event.Data))
 		return nil // skip restart if it's not a connection error
 	case eventClient.EventHead:
-		log.Info("new head event")
+		log.Debug("received head event")
 		head := &structs.HeadEvent{}
 		if err := json.Unmarshal(event.Data, head); err != nil {
 			log.Error(errors.Wrap(err, "failed to unmarshal head Event into JSON").Error())
@@ -1075,8 +1075,8 @@ func (v *validator) ProcessEvent(event *eventClient.Event) error {
 		}
 		v.setHighestSlot(primitives.Slot(uintSlot))
 	default:
-		log.Warn("received an unknown event type of %s with contents %s", event.EventType, string(event.Data))
 		// just keep going and log the error
+		log.Warnf("received an unknown event type of %s with contents %s", event.EventType, string(event.Data))
 	}
 	return nil
 }
