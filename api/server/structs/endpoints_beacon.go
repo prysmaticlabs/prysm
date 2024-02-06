@@ -190,9 +190,9 @@ type GetDepositSnapshotResponse struct {
 }
 
 type DepositSnapshot struct {
-	Finalized            [][]string `json:"finalized"`
-	DepositRoot          string     `json:"deposit_root"`
-	DepositCount         string     `json:"deposit_count"`
-	ExecutionBlockHash   string     `json:"execution_block_hash"`
-	ExecutionBlockHeight string     `json:"execution_block_height"`
+	Finalized            []string `json:"finalized"`
+	DepositRoot          string   `json:"deposit_root"`
+	DepositCount         string   `json:"deposit_count"`
+	ExecutionBlockHash   string   `json:"execution_block_hash"`
+	ExecutionBlockHeight string   `json:"execution_block_height"`
 }

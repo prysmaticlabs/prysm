@@ -1076,9 +1076,9 @@ func sszBytesToUint256String(b []byte) (string, error) {
 }
 
 func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
-	finalized := make([][]string, 0, len(ds.Finalized))
+	finalized := make([]string, 0, len(ds.Finalized))
 	for _, f := range ds.Finalized {
-		finalized = append(finalized, []string{hexutil.Encode(f)})
+		finalized = append(finalized, hexutil.Encode(f))
 	}
 	return &DepositSnapshot{
 		Finalized:            finalized,
