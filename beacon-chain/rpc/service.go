@@ -335,9 +335,10 @@ func (s *Service) Start() {
 		ReplayerBuilder:    ch,
 	}
 	blocker := &lookup.BeaconDbBlocker{
-		BeaconDB:         s.cfg.BeaconDB,
-		ChainInfoFetcher: s.cfg.ChainInfoFetcher,
-		BlobStorage:      s.cfg.BlobStorage,
+		BeaconDB:           s.cfg.BeaconDB,
+		ChainInfoFetcher:   s.cfg.ChainInfoFetcher,
+		GenesisTimeFetcher: s.cfg.GenesisTimeFetcher,
+		BlobStorage:        s.cfg.BlobStorage,
 	}
 	rewardFetcher := &rewards.BlockRewardService{Replayer: ch}
 
