@@ -168,7 +168,7 @@ func (c *grpcValidatorClient) StartEventStream(ctx context.Context, topics []str
 		}
 	}
 	if !containsHead {
-		log.Errorf("gRPC only supports the head topic, topics provided are %v.. continuing stream with head topic", topics)
+		log.Warnf("gRPC only supports the head topic, topics provided are %v.. continuing stream with head topic", topics)
 	}
 	stream, err := c.beaconNodeValidatorClient.StreamSlots(ctx, &ethpb.StreamSlotsRequest{VerifiedOnly: true})
 	if err != nil {
