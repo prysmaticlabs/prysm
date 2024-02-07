@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api/server"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/validator"
 	"github.com/prysmaticlabs/prysm/v4/container/slice"
 
@@ -1078,7 +1079,7 @@ func sszBytesToUint256String(b []byte) (string, error) {
 func DepositSnapshotFromConsensus(ds *eth.DepositSnapshot) *DepositSnapshot {
 	finalized := make([]string, 0, len(ds.Finalized))
 	for i, f := range ds.Finalized {
-		if i >= 3 {
+		if i >= depositsnapshot.DepositContractDepth {
 			break
 		}
 		finalized = append(finalized, hexutil.Encode(f))

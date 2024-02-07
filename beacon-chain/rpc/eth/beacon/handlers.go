@@ -2096,10 +2096,6 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
 		return
 	}
-	if len(snapshot.Finalized) < 3 {
-		httputil.HandleError(w, "Could not retrieve deposit snapshot: less than 3 finalized nodes", http.StatusInternalServerError)
-		return
-	}
 
 	if httputil.RespondWithSsz(r) {
 		sszData, err := snapshot.MarshalSSZ()
