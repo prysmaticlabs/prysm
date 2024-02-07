@@ -896,7 +896,6 @@ func (b *BeaconNode) registerRPCService(router *mux.Router) error {
 		ExitPool:                      b.exitPool,
 		SlashingsPool:                 b.slashingsPool,
 		BLSChangesPool:                b.blsToExecPool,
-		SlashingChecker:               slasherService,
 		SyncCommitteeObjectPool:       b.syncCommitteePool,
 		ExecutionChainService:         web3Service,
 		ExecutionChainInfoFetcher:     web3Service,
