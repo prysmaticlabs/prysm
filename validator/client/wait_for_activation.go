@@ -67,7 +67,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 		}
 	}
 
-	stream, err := v.validatorClient.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
+	stream, err := v.coordinator.WaitForActivation(ctx, &ethpb.ValidatorActivationRequest{
 		PublicKeys: bytesutil.FromBytes48Array(validatingKeys),
 	})
 	if err != nil {
@@ -120,7 +120,7 @@ func (v *validator) internalWaitForActivation(ctx context.Context, accountsChang
 
 			// "-1" indicates that validator count endpoint is not supported by the beacon node.
 			var valCount int64 = -1
-			valCounts, err := v.prysmBeaconClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
+			valCounts, err := v.prysmChainClient.GetValidatorCount(ctx, "head", []validator2.Status{validator2.Active})
 			if err != nil && !errors.Is(err, iface.ErrNotSupported) {
 				return errors.Wrap(err, "could not get active validator count")
 			}

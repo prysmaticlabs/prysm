@@ -1236,8 +1236,8 @@ func TestGetDuties_Valid(t *testing.T) {
 				nil,
 			).MinTimes(1)
 
-			prysmBeaconChainClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
-			prysmBeaconChainClient.EXPECT().GetValidatorCount(
+			prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
+			prysmChainClient.EXPECT().GetValidatorCount(
 				ctx,
 				gomock.Any(),
 				gomock.Any(),
@@ -1250,7 +1250,7 @@ func TestGetDuties_Valid(t *testing.T) {
 			validatorClient := &beaconApiValidatorClient{
 				dutiesProvider:          dutiesProvider,
 				stateValidatorsProvider: stateValidatorsProvider,
-				prysmBeaconChainCLient:  prysmBeaconChainClient,
+				prysmChainClient:        prysmChainClient,
 			}
 
 			expectedCurrentEpochDuties, err := validatorClient.getDutiesForEpoch(
@@ -1344,8 +1344,8 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 		errors.New("foo error"),
 	).Times(1)
 
-	prysmBeaconChainClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
-	prysmBeaconChainClient.EXPECT().GetValidatorCount(
+	prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
+	prysmChainClient.EXPECT().GetValidatorCount(
 		ctx,
 		gomock.Any(),
 		gomock.Any(),
@@ -1357,7 +1357,7 @@ func TestGetDuties_GetDutiesForEpochFailed(t *testing.T) {
 	validatorClient := &beaconApiValidatorClient{
 		stateValidatorsProvider: stateValidatorsProvider,
 		dutiesProvider:          dutiesProvider,
-		prysmBeaconChainCLient:  prysmBeaconChainClient,
+		prysmChainClient:        prysmChainClient,
 	}
 
 	_, err := validatorClient.getDuties(ctx, &ethpb.DutiesRequest{

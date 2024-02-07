@@ -18,7 +18,7 @@ func (s *Server) GetVersion(w http.ResponseWriter, r *http.Request) {
 	ctx, span := trace.StartSpan(r.Context(), "validator.web.health.GetVersion")
 	defer span.End()
 
-	beacon, err := s.beaconNodeClient.GetVersion(ctx, &emptypb.Empty{})
+	beacon, err := s.nodeClient.GetVersion(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -51,7 +51,7 @@ func (s *Server) StreamBeaconLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: StreamBeaconLogs grpc will need to be replaced in the future
-	client, err := s.beaconNodeHealthClient.StreamBeaconLogs(ctx, &emptypb.Empty{})
+	client, err := s.healthClient.StreamBeaconLogs(ctx, &emptypb.Empty{})
 	if err != nil {
 		httputil.HandleError(w, err.Error(), http.StatusInternalServerError)
 		return

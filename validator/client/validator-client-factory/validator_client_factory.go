@@ -12,7 +12,7 @@ func NewValidatorClient(
 	validatorConn validatorHelpers.NodeConnection,
 	jsonRestHandler beaconApi.JsonRestHandler,
 	opt ...beaconApi.ValidatorClientOpt,
-) iface.ValidatorClient {
+) iface.Coordinator {
 	if features.Get().EnableBeaconRESTApi {
 		return beaconApi.NewBeaconApiValidatorClient(jsonRestHandler, opt...)
 	} else {

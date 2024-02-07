@@ -28,27 +28,27 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 		inactive := randKeypair(t)
 		active := randKeypair(t)
 
-		client := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+		coord := validatormock.NewMockCoordinator(ctrl)
+		chainClient := validatormock.NewMockChainClient(ctrl)
+		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		v := validator{
-			validatorClient:   client,
-			km:                newMockKeymanager(t, inactive),
-			genesisTime:       1,
-			beaconClient:      beaconClient,
-			prysmBeaconClient: prysmBeaconClient,
+			coordinator:      coord,
+			km:               newMockKeymanager(t, inactive),
+			genesisTime:      1,
+			chainClient:      chainClient,
+			prysmChainClient: prysmChainClient,
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{inactive.pub[:], active.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
 		resp.Statuses[1].Status = ethpb.ValidatorStatus_ACTIVE
-		client.EXPECT().MultipleValidatorStatus(
+		coord.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{inactive.pub[:], active.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmBeaconClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},
@@ -64,27 +64,27 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 	t.Run("no active", func(t *testing.T) {
 		hook := logTest.NewGlobal()
 
-		client := validatormock.NewMockValidatorClient(ctrl)
-		beaconClient := validatormock.NewMockBeaconChainClient(ctrl)
-		prysmBeaconClient := validatormock.NewMockPrysmBeaconChainClient(ctrl)
+		coord := validatormock.NewMockCoordinator(ctrl)
+		chainClient := validatormock.NewMockChainClient(ctrl)
+		prysmChainClient := validatormock.NewMockPrysmChainClient(ctrl)
 		kp := randKeypair(t)
 		v := validator{
-			validatorClient:   client,
-			km:                newMockKeymanager(t, kp),
-			genesisTime:       1,
-			beaconClient:      beaconClient,
-			prysmBeaconClient: prysmBeaconClient,
+			coordinator:      coord,
+			km:               newMockKeymanager(t, kp),
+			genesisTime:      1,
+			chainClient:      chainClient,
+			prysmChainClient: prysmChainClient,
 		}
 
 		resp := testutil.GenerateMultipleValidatorStatusResponse([][]byte{kp.pub[:]})
 		resp.Statuses[0].Status = ethpb.ValidatorStatus_UNKNOWN_STATUS
-		client.EXPECT().MultipleValidatorStatus(
+		coord.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{kp.pub[:]},
 			},
 		).Return(resp, nil)
-		prysmBeaconClient.EXPECT().GetValidatorCount(
+		prysmChainClient.EXPECT().GetValidatorCount(
 			gomock.Any(),
 			"head",
 			[]validator2.Status{validator2.Active},
@@ -99,14 +99,14 @@ func TestValidator_HandleKeyReload(t *testing.T) {
 
 	t.Run("error when getting status", func(t *testing.T) {
 		kp := randKeypair(t)
-		client := validatormock.NewMockValidatorClient(ctrl)
+		coord := validatormock.NewMockCoordinator(ctrl)
 		v := validator{
-			validatorClient: client,
-			km:              newMockKeymanager(t, kp),
-			genesisTime:     1,
+			coordinator: coord,
+			km:          newMockKeymanager(t, kp),
+			genesisTime: 1,
 		}
 
-		client.EXPECT().MultipleValidatorStatus(
+		coord.EXPECT().MultipleValidatorStatus(
 			gomock.Any(),
 			&ethpb.MultipleValidatorStatusRequest{
 				PublicKeys: [][]byte{kp.pub[:]},

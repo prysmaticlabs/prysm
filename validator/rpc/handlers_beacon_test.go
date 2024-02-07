@@ -26,7 +26,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 		gomock.Any(),
 	).Return(nil /*response*/, errors.New("uh oh"))
 	srv := &Server{
-		beaconNodeClient: nodeClient,
+		nodeClient: nodeClient,
 	}
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)
 	wr := httptest.NewRecorder()
@@ -46,7 +46,7 @@ func TestGetBeaconStatus_NotConnected(t *testing.T) {
 func TestGetBeaconStatus_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	nodeClient := validatormock.NewMockNodeClient(ctrl)
-	beaconChainClient := validatormock.NewMockBeaconChainClient(ctrl)
+	chainClient := validatormock.NewMockChainClient(ctrl)
 	nodeClient.EXPECT().GetSyncStatus(
 		gomock.Any(), // ctx
 		gomock.Any(),
@@ -59,15 +59,15 @@ func TestGetBeaconStatus_OK(t *testing.T) {
 		GenesisTime:            timeStamp,
 		DepositContractAddress: []byte("hello"),
 	}, nil)
-	beaconChainClient.EXPECT().GetChainHead(
+	chainClient.EXPECT().GetChainHead(
 		gomock.Any(), // ctx
 		gomock.Any(),
 	).Return(&ethpb.ChainHead{
 		HeadEpoch: 1,
 	}, nil)
 	srv := &Server{
-		beaconNodeClient:  nodeClient,
-		beaconChainClient: beaconChainClient,
+		nodeClient:  nodeClient,
+		chainClient: chainClient,
 	}
 
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/v2/validator/beacon/status"), nil)

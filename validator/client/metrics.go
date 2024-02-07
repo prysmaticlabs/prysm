@@ -249,7 +249,7 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 	req := &ethpb.ValidatorPerformanceRequest{
 		PublicKeys: pubKeys,
 	}
-	resp, err := v.beaconClient.GetValidatorPerformance(ctx, req)
+	resp, err := v.chainClient.GetValidatorPerformance(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -270,11 +270,11 @@ func (v *validator) LogValidatorGainsAndLosses(ctx context.Context, slot primiti
 			v.voteStats.startEpoch = prevEpoch
 		}
 	}
-	v.prevBalanceLock.Lock()
+	v.prevEpochBalancesLock.Lock()
 	for i, pubKey := range resp.PublicKeys {
 		v.logForEachValidator(i, pubKey, resp, slot, prevEpoch)
 	}
-	v.prevBalanceLock.Unlock()
+	v.prevEpochBalancesLock.Unlock()
 
 	v.UpdateLogAggregateStats(resp, slot)
 	return nil
@@ -438,12 +438,12 @@ func (v *validator) UpdateLogAggregateStats(resp *ethpb.ValidatorPerformanceResp
 	log.WithFields(epochSummaryFields).Info("Previous epoch aggregated voting summary")
 
 	var totalStartBal, totalPrevBal uint64
-	v.prevBalanceLock.RLock()
+	v.prevEpochBalancesLock.RLock()
 	for i, val := range v.startBalances {
 		totalStartBal += val
 		totalPrevBal += v.prevEpochBalances[i]
 	}
-	v.prevBalanceLock.RUnlock()
+	v.prevEpochBalancesLock.RUnlock()
 
 	if totalStartBal == 0 || summary.totalAttestedCount == 0 {
 		log.Error("Failed to print launch summary: one or more divisors is 0")

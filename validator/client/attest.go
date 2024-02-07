@@ -74,7 +74,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 	}
-	data, err := v.validatorClient.GetAttestationData(ctx, req)
+	data, err := v.coordinator.GetAttestationData(ctx, req)
 	if err != nil {
 		log.WithError(err).Error("Could not request attestation to sign at slot")
 		if v.emitAccountMetrics {
@@ -144,7 +144,7 @@ func (v *validator) SubmitAttestation(ctx context.Context, slot primitives.Slot,
 		tracing.AnnotateError(span, err)
 		return
 	}
-	attResp, err := v.validatorClient.ProposeAttestation(ctx, attestation)
+	attResp, err := v.coordinator.ProposeAttestation(ctx, attestation)
 	if err != nil {
 		log.WithError(err).Error("Could not submit attestation to beacon node")
 		if v.emitAccountMetrics {

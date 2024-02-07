@@ -347,7 +347,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	epoch := primitives.Epoch(e)
 
 	if rawEpoch == "" {
-		genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+		genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 		if err != nil {
 			httputil.HandleError(w, errors.Wrap(err, "Failed to get genesis time").Error(), http.StatusInternalServerError)
 			return
@@ -361,7 +361,7 @@ func (s *Server) SetVoluntaryExit(w http.ResponseWriter, r *http.Request) {
 	}
 	sve, err := client.CreateSignedVoluntaryExit(
 		ctx,
-		s.beaconNodeValidatorClient,
+		s.coordinator,
 		km.Sign,
 		pubkey,
 		epoch,

@@ -287,7 +287,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	m := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	var pks [][]byte
 	for i := range pubKeys {
 		pks = append(pks, pubKeys[i][:])
@@ -295,7 +295,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 	req := &ethpb.MultipleValidatorStatusRequest{PublicKeys: pks}
 	resp := &ethpb.MultipleValidatorStatusResponse{Indices: []types.ValidatorIndex{1, math.MaxUint64, 2}}
 
-	m.
+	coord.
 		EXPECT().
 		MultipleValidatorStatus(gomock.Any(), gomock.Eq(req)).
 		Return(resp, nil)
@@ -305,7 +305,7 @@ func TestListAccounts_LocalKeymanager(t *testing.T) {
 		listValidatorIndices(
 			cliCtx.Context,
 			km,
-			m,
+			coord,
 		),
 	)
 	require.NoError(t, writer.Close())

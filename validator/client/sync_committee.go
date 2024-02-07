@@ -30,7 +30,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 
 	v.waitOneThirdOrValidBlock(ctx, slot)
 
-	res, err := v.validatorClient.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
+	res, err := v.coordinator.GetSyncMessageBlockRoot(ctx, &emptypb.Empty{})
 	if err != nil {
 		log.WithError(err).Error("Could not request sync message block root to sign")
 		tracing.AnnotateError(span, err)
@@ -75,7 +75,7 @@ func (v *validator) SubmitSyncCommitteeMessage(ctx context.Context, slot primiti
 		ValidatorIndex: duty.ValidatorIndex,
 		Signature:      sig.Marshal(),
 	}
-	if _, err := v.validatorClient.SubmitSyncMessage(ctx, msg); err != nil {
+	if _, err := v.coordinator.SubmitSyncMessage(ctx, msg); err != nil {
 		log.WithError(err).Error("Could not submit sync committee message")
 		return
 	}
@@ -104,7 +104,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		return
 	}
 
-	indexRes, err := v.validatorClient.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
+	indexRes, err := v.coordinator.GetSyncSubcommitteeIndex(ctx, &ethpb.SyncSubcommitteeIndexRequest{
 		PublicKey: pubKey[:],
 		Slot:      slot,
 	})
@@ -136,7 +136,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 		}
 		subCommitteeSize := params.BeaconConfig().SyncCommitteeSize / params.BeaconConfig().SyncCommitteeSubnetCount
 		subnet := uint64(comIdx) / subCommitteeSize
-		contribution, err := v.validatorClient.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
+		contribution, err := v.coordinator.GetSyncCommitteeContribution(ctx, &ethpb.SyncCommitteeContributionRequest{
 			Slot:      slot,
 			PublicKey: pubKey[:],
 			SubnetId:  subnet,
@@ -165,7 +165,7 @@ func (v *validator) SubmitSignedContributionAndProof(ctx context.Context, slot p
 			return
 		}
 
-		if _, err := v.validatorClient.SubmitSignedContributionAndProof(ctx, &ethpb.SignedContributionAndProof{
+		if _, err := v.coordinator.SubmitSignedContributionAndProof(ctx, &ethpb.SignedContributionAndProof{
 			Message:   contributionAndProof,
 			Signature: sig,
 		}); err != nil {

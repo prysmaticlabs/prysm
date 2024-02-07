@@ -79,7 +79,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 	// https://github.com/ethereum/consensus-specs/blob/v0.9.3/specs/validator/0_beacon-chain-validator.md#broadcast-aggregate
 	v.waitToSlotTwoThirds(ctx, slot)
 
-	res, err := v.validatorClient.SubmitAggregateSelectionProof(ctx, &ethpb.AggregateSelectionRequest{
+	res, err := v.coordinator.SubmitAggregateSelectionProof(ctx, &ethpb.AggregateSelectionRequest{
 		Slot:           slot,
 		CommitteeIndex: duty.CommitteeIndex,
 		PublicKey:      pubKey[:],
@@ -110,7 +110,7 @@ func (v *validator) SubmitAggregateAndProof(ctx context.Context, slot primitives
 		log.WithError(err).Error("Could not sign aggregate and proof")
 		return
 	}
-	_, err = v.validatorClient.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
+	_, err = v.coordinator.SubmitSignedAggregateSelectionProof(ctx, &ethpb.SignedAggregateSubmitRequest{
 		SignedAggregateAndProof: &ethpb.SignedAggregateAttestationAndProof{
 			Message:   res.AggregateAndProof,
 			Signature: sig,

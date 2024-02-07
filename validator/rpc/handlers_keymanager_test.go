@@ -685,18 +685,18 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 	pubKeys, err := dr.FetchValidatingPublicKeys(ctx)
 	require.NoError(t, err)
 
-	beaconClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 	// Any time in the past will suffice
 	genesisTime := &timestamppb.Timestamp{
 		Seconds: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC).Unix(),
 	}
 
-	beaconClient.EXPECT().ValidatorIndex(gomock.Any(), &eth.ValidatorIndexRequest{PublicKey: pubKeys[0][:]}).
+	coord.EXPECT().ValidatorIndex(gomock.Any(), &eth.ValidatorIndexRequest{PublicKey: pubKeys[0][:]}).
 		Times(3).
 		Return(&eth.ValidatorIndexResponse{Index: 2}, nil)
 
-	beaconClient.EXPECT().DomainData(
+	coord.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		gomock.Any(), // epoch
 	).Times(3).
@@ -708,11 +708,11 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 		Return(&eth.Genesis{GenesisTime: genesisTime}, nil)
 
 	s := &Server{
-		validatorService:          vs,
-		beaconNodeValidatorClient: beaconClient,
-		wallet:                    w,
-		beaconNodeClient:          mockNodeClient,
-		walletInitialized:         w != nil,
+		validatorService:  vs,
+		coordinator:       coord,
+		wallet:            w,
+		nodeClient:        mockNodeClient,
+		walletInitialized: w != nil,
 	}
 
 	type want struct {
@@ -806,7 +806,7 @@ func TestServer_SetVoluntaryExit(t *testing.T) {
 			resp := &SetVoluntaryExitResponse{}
 			require.NoError(t, json.Unmarshal(w.Body.Bytes(), resp))
 			if tt.w.epoch == 0 {
-				genesisResponse, err := s.beaconNodeClient.GetGenesis(ctx, &emptypb.Empty{})
+				genesisResponse, err := s.nodeClient.GetGenesis(ctx, &emptypb.Empty{})
 				require.NoError(t, err)
 				tt.w.epoch, err = client.CurrentEpoch(genesisResponse.GenesisTime)
 				require.NoError(t, err)
@@ -919,7 +919,7 @@ func TestServer_GetGasLimit(t *testing.T) {
 func TestServer_SetGasLimit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	beaconClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 
 	pubkey1, err := hexutil.Decode("0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493")
@@ -1060,13 +1060,13 @@ func TestServer_SetGasLimit(t *testing.T) {
 			require.NoError(t, err)
 
 			s := &Server{
-				validatorService:          vs,
-				beaconNodeValidatorClient: beaconClient,
-				db:                        validatorDB,
+				validatorService: vs,
+				coordinator:      coord,
+				db:               validatorDB,
 			}
 
 			if tt.beaconReturn != nil {
-				beaconClient.EXPECT().GetFeeRecipientByPubKey(
+				coord.EXPECT().GetFeeRecipientByPubKey(
 					gomock.Any(),
 					gomock.Any(),
 				).Return(tt.beaconReturn.resp, tt.beaconReturn.error)
@@ -1559,7 +1559,7 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	beaconClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	ctx := grpc.NewContextWithServerTransportStream(context.Background(), &runtime.ServerTransportStream{})
 	pubkey := "0xaf2e7ba294e03438ea819bd4033c6c1bf6b04320ee2075b77273c08d02f8a61bcc303c2c06bd3713cb442072ae591493"
 	byteval, err := hexutil.Decode(pubkey)
@@ -1707,9 +1707,9 @@ func TestServer_FeeRecipientByPubkey(t *testing.T) {
 			})
 			require.NoError(t, err)
 			s := &Server{
-				validatorService:          vs,
-				beaconNodeValidatorClient: beaconClient,
-				db:                        validatorDB,
+				validatorService: vs,
+				coordinator:      coord,
+				db:               validatorDB,
 			}
 			request := &SetFeeRecipientByPubkeyRequest{
 				Ethaddress: tt.args,

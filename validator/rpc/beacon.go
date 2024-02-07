@@ -46,7 +46,7 @@ func (s *Server) registerBeaconClient() error {
 	if s.beaconNodeCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
-	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)
+	s.healthClient = ethpb.NewHealthClient(grpcConn)
 
 	conn := validatorHelpers.NewNodeConnection(
 		grpcConn,
@@ -58,9 +58,9 @@ func (s *Server) registerBeaconClient() error {
 		HttpClient: http.Client{Timeout: s.beaconApiTimeout},
 		Host:       s.beaconApiEndpoint,
 	}
-	s.beaconChainClient = beaconChainClientFactory.NewBeaconChainClient(conn, restHandler)
-	s.beaconNodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
-	s.beaconNodeValidatorClient = validatorClientFactory.NewValidatorClient(conn, restHandler)
+	s.chainClient = beaconChainClientFactory.NewChainClient(conn, restHandler)
+	s.nodeClient = nodeClientFactory.NewNodeClient(conn, restHandler)
+	s.coordinator = validatorClientFactory.NewValidatorClient(conn, restHandler)
 
 	return nil
 }

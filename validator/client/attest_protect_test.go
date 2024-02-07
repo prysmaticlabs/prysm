@@ -61,7 +61,7 @@ func Test_slashableAttestationCheck_UpdatesLowestSignedEpochs(t *testing.T) {
 		},
 	}
 
-	m.validatorClient.EXPECT().DomainData(
+	m.coordinator.EXPECT().DomainData(
 		gomock.Any(), // ctx
 		&ethpb.DomainRequest{Epoch: 10, Domain: []byte{1, 0, 0, 0}},
 	).Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil /*err*/)

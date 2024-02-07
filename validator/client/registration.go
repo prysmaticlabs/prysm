@@ -20,7 +20,7 @@ import (
 // If at least one error occurs during a registration call to the beacon node, the last error is returned.
 func SubmitValidatorRegistrations(
 	ctx context.Context,
-	validatorClient iface.ValidatorClient,
+	coord iface.Coordinator,
 	signedRegs []*ethpb.SignedValidatorRegistrationV1,
 	validatorRegsBatchSize int,
 ) error {
@@ -39,7 +39,7 @@ func SubmitValidatorRegistrations(
 			Messages: chunk,
 		}
 
-		if _, err := validatorClient.SubmitValidatorRegistrations(ctx, &innerSignerRegs); err != nil {
+		if _, err := coord.SubmitValidatorRegistrations(ctx, &innerSignerRegs); err != nil {
 			lastErr = errors.Wrap(err, "could not submit signed registrations to beacon node")
 
 			if strings.Contains(err.Error(), builder.ErrNoBuilder.Error()) {

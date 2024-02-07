@@ -24,10 +24,10 @@ import (
 func TestExitAccountsCli_OK(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
@@ -40,11 +40,11 @@ func TestExitAccountsCli_OK(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
@@ -99,7 +99,7 @@ func TestExitAccountsCli_OK(t *testing.T) {
 	require.NotNil(t, formattedPubKeys)
 
 	cfg := accounts.PerformExitCfg{
-		ValidatorClient:  mockValidatorClient,
+		Coordinator:      coord,
 		NodeClient:       mockNodeClient,
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
@@ -116,14 +116,14 @@ func TestExitAccountsCli_OK(t *testing.T) {
 func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 0}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
@@ -136,12 +136,12 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Times(2).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Times(2).
 		Return(&ethpb.ProposeExitResponse{}, nil)
@@ -199,7 +199,7 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 	require.NotNil(t, formattedPubKeys)
 
 	cfg := accounts.PerformExitCfg{
-		ValidatorClient:  mockValidatorClient,
+		Coordinator:      coord,
 		NodeClient:       mockNodeClient,
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
@@ -222,10 +222,10 @@ func TestExitAccountsCli_OK_AllPublicKeys(t *testing.T) {
 func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
@@ -238,11 +238,11 @@ func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Return(&ethpb.ProposeExitResponse{}, nil)
 
@@ -294,7 +294,7 @@ func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 	require.NotNil(t, formattedPubKeys)
 
 	cfg := accounts.PerformExitCfg{
-		ValidatorClient:  mockValidatorClient,
+		Coordinator:      coord,
 		NodeClient:       mockNodeClient,
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,
@@ -311,10 +311,10 @@ func TestExitAccountsCli_OK_ForceExit(t *testing.T) {
 func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
@@ -327,7 +327,7 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
@@ -381,7 +381,7 @@ func TestExitAccountsCli_WriteJSON_NoBroadcast(t *testing.T) {
 	out := path.Join(bazel.TestTmpDir(), "exits")
 
 	cfg := accounts.PerformExitCfg{
-		ValidatorClient:  mockValidatorClient,
+		Coordinator:      coord,
 		NodeClient:       mockNodeClient,
 		Keymanager:       km,
 		RawPubKeys:       rawPubKeys,

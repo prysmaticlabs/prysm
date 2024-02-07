@@ -236,14 +236,14 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	mockValidatorClient := validatormock.NewMockValidatorClient(ctrl)
+	coord := validatormock.NewMockCoordinator(ctrl)
 	mockNodeClient := validatormock.NewMockNodeClient(ctrl)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 0}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ValidatorIndex(gomock.Any(), gomock.Any()).
 		Return(&ethpb.ValidatorIndexResponse{Index: 1}, nil)
 
@@ -256,12 +256,12 @@ func TestServer_VoluntaryExit(t *testing.T) {
 		GetGenesis(gomock.Any(), gomock.Any()).
 		Return(&ethpb.Genesis{GenesisTime: genesisTime}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		DomainData(gomock.Any(), gomock.Any()).
 		Times(2).
 		Return(&ethpb.DomainResponse{SignatureDomain: make([]byte, 32)}, nil)
 
-	mockValidatorClient.EXPECT().
+	coord.EXPECT().
 		ProposeExit(gomock.Any(), gomock.AssignableToTypeOf(&ethpb.SignedVoluntaryExit{})).
 		Times(2).
 		Return(&ethpb.ProposeExitResponse{}, nil)
@@ -290,11 +290,11 @@ func TestServer_VoluntaryExit(t *testing.T) {
 	})
 	require.NoError(t, err)
 	s := &Server{
-		walletInitialized:         true,
-		wallet:                    w,
-		beaconNodeClient:          mockNodeClient,
-		beaconNodeValidatorClient: mockValidatorClient,
-		validatorService:          vs,
+		walletInitialized: true,
+		wallet:            w,
+		nodeClient:        mockNodeClient,
+		coordinator:       coord,
+		validatorService:  vs,
 	}
 	numAccounts := 2
 	dr, ok := km.(*derived.Keymanager)
