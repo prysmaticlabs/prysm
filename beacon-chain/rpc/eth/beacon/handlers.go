@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v4/api"
 	"github.com/prysmaticlabs/prysm/v4/api/server/structs"
+	"github.com/prysmaticlabs/prysm/v4/beacon-chain/cache/depositsnapshot"
 	corehelpers "github.com/prysmaticlabs/prysm/v4/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/core/transition"
 	"github.com/prysmaticlabs/prysm/v4/beacon-chain/db/filters"
@@ -2096,7 +2097,10 @@ func (s *Server) GetDepositSnapshot(w http.ResponseWriter, r *http.Request) {
 		httputil.HandleError(w, "No Finalized Snapshot Available", http.StatusNotFound)
 		return
 	}
-
+	if len(snapshot.Finalized) > depositsnapshot.DepositContractDepth {
+		httputil.HandleError(w, "Retrieved invalid deposit snapshot", http.StatusInternalServerError)
+		return
+	}
 	if httputil.RespondWithSsz(r) {
 		sszData, err := snapshot.MarshalSSZ()
 		if err != nil {
