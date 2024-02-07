@@ -102,8 +102,8 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ch := make(chan []byte, s.streamLogsBufferSize)
-	sub := s.logsStreamer.LogsFeed().Subscribe(ch)
+	ch := make(chan []byte, s.logStreamerBufferSize)
+	sub := s.logStreamer.LogsFeed().Subscribe(ch)
 	defer func() {
 		sub.Unsubscribe()
 		close(ch)
@@ -113,7 +113,7 @@ func (s *Server) StreamValidatorLogs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", api.KeepAlive)
 
-	recentLogs := s.logsStreamer.GetLastFewLogs()
+	recentLogs := s.logStreamer.GetLastFewLogs()
 	logStrings := make([]string, len(recentLogs))
 	for i, l := range recentLogs {
 		logStrings[i] = string(l)

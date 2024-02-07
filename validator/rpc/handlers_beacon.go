@@ -29,7 +29,7 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).Error("beacon node call to get sync status failed")
 		httputil.WriteJson(w, &BeaconStatusResponse{
-			BeaconNodeEndpoint: s.nodeGatewayEndpoint,
+			BeaconNodeEndpoint: s.beaconNodeEndpoint,
 			Connected:          false,
 			Syncing:            false,
 		})
@@ -48,7 +48,7 @@ func (s *Server) GetBeaconStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteJson(w, &BeaconStatusResponse{
-		BeaconNodeEndpoint:     s.beaconClientEndpoint,
+		BeaconNodeEndpoint:     s.beaconNodeEndpoint,
 		Connected:              true,
 		Syncing:                syncStatus.Syncing,
 		GenesisTime:            fmt.Sprintf("%d", genesisTime),

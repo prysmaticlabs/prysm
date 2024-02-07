@@ -21,110 +21,96 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v4/validator/accounts/wallet"
 	"github.com/prysmaticlabs/prysm/v4/validator/client"
-	iface "github.com/prysmaticlabs/prysm/v4/validator/client/iface"
+	"github.com/prysmaticlabs/prysm/v4/validator/client/iface"
 	"github.com/prysmaticlabs/prysm/v4/validator/db"
-	"github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/reflection"
 )
 
 // Config options for the gRPC server.
 type Config struct {
-	ValidatorGatewayHost     string
-	ValidatorGatewayPort     int
-	ValidatorMonitoringHost  string
-	ValidatorMonitoringPort  int
-	BeaconClientEndpoint     string
-	ClientMaxCallRecvMsgSize int
-	ClientGrpcRetries        uint
-	ClientGrpcRetryDelay     time.Duration
-	ClientGrpcHeaders        []string
-	ClientWithCert           string
-	Host                     string
-	Port                     string
-	CertFlag                 string
-	KeyFlag                  string
-	ValDB                    db.Database
-	WalletDir                string
-	ValidatorService         *client.ValidatorService
-	WalletInitializedFeed    *event.Feed
-	NodeGatewayEndpoint      string
-	Router                   *mux.Router
-	Wallet                   *wallet.Wallet
+	Host                   string
+	Port                   string
+	GRPCGatewayHost        string
+	GRPCGatewayPort        int
+	GRPCMaxCallRecvMsgSize int
+	GRPCRetries            uint
+	GRPCRetryDelay         time.Duration
+	GRPCHeaders            []string
+	BeaconNodeGRPCEndpoint string
+	BeaconApiEndpoint      string
+	BeaconApiTimeout       time.Duration
+	BeaconNodeCert         string
+	DB                     db.Database
+	Wallet                 *wallet.Wallet
+	WalletDir              string
+	WalletInitializedFeed  *event.Feed
+	ValidatorService       *client.ValidatorService
+	Router                 *mux.Router
 }
 
 // Server defining a gRPC server for the remote signer API.
 type Server struct {
-	logsStreamer              logs.Streamer
-	streamLogsBufferSize      int
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	host                      string
+	port                      string
+	grpcGatewayHost           string
+	grpcGatewayPort           int
+	listener                  net.Listener
+	grpcMaxCallRecvMsgSize    int
+	grpcRetries               uint
+	grpcRetryDelay            time.Duration
+	grpcHeaders               []string
+	grpcServer                *grpc.Server
+	jwtSecret                 []byte
 	beaconChainClient         iface.BeaconChainClient
 	beaconNodeClient          iface.NodeClient
 	beaconNodeValidatorClient iface.ValidatorClient
 	beaconNodeHealthClient    ethpb.HealthClient
-	valDB                     db.Database
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	beaconClientEndpoint      string
-	clientMaxCallRecvMsgSize  int
-	clientGrpcRetries         uint
-	clientGrpcRetryDelay      time.Duration
-	clientGrpcHeaders         []string
-	clientWithCert            string
-	host                      string
-	port                      string
-	listener                  net.Listener
-	withCert                  string
-	withKey                   string
-	credentialError           error
-	grpcServer                *grpc.Server
-	jwtSecret                 []byte
-	validatorService          *client.ValidatorService
+	beaconNodeEndpoint        string
+	beaconApiEndpoint         string
+	beaconApiTimeout          time.Duration
+	beaconNodeCert            string
+	db                        db.Database
 	walletDir                 string
 	wallet                    *wallet.Wallet
 	walletInitializedFeed     *event.Feed
 	walletInitialized         bool
-	nodeGatewayEndpoint       string
-	validatorMonitoringHost   string
-	validatorMonitoringPort   int
-	validatorGatewayHost      string
-	validatorGatewayPort      int
-	beaconApiEndpoint         string
-	beaconApiTimeout          time.Duration
+	validatorService          *client.ValidatorService
 	router                    *mux.Router
+	logStreamer               logs.Streamer
+	logStreamerBufferSize     int
 }
 
 // NewServer instantiates a new gRPC server.
 func NewServer(ctx context.Context, cfg *Config) *Server {
 	ctx, cancel := context.WithCancel(ctx)
 	server := &Server{
-		ctx:                      ctx,
-		cancel:                   cancel,
-		logsStreamer:             logs.NewStreamServer(),
-		streamLogsBufferSize:     1000, // Enough to handle most bursts of logs in the validator client.
-		host:                     cfg.Host,
-		port:                     cfg.Port,
-		withCert:                 cfg.CertFlag,
-		withKey:                  cfg.KeyFlag,
-		beaconClientEndpoint:     cfg.BeaconClientEndpoint,
-		clientMaxCallRecvMsgSize: cfg.ClientMaxCallRecvMsgSize,
-		clientGrpcRetries:        cfg.ClientGrpcRetries,
-		clientGrpcRetryDelay:     cfg.ClientGrpcRetryDelay,
-		clientGrpcHeaders:        cfg.ClientGrpcHeaders,
-		clientWithCert:           cfg.ClientWithCert,
-		valDB:                    cfg.ValDB,
-		validatorService:         cfg.ValidatorService,
-		walletDir:                cfg.WalletDir,
-		walletInitializedFeed:    cfg.WalletInitializedFeed,
-		walletInitialized:        cfg.Wallet != nil,
-		wallet:                   cfg.Wallet,
-		nodeGatewayEndpoint:      cfg.NodeGatewayEndpoint,
-		validatorMonitoringHost:  cfg.ValidatorMonitoringHost,
-		validatorMonitoringPort:  cfg.ValidatorMonitoringPort,
-		validatorGatewayHost:     cfg.ValidatorGatewayHost,
-		validatorGatewayPort:     cfg.ValidatorGatewayPort,
-		router:                   cfg.Router,
+		ctx:                    ctx,
+		cancel:                 cancel,
+		host:                   cfg.Host,
+		port:                   cfg.Port,
+		grpcGatewayHost:        cfg.GRPCGatewayHost,
+		grpcGatewayPort:        cfg.GRPCGatewayPort,
+		grpcMaxCallRecvMsgSize: cfg.GRPCMaxCallRecvMsgSize,
+		grpcRetries:            cfg.GRPCRetries,
+		grpcRetryDelay:         cfg.GRPCRetryDelay,
+		grpcHeaders:            cfg.GRPCHeaders,
+		beaconNodeEndpoint:     cfg.BeaconNodeGRPCEndpoint,
+		beaconApiEndpoint:      cfg.BeaconApiEndpoint,
+		beaconApiTimeout:       cfg.BeaconApiTimeout,
+		beaconNodeCert:         cfg.BeaconNodeCert,
+		db:                     cfg.DB,
+		walletDir:              cfg.WalletDir,
+		wallet:                 cfg.Wallet,
+		walletInitializedFeed:  cfg.WalletInitializedFeed,
+		walletInitialized:      cfg.Wallet != nil,
+		validatorService:       cfg.ValidatorService,
+		router:                 cfg.Router,
+		logStreamer:            logs.NewStreamServer(),
+		logStreamerBufferSize:  1000, // Enough to handle most bursts of logs in the validator client.
 	}
 	// immediately register routes to override any catchalls
 	if err := server.InitializeRoutes(); err != nil {
@@ -157,17 +143,7 @@ func (s *Server) Start() {
 		)),
 	}
 	grpcprometheus.EnableHandlingTimeHistogram()
-	if s.withCert != "" && s.withKey != "" {
-		creds, err := credentials.NewServerTLSFromFile(s.withCert, s.withKey)
-		if err != nil {
-			log.WithError(err).Fatal("Could not load TLS keys")
-		}
-		opts = append(opts, grpc.Creds(creds))
-		log.WithFields(logrus.Fields{
-			"crt-path": s.withCert,
-			"key-path": s.withKey,
-		}).Info("Loaded TLS certificates")
-	}
+
 	s.grpcServer = grpc.NewServer(opts...)
 
 	// Register a gRPC client to the beacon node.
@@ -194,7 +170,7 @@ func (s *Server) Start() {
 			log.WithError(err).Error("Could not initialize web auth token")
 			return
 		}
-		validatorWebAddr := fmt.Sprintf("%s:%d", s.validatorGatewayHost, s.validatorGatewayPort)
+		validatorWebAddr := fmt.Sprintf("%s:%d", s.grpcGatewayHost, s.grpcGatewayPort)
 		authTokenPath := filepath.Join(s.walletDir, AuthTokenFileName)
 		logValidatorWebAuth(validatorWebAddr, token, authTokenPath)
 		go s.refreshAuthTokenFromFileChanges(s.ctx, authTokenPath)
@@ -264,5 +240,5 @@ func (s *Server) Stop() error {
 
 // Status returns nil or credentialError.
 func (s *Server) Status() error {
-	return s.credentialError
+	return nil
 }

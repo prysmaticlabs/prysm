@@ -27,23 +27,23 @@ func (s *Server) registerBeaconClient() error {
 		grpcretry.StreamClientInterceptor(),
 	))
 	dialOpts := client.ConstructDialOptions(
-		s.clientMaxCallRecvMsgSize,
-		s.clientWithCert,
-		s.clientGrpcRetries,
-		s.clientGrpcRetryDelay,
+		s.grpcMaxCallRecvMsgSize,
+		s.beaconNodeCert,
+		s.grpcRetries,
+		s.grpcRetryDelay,
 		streamInterceptor,
 	)
 	if dialOpts == nil {
 		return errors.New("no dial options for beacon chain gRPC client")
 	}
 
-	s.ctx = grpcutil.AppendHeaders(s.ctx, s.clientGrpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(s.ctx, s.grpcHeaders)
 
-	grpcConn, err := grpc.DialContext(s.ctx, s.beaconClientEndpoint, dialOpts...)
+	grpcConn, err := grpc.DialContext(s.ctx, s.beaconNodeEndpoint, dialOpts...)
 	if err != nil {
-		return errors.Wrapf(err, "could not dial endpoint: %s", s.beaconClientEndpoint)
+		return errors.Wrapf(err, "could not dial endpoint: %s", s.beaconNodeEndpoint)
 	}
-	if s.clientWithCert != "" {
+	if s.beaconNodeCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
 	s.beaconNodeHealthClient = ethpb.NewHealthClient(grpcConn)

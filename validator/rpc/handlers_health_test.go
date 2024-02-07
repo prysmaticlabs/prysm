@@ -119,9 +119,9 @@ func TestStreamValidatorLogs(t *testing.T) {
 	logStreamer := mock.NewMockStreamer(mockLogs)
 	// Setting up the mock in the server struct
 	s := Server{
-		ctx:                  ctx,
-		logsStreamer:         logStreamer,
-		streamLogsBufferSize: 100,
+		ctx:                   ctx,
+		logStreamer:           logStreamer,
+		logStreamerBufferSize: 100,
 	}
 
 	w := &flushableResponseRecorder{

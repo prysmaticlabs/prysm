@@ -132,7 +132,7 @@ func (s *Server) ImportKeystores(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.SlashingProtection != "" {
 		if err := slashingprotection.ImportStandardProtectionJSON(
-			ctx, s.valDB, bytes.NewBufferString(req.SlashingProtection),
+			ctx, s.db, bytes.NewBufferString(req.SlashingProtection),
 		); err != nil {
 			statuses := make([]*keymanager.KeyStatus, len(req.Keystores))
 			for i := 0; i < len(req.Keystores); i++ {
@@ -285,11 +285,11 @@ func (s *Server) transformDeletedKeysStatuses(
 // Gets a map of all public keys in the database, useful for O(1) lookups.
 func (s *Server) publicKeysInDB(ctx context.Context) (map[[fieldparams.BLSPubkeyLength]byte]bool, error) {
 	pubKeysInDB := make(map[[fieldparams.BLSPubkeyLength]byte]bool)
-	attestedPublicKeys, err := s.valDB.AttestedPublicKeys(ctx)
+	attestedPublicKeys, err := s.db.AttestedPublicKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get attested public keys from DB: %v", err)
 	}
-	proposedPublicKeys, err := s.valDB.ProposedPublicKeys(ctx)
+	proposedPublicKeys, err := s.db.ProposedPublicKeys(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("could not get proposed public keys from DB: %v", err)
 	}
@@ -313,7 +313,7 @@ func (s *Server) slashingProtectionHistoryForDeletedKeys(
 			filteredKeys = append(filteredKeys, pk)
 		}
 	}
-	return slashingprotection.ExportStandardProtectionJSON(ctx, s.valDB, filteredKeys...)
+	return slashingprotection.ExportStandardProtectionJSON(ctx, s.db, filteredKeys...)
 }
 
 // SetVoluntaryExit creates a signed voluntary exit message and returns a VoluntaryExit object.
@@ -414,7 +414,7 @@ func (s *Server) ListRemoteKeys(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < len(pubKeys); i++ {
 		keystoreResponse[i] = &RemoteKey{
 			Pubkey:   hexutil.Encode(pubKeys[i][:]),
-			Url:      s.validatorService.Web3SignerConfig.BaseEndpoint,
+			Url:      s.validatorService.SignerConfig().BaseEndpoint,
 			Readonly: true,
 		}
 	}

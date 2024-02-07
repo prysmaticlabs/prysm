@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
@@ -40,52 +39,49 @@ import (
 // ValidatorService represents a service to manage the validator client
 // routine.
 type ValidatorService struct {
+	ctx                     context.Context
+	cancel                  context.CancelFunc
+	validator               iface.Validator
+	db                      db.Database
+	conn                    validatorHelpers.NodeConnection
+	wallet                  *wallet.Wallet
+	walletInitializedFeed   *event.Feed
+	graffiti                []byte
+	graffitiStruct          *graffiti.Graffiti
+	interopKeysConfig       *local.InteropKeymanagerConfig
+	web3SignerConfig        *remoteweb3signer.SetupConfig
+	proposerSettings        *validatorserviceconfig.ProposerSettings
+	validatorsRegBatchSize  int
 	useWeb                  bool
 	emitAccountMetrics      bool
 	logValidatorPerformance bool
 	distributed             bool
-	interopKeysConfig       *local.InteropKeymanagerConfig
-	conn                    validatorHelpers.NodeConnection
-	cancel                  context.CancelFunc
-	walletInitializedFeed   *event.Feed
-	wallet                  *wallet.Wallet
-	graffitiStruct          *graffiti.Graffiti
-	dataDir                 string
-	ctx                     context.Context
-	validator               iface.Validator
-	db                      db.Database
-	grpcHeaders             []string
-	graffiti                []byte
-	Web3SignerConfig        *remoteweb3signer.SetupConfig
-	proposerSettings        *validatorserviceconfig.ProposerSettings
-	validatorsRegBatchSize  int
 }
 
 // Config for the validator service.
 type Config struct {
+	Validator               iface.Validator
+	DB                      db.Database
+	Wallet                  *wallet.Wallet
+	WalletInitializedFeed   *event.Feed
+	GRPCMaxCallRecvMsgSize  int
+	GRPCRetries             uint
+	GRPCRetryDelay          time.Duration
+	GRPCHeaders             []string
+	BeaconNodeGRPCEndpoint  string
+	BeaconNodeCert          string
+	BeaconApiEndpoint       string
+	BeaconApiTimeout        time.Duration
+	Graffiti                string
+	GraffitiStruct          *graffiti.Graffiti
+	InteropKmConfig         *local.InteropKeymanagerConfig
+	Web3SignerConfig        *remoteweb3signer.SetupConfig
+	ProposerSettings        *validatorserviceconfig.ProposerSettings
+	ValidatorsRegBatchSize  int
 	UseWeb                  bool
 	LogValidatorPerformance bool
 	EmitAccountMetrics      bool
 	Distributed             bool
-	InteropKmConfig         *local.InteropKeymanagerConfig
-	Wallet                  *wallet.Wallet
-	WalletInitializedFeed   *event.Feed
-	GRPCRetries             uint
-	GRPCMaxCallRecvMsgSize  int
-	GRPCRetryDelay          time.Duration
-	GraffitiStruct          *graffiti.Graffiti
-	Validator               iface.Validator
-	DB                      db.Database
-	Cert                    string
-	DataDir                 string
-	GRPCHeaders             string
-	Graffiti                string
-	BeaconNodeGRPCEndpoint  string
-	Web3SignerConfig        *remoteweb3signer.SetupConfig
-	ProposerSettings        *validatorserviceconfig.ProposerSettings
-	BeaconApiEndpoint       string
-	BeaconApiTimeout        time.Duration
-	ValidatorsRegBatchSize  int
 }
 
 // NewValidatorService creates a new validator service for the service
@@ -95,27 +91,25 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 	s := &ValidatorService{
 		ctx:                     ctx,
 		cancel:                  cancel,
-		dataDir:                 cfg.DataDir,
-		graffiti:                []byte(cfg.Graffiti),
-		logValidatorPerformance: cfg.LogValidatorPerformance,
-		emitAccountMetrics:      cfg.EmitAccountMetrics,
-		grpcHeaders:             strings.Split(cfg.GRPCHeaders, ","),
 		validator:               cfg.Validator,
 		db:                      cfg.DB,
 		wallet:                  cfg.Wallet,
 		walletInitializedFeed:   cfg.WalletInitializedFeed,
-		useWeb:                  cfg.UseWeb,
-		interopKeysConfig:       cfg.InteropKmConfig,
+		graffiti:                []byte(cfg.Graffiti),
 		graffitiStruct:          cfg.GraffitiStruct,
-		Web3SignerConfig:        cfg.Web3SignerConfig,
+		interopKeysConfig:       cfg.InteropKmConfig,
+		web3SignerConfig:        cfg.Web3SignerConfig,
 		proposerSettings:        cfg.ProposerSettings,
 		validatorsRegBatchSize:  cfg.ValidatorsRegBatchSize,
+		useWeb:                  cfg.UseWeb,
+		emitAccountMetrics:      cfg.EmitAccountMetrics,
+		logValidatorPerformance: cfg.LogValidatorPerformance,
 		distributed:             cfg.Distributed,
 	}
 
 	dialOpts := ConstructDialOptions(
 		cfg.GRPCMaxCallRecvMsgSize,
-		cfg.Cert,
+		cfg.BeaconNodeCert,
 		cfg.GRPCRetries,
 		cfg.GRPCRetryDelay,
 	)
@@ -123,13 +117,13 @@ func NewValidatorService(ctx context.Context, cfg *Config) (*ValidatorService, e
 		return s, nil
 	}
 
-	s.ctx = grpcutil.AppendHeaders(ctx, s.grpcHeaders)
+	s.ctx = grpcutil.AppendHeaders(ctx, cfg.GRPCHeaders)
 
 	grpcConn, err := grpc.DialContext(ctx, cfg.BeaconNodeGRPCEndpoint, dialOpts...)
 	if err != nil {
 		return s, err
 	}
-	if cfg.Cert != "" {
+	if cfg.BeaconNodeCert != "" {
 		log.Info("Established secure gRPC connection")
 	}
 	s.conn = validatorHelpers.NewNodeConnection(
@@ -206,7 +200,7 @@ func (v *ValidatorService) Start() {
 		graffitiStruct:                 v.graffitiStruct,
 		graffitiOrderedIndex:           graffitiOrderedIndex,
 		blacklistedPubkeys:             slashablePublicKeys,
-		web3SignerConfig:               v.Web3SignerConfig,
+		web3SignerConfig:               v.web3SignerConfig,
 		proposerSettings:               v.proposerSettings,
 		walletInitializedChan:          make(chan *wallet.Wallet, 1),
 		validatorsRegBatchSize:         v.validatorsRegBatchSize,
@@ -244,6 +238,10 @@ func (v *ValidatorService) InteropKeysConfig() *local.InteropKeymanagerConfig {
 // Keymanager returns the underlying keymanager in the validator
 func (v *ValidatorService) Keymanager() (keymanager.IKeymanager, error) {
 	return v.validator.Keymanager()
+}
+
+func (v *ValidatorService) SignerConfig() *remoteweb3signer.SetupConfig {
+	return v.web3SignerConfig
 }
 
 // ProposerSettings returns a deep copy of the underlying proposer settings in the validator
