@@ -37,6 +37,7 @@ go_test(
     srcs = [
         "checkpoint_test.go",
         "client_test.go",
+        "health_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

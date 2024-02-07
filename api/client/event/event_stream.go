@@ -30,7 +30,6 @@ const (
 	EventBlobSidecar                 = "blob_sidecar"
 	EventError                       = "error"
 	EventConnectionError             = "connection_error"
-	MaxRetryAttempts                 = 3
 )
 
 var DefaultEventTopics = []string{EventHead}

@@ -1,6 +1,8 @@
 package beacon
 
-import "sync"
+import (
+	"sync"
+)
 
 type NodeHealth struct {
 	isHealthy     bool
