@@ -432,15 +432,6 @@ func (c *ValidatorClient) registerPrometheusService(cliCtx *cli.Context) error {
 
 func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 	var (
-		beaconNodeGRPCEndpoint  = c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-		logValidatorPerformance = !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name)
-		emitAccountMetrics      = !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name)
-		beaconNodeCert          = c.cliCtx.String(flags.CertFlag.Name)
-		graffiti                = c.cliCtx.String(flags.GraffitiFlag.Name)
-		grpcMaxCallRecvMsgSize  = c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-		grpcRetries             = c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-		grpcRetryDelay          = c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-
 		interopKmConfig *local.InteropKeymanagerConfig
 		err             error
 	)
@@ -478,23 +469,23 @@ func (c *ValidatorClient) registerValidatorService(cliCtx *cli.Context) error {
 		DB:                      c.db,
 		Wallet:                  c.wallet,
 		WalletInitializedFeed:   c.walletInitializedFeed,
-		GRPCMaxCallRecvMsgSize:  grpcMaxCallRecvMsgSize,
-		GRPCRetries:             grpcRetries,
-		GRPCRetryDelay:          grpcRetryDelay,
+		GRPCMaxCallRecvMsgSize:  c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+		GRPCRetries:             c.cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+		GRPCRetryDelay:          c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
 		GRPCHeaders:             strings.Split(c.cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
-		BeaconNodeGRPCEndpoint:  beaconNodeGRPCEndpoint,
-		BeaconNodeCert:          beaconNodeCert,
+		BeaconNodeGRPCEndpoint:  c.cliCtx.String(flags.BeaconRPCProviderFlag.Name),
+		BeaconNodeCert:          c.cliCtx.String(flags.CertFlag.Name),
 		BeaconApiEndpoint:       c.cliCtx.String(flags.BeaconRESTApiProviderFlag.Name),
 		BeaconApiTimeout:        time.Second * 30,
-		Graffiti:                g.ParseHexGraffiti(graffiti),
+		Graffiti:                g.ParseHexGraffiti(c.cliCtx.String(flags.GraffitiFlag.Name)),
 		GraffitiStruct:          graffitiStruct,
 		InteropKmConfig:         interopKmConfig,
 		Web3SignerConfig:        web3signerConfig,
 		ProposerSettings:        proposerSettings,
 		ValidatorsRegBatchSize:  c.cliCtx.Int(flags.ValidatorsRegistrationBatchSizeFlag.Name),
 		UseWeb:                  c.cliCtx.Bool(flags.EnableWebFlag.Name),
-		LogValidatorPerformance: logValidatorPerformance,
-		EmitAccountMetrics:      emitAccountMetrics,
+		LogValidatorPerformance: !c.cliCtx.Bool(flags.DisablePenaltyRewardLogFlag.Name),
+		EmitAccountMetrics:      !c.cliCtx.Bool(flags.DisableAccountMetricsFlag.Name),
 		Distributed:             c.cliCtx.Bool(flags.EnableDistributed.Name),
 	})
 	if err != nil {
@@ -787,34 +778,22 @@ func (c *ValidatorClient) registerRPCService(router *mux.Router) error {
 	if err := c.services.FetchService(&vs); err != nil {
 		return err
 	}
-	grpcGatewayHost := c.cliCtx.String(flags.GRPCGatewayHost.Name)
-	grpcGatewayPort := c.cliCtx.Int(flags.GRPCGatewayPort.Name)
-	host := c.cliCtx.String(flags.RPCHost.Name)
-	port := c.cliCtx.Int(flags.RPCPort.Name)
-	beaconApiEndpoint := c.cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name)
-	beaconNodeEndpoint := c.cliCtx.String(flags.BeaconRPCProviderFlag.Name)
-	grpcMaxCallRecvMsgSize := c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name)
-	grpcRetries := c.cliCtx.Uint(flags.GrpcRetriesFlag.Name)
-	grpcRetryDelay := c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name)
-	walletDir := c.cliCtx.String(flags.WalletDirFlag.Name)
-	grpcHeaders := c.cliCtx.String(flags.GrpcHeadersFlag.Name)
-	cert := c.cliCtx.String(flags.CertFlag.Name)
 	s := rpc.NewServer(c.cliCtx.Context, &rpc.Config{
-		Host:                   host,
-		Port:                   fmt.Sprintf("%d", port),
-		GRPCGatewayHost:        grpcGatewayHost,
-		GRPCGatewayPort:        grpcGatewayPort,
-		GRPCMaxCallRecvMsgSize: grpcMaxCallRecvMsgSize,
-		GRPCRetries:            grpcRetries,
-		GRPCRetryDelay:         grpcRetryDelay,
-		GRPCHeaders:            strings.Split(grpcHeaders, ","),
-		BeaconNodeGRPCEndpoint: beaconNodeEndpoint,
-		BeaconApiEndpoint:      beaconApiEndpoint,
+		Host:                   c.cliCtx.String(flags.RPCHost.Name),
+		Port:                   fmt.Sprintf("%d", c.cliCtx.Int(flags.RPCPort.Name)),
+		GRPCGatewayHost:        c.cliCtx.String(flags.GRPCGatewayHost.Name),
+		GRPCGatewayPort:        c.cliCtx.Int(flags.GRPCGatewayPort.Name),
+		GRPCMaxCallRecvMsgSize: c.cliCtx.Int(cmd.GrpcMaxCallRecvMsgSizeFlag.Name),
+		GRPCRetries:            c.cliCtx.Uint(flags.GrpcRetriesFlag.Name),
+		GRPCRetryDelay:         c.cliCtx.Duration(flags.GrpcRetryDelayFlag.Name),
+		GRPCHeaders:            strings.Split(c.cliCtx.String(flags.GrpcHeadersFlag.Name), ","),
+		BeaconNodeGRPCEndpoint: c.cliCtx.String(flags.BeaconRPCProviderFlag.Name),
+		BeaconApiEndpoint:      c.cliCtx.String(flags.BeaconRPCGatewayProviderFlag.Name),
 		BeaconApiTimeout:       time.Second * 30,
-		BeaconNodeCert:         cert,
+		BeaconNodeCert:         c.cliCtx.String(flags.CertFlag.Name),
 		DB:                     c.db,
 		Wallet:                 c.wallet,
-		WalletDir:              walletDir,
+		WalletDir:              c.cliCtx.String(flags.WalletDirFlag.Name),
 		WalletInitializedFeed:  c.walletInitializedFeed,
 		ValidatorService:       vs,
 		Router:                 router,
