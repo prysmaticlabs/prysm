@@ -1299,7 +1299,7 @@ func TestValidator_WaitForKeymanagerInitialization_web3Signer(t *testing.T) {
 			ProvidedPublicKeys: keys,
 		},
 	}
-	err = v.WaitForKmInitialization(context.Background())
+	err = v.WaitForKeymanagerInitialization(context.Background())
 	require.NoError(t, err)
 	km, err := v.Keymanager()
 	require.NoError(t, err)
@@ -1323,7 +1323,7 @@ func TestValidator_WaitForKeymanagerInitialization_Web(t *testing.T) {
 	wait := make(chan struct{})
 	go func() {
 		defer close(wait)
-		err = v.WaitForKmInitialization(ctx)
+		err = v.WaitForKeymanagerInitialization(ctx)
 		require.NoError(t, err)
 		km, err := v.Keymanager()
 		require.NoError(t, err)
@@ -1351,7 +1351,7 @@ func TestValidator_WaitForKeymanagerInitialization_Interop(t *testing.T) {
 			Offset:           1,
 		},
 	}
-	err = v.WaitForKmInitialization(ctx)
+	err = v.WaitForKeymanagerInitialization(ctx)
 	require.NoError(t, err)
 	km, err := v.Keymanager()
 	require.NoError(t, err)
@@ -1400,7 +1400,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1482,7 +1482,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1560,7 +1560,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1624,7 +1624,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 				}
 				// set bellatrix as current epoch
 				params.BeaconConfig().BellatrixForkEpoch = 0
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				km, err := v.Keymanager()
 				require.NoError(t, err)
@@ -1689,7 +1689,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				err = v.SetProposerSettings(context.Background(), &validatorserviceconfig.ProposerSettings{
 					ProposeConfig: nil,
@@ -1753,7 +1753,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1805,7 +1805,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()
@@ -1848,7 +1848,7 @@ func TestValidator_PushProposerSettings(t *testing.T) {
 						Offset:           1,
 					},
 				}
-				err := v.WaitForKmInitialization(ctx)
+				err := v.WaitForKeymanagerInitialization(ctx)
 				require.NoError(t, err)
 				config := make(map[[fieldparams.BLSPubkeyLength]byte]*validatorserviceconfig.ProposerOption)
 				km, err := v.Keymanager()

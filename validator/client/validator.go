@@ -127,7 +127,7 @@ func (v *validator) Done() {
 }
 
 // WaitForKmInitialization checks if the validator needs to wait for keymanager initialization.
-func (v *validator) WaitForKmInitialization(ctx context.Context) error {
+func (v *validator) WaitForKeymanagerInitialization(ctx context.Context) error {
 	genesisRoot, err := v.db.GenesisValidatorsRoot(ctx)
 	if err != nil {
 		return errors.Wrap(err, "unable to retrieve valid genesis validators root while initializing key manager")
