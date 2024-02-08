@@ -10,6 +10,7 @@ import (
 	slashertypes "github.com/prysmaticlabs/prysm/v4/beacon-chain/slasher/types"
 	"github.com/prysmaticlabs/prysm/v4/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/sirupsen/logrus"
 )
 
 // A struct encapsulating input arguments to
@@ -213,10 +214,12 @@ func (m *MinSpanChunksSlice) CheckSlashable(
 		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
 		// recording the attestation itself. As a consequence, we say there is no surrounding vote,
 		// but we log an error.
-		log.Errorf("No existing attestation record found for validator %d at target %d, while a surrounding vote was detected.",
-			validatorIdx, minTarget,
-		)
+		fields := logrus.Fields{
+			"validatorIndex": validatorIdx,
+			"targetEpoch":    minTarget,
+		}
 
+		log.WithFields(fields).Error("No existing attestation record found while a surrounding vote was detected.")
 		return nil, nil
 	}
 
@@ -279,9 +282,12 @@ func (m *MaxSpanChunksSlice) CheckSlashable(
 		// recorded in our min/max DB an distance corresponding to an attestaiton, but WITHOUT
 		// recording the attestation itself. As a consequence, we say there is no surrounded vote,
 		// but we log an error.
-		log.Errorf("No existing attestation record found for validator %d at target %d, while a surrounded vote was detected.",
-			validatorIdx, maxTarget,
-		)
+		fields := logrus.Fields{
+			"validatorIndex": validatorIdx,
+			"targetEpoch":    maxTarget,
+		}
+
+		log.WithFields(fields).Error("No existing attestation record found while a surrounded vote was detected.")
 		return nil, nil
 	}
 
